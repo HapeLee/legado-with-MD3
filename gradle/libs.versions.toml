@@ -3,7 +3,7 @@
 datastorePreferences = "1.1.7"
 kotlin = "2.2.10"
 ksp = "2.2.10-2.0.2"
-agp = "8.12.1"
+agp = "8.12.2"
 appcompat = "1.7.1"
 colorpicker = "1.1.0"
 commonsText = "1.14.0"
