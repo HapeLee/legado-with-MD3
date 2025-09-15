@@ -1,7 +1,7 @@
 [versions]
 
 datastorePreferences = "1.1.7"
-kotlin = "2.2.10"
+kotlin = "2.2.20"
 ksp = "2.2.10-2.0.2"
 agp = "8.12.2"
 appcompat = "1.7.1"
