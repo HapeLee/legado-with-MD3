@@ -1,6 +1,6 @@
 [versions]
 
-coreSplashscreen = "1.0.0-beta02"
+coreSplashscreen = "1.2.0-rc01"
 datastorePreferences = "1.1.7"
 kotlin = "2.2.20"
 ksp = "2.2.10-2.0.2"
