@@ -15,7 +15,7 @@ flexbox = "3.0.0"
 fragment = "1.8.9"
 
 #不要更新版本
-hutool = "5.8.22"
+hutool = "5.8.41"
 
 libarchive = "1.1.6"
 lifecycle = "2.9.4"
