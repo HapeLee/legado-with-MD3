@@ -5,15 +5,16 @@ body:
   - type: checkboxes
     attributes:
       label: 确认 / Assignments
-      description: 提交issue请确保完成以下前提，否则该issue可能被忽略 / Make sure you read checkboxs below
+      description: 提交issue请确认以下前提，否则该issue可能被忽略 / Make sure you read checkboxs below
       options:
         - label: 搜索现有issues，不存在相似或相关的issue / No similar or related issues
           required: true
-        - label: 最新[测试版](https://github.com/gedoor/legado/actions/workflows/test.yml)依然存在此问题 / Latest beta app does not work
+        - label: 最新版本依然存在此问题 / Latest beta app does not work
           required: true
         - label: 此问题和Xposed、Lsposed、Magisk、手机主题、浏览器插件、无障碍服务等无关 / Make sure your machine is not touched by hook frameworks, plugins, accessibility etc
           required: true
-
+        - label: 此问题仅出现在分支版本中，官方版本及其他分支均未出现此问题。 / Only affects this version; not present in the official or other branch builds.
+          required: false
   - type: textarea
     attributes:
       label: 问题描述 / Describe Bugs
