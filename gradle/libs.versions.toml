@@ -3,7 +3,7 @@
 coreSplashscreen = "1.2.0-rc01"
 datastorePreferences = "1.1.7"
 kotlin = "2.2.20"
-ksp = "2.2.10-2.0.2"
+ksp = "2.2.20-2.0.4"
 agp = "8.13.0"
 appcompat = "1.7.1"
 colorpicker = "1.1.0"
