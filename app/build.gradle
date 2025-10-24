@@ -108,8 +108,8 @@ android {
             //applicationIdSuffix '.release'
             manifestPlaceholders.put("app_name", "@string/app_name")
 
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'cronet-proguard-rules.pro'
         }
         debug {
