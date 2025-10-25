@@ -76,7 +76,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 }
 
                 requestCodeColorImage -> setBgFromUri(uri, PreferKey.colorImage) {
-                    
+
                 }
             }
         }
