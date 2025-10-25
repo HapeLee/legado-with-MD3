@@ -120,25 +120,23 @@
         android:id="@+id/bottom_menu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="@android:color/transparent"
+        android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="2" />
-
-        <!--章节设置-->
         <LinearLayout
             android:id="@+id/ll_slider"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="2"
             android:layout_marginVertical="8dp"
+            android:layout_marginHorizontal="16dp"
             android:importantForAccessibility="no"
             android:gravity="center"
             android:orientation="horizontal">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/tv_pre"
@@ -178,18 +176,45 @@
                 app:icon="@drawable/ic_next"
                 android:contentDescription="@string/next_chapter"
                 tools:ignore="TouchTargetSizeCheck"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButtonGroup
-            android:id="@+id/bottom_view"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:overflowMode="menu"
-            android:layout_weight="2"
-            android:importantForAccessibility="no"
-            android:paddingVertical="8dp"
-            android:paddingHorizontal="16dp"
-            android:orientation="horizontal"/>
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:strokeWidth="0dp">
+                <com.google.android.material.button.MaterialButtonGroup
+                    android:id="@+id/bottom_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    app:overflowMode="menu"
+                    android:paddingVertical="8dp"
+                    android:paddingHorizontal="16dp"
+                    android:background="?attr/colorSurfaceContainer" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
