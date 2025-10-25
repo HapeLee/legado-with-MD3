@@ -32,6 +32,8 @@ import io.legato.kazusa.utils.putPrefInt
 import io.legato.kazusa.utils.resizeAndRecycle
 import splitties.init.appCtx
 import java.io.File
+import kotlin.String
+import androidx.core.graphics.drawable.toDrawable
 
 /**
  * 阅读界面配置
@@ -58,6 +60,7 @@ object ReadBookConfig {
     var bg: Drawable? = null
     var bgMeanColor: Int = 0
     val textColor: Int get() = durConfig.curTextColor()
+    val textShadowColor: Int get() = durConfig.curTextShadowColor()
 
     init {
         initConfigs()
@@ -244,6 +247,36 @@ object ReadBookConfig {
         get() = config.textBold
         set(value) {
             config.textBold = value
+        }
+
+    var textItalic: Boolean
+        get() = config.textItalic
+        set(value) {
+            config.textItalic = value
+        }
+
+    var textShadow: Boolean
+        get() = config.textShadow
+        set(value) {
+            config.textShadow = value
+        }
+
+    var shadowRadius: Float
+        get() = config.shadowRadius
+        set(value) {
+            config.shadowRadius = value
+        }
+
+    var shadowDx: Float
+        get() = config.shadowDx
+        set(value) {
+            config.shadowDx = value
+        }
+
+    var shadowDy: Float
+        get() = config.shadowDy
+        set(value) {
+            config.shadowDy = value
         }
 
     var textSize: Int
@@ -509,6 +542,13 @@ object ReadBookConfig {
         var textFont: String = "",//字体
         var textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
         var textSize: Int = 20,//文字大小
+        var textItalic: Boolean = false,// 是否启用斜体
+        var textShadow: Boolean = false,// 是否启用阴影
+        var shadowRadius: Float = 16f,// 阴影模糊半径
+        var shadowDx: Float = 1f,// 阴影x偏移
+        var shadowDy: Float = 1f,// 阴影y偏移
+        private var shadowColor: String = "#3E3D3B",
+        private var shadowColorN: String = "#3E3D3B",
         var letterSpacing: Float = 0.1f,//字间距
         var lineSpacingExtra: Int = 12,//行间距
         var paragraphSpacing: Int = 2,//段距
@@ -554,13 +594,34 @@ object ReadBookConfig {
         private var textColorInt = -1
 
         @Transient
+        private var textColorSIntNight = -1
+
+        @Transient
+        private var textColorSInt = -1
+
+        @Transient
         private var initColorInt = false
 
         private fun initColorInt() {
-            textColorIntEInk = Color.parseColor(textColorEInk)
-            textColorIntNight = Color.parseColor(textColorNight)
-            textColorInt = Color.parseColor(textColor)
+            textColorIntEInk = textColorEInk.toColorInt()
+            textColorIntNight = textColorNight.toColorInt()
+            textColorInt = textColor.toColorInt()
+            textColorSIntNight = shadowColorN.toColorInt()
+            textColorSInt = shadowColor.toColorInt()
             initColorInt = true
+        }
+
+        fun setCurShadColor(color: Int){
+            when {
+                AppConfig.isNightTheme -> {
+                    shadowColorN = "#${color.hexString}"
+                    textColorSIntNight = color
+                }
+                else -> {
+                    shadowColor = "#${color.hexString}"
+                    textColorSInt = color
+                }
+            }
         }
 
         fun setCurTextColor(color: Int) {
@@ -590,6 +651,16 @@ object ReadBookConfig {
                 AppConfig.isEInkMode -> textColorIntEInk
                 AppConfig.isNightTheme -> textColorIntNight
                 else -> textColorInt
+            }
+        }
+
+        fun curTextShadowColor(): Int {
+            if (!initColorInt) {
+                initColorInt()
+            }
+            return when {
+                AppConfig.isNightTheme -> textColorSIntNight
+                else -> textColorSInt
             }
         }
 
@@ -661,18 +732,18 @@ object ReadBookConfig {
         fun curBgDrawable(width: Int, height: Int): Drawable {
             if (width == 0 || height == 0) {
                 val backgroundColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-                return ColorDrawable(backgroundColor)
+                return backgroundColor.toDrawable()
             }
 
             var bgDrawable: Drawable? = null
             val resources = appCtx.resources
             try {
                 bgDrawable = when (curBgType()) {
-                    0 -> ColorDrawable(Color.parseColor(curBgStr()))
+                    0 -> curBgStr().toColorInt().toDrawable()
                     1 -> {
                         val path = "bg" + File.separator + curBgStr()
                         val bitmap = BitmapUtils.decodeAssetsBitmap(appCtx, path, width, height)
-                        BitmapDrawable(resources, bitmap?.resizeAndRecycle(width, height))
+                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
                     }
                     else -> {
                         val path = curBgStr().let {
@@ -680,7 +751,7 @@ object ReadBookConfig {
                             else FileUtils.getPath(appCtx.externalFiles, "bg", curBgStr())
                         }
                         val bitmap = BitmapUtils.decodeBitmap(path, width, height)
-                        BitmapDrawable(resources, bitmap?.resizeAndRecycle(width, height))
+                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
                     }
                 }
             } catch (e: OutOfMemoryError) {
@@ -691,7 +762,7 @@ object ReadBookConfig {
 
             // fallback 使用 MD3 的 colorSurface 作为背景色
             val fallbackColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-            return bgDrawable ?: ColorDrawable(fallbackColor)
+            return bgDrawable ?: fallbackColor.toDrawable()
         }
     }
 }

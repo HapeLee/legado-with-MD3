@@ -1,17 +1,19 @@
 package io.legato.kazusa.ui.book.read.config
 
-//import io.legado.app.lib.theme.primaryColor
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import androidx.appcompat.widget.Toolbar
+import io.legato.kazusa.help.config.ReadBookConfig
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
+import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legato.kazusa.R
 import io.legato.kazusa.base.BaseBottomSheetDialogFragment
 import io.legato.kazusa.base.adapter.ItemViewHolder
@@ -22,7 +24,6 @@ import io.legato.kazusa.constant.PreferKey
 import io.legato.kazusa.databinding.DialogFontSelectBinding
 import io.legato.kazusa.databinding.ItemFontBinding
 import io.legato.kazusa.help.config.AppConfig
-import io.legato.kazusa.help.config.ReadBookConfig
 import io.legato.kazusa.lib.dialogs.SelectItem
 import io.legato.kazusa.lib.dialogs.alert
 import io.legato.kazusa.lib.permission.Permissions
@@ -54,6 +55,10 @@ import java.net.URLDecoder
  */
 class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_select),
     Toolbar.OnMenuItemClickListener {
+
+    companion object {
+        const val S_COLOR = 123
+    }
     private val fontRegex = Regex("(?i).*\\.[ot]tf")
     private val binding by viewBinding(DialogFontSelectBinding::bind)
     private val adapter by lazy {
@@ -118,21 +123,19 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
             ((it - 50) / 100f).toString()
         }
         dsbLineSize.valueFormat = { ((it - 10) / 10f).toString() }
+        binding.dsbShadowRadius.valueFormat = { "${it.toInt()} px" }
+        binding.dsbShadowDx.valueFormat = { "${it.toInt()} px" }
+        binding.dsbShadowDy.valueFormat = { "${it.toInt()} px" }
 
-        binding.bgTextIndent.apply {
-            val currentIndex = ReadBookConfig.paragraphIndent.length.coerceAtMost(childCount - 1)
-            val defaultButtonId = getChildAt(currentIndex).id
-            check(defaultButtonId)
-
-            addOnButtonCheckedListener { group, checkedId, isChecked ->
-                if (isChecked) {
-                    val checkedIndex = (0 until group.childCount)
-                        .firstOrNull { group.getChildAt(it).id == checkedId }
-                        ?: return@addOnButtonCheckedListener
-
-                    ReadBookConfig.paragraphIndent = "　".repeat(checkedIndex)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
-                }
+        binding.textIndentDropdown.apply {
+            val items = listOf("0", "1", "2", "3", "4")
+            val adapter = ArrayAdapter(context, android.R.layout.simple_list_item_1, items)
+            setAdapter(adapter)
+            val currentIndex = ReadBookConfig.paragraphIndent.length.coerceIn(0, items.lastIndex)
+            setText(items[currentIndex], false)
+            setOnItemClickListener { _, _, position, _ ->
+                ReadBookConfig.paragraphIndent = "　".repeat(position)
+                postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
             }
         }
 
@@ -166,6 +169,9 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
                 postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
             }
         }
+
+        binding.btnTextItalic.isChecked = ReadBookConfig.textItalic
+        binding.btnTextShadow.isChecked = ReadBookConfig.textShadow
     }
 
     private fun initViewEvent() = binding.run {
@@ -192,6 +198,35 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
                 }
             }
         }
+        binding.btnTextItalic.addOnCheckedChangeListener { _, isChecked ->
+            ReadBookConfig.textItalic = isChecked
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.btnTextShadow.addOnCheckedChangeListener { _, isChecked ->
+            ReadBookConfig.textShadow = isChecked
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.dsbShadowRadius.onChanged = {
+            ReadBookConfig.shadowRadius = it.toFloat()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.dsbShadowDx.onChanged = {
+            ReadBookConfig.shadowDx = it.toFloat()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.dsbShadowDy.onChanged = {
+            ReadBookConfig.shadowDy = it.toFloat()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.btnShadowColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(ReadBookConfig.config.curTextShadowColor())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(S_COLOR)
+                .show(requireActivity())
+            //postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
     }
 
     private fun upView() = binding.run {
@@ -199,6 +234,9 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
             dsbTextLetterSpacing.progress = (it.letterSpacing * 100).toInt() + 50
             dsbLineSize.progress = it.lineSpacingExtra
             dsbParagraphSpacing.value = it.paragraphSpacing.toFloat()
+            binding.dsbShadowRadius.progress = it.shadowRadius.toInt()
+            binding.dsbShadowDx.progress = it.shadowDx.toInt()
+            binding.dsbShadowDy.progress = it.shadowDy.toInt()
         }
     }
 

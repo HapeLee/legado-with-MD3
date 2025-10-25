@@ -1,5 +1,7 @@
 package io.legato.kazusa.ui.book.read.page.provider
 
+import android.annotation.SuppressLint
+import android.graphics.Color
 import android.graphics.Paint.FontMetrics
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -38,6 +40,7 @@ import splitties.init.appCtx
 import java.io.File
 import java.util.LinkedList
 import java.util.Locale
+import androidx.core.graphics.toColorInt
 
 /**
  * 解析内容生成章节和页面
@@ -910,6 +913,7 @@ object ChapterProvider {
         } ?: Typeface.DEFAULT
     }
 
+    @SuppressLint("UseKtx")
     private fun getPaints(typeface: Typeface?): Pair<TextPaint, TextPaint> {
         val bold = Typeface.create(typeface, Typeface.BOLD)
         val normal = Typeface.create(typeface, Typeface.NORMAL)
@@ -952,6 +956,17 @@ object ChapterProvider {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && AppConfig.optimizeRender) {
             tPaint.isLinearText = true
         }
+        if (ReadBookConfig.textItalic) {
+            tPaint.textSkewX = -0.25f
+        }
+        if (ReadBookConfig.textShadow) {
+            tPaint.setShadowLayer(
+                ReadBookConfig.shadowRadius,
+                ReadBookConfig.shadowDx,
+                ReadBookConfig.shadowDy,
+                ReadBookConfig.textShadowColor
+            )
+        }
         //正文
         val cPaint = TextPaint()
         cPaint.color = ReadBookConfig.textColor
@@ -964,7 +979,17 @@ object ChapterProvider {
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && AppConfig.optimizeRender) {
             cPaint.isLinearText = true
         }
-
+        if (ReadBookConfig.textItalic) {
+            cPaint.textSkewX = -0.25f
+        }
+        if (ReadBookConfig.textShadow) {
+            cPaint.setShadowLayer(
+                ReadBookConfig.shadowRadius,
+                ReadBookConfig.shadowDx,
+                ReadBookConfig.shadowDy,
+                ReadBookConfig.textShadowColor
+            )
+        }
         return Pair(tPaint, cPaint)
     }
 

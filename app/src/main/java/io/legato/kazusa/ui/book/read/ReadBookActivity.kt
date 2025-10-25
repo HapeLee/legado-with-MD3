@@ -76,6 +76,7 @@ import io.legato.kazusa.ui.book.info.BookInfoActivity
 import io.legato.kazusa.ui.book.read.config.AutoReadDialog
 import io.legato.kazusa.ui.book.read.config.BgTextConfigDialog.Companion.BG_COLOR
 import io.legato.kazusa.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_COLOR
+import io.legato.kazusa.ui.book.read.config.FontSelectDialog.Companion.S_COLOR
 import io.legato.kazusa.ui.book.read.config.ReadAloudDialog
 import io.legato.kazusa.ui.book.read.config.ReadStyleDialog
 import io.legato.kazusa.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
@@ -1504,6 +1505,10 @@ class ReadBookActivity : BaseReadBookActivity(),
      */
     override fun onColorSelected(dialogId: Int, color: Int) = ReadBookConfig.durConfig.run {
         when (dialogId) {
+            S_COLOR -> {
+                setCurShadColor(color)
+                postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
+            }
             TEXT_COLOR -> {
                 setCurTextColor(color)
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
