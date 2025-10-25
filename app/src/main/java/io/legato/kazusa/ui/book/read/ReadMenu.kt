@@ -401,8 +401,8 @@ class ReadMenu @JvmOverloads constructor(
         }
 
         seekReadPage.addOnChangeListener { slider, value, fromUser ->
-            if (fromUser) {
-                VibrationUtils.vibrate(context, 12)
+            VibrationUtils.vibrate(context, 12)
+            if (fromUser && AppConfig.progressBarBehavior == "page") {
                 ReadBook.skipToPage(value.toInt() - 1)
             }
         }
