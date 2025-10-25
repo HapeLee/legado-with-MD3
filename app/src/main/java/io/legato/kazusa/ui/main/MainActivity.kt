@@ -381,7 +381,7 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         realPositions[index] = idMy
         bottomMenuCount = index + 1
 
-        adapter.notifyDataSetChanged()
+        binding.viewPagerMain.adapter = TabFragmentPageAdapter(this)
 
         if (AppConfig.showBottomView) {
             val navView = getNavigationBarView()
@@ -544,11 +544,10 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
 
         override fun containsItem(itemId: Long): Boolean {
-            return realPositions.map { getFragmentId(it).toLong() }.contains(itemId)
+            return (0 until bottomMenuCount).any { getItemId(it) == itemId }
         }
+
     }
-
-
 
 }
 
