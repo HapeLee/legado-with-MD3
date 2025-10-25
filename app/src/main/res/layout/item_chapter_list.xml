@@ -38,12 +38,12 @@
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/ll_chap"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/iv_checked"
+        app:layout_constraintEnd_toStartOf="@id/iv_Coll"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toEndOf="@id/ll_info">
 
@@ -84,6 +84,23 @@
             app:layout_constraintStart_toEndOf="@+id/iv_locked"
             app:layout_constraintTop_toBottomOf="@id/tv_word_count" />
     </LinearLayout>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/iv_Coll"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/iv_checked">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:visibility="visible"
+            android:src="@drawable/ic_arrow_drop_down" />
+    </com.google.android.material.card.MaterialCardView>
 
     <ImageView
         android:id="@+id/iv_checked"

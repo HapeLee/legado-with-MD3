@@ -38,6 +38,8 @@ class ChapterListAdapter(
 
     private val handler = Handler(Looper.getMainLooper())
     private var upDisplayTileJob: Job? = null
+    private val collapsedVolumes = mutableSetOf<Int>() // 保存折叠的卷index
+    private var visibleItems = mutableListOf<BookChapter>() // 当前显示
 
     override val diffItemCallback: DiffUtil.ItemCallback<BookChapter>
         get() = object : DiffUtil.ItemCallback<BookChapter>() {
@@ -59,6 +61,7 @@ class ChapterListAdapter(
 
     override fun onCurrentListChanged() {
         super.onCurrentListChanged()
+        rebuildVisibleItems()
         callback.onListChanged()
     }
 
@@ -169,8 +172,70 @@ class ChapterListAdapter(
         callback.onSelectionModeChanged(isInSelectionMode())
     }
 
+    private fun rebuildVisibleItems() {
+        val all = getItems()
+        visibleItems.clear()
+        var currentVolumeCollapsed = false
+        for (item in all) {
+            if (item.isVolume) {
+                visibleItems.add(item)
+                currentVolumeCollapsed = collapsedVolumes.contains(item.index)
+            } else if (!currentVolumeCollapsed) {
+                visibleItems.add(item)
+            }
+        }
+    }
+
+    fun toggleVolume(volume: BookChapter) {
+        if (!volume.isVolume) return
+
+        val all = getItems()
+        val startIndex = all.indexOf(volume)
+        if (startIndex == -1) return
+
+        val currentPos = visibleItems.indexOf(volume)
+        if (currentPos == -1) return
+
+        if (collapsedVolumes.contains(volume.index)) {
+            collapsedVolumes.remove(volume.index)
+
+            val toAdd = mutableListOf<BookChapter>()
+            for (i in startIndex + 1 until all.size) {
+                val next = all[i]
+                if (next.isVolume) break
+                toAdd.add(next)
+            }
+
+            val insertPos = currentPos + 1
+            visibleItems.addAll(insertPos, toAdd)
+
+            notifyItemRangeInserted(insertPos, toAdd.size)
+            notifyItemChanged(currentPos)
+
+        } else {
+            collapsedVolumes.add(volume.index)
+            val toRemove = mutableListOf<BookChapter>()
+            for (i in startIndex + 1 until all.size) {
+                val next = all[i]
+                if (next.isVolume) break
+                toRemove.add(next)
+            }
+            if (toRemove.isNotEmpty()) {
+                val removeStart = currentPos + 1
+                visibleItems.removeAll(toRemove)
+                notifyItemRangeRemoved(removeStart, toRemove.size)
+                notifyItemChanged(currentPos)
+            }
+        }
+    }
+
     private fun getDisplayTitle(chapter: BookChapter): String =
         displayTitleMap[chapter.url] ?: chapter.title
+
+    override fun getItemCount(): Int = visibleItems.size
+
+    override fun getItem(position: Int): BookChapter? =
+        visibleItems.getOrNull(position)
 
     override fun getViewBinding(parent: ViewGroup): ItemChapterListBinding =
         ItemChapterListBinding.inflate(inflater, parent, false)
@@ -182,8 +247,9 @@ class ChapterListAdapter(
         payloads: MutableList<Any>
     ) {
         val isDur = callback.durChapterIndex() == item.index
-        val cached =
-            callback.isLocalBook || item.isVolume || cacheFileNames.contains(item.getFileName())
+        val cached = callback.isLocalBook || item.isVolume || cacheFileNames.contains(item.getFileName())
+        val isSelected = selectedIndices.contains(item.index)
+        val isCollapsed = collapsedVolumes.contains(item.index)
 
         binding.run {
             if (payloads.isEmpty()) {
@@ -204,31 +270,40 @@ class ChapterListAdapter(
                 if (item.isVip && !item.isPay) ivLocked.visible() else ivLocked.gone()
 
                 upHasCache(binding, cached)
-
             } else {
                 tvChapterName.text = getDisplayTitle(item)
                 upHasCache(binding, cached)
             }
 
-            if (selectedIndices.contains(item.index)) {
-                ivVolume.gone()
-                tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainerHighest))
-            } else {
-                if (item.isVolume) {
+            when {
+                item.isVolume -> {
                     ivVolume.visible()
+                    if (isCollapsed) ivColl.visible()
+                    else ivColl.gone()
                     tvChapterName.textSize = 12f
                     tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorTertiary))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))
-                } else {
-                    ivVolume.gone()
-                    if (isDur) {
-                        tvChapterName.setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
-                        tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
-                    } else {
-                        tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorOnSurface))
-                        tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))
-                    }
                 }
+
+                isDur -> {
+                    ivColl.gone()
+                    ivVolume.gone()
+                    tvChapterName.setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
+                    tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
+                }
+
+                else -> {
+                    ivColl.gone()
+                    ivVolume.gone()
+                    tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorOnSurface))
+                    tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))
+                }
+            }
+
+            if (isSelected) {
+                tvChapterItem.setBackgroundColor(
+                    context.themeColor(com.google.android.material.R.attr.colorSurfaceContainerHighest)
+                )
             }
         }
     }
@@ -239,6 +314,11 @@ class ChapterListAdapter(
             val pos = holder.bindingAdapterPosition
             if (pos == RecyclerView.NO_POSITION) return@setOnClickListener
             val item = getItem(pos) ?: return@setOnClickListener
+
+            if (item.isVolume) {
+                toggleVolume(item)
+                return@setOnClickListener
+            }
 
             if (isInSelectionMode()) {
                 toggleSelection(item, pos)

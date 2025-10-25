@@ -108,7 +108,7 @@ abstract class DiffRecyclerAdapter<ITEM, VB : ViewBinding>(protected val context
 
     fun isNotEmpty() = asyncListDiffer.currentList.isNotEmpty()
 
-    fun getItem(position: Int): ITEM? = asyncListDiffer.currentList.getOrNull(position)
+    open fun getItem(position: Int): ITEM? = asyncListDiffer.currentList.getOrNull(position)
 
     fun getItems(): List<ITEM> = asyncListDiffer.currentList
 
@@ -117,7 +117,7 @@ abstract class DiffRecyclerAdapter<ITEM, VB : ViewBinding>(protected val context
      */
     protected open fun getSpanSize(viewType: Int, position: Int) = 1
 
-    final override fun getItemCount() = getItems().size
+    override fun getItemCount() = getItems().size
 
     final override fun getItemViewType(position: Int): Int {
         return 0
