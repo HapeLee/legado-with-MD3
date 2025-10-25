@@ -76,7 +76,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 }
 
                 requestCodeColorImage -> setBgFromUri(uri, PreferKey.colorImage) {
-                    upPreferenceSummary(PreferKey.colorImage, getPrefString(PreferKey.colorImage))
+                    
                 }
             }
         }
@@ -149,6 +149,8 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             upPreferenceSummary(PreferKey.bgImage, getString(R.string.click_to_delete))
         if (!getPrefString(PreferKey.bgImageN).isNullOrBlank())
             upPreferenceSummary(PreferKey.bgImageN, getString(R.string.click_to_delete))
+        upPreferenceSummary(PreferKey.bgImage)
+        upPreferenceSummary(PreferKey.bgImageN)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -217,11 +219,6 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             }
 
             PreferKey.colorImage -> handleRestartRequired()
-
-            PreferKey.bgImage,
-            PreferKey.bgImageN -> {
-                upPreferenceSummary(key, getPrefString(key))
-            }
 
             PreferKey.showDiscovery, PreferKey.showRss,
             PreferKey.showBottomView, PreferKey.tabletInterface,
@@ -331,8 +328,6 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                         removePref(bgKey)
                         if (isNight != null) {
                             upTheme(isNight)
-                        } else {
-                            upPreferenceSummary(PreferKey.colorImage, getPrefString(PreferKey.colorImage))
                         }
                     }
                 }
