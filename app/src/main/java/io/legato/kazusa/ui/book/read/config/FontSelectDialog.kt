@@ -123,9 +123,9 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
             ((it - 50) / 100f).toString()
         }
         dsbLineSize.valueFormat = { ((it - 10) / 10f).toString() }
-        binding.dsbShadowRadius.valueFormat = { "${it.toInt()} px" }
-        binding.dsbShadowDx.valueFormat = { "${it.toInt()} px" }
-        binding.dsbShadowDy.valueFormat = { "${it.toInt()} px" }
+        binding.dsbShadowRadius.valueFormat = { "$it px" }
+        binding.dsbShadowDx.valueFormat = { "$it px" }
+        binding.dsbShadowDy.valueFormat = { "$it px" }
 
         binding.textIndentDropdown.apply {
             val items = listOf("0", "1", "2", "3", "4")

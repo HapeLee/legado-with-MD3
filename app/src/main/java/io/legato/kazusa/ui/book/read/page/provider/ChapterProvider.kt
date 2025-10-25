@@ -1,7 +1,6 @@
 package io.legato.kazusa.ui.book.read.page.provider
 
 import android.annotation.SuppressLint
-import android.graphics.Color
 import android.graphics.Paint.FontMetrics
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -40,7 +39,6 @@ import splitties.init.appCtx
 import java.io.File
 import java.util.LinkedList
 import java.util.Locale
-import androidx.core.graphics.toColorInt
 
 /**
  * 解析内容生成章节和页面
