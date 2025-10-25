@@ -55,59 +55,48 @@
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent">
 
-        <LinearLayout
-            android:id="@+id/ll_search_base_info"
-            android:layout_width="match_parent"
-            android:layout_height="36dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp">
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardElevation="4dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="?attr/colorSecondaryContainer"
+            android:layout_marginHorizontal="16dp">
 
             <TextView
                 android:id="@+id/tv_current_search_info"
-                android:layout_width="0dp"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:ellipsize="middle"
-                android:gravity="center_vertical"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
+                android:textColor="?attr/colorOnSecondaryContainer"
+                android:padding="8dp"
                 android:singleLine="true"
-                android:textSize="12sp" />
+                android:textSize="18sp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_search_content_up"
-                android:layout_width="36dp"
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardElevation="4dp"
+            android:layout_marginTop="8dp"
+            app:strokeWidth="0dp"
+            android:layout_marginHorizontal="16dp">
+
+            <TextView
+                android:id="@+id/tv_current_chapter"
+                android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                app:iconGravity="textStart"
-                android:contentDescription="@string/go_to_top"
-                app:icon="@drawable/ic_arrow_drop_up"
-                android:tooltipText="@string/go_to_top"
-                android:layout_marginEnd="8dp"
-                tools:ignore="UnusedAttribute" />
+                android:padding="8dp"
+                android:singleLine="true"
+                android:textSize="14sp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_search_content_down"
-                android:layout_width="36dp"
-                android:layout_height="match_parent"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                app:iconGravity="textStart"
-                android:contentDescription="@string/go_to_bottom"
-                app:icon="@drawable/ic_arrow_drop_down"
-                android:tooltipText="@string/go_to_bottom"
-                tools:ignore="UnusedAttribute" />
-
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:id="@+id/ll_bottom_bg"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorSurface"
-            android:baselineAligned="false"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
             <View
@@ -116,117 +105,42 @@
                 android:layout_weight="1"
                 android:importantForAccessibility="no" />
 
-            <!--结果按钮-->
-            <LinearLayout
-                android:id="@+id/ll_search_results"
-                android:layout_width="60dp"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/iv_search_results"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:contentDescription="结果"
-                android:focusable="true"
-                android:orientation="vertical"
-                android:paddingBottom="7dp">
-
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/iv_search_results"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:adjustViewBounds="true"
-                    android:contentDescription="结果"
-                    android:maxHeight="20dp"
-                    android:src="@drawable/ic_toc"
-                    tools:ignore="NestedWeights" />
-
-                <TextView
-                    android:id="@+id/tv_search_results"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="3dp"
-                    android:maxLines="1"
-                    android:text="结果"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
+                android:elevation="16dp"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:text="@string/search_content_size"
+                app:icon="@drawable/ic_toc" />
 
             <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="2" />
-            <!--调节按钮-->
-            <LinearLayout
-                android:id="@+id/ll_main_menu"
-                android:layout_width="60dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/iv_main_menu"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:contentDescription="@string/read_aloud"
-                android:focusable="true"
-                android:orientation="vertical"
-                android:paddingBottom="7dp">
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/iv_main_menu"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:adjustViewBounds="true"
-                    android:contentDescription="@string/main_menu"
-                    android:maxHeight="20dp"
-                    android:src="@drawable/ic_menu"
-                    tools:ignore="NestedWeights" />
-
-                <TextView
-                    android:id="@+id/tv_main_menu"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="3dp"
-                    android:maxLines="1"
-                    android:text="@string/main_menu"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
+                android:elevation="16dp"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:text="@string/main_menu"
+                app:icon="@drawable/ic_menu" />
             <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="2" />
-            <!--界面按钮-->
-            <LinearLayout
-                android:id="@+id/ll_search_exit"
-                android:layout_width="60dp"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/iv_search_exit"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:clickable="true"
-                android:contentDescription="@string/exit"
-                android:focusable="true"
-                android:orientation="vertical"
-                android:paddingBottom="7dp">
-
-                <androidx.appcompat.widget.AppCompatImageView
-                    android:id="@+id/iv_search_exit"
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:adjustViewBounds="true"
-                    android:contentDescription="@string/exit"
-                    android:maxHeight="20dp"
-                    android:src="@drawable/ic_auto_page_stop"
-                    tools:ignore="NestedWeights" />
-
-                <TextView
-                    android:id="@+id/tv_search_exit"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginTop="3dp"
-                    android:maxLines="1"
-                    android:text="@string/exit"
-                    android:textSize="12sp" />
-            </LinearLayout>
+                android:elevation="16dp"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:text="@string/exit"
+                app:icon="@drawable/ic_auto_page_stop"
+                tools:ignore="NestedWeights" />
 
             <!--        <View-->
             <!--            android:layout_width="0dp"-->

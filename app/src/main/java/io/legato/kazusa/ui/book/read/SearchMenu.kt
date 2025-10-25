@@ -105,7 +105,8 @@ class SearchMenu @JvmOverloads constructor(
     fun updateSearchInfo() {
         ReadBook.curTextChapter?.let {
             binding.tvCurrentSearchInfo.text =
-                """${context.getString(R.string.search_content_size)}: ${searchResultList.size} / 当前章节: ${it.title}"""
+                "${context.getString(R.string.search_content_size)}: ${searchResultList.size}"
+            binding.tvCurrentChapter.text = "当前章节: ${it.title}"
         }
     }
 
@@ -120,14 +121,14 @@ class SearchMenu @JvmOverloads constructor(
 
     private fun bindEvent() = binding.run {
         //搜索结果
-        llSearchResults.setOnClickListener {
+        ivSearchResults.setOnClickListener {
             runMenuOut {
                 callBack.openSearchActivity(selectedSearchResult?.query)
             }
         }
 
         //主菜单
-        llMainMenu.setOnClickListener {
+        ivMainMenu.setOnClickListener {
             runMenuOut {
                 callBack.cancelSelect()
                 callBack.showMenuBar()
@@ -136,7 +137,7 @@ class SearchMenu @JvmOverloads constructor(
         }
 
         //退出
-        llSearchExit.setOnClickListener {
+        ivSearchExit.setOnClickListener {
             runMenuOut {
                 callBack.exitSearchMenu()
             }
@@ -144,22 +145,6 @@ class SearchMenu @JvmOverloads constructor(
 
         fabLeft.setOnClickListener {
             updateSearchResultIndex(currentSearchResultIndex - 1)
-            callBack.navigateToSearch(
-                searchResultList[currentSearchResultIndex],
-                currentSearchResultIndex
-            )
-        }
-
-        ivSearchContentUp.setOnClickListener {
-            updateSearchResultIndex(currentSearchResultIndex - 1)
-            callBack.navigateToSearch(
-                searchResultList[currentSearchResultIndex],
-                currentSearchResultIndex
-            )
-        }
-
-        ivSearchContentDown.setOnClickListener {
-            updateSearchResultIndex(currentSearchResultIndex + 1)
             callBack.navigateToSearch(
                 searchResultList[currentSearchResultIndex],
                 currentSearchResultIndex

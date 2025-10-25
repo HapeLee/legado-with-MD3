@@ -401,9 +401,10 @@ class ReadMenu @JvmOverloads constructor(
         }
 
         seekReadPage.addOnChangeListener { slider, value, fromUser ->
-            VibrationUtils.vibrate(context, 12)
-            if (fromUser && AppConfig.progressBarBehavior == "page") {
-                ReadBook.skipToPage(value.toInt() - 1)
+            if (fromUser) {
+                if (AppConfig.progressBarBehavior == "page")
+                    ReadBook.skipToPage(value.toInt() - 1)
+                VibrationUtils.vibrate(context, 12)
             }
         }
 
@@ -541,7 +542,7 @@ class ReadMenu @JvmOverloads constructor(
                 id = "search",
                 iconRes = R.drawable.ic_search,
                 description = context.getString(R.string.search_content),
-                onClick = { callBack.openSearchActivity(null) }
+                onClick = { runMenuOut{ callBack.openSearchActivity(null) } }
             ),
             ToolButton(
                 id = "auto_page",
