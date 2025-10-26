@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.viewModels
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -122,6 +123,22 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
                 tab.text = sortList[position].first
             }.attach()
         }
+
+        binding.btnExpandTabs.setOnClickListener {
+            val popup = PopupMenu(this, it)
+            sortList.forEachIndexed { index, pair ->
+                popup.menu.add(0, index, index, pair.first)
+            }
+            popup.setOnMenuItemClickListener { item ->
+                binding.viewPager.setCurrentItem(item.itemId, true)
+                true
+            }
+            popup.setOnDismissListener {
+                binding.btnExpandTabs.isChecked = false
+            }
+            popup.show()
+        }
+
     }
 
     private fun setSourceVariable() {

@@ -36,12 +36,47 @@
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tab_layout"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@android:color/transparent"
-            android:paddingHorizontal="16dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp">
+
+            <FrameLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:clipChildren="false">
+
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/tab_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@android:color/transparent"
+                    app:tabMode="scrollable"
+                    android:scrollbars="none" />
+
+                <View
+                    android:layout_width="40dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end"
+                    android:background="@drawable/tab_right_fade" />
+
+            </FrameLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_expand_tabs"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:checkable="true"
+                app:iconGravity="textStart"
+                style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+                app:icon="@drawable/m3_split_button_chevron_avd" />
+
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
