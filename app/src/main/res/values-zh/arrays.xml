@@ -168,4 +168,5 @@
         <item>仅显示滑动条</item>
     </string-array>
 
+    <string name="all_version">所有版本</string>
 </resources>

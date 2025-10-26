@@ -194,6 +194,7 @@
 	<string-array name="default_app_variant">
 		<item>@string/official_version</item>
 		<item>@string/beta_release_version</item>
+		<item>@string/all_version</item>
 		<item>@string/beta_releaseA_version</item>
 	</string-array>
 
@@ -207,6 +208,7 @@
 	<string-array name="default_app_variant_value">
 		<item>official_version</item>
 		<item>beta_release_version</item>
+		<item>all_version</item>
 		<item>beta_releaseA_version</item>
 	</string-array>
 
@@ -237,4 +239,5 @@
 		<item>Unlabeled</item>
 	</string-array>
 
+	<string name="all_version">所有版本</string>
 </resources>

@@ -3,6 +3,7 @@ package io.legato.kazusa.ui.book.search
 import android.content.Context
 import android.os.Bundle
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import io.legato.kazusa.R
@@ -11,6 +12,8 @@ import io.legato.kazusa.base.adapter.ItemViewHolder
 import io.legato.kazusa.data.entities.SearchBook
 import io.legato.kazusa.databinding.ItemSearchBinding
 import io.legato.kazusa.help.config.AppConfig
+import io.legato.kazusa.ui.widget.text.AccentBgTextView
+import io.legato.kazusa.utils.dpToPx
 import io.legato.kazusa.utils.gone
 import io.legato.kazusa.utils.visible
 
@@ -135,13 +138,25 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
 
     private fun upKind(binding: ItemSearchBinding, kinds: List<String>) = binding.run {
         if (kinds.isEmpty()) {
-            tvKind.gone()
-            tvAuthorKind.gone()
+            kindContainer.gone()
         } else {
-            tvAuthorKind.visible()
-            tvKind.visible()
-            val kindText = kinds.joinToString("  •  ")
-            tvKind.text = kindText
+            kindContainer.visible()
+            kindContainer.removeAllViews()
+            kinds.forEach { kind ->
+                val kindTextView = AccentBgTextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = 4.dpToPx()
+                    }
+                    textSize = 11f
+                    text = kind
+                    setLines(1)
+                    setSingleLine(true)
+                }
+                kindContainer.addView(kindTextView)
+            }
         }
     }
 
