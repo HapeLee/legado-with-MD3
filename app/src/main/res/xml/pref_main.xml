@@ -42,6 +42,13 @@
             app:iconSpaceReserved="false" />
 
         <io.legato.kazusa.lib.prefs.Preference
+            android:icon="@drawable/ic_book_has"
+            android:key="read_setting"
+            android:summary="@string/global_read_setting"
+            android:title="@string/read"
+            app:iconSpaceReserved="false" />
+
+        <io.legato.kazusa.lib.prefs.Preference
             android:icon="@drawable/ic_cfg_other"
             android:key="setting"
             android:summary="@string/other_setting_s"

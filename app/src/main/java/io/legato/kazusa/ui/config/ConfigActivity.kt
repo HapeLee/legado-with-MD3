@@ -21,6 +21,7 @@ class ConfigActivity : VMBaseActivity<ActivityConfigBinding, ConfigViewModel>() 
             ConfigTag.THEME_CONFIG -> replaceFragment<ThemeConfigFragment>(configTag)
             ConfigTag.BACKUP_CONFIG -> replaceFragment<BackupConfigFragment>(configTag)
             ConfigTag.COVER_CONFIG -> replaceFragment<CoverConfigFragment>(configTag)
+            ConfigTag.READ_CONFIG -> replaceFragment<ReadConfigFragment>(configTag)
             else -> finish()
         }
     }

@@ -6,6 +6,6 @@ object ConfigTag {
     const val THEME_CONFIG = "themeConfig"
     const val BACKUP_CONFIG = "backupConfig"
     const val COVER_CONFIG = "coverConfig"
-    const val WELCOME_CONFIG = "welcomeConfig"
+    const val READ_CONFIG = "readConfig"
 
 }
