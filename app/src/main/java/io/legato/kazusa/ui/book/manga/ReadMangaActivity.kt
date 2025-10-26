@@ -333,9 +333,14 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                     mLayoutManager.scrollToPositionWithOffset(pos, 0)
                     binding.flLoading.isGone = true
                     loadMoreView.visible()
-                    binding.mangaMenu.upSeekBar(
-                        ReadManga.durChapterPos, ReadManga.curMangaChapter!!.imageCount
-                    )
+                    val chapter = ReadManga.curMangaChapter
+                    if (chapter != null && chapter.imageCount > 0) {
+                        binding.mangaMenu.upSeekBar(
+                            ReadManga.durChapterPos, chapter.imageCount
+                        )
+                    } else {
+                        binding.mangaMenu.upSeekBar(1, 2)
+                    }
                 }
 
                 if (curFinish) {
