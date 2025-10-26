@@ -41,6 +41,7 @@ import io.legato.kazusa.receiver.MediaButtonReceiver
 import io.legato.kazusa.ui.book.audio.AudioPlayActivity
 import io.legato.kazusa.utils.activityPendingIntent
 import io.legato.kazusa.utils.broadcastPendingIntent
+import io.legato.kazusa.utils.getPrefBoolean
 import io.legato.kazusa.utils.postEvent
 import io.legato.kazusa.utils.printOnDebug
 import io.legato.kazusa.utils.servicePendingIntent
@@ -81,7 +82,9 @@ class AudioPlayService : BaseService(),
         private const val MEDIA_SESSION_ACTIONS = (PlaybackStateCompat.ACTION_PLAY
                 or PlaybackStateCompat.ACTION_PAUSE
                 or PlaybackStateCompat.ACTION_PLAY_PAUSE
-                or PlaybackStateCompat.ACTION_SEEK_TO)
+                or PlaybackStateCompat.ACTION_SEEK_TO
+                or PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
+                or PlaybackStateCompat.ACTION_SKIP_TO_NEXT)
 
         private const val APP_ACTION_STOP = "Stop"
         private const val APP_ACTION_TIMER = "Timer"
@@ -468,33 +471,50 @@ class AudioPlayService : BaseService(),
     @SuppressLint("UnspecifiedImmutableFlag")
     private fun initMediaSession() {
         mediaSessionCompat = MediaSessionCompat(this, "readAloud")
-        mediaSessionCompat?.setCallback(object : MediaSessionCompat.Callback() {
-            override fun onSeekTo(pos: Long) {
-                position = pos.toInt()
-                exoPlayer.seekTo(pos)
-            }
-
-            override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
-                return MediaButtonReceiver.handleIntent(this@AudioPlayService, mediaButtonEvent)
-            }
-
-            override fun onPlay() = resume()
-
-            override fun onPause() = pause()
-
-            override fun onCustomAction(action: String?, extras: Bundle?) {
-                action ?: return
-
-                when (action) {
-                    APP_ACTION_STOP -> stopSelf()
-                    APP_ACTION_TIMER -> addTimer()
+        if (AppConfig.systemMediaControlCompatibilityChange) {
+            mediaSessionCompat?.setCallback(object : MediaSessionCompat.Callback() {
+                override fun onSeekTo(pos: Long) {
+                    position = pos.toInt()
+                    exoPlayer.seekTo(pos)
                 }
-            }
-        })
-        mediaSessionCompat?.setMediaButtonReceiver(
-            broadcastPendingIntent<MediaButtonReceiver>(Intent.ACTION_MEDIA_BUTTON)
-        )
-        mediaSessionCompat?.isActive = true
+
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                    return MediaButtonReceiver.handleIntent(this@AudioPlayService, mediaButtonEvent)
+                }
+
+                override fun onPlay() = resume()
+
+                override fun onPause() = pause()
+
+                override fun onCustomAction(action: String?, extras: Bundle?) {
+                    action ?: return
+
+                    when (action) {
+                        APP_ACTION_STOP -> stopSelf()
+                        APP_ACTION_TIMER -> addTimer()
+                    }
+                }
+
+                override fun onSkipToPrevious() {
+                    super.onSkipToPrevious()
+                    AudioPlay.prev()
+                }
+
+                override fun onSkipToNext() {
+                    super.onSkipToNext()
+                    AudioPlay.next()
+                }
+
+            })
+        } else {
+            mediaSessionCompat?.setCallback(object : MediaSessionCompat.Callback() {
+                override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                    return MediaButtonReceiver.handleIntent(
+                        this@AudioPlayService, mediaButtonEvent
+                    )
+                }
+            })
+        }
     }
 
     /**
@@ -559,22 +579,23 @@ class AudioPlayService : BaseService(),
 
         val nSubtitle = AudioPlay.durChapter?.title ?: getString(R.string.audio_play_s)
 
-        val builder = NotificationCompat.Builder(this@AudioPlayService, AppConst.channelIdReadAloud)
+        val builder = NotificationCompat
+            .Builder(this@AudioPlayService, AppConst.channelIdReadAloud)
             .setSmallIcon(R.drawable.ic_volume_up)
             .setSubText(getString(R.string.audio))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentTitle(nTitle)
             .setContentText(nSubtitle)
-            .setContentIntent(activityPendingIntent<AudioPlayActivity>("activity"))
-            .setLargeIcon(cover)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setStyle(
-                androidx.media.app.NotificationCompat.MediaStyle()
-                    .setShowActionsInCompactView(0, 1, 2)
-                    .setMediaSession(mediaSessionCompat?.sessionToken)
+            .setContentIntent(
+                activityPendingIntent<AudioPlayActivity>("activity")
             )
-
+        builder.setLargeIcon(cover)
+        builder.addAction(
+            R.drawable.ic_skip_previous,
+            getString(R.string.prev_page),
+            servicePendingIntent<AudioPlayService>(IntentAction.prev)
+        )
         if (pause) {
             builder.addAction(
                 R.drawable.ic_play,
@@ -588,7 +609,11 @@ class AudioPlayService : BaseService(),
                 servicePendingIntent<AudioPlayService>(IntentAction.pause)
             )
         }
-
+        builder.addAction(
+            R.drawable.ic_skip_next,
+            getString(R.string.next_page),
+            servicePendingIntent<AudioPlayService>(IntentAction.next)
+        )
         builder.addAction(
             R.drawable.ic_stop_black_24dp,
             getString(R.string.stop),
@@ -599,8 +624,19 @@ class AudioPlayService : BaseService(),
             getString(R.string.set_timer),
             servicePendingIntent<AudioPlayService>(IntentAction.addTimer)
         )
-
+        builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        builder.setStyle(choiceMediaStyle())
         return builder
+    }
+
+    private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
+        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+        mediaStyle.setShowActionsInCompactView(1,2,4)
+        if (AppConfig.systemMediaControlCompatibilityChange) {
+            //fix #4090 android 14 can not show play control in lock screen
+            mediaStyle.setMediaSession(mediaSessionCompat?.sessionToken)
+        }
+        return mediaStyle
     }
 
     private fun upAudioPlayNotification() {

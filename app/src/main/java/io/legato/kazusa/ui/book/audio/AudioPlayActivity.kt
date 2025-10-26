@@ -33,6 +33,7 @@ import io.legato.kazusa.R
 import io.legato.kazusa.base.VMBaseActivity
 import io.legato.kazusa.constant.BookType
 import io.legato.kazusa.constant.EventBus
+import io.legato.kazusa.constant.PreferKey
 import io.legato.kazusa.constant.Status
 import io.legato.kazusa.constant.Theme
 import io.legato.kazusa.data.appDb
@@ -173,6 +174,7 @@ class AudioPlayActivity :
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
         menu.findItem(R.id.menu_login)?.isVisible = !AudioPlay.bookSource?.loginUrl.isNullOrBlank()
         menu.findItem(R.id.menu_wake_lock)?.isChecked = AppConfig.audioPlayUseWakeLock
+        menu.findItem(R.id.menu_media_control)?.isChecked = AppConfig.systemMediaControlCompatibilityChange
         return super.onMenuOpened(featureId, menu)
     }
 
@@ -188,7 +190,7 @@ class AudioPlayActivity :
                     putExtra("key", it.bookSourceUrl)
                 }
             }
-
+            R.id.menu_media_control -> AppConfig.systemMediaControlCompatibilityChange = !AppConfig.systemMediaControlCompatibilityChange
             R.id.menu_wake_lock -> AppConfig.audioPlayUseWakeLock = !AppConfig.audioPlayUseWakeLock
             R.id.menu_copy_audio_url -> sendToClip(AudioPlayService.url)
             R.id.menu_edit_source -> AudioPlay.bookSource?.let {

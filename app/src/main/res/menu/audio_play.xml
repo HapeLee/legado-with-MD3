@@ -31,6 +31,11 @@
         android:checkable="true"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_media_control"
+        android:title="@string/system_media_control_compatibility_change"
+        android:checkable="true"
+        app:showAsAction="never" />
 
     <item
         android:id="@+id/menu_log"

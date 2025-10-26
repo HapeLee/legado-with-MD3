@@ -466,7 +466,7 @@ abstract class BaseReadAloudService : BaseService(),
      */
     @SuppressLint("UnspecifiedImmutableFlag")
     private fun initMediaSession() {
-        if (getPrefBoolean("systemMediaControlCompatibilityChange")) {
+        if (AppConfig.systemMediaControlCompatibilityChange) {
             mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     resumeReadAloud()
@@ -577,7 +577,7 @@ abstract class BaseReadAloudService : BaseService(),
     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
             .setShowActionsInCompactView(1, 2, 4)
-        if (getPrefBoolean("systemMediaControlCompatibilityChange")) {
+        if (AppConfig.systemMediaControlCompatibilityChange) {
             //fix #4090 android 14 can not show play control in lock screen
             mediaStyle.setMediaSession(mediaSessionCompat.sessionToken)
         }

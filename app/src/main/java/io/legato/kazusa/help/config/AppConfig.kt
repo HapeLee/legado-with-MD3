@@ -837,5 +837,11 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefInt(PreferKey.bookshelfRefreshingLimit, value)
         }
+
+    var systemMediaControlCompatibilityChange: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
+        }
 }
 

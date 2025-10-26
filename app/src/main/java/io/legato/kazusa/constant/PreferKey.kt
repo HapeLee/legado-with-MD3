@@ -207,4 +207,5 @@ object PreferKey {
     const val menuAlpha = "menuAlpha"
     const val colorImage = "colorImage"
     const val bookshelfRefreshingLimit = "bookshelfRefreshingLimit"
+    const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
 }
