@@ -10,14 +10,14 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-            <TextView
-                android:id="@+id/bottom_sheet_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:text="@string/padding"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+        <TextView
+            android:id="@+id/bottom_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:text="@string/padding"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
         <LinearLayout
             android:id="@+id/ll_header_padding"
@@ -31,7 +31,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <io.legato.kazusa.ui.widget.text.AccentTextView
+                <TextView
                     android:id="@+id/tv_header_padding"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -40,15 +40,11 @@
                     android:text="@string/header"
                     style="@style/ChapterNameText" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/showLine" />
-
                 <com.google.android.material.checkbox.MaterialCheckBox
                     android:id="@+id/cb_show_top_line"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp" />
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/showLine"/>
 
             </LinearLayout>
 
@@ -59,21 +55,22 @@
 
                 <io.legato.kazusa.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_top"
-                    android:layout_width="0dp"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="32dp"
-                    android:layout_weight="1"
-                    app:max="100"
+                    app:max="200"
                     app:title="@string/padding_top" />
 
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"/>
 
 
                 <io.legato.kazusa.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_bottom"
-                    android:layout_width="0dp"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    app:max="100"
+                    app:max="200"
                     app:title="@string/padding_bottom" />
 
             </LinearLayout>
@@ -84,29 +81,29 @@
                 android:orientation="horizontal">
 
                 <io.legato.kazusa.ui.widget.SimpleCounterView
-                android:id="@+id/dsb_header_padding_left"
-                    android:layout_width="0dp"
+                    android:id="@+id/dsb_header_padding_left"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="32dp"
-                app:max="100"
-                    android:layout_weight="1"
-                app:title="@string/padding_left" />
+                    app:max="200"
+                    app:title="@string/padding_left" />
 
-
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"/>
 
                 <io.legato.kazusa.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_right"
-                    android:layout_width="0dp"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    app:max="100"
+                    app:max="200"
                     app:title="@string/padding_right" />
 
             </LinearLayout>
 
         </LinearLayout>
 
-        <io.legato.kazusa.ui.widget.text.AccentTextView
+        <TextView
             android:id="@+id/tv_body_padding"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -122,20 +119,21 @@
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_top"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
-                android:layout_weight="1"
                 app:max="200"
                 app:title="@string/padding_top" />
 
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_bottom"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_bottom" />
 
         </LinearLayout>
@@ -147,20 +145,21 @@
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_left"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_left" />
 
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_right"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_right" />
 
         </LinearLayout>
@@ -171,7 +170,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.text.AccentTextView
+            <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -180,16 +179,11 @@
                 android:text="@string/footer"
                 style="@style/ChapterNameText" />
 
-            <TextView
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cb_show_bottom_line"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/showLine" />
-
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/cb_show_bottom_line"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_margin="6dp" />
 
         </LinearLayout>
 
@@ -200,20 +194,21 @@
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_top"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_top" />
 
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_bottom"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_bottom" />
 
         </LinearLayout>
@@ -225,19 +220,21 @@
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_left"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="32dp"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_left" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <io.legato.kazusa.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_right"
-                android:layout_width="0dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                app:max="100"
+                app:max="200"
                 app:title="@string/padding_right" />
 
         </LinearLayout>
