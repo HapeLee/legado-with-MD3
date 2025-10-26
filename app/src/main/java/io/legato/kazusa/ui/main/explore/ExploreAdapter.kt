@@ -65,8 +65,7 @@ class ExploreAdapter(
             val isExpanded = (item.bookSourceUrl == expandedId)
 
             if (isExpanded) {
-                ivStatus.icon = ContextCompat.getDrawable(context, R.drawable.ic_arrow_right)
-                ivStatus.rotation = 90f
+                ivStatus.isChecked = true
                 rotateLoading.visible()
                 if (scrollToId == item.bookSourceUrl) {
                     val pos = holder.bindingAdapterPosition
@@ -82,8 +81,7 @@ class ExploreAdapter(
                     rotateLoading.gone()
                 }
             } else {
-                ivStatus.icon = ContextCompat.getDrawable(context, R.drawable.ic_arrow_right)
-                ivStatus.rotation = 0f
+                ivStatus.isChecked = false
                 recyclerFlexbox(flexbox)
                 flexbox.gone()
             }
@@ -135,20 +133,27 @@ class ExploreAdapter(
     override fun registerListener(holder: ItemViewHolder, binding: ItemFindBookBinding) {
         binding.apply {
             llTitle.setOnClickListener {
-                val item = getItem(holder.bindingAdapterPosition) ?: return@setOnClickListener
-                val oldId = expandedId
-                expandedId = if (expandedId == item.bookSourceUrl) null else item.bookSourceUrl
-                notifyItemChangedById(oldId)
-                notifyItemChangedById(expandedId)
-
-                if (expandedId != null) {
-                    scrollToId = expandedId
-                    callBack.scrollTo(holder.bindingAdapterPosition)
-                }
+                toggleExpandState(holder)
+            }
+            ivStatus.setOnClickListener {
+                toggleExpandState(holder)
             }
             llTitle.onLongClick {
                 showMenu(ivStatus, holder.bindingAdapterPosition)
             }
+        }
+    }
+
+    private fun toggleExpandState(holder: ItemViewHolder) {
+        val item = getItem(holder.bindingAdapterPosition) ?: return
+        val oldId = expandedId
+        expandedId = if (expandedId == item.bookSourceUrl) null else item.bookSourceUrl
+        notifyItemChangedById(oldId)
+        notifyItemChangedById(expandedId)
+
+        if (expandedId != null) {
+            scrollToId = expandedId
+            callBack.scrollTo(holder.bindingAdapterPosition)
         }
     }
 
