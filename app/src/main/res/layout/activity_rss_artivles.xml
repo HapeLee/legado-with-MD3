@@ -21,7 +21,6 @@
             style="?attr/collapsingToolbarLayoutMediumStyle"
             app:collapsedTitleTextAppearance="?attr/textAppearanceTitleLarge"
             app:expandedTitleTextAppearance="?attr/textAppearanceHeadlineLarge"
-            app:contentScrim="?attr/colorSurfaceContainer"
             app:titleCollapseMode="scale"
             app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
 
@@ -60,6 +59,7 @@
                     android:scrollbars="none" />
 
                 <View
+                    android:id="@+id/tab_right_fade"
                     android:layout_width="40dp"
                     android:layout_height="match_parent"
                     android:layout_gravity="end"

@@ -2,6 +2,8 @@
 
 package io.legato.kazusa.ui.rss.article
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -54,6 +56,19 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
         viewModel.initData(intent) {
             upFragments()
         }
+
+        binding.titleBar.addOnOffsetChangedListener({ appBarLayout, verticalOffset ->
+            if (-verticalOffset >= appBarLayout.totalScrollRange) {
+                val drawable = binding.tabRightFade.background as? GradientDrawable
+                drawable?.colors = intArrayOf(Color.TRANSPARENT,
+                    themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
+            } else {
+                val drawable = binding.tabRightFade.background as? GradientDrawable
+                drawable?.colors = intArrayOf(Color.TRANSPARENT,
+                    themeColor(com.google.android.material.R.attr.colorSurface))
+            }
+        })
+
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
