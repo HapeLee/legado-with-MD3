@@ -34,6 +34,7 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
         get() = when (AppConfig.updateToVariant) {
             "official_version" -> AppVariant.OFFICIAL
             "beta_release_version" -> AppVariant.BETA_RELEASE
+            "all_version" -> AppVariant.ALL
             else -> AppConst.appInfo.appVariant
         }
 

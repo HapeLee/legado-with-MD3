@@ -18,34 +18,49 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         get() = when (AppConfig.updateToVariant) {
             "official_version" -> AppVariant.OFFICIAL
             "beta_release_version" -> AppVariant.BETA_RELEASE
+            "all_version" -> AppVariant.ALL
             else -> AppConst.appInfo.appVariant
         }
 
     private suspend fun getLatestRelease(): List<AppReleaseInfo> {
-        val lastReleaseUrl = if (checkVariant.isBeta()) {
-            "https://api.github.com/repos/HapeLee/legado-with-MD3/releases"
-        } else {
+        val url = if (checkVariant == AppVariant.OFFICIAL)
             "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/latest"
-        }
+        else
+            "https://api.github.com/repos/HapeLee/legado-with-MD3/releases"
 
-        val res = okHttpClient.newCallResponse { url(lastReleaseUrl) }
+        val res = okHttpClient.newCallResponse { url(url) }
         if (!res.isSuccessful) throw NoStackTraceException("获取新版本出错(${res.code})")
+
         val body = res.body.text()
         if (body.isBlank()) throw NoStackTraceException("获取新版本出错")
 
-        return if (checkVariant.isBeta()) {
-            val releases = GSON.fromJsonArray<GithubRelease>(body)
-                .getOrElse { throw NoStackTraceException("获取新版本出错 ${it.localizedMessage}") }
+        return when (checkVariant) {
+            AppVariant.BETA_RELEASE -> {
+                val releases = GSON.fromJsonArray<GithubRelease>(body)
+                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
 
-            releases.filter { it.isPreRelease }
-                .flatMap { it.gitReleaseToAppReleaseInfo() }
-                .sortedByDescending { it.createdAt }
-        } else {
-            val release = GSON.fromJsonObject<GithubRelease>(body)
-                .getOrElse { throw NoStackTraceException("获取新版本出错 ${it.localizedMessage}") }
+                releases.filter { it.isPreRelease }
+                    .flatMap { it.gitReleaseToAppReleaseInfo() }
+                    .sortedByDescending { it.createdAt }
+            }
 
-            release.gitReleaseToAppReleaseInfo()
-                .sortedByDescending { it.createdAt }
+            AppVariant.OFFICIAL -> {
+                val release = GSON.fromJsonObject<GithubRelease>(body)
+                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
+
+                release.gitReleaseToAppReleaseInfo()
+                    .sortedByDescending { it.createdAt }
+            }
+
+            AppVariant.ALL -> {
+                val releases = GSON.fromJsonArray<GithubRelease>(body)
+                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
+
+                releases.flatMap { it.gitReleaseToAppReleaseInfo() }
+                    .sortedByDescending { it.createdAt }
+            }
+
+            else -> emptyList()
         }
     }
 
@@ -53,12 +68,17 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         return Coroutine.async(scope) {
             val currentVersion = AppConst.appInfo.versionName
             val releases = getLatestRelease()
-                .filter { it.appVariant == checkVariant }
 
-            val latest = releases.firstOrNull { r ->
+            val filtered = if (checkVariant == AppVariant.ALL) {
+                releases
+            } else {
+                releases.filter { it.appVariant == checkVariant }
+            }
+
+            val latest = filtered.firstOrNull { r ->
                 try {
                     r.versionName.versionCompare(currentVersion) > 0
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     false
                 }
             }

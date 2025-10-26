@@ -19,6 +19,7 @@ data class AppReleaseInfo(
 enum class AppVariant {
     OFFICIAL,
     BETA_RELEASE,
+    ALL,
     UNKNOWN;
 
     fun isBeta(): Boolean {
