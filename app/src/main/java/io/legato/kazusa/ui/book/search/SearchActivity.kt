@@ -114,6 +114,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
 
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
         buildSearchScopeMenu(menu)
+        updateSearchScopeChip()
         return super.onMenuOpened(featureId, menu)
     }
 
@@ -161,36 +162,43 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
             alertSearchScope()
         }
         binding.chipGroup.setOnClickListener { view ->
+            binding.chipGroup.isChecked = true
             val popup = PopupMenu(this, view)
             val menu = popup.menu
             buildSearchScopeMenu(menu)
+            updateSearchScopeChip()
+            var fromGroup1 = false
             popup.setOnMenuItemClickListener { item ->
                 when (item.groupId) {
-                    R.id.menu_group_1 -> item.title.toString()
+                    R.id.menu_group_1 -> {
+                        viewModel.searchScope.remove(item.title.toString())
+                        fromGroup1 = true
+                    }
                     R.id.menu_group_2 -> {
                         if (item.itemId == R.id.menu_1) {
-                            ""
+                            viewModel.searchScope.update("")
+                            fromGroup1 = true
                         } else {
-                            item.title.toString()
+                            viewModel.searchScope.update(item.title.toString())
+                            fromGroup1 = false
                         }
                     }
-                    else -> item.title.toString()
-                }
-                if (item.groupId == R.id.menu_group_1) {
-                    viewModel.searchScope.remove(item.title.toString())
-                } else {
-                    if (item.itemId == R.id.menu_1) {
-                        viewModel.searchScope.update("")
-                    } else {
+                    else -> {
                         viewModel.searchScope.update(item.title.toString())
+                        fromGroup1 = false
                     }
                 }
+
                 updateSelectedGroup()
                 true
             }
-
+            popup.setOnDismissListener {
+                binding.chipGroup.isChecked = !fromGroup1
+                updateSearchScopeChip()
+            }
             popup.show()
         }
+
         searchBar.setOnMenuItemClickListener { item ->
             onCompatOptionsItemSelected(item)
         }
@@ -257,12 +265,10 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     }
 
     private fun updateSelectedGroup() {
-        val chip = binding.chipGroup
         val displayNames = viewModel.searchScope.displayNames
         val groupName = displayNames.firstOrNull().orEmpty()
-        chip.text = groupName.ifEmpty { getString(R.string.search_select_group) }
-        chip.isCheckable = true
-        chip.isChecked = groupName.isNotEmpty()
+        binding.chipGroup.text = groupName.ifEmpty { getString(R.string.search_select_group) }
+        binding.chipGroup.isChecked = groupName.isNotEmpty()
     }
 
     private fun buildSearchScopeMenu(menu: Menu) {
@@ -609,6 +615,24 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
 
     override fun onSearchScopeOk(searchScope: SearchScope) {
         viewModel.searchScope.update(searchScope.toString())
+        updateSearchScopeChip()
+    }
+
+    private fun updateSearchScopeChip() {
+        binding.chipSearchScope.isCheckable = true
+        val scopeNames = viewModel.searchScope.displayNames
+        if (scopeNames.isEmpty() || viewModel.searchScope.isAll()) {
+            binding.chipSearchScope.apply {
+                isChecked = false
+                text = getString(R.string.all_source)
+            }
+        } else {
+            binding.chipSearchScope.apply {
+                isChecked = true
+                text = scopeNames.joinToString(", ")
+            }
+        }
+        binding.chipSearchScope.isCheckable = false
     }
 
     private fun alertSearchScope() {

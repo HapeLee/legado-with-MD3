@@ -127,6 +127,7 @@
             <com.google.android.material.chip.ChipGroup
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:chipSpacingVertical="0dp"
                 android:layout_marginTop="8dp"
                 android:layout_marginHorizontal="16dp">
                 <com.google.android.material.chip.Chip
@@ -139,13 +140,13 @@
                     android:id="@+id/chip_search_scope"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:clickable="true"
-                    android:text="@string/search_scope"/>
+                    android:text="@string/all_source"/>
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_group"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:clickable="true"
+                    android:visibility="gone"
+                    android:checkable="true"
                     android:text="@string/search_select_group"/>
             </com.google.android.material.chip.ChipGroup>
 
