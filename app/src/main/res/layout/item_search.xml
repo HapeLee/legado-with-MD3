@@ -134,7 +134,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:visibility="gone"
                 android:lines="1"
                 android:text="@string/last_read"
                 android:textSize="11sp" />
