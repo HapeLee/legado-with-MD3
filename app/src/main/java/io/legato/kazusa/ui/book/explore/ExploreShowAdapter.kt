@@ -15,7 +15,6 @@ import io.legato.kazusa.help.config.AppConfig
 import io.legato.kazusa.ui.widget.text.AccentBgTextView
 import io.legato.kazusa.utils.dpToPx
 import io.legato.kazusa.utils.gone
-import io.legato.kazusa.utils.spToPx
 import io.legato.kazusa.utils.visible
 
 

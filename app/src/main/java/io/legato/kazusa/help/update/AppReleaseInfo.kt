@@ -22,10 +22,6 @@ enum class AppVariant {
     ALL,
     UNKNOWN;
 
-    fun isBeta(): Boolean {
-        return this == BETA_RELEASE
-    }
-
 }
 
 @Keep
