@@ -1,159 +1,197 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:paddingHorizontal="16dp"
-    android:paddingVertical="8dp"
-    android:background="?attr/selectableItemBackground"
-    android:orientation="horizontal"
-    android:scrollbars="none">
-
-    <!-- 封面图片 -->
-    <com.google.android.material.card.MaterialCardView
-        android:layout_width="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="6dp">
+    <LinearLayout
+        android:id="@+id/ll_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="8dp"
-        app:strokeWidth="0dp">
+        android:padding="8dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground"
+        android:orientation="horizontal"
+        android:scrollbars="none">
 
-        <io.legato.kazusa.ui.widget.image.CoverImageView
-            android:id="@+id/iv_cover"
-            android:layout_width="80dp"
-            android:layout_height="110dp"
-            android:contentDescription="@string/img_cover"
-            android:scaleType="centerCrop"
-            android:src="@drawable/image_cover_default"
-            android:transitionName="img_cover"
-            tools:ignore="UnusedAttribute" />
-
-        <!-- 书架内标记 -->
+        <!-- 封面图片 -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/iv_in_bookshelf"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:layout_margin="4dp"
-            android:scaleType="centerCrop"
-            android:visibility="visible"
-            app:cardBackgroundColor="?attr/colorTertiaryContainer"
-            app:cardCornerRadius="4dp"
+            app:cardCornerRadius="8dp"
             app:strokeWidth="0dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="4dp"
-                android:paddingVertical="2dp"
-                android:text="@string/remove_from_bookshelf"
-                android:textColor="?attr/colorTertiary"
-                android:textStyle="bold"
-                android:textSize="10sp"
-                tools:ignore="SmallSp" />
+            <io.legato.kazusa.ui.widget.image.CoverImageView
+                android:id="@+id/iv_cover"
+                android:layout_width="80dp"
+                android:layout_height="110dp"
+                android:contentDescription="@string/img_cover"
+                android:scaleType="centerCrop"
+                android:src="@drawable/image_cover_default"
+                android:transitionName="img_cover"
+                tools:ignore="UnusedAttribute" />
 
-        </com.google.android.material.card.MaterialCardView>
-
-    </com.google.android.material.card.MaterialCardView>
-
-
-    <!-- 右侧内容区域 -->
-    <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:layout_marginStart="8dp"
-        android:layout_gravity="center"
-        android:orientation="vertical">
-
-        <!-- 标题行 -->
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <TextView
-                android:id="@+id/tv_name"
-                style="@style/ChapterNameText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="4dp"
-                android:singleLine="true"
-                android:text="@string/app_name"
-                app:layout_constraintEnd_toStartOf="@id/cd_count"
-                app:layout_constraintHorizontal_bias="0.0"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
+            <!-- 书架内标记 -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cd_count"
+                android:id="@+id/iv_in_bookshelf"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:layout_marginVertical="4dp"
-                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_margin="4dp"
+                android:scaleType="centerCrop"
+                android:visibility="visible"
+                app:cardBackgroundColor="?attr/colorTertiaryContainer"
                 app:cardCornerRadius="4dp"
-                app:layout_constraintBottom_toBottomOf="@id/tv_name"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="@id/tv_name"
                 app:strokeWidth="0dp">
 
                 <TextView
-                    android:id="@+id/bv_originCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="4dp"
                     android:paddingVertical="2dp"
-                    android:text="@string/text"
-                    android:textColor="?attr/colorPrimary"
-                    android:textSize="10sp"
+                    android:text="@string/remove_from_bookshelf"
+                    android:textColor="?attr/colorTertiary"
                     android:textStyle="bold"
+                    android:textSize="10sp"
                     tools:ignore="SmallSp" />
+
             </com.google.android.material.card.MaterialCardView>
 
-        </androidx.constraintlayout.widget.ConstraintLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- 作者 -->
-        <TextView
-            android:id="@+id/tv_author"
-            android:layout_width="match_parent"
+
+        <!-- 右侧内容区域 -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:lines="1"
-            android:text="@string/author"
-            android:textSize="12sp" />
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:layout_gravity="center"
+            android:orientation="vertical">
 
-        <!-- 分类标签 -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none">
+            <!-- 标题行 -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
 
-            <io.legato.kazusa.ui.widget.LabelsBar
-                android:id="@+id/ll_kind"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                app:chipSpacingHorizontal="4dp"
-                android:orientation="horizontal" />
+                <TextView
+                    android:id="@+id/tv_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:singleLine="true"
+                    android:text="@string/app_name"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    app:layout_constraintEnd_toStartOf="@id/cd_count"
+                    app:layout_constraintHorizontal_bias="0.0"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
-        </HorizontalScrollView>
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cd_count"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    android:layout_marginVertical="4dp"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                    app:cardCornerRadius="4dp"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_name"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/tv_name"
+                    app:strokeWidth="0dp">
 
-        <!-- 最后阅读 -->
-        <TextView
-            android:id="@+id/tv_lasted"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:lines="1"
-            android:text="@string/last_read"
-            android:textSize="12sp" />
+                    <TextView
+                        android:id="@+id/bv_originCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="2dp"
+                        android:text="@string/text"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="10sp"
+                        android:textStyle="bold"
+                        tools:ignore="SmallSp" />
+                </com.google.android.material.card.MaterialCardView>
 
-        <!-- 简介 -->
-        <io.legato.kazusa.ui.widget.text.MultilineTextView
-            android:id="@+id/tv_introduce"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:text="@string/book_intro"
-            android:textSize="12sp" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/horizontal_scroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:layout_gravity="center_vertical"
+                android:scrollbars="none"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_author"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorSecondary"
+                        android:lines="1"
+                        android:singleLine="true"
+                        android:text="@string/author"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tv_author_kind"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="4dp"
+                        android:textColor="?attr/colorSecondary"
+                        android:text=" | "
+                        android:textSize="12sp"/>
+
+                    <TextView
+                        android:id="@+id/tv_kind"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:lines="1"
+                        android:paddingEnd="32dp"
+                        android:textColor="?attr/colorSecondary"
+                        android:textSize="12sp"
+                        android:ellipsize="end"
+                        android:singleLine="true"
+                        tools:ignore="RtlSymmetry" />
+
+                </LinearLayout>
+
+            </HorizontalScrollView>
+
+
+            <!-- 最后阅读 -->
+            <TextView
+                android:id="@+id/tv_lasted"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:ellipsize="end"
+                android:lines="1"
+                android:text="@string/last_read"
+                android:textSize="12sp" />
+
+            <!-- 简介 -->
+            <TextView
+                android:id="@+id/tv_introduce"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="3dp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:text="@string/book_intro"
+                android:textSize="12sp" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</com.google.android.material.card.MaterialCardView>

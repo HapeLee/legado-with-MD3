@@ -72,7 +72,7 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
     }
 
     override fun registerListener(holder: ItemViewHolder, binding: ItemSearchBinding) {
-        binding.root.setOnClickListener {
+        binding.llContent.setOnClickListener {
             getItem(holder.layoutPosition)?.let {
                 callBack.showBookInfo(it.name, it.author, it.bookUrl)
             }
@@ -135,12 +135,13 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
 
     private fun upKind(binding: ItemSearchBinding, kinds: List<String>) = binding.run {
         if (kinds.isEmpty()) {
-            llKind.gone()
+            tvKind.gone()
+            tvAuthorKind.gone()
         } else {
-            llKind.visible()
-            llKind.setLabels(kinds) { chips ->
-                chips.textSize = 12f
-            }
+            tvAuthorKind.visible()
+            tvKind.visible()
+            val kindText = kinds.joinToString("  •  ")
+            tvKind.text = kindText
         }
     }
 

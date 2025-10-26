@@ -53,10 +53,13 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
             tvIntroduce.text = item.trimIntro(context)
             val kinds = item.getKindList()
             if (kinds.isEmpty()) {
-                llKind.gone()
+                tvKind.gone()
+                tvAuthorKind.gone()
             } else {
-                llKind.visible()
-                llKind.setLabels(kinds) {}
+                tvAuthorKind.visible()
+                tvKind.visible()
+                val kindText = kinds.joinToString("  •  ")
+                tvKind.text = kindText
             }
             ivCover.load(
                 item.coverUrl,
@@ -80,7 +83,7 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
     }
 
     override fun registerListener(holder: ItemViewHolder, binding: ItemSearchBinding) {
-        holder.itemView.setOnClickListener {
+        binding.llContent.setOnClickListener {
             getItem(holder.layoutPosition)?.let {
                 callBack.showBookInfo(it.toBook())
             }
