@@ -145,10 +145,6 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             upPreferenceSummary("colorPrimary", getString(R.string.seed_photo_alart))
             upPreferenceSummary(PreferKey.colorImage, getString(R.string.click_to_delete))
         }
-        if (!getPrefString(PreferKey.bgImage).isNullOrBlank())
-            upPreferenceSummary(PreferKey.bgImage, getString(R.string.click_to_delete))
-        if (!getPrefString(PreferKey.bgImageN).isNullOrBlank())
-            upPreferenceSummary(PreferKey.bgImageN, getString(R.string.click_to_delete))
         upPreferenceSummary(PreferKey.bgImage)
         upPreferenceSummary(PreferKey.bgImageN)
     }
@@ -216,6 +212,11 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
 
             PreferKey.themeMode -> {
                 //recreateActivities()
+            }
+
+            PreferKey.bgImage,
+            PreferKey.bgImageN -> {
+                upPreferenceSummary(key, getString(R.string.click_to_delete))
             }
 
             PreferKey.colorImage -> handleRestartRequired()
@@ -400,10 +401,13 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             }
 
             PreferKey.bgImage,
-            PreferKey.bgImageN -> preference.summary = if (value.isNullOrBlank()) {
-                getString(R.string.select_image)
-            } else {
-                value
+            PreferKey.bgImageN -> {
+                val hasImage = !getPrefString(preferenceKey).isNullOrBlank()
+                preference.summary = if (hasImage) {
+                    getString(R.string.click_to_delete)
+                } else {
+                    getString(R.string.select_image)
+                }
             }
 
             else -> preference.summary = value
