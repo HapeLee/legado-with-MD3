@@ -5,26 +5,27 @@ plugins {
 
 android {
     compileSdk = compile_sdk_version
-    namespace 'me.ag2s'
+    namespace = 'me.ag2s'
     kotlin {
         jvmToolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
+            languageVersion.set(JavaLanguageVersion.of(21))
+            vendor.set(JvmVendorSpec.ADOPTIUM)
         }
     }
     defaultConfig {
-        minSdk 21
-        targetSdk 35
+        minSdk 26
+        targetSdk 36
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     lint {
-        checkDependencies true
+        checkDependencies = true
     }
 }
 

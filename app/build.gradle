@@ -35,7 +35,7 @@ ext.versionName = "${ext.versionMajor}.${ext.versionMinor}.${ext.versionPatch}${
 def getGitCommitHash() {
     try {
         def stdout = new ByteArrayOutputStream()
-        exec {
+        ExecOperations.exec {
             commandLine 'git', 'rev-parse', '--short', 'HEAD'
             standardOutput = stdout
         }
@@ -47,10 +47,11 @@ def getGitCommitHash() {
 
 android {
     compileSdk = compile_sdk_version
-    namespace 'io.legato.kazusa'
+    namespace = "io.legato.kazusa"
     kotlin {
         jvmToolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
+            languageVersion.set(JavaLanguageVersion.of(21))
+            vendor.set(JvmVendorSpec.ADOPTIUM)
         }
     }
 
@@ -96,8 +97,8 @@ android {
     }
 
     buildFeatures {
-        buildConfig true
-        viewBinding true
+        buildConfig = true
+        viewBinding = true
     }
 
     buildTypes {
@@ -108,8 +109,8 @@ android {
             //applicationIdSuffix '.release'
             manifestPlaceholders.put("app_name", "@string/app_name")
 
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'cronet-proguard-rules.pro'
         }
         debug {
@@ -128,11 +129,11 @@ android {
 
     splits {
         abi {
-            enable true
+            enable = true
             reset()
             //noinspection ChromeOsAbiSupport
             include 'armeabi-v7a', 'arm64-v8a'
-            universalApk true
+            universalApk = true
         }
     }
 
@@ -175,10 +176,10 @@ android {
 
     compileOptions {
         // Flag to enable support for the new language APIs
-        coreLibraryDesugaringEnabled true
+        coreLibraryDesugaringEnabled = true
         // Sets Java compatibility
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
     }
     packaging {
         resources.excludes.add('META-INF/*')
@@ -189,7 +190,7 @@ android {
         androidTest.assets.srcDirs += files("$projectDir/schemas".toString())
     }
     lint {
-        checkDependencies true
+        checkDependencies = true
     }
     tasks.withType(JavaCompile).tap {
         configureEach {
