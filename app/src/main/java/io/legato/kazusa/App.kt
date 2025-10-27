@@ -72,7 +72,7 @@ class App : Application() {
 
     override fun onCreate() {
 
-        if (getPrefString("app_theme", "0") == "11") {
+        if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")
                 setTheme(R.style.ThemeOverlay_WhiteBackground)
 

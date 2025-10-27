@@ -124,15 +124,16 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
         "1" to R.style.Theme_Base_GR,
         "2" to R.style.Theme_Base_Lemon,
         "3" to R.style.Theme_Base_WH,
-        "4" to R.style.Theme_Base_Sora,
-        "5" to R.style.Theme_Base_August,
-        "6" to R.style.Theme_Base_Carlotta,
-        "7" to R.style.Theme_Base_Koharu,
-        "8" to R.style.Theme_Base_Yuuka,
-        "9" to R.style.Theme_Base_Phoebe,
-        "10" to R.style.Theme_Base_Mujika,
-        "11" to R.style.ThemeOverlay_WhiteBackground,
-        "12" to R.style.AppTheme_Transparent)
+        "4" to R.style.Theme_Base_Elink,
+        "5" to R.style.Theme_Base_Sora,
+        "6" to R.style.Theme_Base_August,
+        "7" to R.style.Theme_Base_Carlotta,
+        "8" to R.style.Theme_Base_Koharu,
+        "9" to R.style.Theme_Base_Yuuka,
+        "10" to R.style.Theme_Base_Phoebe,
+        "11" to R.style.Theme_Base_Mujika,
+        "12" to R.style.ThemeOverlay_WhiteBackground,
+        "13" to R.style.AppTheme_Transparent)
 
     private fun getThemeColors(value: String): List<Int> {
         val themeResId = themeResIdMap[value] ?: return listOf(Color.GRAY, Color.GRAY, Color.GRAY, Color.GRAY)

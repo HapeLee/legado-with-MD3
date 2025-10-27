@@ -2,6 +2,7 @@ package io.legato.kazusa.ui.book.read
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
@@ -14,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.doOnAttach
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.button.MaterialButton
@@ -47,6 +49,7 @@ import io.legato.kazusa.utils.putPrefBoolean
 import io.legato.kazusa.utils.startActivity
 import io.legato.kazusa.utils.themeColor
 import io.legato.kazusa.utils.visible
+import org.checkerframework.checker.units.qual.cd
 import splitties.views.onClick
 
 /**
@@ -167,19 +170,16 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     init {
-        initView()
-        upBrightnessState()
-        bindEvent()
+        doOnAttach {
+            initView()
+            upBrightnessState()
+            bindEvent()
+        }
     }
 
     private fun initView() = binding.run {
         initAnimation()
         updateSliderVisibility()
-        binding.bottomView.post {
-            val allButtons = getUserButtons()
-            renderButtons(binding.bottomView, allButtons)
-        }
-
         val brightnessBackground = GradientDrawable()
         brightnessBackground.cornerRadius = 5F.dpToPx()
         llBrightness.background = brightnessBackground
@@ -198,10 +198,16 @@ class ReadMenu @JvmOverloads constructor(
         } else {
             titleBarAddition.gone()
         }
+        binding.bottomView.post {
+            val allButtons = getUserButtons()
+            renderButtons(binding.bottomView, allButtons)
+        }
         val alpha = (AppConfig.menuAlpha / 100f * 255).toInt()
         val color = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
         titleBar.setBackgroundColor(ColorUtils.setAlphaComponent(color, alpha))
-        llSlider.alpha = AppConfig.menuAlpha / 100f
+        cdSlider.setCardBackgroundColor(ColorUtils.setAlphaComponent(color, alpha))
+        tvPre.alpha = AppConfig.menuAlpha / 100f * 255
+        tvNext.alpha = AppConfig.menuAlpha / 100f * 255
         upBrightnessVwPos()
         /**
          * 确保视图不被导航栏遮挡
@@ -503,12 +509,7 @@ class ReadMenu @JvmOverloads constructor(
         buttonMap.clear()
 
         buttons.forEach { btn ->
-            val style =
-                if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE)
-                    com.google.android.material.R.attr.materialIconButtonFilledTonalStyle
-                else
-                    com.google.android.material.R.attr.materialIconButtonOutlinedStyle
-
+            val style = com.google.android.material.R.attr.materialIconButtonOutlinedStyle
             val button = MaterialButton(group.context, null, style).apply {
                 id = btn.id.hashCode()
                 setIconResource(btn.iconRes)
@@ -517,6 +518,7 @@ class ReadMenu @JvmOverloads constructor(
                 strokeWidth = 0
                 iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
                 maxLines = 1
+                iconTint = ColorStateList.valueOf(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
                 setOnClickListener { btn.onClick() }
                 btn.onLongClick?.let { longAction ->
                     setOnLongClickListener {
@@ -561,7 +563,7 @@ class ReadMenu @JvmOverloads constructor(
                 iconRes = R.drawable.ic_read_aloud,
                 description = context.getString(R.string.read_aloud),
                 onClick = { runMenuOut { callBack.onClickReadAloud() } },
-                onLongClick = { callBack.showReadAloudDialog() }
+                onLongClick = { runMenuOut { callBack.onClickReadAloud() } }
             ),
             ToolButton(
                 id = "setting",
@@ -653,7 +655,9 @@ class ReadMenu @JvmOverloads constructor(
     fun upBookView() {
         val bookName = ReadBook.book?.name ?: ""
 
-        if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+
+        if (isTablet || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             binding.titleBar.title = bookName
             binding.tvBookName.gone()
         } else {

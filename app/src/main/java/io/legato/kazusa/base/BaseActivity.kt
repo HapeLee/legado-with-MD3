@@ -163,14 +163,15 @@ abstract class BaseActivity<VB : ViewBinding>(
             "1" -> setTheme(R.style.Theme_Base_GR)
             "2" -> setTheme(R.style.Theme_Base_Lemon)
             "3" -> setTheme(R.style.Theme_Base_WH)
-            "4" -> setTheme(R.style.Theme_Base_Sora)
-            "5" -> setTheme(R.style.Theme_Base_August)
-            "6" -> setTheme(R.style.Theme_Base_Carlotta)
-            "7" -> setTheme(R.style.Theme_Base_Koharu)
-            "8" -> setTheme(R.style.Theme_Base_Yuuka)
-            "9" -> setTheme(R.style.Theme_Base_Phoebe)
-            "10" -> setTheme(R.style.Theme_Base_Mujika)
-            "11" -> {
+            "4" -> setTheme(R.style.Theme_Base_Elink)
+            "5" -> setTheme(R.style.Theme_Base_Sora)
+            "6" -> setTheme(R.style.Theme_Base_August)
+            "7" -> setTheme(R.style.Theme_Base_Carlotta)
+            "8" -> setTheme(R.style.Theme_Base_Koharu)
+            "9" -> setTheme(R.style.Theme_Base_Yuuka)
+            "10" -> setTheme(R.style.Theme_Base_Phoebe)
+            "11" -> setTheme(R.style.Theme_Base_Mujika)
+            "12" -> {
                 if (AppConfig.customMode == "accent")
                     setTheme(R.style.ThemeOverlay_WhiteBackground)
 
@@ -203,7 +204,7 @@ abstract class BaseActivity<VB : ViewBinding>(
                 }
             }
 
-            "12" -> setTheme(R.style.AppTheme_Transparent)
+            "13" -> setTheme(R.style.AppTheme_Transparent)
         }
 
         if (AppConfig.pureBlack)

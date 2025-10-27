@@ -537,6 +537,55 @@
     <color name="transparent_theme_surfaceContainerHigh">#4DFFFFFF</color>
     <color name="transparent_theme_surfaceContainerHighest">#66FFFFFF</color>
 
+
+    <color name="elink_theme_primary">#000000</color>
+    <color name="elink_theme_onPrimary">#FFFFFF</color>
+    <color name="elink_theme_primaryContainer">#000000</color>
+    <color name="elink_theme_onPrimaryContainer">#FFFFFF</color>
+    <color name="elink_theme_secondary">#000000</color>
+    <color name="elink_theme_onSecondary">#FFFFFF</color>
+    <color name="elink_theme_secondaryContainer">#808080</color>
+    <color name="elink_theme_onSecondaryContainer">#FFFFFF</color>
+    <color name="elink_theme_tertiary">#000000</color>
+    <color name="elink_theme_onTertiary">#FFFFFF</color>
+    <color name="elink_theme_tertiaryContainer">#000000</color>
+    <color name="elink_theme_onTertiaryContainer">#FFFFFF</color>
+    <color name="elink_theme_error">#BA1A1A</color>
+    <color name="elink_theme_onError">#FFFFFF</color>
+    <color name="elink_theme_errorContainer">#FFDAD6</color>
+    <color name="elink_theme_onErrorContainer">#93000A</color>
+    <color name="elink_theme_background">#FFFFFF</color>
+    <color name="elink_theme_onBackground">#000000</color>
+    <color name="elink_theme_surface">#FFFFFF</color>
+    <color name="elink_theme_onSurface">#000000</color>
+    <color name="elink_theme_surfaceVariant">#FFFFFF</color>
+    <color name="elink_theme_onSurfaceVariant">#000000</color>
+    <color name="elink_theme_outline">#000000</color>
+    <color name="elink_theme_outlineVariant">#000000</color>
+    <color name="elink_theme_scrim">#000000</color>
+    <color name="elink_theme_inverseSurface">#313030</color>
+    <color name="elink_theme_inverseOnSurface">#F4F0EF</color>
+    <color name="elink_theme_inversePrimary">#C6C6C7</color>
+    <color name="elink_theme_primaryFixed">#E2E2E2</color>
+    <color name="elink_theme_onPrimaryFixed">#1A1C1C</color>
+    <color name="elink_theme_primaryFixedDim">#C6C6C7</color>
+    <color name="elink_theme_onPrimaryFixedVariant">#454747</color>
+    <color name="elink_theme_secondaryFixed">#E2E2E2</color>
+    <color name="elink_theme_onSecondaryFixed">#1B1B1B</color>
+    <color name="elink_theme_secondaryFixedDim">#C6C6C6</color>
+    <color name="elink_theme_onSecondaryFixedVariant">#474747</color>
+    <color name="elink_theme_tertiaryFixed">#E2E2E2</color>
+    <color name="elink_theme_onTertiaryFixed">#1B1B1B</color>
+    <color name="elink_theme_tertiaryFixedDim">#C6C6C6</color>
+    <color name="elink_theme_onTertiaryFixedVariant">#474747</color>
+    <color name="elink_theme_surfaceDim">#DDD9D9</color>
+    <color name="elink_theme_surfaceBright">#FCF8F8</color>
+    <color name="elink_theme_surfaceContainerLowest">#FFFFFF</color>
+    <color name="elink_theme_surfaceContainerLow">#F6F3F2</color>
+    <color name="elink_theme_surfaceContainer">#F1EDEC</color>
+    <color name="elink_theme_surfaceContainerHigh">#EBE7E7</color>
+    <color name="elink_theme_surfaceContainerHighest">#E5E2E1</color>
+
     <color name="disabled">@color/md_light_disabled</color>
 
     <color name="divider">#66666666</color>

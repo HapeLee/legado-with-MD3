@@ -610,4 +610,53 @@
         <item name="colorSurfaceContainer">@color/transparent_theme_surfaceContainer</item>
     </style>
 
+    <style name="Theme.Base.Elink" parent="Base.AppTheme">
+        <item name="colorPrimary">@color/elink_theme_primary</item>
+        <item name="colorOnPrimary">@color/elink_theme_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/elink_theme_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/elink_theme_onPrimaryContainer</item>
+        <item name="colorSecondary">@color/elink_theme_secondary</item>
+        <item name="colorOnSecondary">@color/elink_theme_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/elink_theme_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/elink_theme_onSecondaryContainer</item>
+        <item name="colorTertiary">@color/elink_theme_tertiary</item>
+        <item name="colorOnTertiary">@color/elink_theme_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/elink_theme_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/elink_theme_onTertiaryContainer</item>
+        <item name="colorError">@color/elink_theme_error</item>
+        <item name="colorOnError">@color/elink_theme_onError</item>
+        <item name="colorErrorContainer">@color/elink_theme_errorContainer</item>
+        <item name="colorOnErrorContainer">@color/elink_theme_onErrorContainer</item>
+        <item name="android:colorBackground">@color/elink_theme_background</item>
+        <item name="colorOnBackground">@color/elink_theme_onBackground</item>
+        <item name="colorSurface">@color/elink_theme_surface</item>
+        <item name="colorOnSurface">@color/elink_theme_onSurface</item>
+        <item name="colorSurfaceVariant">@color/elink_theme_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/elink_theme_onSurfaceVariant</item>
+        <item name="colorOutline">@color/elink_theme_outline</item>
+        <item name="colorOutlineVariant">@color/elink_theme_outlineVariant</item>
+        <item name="colorSurfaceInverse">@color/elink_theme_inverseSurface</item>
+        <item name="colorOnSurfaceInverse">@color/elink_theme_inverseOnSurface</item>
+        <item name="colorPrimaryInverse">@color/elink_theme_inversePrimary</item>
+        <item name="colorPrimaryFixed">@color/elink_theme_primaryFixed</item>
+        <item name="colorOnPrimaryFixed">@color/elink_theme_onPrimaryFixed</item>
+        <item name="colorPrimaryFixedDim">@color/elink_theme_primaryFixedDim</item>
+        <item name="colorOnPrimaryFixedVariant">@color/elink_theme_onPrimaryFixedVariant</item>
+        <item name="colorSecondaryFixed">@color/elink_theme_secondaryFixed</item>
+        <item name="colorOnSecondaryFixed">@color/elink_theme_onSecondaryFixed</item>
+        <item name="colorSecondaryFixedDim">@color/elink_theme_secondaryFixedDim</item>
+        <item name="colorOnSecondaryFixedVariant">@color/elink_theme_onSecondaryFixedVariant</item>
+        <item name="colorTertiaryFixed">@color/elink_theme_tertiaryFixed</item>
+        <item name="colorOnTertiaryFixed">@color/elink_theme_onTertiaryFixed</item>
+        <item name="colorTertiaryFixedDim">@color/elink_theme_tertiaryFixedDim</item>
+        <item name="colorOnTertiaryFixedVariant">@color/elink_theme_onTertiaryFixedVariant</item>
+        <item name="colorSurfaceDim">@color/elink_theme_surfaceDim</item>
+        <item name="colorSurfaceBright">@color/elink_theme_surfaceBright</item>
+        <item name="colorSurfaceContainerLowest">@color/elink_theme_surfaceContainerLowest</item>
+        <item name="colorSurfaceContainerLow">@color/elink_theme_surfaceContainerLow</item>
+        <item name="colorSurfaceContainer">@color/elink_theme_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/elink_theme_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/elink_theme_surfaceContainerHighest</item>
+    </style>
+
 </resources>
