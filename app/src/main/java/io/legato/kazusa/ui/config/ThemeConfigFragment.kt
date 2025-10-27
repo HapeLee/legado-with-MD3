@@ -121,9 +121,9 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
         val customMode = findPreference<NameListPreference>("customMode")
         val currentTheme = getPrefString("app_theme")
 
-        colorPrimary?.isVisible = currentTheme == "11"
-        colorImage?.isVisible = currentTheme == "11"
-        customMode?.isVisible = currentTheme == "11"
+        colorPrimary?.isVisible = currentTheme == "12"
+        colorImage?.isVisible = currentTheme == "12"
+        customMode?.isVisible = currentTheme == "12"
 
         themePref?.let {
             it.setOnPreferenceChangeListener { _, _ ->
@@ -132,9 +132,9 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
         }
 
         themePref?.setOnPreferenceChangeListener { _, newValue ->
-            colorPrimary?.isVisible = newValue == "11"
-            colorImage?.isVisible = currentTheme == "11"
-            customMode?.isVisible = newValue == "11"
+            colorPrimary?.isVisible = newValue == "12"
+            colorImage?.isVisible = currentTheme == "12"
+            customMode?.isVisible = newValue == "12"
             true
         }
 

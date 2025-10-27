@@ -81,7 +81,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
 
             holder.card.setOnClickListener {
                 if (value != currentValue) {
-                    if (value == "12") {
+                    if (value == "13") {
                         val hasLightBg = !appCtx.getPrefString(PreferKey.bgImage).isNullOrEmpty()
                         val hasDarkBg = !appCtx.getPrefString(PreferKey.bgImageN).isNullOrEmpty()
                         if (!hasLightBg || !hasDarkBg) {
@@ -94,7 +94,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                     persistString(value)
                     callChangeListener(value)
                     notifyDataSetChanged()
-                    val isDynamicSwitch = (oldValue == "11" || value == "11")
+                    val isDynamicSwitch = (oldValue == "12" || value == "12")
                     Handler(Looper.getMainLooper()).postDelayed({
                         if (isDynamicSwitch) {
                             context.alert(context.getString(R.string.restart_required_message)) {
