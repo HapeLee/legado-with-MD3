@@ -5,26 +5,30 @@
     android:layout_margin="4dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    app:strokeWidth="0dp"
+    app:strokeColor="?attr/colorSurfaceContainer"
     app:cardBackgroundColor="?attr/colorSurfaceContainer">
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:padding="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/selectableItemBackground">
 
-        <ImageView
-            android:id="@+id/image_view"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cd_img"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:contentDescription="@string/loading"
-            android:visibility="visible"
-            android:scaleType="centerCrop"
-            android:background="@drawable/bg_img_border"
+            app:cardCornerRadius="0dp"
+            app:strokeColor="?attr/colorSurfaceContainer"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent"
-            tools:ignore="RtlHardcoded,RtlSymmetry" />
+            app:layout_constraintRight_toRightOf="parent">
+            <ImageView
+                android:id="@+id/image_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:contentDescription="@string/loading"
+                android:visibility="visible"
+                android:scaleType="centerCrop" />
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:id="@+id/tv_title"
@@ -33,10 +37,11 @@
             android:maxLines="3"
             android:ellipsize="end"
             android:text="@string/app_name"
-            android:textSize="13sp"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:paddingTop="8dp"
-            app:layout_constraintTop_toBottomOf="@+id/image_view"
+            android:layout_marginHorizontal="8dp"
+            android:paddingTop="4dp"
+            app:layout_constraintTop_toBottomOf="@+id/cd_img"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent" />
 
@@ -46,9 +51,9 @@
             android:layout_height="wrap_content"
             android:text="@string/app_name"
             android:textSize="11sp"
-            android:maxLines="2"
             android:paddingTop="4dp"
-            android:paddingBottom="2dp"
+            android:paddingBottom="10dp"
+            android:layout_marginHorizontal="8dp"
             app:layout_constraintTop_toBottomOf="@+id/tv_title"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
