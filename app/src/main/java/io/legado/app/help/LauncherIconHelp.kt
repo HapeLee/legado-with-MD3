@@ -2,7 +2,18 @@ package io.legado.app.help
 
 import android.content.ComponentName
 import android.content.pm.PackageManager
+import android.os.Build
 import io.legado.app.R
+import io.legado.app.ui.main.Launcher1
+import io.legado.app.ui.main.Launcher2
+import io.legado.app.ui.main.Launcher3
+import io.legado.app.ui.main.Launcher4
+import io.legado.app.ui.main.Launcher5
+import io.legado.app.ui.main.Launcher6
+import io.legado.app.ui.main.Launcher7
+import io.legado.app.ui.main.LauncherW
+import io.legado.app.ui.main.MainActivity
+import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
@@ -13,97 +24,50 @@ import splitties.init.appCtx
 object LauncherIconHelp {
     private val packageManager: PackageManager = appCtx.packageManager
     private val componentNames = arrayListOf(
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcherw"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher0"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher1"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher2"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher3"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher4"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher5"),
-        ComponentName(appCtx.packageName, "${appCtx.packageName}.Launcher6")
-    )
-
-    // 主Activity的ComponentName
-    private val mainActivity = ComponentName(
-        appCtx.packageName,
-        "${appCtx.packageName}.ui.main.MainActivity"
+        ComponentName(appCtx, LauncherW::class.java.name),
+        ComponentName(appCtx, Launcher1::class.java.name),
+        ComponentName(appCtx, Launcher2::class.java.name),
+        ComponentName(appCtx, Launcher3::class.java.name),
+        ComponentName(appCtx, Launcher4::class.java.name),
+        ComponentName(appCtx, Launcher5::class.java.name),
+        ComponentName(appCtx, Launcher6::class.java.name),
+        ComponentName(appCtx, Launcher7::class.java.name)
     )
 
     fun changeIcon(icon: String?) {
         if (icon.isNullOrEmpty()) return
-
-        try {
-            // 首先禁用主Activity的启动器intent
-            disableMainActivityLauncher()
-
-            // 然后处理所有别名
-            var matched = false
-            componentNames.forEach {
-                val aliasName = it.className.substringAfterLast(".")
-                if (icon.equals(aliasName, ignoreCase = true)) {
-                    matched = true
-                    packageManager.setComponentEnabledSetting(
-                        it,
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                        PackageManager.DONT_KILL_APP
-                    )
-                } else {
-                    packageManager.setComponentEnabledSetting(
-                        it,
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                    )
-                }
-            }
-
-            if (!matched) {
-                enableMainActivityLauncher()
-            }
-
-            // 通知用户图标已更改
-            appCtx.toastOnUi(R.string.change_icon_success)
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            appCtx.toastOnUi(R.string.change_icon_error)
-        }
-    }
-
-    // 禁用主Activity的启动器功能
-    private fun disableMainActivityLauncher() {
-        try {
-            // 获取当前组件状态
-            val state = packageManager.getComponentEnabledSetting(mainActivity)
-
-            // 如果已经禁用，不需要再次操作
-            if (state != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+        var hasEnabled = false
+        componentNames.forEach {
+            if (icon.equals(it.className.substringAfterLast("."), true)) {
+                hasEnabled = true
+                //启用
                 packageManager.setComponentEnabledSetting(
-                    mainActivity,
+                    it,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP
+                )
+            } else {
+                //禁用
+                packageManager.setComponentEnabledSetting(
+                    it,
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                     PackageManager.DONT_KILL_APP
                 )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        }
+        if (hasEnabled) {
+            packageManager.setComponentEnabledSetting(
+                ComponentName(appCtx, MainActivity::class.java.name),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+            )
+        } else {
+            packageManager.setComponentEnabledSetting(
+                ComponentName(appCtx, MainActivity::class.java.name),
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+            )
         }
     }
 
-    // 启用主Activity的启动器功能
-    private fun enableMainActivityLauncher() {
-        try {
-            // 获取当前组件状态
-            val state = packageManager.getComponentEnabledSetting(mainActivity)
-
-            // 如果已经启用，不需要再次操作
-            if (state != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-                packageManager.setComponentEnabledSetting(
-                    mainActivity,
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-                    PackageManager.DONT_KILL_APP
-                )
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
 }

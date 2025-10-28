@@ -72,7 +72,7 @@ import kotlin.coroutines.suspendCoroutine
 /**
  * 主界面
  */
-class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
+open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     BottomNavigationView.OnNavigationItemSelectedListener,
     BottomNavigationView.OnNavigationItemReselectedListener {
 
@@ -550,5 +550,14 @@ class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     }
 
 }
+
+class LauncherW : MainActivity()
+class Launcher1 : MainActivity()
+class Launcher2 : MainActivity()
+class Launcher3 : MainActivity()
+class Launcher4 : MainActivity()
+class Launcher5 : MainActivity()
+class Launcher6 : MainActivity()
+class Launcher7 : MainActivity()
 
 

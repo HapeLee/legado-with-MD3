@@ -34,100 +34,92 @@
         android:theme="@style/Base.AppTheme"
         tools:ignore="AllowBackup,GoogleAppIndexingWarning,UnusedAttribute">
         <!-- 图标0 -->
-        <activity-alias
-            android:name=".Launcherw"
+        <activity
+            android:name=".ui.main.LauncherW"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcherw"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcherw">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".Launcher0"
+        </activity>
+        <activity
+            android:name=".ui.main.Launcher1"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher0"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher0">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标1 -->
-        <activity-alias
-            android:name=".Launcher1"
+        <activity
+            android:name=".ui.main.Launcher2"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher1"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher1">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标2 -->
-        <activity-alias
-            android:name=".Launcher2"
+        <activity
+            android:name=".ui.main.Launcher3"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher2"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher2">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标3 -->
-        <activity-alias
-            android:name=".Launcher3"
+        <activity
+            android:name=".ui.main.Launcher4"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher3"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher3">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标4 -->
-        <activity-alias
-            android:name=".Launcher4"
+        <activity
+            android:name=".ui.main.Launcher5"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher4"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher4">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标5 -->
-        <activity-alias
-            android:name=".Launcher5"
+        <activity
+            android:name=".ui.main.Launcher6"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher5"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher5">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 图标6 -->
-        <activity-alias
-            android:name=".Launcher6"
+        <activity
+            android:name=".ui.main.Launcher7"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/launcher6"
-            android:targetActivity=".ui.main.MainActivity">
+            android:icon="@mipmap/launcher6">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
+        </activity>
         <!-- 主界面 -->
         <activity
             android:name=".ui.main.MainActivity"
