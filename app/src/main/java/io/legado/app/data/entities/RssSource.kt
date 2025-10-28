@@ -91,7 +91,10 @@ data class RssSource(
     @ColumnInfo(defaultValue = "0")
     var lastUpdateTime: Long = 0,
     @ColumnInfo(defaultValue = "0")
-    var customOrder: Int = 0
+    var customOrder: Int = 0,
+    //用户控制的重定向
+    @ColumnInfo(defaultValue = "ASK_CROSS_ORIGIN")
+    var redirectPolicy: String = "ASK_CROSS_ORIGIN"
 ) : Parcelable, BaseSource {
 
     override fun getTag(): String {

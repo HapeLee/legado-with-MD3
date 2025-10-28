@@ -128,6 +128,9 @@ interface RssSourceDao {
     @Query("update rssSources set enabled = :enable where sourceUrl = :sourceUrl")
     fun enable(sourceUrl: String, enable: Boolean)
 
+    @Query("UPDATE rssSources SET redirectPolicy = :redirectPolicy WHERE sourceUrl = :sourceUrl")
+    suspend fun updateRedirectPolicy(sourceUrl: String, redirectPolicy: String)
+
     private fun dealGroups(list: List<String>): List<String> {
         val groups = linkedSetOf<String>()
         list.forEach {

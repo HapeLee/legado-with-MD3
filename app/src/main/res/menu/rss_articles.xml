@@ -37,4 +37,9 @@
         android:title="@string/clear"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_redirect_policy"
+        android:title="@string/redirect_policy"
+        app:showAsAction="never" />
+
 </menu>

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -22,6 +23,8 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.addCallback
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.size
@@ -73,11 +76,28 @@ import java.util.regex.PatternSyntaxException
 class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>(),
     RssFavoritesDialog.Callback {
 
+    enum class RedirectPolicy {
+        ALLOW_ALL,
+        ASK_ALWAYS,
+        ASK_CROSS_ORIGIN,
+        BLOCK_CROSS_ORIGIN;
+
+        companion object {
+            fun fromString(value: String?): RedirectPolicy {
+                return entries.find { it.name.equals(value, ignoreCase = true) } ?: ALLOW_ALL
+            }
+        }
+
+    }
+
+    var redirectPolicy: RedirectPolicy = RedirectPolicy.ALLOW_ALL
+
     override val binding by viewBinding(ActivityRssReadBinding::inflate)
     override val viewModel by viewModels<ReadRssViewModel>()
 
     private var starMenuItem: MenuItem? = null
     private var ttsMenuItem: MenuItem? = null
+    private var redirectPolicyMenu: MenuItem? = null
     private var isFullScreen = false
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
     private val rssJsExtensions by lazy { RssJsExtensions(this) }
@@ -138,6 +158,11 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         starMenuItem = menu.findItem(R.id.menu_rss_star)
         ttsMenuItem = menu.findItem(R.id.menu_aloud)
+        redirectPolicyMenu = menu.findItem(R.id.menu_redirect_policy)
+        redirectPolicyMenu?.setOnMenuItemClickListener {
+            showRedirectPolicySubMenu()
+            true
+        }
         upStarMenu()
         return super.onPrepareOptionsMenu(menu)
     }
@@ -160,7 +185,6 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                     showDialogFragment(RssFavoritesDialog(it))
                 }
             }
-
             R.id.menu_share_it -> {
                 binding.webView.url?.let {
                     share(it)
@@ -201,6 +225,41 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     @JavascriptInterface
     fun isNightTheme(): Boolean {
         return AppConfig.isNightTheme
+    }
+
+    private fun showRedirectPolicySubMenu() {
+        val popup = PopupMenu(this, binding.titleBar, Gravity.END)
+        popup.menuInflater.inflate(R.menu.menu_redirect_policy_submenu, popup.menu)
+        setCurrentRedirectPolicyChecked(popup.menu)
+        popup.setOnMenuItemClickListener { menuItem ->
+            handleRedirectPolicySelection(menuItem)
+            true
+        }
+        popup.show()
+    }
+
+    private fun setCurrentRedirectPolicyChecked(menu: Menu) {
+        val currentPolicy = redirectPolicy
+        val menuItemId = when (currentPolicy) {
+            RedirectPolicy.ALLOW_ALL -> R.id.menu_redirect_allow_all
+            RedirectPolicy.ASK_ALWAYS -> R.id.menu_redirect_ask_always
+            RedirectPolicy.ASK_CROSS_ORIGIN -> R.id.menu_redirect_ask_cross_origin
+            RedirectPolicy.BLOCK_CROSS_ORIGIN -> R.id.menu_redirect_block_cross_origin
+        }
+        menu.findItem(menuItemId)?.isChecked = true
+    }
+
+    private fun handleRedirectPolicySelection(menuItem: MenuItem) {
+        val selectedPolicy = when (menuItem.itemId) {
+            R.id.menu_redirect_allow_all -> RedirectPolicy.ALLOW_ALL
+            R.id.menu_redirect_ask_always -> RedirectPolicy.ASK_ALWAYS
+            R.id.menu_redirect_ask_cross_origin -> RedirectPolicy.ASK_CROSS_ORIGIN
+            R.id.menu_redirect_block_cross_origin -> RedirectPolicy.BLOCK_CROSS_ORIGIN
+            else -> RedirectPolicy.ALLOW_ALL
+        }
+
+        updateRedirectPolicy(selectedPolicy)
+        toastOnUi("重定向策略已更新")
     }
 
     private fun toggleFullScreen() {
@@ -277,6 +336,9 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     private fun initLiveData() {
         viewModel.contentLiveData.observe(this) { content ->
             viewModel.rssArticle?.let {
+                if (viewModel.rssSource != null) {
+                    redirectPolicy = RedirectPolicy.fromString(viewModel.rssSource?.redirectPolicy)
+                }
                 upJavaScriptEnable()
                 val url = NetworkUtils.getAbsoluteURL(it.origin, it.link)
                 val html = viewModel.clHtml(content)
@@ -303,6 +365,14 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     private fun upJavaScriptEnable() {
         if (viewModel.rssSource?.enableJs == true) {
             binding.webView.settings.javaScriptEnabled = true
+        }
+    }
+
+    fun updateRedirectPolicy(policy: RedirectPolicy) {
+        viewModel.rssSource?.let { source ->
+            source.redirectPolicy = policy.name
+            redirectPolicy = policy
+            viewModel.updateRssSourceRedirectPolicy(source.sourceUrl)
         }
     }
 
@@ -382,17 +452,72 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     }
 
     inner class CustomWebViewClient : WebViewClient() {
-
+        private var lastUrl: String? = null
         override fun shouldOverrideUrlLoading(
             view: WebView,
             request: WebResourceRequest
         ): Boolean {
+            val currentUrl = lastUrl ?: view.url
+            val targetUrl = request.url.toString()
+            lastUrl = targetUrl
+            if (!request.isForMainFrame) return false
+            if (handleRedirect(view, currentUrl, targetUrl)) {
+                return true
+            }
+
             return shouldOverrideUrlLoading(request.url)
         }
 
         @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION", "KotlinRedundantDiagnosticSuppress")
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+            val currentUrl = lastUrl ?: view.url
+            val targetUrl = url
+            lastUrl = targetUrl
+            if (handleRedirect(view, currentUrl, targetUrl)) {
+                return true
+            }
+
             return shouldOverrideUrlLoading(url.toUri())
+        }
+
+        private fun handleRedirect(view: WebView, fromUrl: String?, toUrl: String): Boolean {
+            val fromHost = fromUrl?.toUri()?.host
+            val toHost = toUrl.toUri().host
+            val crossOrigin = fromHost != null && toHost != null && fromHost != toHost
+
+            return when (redirectPolicy) {
+                RedirectPolicy.ALLOW_ALL -> false
+                RedirectPolicy.ASK_ALWAYS -> {
+                    askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
+                    true
+                }
+                RedirectPolicy.ASK_CROSS_ORIGIN -> {
+                    if (crossOrigin) {
+                        askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
+                        true
+                    } else {
+                        false
+                    }
+                }
+                RedirectPolicy.BLOCK_CROSS_ORIGIN -> {
+                    if (crossOrigin) {
+                        toastOnUi("已阻止跨域重定向")
+                        true
+                    } else {
+                        false
+                    }
+                }
+            }
+        }
+
+        private fun askUser(fromUrl: String?, toUrl: String, onResult: (Boolean) -> Unit) {
+            AlertDialog.Builder(this@ReadRssActivity)
+                .setTitle("重定向请求")
+                .setMessage("是否允许页面跳转？\n\n来源：${fromUrl ?: "未知"}\n目标：$toUrl")
+                .setPositiveButton("允许") { _, _ -> onResult(true) }
+                .setNegativeButton("拒绝") { _, _ -> onResult(false) }
+                .setCancelable(true)
+                .show()
         }
 
         /**

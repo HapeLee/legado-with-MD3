@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/menu_redirect_allow_all"
+            android:title="@string/redirect_allow_all" />
+        <item
+            android:id="@+id/menu_redirect_ask_always"
+            android:title="@string/redirect_ask_always" />
+        <item
+            android:id="@+id/menu_redirect_ask_cross_origin"
+            android:title="@string/redirect_ask_cross_origin" />
+        <item
+            android:id="@+id/menu_redirect_block_cross_origin"
+            android:title="@string/redirect_block_cross_origin" />
+    </group>
+</menu>

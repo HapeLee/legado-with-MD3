@@ -9,6 +9,8 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.removeSortCache
+import io.legado.app.utils.toastOnUi
+import splitties.init.appCtx
 
 
 class RssSortViewModel(application: Application) : BaseViewModel(application) {
@@ -89,6 +91,16 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
     fun deleteAllRecord() {
         execute {
             appDb.rssReadRecordDao.deleteAllRecord()
+        }
+    }
+
+    fun updateRssSourceRedirectPolicy(redirectPolicy: String) {
+        execute {
+            val source = rssSource ?: return@execute
+            source.redirectPolicy = redirectPolicy
+            appDb.rssSourceDao.updateRedirectPolicy(source.sourceUrl, redirectPolicy)
+        }.onError {
+            appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
         }
     }
 

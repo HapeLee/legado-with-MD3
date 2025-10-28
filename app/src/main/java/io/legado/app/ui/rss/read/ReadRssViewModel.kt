@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
+import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
@@ -240,6 +241,16 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             }
         }
         tts?.speak(text)
+    }
+
+    fun updateRssSourceRedirectPolicy(redirectPolicy: String) {
+        execute {
+            val source = rssSource ?: return@execute
+            source.redirectPolicy = redirectPolicy
+            appDb.rssSourceDao.updateRedirectPolicy(source.sourceUrl, redirectPolicy)
+        }.onError {
+            appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
+        }
     }
 
     override fun onCleared() {

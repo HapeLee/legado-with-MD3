@@ -1314,4 +1314,9 @@
     <string name="screen_settings">屏幕显示与亮度</string>
     <string name="reading_behavior">阅读行为</string>
     <string name="page_control">翻页控制</string>
+    <string name="redirect_policy">网页重定向策略</string>
+    <string name="redirect_allow_all">允许所有重定向</string>
+    <string name="redirect_ask_always">总是询问</string>
+    <string name="redirect_ask_cross_origin">跨域时询问</string>
+    <string name="redirect_block_cross_origin">阻止跨域重定向</string>
 </resources>

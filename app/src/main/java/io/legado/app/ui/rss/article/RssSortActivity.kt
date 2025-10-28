@@ -5,6 +5,7 @@ package io.legado.app.ui.rss.article
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.viewModels
@@ -19,6 +20,7 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.databinding.ActivityRssArtivlesBinding
 import io.legado.app.help.source.sortUrls
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.rss.read.ReadRssActivity.RedirectPolicy
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.*
@@ -45,16 +47,19 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
         }
     }
 
+    var redirectPolicy: RedirectPolicy = RedirectPolicy.ALLOW_ALL
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setSupportActionBar(binding.topBar)
 
         viewModel.titleLiveData.observe(this) {
-            binding.topBar.title = it
+            binding.ctlBar.title = it
         }
 
         viewModel.initData(intent) {
             upFragments()
+            redirectPolicy = RedirectPolicy.fromString(viewModel.rssSource?.redirectPolicy)
         }
 
         binding.titleBar.addOnOffsetChangedListener({ appBarLayout, verticalOffset ->
@@ -98,7 +103,8 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
                     putExtra("sourceUrl", it)
                 }
             }
-
+            R.id.menu_redirect_policy ->
+                showRedirectPolicySubMenu()
             R.id.menu_clear -> {
                 viewModel.url?.let {
                     viewModel.clearArticles()
@@ -115,6 +121,49 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             }
         }
         return super.onCompatOptionsItemSelected(item)
+    }
+
+    private fun showRedirectPolicySubMenu() {
+        val popup = PopupMenu(this, binding.titleBar, Gravity.END)
+        popup.menuInflater.inflate(R.menu.menu_redirect_policy_submenu, popup.menu)
+        setCurrentRedirectPolicyChecked(popup.menu)
+        popup.setOnMenuItemClickListener { menuItem ->
+            handleRedirectPolicySelection(menuItem)
+            true
+        }
+        popup.show()
+    }
+
+    private fun setCurrentRedirectPolicyChecked(menu: Menu) {
+        val currentPolicy = redirectPolicy
+        val menuItemId = when (currentPolicy) {
+            RedirectPolicy.ALLOW_ALL -> R.id.menu_redirect_allow_all
+            RedirectPolicy.ASK_ALWAYS -> R.id.menu_redirect_ask_always
+            RedirectPolicy.ASK_CROSS_ORIGIN -> R.id.menu_redirect_ask_cross_origin
+            RedirectPolicy.BLOCK_CROSS_ORIGIN -> R.id.menu_redirect_block_cross_origin
+        }
+        menu.findItem(menuItemId)?.isChecked = true
+    }
+
+    private fun handleRedirectPolicySelection(menuItem: MenuItem) {
+        val selectedPolicy = when (menuItem.itemId) {
+            R.id.menu_redirect_allow_all -> RedirectPolicy.ALLOW_ALL
+            R.id.menu_redirect_ask_always -> RedirectPolicy.ASK_ALWAYS
+            R.id.menu_redirect_ask_cross_origin -> RedirectPolicy.ASK_CROSS_ORIGIN
+            R.id.menu_redirect_block_cross_origin -> RedirectPolicy.BLOCK_CROSS_ORIGIN
+            else -> RedirectPolicy.ALLOW_ALL
+        }
+
+        updateRedirectPolicy(selectedPolicy)
+        toastOnUi("重定向策略已更新")
+    }
+
+    fun updateRedirectPolicy(policy: RedirectPolicy) {
+        viewModel.rssSource?.let { source ->
+            source.redirectPolicy = policy.name
+            redirectPolicy = policy
+            viewModel.updateRssSourceRedirectPolicy(source.sourceUrl)
+        }
     }
 
     private fun upFragments() {
