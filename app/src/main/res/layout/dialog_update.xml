@@ -156,7 +156,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
-            <io.legato.kazusa.ui.widget.text.ScrollTextView
+            <io.legado.app.ui.widget.text.ScrollTextView
                 android:id="@+id/text_view"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

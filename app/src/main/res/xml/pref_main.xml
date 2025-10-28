@@ -4,14 +4,14 @@
     android:divider="@color/transparent"
     app:allowDividerBelow="false">
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:icon="@drawable/ic_cfg_source"
         android:key="bookSourceManage"
         android:summary="@string/book_source_manage_desc"
         android:title="@string/book_source_manage"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.SwitchPreference
+    <io.legado.app.lib.prefs.SwitchPreference
         android:defaultValue="false"
         android:icon="@drawable/ic_cfg_web"
         android:key="webService"
@@ -20,35 +20,35 @@
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:title="@string/setting"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_cfg_backup"
             android:key="web_dav_setting"
             android:summary="@string/web_dav_set_import_old"
             android:title="@string/backup_restore"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_cfg_theme"
             android:key="theme_setting"
             android:summary="@string/theme_setting_s"
             android:title="@string/theme_setting"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_book_has"
             android:key="read_setting"
             android:summary="@string/global_read_setting"
             android:title="@string/read"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_cfg_other"
             android:key="setting"
             android:summary="@string/other_setting_s"
@@ -56,39 +56,39 @@
             app:allowDividerBelow="false"
             app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:title="规则"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:icon="@drawable/ic_cfg_txt"
         android:key="txtTocRuleManage"
         android:summary="@string/config_txt_toc_rule"
         android:title="@string/txt_toc_rule"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:icon="@drawable/ic_cfg_replace"
         android:key="replaceManage"
         android:summary="@string/replace_purify_desc"
         android:title="@string/replace_purify"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:icon="@drawable/ic_translate"
         android:key="dictRuleManage"
         android:summary="@string/config_dict_rule"
         android:title="@string/dict_rule"
         app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="aboutCategory"
         android:title="@string/other"
         app:allowDividerAbove="false"
@@ -96,39 +96,39 @@
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_bookmark"
             android:key="bookmark"
             android:summary="@string/all_bookmark"
             android:title="@string/bookmark"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_history"
             android:key="readRecord"
             android:summary="@string/read_record_summary"
             android:title="@string/read_record"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_folder_outline"
             android:key="fileManage"
             android:summary="@string/file_manage_summary"
             android:title="@string/file_manage"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_cfg_about"
             android:key="about"
             android:title="@string/about"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:icon="@drawable/ic_exit"
             android:key="exit"
             android:title="@string/exit"
             app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

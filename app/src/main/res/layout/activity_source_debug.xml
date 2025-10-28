@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        app:layoutManager="io.legato.kazusa.ui.widget.recycler.NoChildScrollLinearLayoutManager"
+        app:layoutManager="io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/title_bar" />
 
@@ -36,7 +36,7 @@
         app:layout_constraintTop_toBottomOf="@+id/title_bar"
         app:loading_width="2dp" />
 
-    <io.legato.kazusa.ui.widget.NoChildScrollNestedScrollView
+    <io.legado.app.ui.widget.NoChildScrollNestedScrollView
         android:id="@+id/help"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -190,6 +190,6 @@
 
         </LinearLayout>
 
-    </io.legato.kazusa.ui.widget.NoChildScrollNestedScrollView>
+    </io.legado.app.ui.widget.NoChildScrollNestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

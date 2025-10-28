@@ -160,7 +160,7 @@
                     android:text="@string/cover_grid" />
             </com.google.android.material.chip.ChipGroup>
 
-            <io.legato.kazusa.ui.widget.DetailSeekBar
+            <io.legado.app.ui.widget.DetailSeekBar
                 android:id="@+id/slider_grid_count"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

@@ -6,7 +6,7 @@
     android:paddingHorizontal="16dp"
     android:paddingVertical="8dp">
 
-    <io.legato.kazusa.lib.theme.view.ThemeRadioButton
+    <io.legado.app.lib.theme.view.ThemeRadioButton
         android:id="@+id/radio_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

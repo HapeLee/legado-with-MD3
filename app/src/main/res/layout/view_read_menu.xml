@@ -15,7 +15,7 @@
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp" />
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -65,7 +65,7 @@
 
             </LinearLayout>
         </LinearLayout>
-    </io.legato.kazusa.ui.widget.TitleBar>
+    </io.legado.app.ui.widget.TitleBar>
 
     <LinearLayout
         android:id="@+id/ll_brightness"
@@ -89,19 +89,19 @@
             android:src="@drawable/ic_brightness_auto"
             tools:ignore="ImageContrastCheck" />
 
-        <io.legato.kazusa.ui.widget.seekbar.VerticalSeekBarWrapper
+        <io.legado.app.ui.widget.seekbar.VerticalSeekBarWrapper
             android:layout_width="wrap_content"
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <io.legato.kazusa.ui.widget.seekbar.VerticalSeekBar
+            <io.legado.app.ui.widget.seekbar.VerticalSeekBar
                 android:id="@+id/seek_brightness"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:max="255"
                 app:seekBarRotation="CW270" />
 
-        </io.legato.kazusa.ui.widget.seekbar.VerticalSeekBarWrapper>
+        </io.legado.app.ui.widget.seekbar.VerticalSeekBarWrapper>
 
         <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/vw_brightness_pos_adjust"

@@ -40,7 +40,7 @@
         android:gravity="center_horizontal"
         android:paddingVertical="16dp">
 
-        <io.legato.kazusa.ui.widget.image.CoverImageView
+        <io.legado.app.ui.widget.image.CoverImageView
             android:id="@+id/iv_cover"
             android:layout_width="90dp"
             android:layout_height="130dp"

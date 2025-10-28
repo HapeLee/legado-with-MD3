@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="io.legato.kazusa.ui.about.AboutActivity">
+    tools:context="io.legado.app.ui.about.AboutActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"

@@ -72,7 +72,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <io.legato.kazusa.ui.widget.EmptyMessageView
+    <io.legado.app.ui.widget.EmptyMessageView
         android:id="@+id/empty_message_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

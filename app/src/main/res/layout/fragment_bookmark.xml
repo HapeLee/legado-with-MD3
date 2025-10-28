@@ -5,14 +5,14 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:descendantFocusability="blocksDescendants">
 
-    <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+    <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:overScrollMode="never" />
 
-    <io.legato.kazusa.ui.widget.EmptyMessageView
+    <io.legado.app.ui.widget.EmptyMessageView
         android:id="@+id/tv_empty_msg"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

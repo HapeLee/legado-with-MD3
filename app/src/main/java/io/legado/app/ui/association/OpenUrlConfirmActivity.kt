@@ -1,0 +1,26 @@
+package io.legado.app.ui.association
+
+import android.os.Bundle
+import io.legado.app.base.BaseActivity
+import io.legado.app.constant.SourceType
+import io.legado.app.databinding.ActivityTranslucenceBinding
+import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.viewbindingdelegate.viewBinding
+
+class OpenUrlConfirmActivity :
+    BaseActivity<ActivityTranslucenceBinding>() {
+
+    override val binding by viewBinding(ActivityTranslucenceBinding::inflate)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        intent.getStringExtra("uri")?.let {
+            val mimeType = intent.getStringExtra("mimeType")
+            val sourceOrigin = intent.getStringExtra("sourceOrigin")
+            val sourceName = intent.getStringExtra("sourceName")
+            val sourceType = intent.getIntExtra("sourceType", SourceType.book)
+            showDialogFragment(OpenUrlConfirmDialog(it, mimeType, sourceOrigin, sourceName, sourceType))
+        } ?: finish()
+    }
+
+}

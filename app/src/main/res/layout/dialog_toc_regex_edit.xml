@@ -37,7 +37,7 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/name">
 
-                    <io.legato.kazusa.lib.theme.view.ThemeEditText
+                    <io.legado.app.lib.theme.view.ThemeEditText
                         android:id="@+id/tv_rule_name"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -50,7 +50,7 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/regex">
 
-                    <io.legato.kazusa.lib.theme.view.ThemeEditText
+                    <io.legado.app.lib.theme.view.ThemeEditText
                         android:id="@+id/tv_rule_regex"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -63,7 +63,7 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/example">
 
-                    <io.legato.kazusa.lib.theme.view.ThemeEditText
+                    <io.legado.app.lib.theme.view.ThemeEditText
                         android:id="@+id/tv_rule_example"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

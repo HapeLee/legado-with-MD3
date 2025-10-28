@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".ui.book.search.SearchActivity">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -14,7 +14,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:title="@string/discovery" />
 
-    <io.legato.kazusa.ui.widget.dynamiclayout.DynamicFrameLayout
+    <io.legado.app.ui.widget.dynamiclayout.DynamicFrameLayout
         android:id="@+id/content_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -30,6 +30,6 @@
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             tools:listitem="@layout/item_search" />
 
-    </io.legato.kazusa.ui.widget.dynamiclayout.DynamicFrameLayout>
+    </io.legado.app.ui.widget.dynamiclayout.DynamicFrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

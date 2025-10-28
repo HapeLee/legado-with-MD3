@@ -31,7 +31,7 @@
         app:barrierDirection="top"
         app:constraint_referenced_ids="cb_book_source,swt_enabled,iv_edit,iv_menu_more" />
 
-    <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+    <io.legado.app.lib.theme.view.ThemeCheckBox
         android:id="@+id/cb_book_source"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -46,7 +46,7 @@
         tools:ignore="TouchTargetSizeCheck"
         tools:text="@string/book_source" />
 
-    <io.legato.kazusa.lib.theme.view.ThemeSwitch
+    <io.legado.app.lib.theme.view.ThemeSwitch
         android:id="@+id/swt_enabled"
         android:name="@string/enable"
         android:layout_width="wrap_content"

@@ -15,33 +15,33 @@
         android:textStyle="bold"
         android:text="@string/custom_page_key" />
 
-    <io.legato.kazusa.ui.widget.text.TextInputLayout
+    <io.legado.app.ui.widget.text.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
         android:hint="@string/prev_page_key">
 
-        <io.legato.kazusa.lib.theme.view.ThemeEditText
+        <io.legado.app.lib.theme.view.ThemeEditText
             android:id="@+id/et_prev"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:singleLine="true" />
 
-    </io.legato.kazusa.ui.widget.text.TextInputLayout>
+    </io.legado.app.ui.widget.text.TextInputLayout>
 
-    <io.legato.kazusa.ui.widget.text.TextInputLayout
+    <io.legado.app.ui.widget.text.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="5dp"
         android:hint="@string/next_page_key">
 
-        <io.legato.kazusa.lib.theme.view.ThemeEditText
+        <io.legado.app.lib.theme.view.ThemeEditText
             android:id="@+id/et_next"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:singleLine="true" />
 
-    </io.legato.kazusa.ui.widget.text.TextInputLayout>
+    </io.legado.app.ui.widget.text.TextInputLayout>
 
     <TextView
         android:layout_width="match_parent"

@@ -2,7 +2,7 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="themeCategory"
         android:title="@string/theme"
         app:allowDividerAbove="true"
@@ -10,13 +10,13 @@
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.ThemeModePreference
+        <io.legado.app.lib.prefs.ThemeModePreference
             android:defaultValue="0"
             android:entries="@array/theme_mode"
             android:entryValues="@array/theme_mode_v"
             android:key="themeMode" />
 
-        <io.legato.kazusa.lib.prefs.ThemeCardPreference
+        <io.legado.app.lib.prefs.ThemeCardPreference
             android:key="app_theme"
             android:title="应用主题"
             android:summary="喵喵喵"
@@ -24,18 +24,18 @@
             android:entryValues="@array/themes_value"
             android:defaultValue="0" />
 
-        <io.legato.kazusa.lib.prefs.TipPreference
+        <io.legado.app.lib.prefs.TipPreference
             android:key="tip"
             android:selectable="false"
             app:iconSpaceReserved="false"
             app:tipText="@string/tip_custom_mode"/>
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="pure_black"
             android:title="@string/pure_black" />
 
-        <io.legato.kazusa.lib.prefs.ColorPreference
+        <io.legado.app.lib.prefs.ColorPreference
             android:defaultValue="@color/md_green_500"
             android:key="colorPrimary"
             android:summary="@string/seed_color_summary"
@@ -43,19 +43,19 @@
             app:cpv_dialogType="preset"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.ImagePreviewPreference
+        <io.legado.app.lib.prefs.ImagePreviewPreference
             android:key="colorImage"
             android:title="种子图片"
             android:summary="@string/seed_photo_summary"/>
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="global"
             android:key="customMode"
             android:title="@string/custom_mode"
             app:entries="@array/customMode"
             app:entryValues="@array/customMode_value" />
 
-        <io.legato.kazusa.lib.prefs.IconListPreference
+        <io.legado.app.lib.prefs.IconListPreference
             android:defaultValue="ic_launcher"
             android:entries="@array/icon_names"
             android:entryValues="@array/icons"
@@ -65,13 +65,13 @@
             app:iconSpaceReserved="false"
             app:icons="@array/icons" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="fontScale"
             android:summary="@string/font_scale_summary"
             android:title="@string/font_scale"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="coverConfig"
             android:title="@string/cover_config"
             android:summary="@string/cover_config_summary"
@@ -79,42 +79,42 @@
             app:allowDividerBelow="false"
             app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:title="@string/main_activity"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showDiscovery"
             android:title="@string/show_discovery"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showRss"
             android:title="@string/show_rss"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showBottomView"
             android:summary="@string/be_swiped"
             android:title="@string/show_bottom_nav"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="auto"
             android:key="tabletInterface"
             android:title="@string/tabletInterface"
             app:entries="@array/tabletInterface"
             app:entryValues="@array/tabletInterface_value" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="auto"
             android:key="labelVisibilityMode"
             android:title="@string/nav_label_mode"
@@ -123,7 +123,7 @@
             app:entries="@array/label_vis_mode"
             app:entryValues="@array/label_vis_mode_value" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="bookshelf"
             android:key="defaultHomePage"
             android:title="@string/default_home_page"
@@ -132,9 +132,9 @@
             app:entries="@array/default_home_page"
             app:entryValues="@array/default_home_page_value" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="backgroundIma"
         android:title="@string/background_image"
         app:allowDividerAbove="false"
@@ -142,17 +142,17 @@
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.ImagePreviewPreference
+        <io.legado.app.lib.prefs.ImagePreviewPreference
             android:key="backgroundImage"
             android:title="@string/light_mode" />
 
-        <io.legato.kazusa.lib.prefs.ImagePreviewPreference
+        <io.legado.app.lib.prefs.ImagePreviewPreference
             android:key="backgroundImageNight"
             android:title="@string/dark_mode" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="dayThemeCategory"
         android:title="@string/share"
         app:allowDividerAbove="false"
@@ -160,7 +160,7 @@
         app:iconSpaceReserved="false"
         app:layout="@layout/view_preference_category">
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="themeList"
             android:summary="@string/theme_list_summary"
             android:title="@string/theme_list"
@@ -168,7 +168,7 @@
             app:allowDividerBelow="false"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="saveDayTheme"
             android:summary="@string/save_day_theme_summary"
             android:title="@string/save_theme_config"
@@ -176,6 +176,6 @@
             app:allowDividerBelow="false"
             app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

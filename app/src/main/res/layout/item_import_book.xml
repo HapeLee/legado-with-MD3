@@ -12,7 +12,7 @@
         android:layout_width="60dp"
         android:layout_height="match_parent">
         <!--选择是否添加文件-->
-        <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+        <io.legado.app.lib.theme.view.ThemeCheckBox
             android:id="@+id/cb_select"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -57,7 +57,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.text.AccentBgTextView
+            <io.legado.app.ui.widget.text.AccentBgTextView
                 android:id="@+id/tv_tag"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

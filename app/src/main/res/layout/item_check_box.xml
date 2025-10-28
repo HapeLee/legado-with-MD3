@@ -7,7 +7,7 @@
     android:paddingHorizontal="16dp"
     android:paddingVertical="8dp">
 
-    <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+    <io.legado.app.lib.theme.view.ThemeCheckBox
         android:id="@+id/check_box"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

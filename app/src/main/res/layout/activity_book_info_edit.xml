@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -25,7 +25,7 @@
             android:layout_marginHorizontal="16dp"
             android:layout_marginVertical="8dp">
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover"
                 android:layout_width="120dp"
                 android:layout_height="172dp"

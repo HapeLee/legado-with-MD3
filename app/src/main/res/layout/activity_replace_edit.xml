@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -15,7 +15,7 @@
         app:displayHomeAsUp="true"
         app:title="@string/replace_rule_edit" />
 
-    <io.legato.kazusa.ui.widget.NoChildScrollNestedScrollView
+    <io.legado.app.ui.widget.NoChildScrollNestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -71,7 +71,7 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+                <io.legado.app.lib.theme.view.ThemeCheckBox
                     android:id="@+id/cb_use_regex"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+                <io.legado.app.lib.theme.view.ThemeCheckBox
                     android:id="@+id/cb_scope_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -113,7 +113,7 @@
                     android:text="@string/scope_title"
                     tools:ignore="TouchTargetSizeCheck" />
 
-                <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+                <io.legado.app.lib.theme.view.ThemeCheckBox
                     android:id="@+id/cb_scope_content"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -165,6 +165,6 @@
             </com.google.android.material.textfield.TextInputLayout>
 
         </LinearLayout>
-    </io.legato.kazusa.ui.widget.NoChildScrollNestedScrollView>
+    </io.legado.app.ui.widget.NoChildScrollNestedScrollView>
 
 </LinearLayout>

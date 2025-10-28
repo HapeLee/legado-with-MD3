@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
-        <io.legato.kazusa.ui.widget.text.AccentTextView
+        <io.legado.app.ui.widget.text.AccentTextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/book_type"
@@ -27,29 +27,29 @@
 
     </LinearLayout>
 
-    <io.legato.kazusa.ui.widget.text.TextInputLayout
+    <io.legado.app.ui.widget.text.TextInputLayout
         android:id="@+id/til_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/name">
 
-        <io.legato.kazusa.lib.theme.view.ThemeEditText
+        <io.legado.app.lib.theme.view.ThemeEditText
             android:id="@+id/et_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
-    </io.legato.kazusa.ui.widget.text.TextInputLayout>
+    </io.legado.app.ui.widget.text.TextInputLayout>
 
-    <io.legato.kazusa.ui.widget.text.TextInputLayout
+    <io.legado.app.ui.widget.text.TextInputLayout
         android:id="@+id/til_url"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Url"
         tools:ignore="HardcodedText">
 
-        <io.legato.kazusa.lib.theme.view.ThemeEditText
+        <io.legado.app.lib.theme.view.ThemeEditText
             android:id="@+id/et_url"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
-    </io.legato.kazusa.ui.widget.text.TextInputLayout>
+    </io.legado.app.ui.widget.text.TextInputLayout>
 
 </LinearLayout>

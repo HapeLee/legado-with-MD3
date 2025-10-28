@@ -117,7 +117,7 @@
             android:gravity="bottom"
             android:layout_marginHorizontal="16dp">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_text_size"
                 android:layout_width="140dp"
                 android:layout_height="wrap_content"

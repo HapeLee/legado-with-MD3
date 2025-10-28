@@ -92,7 +92,7 @@
         android:gravity="center_vertical"
         android:layout_marginVertical="6dp">
 
-        <io.legato.kazusa.lib.theme.view.ThemeSlider
+        <io.legado.app.lib.theme.view.ThemeSlider
             android:id="@+id/seek_timer"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -194,7 +194,7 @@
                 android:layout_gravity="center"
                 android:layout_weight="1" />
 
-            <io.legato.kazusa.lib.theme.view.ThemeSwitch
+            <io.legado.app.lib.theme.view.ThemeSwitch
                 android:id="@+id/cb_tts_follow_sys"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -223,7 +223,7 @@
                 tools:ignore="UnusedAttribute" />
 
             <!-- 滑动条 (保持不变) -->
-            <io.legato.kazusa.lib.theme.view.ThemeSlider
+            <io.legado.app.lib.theme.view.ThemeSlider
                 android:id="@+id/seek_tts_speechRate"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

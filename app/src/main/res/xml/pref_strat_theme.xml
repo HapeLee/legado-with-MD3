@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <io.legato.kazusa.lib.prefs.ThemeModePreference
+    <io.legado.app.lib.prefs.ThemeModePreference
         android:defaultValue="0"
         android:entries="@array/theme_mode"
         android:entryValues="@array/theme_mode_v"
         android:key="themeMode" />
 
-    <io.legato.kazusa.lib.prefs.ThemeCardPreference
+    <io.legado.app.lib.prefs.ThemeCardPreference
         android:defaultValue="0"
         android:entries="@array/themes_item"
         android:entryValues="@array/themes_value"

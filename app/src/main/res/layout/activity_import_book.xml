@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/titleBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -60,7 +60,7 @@
         app:layout_constraintBottom_toTopOf="@id/select_action_bar"
         app:layout_constraintTop_toBottomOf="@id/refresh_progress_bar">
 
-        <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+        <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -79,7 +79,7 @@
 
     </FrameLayout>
 
-    <io.legato.kazusa.ui.widget.SelectActionBar
+    <io.legado.app.ui.widget.SelectActionBar
         android:id="@+id/select_action_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

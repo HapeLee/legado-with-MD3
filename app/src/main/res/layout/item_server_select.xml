@@ -7,7 +7,7 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <io.legato.kazusa.lib.theme.view.ThemeRadioButton
+    <io.legado.app.lib.theme.view.ThemeRadioButton
         android:id="@+id/rb_server"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

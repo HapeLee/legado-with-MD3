@@ -33,7 +33,7 @@
             android:layout_margin="32dp"
             android:layout_gravity="center"/>
 
-        <io.legato.kazusa.ui.widget.EmptyMessageView
+        <io.legado.app.ui.widget.EmptyMessageView
             android:id="@+id/emptyView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -80,7 +80,7 @@
                 android:text="@string/webtoon"
                 android:textStyle="bold" />
 
-            <io.legato.kazusa.ui.widget.DetailSeekBar
+            <io.legado.app.ui.widget.DetailSeekBar
                 android:id="@+id/scv_Padding"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

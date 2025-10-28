@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+            <io.legado.app.ui.widget.text.AutoCompleteTextView
                 android:id="@+id/edit_1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:visibility="gone">
 
-            <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+            <io.legado.app.ui.widget.text.AutoCompleteTextView
                 android:id="@+id/edit_2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

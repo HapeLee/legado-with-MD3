@@ -61,7 +61,7 @@
             style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
             app:icon="@drawable/ic_edit" />
 
-        <io.legato.kazusa.lib.theme.view.ThemeSwitch
+        <io.legado.app.lib.theme.view.ThemeSwitch
             android:id="@+id/sw_show"
             android:minWidth="48dp"
             android:minHeight="48dp"

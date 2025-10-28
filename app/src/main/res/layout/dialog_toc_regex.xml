@@ -37,7 +37,7 @@
             android:text="@string/cancel"
             tools:ignore="RtlHardcoded" />
 
-        <io.legato.kazusa.ui.widget.text.AccentTextView
+        <io.legado.app.ui.widget.text.AccentTextView
             android:id="@+id/tv_ok"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

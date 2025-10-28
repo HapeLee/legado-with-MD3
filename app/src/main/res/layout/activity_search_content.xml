@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -21,7 +21,7 @@
         android:indeterminate="true"
         app:layout_constraintTop_toBottomOf="@id/title_bar" />
 
-    <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+    <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"

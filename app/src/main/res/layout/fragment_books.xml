@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+        <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
             android:id="@+id/rv_bookshelf"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -18,7 +18,7 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
-    <io.legato.kazusa.ui.widget.EmptyMessageView
+    <io.legado.app.ui.widget.EmptyMessageView
         android:id="@+id/emptyView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

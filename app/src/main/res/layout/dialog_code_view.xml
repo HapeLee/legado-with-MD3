@@ -12,7 +12,7 @@
         android:theme="?attr/actionBarStyle"
         app:title="code edit" />
 
-    <io.legato.kazusa.ui.widget.code.CodeView
+    <io.legado.app.ui.widget.code.CodeView
         android:id="@+id/code_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

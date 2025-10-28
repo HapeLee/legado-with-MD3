@@ -51,7 +51,7 @@
                 android:checkable="true"
                 android:text="@string/enable_auto_page_scroll" />
 
-            <io.legato.kazusa.ui.widget.DetailSeekBar
+            <io.legado.app.ui.widget.DetailSeekBar
                 android:id="@+id/scv_autoPageSpeed"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -7,7 +7,7 @@
     android:layout_height="wrap_content"
     android:paddingVertical="4dp">
 
-    <io.legato.kazusa.ui.widget.code.CodeView
+    <io.legado.app.ui.widget.code.CodeView
         android:id="@+id/editText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

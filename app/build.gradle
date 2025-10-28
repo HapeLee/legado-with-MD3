@@ -47,7 +47,7 @@ def getGitCommitHash() {
 
 android {
     compileSdk = compile_sdk_version
-    namespace = "io.legato.kazusa"
+    namespace = "io.legado.app"
     kotlin {
         jvmToolchain {
             languageVersion.set(JavaLanguageVersion.of(21))

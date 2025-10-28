@@ -8,7 +8,7 @@
     android:clickable="true"
     android:padding="16dp">
 
-    <io.legato.kazusa.lib.theme.view.ThemeRadioButton
+    <io.legado.app.lib.theme.view.ThemeRadioButton
         android:id="@+id/rb_regex_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -19,7 +19,7 @@
         app:layout_constraintRight_toLeftOf="@id/swt_enabled"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <io.legato.kazusa.lib.theme.view.ThemeSwitch
+    <io.legado.app.lib.theme.view.ThemeSwitch
         android:id="@+id/swt_enabled"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

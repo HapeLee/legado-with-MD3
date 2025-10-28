@@ -25,7 +25,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
             <!-- 书封面 -->
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -76,7 +76,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover1"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -89,7 +89,7 @@
                 app:layout_constraintEnd_toStartOf="@id/iv_cover2"
                 app:layout_constraintBottom_toTopOf="@id/iv_cover3"/>
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover2"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
@@ -102,7 +102,7 @@
                 app:layout_constraintStart_toEndOf="@id/iv_cover1"
                 app:layout_constraintBottom_toTopOf="@id/iv_cover4"/>
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover3"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -115,7 +115,7 @@
                 app:layout_constraintTop_toBottomOf="@id/iv_cover1"
                 app:layout_constraintEnd_toStartOf="@id/iv_cover4"/>
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover4"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

@@ -9,7 +9,7 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
-    <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+    <io.legado.app.lib.theme.view.ThemeCheckBox
         android:id="@+id/cb_group"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

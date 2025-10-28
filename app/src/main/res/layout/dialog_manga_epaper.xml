@@ -17,7 +17,7 @@
             android:text="@string/manga_epaper_stting"
             android:textSize="18sp" />
 
-        <io.legato.kazusa.ui.widget.DetailSeekBar
+        <io.legado.app.ui.widget.DetailSeekBar
             android:id="@+id/dsb_epaper"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

@@ -33,7 +33,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <io.legato.kazusa.ui.widget.image.PhotoView
+    <io.legado.app.ui.widget.image.PhotoView
         android:id="@+id/photo_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

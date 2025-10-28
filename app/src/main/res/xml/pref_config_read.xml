@@ -2,12 +2,12 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="screenCategory"
         android:title="@string/screen_settings"
         app:iconSpaceReserved="false">
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="0"
             android:entries="@array/screen_direction_title"
             android:entryValues="@array/screen_direction_value"
@@ -15,7 +15,7 @@
             android:title="@string/screen_direction"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="0"
             android:entries="@array/screen_time_out"
             android:entryValues="@array/screen_time_out_value"
@@ -23,68 +23,68 @@
             android:title="@string/keep_light"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="hideStatusBar"
             android:title="@string/pt_hide_status_bar"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="hideNavigationBar"
             android:title="@string/pt_hide_navigation_bar"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="paddingDisplayCutouts"
             android:title="@string/padding_display_cutouts"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="menuAlpha"
             android:summary="@string/menu_alpha_sum"
             android:title="@string/menu_alpha"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="readBodyToLh"
             android:title="@string/read_body_to_lh"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="textFullJustify"
             android:title="@string/text_full_justify"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="textBottomJustify"
             android:title="@string/text_bottom_justify"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="useZhLayout"
             android:title="@string/use_zh_layout"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showBrightnessView"
             android:title="@string/show_brightness_view"
             app:isBottomBackground="true" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="pageControlCategory"
         android:title="@string/page_control"
         app:iconSpaceReserved="false">
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="0"
             android:entries="@array/read_slider_mode"
             android:entryValues="@array/read_slider_mode_value"
@@ -92,7 +92,7 @@
             android:title="@string/read_slider_mode"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="0"
             android:entries="@array/double_page_title"
             android:entryValues="@array/double_page_value"
@@ -100,7 +100,7 @@
             android:title="@string/double_page_horizontal"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.NameListPreference
+        <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="page"
             android:entries="@array/progress_bar_behavior_title"
             android:entryValues="@array/progress_bar_behavior_value"
@@ -108,103 +108,103 @@
             android:title="@string/progress_bar_behavior"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="mouseWheelPage"
             android:title="@string/mouse_wheel_page"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="volumeKeyPage"
             android:title="@string/volume_key_page"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="volumeKeyPageOnPlay"
             android:title="@string/volume_key_page_on_play"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="keyPageOnLongPress"
             android:title="@string/key_page_on_long_press"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="pageTouchSlop"
             android:summary="@string/page_touch_slop_summary"
             android:title="@string/page_touch_slop_title"
             app:isBottomBackground="true" />
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:key="otherCategory"
         android:title="@string/other"
         app:iconSpaceReserved="false">
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="autoChangeSource"
             android:title="@string/auto_change_source"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="selectText"
             android:title="@string/selectText"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="noAnimScrollPage"
             android:title="@string/no_anim_scroll_page"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="previewImageByClick"
             android:title="@string/preview_image_by_click"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="optimizeRender"
             android:title="@string/enable_optimize_render"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="clickRegionalConfig"
             android:title="@string/click_regional_config"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="disableReturnKey"
             android:title="@string/disable_return_key"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:key="customPageKey"
             android:title="@string/custom_page_key"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="expandTextMenu"
             android:title="@string/expand_text_menu"
             app:isBottomBackground="true" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="showReadTitleAddition"
             android:title="@string/show_read_title_addition" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="readBarStyleFollowPage"
             android:title="@string/read_bar_style_follow_page" />
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

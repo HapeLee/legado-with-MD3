@@ -11,13 +11,13 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <io.legato.kazusa.ui.widget.TitleBar
+        <io.legado.app.ui.widget.TitleBar
             android:id="@+id/title_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <io.legato.kazusa.ui.rss.read.VisibleWebView
+        <io.legado.app.ui.rss.read.VisibleWebView
             android:id="@+id/web_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"

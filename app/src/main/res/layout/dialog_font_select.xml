@@ -78,7 +78,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_shadow_dx"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -91,7 +91,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_shadow_dy"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -106,7 +106,7 @@
             android:layout_height="wrap_content"
             android:gravity="bottom">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_shadow_radius"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -215,7 +215,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_line_size"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -228,7 +228,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_text_letter_spacing"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"

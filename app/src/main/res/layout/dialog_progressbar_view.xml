@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.legato.kazusa.lib.theme.view.ThemeProgressBar
+    <io.legado.app.lib.theme.view.ThemeProgressBar
         android:id="@+id/ck_progress"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
@@ -23,7 +23,7 @@
         app:layout_constraintBottom_toBottomOf="@+id/ck_progress"
         app:layout_constraintEnd_toEndOf="@+id/ck_progress" />
 
-    <io.legato.kazusa.ui.widget.text.AccentTextView
+    <io.legado.app.ui.widget.text.AccentTextView
         android:id="@+id/tv_footer_left"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

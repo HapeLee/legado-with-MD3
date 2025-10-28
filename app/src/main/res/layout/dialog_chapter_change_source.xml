@@ -23,7 +23,7 @@
         android:indeterminate="true"
         app:layout_constraintTop_toBottomOf="@+id/tool_bar" />
 
-    <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+    <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"

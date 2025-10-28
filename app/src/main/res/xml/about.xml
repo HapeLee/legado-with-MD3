@@ -2,52 +2,52 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="contributors"
         android:summary="@string/contributors_summary"
         android:title="@string/contributors"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="update_log"
         android:title="@string/update_log"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="check_update"
         android:title="@string/check_update"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="privacyPolicy"
         android:title="@string/privacy_policy"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="license"
         android:title="@string/license"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="disclaimer"
         android:title="@string/disclaimer"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="crashLog"
         android:title="@string/crash_log"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="saveLog"
         android:title="@string/save_log"
         app:iconSpaceReserved="false" />
 
-    <io.legato.kazusa.lib.prefs.Preference
+    <io.legado.app.lib.prefs.Preference
         android:key="createHeapDump"
         android:title="@string/create_heap_dump"
         app:iconSpaceReserved="false" />

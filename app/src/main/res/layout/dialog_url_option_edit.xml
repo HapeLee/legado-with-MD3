@@ -54,89 +54,89 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
-                <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+                <io.legado.app.lib.theme.view.ThemeCheckBox
                     android:id="@+id/cb_use_web_view"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="useWebView"
                     tools:ignore="HardcodedText" />
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_method"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_method"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="method"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_charset"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_charset"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="charset"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_headers"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_headers"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="headers"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_body"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_body"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="body"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_type"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_type"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="type"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_retry"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_retry"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -144,35 +144,35 @@
                         android:inputType="number"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_web_js"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_web_js"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="webJs"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
-                <io.legato.kazusa.ui.widget.text.TextInputLayout
+                <io.legado.app.ui.widget.text.TextInputLayout
                     android:id="@+id/layout_js"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
 
-                    <io.legato.kazusa.ui.widget.text.AutoCompleteTextView
+                    <io.legado.app.ui.widget.text.AutoCompleteTextView
                         android:id="@+id/edit_js"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:hint="js"
                         tools:ignore="HardcodedText,SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
-                </io.legato.kazusa.ui.widget.text.TextInputLayout>
+                </io.legado.app.ui.widget.text.TextInputLayout>
 
             </LinearLayout>
 

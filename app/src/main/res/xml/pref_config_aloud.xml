@@ -2,71 +2,71 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <io.legato.kazusa.lib.prefs.PreferenceCategory
+    <io.legado.app.lib.prefs.PreferenceCategory
         android:title="@string/aloud_config"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false">
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="ignoreAudioFocus"
             android:summary="@string/ignore_audio_focus_summary"
             android:title="@string/ignore_audio_focus_title" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="pauseReadAloudWhilePhoneCalls"
             android:summary="@string/pause_read_aloud_while_phone_calls_summary"
             android:title="@string/pause_read_aloud_while_phone_calls_title" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:title="@string/read_aloud_wake_lock"
             android:summary="@string/read_aloud_wake_lock_summary"
             android:key="readAloudWakeLock"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:title="@string/pref_media_button_per_next"
             android:summary="@string/pref_media_button_per_next_summary"
             android:key="mediaButtonPerNext"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:title="@string/read_aloud_by_page"
             android:summary="@string/read_aloud_by_page_summary"
             android:key="readAloudByPage"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="systemMediaControlCompatibilityChange"
             android:summary="@string/system_media_control_compatibility_change_summary"
             android:title="@string/system_media_control_compatibility_change"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.SwitchPreference
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:title="@string/stream_read_aloud_audio"
             android:summary="@string/stream_read_aloud_audio_summary"
             android:key="streamReadAloudAudio"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:title="@string/speak_engine"
             android:summary="TTS"
             android:key="appTtsEngine"
             app:iconSpaceReserved="false" />
 
-        <io.legato.kazusa.lib.prefs.Preference
+        <io.legado.app.lib.prefs.Preference
             android:title="@string/sys_tts_config"
             android:summary="@string/sys_tts_config_summary"
             android:key="sysTtsConfig"
             app:iconSpaceReserved="false" />
 
-    </io.legato.kazusa.lib.prefs.PreferenceCategory>
+    </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

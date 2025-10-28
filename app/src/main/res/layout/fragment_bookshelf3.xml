@@ -35,7 +35,7 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <io.legato.kazusa.ui.widget.NestedScrollableHost
+    <io.legado.app.ui.widget.NestedScrollableHost
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
@@ -44,6 +44,6 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:paddingHorizontal="8dp" />
-    </io.legato.kazusa.ui.widget.NestedScrollableHost>
+    </io.legado.app.ui.widget.NestedScrollableHost>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,28 +40,28 @@
                 android:entries="@array/book_type"
                 tools:ignore="TouchTargetSizeCheck" />
 
-            <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+            <io.legado.app.lib.theme.view.ThemeCheckBox
                 android:id="@+id/cb_is_enable"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="@string/is_enable" />
 
-            <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+            <io.legado.app.lib.theme.view.ThemeCheckBox
                 android:id="@+id/cb_is_enable_explore"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="@string/discovery" />
 
-            <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+            <io.legado.app.lib.theme.view.ThemeCheckBox
                 android:id="@+id/cb_is_enable_cookie"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="@string/auto_save_cookie" />
 
-            <io.legato.kazusa.lib.theme.view.ThemeCheckBox
+            <io.legado.app.lib.theme.view.ThemeCheckBox
                 android:id="@+id/cb_is_enable_review"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

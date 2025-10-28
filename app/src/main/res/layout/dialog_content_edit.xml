@@ -20,7 +20,7 @@
         android:paddingBottom="24dp"
         app:layout_constraintTop_toBottomOf="@id/tool_bar">
 
-        <io.legato.kazusa.ui.widget.text.TextInputLayout
+        <io.legado.app.ui.widget.text.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:importantForAutofill="no"
                 />
-        </io.legato.kazusa.ui.widget.text.TextInputLayout>
+        </io.legado.app.ui.widget.text.TextInputLayout>
 
     </androidx.core.widget.NestedScrollView>
 

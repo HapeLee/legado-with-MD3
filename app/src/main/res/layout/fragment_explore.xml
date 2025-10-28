@@ -55,7 +55,7 @@
         tools:listitem="@layout/item_find_book"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
-    <io.legato.kazusa.ui.widget.EmptyMessageView
+    <io.legado.app.ui.widget.EmptyMessageView
         android:id="@+id/emptyView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

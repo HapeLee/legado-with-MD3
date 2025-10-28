@@ -20,7 +20,7 @@
         android:gravity="center_vertical"
         app:layout_constraintTop_toBottomOf="@id/vw_status_bar">
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_header_left"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -33,7 +33,7 @@
             app:layout_constraintRight_toLeftOf="@+id/tv_header_right"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_header_middle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -46,7 +46,7 @@
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_header_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -69,7 +69,7 @@
         android:visibility="invisible"
         app:layout_constraintTop_toBottomOf="@id/ll_header" />
 
-    <io.legato.kazusa.ui.book.read.page.ContentTextView
+    <io.legado.app.ui.book.read.page.ContentTextView
         android:id="@+id/content_text_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -92,7 +92,7 @@
         android:gravity="center_vertical"
         app:layout_constraintBottom_toTopOf="@id/vw_navigation_bar">
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_footer_left"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -105,7 +105,7 @@
             app:layout_constraintRight_toLeftOf="@+id/tv_footer_right"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_footer_middle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -118,7 +118,7 @@
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <io.legato.kazusa.ui.widget.BatteryView
+        <io.legado.app.ui.widget.BatteryView
             android:id="@+id/tv_footer_right"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

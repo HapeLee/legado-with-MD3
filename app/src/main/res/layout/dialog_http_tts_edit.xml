@@ -50,7 +50,7 @@
                     android:hint="url"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_url"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -65,7 +65,7 @@
                     android:hint="Content-Type"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_content_type"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -80,7 +80,7 @@
                     android:hint="@string/concurrent_rate"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_concurrent_rate"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -95,7 +95,7 @@
                     android:hint="@string/login_url"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_login_url"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -110,7 +110,7 @@
                     android:hint="@string/login_ui"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_login_ui"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -125,7 +125,7 @@
                     android:hint="@string/login_check_js"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_login_check_js"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -140,7 +140,7 @@
                     android:hint="@string/source_http_header"
                     tools:ignore="HardcodedText">
 
-                    <io.legato.kazusa.ui.widget.code.CodeView
+                    <io.legado.app.ui.widget.code.CodeView
                         android:id="@+id/tv_headers"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

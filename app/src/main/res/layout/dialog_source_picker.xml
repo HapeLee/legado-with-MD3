@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <io.legato.kazusa.ui.widget.TitleBar
+    <io.legado.app.ui.widget.TitleBar
         android:id="@+id/tool_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -22,7 +22,7 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <io.legato.kazusa.ui.widget.recycler.scroller.FastScrollRecyclerView
+        <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -57,7 +57,7 @@
         app:flexWrap="wrap"
         app:justifyContent="space_between">
 
-        <io.legato.kazusa.ui.widget.text.AccentTextView
+        <io.legado.app.ui.widget.text.AccentTextView
             android:id="@+id/tv_footer_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -74,7 +74,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.text.AccentTextView
+            <io.legado.app.ui.widget.text.AccentTextView
                 android:id="@+id/tv_cancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -83,7 +83,7 @@
                 android:visibility="gone"
                 tools:ignore="RtlHardcoded" />
 
-            <io.legato.kazusa.ui.widget.text.AccentTextView
+            <io.legado.app.ui.widget.text.AccentTextView
                 android:id="@+id/tv_ok"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <io.legato.kazusa.ui.book.read.page.ReadView
+    <io.legado.app.ui.book.read.page.ReadView
         android:id="@+id/read_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
@@ -32,13 +32,13 @@
         android:src="@drawable/ic_cursor_right"
         android:visibility="invisible" />
 
-    <io.legato.kazusa.ui.book.read.ReadMenu
+    <io.legado.app.ui.book.read.ReadMenu
         android:id="@+id/read_menu"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
 
-    <io.legato.kazusa.ui.book.read.SearchMenu
+    <io.legado.app.ui.book.read.SearchMenu
         android:id="@+id/search_menu"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

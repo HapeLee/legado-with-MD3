@@ -6,20 +6,20 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <io.legato.kazusa.ui.book.manga.recyclerview.WebtoonFrame
+    <io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
         android:id="@+id/webtoon_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/black">
 
-        <io.legato.kazusa.ui.book.manga.recyclerview.WebtoonRecyclerView
+        <io.legado.app.ui.book.manga.recyclerview.WebtoonRecyclerView
             android:id="@+id/recycler_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-    </io.legato.kazusa.ui.book.manga.recyclerview.WebtoonFrame>
+    </io.legado.app.ui.book.manga.recyclerview.WebtoonFrame>
 
-    <io.legato.kazusa.ui.widget.ReaderInfoBarView
+    <io.legado.app.ui.widget.ReaderInfoBarView
         android:id="@+id/infobar"
         android:layout_width="match_parent"
         android:layout_height="20dp"
@@ -30,7 +30,7 @@
         android:visibility="gone"
         tools:visibility="visible" />
 
-    <io.legato.kazusa.ui.book.read.MangaMenu
+    <io.legado.app.ui.book.read.MangaMenu
         android:id="@+id/manga_menu"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -73,7 +73,7 @@
             android:orientation="vertical"
             android:visibility="gone">
 
-            <io.legato.kazusa.ui.widget.EmptyMessageView
+            <io.legado.app.ui.widget.EmptyMessageView
                 android:id="@+id/tv_msg2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

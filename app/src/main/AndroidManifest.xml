@@ -185,12 +185,12 @@
             android:launchMode="singleTask" />
         <!-- 音频播放界面 -->
         <activity
-            android:name="io.legato.kazusa.ui.book.audio.AudioPlayActivity"
+            android:name="io.legado.app.ui.book.audio.AudioPlayActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
         <!-- 授权界面 -->
         <activity
-            android:name="io.legato.kazusa.lib.permission.PermissionActivity"
+            android:name="io.legado.app.lib.permission.PermissionActivity"
             android:enableOnBackInvokedCallback="true"
             android:theme="@style/Activity.Permission" />
         <!-- 二维码扫描 -->
@@ -334,7 +334,7 @@
             android:launchMode="standard" />
         <!-- 书源登录 -->
         <activity
-            android:name="io.legato.kazusa.ui.login.SourceLoginActivity"
+            android:name="io.legado.app.ui.login.SourceLoginActivity"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true"

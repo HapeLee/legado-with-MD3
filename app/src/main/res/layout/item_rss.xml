@@ -17,7 +17,7 @@
         android:padding="12dp"
         android:scrollbars="none">
 
-        <io.legato.kazusa.ui.widget.image.FilletImageView
+        <io.legado.app.ui.widget.image.FilletImageView
             android:id="@+id/iv_icon"
             android:layout_width="50dp"
             android:layout_height="50dp"

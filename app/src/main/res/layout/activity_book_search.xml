@@ -65,7 +65,7 @@
             </com.google.android.material.card.MaterialCardView>
         </com.google.android.material.appbar.AppBarLayout>
 
-        <io.legato.kazusa.ui.widget.EmptyMessageView
+        <io.legado.app.ui.widget.EmptyMessageView
             android:id="@+id/tv_empty_msg"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

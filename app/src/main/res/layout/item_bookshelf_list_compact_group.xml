@@ -25,7 +25,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent">
             <!-- 书封面 -->
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -76,7 +76,7 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover1"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -87,7 +87,7 @@
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
-            <io.legato.kazusa.ui.widget.image.CoverImageView
+            <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover2"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

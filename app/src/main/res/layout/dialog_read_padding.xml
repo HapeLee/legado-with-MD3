@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <io.legato.kazusa.ui.widget.SimpleCounterView
+                <io.legado.app.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_top"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
@@ -66,7 +66,7 @@
                     android:layout_weight="1"/>
 
 
-                <io.legato.kazusa.ui.widget.SimpleCounterView
+                <io.legado.app.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_bottom"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
@@ -80,7 +80,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <io.legato.kazusa.ui.widget.SimpleCounterView
+                <io.legado.app.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_left"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
@@ -92,7 +92,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"/>
 
-                <io.legato.kazusa.ui.widget.SimpleCounterView
+                <io.legado.app.ui.widget.SimpleCounterView
                     android:id="@+id/dsb_header_padding_right"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
@@ -117,7 +117,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_top"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -129,7 +129,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_bottom"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -143,7 +143,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_left"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -155,7 +155,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_padding_right"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -192,7 +192,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_top"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -204,7 +204,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_bottom"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -218,7 +218,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_left"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
@@ -230,7 +230,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"/>
 
-            <io.legato.kazusa.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_footer_padding_right"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
