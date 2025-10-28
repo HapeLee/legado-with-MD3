@@ -111,11 +111,6 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                     binding.viewPagerMain.currentItem = 0
                     return
                 }
-
-                val fragment = fragmentMap[getFragmentId(0)] as? BookshelfFragment2
-                if (fragment?.back() == true) {
-                    return
-                }
             }
         }
         onBackPressedDispatcher.addCallback(this, backCallback)
@@ -434,8 +429,8 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         }
 
         efab.setOnClickListener {
-                startActivity<SearchActivity>()
-            }
+            startActivity<SearchActivity>()
+        }
 
         button.setOnClickListener {
             efab.let { it1 ->
@@ -509,8 +504,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     }
 
     private fun updateBackCallbackState() {
-        val fragment = fragmentMap[getFragmentId(0)] as? BookshelfFragment2
-        backCallback.isEnabled = (pagePosition != 0) || (fragment?.canHandleBack() == true)
+        backCallback.isEnabled = (pagePosition != 0)
     }
 
     private inner class TabFragmentPageAdapter(
@@ -522,13 +516,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         override fun createFragment(position: Int): Fragment {
             val fragment = when (getFragmentId(position)) {
                 idBookshelf1 -> BookshelfFragment1(position)
-                idBookshelf2 -> {
-                    val bookshelfFragment = BookshelfFragment2(position)
-                    bookshelfFragment.setGroupIdChangeListener {
-                        updateBackCallbackState()
-                    }
-                    bookshelfFragment
-                }
+                idBookshelf2 -> BookshelfFragment2(position)
                 idBookshelf3 -> BookshelfFragment3(position)
                 idExplore -> ExploreFragment(position)
                 idRss -> RssFragment(position)

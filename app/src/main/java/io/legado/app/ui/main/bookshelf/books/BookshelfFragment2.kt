@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.view.isGone
@@ -78,10 +79,6 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
 
     private var groupIdChangeListener: OnGroupIdChangeListener? = null
 
-    fun setGroupIdChangeListener(listener: OnGroupIdChangeListener) {
-        this.groupIdChangeListener = listener
-    }
-
     private val booksAdapter: BaseBooksAdapter<*> by lazy {
         when (bookshelfLayoutMode) {
             0 -> {
@@ -113,12 +110,27 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
     override var books: List<Book> = emptyList()
     private var enableRefresh = true
 
+    private lateinit var backCallback: OnBackPressedCallback
+
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.topBar)
         initRecyclerView()
         initBookGroupData()
         initAllBooksData()
         initBooksData()
+        backCallback = object : OnBackPressedCallback(false) { // 初始禁用
+            override fun handleOnBackPressed() {
+                if (back()) {
+                    updateBackCallbackState()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
+    }
+
+    private fun updateBackCallbackState() {
+        //每次进出书架时，判断是否启用回调
+        backCallback.isEnabled = groupId != BookGroup.IdRoot
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -272,9 +284,11 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
             groupId = BookGroup.Companion.IdRoot
             initBooksData()
             groupIdChangeListener?.onGroupIdChanged()
-            return true
+            updateBackCallbackState()
+            return false
         }
-        return false
+        return true
+        //需要提前设置，因为在返回时触发
     }
 
     override fun onQueryTextSubmit(query: String?): Boolean {
@@ -324,6 +338,7 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
                 groupId = item.groupId
                 initBooksData()
                 groupIdChangeListener?.onGroupIdChanged()
+                updateBackCallbackState()
             }
         }
     }
@@ -363,10 +378,6 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         } else {
             books.size
         }
-    }
-
-    fun canHandleBack(): Boolean {
-        return groupId != BookGroup.Companion.IdRoot
     }
 
     override fun getItems(): List<Any> {
