@@ -45,7 +45,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.main.Launcher1"
+            android:name=".ui.main.Launcher0"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher0">
@@ -56,7 +56,7 @@
         </activity>
         <!-- 图标1 -->
         <activity
-            android:name=".ui.main.Launcher2"
+            android:name=".ui.main.Launcher1"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher1">
@@ -67,7 +67,7 @@
         </activity>
         <!-- 图标2 -->
         <activity
-            android:name=".ui.main.Launcher3"
+            android:name=".ui.main.Launcher2"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher2">
@@ -78,7 +78,7 @@
         </activity>
         <!-- 图标3 -->
         <activity
-            android:name=".ui.main.Launcher4"
+            android:name=".ui.main.Launcher3"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher3">
@@ -89,7 +89,7 @@
         </activity>
         <!-- 图标4 -->
         <activity
-            android:name=".ui.main.Launcher5"
+            android:name=".ui.main.Launcher4"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher4">
@@ -100,7 +100,7 @@
         </activity>
         <!-- 图标5 -->
         <activity
-            android:name=".ui.main.Launcher6"
+            android:name=".ui.main.Launcher5"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher5">
@@ -111,7 +111,7 @@
         </activity>
         <!-- 图标6 -->
         <activity
-            android:name=".ui.main.Launcher7"
+            android:name=".ui.main.Launcher6"
             android:enabled="false"
             android:exported="true"
             android:icon="@mipmap/launcher6">
