@@ -13,5 +13,8 @@
         <item
             android:id="@+id/menu_redirect_block_cross_origin"
             android:title="@string/redirect_block_cross_origin" />
+        <item
+            android:id="@+id/menu_redirect_block_all"
+            android:title="@string/redirect_block_all" />
     </group>
 </menu>

@@ -141,6 +141,7 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             RedirectPolicy.ASK_ALWAYS -> R.id.menu_redirect_ask_always
             RedirectPolicy.ASK_CROSS_ORIGIN -> R.id.menu_redirect_ask_cross_origin
             RedirectPolicy.BLOCK_CROSS_ORIGIN -> R.id.menu_redirect_block_cross_origin
+            RedirectPolicy.BLOCK_ALL -> R.id.menu_redirect_block_all
         }
         menu.findItem(menuItemId)?.isChecked = true
     }
@@ -151,6 +152,7 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             R.id.menu_redirect_ask_always -> RedirectPolicy.ASK_ALWAYS
             R.id.menu_redirect_ask_cross_origin -> RedirectPolicy.ASK_CROSS_ORIGIN
             R.id.menu_redirect_block_cross_origin -> RedirectPolicy.BLOCK_CROSS_ORIGIN
+            R.id.menu_redirect_block_all -> RedirectPolicy.BLOCK_ALL
             else -> RedirectPolicy.ALLOW_ALL
         }
 
@@ -160,9 +162,8 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
 
     fun updateRedirectPolicy(policy: RedirectPolicy) {
         viewModel.rssSource?.let { source ->
-            source.redirectPolicy = policy.name
+            viewModel.updateRssSourceRedirectPolicy(source.sourceUrl, policy.name)
             redirectPolicy = policy
-            viewModel.updateRssSourceRedirectPolicy(source.sourceUrl)
         }
     }
 

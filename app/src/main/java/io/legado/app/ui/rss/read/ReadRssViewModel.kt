@@ -243,11 +243,10 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         tts?.speak(text)
     }
 
-    fun updateRssSourceRedirectPolicy(redirectPolicy: String) {
+    fun updateRssSourceRedirectPolicy(sourceUrl: String, redirectPolicy: String) {
         execute {
-            val source = rssSource ?: return@execute
-            source.redirectPolicy = redirectPolicy
-            appDb.rssSourceDao.updateRedirectPolicy(source.sourceUrl, redirectPolicy)
+            appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
+            rssSource?.redirectPolicy = redirectPolicy
         }.onError {
             appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
         }

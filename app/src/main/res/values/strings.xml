@@ -1319,4 +1319,5 @@
     <string name="redirect_ask_always">总是询问</string>
     <string name="redirect_ask_cross_origin">跨域时询问</string>
     <string name="redirect_block_cross_origin">阻止跨域重定向</string>
+    <string name="redirect_block_all">阻止所有重定向</string>
 </resources>
