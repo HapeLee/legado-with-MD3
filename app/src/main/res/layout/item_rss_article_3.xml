@@ -25,9 +25,11 @@
                 android:id="@+id/image_view"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="80dp"
+                android:backgroundTint="?attr/colorSurfaceContainer"
                 android:contentDescription="@string/loading"
                 android:visibility="visible"
-                android:scaleType="centerCrop" />
+                 />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView

@@ -81,7 +81,8 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         ASK_ALWAYS,
         ASK_CROSS_ORIGIN,
         BLOCK_CROSS_ORIGIN,
-        BLOCK_ALL;
+        BLOCK_ALL,
+        ASK_SAME_DOMAIN_BLOCK_CROSS;
 
         companion object {
             fun fromString(value: String?): RedirectPolicy {
@@ -247,6 +248,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             RedirectPolicy.ASK_CROSS_ORIGIN -> R.id.menu_redirect_ask_cross_origin
             RedirectPolicy.BLOCK_CROSS_ORIGIN -> R.id.menu_redirect_block_cross_origin
             RedirectPolicy.BLOCK_ALL -> R.id.menu_redirect_block_all
+            RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> R.id.menu_redirect_ask_same_domain_block_cross
         }
         menu.findItem(menuItemId)?.isChecked = true
     }
@@ -258,6 +260,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             R.id.menu_redirect_ask_cross_origin -> RedirectPolicy.ASK_CROSS_ORIGIN
             R.id.menu_redirect_block_cross_origin -> RedirectPolicy.BLOCK_CROSS_ORIGIN
             R.id.menu_redirect_block_all -> RedirectPolicy.BLOCK_ALL
+            R.id.menu_redirect_ask_same_domain_block_cross -> RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS
             else -> RedirectPolicy.ALLOW_ALL
         }
 
@@ -489,7 +492,10 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
 
             return when (redirectPolicy) {
                 RedirectPolicy.ALLOW_ALL -> false
-                RedirectPolicy.BLOCK_ALL -> true
+                RedirectPolicy.BLOCK_ALL -> {
+                    toastOnUi("已阻止重定向")
+                    true
+                }
                 RedirectPolicy.ASK_ALWAYS -> {
                     askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
                     true
@@ -508,6 +514,15 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                         true
                     } else {
                         false
+                    }
+                }
+                RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> {
+                    if (crossOrigin) {
+                        toastOnUi("已阻止域外跳转")
+                        true
+                    } else {
+                        askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
+                        true
                     }
                 }
             }

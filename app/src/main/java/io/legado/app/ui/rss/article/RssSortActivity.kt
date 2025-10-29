@@ -142,6 +142,7 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             RedirectPolicy.ASK_CROSS_ORIGIN -> R.id.menu_redirect_ask_cross_origin
             RedirectPolicy.BLOCK_CROSS_ORIGIN -> R.id.menu_redirect_block_cross_origin
             RedirectPolicy.BLOCK_ALL -> R.id.menu_redirect_block_all
+            RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> R.id.menu_redirect_ask_same_domain_block_cross
         }
         menu.findItem(menuItemId)?.isChecked = true
     }
@@ -153,6 +154,7 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             R.id.menu_redirect_ask_cross_origin -> RedirectPolicy.ASK_CROSS_ORIGIN
             R.id.menu_redirect_block_cross_origin -> RedirectPolicy.BLOCK_CROSS_ORIGIN
             R.id.menu_redirect_block_all -> RedirectPolicy.BLOCK_ALL
+            R.id.menu_redirect_ask_same_domain_block_cross -> RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS
             else -> RedirectPolicy.ALLOW_ALL
         }
 

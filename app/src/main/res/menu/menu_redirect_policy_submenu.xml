@@ -11,6 +11,9 @@
             android:id="@+id/menu_redirect_ask_cross_origin"
             android:title="@string/redirect_ask_cross_origin" />
         <item
+            android:id="@+id/menu_redirect_ask_same_domain_block_cross"
+            android:title="@string/redirect_ask_same_domain_block_cross" />
+        <item
             android:id="@+id/menu_redirect_block_cross_origin"
             android:title="@string/redirect_block_cross_origin" />
         <item
