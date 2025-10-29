@@ -7,10 +7,12 @@ import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import io.legado.app.R
 import io.legado.app.ui.dict.DictDialog
+import io.legado.app.utils.toastOnUi
 
 @SuppressLint("SetJavaScriptEnabled")
 class VisibleWebView(
@@ -21,10 +23,29 @@ class VisibleWebView(
     init {
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
+
+        addJavascriptInterface(object {
+            @JavascriptInterface
+            fun onTextSelected(text: String) {
+                lastSelectedText = text
+            }
+        }, "TextSelectionBridge")
+
+        val js = """
+        document.addEventListener('selectionchange', function() {
+            const text = window.getSelection().toString();
+            if (text) {
+                TextSelectionBridge.onTextSelected(text);
+            }
+        });
+    """
+        evaluateJavascript(js, null)
     }
 
+    private var lastSelectedText: String = ""
+
     override fun onWindowVisibilityChanged(visibility: Int) {
-        super.onWindowVisibilityChanged(View.VISIBLE)
+        super.onWindowVisibilityChanged(VISIBLE)
     }
 
     override fun startActionMode(callback: ActionMode.Callback?): ActionMode {
@@ -54,19 +75,22 @@ class VisibleWebView(
             override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
                 when (item.itemId) {
                     MENU_ID_DICT -> {
-                        getSelectedText { selectedText ->
-                            if (selectedText.isNotBlank()) {
-                                showDictDialog(selectedText)
+                        postDelayed({
+                            getSelectedText { selectedText ->
+                                if (selectedText.isNotBlank()) {
+                                    showDictDialog(selectedText)
+                                } else {
+                                    context.toastOnUi("未获取到选中文本，请重试")
+                                }
                             }
-                        }
+                        }, 200)
                         mode.finish()
                         return true
                     }
-                    else -> {
-                        return original?.onActionItemClicked(mode, item) ?: false
-                    }
+                    else -> return original?.onActionItemClicked(mode, item) ?: false
                 }
             }
+
 
             override fun onDestroyActionMode(mode: ActionMode) {
                 original?.onDestroyActionMode(mode)
@@ -84,14 +108,14 @@ class VisibleWebView(
     }
 
     private fun getSelectedText(callback: (String) -> Unit) {
-        evaluateJavascript("(function(){return window.getSelection().toString();})()") { result ->
-            val selectedText = result
-                ?.removeSurrounding("\"")
-                ?.replace("\\n", "\n")
-                ?.replace("\\t", "\t")
-                ?.replace("\\\"", "\"")
-                ?: ""
-            callback(selectedText)
+        if (lastSelectedText.isNotBlank()) {
+            callback(lastSelectedText)
+        } else {
+            evaluateJavascript("(function(){return window.getSelection().toString();})()") { result ->
+                val selectedText = result?.removeSurrounding("\"") ?: ""
+                lastSelectedText = selectedText
+                callback(selectedText)
+            }
         }
     }
 
