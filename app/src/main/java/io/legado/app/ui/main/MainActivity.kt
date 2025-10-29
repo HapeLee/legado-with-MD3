@@ -546,6 +546,6 @@ class Launcher3 : MainActivity()
 class Launcher4 : MainActivity()
 class Launcher5 : MainActivity()
 class Launcher6 : MainActivity()
-class Launcher7 : MainActivity()
+class Launcher0 : MainActivity()
 
 
