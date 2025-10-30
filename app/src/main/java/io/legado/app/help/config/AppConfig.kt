@@ -282,6 +282,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val showRSS: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showRss, true)
 
+    val showStatusBar: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.showStatusBar, true)
+
     val showBottomView: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showBottomView, true)
 

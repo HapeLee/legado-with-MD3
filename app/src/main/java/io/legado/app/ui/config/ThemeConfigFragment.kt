@@ -222,7 +222,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             PreferKey.colorImage -> handleRestartRequired()
 
             PreferKey.showDiscovery, PreferKey.showRss,
-            PreferKey.showBottomView, PreferKey.tabletInterface,
+            PreferKey.showStatusBar, PreferKey.showBottomView, PreferKey.tabletInterface,
             PreferKey.labelVisibilityMode -> postEvent(EventBus.NOTIFY_MAIN, true)
         }
 

@@ -9,11 +9,14 @@ import android.text.format.DateUtils
 import android.view.Gravity
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.get
 import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
@@ -21,6 +24,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import cn.hutool.core.util.IdcardUtil.hide
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.bottomnavigation.LabelVisibilityMode
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
@@ -37,6 +41,7 @@ import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.alert
@@ -61,6 +66,7 @@ import io.legado.app.utils.shouldHideSoftInput
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.themeColor
+import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
@@ -119,7 +125,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-
+        toggleSystemBar(AppConfig.showStatusBar)
         if (checkStartupRoute()) return
         setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
 
@@ -133,6 +139,11 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         initView()
         upHomePage()
         bindNavigationListener()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        toggleSystemBar(AppConfig.showStatusBar)
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {

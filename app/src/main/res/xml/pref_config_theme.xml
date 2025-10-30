@@ -102,6 +102,12 @@
 
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
+            android:key="showStatusBar"
+            android:title="@string/show_status"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
             android:key="showBottomView"
             android:summary="@string/be_swiped"
             android:title="@string/show_bottom_nav"

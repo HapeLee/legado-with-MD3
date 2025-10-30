@@ -22,6 +22,8 @@
                 android:id="@+id/tv_count"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:gravity="top"
                 android:textColor="?attr/colorSecondary"
                 android:textSize="18sp"
                 android:textStyle="bold" />
@@ -30,6 +32,8 @@
                 android:id="@+id/tv_count_all"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:gravity="bottom"
                 android:textSize="12sp"
                 android:textStyle="bold" />
 
