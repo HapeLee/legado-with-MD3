@@ -43,14 +43,22 @@
                 android:id="@+id/til_group"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
                 android:hint="@string/group">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/et_group"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:text="@string/text_default"
                     tools:ignore="SpeakableTextPresentCheck,TouchTargetSizeCheck" />
             </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/iv_manage_groups"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/group_manage"/>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_replace_rule"

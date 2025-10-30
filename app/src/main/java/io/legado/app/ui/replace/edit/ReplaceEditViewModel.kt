@@ -22,11 +22,15 @@ class ReplaceEditViewModel(application: Application) : BaseViewModel(application
                 val pattern = intent.getStringExtra("pattern") ?: ""
                 val isRegex = intent.getBooleanExtra("isRegex", false)
                 val scope = intent.getStringExtra("scope")
+                val isScopeTitle = intent.getBooleanExtra("isScopeTitle", false)
+                val isScopeContent = intent.getBooleanExtra("isScopeContent", false)
                 ReplaceRule(
                     name = pattern,
                     pattern = pattern,
                     isRegex = isRegex,
-                    scope = scope
+                    scope = scope,
+                    scopeTitle = isScopeTitle,
+                    scopeContent = isScopeContent
                 )
             }
         }.onFinally {

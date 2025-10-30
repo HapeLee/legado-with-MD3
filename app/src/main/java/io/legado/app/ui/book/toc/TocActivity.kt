@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
@@ -22,12 +23,12 @@ import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.CacheBook
-//import io.legado.app.lib.theme.accentColor
-//import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.toc.rule.TxtTocRuleDialog
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.gone
 import io.legado.app.utils.hideSoftInput
@@ -57,6 +58,12 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
             }
         }
     }
+    private val replaceActivity =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == RESULT_OK) {
+                viewModel.replaceRuleChanged()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -143,6 +150,25 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_replace -> {
+                val scopes = arrayListOf<String>()
+                viewModel.bookData.value?.name?.let { scopes.add(it) }
+                viewModel.bookSource?.bookSourceUrl?.let { scopes.add(it) }
+                replaceActivity.launch(
+                    ReplaceEditActivity.startIntent(
+                        this,
+                        pattern = "text",
+                        scope = scopes.joinToString(";"),
+                        isScopeTitle = true,
+                        isScopeContent = false
+                    )
+                )
+                return true
+            }
+            R.id.menu_replace_show -> {
+                replaceActivity.launch(Intent(this, ReplaceRuleActivity::class.java))
+                return true
+            }
             R.id.menu_toc_regex -> showDialogFragment(
                 TxtTocRuleDialog(viewModel.bookData.value?.tocUrl)
             )
@@ -209,6 +235,7 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
             }
         }
     }
+
 
     fun locateToChapter(index: Int) {
         val tag = "android:switcher:${binding.viewPager.id}:0"

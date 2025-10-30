@@ -9,7 +9,9 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.book.ContentProcessor
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.FileDoc
@@ -21,15 +23,25 @@ import io.legado.app.utils.writeText
 
 class TocViewModel(application: Application) : BaseViewModel(application) {
     var bookUrl: String = ""
+    var bookSource: BookSource? = null
     var bookData = MutableLiveData<Book>()
     var chapterListCallBack: ChapterListCallBack? = null
     var bookMarkCallBack: BookmarkCallBack? = null
     var searchKey: String? = null
+    fun replaceRuleChanged() {
+        execute {
+            ReadBook.book?.let {
+                ContentProcessor.get(it.name, it.origin).upReplaceRules()
+                ReadBook.loadContent(resetPageOffset = false)
+            }
+        }
+    }
 
     fun initBook(bookUrl: String) {
         this.bookUrl = bookUrl
         execute {
             appDb.bookDao.getBook(bookUrl)?.let {
+                bookSource = appDb.bookSourceDao.getBookSource(it.origin)
                 bookData.postValue(it)
             }
         }
