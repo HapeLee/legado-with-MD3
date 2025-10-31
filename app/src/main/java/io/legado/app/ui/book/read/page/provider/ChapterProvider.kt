@@ -915,40 +915,52 @@ object ChapterProvider {
     private fun getPaints(typeface: Typeface?): Pair<TextPaint, TextPaint> {
         val bold = Typeface.create(typeface, Typeface.BOLD)
         val normal = Typeface.create(typeface, Typeface.NORMAL)
-        val (titleFont, textFont) = when (ReadBookConfig.textBold) {
-            1 -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                    Pair(Typeface.create(typeface, 900, false), bold)
-                else
-                    Pair(bold, bold)
-            }
+        val titleFont = when (ReadBookConfig.titleBold) {
+            1 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 900, false)
+            else
+                bold
 
-            2 -> {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                    Pair(normal, Typeface.create(typeface, 300, false))
-                else
-                    Pair(normal, normal)
-            }
+            2 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 300, false)
+            else
+                normal
 
-            in 100..900 -> {
+            in 100..900 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, ReadBookConfig.titleBold, false)
+            else
+                normal
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    Pair(normal, Typeface.create(typeface, ReadBookConfig.textBold, false))
-                } else {
-                    Pair(normal, normal)
-                }
-            }
-
-            else -> Pair(bold, normal)
+            else -> bold
         }
+
+        val textFont = when (ReadBookConfig.textBold) {
+            1 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 900, false)
+            else
+                bold
+
+            2 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 300, false)
+            else
+                normal
+
+            in 100..900 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, ReadBookConfig.textBold, false)
+            else
+                normal
+
+            else -> bold
+        }
+
 
         //标题
         val tPaint = TextPaint()
         tPaint.color = ReadBookConfig.textColor
         tPaint.letterSpacing = ReadBookConfig.letterSpacing
         tPaint.typeface = titleFont
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ReadBookConfig.textBold in 100..900)
-            tPaint.setFontVariationSettings("'wght' ${ReadBookConfig.textBold}")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ReadBookConfig.titleBold in 100..900)
+            tPaint.setFontVariationSettings("'wght' ${ReadBookConfig.titleBold}")
         tPaint.textSize = with(ReadBookConfig) { textSize + titleSize }.toFloat().spToPx()
         tPaint.isAntiAlias = true
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && AppConfig.optimizeRender) {

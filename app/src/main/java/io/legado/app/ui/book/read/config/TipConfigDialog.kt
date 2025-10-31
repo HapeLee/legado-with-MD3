@@ -10,6 +10,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogTipConfigBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
+import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.hexString
 import io.legado.app.utils.observeEvent
@@ -46,6 +47,35 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
             1 -> binding.rgTitleMode.check(R.id.rb_title_mode2)
             2 -> binding.rgTitleMode.check(R.id.rb_title_mode3)
             else -> {  }
+        }
+        val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
+        val weightValues = listOf(2, 1, 0)
+        val initialIndex = weightValues.indexOf(ReadBookConfig.titleBold)
+        binding.textFontWeightConverter.text = weightOptions?.getOrNull(initialIndex) ?: "自定义"
+        binding.textFontWeightConverter.setOnClickListener {
+            context?.alert(titleResource = R.string.text_font_weight_converter) {
+                weightOptions?.let { options ->
+                    items(options.toList()) { _, i ->
+                        ReadBookConfig.titleBold = weightValues[i]
+                        binding.sliderFontWeight.value =
+                            ReadBookConfig.titleBold.toFloat().coerceAtLeast(100f)
+                        binding.textFontWeightConverter.text = options.getOrNull(i) ?: ""
+                        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+                    }
+                }
+            }
+        }
+
+        binding.sliderFontWeight.apply {
+            valueFrom = 100f
+            valueTo = 900f
+            stepSize = 1f
+            value = ReadBookConfig.titleBold.toFloat().coerceAtLeast(100f)
+            addOnChangeListener { _, newValue, _ ->
+                binding.textFontWeightConverter.text = "自定义"
+                ReadBookConfig.titleBold = newValue.toInt()
+                postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+            }
         }
 
         binding.dsbTitleSize.progress = ReadBookConfig.titleSize

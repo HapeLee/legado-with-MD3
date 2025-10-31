@@ -75,11 +75,36 @@
 
         </com.google.android.material.chip.ChipGroup>
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_font_weight_converter"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/textFontWeightConverter"
+                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:textSize="12sp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/sliderFontWeight"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
         <io.legado.app.ui.widget.DetailSeekBar
             android:id="@+id/dsb_title_size"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:max="10"
+            app:max="20"
             app:title="@string/title_font_size" />
 
         <LinearLayout
@@ -89,9 +114,9 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_title_top"
-                android:layout_width="140dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="100"
+                app:max="200"
                 app:title="@string/title_margin_top" />
 
             <View
@@ -101,10 +126,11 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_title_bottom"
-                android:layout_width="140dp"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="100"
+                app:max="200"
                 app:title="@string/title_margin_bottom" />
+
         </LinearLayout>
 
 

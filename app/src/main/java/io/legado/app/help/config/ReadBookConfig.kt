@@ -219,6 +219,12 @@ object ReadBookConfig {
             config.textBold = value
         }
 
+    var titleBold: Int
+        get() = config.titleBold
+        set(value) {
+            config.titleBold = value
+        }
+
     var textItalic: Boolean
         get() = config.textItalic
         set(value) {
@@ -490,6 +496,7 @@ object ReadBookConfig {
         var titleSize: Int = 0,
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
+        var titleBold: Int = 500,
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
         var paddingBottom: Int = 6,
