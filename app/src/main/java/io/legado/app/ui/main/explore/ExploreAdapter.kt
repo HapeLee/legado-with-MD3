@@ -79,6 +79,7 @@ class ExploreAdapter(
                 }.onFinally {
                     rotateLoading.gone()
                 }
+
             } else {
                 ivStatus.isChecked = false
                 recyclerFlexbox(flexbox)
@@ -116,11 +117,21 @@ class ExploreAdapter(
 
     @Synchronized
     private fun getFlexboxChild(flexbox: FlexboxLayout): MaterialCardView {
-        return if (recycler.isEmpty()) {
+        val cardView = if (recycler.isEmpty()) {
             ItemFilletTextBinding.inflate(inflater, flexbox, false).root
         } else {
             recycler.removeLastElement() as MaterialCardView
         }
+        val lp = FlexboxLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        cardView.layoutParams = lp
+        cardView.forceLayout()
+        val tv = cardView.findViewById<TextView>(R.id.text_view)
+        tv.text = ""
+        tv.requestLayout()
+        return cardView
     }
 
     @Synchronized
