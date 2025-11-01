@@ -29,6 +29,24 @@
     </item>
 
     <item
+        android:id="@+id/menu_sort"
+        android:title="@string/sort"
+        android:icon="@drawable/ic_sort"
+        app:showAsAction="always">
+        <menu>
+            <item android:id="@+id/sort_order_asc" android:title="@string/sort_old_to_new" />
+
+            <item android:id="@+id/sort_order_desc" android:title="@string/sort_new_to_old" />
+
+            <item android:id="@+id/sort_name_asc" android:title="@string/sort_name_asc" />
+
+            <item android:id="@+id/sort_name_desc" android:title="@string/sort_name_desc" />
+
+        </menu>
+    </item>
+
+
+    <item
         android:id="@+id/menu_add_replace_rule"
         android:icon="@drawable/ic_add"
         android:title="@string/add_replace_rule"

@@ -50,6 +50,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
@@ -71,8 +72,9 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
     private var groups = arrayListOf<String>()
     private var groupMenu: SubMenu? = null
-    private var replaceRuleFlowJob: Job? = null
-    private var dataInit = false
+
+    private var sortMode = "desc"
+    private var searchKey: String? = null
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         showDialogFragment(
@@ -197,35 +199,10 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         binding.selectActionBar.setCallBack(this)
     }
 
-    private fun observeReplaceRuleData(searchKey: String? = null) {
-        dataInit = false
-        replaceRuleFlowJob?.cancel()
-        replaceRuleFlowJob = lifecycleScope.launch {
-            when {
-                searchKey.isNullOrEmpty() -> {
-                    appDb.replaceRuleDao.flowAll()
-                }
-
-                searchKey == getString(R.string.no_group) -> {
-                    appDb.replaceRuleDao.flowNoGroup()
-                }
-
-                searchKey.startsWith("group:") -> {
-                    val key = searchKey.substringAfter("group:")
-                    appDb.replaceRuleDao.flowGroupSearch("%$key%")
-                }
-                else -> {
-                    appDb.replaceRuleDao.flowSearch("%$searchKey%")
-                }
-            }.catch {
-                AppLog.put("替换规则管理界面更新数据出错", it)
-            }.flowOn(IO).conflate().collect {
-                if (dataInit) {
-                    setResult(RESULT_OK)
-                }
-                adapter.setItems(it, adapter.diffItemCallBack)
-                dataInit = true
-                delay(100)
+    private fun observeReplaceRuleData() {
+        lifecycleScope.launch {
+            viewModel.rulesFlow.collectLatest { rules ->
+                adapter.setItems(rules, adapter.diffItemCallBack)
             }
         }
     }
@@ -256,10 +233,16 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
             R.id.menu_group_null -> {
                 searchView.setQuery(getString(R.string.no_group), true)
             }
+            R.id.sort_order_asc -> viewModel.setSortMode("asc")
+            R.id.sort_order_desc -> viewModel.setSortMode("desc")
+            R.id.sort_name_asc -> viewModel.setSortMode("name_asc")
+            R.id.sort_name_desc -> viewModel.setSortMode("name_desc")
             else -> if (item.groupId == R.id.replace_group) {
                 searchView.setQuery("group:${item.title}", true)
+                viewModel.setSearchKey("group:${item.title}")
             }
         }
+        observeReplaceRuleData()
         return super.onCompatOptionsItemSelected(item)
     }
 
@@ -322,7 +305,8 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
 
     override fun onQueryTextChange(newText: String?): Boolean {
-        observeReplaceRuleData(newText)
+        searchKey = newText
+        viewModel.setSearchKey(newText)
         return false
     }
 

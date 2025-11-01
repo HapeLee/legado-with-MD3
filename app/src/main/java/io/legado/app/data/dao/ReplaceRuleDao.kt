@@ -22,6 +22,55 @@ interface ReplaceRuleDao {
     @Query("SELECT * FROM replace_rules ORDER BY sortOrder ASC")
     fun flowAll(): Flow<List<ReplaceRule>>
 
+    @Query("SELECT * FROM replace_rules ORDER BY sortOrder ASC")
+    fun flowAllAsc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules ORDER BY sortOrder DESC")
+    fun flowAllDesc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules ORDER BY name COLLATE NOCASE ASC")
+    fun flowAllNameAsc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules ORDER BY name COLLATE NOCASE DESC")
+    fun flowAllNameDesc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key OR name LIKE :key ORDER BY sortOrder ASC")
+    fun flowSearchAsc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key OR name LIKE :key ORDER BY sortOrder DESC")
+    fun flowSearchDesc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key OR name LIKE :key ORDER BY name COLLATE NOCASE ASC")
+    fun flowSearchNameAsc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key OR name LIKE :key ORDER BY name COLLATE NOCASE DESC")
+    fun flowSearchNameDesc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY sortOrder ASC")
+    fun flowGroupSearchAsc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY sortOrder DESC")
+    fun flowGroupSearchDesc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY name COLLATE NOCASE ASC")
+    fun flowGroupSearchNameAsc(key: String): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` LIKE :key ORDER BY name COLLATE NOCASE DESC")
+    fun flowGroupSearchNameDesc(key: String): Flow<List<ReplaceRule>>
+
+    // === 未分组 ===
+    @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%未分组%' ORDER BY sortOrder ASC")
+    fun flowNoGroupAsc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%未分组%' ORDER BY sortOrder DESC")
+    fun flowNoGroupDesc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%未分组%' ORDER BY name COLLATE NOCASE ASC")
+    fun flowNoGroupNameAsc(): Flow<List<ReplaceRule>>
+
+    @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%未分组%' ORDER BY name COLLATE NOCASE DESC")
+    fun flowNoGroupNameDesc(): Flow<List<ReplaceRule>>
+
     @Query("SELECT * FROM replace_rules where `group` like :key or name like :key ORDER BY sortOrder ASC")
     fun flowSearch(key: String): Flow<List<ReplaceRule>>
 
