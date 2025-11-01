@@ -135,6 +135,14 @@
         android:text="@string/text_underline"
         tools:ignore="TouchTargetSizeCheck" />
 
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/sw_dottedline"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="6dp"
+        android:text="@string/text_dottedline"
+        tools:ignore="TouchTargetSizeCheck" />
+
     <com.google.android.material.button.MaterialButtonGroup
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

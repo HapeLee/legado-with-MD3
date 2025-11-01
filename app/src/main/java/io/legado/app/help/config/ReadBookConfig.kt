@@ -382,6 +382,12 @@ object ReadBookConfig {
             config.underline = value
         }
 
+    var dottedLine: Boolean
+        get() = config.dottedLine
+        set(value) {
+            config.dottedLine = value
+        }
+
     var paddingBottom: Int
         get() = config.paddingBottom
         set(value) {
@@ -600,6 +606,7 @@ object ReadBookConfig {
         var titleSegFlag: String = "",//分段判断，碰到指定值时分段
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
+        var dottedLine: Boolean = false, //虚线
         var paddingBottom: Int = 6,
         var paddingLeft: Int = 16,
         var paddingRight: Int = 16,

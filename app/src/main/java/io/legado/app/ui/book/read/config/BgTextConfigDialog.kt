@@ -131,6 +131,8 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
         binding.tvName.text = name.ifBlank { "文字" }
         binding.swDarkStatusIcon.isChecked = curStatusIconDark()
         binding.swUnderline.isChecked = underline
+        binding.swDottedline.isChecked = dottedLine
+        binding.swDottedline.isEnabled = underline
         binding.sbBgAlpha.value = ReadBookConfig.bgAlpha.toFloat()
     }
 
@@ -169,6 +171,15 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
         }
         binding.swUnderline.setOnCheckedChangeListener { _, isChecked ->
             underline = isChecked
+            binding.swDottedline.isEnabled = isChecked
+            if (!isChecked) {
+                dottedLine = false
+                binding.swDottedline.isChecked = false
+            }
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
+        binding.swDottedline.setOnCheckedChangeListener { _, isChecked ->
+            dottedLine = isChecked
             postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
         }
         binding.tvTextColor.setOnClickListener {

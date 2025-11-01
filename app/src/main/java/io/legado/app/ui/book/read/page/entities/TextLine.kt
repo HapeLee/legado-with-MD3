@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.page.entities
 
 import android.annotation.SuppressLint
 import android.graphics.Canvas
+import android.graphics.DashPathEffect
 import android.graphics.Paint.FontMetrics
 import android.os.Build
 import androidx.annotation.Keep
@@ -170,7 +171,7 @@ data class TextLine(
             PaintPool.recycle(underlinePaint)
         }
         if (ReadBookConfig.underline && !isImage && ReadBook.book?.isImage != true) {
-            drawUnderline(canvas)
+            drawUnderline(canvas, ReadBookConfig.dottedLine)
         }
     }
 
@@ -213,16 +214,23 @@ data class TextLine(
     /**
      * 绘制下划线
      */
-    private fun drawUnderline(canvas: Canvas) {
+    private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
         val lineY = height - 1.dpToPx()
+        val paint = ChapterProvider.contentPaint
+        val oldEffect = paint.pathEffect
+        if (dottedLine) {
+            paint.pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
+        }
         canvas.drawLine(
             lineStart + indentWidth,
             lineY,
             lineEnd,
             lineY,
-            ChapterProvider.contentPaint
+            paint
         )
+        paint.pathEffect = oldEffect
     }
+
 
     fun checkFastDraw(): Boolean {
         if (!AppConfig.optimizeRender || exceed || !onlyTextColumn || textPage.isMsgPage) {
