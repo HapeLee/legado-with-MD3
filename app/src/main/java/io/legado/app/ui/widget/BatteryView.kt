@@ -1,122 +1,140 @@
 package io.legado.app.ui.widget
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Rect
+import android.graphics.PorterDuff
 import android.graphics.Typeface
-import android.os.Build
-import android.text.StaticLayout
 import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.LayoutInflater
 import androidx.annotation.ColorInt
-import androidx.appcompat.widget.AppCompatTextView
-import io.legado.app.help.config.AppConfig
-import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
-import io.legado.app.utils.canvasrecorder.recordIfNeededThenDraw
+import androidx.constraintlayout.widget.ConstraintLayout
+import io.legado.app.databinding.ViewBatteryBinding
 import io.legado.app.utils.dpToPx
 
 class BatteryView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
-) : AppCompatTextView(context, attrs) {
+) : ConstraintLayout(context, attrs) {
+
+    private val binding: ViewBatteryBinding =
+        ViewBatteryBinding.inflate(LayoutInflater.from(context), this, true)
+
+    enum class BatteryMode { OUTER, INNER, ICON, ARROW }
+
     private val batteryTypeface by lazy {
         Typeface.createFromAsset(context.assets, "font/number.ttf")
     }
-    private val batteryPaint = Paint()
-    private val outFrame = Rect()
-    private val polar = Rect()
-    private val canvasRecorder = CanvasRecorderFactory.create()
-    var isBattery = false
-        set(value) {
-            field = value
-            if (value && !isInEditMode) {
-                super.setTypeface(batteryTypeface)
-                postInvalidate()
-            }
-        }
+
     private var battery: Int = 0
 
     init {
         setPadding(4.dpToPx(), 3.dpToPx(), 6.dpToPx(), 3.dpToPx())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            isFallbackLineSpacing = false
-        }
-        batteryPaint.strokeWidth = 1f.dpToPx()
-        batteryPaint.isAntiAlias = true
-        batteryPaint.color = paint.color
+        binding.batteryText.typeface = batteryTypeface
+        binding.batteryTextInner.typeface = batteryTypeface
     }
 
-    override fun setTypeface(tf: Typeface?) {
-        if (!isBattery) {
-            super.setTypeface(tf)
+    var isBattery = false
+        set(value) {
+            field = value
+            binding.arrowIcon.visibility = if (value) VISIBLE else GONE
+            binding.batteryTextInner.visibility = if (value) VISIBLE else GONE
+            binding.batteryTextInner.typeface = if (value) Typeface.DEFAULT else batteryTypeface
+            binding.batteryText.typeface = if (value) Typeface.DEFAULT else batteryTypeface
+            binding.batteryIcon.visibility = if (value) VISIBLE else GONE
+            binding.batteryFill.visibility = if (value) VISIBLE else GONE
         }
+
+    var text: CharSequence?
+        get() = binding.batteryText.text
+        set(value) {
+            binding.batteryText.text = value
+            binding.batteryTextInner.text = value
+        }
+
+    var batteryMode: BatteryMode = BatteryMode.OUTER
+        set(value) {
+            field = value
+            updateMode()
+        }
+
+    var typeface: Typeface?
+        get() = binding.batteryText.typeface
+        set(value) {
+            binding.batteryText.typeface = value ?: Typeface.DEFAULT
+            binding.batteryTextInner.typeface = value ?: Typeface.DEFAULT
+        }
+
+    var textSize: Float
+        get() = binding.batteryText.textSize / binding.batteryText.resources.displayMetrics.density
+        set(value) {
+            binding.batteryText.setTextSize(TypedValue.COMPLEX_UNIT_SP, value)
+        }
+
+    fun setTextColor(@ColorInt color: Int) {
+        binding.batteryText.setTextColor(color)
+        binding.batteryTextInner.setTextColor(color)
+    }
+
+    fun setBattery(battery: Int, text: String? = null) {
+        this.battery = battery.coerceIn(0, 100)
+        binding.batteryText.text = text?.let { "$it  $battery" } ?: battery.toString()
+        binding.batteryTextInner.text = text?.let { "$it  $battery" } ?: battery.toString()
+        updateFill()
     }
 
     fun setColor(@ColorInt color: Int) {
-        setTextColor(color)
-        batteryPaint.color = color
-        invalidate()
+        binding.batteryText.setTextColor(color)
+        binding.batteryFill.setCardBackgroundColor(color)
+        binding.arrowIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+        binding.batteryIcon.setColorFilter(color, PorterDuff.Mode.SRC_IN)
+        binding.batteryIcon.alpha = 0.76f
+        binding.arrowIcon.alpha = 0.76f
     }
 
-    @SuppressLint("SetTextI18n")
-    fun setBattery(battery: Int, text: String? = null) {
-        this.battery = battery
-        if (text.isNullOrEmpty()) {
-            setText(battery.toString())
-        } else {
-            setText("$text  $battery")
+    fun setTextIfNotEqual(newText: String?) {
+        if (binding.batteryText.text?.toString() != newText) {
+            binding.batteryText.text = newText
         }
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        super.onLayout(changed, left, top, right, bottom)
-        canvasRecorder.invalidate()
-    }
 
-    override fun onDraw(canvas: Canvas) {
-        if (AppConfig.optimizeRender) {
-            canvasRecorder.recordIfNeededThenDraw(canvas, width, height) {
-                super.onDraw(this)
-                drawBattery(this)
+    private fun updateMode() {
+        when (batteryMode) {
+            BatteryMode.OUTER -> {
+                binding.arrowIcon.visibility = GONE
+                binding.batteryText.visibility = VISIBLE
+                binding.batteryTextInner.visibility = GONE
+                binding.batteryFill.visibility = VISIBLE
             }
-        } else {
-            super.onDraw(canvas)
-            drawBattery(canvas)
+            BatteryMode.INNER -> {
+                binding.arrowIcon.visibility = GONE
+                binding.batteryText.visibility = GONE
+                binding.batteryTextInner.visibility = VISIBLE
+                binding.batteryFill.visibility = GONE
+            }
+            BatteryMode.ICON -> {
+                binding.arrowIcon.visibility = GONE
+                binding.batteryText.visibility = GONE
+                binding.batteryTextInner.visibility = GONE
+                binding.batteryFill.visibility = VISIBLE
+            }
+            BatteryMode.ARROW -> {
+                binding.batteryText.visibility = VISIBLE
+                binding.batteryTextInner.visibility = GONE
+                binding.batteryFill.visibility = GONE
+                binding.arrowIcon.visibility = VISIBLE
+            }
         }
+        updateFill()
     }
 
-    private fun drawBattery(canvas: Canvas) {
-        if (!isBattery) return
-        layout.getLineBounds(0, outFrame)
-        val batteryStart = layout
-            .getPrimaryHorizontal(text.length - battery.toString().length)
-            .toInt() + 2.dpToPx()
-        val batteryEnd = batteryStart +
-                StaticLayout.getDesiredWidth(battery.toString(), paint).toInt() + 4.dpToPx()
-        outFrame.set(
-            batteryStart,
-            2.dpToPx(),
-            batteryEnd,
-            height - 2.dpToPx()
-        )
-        val dj = (outFrame.bottom - outFrame.top) / 3
-        polar.set(
-            batteryEnd,
-            outFrame.top + dj,
-            batteryEnd + 2.dpToPx(),
-            outFrame.bottom - dj
-        )
-        batteryPaint.style = Paint.Style.STROKE
-        canvas.drawRect(outFrame, batteryPaint)
-        batteryPaint.style = Paint.Style.FILL
-        canvas.drawRect(polar, batteryPaint)
-    }
-
-    @Suppress("UNNECESSARY_SAFE_CALL")
-    override fun invalidate() {
-        super.invalidate()
-        canvasRecorder?.invalidate()
+    private fun updateFill() {
+        post {
+            val maxWidth = 14.dpToPx()
+            val params = binding.batteryFill.layoutParams
+            params.width = (maxWidth * battery / 100f).toInt()
+            binding.batteryFill.layoutParams = params
+        }
     }
 
 }

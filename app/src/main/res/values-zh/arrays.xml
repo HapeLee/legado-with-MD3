@@ -75,8 +75,11 @@
         <item>无</item>
         <item>书名</item>
         <item>标题</item>
+        <item>带箭头的标题</item>
         <item>时间</item>
         <item>电量</item>
+        <item>电量内显</item>
+        <item>仅电量图标</item>
         <item>电量%</item>
         <item>页数</item>
         <item>进度(%)</item>

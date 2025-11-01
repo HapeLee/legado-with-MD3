@@ -88,8 +88,11 @@
         <item>無</item>
         <item>書名</item>
         <item>標題</item>
+        <item>標題+箭頭</item>
         <item>時間</item>
         <item>電量</item>
+        <item>電量內顯</item>
+        <item>僅電量圖標</item>
         <item>電量%</item>
         <item>頁數</item>
         <item>進度(%)</item>

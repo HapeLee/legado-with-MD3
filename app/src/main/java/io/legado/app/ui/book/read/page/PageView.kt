@@ -31,7 +31,6 @@ import io.legado.app.utils.applyStatusBarPadding
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
-import io.legado.app.utils.setTextIfNotEqual
 import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
 import java.util.Date
@@ -55,6 +54,9 @@ class PageView(context: Context) : FrameLayout(context) {
     private var tvBookName: BatteryView? = null
     private var tvTimeBattery: BatteryView? = null
     private var tvTimeBatteryP: BatteryView? = null
+    private var tvTitleArrow: BatteryView? = null
+    private var tvBatteryInside: BatteryView? = null
+    private var tvBatteryIcon: BatteryView? = null
     private var isMainView = false
     var isScroll = false
 
@@ -183,6 +185,13 @@ class PageView(context: Context) : FrameLayout(context) {
             typeface = ChapterProvider.typeface
             textSize = 12f
         }
+        tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
+            tag = ReadTipConfig.chapterTitleArrow
+            isBattery = false
+            typeface = ChapterProvider.typeface
+            textSize = 12f
+            batteryMode = BatteryView.BatteryMode.ARROW
+        }
         tvTime = getTipView(ReadTipConfig.time)?.apply {
             tag = ReadTipConfig.time
             isBattery = false
@@ -193,6 +202,19 @@ class PageView(context: Context) : FrameLayout(context) {
             tag = ReadTipConfig.battery
             isBattery = true
             textSize = 11f
+            batteryMode = BatteryView.BatteryMode.OUTER
+        }
+        tvBatteryInside = getTipView(ReadTipConfig.batteryInside)?.apply {
+            tag = ReadTipConfig.batteryInside
+            isBattery = true
+            textSize = 11f
+            batteryMode = BatteryView.BatteryMode.INNER
+        }
+        tvBatteryIcon = getTipView(ReadTipConfig.batteryIcon)?.apply {
+            tag = ReadTipConfig.batteryIcon
+            isBattery = true
+            textSize = 11f
+            batteryMode = BatteryView.BatteryMode.ICON
         }
         tvPage = getTipView(ReadTipConfig.page)?.apply {
             tag = ReadTipConfig.page
@@ -296,6 +318,8 @@ class PageView(context: Context) : FrameLayout(context) {
     fun upBattery(battery: Int) {
         this.battery = battery
         tvBattery?.setBattery(battery)
+        tvBatteryInside?.setBattery(battery)
+        tvBatteryIcon?.setBattery(battery)
         tvBatteryP?.text = "$battery%"
         upTimeBattery()
     }
@@ -307,6 +331,8 @@ class PageView(context: Context) : FrameLayout(context) {
     private fun upTimeBattery() {
         val time = timeFormat.format(Date(System.currentTimeMillis()))
         tvTimeBattery?.setBattery(battery, time)
+        tvTimeBatteryP?.setBattery(battery, time)
+        tvTimeBattery?.text = "$time $battery%"
         tvTimeBatteryP?.text = "$time $battery%"
     }
 
@@ -352,6 +378,7 @@ class PageView(context: Context) : FrameLayout(context) {
     fun setProgress(textPage: TextPage) = textPage.apply {
         tvBookName?.setTextIfNotEqual(ReadBook.book?.name)
         tvTitle?.setTextIfNotEqual(textPage.title)
+        tvTitleArrow?.setTextIfNotEqual(textPage.title)
         val readProgress = readProgress
         tvTotalProgress?.setTextIfNotEqual(readProgress)
         tvTotalProgress1?.setTextIfNotEqual("${chapterIndex.plus(1)}/${chapterSize}")
