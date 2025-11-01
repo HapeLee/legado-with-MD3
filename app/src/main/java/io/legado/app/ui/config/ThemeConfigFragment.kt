@@ -185,6 +185,10 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 }, 100)
             }
 
+            PreferKey.isPredictiveBackEnabled -> {
+                toastOnUi("重启以应用")
+            }
+
             PreferKey.cPrimary -> {
                 val color = getPrefInt(key, ThemeStore.primaryColor(requireContext()))
                 ThemeStore.editTheme(requireContext())

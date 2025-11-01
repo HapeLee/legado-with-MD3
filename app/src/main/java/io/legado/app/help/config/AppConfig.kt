@@ -846,5 +846,11 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
         }
+
+    var isPredictiveBackEnabled: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.isPredictiveBackEnabled, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.isPredictiveBackEnabled, value)
+        }
 }
 

@@ -12,6 +12,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
+import android.window.OnBackInvokedDispatcher
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.drawable.toDrawable
@@ -81,6 +82,19 @@ abstract class BaseActivity<VB : ViewBinding>(
         initTheme()
         window.decorView.disableAutoFill()
         AppContextWrapper.applyLocaleAndFont(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val enable = !AppConfig.isPredictiveBackEnabled
+            if (enable) {
+                onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT
+                ) {
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            } else {
+                //不注册才是启用
+            }
+        }
+
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q)

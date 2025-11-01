@@ -209,4 +209,5 @@ object PreferKey {
     const val colorImage = "colorImage"
     const val bookshelfRefreshingLimit = "bookshelfRefreshingLimit"
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
+    const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
 }

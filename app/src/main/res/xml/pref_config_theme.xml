@@ -138,6 +138,13 @@
             app:entries="@array/default_home_page"
             app:entryValues="@array/default_home_page_value" />
 
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
+            android:key="isPredictiveBackEnabled"
+            android:summary="仅部分设备可用"
+            android:title="预见性返回手势" />
+
     </io.legado.app.lib.prefs.PreferenceCategory>
 
     <io.legado.app.lib.prefs.PreferenceCategory
