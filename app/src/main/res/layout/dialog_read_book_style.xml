@@ -242,6 +242,14 @@
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cb_share_layout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:text="@string/share_layout"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginEnd="16dp" />
+
             </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView

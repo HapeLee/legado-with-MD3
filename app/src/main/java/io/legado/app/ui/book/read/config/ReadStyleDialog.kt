@@ -76,6 +76,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
     }
 
     private fun initData() {
+        binding.cbShareLayout.isChecked = ReadBookConfig.shareLayout
         upView()
         styleAdapter.setItems(ReadBookConfig.configList)
     }
@@ -129,6 +130,12 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
             }
             callBack?.upPageAnim()
             ReadBook.loadContent(false)
+        }
+
+        cbShareLayout.setOnCheckedChangeListener { _, isChecked ->
+            ReadBookConfig.shareLayout = isChecked
+            upView()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
         }
 
         dsbTextSize.onChanged = {
