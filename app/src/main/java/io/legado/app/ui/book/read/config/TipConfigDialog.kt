@@ -3,8 +3,6 @@ package io.legado.app.ui.book.read.config
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
-import android.widget.EditText
-import androidx.appcompat.app.AlertDialog
 import com.google.android.material.chip.Chip
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
