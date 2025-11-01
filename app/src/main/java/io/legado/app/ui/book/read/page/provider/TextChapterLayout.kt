@@ -65,6 +65,8 @@ class TextChapterLayout(
     private val titleTopSpacing = ChapterProvider.titleTopSpacing
     private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
     private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
+    private val titleLineSpacingExtra = ChapterProvider.titleLineSpacingExtra
+
     private val paragraphSpacing = ChapterProvider.paragraphSpacing
 
     private val visibleHeight = ChapterProvider.visibleHeight
@@ -80,6 +82,11 @@ class TextChapterLayout(
     private val useZhLayout = ReadBookConfig.useZhLayout
     private val isMiddleTitle = ReadBookConfig.isMiddleTitle
     private val textFullJustify = ReadBookConfig.textFullJustify
+    private val titleSegType = ReadBookConfig.titleSegType
+    private val titleSegDistance = ReadBookConfig.titleSegDistance
+    private val titleSegFlag = ReadBookConfig.titleSegFlag
+    private val titleSegScaling = ReadBookConfig.titleSegScaling
+
 
     private var pendingTextPage = TextPage()
 
@@ -189,6 +196,48 @@ class TextChapterLayout(
         }
     }
 
+    private fun parseTitleSegments(
+        rawTitle: String,
+        segType: Int,
+        segDistance: Int,
+        segFlag: String
+    ): List<String> {
+        if (rawTitle.isBlank()) return emptyList()
+
+        return when (segType) {
+            // 0：不分段
+            0 -> listOf(rawTitle)
+
+            // 1：按字符数分段
+            1 -> {
+                if (segDistance <= 0 || segDistance >= rawTitle.length)
+                    listOf(rawTitle)
+                else
+                    listOf(
+                        rawTitle.substring(0, segDistance),
+                        rawTitle.substring(segDistance)
+                    )
+            }
+
+            // 2：按标志字符串分段
+            2 -> {
+                val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                if (flags.isEmpty()) return listOf(rawTitle)
+
+                val pattern = flags.joinToString("|") { Regex.escape(it) }
+                val regex = Regex("(?<=$pattern)") // 在分隔符后断开
+                val segments = rawTitle.split(regex)
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+
+                segments.ifEmpty { listOf(rawTitle) }
+            }
+
+            else -> listOf(rawTitle)
+        }
+    }
+
+
     /**
      * 获取拆分完的章节数据
      */
@@ -204,37 +253,48 @@ class TextChapterLayout(
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
-            //标题非隐藏
-            displayTitle.splitNotBlank("\n").forEach { text ->
-                val srcList = LinkedList<String>()
-                val reviewImg = bookChapter.reviewImg
-                var reviewTxt = ""
-                if (reviewImg != null) {
-                    srcList.add(reviewImg)
-                    reviewTxt = if (reviewImg.contains("TEXT")) {
-                        ChapterProvider.reviewChar
-                    } else {
-                        ChapterProvider.srcReplaceChar
-                    }
-                }
-                setTypeText(
-                    book,
-                    text + reviewTxt,
-                    titlePaint,
-                    titlePaintTextHeight,
-                    titlePaintFontMetrics,
-                    imageStyle,
-                    srcList = srcList.ifEmpty { null },
-                    isTitle = true,
-                    emptyContent = contents.isEmpty(),
-                    isVolumeTitle = bookChapter.isVolume
+            val baseTitles = displayTitle.splitNotBlank("\n")
+            baseTitles.forEach { rawTitle ->
+                val titleSegments = parseTitleSegments(
+                    rawTitle,
+                    titleSegType,
+                    titleSegDistance,
+                    titleSegFlag
                 )
-                pendingTextPage.lines.last().isParagraphEnd = true
-                stringBuilder.append("\n")
+                titleSegments.forEachIndexed { index, segment ->
+                    val srcList = LinkedList<String>()
+                    val reviewImg = bookChapter.reviewImg
+                    var reviewTxt = ""
+                    if (reviewImg != null) {
+                        srcList.add(reviewImg)
+                        reviewTxt = if (reviewImg.contains("TEXT")) {
+                            ChapterProvider.reviewChar
+                        } else {
+                            ChapterProvider.srcReplaceChar
+                        }
+                    }
+                    val paint = if (index == 0) titlePaint else {
+                        TextPaint(titlePaint).apply {
+                            textSize = titlePaint.textSize * titleSegScaling
+                        }
+                    }
+                    setTypeText(
+                        book,
+                        segment + reviewTxt,
+                        paint,
+                        titlePaintTextHeight,
+                        titlePaintFontMetrics,
+                        imageStyle,
+                        srcList = srcList.ifEmpty { null },
+                        isTitle = true,
+                        emptyContent = contents.isEmpty(),
+                        isVolumeTitle = bookChapter.isVolume
+                    )
+                    pendingTextPage.lines.last().isParagraphEnd = true
+                    stringBuilder.append("\n")
+                }
             }
             durY += titleBottomSpacing
-
-            // 如果是单图模式且当前页有内容，强制分页
             if (isSingleImageStyle && pendingTextPage.lines.isNotEmpty() && contents.isNotEmpty()) {
                 prepareNextPageIfNeed()
             }
@@ -598,7 +658,7 @@ class TextChapterLayout(
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             val textPage = pendingTextPage
             textPage.addLine(textLine)
-            durY += textHeight * lineSpacingExtra
+            durY += textHeight * if (isTitle) titleLineSpacingExtra else lineSpacingExtra
             if (textPage.height < durY) {
                 textPage.height = durY
             }

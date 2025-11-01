@@ -1,12 +1,16 @@
 package io.legado.app.ui.book.read.config
 
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.chip.Chip
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
+import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogTipConfigBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
@@ -15,6 +19,8 @@ import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.hexString
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
+import io.legado.app.utils.requestInputMethod
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 
@@ -74,10 +80,82 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
             addOnChangeListener { _, newValue, _ ->
                 binding.textFontWeightConverter.text = "自定义"
                 ReadBookConfig.titleBold = newValue.toInt()
-                postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+                postEvent(EventBus.UP_CONFIG, arrayListOf(5))
             }
         }
 
+        binding.btnTitleSegType.setOnClickListener {
+            val types = arrayOf("不分段", "按字符数分段", "按标志字符串分段")
+            val current = ReadBookConfig.titleSegType
+
+            alert(title = "选择标题分段模式") {
+                singleChoiceItems(types, current) { _, which ->
+                    ReadBookConfig.titleSegType = which
+                }
+                positiveButton("确定") {
+                    toastOnUi("分段模式已设置为：${types[ReadBookConfig.titleSegType]}")
+                    postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+                }
+                negativeButton("取消")
+            }.show()
+        }
+
+        binding.btnTitleSegConfig.setOnClickListener {
+            when (ReadBookConfig.titleSegType) {
+                1 -> { // 按字符数分段
+                    alert(title = "设置分段字符数") {
+                        val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
+                            editView.inputType = InputType.TYPE_CLASS_NUMBER
+                            editView.setText(ReadBookConfig.titleSegDistance.toString())
+                            editView.hint = "输入分段字符数"
+                        }
+                        customView { alertBinding.root }
+
+                        okButton {
+                            val value = alertBinding.editView.text?.toString()?.toIntOrNull()
+                            if (value != null && value > 0) {
+                                ReadBookConfig.titleSegDistance = value
+                                toastOnUi("分段字符数设置为 $value")
+                                postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+                            } else {
+                                toastOnUi("请输入有效数字")
+                            }
+                        }
+                        cancelButton()
+                    }.requestInputMethod()
+                }
+
+                2 -> { // 按标志字符串分段
+                    alert(title = "设置分段标志") {
+                        val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
+                            editView.inputType = InputType.TYPE_CLASS_TEXT
+                            editView.setText(ReadBookConfig.titleSegFlag)
+                            editLayout.hint = "输入多个标志，用英文逗号分隔，例如：章,回,篇"
+                        }
+                        customView { alertBinding.root }
+
+                        okButton {
+                            val value = alertBinding.editView.text?.toString()?.trim()
+                            if (!value.isNullOrEmpty()) {
+                                ReadBookConfig.titleSegFlag = value
+                                toastOnUi("分段标志设置为 \"$value\"")
+                                postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+                            } else {
+                                toastOnUi("标志不能为空")
+                            }
+                        }
+                        cancelButton()
+                    }.requestInputMethod()
+                }
+
+                else -> {
+                    toastOnUi("当前分段模式无需配置参数")
+                }
+            }
+        }
+
+        binding.dsbTitleSegScaling.progress = ReadBookConfig.titleSegScaling.toInt() * 10
+        binding.dsbTitleLineSpacingExtra.progress = ReadBookConfig.titleLineSpacingExtra
         binding.dsbTitleSize.progress = ReadBookConfig.titleSize
         binding.dsbTitleTop.progress = ReadBookConfig.titleTopSpacing
         binding.dsbTitleBottom.progress = ReadBookConfig.titleBottomSpacing
@@ -165,6 +243,14 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                 ReadBookConfig.titleMode = group.indexOfChild(group.findViewById(checkedIds.first()))
                 postEvent(EventBus.UP_CONFIG, arrayListOf(5))
             }
+        }
+        binding.dsbTitleSegScaling.onChanged = {
+            ReadBookConfig.titleSegScaling = it / 10f
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.dsbTitleLineSpacingExtra.onChanged = {
+            ReadBookConfig.titleLineSpacingExtra = it
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
         }
         dsbTitleSize.onChanged = {
             ReadBookConfig.titleSize = it

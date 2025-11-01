@@ -273,6 +273,12 @@ object ReadBookConfig {
             config.lineSpacingExtra = value
         }
 
+    var titleLineSpacingExtra: Int
+        get() = config.titleLineSpacingExtra
+        set(value) {
+            config.titleLineSpacingExtra = value
+        }
+
     var paragraphSpacing: Int
         get() = config.paragraphSpacing
         set(value) {
@@ -291,6 +297,30 @@ object ReadBookConfig {
         get() = config.titleSize
         set(value) {
             config.titleSize = value
+        }
+
+    var titleSegType: Int
+        get() = config.titleSegType
+        set(value) {
+            config.titleSegType = value
+        }
+
+    var titleSegScaling: Float
+        get() = config.titleSegScaling
+        set(value) {
+            config.titleSegScaling = value
+        }
+
+    var titleSegDistance: Int
+        get() = config.titleSegDistance
+        set(value) {
+            config.titleSegDistance = value
+        }
+
+    var titleSegFlag: String
+        get() = config.titleSegFlag
+        set(value) {
+            config.titleSegFlag = value
         }
 
     /**
@@ -497,6 +527,11 @@ object ReadBookConfig {
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
         var titleBold: Int = 500,
+        var titleLineSpacingExtra: Int = 4,
+        var titleSegType: Int = 0,//分段模式
+        var titleSegScaling: Float = 1.2f,//分段缩放，第二段与第一段的字体大小比例
+        var titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
+        var titleSegFlag: String = "",//分段判断，碰到指定值时分段
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
         var paddingBottom: Int = 6,

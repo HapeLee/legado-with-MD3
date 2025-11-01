@@ -75,11 +75,58 @@
 
         </com.google.android.material.chip.ChipGroup>
 
+        <com.google.android.material.button.MaterialButtonGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="bottom">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_title_segType"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="标题分段"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_title_seg_config"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="分段模式"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"/>
+
+        </com.google.android.material.button.MaterialButtonGroup>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <io.legado.app.ui.widget.SimpleCounterView
+                android:id="@+id/dsb_title_seg_scaling"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:visibility="gone"
+                app:max="20"
+                app:title="次行字体缩放" />
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <io.legado.app.ui.widget.SimpleCounterView
+                android:id="@+id/dsb_title_line_spacing_extra"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                app:max="20"
+                app:title="标题段距" />
+
+        </LinearLayout>
+
+
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/text_font_weight_converter"
-            android:textSize="16sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <LinearLayout
