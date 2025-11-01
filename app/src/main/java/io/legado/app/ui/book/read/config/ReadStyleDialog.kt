@@ -29,6 +29,11 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_style),
     FontSelectDialog.CallBack {
 
+    sealed class ReadStyleItem {
+        data class ConfigItem(val config: ReadBookConfig.Config) : ReadStyleItem()
+        data object ShareLayoutItem : ReadStyleItem()
+    }
+
     private val binding by viewBinding(DialogReadBookStyleBinding::bind)
     private val callBack get() = activity as? ReadBookActivity
     private lateinit var styleAdapter: StyleAdapter
@@ -132,7 +137,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
             ReadBook.loadContent(false)
         }
 
-        cbShareLayout.setOnCheckedChangeListener { _, isChecked ->
+        cbShareLayout.addOnCheckedChangeListener { _, isChecked ->
             ReadBookConfig.shareLayout = isChecked
             upView()
             postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))

@@ -242,27 +242,41 @@
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
-                <com.google.android.material.checkbox.MaterialCheckBox
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/cb_share_layout"
-                    android:layout_width="wrap_content"
-                    android:layout_height="20dp"
-                    android:text="@string/share_layout"
-                    android:layout_marginStart="6dp"
-                    android:layout_marginEnd="16dp" />
+                    android:layout_width="48dp"
+                    android:layout_height="56dp"
+                    app:cornerRadius="16dp"
+                    style="@style/Widget.Material3Expressive.Button.TonalButton"
+                    android:checkable="true"
+                    android:clickable="true"
+                    android:layout_marginVertical="2dp"
+                    app:icon="@drawable/ic_share_layout"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp"
+                    android:layout_marginStart="16dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_style"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="16dp"
+                    android:paddingHorizontal="8dp"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tool:listitem="@layout/item_read_style" />
 
             </LinearLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_style"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:layout_marginBottom="16dp"
-                android:clipToPadding="false"
-                android:orientation="horizontal"
-                android:paddingHorizontal="12dp"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tool:listitem="@layout/item_read_style" />
+
 
         </LinearLayout>
 

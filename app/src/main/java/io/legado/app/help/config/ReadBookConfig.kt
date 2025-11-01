@@ -33,6 +33,7 @@ import splitties.init.appCtx
 import java.io.File
 import kotlin.String
 import androidx.core.graphics.drawable.toDrawable
+import io.legado.app.utils.putPrefBoolean
 
 /**
  * 阅读界面配置
