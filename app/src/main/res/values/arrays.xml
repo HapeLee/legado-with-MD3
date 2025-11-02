@@ -145,6 +145,7 @@
 		<item>Title With Arrow</item>
 		<item>Time</item>
 		<item>Battery</item>
+		<item>Battery Classic</item>
 		<item>Battery Inside</item>
 		<item>Battery Only Icon</item>
 		<item>Battery%</item>
@@ -153,6 +154,7 @@
 		<item>Progress(xx/yyy)</item>
 		<item>Pages and progress</item>
 		<item>Time and Battery</item>
+		<item>Time and Battery Classic</item>
 		<item>Time and Battery%</item>
 	</string-array>
 

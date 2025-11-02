@@ -91,6 +91,7 @@
         <item>標題+箭頭</item>
         <item>時間</item>
         <item>電量</item>
+        <item>電量经典</item>
         <item>電量內顯</item>
         <item>僅電量圖標</item>
         <item>電量%</item>
@@ -99,6 +100,7 @@
         <item>進度(xx/yyy)</item>
         <item>頁數及進度</item>
         <item>時間及電量</item>
+        <item>時間及電量经典</item>
         <item>時間及電量%</item>
     </string-array>
 
