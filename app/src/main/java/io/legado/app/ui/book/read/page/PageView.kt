@@ -59,6 +59,7 @@ class PageView(context: Context) : FrameLayout(context) {
     private var tvBatteryIcon: BatteryView? = null
     private var tvBatteryClassic: BatteryView? = null
     private var tvTimeBatteryClassic: BatteryView? = null
+    private var tvTitleArrowClassic: BatteryView? = null
 
     private var isMainView = false
     var isScroll = false
@@ -190,6 +191,11 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
             tag = ReadTipConfig.chapterTitleArrow
+            textSize = 12f
+            batteryMode = BatteryView.BatteryMode.ARROW
+        }
+        tvTitleArrowClassic = getTipView(ReadTipConfig.chapterTitleArrowClassic)?.apply {
+            tag = ReadTipConfig.chapterTitleArrowClassic
             typeface = ChapterProvider.typeface
             textSize = 12f
             batteryMode = BatteryView.BatteryMode.ARROW
@@ -390,6 +396,7 @@ class PageView(context: Context) : FrameLayout(context) {
         tvBookName?.setTextIfNotEqual(ReadBook.book?.name)
         tvTitle?.setTextIfNotEqual(textPage.title)
         tvTitleArrow?.setTextIfNotEqual(textPage.title)
+        tvTitleArrowClassic?.setTextIfNotEqual(textPage.title)
         val readProgress = readProgress
         tvTotalProgress?.setTextIfNotEqual(readProgress)
         tvTotalProgress1?.setTextIfNotEqual("${chapterIndex.plus(1)}/${chapterSize}")

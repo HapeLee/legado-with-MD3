@@ -58,8 +58,11 @@
 
                 <TextView
                     android:id="@+id/tv_source_action"
-                    android:layout_width="wrap_content"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:gravity="end"
                     android:paddingVertical="8dp"
                     android:text="@string/book_source" />
 

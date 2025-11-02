@@ -21,16 +21,11 @@ class BatteryView @JvmOverloads constructor(
 
     enum class BatteryMode { OUTER, INNER, ICON, ARROW, TIME, CLASSIC, NO_BATTERY }
 
-//    private val batteryTypeface by lazy {
-//        Typeface.createFromAsset(context.assets, "font/number.ttf")
-//    }
+    private val batteryTypeface by lazy {
+        Typeface.createFromAsset(context.assets, "font/number.ttf")
+    }
 
     private var battery: Int = 0
-
-    init {
-        //binding.batteryText.typeface = batteryTypeface
-        //binding.batteryTextInner.typeface = batteryTypeface
-    }
 
     var text: CharSequence?
         get() = binding.batteryText.text
@@ -75,7 +70,10 @@ class BatteryView @JvmOverloads constructor(
             }
 
             BatteryMode.CLASSIC -> {
+                binding.batteryText.typeface = batteryTypeface
+                binding.batteryTextInner.typeface = batteryTypeface
                 binding.batteryClassic.isBattery = true
+                binding.batteryClassic.textSize = 11f
                 binding.batteryClassic.setBattery(battery, text)
             }
 
@@ -169,7 +167,7 @@ class BatteryView @JvmOverloads constructor(
 
     private fun updateFill() {
         post {
-            val maxWidth = 14.dpToPx()
+            val maxWidth = 17.dpToPx()
             val params = binding.batteryFill.layoutParams
             params.width = (maxWidth * battery / 100f).toInt()
             binding.batteryFill.layoutParams = params

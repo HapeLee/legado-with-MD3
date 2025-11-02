@@ -57,7 +57,7 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/battery_fill"
-        android:layout_width="14dp"
+        android:layout_width="17dp"
         android:layout_height="8dp"
         android:visibility="gone"
         android:layout_marginStart="4.2dp"

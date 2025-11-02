@@ -27,7 +27,7 @@ class BatteryViewOrgin @JvmOverloads constructor(
     private val outFrame = Rect()
     private val polar = Rect()
     private val canvasRecorder = CanvasRecorderFactory.create()
-    var isBattery = false
+    var isBattery = true
         set(value) {
             field = value
             if (value && !isInEditMode) {
