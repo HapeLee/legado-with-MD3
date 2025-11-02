@@ -103,9 +103,9 @@
                 android:id="@+id/dsb_title_seg_scaling"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                android:visibility="gone"
                 app:max="20"
-                app:title="次行字体缩放" />
+                app:title="次行缩放(未完成)" />
+
             <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
