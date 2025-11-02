@@ -21,9 +21,9 @@ class BatteryView @JvmOverloads constructor(
 
     enum class BatteryMode { OUTER, INNER, ICON, ARROW, TIME, CLASSIC, NO_BATTERY }
 
-    private val batteryTypeface by lazy {
-        Typeface.createFromAsset(context.assets, "font/number.ttf")
-    }
+//    private val batteryTypeface by lazy {
+//        Typeface.createFromAsset(context.assets, "font/number.ttf")
+//    }
 
     private var battery: Int = 0
 
