@@ -564,9 +564,9 @@
     <color name="elink_theme_outlineVariant">#000000</color>
     <color name="elink_theme_scrim">#000000</color>
     <color name="elink_theme_inverseSurface">#313030</color>
-    <color name="elink_theme_inverseOnSurface">#F4F0EF</color>
-    <color name="elink_theme_inversePrimary">#C6C6C7</color>
-    <color name="elink_theme_primaryFixed">#E2E2E2</color>
+    <color name="elink_theme_inverseOnSurface">#FFFFFF</color>
+    <color name="elink_theme_inversePrimary">#FFFFFF</color>
+    <color name="elink_theme_primaryFixed">#FFFFFF</color>
     <color name="elink_theme_onPrimaryFixed">#1A1C1C</color>
     <color name="elink_theme_primaryFixedDim">#C6C6C7</color>
     <color name="elink_theme_onPrimaryFixedVariant">#454747</color>
@@ -574,17 +574,17 @@
     <color name="elink_theme_onSecondaryFixed">#1B1B1B</color>
     <color name="elink_theme_secondaryFixedDim">#C6C6C6</color>
     <color name="elink_theme_onSecondaryFixedVariant">#474747</color>
-    <color name="elink_theme_tertiaryFixed">#E2E2E2</color>
+    <color name="elink_theme_tertiaryFixed">#FFFFFF</color>
     <color name="elink_theme_onTertiaryFixed">#1B1B1B</color>
     <color name="elink_theme_tertiaryFixedDim">#C6C6C6</color>
     <color name="elink_theme_onTertiaryFixedVariant">#474747</color>
-    <color name="elink_theme_surfaceDim">#DDD9D9</color>
-    <color name="elink_theme_surfaceBright">#FCF8F8</color>
+    <color name="elink_theme_surfaceDim">#FFFFFF</color>
+    <color name="elink_theme_surfaceBright">#FFFFFF</color>
     <color name="elink_theme_surfaceContainerLowest">#FFFFFF</color>
-    <color name="elink_theme_surfaceContainerLow">#F6F3F2</color>
-    <color name="elink_theme_surfaceContainer">#F1EDEC</color>
-    <color name="elink_theme_surfaceContainerHigh">#EBE7E7</color>
-    <color name="elink_theme_surfaceContainerHighest">#E5E2E1</color>
+    <color name="elink_theme_surfaceContainerLow">#FFFFFF</color>
+    <color name="elink_theme_surfaceContainer">#FFFFFF</color>
+    <color name="elink_theme_surfaceContainerHigh">#FFFFFF</color>
+    <color name="elink_theme_surfaceContainerHighest">#FFFFFF</color>
 
     <color name="disabled">@color/md_light_disabled</color>
 

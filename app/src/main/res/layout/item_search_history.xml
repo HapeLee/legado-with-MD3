@@ -30,6 +30,7 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="16dp"
         app:backgroundTint="@android:color/transparent"
+        app:iconTint="?attr/colorOnSurface"
         app:icon="@drawable/ic_baseline_close" />
 
 </LinearLayout>

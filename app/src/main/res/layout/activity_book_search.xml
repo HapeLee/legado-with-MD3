@@ -96,7 +96,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="16dp"
-                app:tint="?attr/colorTertiary"
+                app:tint="?attr/colorOnTertiaryContainer"
                 app:backgroundTint="?attr/colorTertiaryContainer"
                 android:contentDescription="@string/stop"
                 android:src="@drawable/ic_stop_black_24dp"

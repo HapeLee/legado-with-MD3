@@ -54,7 +54,7 @@
                     android:paddingHorizontal="4dp"
                     android:paddingVertical="2dp"
                     android:text="@string/remove_from_bookshelf"
-                    android:textColor="?attr/colorTertiary"
+                    android:textColor="?attr/colorOnTertiaryContainer"
                     android:textStyle="bold"
                     android:textSize="10sp"
                     tools:ignore="SmallSp" />

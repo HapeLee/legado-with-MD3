@@ -573,7 +573,7 @@
     <color name="elink_theme_surfaceBright">#3A3939</color>
     <color name="elink_theme_surfaceContainerLowest">#0E0E0E</color>
     <color name="elink_theme_surfaceContainerLow">#1C1B1B</color>
-    <color name="elink_theme_surfaceContainer">#201F1F</color>
+    <color name="elink_theme_surfaceContainer">#000000</color>
     <color name="elink_theme_surfaceContainerHigh">#2A2A2A</color>
     <color name="elink_theme_surfaceContainerHighest">#353434</color>
 
