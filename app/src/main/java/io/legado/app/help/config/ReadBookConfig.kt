@@ -599,7 +599,7 @@ object ReadBookConfig {
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
         var titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
-        var titleLineSpacingExtra: Int = 8,
+        var titleLineSpacingExtra: Int = 12,
         var titleSegType: Int = 0,//分段模式
         var titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
         var titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
