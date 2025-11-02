@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.page
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Typeface
 import android.graphics.drawable.LayerDrawable
 import android.view.LayoutInflater
 import android.widget.FrameLayout
@@ -191,6 +192,7 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
             tag = ReadTipConfig.chapterTitleArrow
+            typeface = Typeface.DEFAULT
             textSize = 12f
             batteryMode = BatteryView.BatteryMode.ARROW
         }
@@ -208,6 +210,7 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         tvBattery = getTipView(ReadTipConfig.battery)?.apply {
             tag = ReadTipConfig.battery
+            typeface = Typeface.DEFAULT
             textSize = 11f
             batteryMode = BatteryView.BatteryMode.OUTER
         }
@@ -218,11 +221,13 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         tvBatteryInside = getTipView(ReadTipConfig.batteryInside)?.apply {
             tag = ReadTipConfig.batteryInside
+            typeface = Typeface.DEFAULT
             textSize = 11f
             batteryMode = BatteryView.BatteryMode.INNER
         }
         tvBatteryIcon = getTipView(ReadTipConfig.batteryIcon)?.apply {
             tag = ReadTipConfig.batteryIcon
+            typeface = Typeface.DEFAULT
             textSize = 11f
             batteryMode = BatteryView.BatteryMode.ICON
         }
@@ -258,6 +263,7 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         tvTimeBattery = getTipView(ReadTipConfig.timeBattery)?.apply {
             tag = ReadTipConfig.timeBattery
+            typeface = Typeface.DEFAULT
             textSize = 11f
             batteryMode = BatteryView.BatteryMode.TIME
         }

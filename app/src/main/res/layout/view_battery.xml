@@ -20,7 +20,7 @@
     <TextView
         android:id="@+id/battery_text"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:includeFontPadding="false"
         android:textSize="11sp"
         android:text="@string/text"
@@ -32,7 +32,7 @@
     <TextView
         android:id="@+id/battery_text_inner"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_marginEnd="2.4dp"
         android:layout_marginBottom="0.8dp"
         android:textSize="8sp"
@@ -71,7 +71,7 @@
     <TextView
         android:id="@+id/battery_text_end"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:visibility="gone"
         android:includeFontPadding="false"
         android:textSize="11sp"
@@ -86,7 +86,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/text"
-        android:visibility="gone"
+        android:visibility="visible"
         app:layout_constraintStart_toEndOf="@id/battery_icon"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>

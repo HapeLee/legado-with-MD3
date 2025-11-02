@@ -21,10 +21,6 @@ class BatteryView @JvmOverloads constructor(
 
     enum class BatteryMode { OUTER, INNER, ICON, ARROW, TIME, CLASSIC, NO_BATTERY }
 
-    private val batteryTypeface by lazy {
-        Typeface.createFromAsset(context.assets, "font/number.ttf")
-    }
-
     private var battery: Int = 0
 
     var text: CharSequence?
@@ -72,8 +68,6 @@ class BatteryView @JvmOverloads constructor(
             }
 
             BatteryMode.CLASSIC -> {
-                binding.batteryText.typeface = batteryTypeface
-                binding.batteryTextInner.typeface = batteryTypeface
                 binding.batteryClassic.isBattery = true
                 binding.batteryClassic.textSize = 11f
                 binding.batteryClassic.setBattery(battery, text)
@@ -140,7 +134,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.ARROW -> {
                 binding.batteryText.visibility = VISIBLE
-                binding.batteryTextEnd.visibility = VISIBLE
+                binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = GONE
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = GONE
@@ -168,6 +162,9 @@ class BatteryView @JvmOverloads constructor(
             BatteryMode.NO_BATTERY -> {
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = GONE
+                binding.batteryText.visibility = VISIBLE
+                binding.batteryTextEnd.visibility = GONE
+                binding.batteryTextInner.visibility = GONE
                 binding.arrowIcon.visibility = GONE
                 binding.batteryClassic.visibility = GONE
             }
