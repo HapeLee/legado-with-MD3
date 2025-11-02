@@ -930,6 +930,11 @@ object ChapterProvider {
             else
                 normal
 
+            0 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 300, false)
+            else
+                normal
+
             in 100..900 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
                 Typeface.create(typeface, ReadBookConfig.titleBold, false)
             else
@@ -945,6 +950,11 @@ object ChapterProvider {
                 bold
 
             2 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
+                Typeface.create(typeface, 300, false)
+            else
+                normal
+
+            0 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
                 Typeface.create(typeface, 300, false)
             else
                 normal

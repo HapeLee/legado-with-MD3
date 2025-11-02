@@ -53,7 +53,7 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
             else -> {  }
         }
         val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
-        val weightValues = listOf(2, 1, 0)
+        val weightValues = listOf(0, 1, 2)
         val initialIndex = weightValues.indexOf(ReadBookConfig.titleBold)
         binding.textFontWeightConverter.text = weightOptions?.getOrNull(initialIndex) ?: "自定义"
         binding.textFontWeightConverter.setOnClickListener {

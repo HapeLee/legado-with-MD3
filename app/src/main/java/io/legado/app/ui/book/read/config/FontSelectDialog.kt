@@ -140,7 +140,7 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         }
 
         val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
-        val weightValues = listOf(2, 1, 0)
+        val weightValues = listOf(0, 1, 2)
         val initialIndex = weightValues.indexOf(ReadBookConfig.textBold)
 
         binding.textFontWeightConverter.text = weightOptions?.getOrNull(initialIndex) ?: "自定义"
