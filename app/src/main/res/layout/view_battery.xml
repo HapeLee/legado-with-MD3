@@ -68,6 +68,19 @@
         app:layout_constraintTop_toTopOf="@id/battery_icon"
         app:layout_constraintBottom_toBottomOf="@id/battery_icon"/>
 
+    <TextView
+        android:id="@+id/battery_text_end"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:includeFontPadding="false"
+        android:textSize="11sp"
+        android:text="@string/text"
+        android:textStyle="bold"
+        app:layout_constraintStart_toEndOf="@id/battery_icon"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
     <io.legado.app.ui.widget.BatteryViewOrgin
         android:id="@+id/battery_classic"
         android:layout_width="wrap_content"

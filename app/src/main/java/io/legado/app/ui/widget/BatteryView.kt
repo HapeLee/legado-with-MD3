@@ -32,6 +32,7 @@ class BatteryView @JvmOverloads constructor(
         set(value) {
             binding.batteryText.text = value
             binding.batteryTextInner.text = value
+            binding.batteryTextEnd.text = value
         }
 
     var batteryMode: BatteryMode = BatteryMode.OUTER
@@ -45,6 +46,7 @@ class BatteryView @JvmOverloads constructor(
         set(value) {
             binding.batteryText.typeface = value ?: Typeface.DEFAULT
             binding.batteryTextInner.typeface = value ?: Typeface.DEFAULT
+            binding.batteryTextEnd.typeface = value ?: Typeface.DEFAULT
         }
 
     var textSize: Float
@@ -80,6 +82,7 @@ class BatteryView @JvmOverloads constructor(
             else -> {
                 val displayText = text?.let { "$it  $battery" } ?: battery.toString()
                 binding.batteryText.text = displayText
+                binding.batteryTextEnd.text = displayText
                 binding.batteryTextInner.text = displayText
             }
         }
@@ -89,6 +92,7 @@ class BatteryView @JvmOverloads constructor(
 
     fun setColor(@ColorInt color: Int) {
         binding.batteryText.setTextColor(color)
+        binding.batteryTextEnd.setTextColor(color)
         binding.batteryTextInner.setTextColor(color)
         binding.batteryFill.setCardBackgroundColor(color)
         binding.batteryClassic.setColor(color)
@@ -108,7 +112,8 @@ class BatteryView @JvmOverloads constructor(
     private fun updateMode() {
         when (batteryMode) {
             BatteryMode.OUTER -> {
-                binding.batteryText.visibility = VISIBLE
+                binding.batteryText.visibility = GONE
+                binding.batteryTextEnd.visibility = VISIBLE
                 binding.batteryTextInner.visibility = GONE
                 binding.batteryFill.visibility = VISIBLE
                 binding.batteryIcon.visibility = VISIBLE
@@ -117,6 +122,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.INNER -> {
                 binding.batteryText.visibility = GONE
+                binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = VISIBLE
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = VISIBLE
@@ -125,6 +131,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.ICON -> {
                 binding.batteryText.visibility = GONE
+                binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = GONE
                 binding.batteryFill.visibility = VISIBLE
                 binding.batteryIcon.visibility = VISIBLE
@@ -133,6 +140,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.ARROW -> {
                 binding.batteryText.visibility = VISIBLE
+                binding.batteryTextEnd.visibility = VISIBLE
                 binding.batteryTextInner.visibility = GONE
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = GONE
@@ -141,6 +149,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.TIME -> {
                 binding.batteryText.visibility = VISIBLE
+                binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = VISIBLE
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = VISIBLE
@@ -149,6 +158,7 @@ class BatteryView @JvmOverloads constructor(
             }
             BatteryMode.CLASSIC -> {
                 binding.batteryText.visibility = GONE
+                binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = GONE
                 binding.batteryFill.visibility = GONE
                 binding.batteryIcon.visibility = GONE
