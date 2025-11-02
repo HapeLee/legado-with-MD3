@@ -17,6 +17,7 @@
         android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:paddingBottom="32dp"
         app:layout_constraintTop_toBottomOf="@id/tool_bar">
 
         <io.legado.app.ui.widget.text.TextInputLayout

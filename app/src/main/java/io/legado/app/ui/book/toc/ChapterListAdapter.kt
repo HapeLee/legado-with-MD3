@@ -278,22 +278,19 @@ class ChapterListAdapter(
             when {
                 item.isVolume -> {
                     ivVolume.visible()
-                    if (isCollapsed) ivColl.visible()
-                    else ivColl.gone()
+                    ivVolume.isChecked = isCollapsed
                     tvChapterName.textSize = 12f
-                    tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorTertiary))
+                    tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorSecondary))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))
                 }
 
                 isDur -> {
-                    ivColl.gone()
                     ivVolume.gone()
                     tvChapterName.setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
                 }
 
                 else -> {
-                    ivColl.gone()
                     ivVolume.gone()
                     tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorOnSurface))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))

@@ -27,14 +27,20 @@
             android:src="@drawable/ic_lock_outline"
             android:visibility="visible" />
 
-        <com.google.android.material.card.MaterialCardView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/iv_volume"
-            android:layout_width="4dp"
-            android:layout_height="16dp"
+            android:layout_width="18dp"
+            android:layout_height="26dp"
             android:layout_marginEnd="8dp"
+            android:checkable="true"
+            android:clickable="false"
+            app:iconPadding="0dp"
+            app:iconGravity="textStart"
+            app:iconSize="16dp"
+            style="@style/Widget.Material3Expressive.Button.TonalButton"
             android:visibility="visible"
-            app:cardBackgroundColor="?attr/colorTertiary"
-            app:strokeWidth="0dp" />
+            app:icon="@drawable/m3_split_button_chevron_avd" />
+
     </LinearLayout>
 
     <LinearLayout
@@ -43,7 +49,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/iv_Coll"
+        app:layout_constraintEnd_toStartOf="@id/iv_checked"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toEndOf="@id/ll_info">
 
@@ -84,23 +90,6 @@
             app:layout_constraintStart_toEndOf="@+id/iv_locked"
             app:layout_constraintTop_toBottomOf="@id/tv_word_count" />
     </LinearLayout>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/iv_Coll"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:strokeWidth="0dp"
-        app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/iv_checked">
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:visibility="visible"
-            android:src="@drawable/ic_arrow_drop_down" />
-    </com.google.android.material.card.MaterialCardView>
 
     <ImageView
         android:id="@+id/iv_checked"
