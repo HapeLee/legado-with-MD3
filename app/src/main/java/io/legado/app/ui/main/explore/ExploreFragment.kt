@@ -3,11 +3,13 @@ package io.legado.app.ui.main.explore
 //import io.legado.app.lib.theme.primaryColor
 //import io.legado.app.lib.theme.primaryTextColor
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -17,8 +19,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.transition.TransitionManager
-import com.google.android.material.search.SearchBar
-import com.google.android.material.search.SearchView
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -40,7 +40,6 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -68,12 +67,12 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         ExploreAdapter(requireContext(), this)
     }
     private val linearLayoutManager by lazy { LinearLayoutManager(context) }
-    private val searchBar: SearchBar by lazy { binding.searchBar }
-    private val searchView: SearchView by lazy { binding.searchView }
+    private val searchView: SearchView by lazy { binding.searchBar }
     private val diffItemCallBack = ExploreDiffItemCallBack()
     private val groups = linkedSetOf<String>()
     private var exploreFlowJob: Job? = null
     private var groupsMenu: SubMenu? = null
+    private var currentGroup: String? = null
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.topBar)
@@ -89,44 +88,20 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     }
 
     private fun initSearchView() {
-        searchView.setupWithSearchBar(searchBar)
-        searchView.hint = getString(R.string.screen_find)
-        searchBar.setOnClickListener {
-            searchView.show()
-            if (searchView.text.isEmpty()) {
-                searchView.hint = getString(R.string.screen_find)
-            }
-        }
-
-        searchView.addTransitionListener { _, _, newState ->
-            if (newState == SearchView.TransitionState.HIDDEN) {
-                searchBar.setText(searchView.text)
-            }
-        }
-
-        searchView.editText.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val query = searchView.text.toString()
+        searchView.queryHint = getString(R.string.screen_find)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
                 upExploreData(query)
-                searchBar.hint = query.ifEmpty {
-                    getString(R.string.screen_find)
-                }
-                searchView.hide()
-                return@setOnEditorActionListener true
+                searchView.clearFocus()
+                return true
             }
-            false
-        }
 
-        searchView.editText.doAfterTextChanged { editable ->
-            editable?.let {
-                upExploreData(it.toString())
-                if (it.isEmpty()) {
-                    searchBar.hint = getString(R.string.screen_find)
-                }
+            override fun onQueryTextChange(newText: String): Boolean {
+                upExploreData(newText)
+                return true
             }
-        }
+        })
 
-        searchView.setupWithSearchBar(searchBar)
     }
 
     private fun initRecyclerView() {
@@ -158,7 +133,6 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
                     groups.clear()
                     groups.addAll(it)
                     upGroupsMenu()
-                    delay(500)
                 }
         }
     }
@@ -166,18 +140,18 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
     private fun upExploreData(searchKey: String? = null) {
         exploreFlowJob?.cancel()
         exploreFlowJob = viewLifecycleOwner.lifecycleScope.launch {
+            val query = searchKey ?: searchView.query?.toString() ?: ""
+
             when {
-                searchKey.isNullOrBlank() -> {
+                query.isBlank() -> {
                     appDb.bookSourceDao.flowExplore()
                 }
-
-                searchKey.startsWith("group:") -> {
-                    val key = searchKey.substringAfter("group:")
+                query.startsWith("group:") -> {
+                    val key = query.substringAfter("group:")
                     appDb.bookSourceDao.flowGroupExplore(key)
                 }
-
                 else -> {
-                    appDb.bookSourceDao.flowExplore(searchKey)
+                    appDb.bookSourceDao.flowExplore(query)
                 }
             }.flowWithLifecycleAndDatabaseChange(
                 viewLifecycleOwner.lifecycle,
@@ -186,9 +160,8 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
             ).catch {
                 AppLog.put("发现界面更新数据出错", it)
             }.conflate().flowOn(IO).collect {
-                binding.emptyView.isGone = it.isNotEmpty() || searchView.text.isNotEmpty() == true
+                binding.emptyView.isGone = it.isNotEmpty() || query.isNotEmpty()
                 adapter.setItems(it, diffItemCallBack)
-                delay(500)
             }
         }
     }
@@ -216,17 +189,20 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         if (item.groupId == R.id.menu_group_text) {
             val title = item.title.toString()
             if (title == getString(R.string.all)) {
-                searchView.setText("")
-                upExploreData(null)
+                searchView.setQuery("", false)
+                upExploreData("")
             } else {
-                val query = "group:$title"
-                searchView.setText(query)
-                upExploreData(query)
+                searchView.setQuery(title, false)
             }
         } else if (item.itemId == R.id.menu_exp_search) {
             TransitionManager.beginDelayedTransition(binding.rootView)
-            binding.searchBar.visibility =
-                if (binding.searchBar.isVisible) View.GONE else View.VISIBLE
+            if (searchView.isVisible) {
+                searchView.isVisible = false
+                searchView.clearFocus()
+            } else {
+                searchView.isVisible = true
+                searchView.requestFocus()
+            }
         }
     }
 

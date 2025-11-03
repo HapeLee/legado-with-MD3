@@ -31,23 +31,20 @@
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
-        <com.google.android.material.search.SearchBar
+        <androidx.appcompat.widget.SearchView
             android:id="@+id/search_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginVertical="8dp"
+            app:queryBackground="@null"
+            app:iconifiedByDefault="false"
+            app:searchIcon="@null"
+            android:background="@drawable/bg_searchview"
             android:visibility="gone"
             android:layout_marginHorizontal="16dp"
             android:hint="@string/search_rss_source" />
 
     </com.google.android.material.appbar.AppBarLayout>
-
-    <com.google.android.material.search.SearchView
-        android:id="@+id/search_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_view"
@@ -57,8 +54,6 @@
             app:layout_behavior="@string/appbar_scrolling_view_behavior"
             app:spanCount="4"
             tools:listitem="@layout/item_rss" />
-
-
 
     <TextView
         android:id="@+id/tv_empty_msg"

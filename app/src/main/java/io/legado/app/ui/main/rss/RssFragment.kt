@@ -7,13 +7,12 @@ import android.view.MenuItem
 import android.view.SubMenu
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import androidx.appcompat.widget.SearchView
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.search.SearchBar
-import com.google.android.material.search.SearchView
 import io.legado.app.R
 import io.legado.app.base.VMBaseFragment
 import io.legado.app.constant.AppLog
@@ -65,8 +64,7 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss),
     private val adapter by lazy {
         RssAdapter(requireContext(), this, this, viewLifecycleOwner.lifecycle)
     }
-    private val searchBar: SearchBar by lazy { binding.searchBar }
-    private val searchView: SearchView by lazy { binding.searchView }
+    private val searchView: SearchView by lazy { binding.searchBar }
     private var groupsFlowJob: Job? = null
     private var rssFlowJob: Job? = null
     private val groups = linkedSetOf<String>()
@@ -99,9 +97,9 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss),
             else -> if (item.groupId == R.id.menu_group_text) {
                 if (item.title == getString(R.string.all)) {
                     upRssFlowJob()
-                    searchView.setText("")
+                    searchView.setQuery("", false)
                 } else {
-                    searchView.setText("group:${item.title}")
+                    searchView.setQuery(item.title, false)
                     upRssFlowJob("group:${item.title}")
                 }
             }
@@ -123,39 +121,19 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss),
     }
 
     private fun initSearchView() {
-        searchView.hint = getString(R.string.search_rss_source)
-
-        searchBar.setOnClickListener {
-            searchView.show()
-            if (searchView.text.isEmpty()) {
-                searchView.hint = getString(R.string.search_rss_source)
-            }
-        }
-
-        searchView.editText.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                val query = searchView.text.toString()
+        searchView.queryHint = getString(R.string.search_rss_source)
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
                 upRssFlowJob(query)
-                searchBar.hint = query.ifEmpty {
-                    getString(R.string.search_rss_source)
-                }
-                searchView.hide()
-                return@setOnEditorActionListener true
+                searchView.clearFocus()
+                return true
             }
-            false
-        }
 
-        searchView.editText.doAfterTextChanged { editable ->
-            editable?.let {
-                upRssFlowJob(it.toString())
-
-                if (it.isEmpty()) {
-                    searchBar.hint = getString(R.string.search_rss_source)
-                }
+            override fun onQueryTextChange(newText: String): Boolean {
+                upRssFlowJob(newText)
+                return true
             }
-        }
-
-        searchView.setupWithSearchBar(searchBar)
+        })
     }
 
     private fun initRecyclerView() {
