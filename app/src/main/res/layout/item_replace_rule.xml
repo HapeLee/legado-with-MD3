@@ -12,7 +12,7 @@
 
     <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/cb_name"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="8dp"
@@ -20,9 +20,18 @@
         android:maxLines="2"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toLeftOf="@+id/swt_enabled"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="RtlSymmetry" />
+
+    <ImageView
+        android:id="@+id/iv_pin"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginStart="16dp"
+        android:src="@drawable/ic_praise"
+        app:layout_constraintStart_toEndOf="@id/cb_name"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/swt_enabled"

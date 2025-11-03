@@ -16,6 +16,10 @@ import io.legado.app.databinding.ItemReplaceRuleBinding
 //import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
+import io.legado.app.utils.gone
+import io.legado.app.utils.themeColor
+import io.legado.app.utils.visible
+import splitties.views.backgroundColor
 
 
 class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
@@ -38,27 +42,23 @@ class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
         }
 
         override fun areContentsTheSame(oldItem: ReplaceRule, newItem: ReplaceRule): Boolean {
-            if (oldItem.name != newItem.name) {
-                return false
-            }
-            if (oldItem.group != newItem.group) {
-                return false
-            }
-            if (oldItem.isEnabled != newItem.isEnabled) {
-                return false
-            }
+            if (oldItem.name != newItem.name) return false
+            if (oldItem.group != newItem.group) return false
+            if (oldItem.isEnabled != newItem.isEnabled) return false
+            if (oldItem.order != newItem.order) return false  // 添加 order 检查
             return true
         }
 
         override fun getChangePayload(oldItem: ReplaceRule, newItem: ReplaceRule): Any? {
             val payload = Bundle()
-            if (oldItem.name != newItem.name
-                || oldItem.group != newItem.group
-            ) {
+            if (oldItem.name != newItem.name || oldItem.group != newItem.group) {
                 payload.putBoolean("upName", true)
             }
             if (oldItem.isEnabled != newItem.isEnabled) {
                 payload.putBoolean("enabled", newItem.isEnabled)
+            }
+            if (oldItem.order != newItem.order) {
+                payload.putBoolean("orderChanged", true)
             }
             if (payload.isEmpty) {
                 return null
@@ -102,12 +102,9 @@ class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         binding.run {
-            if (payloads.isEmpty()) {
-                //root.setBackgroundColor(ColorUtils.withAlpha(context.backgroundColor, 0.5f))
-                cbName.text = item.getDisplayNameGroup()
-                swtEnabled.isChecked = item.isEnabled
-                cbName.isChecked = selected.contains(item)
-            } else {
+            var needUpdatePin = payloads.isEmpty()
+
+            if (payloads.isNotEmpty()) {
                 for (i in payloads.indices) {
                     val bundle = payloads[i] as Bundle
                     bundle.keySet().forEach {
@@ -115,9 +112,34 @@ class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
                             "selected" -> cbName.isChecked = selected.contains(item)
                             "upName" -> cbName.text = item.getDisplayNameGroup()
                             "enabled" -> swtEnabled.isChecked = item.isEnabled
+                            "orderChanged" -> needUpdatePin = true
                         }
                     }
                 }
+            }
+
+            if (payloads.isEmpty() || needUpdatePin) {
+                when (item.order) {
+                    -1 -> {
+                        ivPin.visible()
+                        ivPin.setImageResource(R.drawable.ic_praise_filled)
+                        ivPin.rotation = 0f
+                        ivPin.setColorFilter(context.themeColor(com.google.android.material.R.attr.colorSecondary))
+                    }
+                    -2 -> {
+                        ivPin.visible()
+                        ivPin.setImageResource(R.drawable.ic_praise_filled)
+                        ivPin.rotation = 180f
+                        ivPin.setColorFilter(context.themeColor(com.google.android.material.R.attr.colorSecondary))
+                    }
+                    else -> ivPin.gone()
+                }
+            }
+
+            if (payloads.isEmpty()) {
+                cbName.text = item.getDisplayNameGroup()
+                swtEnabled.isChecked = item.isEnabled
+                cbName.isChecked = selected.contains(item)
             }
         }
     }
@@ -221,6 +243,7 @@ class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
                 }
                 return false
             }
+            
         }
 
     interface CallBack {

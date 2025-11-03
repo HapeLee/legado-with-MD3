@@ -72,8 +72,6 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     }
     private var groups = arrayListOf<String>()
     private var groupMenu: SubMenu? = null
-
-    private var sortMode = "desc"
     private var searchKey: String? = null
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult

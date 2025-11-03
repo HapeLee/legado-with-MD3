@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import splitties.init.appCtx
 
 /**
@@ -43,39 +44,64 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
     val rulesFlow = combine(_searchKey, _sortMode) { search, sort ->
         Pair(search, sort)
     }.flatMapLatest { (searchKey, sortMode) ->
-        when {
-            searchKey.isNullOrEmpty() -> when (sortMode) {
-                "asc" -> appDb.replaceRuleDao.flowAllAsc()
-                "name_asc" -> appDb.replaceRuleDao.flowAllNameAsc()
-                "name_desc" -> appDb.replaceRuleDao.flowAllNameDesc()
-                else -> appDb.replaceRuleDao.flowAllDesc()
-            }
-
-            searchKey == appCtx.getString(R.string.no_group) -> when (sortMode) {
-                "asc" -> appDb.replaceRuleDao.flowNoGroupAsc()
-                "name_asc" -> appDb.replaceRuleDao.flowNoGroupNameAsc()
-                "name_desc" -> appDb.replaceRuleDao.flowNoGroupNameDesc()
-                else -> appDb.replaceRuleDao.flowNoGroupDesc()
-            }
-
+        // 先获取基础数据
+        val baseFlow = when {
+            searchKey.isNullOrEmpty() -> appDb.replaceRuleDao.flowAll()
+            searchKey == appCtx.getString(R.string.no_group) -> appDb.replaceRuleDao.flowNoGroup()
             searchKey.startsWith("group:") -> {
                 val key = searchKey.substringAfter("group:")
-                when (sortMode) {
-                    "asc" -> appDb.replaceRuleDao.flowGroupSearchAsc("%$key%")
-                    "name_asc" -> appDb.replaceRuleDao.flowGroupSearchNameAsc("%$key%")
-                    "name_desc" -> appDb.replaceRuleDao.flowGroupSearchNameDesc("%$key%")
-                    else -> appDb.replaceRuleDao.flowGroupSearchDesc("%$key%")
+                appDb.replaceRuleDao.flowGroupSearch("%$key%")
+            }
+            else -> appDb.replaceRuleDao.flowSearch("%$searchKey%")
+        }
+
+        baseFlow.map { rules ->
+            val comparator = when (sortMode) {
+                "asc" -> Comparator<ReplaceRule> { a, b ->
+                    when {
+                        // 置顶优先
+                        a.order == -1 && b.order != -1 -> -1
+                        a.order != -1 && b.order == -1 -> 1
+                        // 置底最后
+                        a.order == -2 && b.order != -2 -> 1
+                        a.order != -2 && b.order == -2 -> -1
+                        // 普通规则按order排序
+                        else -> a.order.compareTo(b.order)
+                    }
                 }
+                "desc" -> Comparator<ReplaceRule> { a, b ->
+                    when {
+                        a.order == -1 && b.order != -1 -> -1
+                        a.order != -1 && b.order == -1 -> 1
+                        a.order == -2 && b.order != -2 -> 1
+                        a.order != -2 && b.order == -2 -> -1
+                        else -> b.order.compareTo(a.order)
+                    }
+                }
+                "name_asc" -> Comparator<ReplaceRule> { a, b ->
+                    when {
+                        a.order == -1 && b.order != -1 -> -1
+                        a.order != -1 && b.order == -1 -> 1
+                        a.order == -2 && b.order != -2 -> 1
+                        a.order != -2 && b.order == -2 -> -1
+                        else -> a.name.lowercase().compareTo(b.name.lowercase())
+                    }
+                }
+                "name_desc" -> Comparator<ReplaceRule> { a, b ->
+                    when {
+                        a.order == -1 && b.order != -1 -> -1
+                        a.order != -1 && b.order == -1 -> 1
+                        a.order == -2 && b.order != -2 -> 1
+                        a.order != -2 && b.order == -2 -> -1
+                        else -> b.name.lowercase().compareTo(a.name.lowercase())
+                    }
+                }
+                else -> null
             }
 
-            else -> when (sortMode) {
-                "asc" -> appDb.replaceRuleDao.flowSearchAsc("%$searchKey%")
-                "name_asc" -> appDb.replaceRuleDao.flowSearchNameAsc("%$searchKey%")
-                "name_desc" -> appDb.replaceRuleDao.flowSearchNameDesc("%$searchKey%")
-                else -> appDb.replaceRuleDao.flowSearchDesc("%$searchKey%")
-            }
+            if (comparator != null) rules.sortedWith(comparator) else rules
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(Dispatchers.Default)
 
     fun update(vararg rule: ReplaceRule) {
         execute {
@@ -91,16 +117,15 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun toTop(rule: ReplaceRule) {
         execute {
-            rule.order = appDb.replaceRuleDao.minOrder - 1
+            rule.order = -1
             appDb.replaceRuleDao.update(rule)
         }
     }
 
     fun topSelect(rules: List<ReplaceRule>) {
         execute {
-            var minOrder = appDb.replaceRuleDao.minOrder - rules.size
             rules.forEach {
-                it.order = ++minOrder
+                it.order = -1
             }
             appDb.replaceRuleDao.update(*rules.toTypedArray())
         }
@@ -108,16 +133,15 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun toBottom(rule: ReplaceRule) {
         execute {
-            rule.order = appDb.replaceRuleDao.maxOrder + 1
+            rule.order = -2
             appDb.replaceRuleDao.update(rule)
         }
     }
 
     fun bottomSelect(rules: List<ReplaceRule>) {
         execute {
-            var maxOrder = appDb.replaceRuleDao.maxOrder
             rules.forEach {
-                it.order = maxOrder++
+                it.order = -2
             }
             appDb.replaceRuleDao.update(*rules.toTypedArray())
         }
@@ -125,9 +149,13 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun upOrder() {
         execute {
+            // 重置所有非特殊排序的规则
             val rules = appDb.replaceRuleDao.all
-            for ((index, rule) in rules.withIndex()) {
-                rule.order = index + 1
+            var normalOrder = 1
+            rules.forEach { rule ->
+                if (rule.order >= 0) { // 只重置普通排序的规则
+                    rule.order = normalOrder++
+                }
             }
             appDb.replaceRuleDao.update(*rules.toTypedArray())
         }

@@ -211,8 +211,7 @@ class ReplaceEditActivity :
 
     private fun upReplaceView(rule: ReplaceRule) = binding.run {
         etName.setText(rule.name)
-        val group = rule.group.takeUnless { it.isNullOrBlank() }
-            ?: GroupManager.getLastSelectedGroup(this@ReplaceEditActivity)
+        val group = rule.group.takeUnless { it.isNullOrBlank() } ?: "默认"
         etGroup.setText(group, false)
         etReplaceRule.setText(rule.pattern)
         cbUseRegex.isChecked = rule.isRegex
@@ -229,8 +228,11 @@ class ReplaceEditActivity :
         val rule = viewModel.replaceRule ?: ReplaceRule()
 
         rule.name = etName.text.toString()
-        rule.group = etGroup.text.toString().trim().ifBlank {
-            GroupManager.getLastSelectedGroup(this@ReplaceEditActivity)
+        val groupText = etGroup.text.toString().trim()
+        rule.group = if (groupText == "默认") {
+            null
+        } else {
+            groupText.ifBlank { null }
         }
         rule.pattern = etReplaceRule.text.toString()
         rule.isRegex = cbUseRegex.isChecked
