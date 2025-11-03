@@ -143,6 +143,33 @@
         android:text="@string/text_dottedline"
         tools:ignore="TouchTargetSizeCheck" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:orientation="horizontal">
+        <io.legado.app.ui.widget.SimpleCounterView
+            android:id="@+id/dottedBase"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            app:max="100"
+            app:title="实线长度"/>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"/>
+
+        <io.legado.app.ui.widget.SimpleCounterView
+            android:id="@+id/dottedRatio"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            app:max="100"
+            app:title="比例"/>
+    </LinearLayout>
+
+
+
     <com.google.android.material.button.MaterialButtonGroup
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

@@ -134,6 +134,12 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
         binding.swDottedline.isChecked = dottedLine
         binding.swDottedline.isEnabled = underline
         binding.sbBgAlpha.value = ReadBookConfig.bgAlpha.toFloat()
+        binding.dottedRatio.valueFormat = {
+            (ReadBookConfig.dottedRatio * 100).toInt().toString()
+        }
+        binding.dottedBase.valueFormat = {
+            (ReadBookConfig.dottedBase * 100).toInt().toString()
+        }
     }
 
     @SuppressLint("InflateParams")
@@ -239,6 +245,14 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
                 postEvent(EventBus.UP_CONFIG, arrayListOf(3))
             }
         })
+        binding.dottedRatio.onChanged = {
+            ReadBookConfig.dottedRatio = it / 100f
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
+        binding.dottedBase.onChanged = {
+            ReadBookConfig.dottedBase = it / 100f
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
     }
 
     private fun exportConfig(uri: Uri) {

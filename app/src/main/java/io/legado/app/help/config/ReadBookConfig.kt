@@ -388,6 +388,18 @@ object ReadBookConfig {
             config.dottedLine = value
         }
 
+    var dottedBase: Float
+        get() = config.dottedBase
+        set(value) {
+            config.dottedBase = value
+        }
+
+    var dottedRatio: Float
+        get() = config.dottedRatio
+        set(value) {
+            config.dottedRatio = value
+        }
+
     var paddingBottom: Int
         get() = config.paddingBottom
         set(value) {
@@ -607,6 +619,8 @@ object ReadBookConfig {
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
         var dottedLine: Boolean = false, //虚线
+        var dottedBase: Float = 6f, //长度
+        var dottedRatio: Float = 6f,
         var paddingBottom: Int = 6,
         var paddingLeft: Int = 16,
         var paddingRight: Int = 16,

@@ -2,7 +2,6 @@ package io.legado.app.ui.book.read.page.entities
 
 import android.annotation.SuppressLint
 import android.graphics.Canvas
-import android.graphics.DashPathEffect
 import android.graphics.Paint.FontMetrics
 import android.os.Build
 import androidx.annotation.Keep
@@ -157,19 +156,15 @@ data class TextLine(
         if (checkFastDraw()) {
             fastDrawTextLine(view, canvas)
         } else {
-            for (i in columns.indices) {
-                columns[i].draw(view, canvas)
-            }
+            for (i in columns.indices) columns[i].draw(view, canvas)
         }
-        // 墨水屏模式下的朗读和搜索下划线
+
         if (AppConfig.isEInkMode && (isReadAloud || searchResultColumnCount > 0)) {
-            val underlinePaint = PaintPool.obtain()
-            underlinePaint.set(ChapterProvider.contentPaint)
-            underlinePaint.strokeWidth = 1.dpToPx().toFloat()
+            val linePaint = ChapterProvider.linePaint
             val lineY = height - 1.dpToPx()
-            canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, underlinePaint)
-            PaintPool.recycle(underlinePaint)
+            canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, linePaint)
         }
+
         if (ReadBookConfig.underline && !isImage && ReadBook.book?.isImage != true) {
             drawUnderline(canvas, ReadBookConfig.dottedLine)
         }
@@ -215,20 +210,14 @@ data class TextLine(
      * 绘制下划线
      */
     private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
+        val paint = ChapterProvider.linePaint
+        paint.pathEffect =
+            if (dottedLine && !AppConfig.isEInkMode)
+                ChapterProvider.dashEffect
+            else
+                null
         val lineY = height - 1.dpToPx()
-        val paint = ChapterProvider.contentPaint
-        val oldEffect = paint.pathEffect
-        if (dottedLine) {
-            paint.pathEffect = DashPathEffect(floatArrayOf(6f, 6f), 0f)
-        }
-        canvas.drawLine(
-            lineStart + indentWidth,
-            lineY,
-            lineEnd,
-            lineY,
-            paint
-        )
-        paint.pathEffect = oldEffect
+        canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, paint)
     }
 
 

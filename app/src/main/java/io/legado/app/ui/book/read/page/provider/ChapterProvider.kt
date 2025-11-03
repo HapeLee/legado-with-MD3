@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.read.page.provider
 
 import android.annotation.SuppressLint
+import android.graphics.DashPathEffect
+import android.graphics.Paint
 import android.graphics.Paint.FontMetrics
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -17,6 +19,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ReadBookConfig.dottedBase
+import io.legado.app.help.config.ReadBookConfig.dottedRatio
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextChapter
@@ -52,6 +56,17 @@ object ChapterProvider {
     const val reviewChar = "꧁"
 
     const val indentChar = "　"
+
+    val linePaint: Paint by lazy {
+        Paint(contentPaint).apply {
+            clearShadowLayer()
+            isAntiAlias = true
+            strokeWidth = 1.dpToPx().toFloat()
+            style = Paint.Style.STROKE
+        }
+    }
+
+    val dashEffect = DashPathEffect(floatArrayOf(dottedBase, dottedRatio), 0f)
 
     @JvmStatic
     var viewWidth = 0
