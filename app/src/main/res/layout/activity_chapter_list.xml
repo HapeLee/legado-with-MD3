@@ -22,14 +22,31 @@
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="" />
 
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tab_layout"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:background="?attr/colorSurface"
-            app:tabGravity="fill"
-            app:tabMode="fixed" />
+            android:layout_marginHorizontal="16dp">
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tab_layout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="?attr/colorSurface"
+                app:tabGravity="fill"
+                app:tabMode="fixed" />
+
+            <com.google.android.material.button.MaterialButton
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:clickable="true"
+                android:checkable="true"
+                app:icon="@drawable/ic_toc"
+                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"/>
+
+        </LinearLayout>
+
+
 
     </com.google.android.material.appbar.AppBarLayout>
 
