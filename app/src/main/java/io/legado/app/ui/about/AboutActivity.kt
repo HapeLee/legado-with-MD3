@@ -123,7 +123,7 @@ class AboutActivity : BaseActivity<ActivityAboutBinding>() {
         AppUpdate.gitHubUpdate?.run {
             check(lifecycleScope)
                 .onSuccess {
-                    showDialogFragment(UpdateDialog(it))
+                    showDialogFragment(UpdateDialog(it, UpdateDialog.Mode.UPDATE))
                 }.onError {
                     appCtx.toastOnUi("${getString(R.string.check_update)}\n${it.localizedMessage}")
                 }.onFinally {

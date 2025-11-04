@@ -39,8 +39,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
+import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.about.CrashLogsDialog
+import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
@@ -235,7 +237,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     /**
      * 版本更新日志
      */
-    private suspend fun upVersion() = suspendCoroutine { block ->
+    private suspend fun upVersion() = suspendCoroutine<Unit?> { block ->
         if (LocalConfig.versionCode == appInfo.versionCode) {
             block.resume(null)
             return@suspendCoroutine
@@ -244,17 +246,32 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         if (LocalConfig.isFirstOpenApp) {
             val help = String(assets.open("web/help/md/appHelp.md").readBytes())
             val dialog = TextDialog(getString(R.string.help), help, TextDialog.Mode.MD)
-            dialog.setOnDismissListener {
-                block.resume(null)
-            }
+            dialog.setOnDismissListener { block.resume(null) }
             showDialogFragment(dialog)
-        } else if (!BuildConfig.DEBUG) {
-            val log = String(assets.open("updateLog.md").readBytes())
-            val dialog = TextDialog(getString(R.string.update_log), log, TextDialog.Mode.MD)
-            dialog.setOnDismissListener {
-                block.resume(null)
+            return@suspendCoroutine
+        }
+        if (!BuildConfig.DEBUG) {
+            lifecycleScope.launch {
+                try {
+                    val info = AppUpdateGitHub.getReleaseByTag(BuildConfig.VERSION_NAME)
+                    if (info != null) {
+                        val dialog = UpdateDialog(info, UpdateDialog.Mode.VIEW_LOG)
+                        dialog.setOnDismissListener { block.resume(null) }
+                        showDialogFragment(dialog)
+                    } else {
+                        val fallback = String(assets.open("updateLog.md").readBytes())
+                        val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
+                        dialog.setOnDismissListener { block.resume(null) }
+                        showDialogFragment(dialog)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    val fallback = String(assets.open("updateLog.md").readBytes())
+                    val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
+                    dialog.setOnDismissListener { block.resume(null) }
+                    showDialogFragment(dialog)
+                }
             }
-            showDialogFragment(dialog)
         } else {
             block.resume(null)
         }

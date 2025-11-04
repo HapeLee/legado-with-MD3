@@ -64,6 +64,23 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
         }
     }
 
+    suspend fun getReleaseByTag(tag: String): AppUpdate.UpdateInfo? {
+        val url = "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/tags/$tag"
+        val res = okHttpClient.newCallResponse { url(url) }
+        if (!res.isSuccessful) return null
+
+        val body = res.body.text()
+        val release = GSON.fromJsonObject<GithubRelease>(body).getOrElse { return null }
+        val info = release.gitReleaseToAppReleaseInfo().firstOrNull() ?: return null
+
+        return AppUpdate.UpdateInfo(
+            tagName = info.versionName,
+            updateLog = info.note,
+            downloadUrl = info.downloadUrl,
+            fileName = info.name
+        )
+    }
+
     override fun check(scope: CoroutineScope): Coroutine<AppUpdate.UpdateInfo> {
         return Coroutine.async(scope) {
             val currentVersion = AppConst.appInfo.versionName

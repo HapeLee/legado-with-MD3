@@ -12,6 +12,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.help.update.AppVariant
 import io.legado.app.model.Download
+import io.legado.app.utils.gone
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.noties.markwon.Markwon
@@ -21,12 +22,15 @@ import io.noties.markwon.image.glide.GlideImagesPlugin
 
 class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
 
-    constructor(updateInfo: AppUpdate.UpdateInfo) : this() {
+    enum class Mode { UPDATE, VIEW_LOG }
+
+    constructor(updateInfo: AppUpdate.UpdateInfo, mode: Mode = Mode.UPDATE) : this() {
         arguments = Bundle().apply {
             putString("newVersion", updateInfo.tagName)
             putString("updateBody", updateInfo.updateLog)
             putString("url", updateInfo.downloadUrl)
             putString("name", updateInfo.fileName)
+            putString("mode", mode.name)
         }
     }
 
@@ -38,28 +42,24 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
             else -> AppConst.appInfo.appVariant
         }
 
-    val binding by viewBinding(DialogUpdateBinding::bind)
+    private val binding by viewBinding(DialogUpdateBinding::bind)
 
-    override fun onStart() {
-        super.onStart()
-    }
+    private val mode: Mode
+        get() = Mode.valueOf(arguments?.getString("mode") ?: Mode.UPDATE.name)
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        //binding.toolBar.setBackgroundColor(primaryColor)
-
         binding.tvCurrentVersion.text = BuildConfig.VERSION_NAME
         binding.tvVersion.text = arguments?.getString("newVersion")
-
         binding.tvAbi.text = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"
-        binding.tvUrl.text = arguments?.getString("url")
         binding.tvVariable.text = checkVariant.toString()
 
         val updateBody = arguments?.getString("updateBody")
-        if (updateBody == null) {
+        if (updateBody.isNullOrBlank()) {
             toastOnUi("没有数据")
             dismiss()
             return
         }
+
         binding.textView.post {
             Markwon.builder(requireContext())
                 .usePlugin(GlideImagesPlugin.create(requireContext()))
@@ -69,19 +69,29 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
                 .setMarkdown(binding.textView, updateBody)
         }
 
-        binding.btnUpdate.setOnClickListener {
-            val url = arguments?.getString("url")
-            val fileName = arguments?.getString("name")
-
-            if (url.isNullOrBlank() || fileName.isNullOrBlank()) {
-                toastOnUi("下载信息不完整")
-                return@setOnClickListener
+        when (mode) {
+            Mode.UPDATE -> {
+                val url = arguments?.getString("url")
+                val fileName = arguments?.getString("name")
+                binding.ivAward.gone()
+                binding.btnUpdate.setOnClickListener {
+                    if (url.isNullOrBlank() || fileName.isNullOrBlank()) {
+                        toastOnUi("下载信息不完整")
+                        return@setOnClickListener
+                    }
+                    Download.start(requireContext(), url, fileName)
+                    toastOnUi("开始下载: $fileName")
+                }
             }
 
-            Download.start(requireContext(), url, fileName)
-            toastOnUi("开始下载: $fileName")
+            Mode.VIEW_LOG -> {
+                binding.bottomSheetTitle.text = "已经更新至"
+                binding.tvVersion.text = BuildConfig.VERSION_NAME
+                binding.btnUpdate.gone()
+                binding.llCurrent.gone()
+                binding.tvCurrentVersion.gone()
+                binding.tvUrl.gone()
+            }
         }
-
     }
-
 }

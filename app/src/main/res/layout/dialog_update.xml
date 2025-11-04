@@ -11,7 +11,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:paddingBottom="16dp">
+        android:paddingBottom="4dp">
 
         <com.google.android.material.bottomsheet.BottomSheetDragHandleView
             android:layout_width="wrap_content"
@@ -20,41 +20,57 @@
             android:minHeight="0dp"
             android:layout_gravity="center_horizontal" />
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
             android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/iv_award"
+                android:layout_width="48dp"
+                android:layout_height="56dp"
+                android:clickable="false"
+                app:iconSize="32dp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                app:icon="@drawable/ic_award"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
 
             <TextView
                 android:id="@+id/bottom_sheet_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:includeFontPadding="false"
+                android:layout_gravity="bottom"
                 android:text="@string/update_available"
                 android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/iv_award"
+                app:layout_constraintBottom_toBottomOf="parent"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_update"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:icon="@drawable/ic_download"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal" />
-        </LinearLayout>
+                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"/>
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </LinearLayout>
 
     <LinearLayout
+        android:id="@+id/ll_current"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="bottom"
-        android:paddingBottom="4dp">
+        android:paddingVertical="4dp">
 
         <TextView
             android:id="@+id/tv_current_version"
@@ -90,7 +106,7 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="2dp"
-        android:layout_marginVertical="2dp"
+        android:layout_marginVertical="4dp"
         android:background="?attr/colorPrimaryContainer" />
 
     <LinearLayout
@@ -104,6 +120,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:maxLines="1"
             android:text="@string/text"
             android:textColor="?attr/colorPrimary"
             android:textSize="24sp"
@@ -113,7 +130,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:cardBackgroundColor="?attr/colorTertiaryContainer"
-
             app:cardCornerRadius="8dp"
             app:strokeWidth="0dp">
 
@@ -147,6 +163,7 @@
         android:layout_height="wrap_content"
         android:textStyle="bold"
         android:textSize="14sp"
+        android:paddingTop="8dp"
         android:text="@string/update_log"/>
 
     <androidx.core.widget.NestedScrollView
@@ -164,6 +181,5 @@
                 android:textIsSelectable="true" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
 
 </LinearLayout>
