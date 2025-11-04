@@ -10,26 +10,34 @@
     android:paddingVertical="12dp"
     android:background="?attr/selectableItemBackground">
 
-    <com.google.android.material.checkbox.MaterialCheckBox
-        android:id="@+id/cb_name"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="8dp"
-        android:scrollbars="none"
-        android:maxLines="2"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="RtlSymmetry" />
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/iv_pin">
+
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/cb_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp"
+            android:scrollbars="none"
+            android:maxLines="2"
+            android:ellipsize="end"
+            tools:ignore="RtlSymmetry" />
+
+    </LinearLayout>
 
     <ImageView
         android:id="@+id/iv_pin"
         android:layout_width="16dp"
         android:layout_height="16dp"
-        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
         android:src="@drawable/ic_praise"
-        app:layout_constraintStart_toEndOf="@id/cb_name"
+        app:layout_constraintEnd_toStartOf="@id/swt_enabled"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
