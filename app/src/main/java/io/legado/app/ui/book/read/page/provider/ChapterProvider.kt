@@ -946,7 +946,7 @@ object ChapterProvider {
                 normal
 
             0 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, 300, false)
+                Typeface.create(typeface, 400, false)
             else
                 normal
 
@@ -955,7 +955,7 @@ object ChapterProvider {
             else
                 normal
 
-            else -> bold
+            else -> normal
         }
 
         val textFont = when (ReadBookConfig.textBold) {
@@ -970,7 +970,7 @@ object ChapterProvider {
                 normal
 
             0 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, 300, false)
+                Typeface.create(typeface, 400, false)
             else
                 normal
 
@@ -979,7 +979,7 @@ object ChapterProvider {
             else
                 normal
 
-            else -> bold
+            else -> normal
         }
 
 
