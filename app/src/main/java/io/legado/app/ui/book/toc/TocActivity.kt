@@ -4,13 +4,24 @@ package io.legado.app.ui.book.toc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.AbsoluteSizeSpan
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentPagerAdapter
 import com.google.android.material.tabs.TabLayout
@@ -78,6 +89,88 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
         intent.getStringExtra("bookUrl")?.let {
             viewModel.initBook(it)
         }
+        setupTabListener()
+        setupMoreMenuButton()
+    }
+
+    private fun setupTabListener() {
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                updateButtonVisibility(tab.position)
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab) {}
+            override fun onTabReselected(tab: TabLayout.Tab) {
+                updateButtonVisibility(tab.position)
+            }
+        })
+    }
+
+    private fun updateButtonVisibility(tabPosition: Int) {
+        binding.btnChapterMenu.isEnabled = tabPosition == 0
+    }
+
+    private fun setupMoreMenuButton() {
+        val tag = "android:switcher:${binding.viewPager.id}:0"
+        binding.viewPager.postDelayed({
+            val chapterFragment = supportFragmentManager.findFragmentByTag(tag) as? ChapterListFragment
+            val volumes = chapterFragment?.getAllVolumes().orEmpty()
+            binding.btnChapterMenu.isVisible = volumes.isNotEmpty()
+        }, 200)
+        binding.btnChapterMenu.setOnClickListener { view ->
+            showChapterActionsMenu(view)
+        }
+    }
+
+    private fun showChapterActionsMenu(anchor: View) {
+        val popup = PopupMenu(this, anchor)
+        popup.menuInflater.inflate(R.menu.menu_chapter_actions, popup.menu)
+        val tag = "android:switcher:${binding.viewPager.id}:0"
+        val chapterFragment = supportFragmentManager.findFragmentByTag(tag) as? ChapterListFragment
+        val volumes = chapterFragment?.getAllVolumes().orEmpty()
+        volumes.forEachIndexed { index, volumeName ->
+            popup.menu.add(R.id.action_jump_to_volume_section, index, Menu.NONE, volumeName)
+        }
+        val titleItem = popup.menu.findItem(R.id.action_jump_to_volume_section)
+        val s = SpannableString(titleItem.title)
+        s.setSpan(StyleSpan(Typeface.BOLD), 0, s.length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+        s.setSpan(ForegroundColorSpan(Color.GRAY), 0, s.length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+        s.setSpan(AbsoluteSizeSpan(12, true), 0, s.length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+        titleItem.title = s
+        val toggleSelectionItem = popup.menu.findItem(R.id.action_toggle_selection)
+        toggleSelectionItem.title = if (chapterFragment?.isInSelectionMode() == true) {
+            getString(R.string.cancel_select)
+        } else {
+            getString(R.string.select_all)
+        }
+
+        val toggleVolumesItem = popup.menu.findItem(R.id.action_toggle_volumes)
+        toggleVolumesItem.title = if (chapterFragment?.areAllVolumesExpanded() == true) {
+            getString(R.string.coll_volume)
+        } else {
+            getString(R.string.expand_volume)
+        }
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.action_toggle_volumes -> {
+                    chapterFragment?.toggleAllVolumes()
+                    true
+                }
+                R.id.action_toggle_selection -> {
+                    chapterFragment?.toggleChapterSelection()
+                    true
+                }
+                else -> {
+                    if (item.groupId == R.id.action_jump_to_volume_section && item.itemId in volumes.indices) {
+                        chapterFragment?.scrollToVolume(volumes[item.itemId])
+                        true
+                    } else false
+                }
+            }
+        }
+        popup.setOnDismissListener {
+            binding.btnChapterMenu.isChecked = false
+        }
+        popup.show()
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {

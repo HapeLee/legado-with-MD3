@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_toggle_volumes"
+        android:title="" />
+    <item
+        android:id="@+id/action_toggle_selection"
+        android:title="" />
+    <item
+        android:id="@+id/action_jump_to_volume_section"
+        android:title="@string/jump_to_volume"
+        android:enabled="false" />
+</menu>

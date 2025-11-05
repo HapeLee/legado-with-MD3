@@ -18,6 +18,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.transition.platform.MaterialFadeThrough
 import io.legado.app.R
@@ -259,8 +260,44 @@ class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapt
                 }
             }
 
-            // 可选：清空选择状态并提示
             adapter.clearSelection()
+        }
+    }
+
+    fun areAllVolumesExpanded(): Boolean = adapter.areAllVolumesExpanded()
+
+    fun toggleAllVolumes() {
+        val allExpanded = adapter.areAllVolumesExpanded()
+        if (allExpanded) {
+            adapter.collapseAllVolumes()
+            toastOnUi("已收起所有卷")
+        } else {
+            adapter.expandAllVolumes()
+            toastOnUi("已展开所有卷")
+        }
+    }
+
+    fun isInSelectionMode(): Boolean = adapter.isInSelectionMode()
+
+    fun toggleChapterSelection() {
+        if (adapter.isInSelectionMode()) {
+            adapter.clearSelection()
+            toastOnUi("已取消选择")
+        } else {
+            adapter.selectAll()
+            toastOnUi("已全选 ${adapter.itemCount} 个章节")
+        }
+    }
+
+    fun getAllVolumes(): List<String> {
+        return adapter.getAllVolumes()
+    }
+
+    fun scrollToVolume(volumeName: String) {
+        val position = adapter.getVolumeStartPosition(volumeName)
+        if (position >= 0) {
+            (binding.recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(position, 0)
+            toastOnUi("已跳转到 $volumeName")
         }
     }
 

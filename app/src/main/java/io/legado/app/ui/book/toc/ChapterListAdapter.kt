@@ -229,6 +229,70 @@ class ChapterListAdapter(
         }
     }
 
+    fun expandAllVolumes() {
+        val all = getItems()
+        var offset = 0
+
+        collapsedVolumes.forEach { volumeIndex ->
+            val volume = all.firstOrNull { it.index == volumeIndex } ?: return@forEach
+            val startIndex = all.indexOf(volume)
+            val currentPos = visibleItems.indexOf(volume)
+            if (currentPos == -1) return@forEach
+
+            val toAdd = mutableListOf<BookChapter>()
+            for (i in startIndex + 1 until all.size) {
+                val next = all[i]
+                if (next.isVolume) break
+                toAdd.add(next)
+            }
+
+            if (toAdd.isNotEmpty()) {
+                visibleItems.addAll(currentPos + 1, toAdd)
+                notifyItemRangeInserted(currentPos + 1, toAdd.size)
+                notifyItemChanged(currentPos)
+                offset += toAdd.size
+            }
+        }
+
+        collapsedVolumes.clear()
+    }
+
+    fun collapseAllVolumes() {
+        val all = getItems()
+
+        all.filter { it.isVolume }.forEach { volume ->
+            val startIndex = visibleItems.indexOf(volume)
+            if (startIndex == -1) return@forEach
+
+            val toRemove = mutableListOf<BookChapter>()
+            for (i in startIndex + 1 until visibleItems.size) {
+                val next = visibleItems[i]
+                if (next.isVolume) break
+                toRemove.add(next)
+            }
+
+            if (toRemove.isNotEmpty()) {
+                visibleItems.removeAll(toRemove)
+                notifyItemRangeRemoved(startIndex + 1, toRemove.size)
+                notifyItemChanged(startIndex)
+            }
+
+            collapsedVolumes.add(volume.index)
+        }
+    }
+
+    fun getAllVolumes(): List<String> {
+        return getItems().filter { it.isVolume }.map { it.title }
+    }
+
+    fun getVolumeStartPosition(volumeName: String): Int {
+        return getItems().indexOfFirst { it.isVolume && it.title == volumeName }
+    }
+
+    fun areAllVolumesExpanded(): Boolean {
+        return getItems().filter { it.isVolume }.all { !collapsedVolumes.contains(it.index) }
+    }
+
     private fun getDisplayTitle(chapter: BookChapter): String =
         displayTitleMap[chapter.url] ?: chapter.title
 

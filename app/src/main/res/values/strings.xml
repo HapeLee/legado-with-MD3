@@ -1327,4 +1327,8 @@
     <string name="sort_name_asc">名称升序</string>
     <string name="sort_name_desc">名称降序</string>
     <string name="text_dottedline">文字下划虚线</string>
+    <string name="jump_to_volume">跳转到卷</string>
+    <string name="cancel_select">取消选择</string>
+    <string name="coll_volume">折叠所有卷</string>
+    <string name="expand_volume">展开所有卷</string>
 </resources>
