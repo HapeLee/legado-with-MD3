@@ -210,4 +210,5 @@ object PreferKey {
     const val bookshelfRefreshingLimit = "bookshelfRefreshingLimit"
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
+    const val replaceSortMode = "desc"
 }

@@ -5,8 +5,11 @@ import android.text.TextUtils
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.utils.getPrefString
+import io.legado.app.utils.putPrefString
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,7 +29,7 @@ import splitties.init.appCtx
  */
 class ReplaceRuleViewModel(application: Application) : BaseViewModel(application) {
 
-    private val _sortMode = MutableStateFlow("desc")
+    private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     private val _searchKey = MutableStateFlow<String?>(null)
 
     val sortMode: StateFlow<String> = _sortMode
@@ -34,6 +37,7 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun setSortMode(mode: String) {
         _sortMode.value = mode
+        context.putPrefString(PreferKey.replaceSortMode, mode)
     }
 
     fun setSearchKey(key: String?) {

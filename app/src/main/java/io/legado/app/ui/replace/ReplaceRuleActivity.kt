@@ -145,8 +145,17 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         groupMenu = menu.findItem(R.id.menu_group)?.subMenu
         upGroupMenu()
+
+        // 标记当前选中的排序方式
+        when (viewModel.sortMode.value) {
+            "asc" -> menu.findItem(R.id.sort_order_asc)?.isChecked = true
+            "desc" -> menu.findItem(R.id.sort_order_desc)?.isChecked = true
+            "name_asc" -> menu.findItem(R.id.sort_name_asc)?.isChecked = true
+            "name_desc" -> menu.findItem(R.id.sort_name_desc)?.isChecked = true
+        }
         return super.onPrepareOptionsMenu(menu)
     }
+
 
     private fun initRecyclerView() {
         //binding.recyclerView.setEdgeEffectColor(primaryColor)
@@ -231,10 +240,22 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
             R.id.menu_group_null -> {
                 searchView.setQuery(getString(R.string.no_group), true)
             }
-            R.id.sort_order_asc -> viewModel.setSortMode("asc")
-            R.id.sort_order_desc -> viewModel.setSortMode("desc")
-            R.id.sort_name_asc -> viewModel.setSortMode("name_asc")
-            R.id.sort_name_desc -> viewModel.setSortMode("name_desc")
+            R.id.sort_order_asc -> {
+                viewModel.setSortMode("asc")
+                item.isChecked = true
+            }
+            R.id.sort_order_desc -> {
+                viewModel.setSortMode("desc")
+                item.isChecked = true
+            }
+            R.id.sort_name_asc -> {
+                viewModel.setSortMode("name_asc")
+                item.isChecked = true
+            }
+            R.id.sort_name_desc -> {
+                viewModel.setSortMode("name_desc")
+                item.isChecked = true
+            }
             else -> if (item.groupId == R.id.replace_group) {
                 searchView.setQuery("group:${item.title}", true)
                 viewModel.setSearchKey("group:${item.title}")
