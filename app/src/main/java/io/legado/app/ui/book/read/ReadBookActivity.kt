@@ -927,7 +927,9 @@ class ReadBookActivity : BaseReadBookActivity(),
                     ReplaceEditActivity.startIntent(
                         this,
                         pattern = text,
-                        scope = scopes.joinToString(";")
+                        scope = scopes.joinToString(";"),
+                        isScopeTitle = false,
+                        isScopeContent = true
                     )
                 )
                 return true
