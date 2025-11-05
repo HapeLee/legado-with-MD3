@@ -24,12 +24,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingHorizontal="16dp">
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/til_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
                 android:hint="@string/replace_rule_summary">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -42,6 +43,8 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp"
                 android:orientation="horizontal">
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -49,7 +52,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense.ExposedDropdownMenu"
                     android:hint="@string/group">
 
                     <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -58,13 +61,16 @@
                         android:layout_height="wrap_content"
                         android:text="@string/text_default"
                         tools:ignore="SpeakableTextPresentCheck,TouchTargetSizeCheck" />
+
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/iv_manage_groups"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    style="@style/Widget.Material3Expressive.Button.TextButton"
+                    android:layout_marginStart="12dp"
+                    style="@style/Widget.Material3Expressive.Button.TonalButton"
+                    app:cornerRadius="12dp"
                     android:text="@string/group_manage"/>
 
             </LinearLayout>
@@ -85,6 +91,7 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
@@ -109,6 +116,7 @@
                 android:id="@+id/til_replace_to"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+
                 android:hint="@string/replace_to">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -120,7 +128,8 @@
 
             <androidx.appcompat.widget.LinearLayoutCompat
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp">
 
                 <io.legado.app.lib.theme.view.ThemeCheckBox
                     android:id="@+id/cb_scope_title"
@@ -145,7 +154,8 @@
                 android:id="@+id/til_scope"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/replace_scope">
+                android:hint="@string/replace_scope"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_scope"
@@ -158,7 +168,8 @@
                 android:id="@+id/til_exclude_scope"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/replace_exclude_scope">
+                android:hint="@string/replace_exclude_scope"
+                android:layout_marginBottom="8dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_exclude_scope"
@@ -171,7 +182,8 @@
                 android:id="@+id/til_timeout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/timeout_millisecond">
+                android:hint="@string/timeout_millisecond"
+                android:layout_marginBottom="16dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_timeout"
