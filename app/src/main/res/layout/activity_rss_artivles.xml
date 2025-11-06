@@ -37,6 +37,7 @@
         </com.google.android.material.appbar.CollapsingToolbarLayout>
 
         <LinearLayout
+            android:id="@+id/ll_tab"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

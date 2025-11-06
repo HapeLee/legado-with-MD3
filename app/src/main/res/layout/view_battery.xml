@@ -2,16 +2,17 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="20dp"
+    android:layout_height="wrap_content"
     android:gravity="center_vertical"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <ImageView
         android:id="@+id/arrow_icon"
-        android:layout_width="24dp"
-        android:layout_height="12dp"
-        android:scaleType="centerCrop"
-        android:visibility="gone"
+        android:layout_width="12dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="8dp"
+        android:scaleType="center"
+        android:visibility="visible"
         android:src="@drawable/ic_arrow_right"
         android:rotation="180"
         app:layout_constraintStart_toStartOf="parent"
@@ -21,7 +22,8 @@
     <TextView
         android:id="@+id/battery_text"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="0.1dp"
         android:gravity="center_vertical"
         android:maxLines="1"
         android:ellipsize="end"
