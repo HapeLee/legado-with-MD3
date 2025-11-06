@@ -177,9 +177,9 @@ class RssSortActivity : VMBaseActivity<ActivityRssArtivlesBinding, RssSortViewMo
             sortList.addAll(sorts)
 
             if (sortList.size <= 1) {
-                binding.tabLayout.gone()
+                binding.llTab.gone()
             } else {
-                binding.tabLayout.visible()
+                binding.llTab.visible()
             }
 
             adapter = TabFragmentPageAdapter(this@RssSortActivity, sortList)
