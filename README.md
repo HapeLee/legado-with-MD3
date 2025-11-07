@@ -1,7 +1,7 @@
 >此版本为Material Design 3风格重构版本。
 
 与[官方版本](https://github.com/gedoor/legado)的区别：
-重新设计界面，使用Material Design 3设计，和增加一些奇怪的新功能。
+重新设计界面，使用Material Design 3设计，增加一些奇怪的新功能（和新的bug。
 
 应用截图：
 ![retouch_2025090304371780](https://github.com/user-attachments/assets/679c7a0e-088a-42fe-856b-cccb6f1d1880)
