@@ -19,6 +19,8 @@
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        app:isNavigationBackground="no"
+        style="@style/NoBackgroundNavi"
         android:background="?attr/colorSurfaceContainer"
         app:layout_constraintTop_toTopOf="parent">
 
@@ -64,9 +66,8 @@
                     android:text="@string/book_source" />
 
             </LinearLayout>
+
         </LinearLayout>
-
-
 
     </io.legado.app.ui.widget.TitleBar>
 

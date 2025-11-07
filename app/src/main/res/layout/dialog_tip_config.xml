@@ -93,6 +93,14 @@
                 android:text="分段模式"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"/>
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/textFontWeightConverter"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_weight_text"
+                android:minWidth="0dp" />
+
         </com.google.android.material.button.MaterialButtonGroup>
 
         <LinearLayout
@@ -101,7 +109,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_title_seg_scaling"
-                android:layout_width="120dp"
+                android:layout_width="108dp"
                 android:layout_height="wrap_content"
                 app:max="20"
                 app:title="次行缩放(未完成)" />
@@ -112,47 +120,25 @@
                 android:layout_weight="1"/>
 
             <io.legado.app.ui.widget.SimpleCounterView
+                android:id="@+id/dsb_title_size"
+                android:layout_width="108dp"
+                android:layout_height="wrap_content"
+                app:max="20"
+                app:title="@string/title_font_size" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
+
+            <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_title_line_spacing_extra"
-                android:layout_width="120dp"
+                android:layout_width="108dp"
                 android:layout_height="wrap_content"
                 app:max="20"
                 app:title="标题段距" />
 
         </LinearLayout>
-
-
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/text_font_weight_converter"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/textFontWeightConverter"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:textSize="12sp" />
-
-            <com.google.android.material.slider.Slider
-                android:id="@+id/sliderFontWeight"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
-        </LinearLayout>
-
-        <io.legado.app.ui.widget.DetailSeekBar
-            android:id="@+id/dsb_title_size"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:max="20"
-            app:title="@string/title_font_size" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -180,29 +166,31 @@
 
         </LinearLayout>
 
-
-
-        <TextView
-            android:id="@+id/tv_header_padding"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingTop="8dp"
-            android:text="@string/header"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
         <LinearLayout
             android:id="@+id/ll_header_show"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingVertical="4dp"
             android:gravity="center_vertical"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             tools:ignore="RtlHardcoded,RtlSymmetry">
+
+            <TextView
+                android:id="@+id/tv_header_padding"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/header"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_header_mode"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 app:selectionRequired="true"
@@ -279,26 +267,30 @@
 
         </LinearLayout>
 
-        <io.legado.app.ui.widget.text.AccentTextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingTop="8dp"
-            android:text="@string/footer"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
         <LinearLayout
             android:id="@+id/ll_footer_show"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingVertical="4dp"
             android:gravity="center_vertical"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             tools:ignore="RtlHardcoded,RtlSymmetry">
+
+            <io.legado.app.ui.widget.text.AccentTextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/footer"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"/>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_footer_mode"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:selectionRequired="true"
                 app:singleSelection="true" />
@@ -427,6 +419,52 @@
                 tools:text="@string/tip_divider_color" />
 
         </LinearLayout>
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/abtnBackgroundColor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/background_color" />
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/abtnAccentColor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/accent" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/bottom_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleLine="true"
+            app:singleSelection="true"
+            app:selectionRequired="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/bottom_mode1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/flow_sys" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/bottom_mode2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="跟随阅读背景" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/bottom_mode3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="true"
+                android:text="@string/custom" />
+
+
+        </com.google.android.material.chip.ChipGroup>
 
     </LinearLayout>
 

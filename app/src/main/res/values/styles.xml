@@ -37,6 +37,10 @@
         <item name="chipStrokeColor">@color/chip_stroke_selector</item>
     </style>
 
+    <style name="NoBackgroundNavi" parent="ThemeOverlay.Material3.Toolbar.CircleNavigationButton">
+        <item name="toolbarNavigationButtonCircleColor">@color/transparent</item>
+    </style>
+
     <style name="TextActionMenuAnimation">
         <item name="android:windowEnterAnimation">@anim/popup_enter</item>
         <item name="android:windowExitAnimation">@anim/popup_exit</item>

@@ -15,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnAttach
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -27,6 +28,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ViewReadMenuBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
@@ -87,25 +89,51 @@ class ReadMenu @JvmOverloads constructor(
         fillAfter = true
     }
 
-//    private val immersiveMenu: Boolean
-//        get() = AppConfig.readBarStyleFollowPage && ReadBookConfig.durConfig.curBgType() == 0
-//    private var bgColor: Int = if (immersiveMenu) {
-//        kotlin.runCatching {
-//            ReadBookConfig.durConfig.curBgStr().toColorInt()
-//        }.getOrDefault(context.bottomBackground)
-//    } else {
-//        context.bottomBackground
-//    }
-//    private var textColor: Int = if (immersiveMenu) {
-//        ReadBookConfig.durConfig.curTextColor()
-//    } else {
-//        context.getPrimaryTextColor(ColorUtils.isColorLight(bgColor))
-//    }
+    var colorSurfaceContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+        set(value) {
+            field = value
+        }
 
-//    private var bottomBackgroundList: ColorStateList = Selector.colorBuild()
-//        .setDefaultColor(bgColor)
-//        .setPressedColor(ColorUtils.darkenColor(bgColor))
-//        .create()
+    var colorSecondary: Int = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
+        set(value) {
+            field = value
+        }
+
+    var colorSecondaryContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
+        set(value) {
+            field = value
+        }
+
+    private val bgColor: Int
+        get() = when (AppConfig.readBarStyle) {
+            0 -> colorSurfaceContainer
+            1 -> kotlin.runCatching {
+                ReadBookConfig.durConfig.curBgStr().toColorInt()
+            }.getOrDefault(colorSurfaceContainer)
+            else -> ReadBookConfig.durConfig.curMenuBg()
+        }
+
+
+    private val acColor: Int
+        get() = when (AppConfig.readBarStyle) {
+            0 -> colorSecondary
+            1 -> kotlin.runCatching {
+                ReadBookConfig.durConfig.curTextColor()
+            }.getOrDefault(colorSecondary)
+            else -> ReadBookConfig.durConfig.curMenuAc()
+        }
+
+
+    private val bgcColor: Int
+        get() = when (AppConfig.readBarStyle) {
+            0 -> colorSecondaryContainer
+            1 -> kotlin.runCatching {
+                val baseColor = ReadBookConfig.durConfig.curTextColor()
+                ColorUtils.setAlphaComponent(baseColor, (255 * 0.2f).toInt())
+            }.getOrDefault(colorSecondaryContainer)
+            else -> ColorUtils.setAlphaComponent(acColor, (255 * 0.2f).toInt())
+        }
+
     private var onMenuOutEnd: (() -> Unit)? = null
 
     private val showBrightnessView
@@ -182,11 +210,10 @@ class ReadMenu @JvmOverloads constructor(
         val brightnessBackground = GradientDrawable()
         brightnessBackground.cornerRadius = 5F.dpToPx()
         llBrightness.background = brightnessBackground
-        if (AppConfig.isEInkMode) {
-            titleBar.setBackgroundResource(R.drawable.bg_eink_border_bottom)
-        } else {
-            //llBottomBg.setBackgroundColor(bgColor)
-        }
+
+//        if (AppConfig.isEInkMode) {
+//            titleBar.setBackgroundResource(R.drawable.bg_eink_border_bottom)
+//        }
 
         llBrightness.setOnClickListener(null)
         seekBrightness.post {
@@ -202,9 +229,17 @@ class ReadMenu @JvmOverloads constructor(
             renderButtons(binding.bottomView, allButtons)
         }
         val alpha = (AppConfig.menuAlpha / 100f * 255).toInt()
-        val color = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
-        titleBar.setBackgroundColor(ColorUtils.setAlphaComponent(color, alpha))
-        cdSlider.setCardBackgroundColor(ColorUtils.setAlphaComponent(color, alpha))
+        titleBar.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
+        cdSlider.setCardBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
+        seekReadPage.trackInactiveTintList = ColorStateList.valueOf(bgcColor)
+        seekReadPage.trackActiveTintList = ColorStateList.valueOf(acColor)
+        seekReadPage.thumbTintList = ColorStateList.valueOf(acColor)
+        seekReadPage.tickActiveTintList = ColorStateList.valueOf(bgColor)
+        seekReadPage.tickInactiveTintList = ColorStateList.valueOf(acColor)
+        tvPre.iconTint = ColorStateList.valueOf(acColor)
+        tvNext.iconTint = ColorStateList.valueOf(acColor)
+        tvPre.backgroundTintList = ColorStateList.valueOf(bgColor)
+        tvNext.backgroundTintList = ColorStateList.valueOf(bgColor)
         tvPre.alpha = AppConfig.menuAlpha / 100f * 255
         tvNext.alpha = AppConfig.menuAlpha / 100f * 255
         upBrightnessVwPos()
@@ -214,7 +249,7 @@ class ReadMenu @JvmOverloads constructor(
         if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             binding.bottomMenu.applyNavigationBarPadding()
         } else {
-            bottomView.setBackgroundColor(ColorUtils.setAlphaComponent(color, alpha))
+            bottomView.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
             binding.bottomView.applyNavigationBarPadding()
         }
     }
@@ -516,8 +551,8 @@ class ReadMenu @JvmOverloads constructor(
                 tooltipText = btn.description
                 strokeWidth = 0
                 iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                iconTint = ColorStateList.valueOf(acColor)
                 maxLines = 1
-                iconTint = ColorStateList.valueOf(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
                 setOnClickListener { btn.onClick() }
                 btn.onLongClick?.let { longAction ->
                     setOnLongClickListener {

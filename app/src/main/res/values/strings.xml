@@ -1331,4 +1331,5 @@
     <string name="cancel_select">取消选择</string>
     <string name="coll_volume">折叠所有卷</string>
     <string name="expand_volume">展开所有卷</string>
+    <string name="custom">自定义</string>
 </resources>

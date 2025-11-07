@@ -211,4 +211,5 @@ object PreferKey {
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
     const val replaceSortMode = "desc"
+    const val readBarStyle = "0"
 }

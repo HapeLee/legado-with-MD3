@@ -201,10 +201,6 @@
             android:key="showReadTitleAddition"
             android:title="@string/show_read_title_addition" />
 
-        <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="false"
-            android:key="readBarStyleFollowPage"
-            android:title="@string/read_bar_style_follow_page" />
     </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

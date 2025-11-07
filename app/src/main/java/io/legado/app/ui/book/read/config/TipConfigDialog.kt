@@ -10,6 +10,7 @@ import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogTipConfigBinding
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.lib.dialogs.alert
@@ -27,6 +28,8 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
     companion object {
         const val TIP_COLOR = 7897
         const val TIP_DIVIDER_COLOR = 7898
+        const val B_COLOR = 114
+        const val A_COLOR = 514
     }
 
     private val binding by viewBinding(DialogTipConfigBinding::bind)
@@ -41,6 +44,10 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         observeEvent<String>(EventBus.TIP_COLOR) {
             upTvTipColor()
             upTvTipDividerColor()
+        }
+        observeEvent<Boolean>(EventBus.UPDATE_READ_ACTION_BAR) {
+            binding.abtnBackgroundColor.color = ReadBookConfig.durConfig.curMenuBg()
+            binding.abtnAccentColor.color = ReadBookConfig.durConfig.curMenuAc()
         }
     }
 
@@ -61,25 +68,47 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                 weightOptions?.let { options ->
                     items(options.toList()) { _, i ->
                         ReadBookConfig.titleBold = weightValues[i]
-                        binding.sliderFontWeight.value =
-                            ReadBookConfig.titleBold.toFloat().coerceAtLeast(100f)
-                        binding.textFontWeightConverter.text = options.getOrNull(i) ?: ""
                         postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
                     }
                 }
             }
         }
+        binding.abtnBackgroundColor.color = ReadBookConfig.durConfig.curMenuBg()
+        binding.abtnAccentColor.color = ReadBookConfig.durConfig.curMenuAc()
+        binding.abtnBackgroundColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(ReadBookConfig.durConfig.curMenuBg())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(B_COLOR)
+                .show(requireActivity())
+        }
 
-        binding.sliderFontWeight.apply {
-            valueFrom = 100f
-            valueTo = 900f
-            stepSize = 1f
-            value = ReadBookConfig.titleBold.toFloat().coerceAtLeast(100f)
-            addOnChangeListener { _, newValue, _ ->
-                binding.textFontWeightConverter.text = "自定义"
-                ReadBookConfig.titleBold = newValue.toInt()
-                postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+        binding.abtnAccentColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(ReadBookConfig.durConfig.curMenuAc())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(A_COLOR)
+                .show(requireActivity())
+        }
+
+        binding.bottomMode.check(
+            when (AppConfig.readBarStyle) {
+                0 -> R.id.bottom_mode1
+                1 -> R.id.bottom_mode2
+                else -> R.id.bottom_mode3
             }
+        )
+        binding.bottomMode.setOnCheckedStateChangeListener { group, checkedIds ->
+            val checkedId = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
+            AppConfig.readBarStyle = when (checkedId) {
+                R.id.bottom_mode1 -> 0
+                R.id.bottom_mode2 -> 1
+                R.id.bottom_mode3 -> 2
+                else -> 0
+            }
+            postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
         }
 
         binding.btnTitleSegType.setOnClickListener {

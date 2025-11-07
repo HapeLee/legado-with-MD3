@@ -648,10 +648,17 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.showReadTitleAddition, value)
         }
+
     var readBarStyleFollowPage: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.readBarStyleFollowPage, false)
         set(value) {
             appCtx.putPrefBoolean(PreferKey.readBarStyleFollowPage, value)
+        }
+
+    var readBarStyle: Int
+        get() = appCtx.getPrefInt(PreferKey.readBarStyle, 0)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.readBarStyle, value)
         }
 
     var sourceEditMaxLine: Int

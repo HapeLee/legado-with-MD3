@@ -79,6 +79,8 @@ import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.book.read.config.FontSelectDialog.Companion.S_COLOR
 import io.legado.app.ui.book.read.config.ReadAloudDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
 import io.legado.app.ui.book.read.config.ToolButtonConfigDialog
@@ -126,6 +128,7 @@ import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.sysScreenOffTime
+import io.legado.app.utils.themeColor
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
@@ -278,13 +281,17 @@ class ReadBookActivity : BaseReadBookActivity(),
             window.sharedElementReturnTransition = transform
         }
         super.onCreate(savedInstanceState)
-
         if (AppConfig.sharedElementEnterTransitionEnable){
             binding.rootView.transitionName = intent.getStringExtra("transitionName")
         }
         upScreenTimeOut()
         ReadBook.register(this)
-
+        binding.readMenu.colorSurfaceContainer =
+            themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+        binding.readMenu.colorSecondary =
+            themeColor(androidx.appcompat.R.attr.colorPrimary)
+        binding.readMenu.colorSecondaryContainer =
+            themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
         binding.cursorLeft.setOnTouchListener(this)
         binding.cursorRight.setOnTouchListener(this)
 
@@ -1537,6 +1544,16 @@ class ReadBookActivity : BaseReadBookActivity(),
                 ReadTipConfig.tipDividerColor = color
                 postEvent(EventBus.TIP_COLOR, "")
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            }
+
+            B_COLOR -> {
+                setMenuCurBg(color)
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            A_COLOR -> {
+                setMenuCurAc(color)
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
         }
     }

@@ -580,6 +580,10 @@ object ReadBookConfig {
         var name: String = "",
         var bgStr: String = "#EEEEEE",//白天背景
         var bgStrNight: String = "#000000",//夜间背景
+        var menuBgColor: String = "#EEEFE3",
+        var menuAcColor: String = "#EEEFE3",
+        var menuBgColorNight: String = "#BFCBAD",
+        var menuAcColorNight: String = "#586249",
         var bgStrEInk: String = "#FFFFFF",//EInk背景
         var bgAlpha: Int = 100,//背景透明度
         var bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
@@ -663,6 +667,18 @@ object ReadBookConfig {
         private var textColorSInt = -1
 
         @Transient
+        private var menuBgColorInt = -1
+
+        @Transient
+        private var menuBgColorNightInt = -1
+
+        @Transient
+        private var menuAcColorInt = -1
+
+        @Transient
+        private var menuAcColorNightInt = -1
+
+        @Transient
         private var initColorInt = false
 
         private fun initColorInt() {
@@ -671,6 +687,10 @@ object ReadBookConfig {
             textColorInt = textColor.toColorInt()
             textColorSIntNight = shadowColorN.toColorInt()
             textColorSInt = shadowColor.toColorInt()
+            menuBgColorInt = menuBgColor.toColorInt()
+            menuBgColorNightInt = menuBgColorNight.toColorInt()
+            menuAcColorInt = menuAcColor.toColorInt()
+            menuAcColorNightInt = menuAcColorNight.toColorInt()
             initColorInt = true
         }
 
@@ -781,6 +801,48 @@ object ReadBookConfig {
                 AppConfig.isEInkMode -> bgStrEInk
                 AppConfig.isNightTheme -> bgStrNight
                 else -> bgStr
+            }
+        }
+
+        fun curMenuBg(): Int {
+            return when {
+                AppConfig.isNightTheme -> menuBgColorNightInt
+                else -> menuBgColorInt
+            }
+        }
+
+        fun setMenuCurBg(bg: Int) {
+            when {
+                AppConfig.isNightTheme -> {
+                    menuBgColorNight = "#${bg.hexString}"
+                    menuBgColorNightInt = bg
+                }
+
+                else -> {
+                    menuBgColor = "#${bg.hexString}"
+                    menuBgColorInt = bg
+                }
+            }
+        }
+
+        fun curMenuAc(): Int {
+            return when {
+                AppConfig.isNightTheme -> menuAcColorNightInt
+                else -> menuAcColorInt
+            }
+        }
+
+        fun setMenuCurAc(bg: Int) {
+            when {
+                AppConfig.isNightTheme -> {
+                    menuAcColorNight = "#${bg.hexString}"
+                    menuAcColorNightInt = bg
+                }
+
+                else -> {
+                    menuAcColor = "#${bg.hexString}"
+                    menuAcColorInt = bg
+                }
             }
         }
 

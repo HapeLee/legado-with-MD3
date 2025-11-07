@@ -30,7 +30,10 @@
         <attr name="fitNavigationBar" format="boolean" />
         <attr name="navigationContentDescription" format="reference|string" />
         <attr name="navigationIconTint" format="color|reference" />
-        <attr name="themeMode" />
+        <attr name="isNavigationBackground" format="enum">
+            <enum name="no" value="1" />
+            <enum name="yes" value="0" />
+        </attr>
         <attr name="navigationIconTintMode" format="enum">
             <enum name="clear" value="0" />
             <enum name="src" value="1" />
