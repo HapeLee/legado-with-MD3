@@ -45,8 +45,9 @@
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/rg_title_mode"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
             app:singleLine="true"
             app:singleSelection="true"
             app:selectionRequired="true">
@@ -78,7 +79,7 @@
         <com.google.android.material.button.MaterialButtonGroup
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="bottom">
+            android:gravity="end">
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_title_segType"
                 android:layout_width="wrap_content"
@@ -166,278 +167,19 @@
 
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/ll_header_show"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:id="@+id/tv_header_padding"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/header"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chip_header_mode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                app:selectionRequired="true"
-                app:singleSelection="true" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_header_left"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/left" />
-
-            <TextView
-                android:id="@+id/tv_header_left"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_header_middle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/middle" />
-
-            <TextView
-                android:id="@+id/tv_header_middle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_header_right"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/right" />
-
-            <TextView
-                android:id="@+id/tv_header_right"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_footer_show"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <io.legado.app.ui.widget.text.AccentTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/footer"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
-
-            <com.google.android.material.chip.ChipGroup
-                android:id="@+id/chip_footer_mode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:selectionRequired="true"
-                app:singleSelection="true" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_footer_left"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/left" />
-
-            <TextView
-                android:id="@+id/tv_footer_left"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_footer_middle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/middle" />
-
-            <TextView
-                android:id="@+id/tv_footer_middle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_footer_right"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/right" />
-
-            <TextView
-                android:id="@+id/tv_footer_right"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/title" />
-
-        </LinearLayout>
-
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingTop="8dp"
-            android:text="@string/header_footer"
+            android:layout_marginTop="8dp"
+            android:text="工具栏样式"
             android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <LinearLayout
-            android:id="@+id/ll_tip_color"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/text_color" />
-
-            <TextView
-                android:id="@+id/tv_tip_color"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/text_color" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/ll_tip_divider_color"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingVertical="4dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            tools:ignore="RtlHardcoded,RtlSymmetry">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/tip_divider_color" />
-
-            <TextView
-                android:id="@+id/tv_tip_divider_color"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                tools:text="@string/tip_divider_color" />
-
-        </LinearLayout>
-
-        <io.legado.app.ui.widget.AccentColorButton
-            android:id="@+id/abtnBackgroundColor"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-            android:text="@string/background_color" />
-
-        <io.legado.app.ui.widget.AccentColorButton
-            android:id="@+id/abtnAccentColor"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-            android:text="@string/accent" />
+            android:textStyle="bold"/>
 
         <com.google.android.material.chip.ChipGroup
             android:id="@+id/bottom_mode"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="end"
             app:singleLine="true"
             app:singleSelection="true"
             app:selectionRequired="true">
@@ -463,8 +205,28 @@
                 android:checkable="true"
                 android:text="@string/custom" />
 
-
         </com.google.android.material.chip.ChipGroup>
+
+        <com.google.android.material.button.MaterialButtonGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end">
+
+            <io.legado.app.ui.widget.AccentColorButton
+                android:id="@+id/abtnBackgroundColor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+                android:text="@string/background_color" />
+
+            <io.legado.app.ui.widget.AccentColorButton
+                android:id="@+id/abtnAccentColor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+                android:text="@string/accent" />
+
+        </com.google.android.material.button.MaterialButtonGroup>
 
     </LinearLayout>
 

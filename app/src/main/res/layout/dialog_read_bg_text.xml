@@ -127,22 +127,6 @@
         android:text="@string/dark_status_icon"
         tools:ignore="TouchTargetSizeCheck" />
 
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/sw_underline"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="6dp"
-        android:text="@string/text_underline"
-        tools:ignore="TouchTargetSizeCheck" />
-
-    <com.google.android.material.materialswitch.MaterialSwitch
-        android:id="@+id/sw_dottedline"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="6dp"
-        android:text="@string/text_dottedline"
-        tools:ignore="TouchTargetSizeCheck" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -176,18 +160,6 @@
         android:gravity="center_vertical"
         android:paddingBottom="8dp"
         android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/tv_text_color"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button.TonalButton"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            app:icon="@drawable/ic_palette"
-            android:text="@string/text_color"
-            android:textSize="14sp"
-            app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/tv_bg_color"

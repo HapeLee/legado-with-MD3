@@ -1748,7 +1748,10 @@ class ReadBookActivity : BaseReadBookActivity(),
                 when (value) {
                     0 -> upSystemUiVisibility()
                     1 -> readView.upBg()
-                    2 -> readView.upStyle()
+                    2 -> {
+                        readView.upStyle()
+                        binding.readMenu.reset()
+                    }
                     3 -> readView.upBgAlpha()
                     4 -> readView.upPageSlopSquare()
                     5 -> if (isInitFinish) ReadBook.loadContent(resetPageOffset = false)

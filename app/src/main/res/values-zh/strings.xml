@@ -266,7 +266,7 @@
     <string name="copy_text">拷贝内容</string>
     <string name="download_all">一键缓存</string>
     <string name="content_sl">这是一段测试文字\n\u3000\u3000只是让你看看效果的</string>
-    <string name="text_bg_style">文字颜色和背景（长按自定义）</string>
+    <string name="text_bg_style">背景</string>
     <string name="immersion_status_bar">沉浸式状态栏</string>
     <string name="un_download">还剩 %d 章未下载</string>
     <string name="long_click_input_color">长按输入颜色值</string>
@@ -817,7 +817,7 @@
     <string name="non_action">无操作</string>
     <string name="body_title">正文标题</string>
     <string name="show_hide">显示/隐藏</string>
-    <string name="header_footer">页眉<![CDATA[&]]>页脚</string>
+    <string name="header_footer">页眉与页脚</string>
     <string name="rule_subscription">规则订阅</string>
     <string name="rule_sub_empty_msg">添加大佬们提供的规则导入地址\n添加后点击可导入规则</string>
     <string name="get_book_progress">拉取云端进度</string>
@@ -1331,4 +1331,8 @@
     <string name="coll_volume">折叠所有卷</string>
     <string name="expand_volume">展开所有卷</string>
     <string name="custom">自定义</string>
+    <string name="global_setting">全局设置</string>
+    <string name="text_typeface">字体样式</string>
+    <string name="shadow_typeface">阴影样式</string>
+    <string name="long_click_to_custom">长按自定义</string>
 </resources>

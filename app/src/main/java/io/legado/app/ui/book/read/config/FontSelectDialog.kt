@@ -24,10 +24,13 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogFontSelectBinding
 import io.legado.app.databinding.ItemFontBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadBookConfig.dottedLine
+import io.legado.app.help.config.ReadBookConfig.underline
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
+import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -40,6 +43,7 @@ import io.legado.app.utils.invisible
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.list
 import io.legado.app.utils.listFileDocs
+import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.putPrefString
@@ -47,14 +51,14 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import kotlinx.coroutines.launch
+import splitties.resources.color
 import java.io.File
 import java.net.URLDecoder
 
 /**
  * 字体选择对话框
  */
-class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_select),
-    Toolbar.OnMenuItemClickListener {
+class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_select) {
 
     companion object {
         const val S_COLOR = 123
@@ -88,14 +92,14 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         //binding.toolBar.setBackgroundColor(primaryColor)
-        binding.toolBar.setTitle(R.string.select_font)
-        binding.toolBar.inflateMenu(R.menu.font_select)
-        binding.toolBar.menu.applyTint(requireContext())
-        binding.toolBar.setOnMenuItemClickListener(this)
         binding.recyclerView.layoutManager = GridLayoutManager(context, 2)
         binding.recyclerView.adapter = adapter
-
-
+        observeEvent<ArrayList<Int>>(EventBus.UP_CONFIG) { list ->
+            if (list.contains(2)) {
+                binding.btnTextColor.color = ReadBookConfig.durConfig.curTextColor()
+                binding.btnShadowColor.color = ReadBookConfig.durConfig.curTextShadowColor()
+            }
+        }
         initView()
         upView()
         initViewEvent()
@@ -118,7 +122,10 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
                 loadFontFilesByPermission(fontPath)
             }
         }
-
+        binding.btnTextColor.color = ReadBookConfig.durConfig.curTextColor()
+        binding.swUnderline.isChecked = underline
+        binding.swDottedline.isChecked = dottedLine
+        binding.swDottedline.isEnabled = underline
         dsbTextLetterSpacing.valueFormat = {
             ((it - 50) / 100f).toString()
         }
@@ -126,17 +133,19 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         binding.dsbShadowRadius.valueFormat = { "$it px" }
         binding.dsbShadowDx.valueFormat = { "$it px" }
         binding.dsbShadowDy.valueFormat = { "$it px" }
-
-        binding.textIndentDropdown.apply {
-            val items = listOf("0", "1", "2", "3", "4")
-            val adapter = ArrayAdapter(context, android.R.layout.simple_list_item_1, items)
-            setAdapter(adapter)
-            val currentIndex = ReadBookConfig.paragraphIndent.length.coerceIn(0, items.lastIndex)
-            setText(items[currentIndex], false)
-            setOnItemClickListener { _, _, position, _ ->
-                ReadBookConfig.paragraphIndent = "　".repeat(position)
+        binding.dsbParagraphSpacing.valueFormat = { value ->
+            (value / 10f).toString()
+        }
+        binding.btnIndentLayout.apply {
+            valueFormat = { value ->
+                value.toString()
+            }
+            onChanged = { value ->
+                val indentCount = value.coerceIn(0, 4)
+                ReadBookConfig.paragraphIndent = "　".repeat(indentCount)
                 postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
             }
+            progress = ReadBookConfig.paragraphIndent.length
         }
 
         val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
@@ -172,6 +181,7 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
 
         binding.btnTextItalic.isChecked = ReadBookConfig.textItalic
         binding.btnTextShadow.isChecked = ReadBookConfig.textShadow
+        binding.btnShadowColor.color = ReadBookConfig.textShadowColor
     }
 
     private fun initViewEvent() = binding.run {
@@ -183,21 +193,48 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
             ReadBookConfig.lineSpacingExtra = it
             postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
         }
-        binding.dsbParagraphSpacing.apply {
-            valueFrom = 0f
-            valueTo = 20f
-            stepSize = 1f
-            value = ReadBookConfig.paragraphSpacing.toFloat()
-            textParagraphSpacing.text = (ReadBookConfig.paragraphSpacing.toFloat() / 10f).toString()
-            addOnChangeListener { slider, newValue, fromUser ->
-                binding.textParagraphSpacing.text = (newValue / 10f).toString()
+        binding.btnTextColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(ReadBookConfig.durConfig.curTextColor())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(TEXT_COLOR)
+                .show(requireActivity())
+        }
 
-                if (fromUser) {
-                    ReadBookConfig.paragraphSpacing = newValue.toInt()
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        binding.swUnderline.addOnCheckedChangeListener { _, isChecked ->
+            underline = isChecked
+            binding.swDottedline.isEnabled = isChecked
+            if (!isChecked) {
+                dottedLine = false
+                binding.swDottedline.isChecked = false
+            }
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
+        binding.swDottedline.addOnCheckedChangeListener { _, isChecked ->
+            dottedLine = isChecked
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
+        binding.btnDefaultFonts.setOnClickListener {
+            val requireContext = requireContext()
+            alert(titleResource = R.string.system_typeface) {
+                items(
+                    requireContext.resources.getStringArray(R.array.system_typefaces).toList()
+                ) { _, i ->
+                    AppConfig.systemTypefaces = i
+                    onDefaultFontChange()
+                    dismissAllowingStateLoss()
                 }
             }
         }
+        binding.btnOtherDir.setOnClickListener {
+            openFolder()
+        }
+        binding.dsbParagraphSpacing.onChanged = { value ->
+            ReadBookConfig.paragraphSpacing = value
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+
         binding.btnTextItalic.addOnCheckedChangeListener { _, isChecked ->
             ReadBookConfig.textItalic = isChecked
             postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
@@ -233,32 +270,11 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         ReadBookConfig.let {
             dsbTextLetterSpacing.progress = (it.letterSpacing * 100).toInt() + 50
             dsbLineSize.progress = it.lineSpacingExtra
-            dsbParagraphSpacing.value = it.paragraphSpacing.toFloat()
+            dsbParagraphSpacing.progress = it.paragraphSpacing
             binding.dsbShadowRadius.progress = it.shadowRadius.toInt()
             binding.dsbShadowDx.progress = it.shadowDx.toInt()
             binding.dsbShadowDy.progress = it.shadowDy.toInt()
         }
-    }
-
-    override fun onMenuItemClick(item: MenuItem?): Boolean {
-        when (item?.itemId) {
-            R.id.menu_default -> {
-                val requireContext = requireContext()
-                alert(titleResource = R.string.system_typeface) {
-                    items(
-                        requireContext.resources.getStringArray(R.array.system_typefaces).toList()
-                    ) { _, i ->
-                        AppConfig.systemTypefaces = i
-                        onDefaultFontChange()
-                        dismissAllowingStateLoss()
-                    }
-                }
-            }
-            R.id.menu_other -> {
-                openFolder()
-            }
-        }
-        return true
     }
 
     private fun openFolder() {

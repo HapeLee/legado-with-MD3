@@ -17,13 +17,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingBottom="8dp"
+            android:paddingBottom="4dp"
             android:paddingHorizontal="16dp">
 
             <com.google.android.material.bottomsheet.BottomSheetDragHandleView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingVertical="16dp"
+                android:paddingVertical="8dp"
                 android:minHeight="0dp"
                 android:layout_gravity="center_horizontal" />
 
@@ -119,7 +119,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_text_size"
-                android:layout_width="140dp"
+                android:layout_width="128dp"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="2dp"
                 app:layout_constraintBottom_toBottomOf="parent"
@@ -229,30 +229,41 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="8dp"
-                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/tv_bg_ts"
-                    android:layout_width="0dp"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
-                    android:layout_weight="1"
                     android:text="@string/text_bg_style"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.6"
+                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:text="@string/long_click_to_custom"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    tool:ignore="SmallSp" />
+
             </LinearLayout>
 
-            <LinearLayout
+            <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="wrap_content"
+                android:paddingBottom="16dp">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/cb_share_layout"
                     android:layout_width="48dp"
-                    android:layout_height="56dp"
-                    app:cornerRadius="16dp"
+                    android:layout_height="44dp"
+                    app:cornerRadius="8dp"
                     style="@style/Widget.Material3Expressive.Button.TonalButton"
                     android:checkable="true"
                     android:clickable="true"
@@ -260,21 +271,33 @@
                     app:icon="@drawable/ic_share_layout"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
-                    android:layout_marginStart="16dp"/>
+                    android:layout_marginStart="16dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_style"
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:layout_marginBottom="16dp"
                     android:paddingHorizontal="8dp"
                     android:clipToPadding="false"
                     android:orientation="horizontal"
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                    tool:listitem="@layout/item_read_style" />
+                    tool:listitem="@layout/item_read_style"
+                    app:layout_constraintStart_toEndOf="@id/cb_share_layout"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"/>
 
-            </LinearLayout>
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="48dp"
+                    app:layout_constraintStart_toEndOf="@id/cb_share_layout"
+                    app:layout_constraintTop_toTopOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    android:src="@drawable/left_fade"/>
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
 
 
 

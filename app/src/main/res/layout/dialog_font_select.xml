@@ -5,72 +5,147 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/tool_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:theme="?attr/actionBarStyle" />
-
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingStart="16dp"
-        android:text="@string/text_font"
-        android:textSize="12sp"
-        android:textStyle="bold" />
-
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="10dp"
-        android:paddingEnd="10dp">
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="16dp">
 
-        <com.google.android.material.button.MaterialButtonGroup
+        <com.google.android.material.bottomsheet.BottomSheetDragHandleView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical">
+            android:paddingVertical="16dp"
+            android:minHeight="0dp"
+            android:layout_gravity="center_horizontal" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_textItalic"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                app:icon="@drawable/ic_format_italic"
-                android:checkable="true"
-                android:focusable="true"/>
+        <TextView
+            android:id="@+id/bottom_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_font"
+            android:textSize="18sp"
+            android:textStyle="bold" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_textShadow"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                app:icon="@drawable/ic_shadow"
-                android:checkable="true"
-                android:focusable="true"/>
+    </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/textFontWeightConverter"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:textSize="12sp" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/text_typeface"
+        android:textSize="14sp"
+        android:textStyle="bold" />
 
-        </com.google.android.material.button.MaterialButtonGroup>
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="end|center_vertical">
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_text_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/text_color" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sw_underline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_underline"
+            android:checkable="true"
+            android:focusable="true"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sw_dottedline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_dottedline"
+            android:checkable="true"
+            android:focusable="true"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_textItalic"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_format_italic"
+            android:checkable="true"
+            android:focusable="true"/>
+
+    </com.google.android.material.button.MaterialButtonGroup>
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="4dp"
+        android:gravity="end|center_vertical">
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btnShadowColor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/text_shadow_color" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_textShadow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_shadow"
+            android:checkable="true"
+            android:focusable="true"/>
+
+    </com.google.android.material.button.MaterialButtonGroup>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/textFontWeightConverter"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:textSize="12sp" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/sliderFontWeight"
-            android:layout_width="0dp"
+            android:layout_width="160dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1" />
+            android:stepSize="1"
+            android:valueFrom="0"
+            android:valueTo="20"
+            app:thumbHeight="24dp"
+            app:trackHeight="24dp" />
+
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
         android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@string/shadow_typeface"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginVertical="8dp"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -78,23 +153,21 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <io.legado.app.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleSliderView
                 android:id="@+id/dsb_shadow_dx"
-                android:layout_width="120dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginEnd="32dp"
+                android:layout_weight="1"
                 app:isBottomBackground="true"
                 app:max="20"
                 app:title="@string/text_shadow_x" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
-
-            <io.legado.app.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleSliderView
                 android:id="@+id/dsb_shadow_dy"
-                android:layout_width="120dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 app:isBottomBackground="true"
                 app:max="20"
                 app:title="@string/text_shadow_y" />
@@ -106,27 +179,23 @@
             android:layout_height="wrap_content"
             android:gravity="bottom">
 
-            <io.legado.app.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleSliderView
                 android:id="@+id/dsb_shadow_radius"
-                android:layout_width="120dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="4dp"
+                android:layout_marginEnd="32dp"
+                android:layout_weight="1"
                 app:isBottomBackground="true"
                 app:max="50"
                 app:title="@string/text_shadow_radius" />
 
-            <View
+            <io.legado.app.ui.widget.SimpleSliderView
+                android:id="@+id/btn_indent_layout"
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnShadowColor"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-                android:text="@string/text_shadow_color" />
-
+                android:layout_weight="1"
+                app:title="@string/text_indent"
+                app:max="4" />
         </LinearLayout>
 
         <LinearLayout
@@ -134,110 +203,76 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/textInputIndentLayout"
-                android:layout_width="120dp"
+
+            <io.legado.app.ui.widget.SimpleSliderView
+                android:id="@+id/dsb_paragraph_spacing"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                style="@style/Widget.Material3.TextInputLayout.FilledBox.Dense.ExposedDropdownMenu"
-                android:hint="@string/text_indent">
+                android:layout_marginEnd="32dp"
+                android:layout_weight="1"
+                app:max="20"
+                app:isBottomBackground="true"
+                app:title="@string/paragraph_size" />
 
-                <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                    android:id="@+id/textIndentDropdown"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:focusable="false"
-                    android:clickable="true" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="16dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center_vertical"
-                        android:layout_weight="1"
-                        android:text="@string/paragraph_size"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:cardBackgroundColor="?attr/colorSurfaceContainer"
-                        app:cardCornerRadius="4dp"
-                        app:strokeWidth="0dp">
-
-                        <TextView
-                            android:id="@+id/textParagraphSpacing"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:paddingHorizontal="4dp"
-                            android:paddingVertical="2dp"
-                            android:text="@string/text"
-                            android:textSize="12sp"
-                            android:textStyle="bold" />
-                    </com.google.android.material.card.MaterialCardView>
-
-                </LinearLayout>
-
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/dsb_paragraph_spacing"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:stepSize="1"
-                    android:valueFrom="0"
-                    android:valueTo="20"
-                    app:isBottomBackground="true"
-                    app:thumbHeight="24dp"
-                    app:title="@string/paragraph_size"
-                    app:trackHeight="24dp" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginVertical="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <io.legado.app.ui.widget.SimpleCounterView
+            <io.legado.app.ui.widget.SimpleSliderView
                 android:id="@+id/dsb_line_size"
-                android:layout_width="120dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 app:isBottomBackground="true"
                 app:max="20"
                 app:title="@string/line_size" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"/>
+        </LinearLayout>
 
-            <io.legado.app.ui.widget.SimpleCounterView
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <io.legado.app.ui.widget.SimpleSliderView
                 android:id="@+id/dsb_text_letter_spacing"
-                android:layout_width="120dp"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 app:isBottomBackground="true"
                 app:max="100"
                 app:title="@string/text_letter_spacing" />
 
         </LinearLayout>
     </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/select_font"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:paddingHorizontal="16dp">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_default_fonts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/default_font"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_other_dir"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/other_folder"/>
+    </com.google.android.material.button.MaterialButtonGroup>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"

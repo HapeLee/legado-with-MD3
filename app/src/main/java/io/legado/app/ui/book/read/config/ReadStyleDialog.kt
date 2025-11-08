@@ -208,17 +208,14 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
                 tvStyle.text = item.name.ifBlank { "文字" }
                 tvStyle.setTextColor(item.curTextColor())
                 ivStyle.setImageDrawable(item.curBgDrawable(100, 150))
+                cdStyle.strokeWidth = 1.dpToPx()
                 if (ReadBookConfig.styleSelect == holder.layoutPosition) {
                     llStyle.gravity = Gravity.TOP
-                    cdStyle.cardElevation = 1f.dpToPx()
-                    cdStyle.radius = 16f.dpToPx()
-                    cdStyle.strokeWidth = 1.dpToPx()
+                    cdStyle.radius = 32f.dpToPx()
                     //cdStyle.strokeColor = item.curTextColor()
                     //tvStyle.setTextBold(true)
                 } else {
-                    cdStyle.cardElevation = 2f.dpToPx()
-                    cdStyle.radius = 32f.dpToPx()
-                    cdStyle.strokeWidth = 0
+                    cdStyle.radius = 8f.dpToPx()
                     //cdStyle.strokeColor = item.curTextColor()
                     //tvStyle.setTextBold(false)
                 }

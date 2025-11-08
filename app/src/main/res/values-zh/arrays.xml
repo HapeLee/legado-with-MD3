@@ -112,7 +112,7 @@
     </string-array>
 
     <string-array name="tip_color">
-        <item>跟随内容</item>
+        <item>跟随正文字体颜色</item>
         <item>自定义</item>
     </string-array>
 

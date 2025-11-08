@@ -115,7 +115,6 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
             ItemBgImageBinding.inflate(layoutInflater, it, false).apply {
                 tvName.text = getString(R.string.select_image)
                 ivBg.setImageResource(R.drawable.ic_add)
-                swUnderline.isGone = ReadBook.book?.isImage == true
                 root.setOnClickListener {
                     selectBgImage.launch()
                 }
@@ -130,9 +129,6 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
     private fun initData() = with(ReadBookConfig.durConfig) {
         binding.tvName.text = name.ifBlank { "文字" }
         binding.swDarkStatusIcon.isChecked = curStatusIconDark()
-        binding.swUnderline.isChecked = underline
-        binding.swDottedline.isChecked = dottedLine
-        binding.swDottedline.isEnabled = underline
         binding.sbBgAlpha.value = ReadBookConfig.bgAlpha.toFloat()
         binding.dottedRatio.valueFormat = {
             (ReadBookConfig.dottedRatio * 100).toInt().toString()
@@ -174,27 +170,6 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
         binding.swDarkStatusIcon.setOnCheckedChangeListener { _, isChecked ->
             setCurStatusIconDark(isChecked)
             (activity as? ReadBookActivity)?.upSystemUiVisibility()
-        }
-        binding.swUnderline.setOnCheckedChangeListener { _, isChecked ->
-            underline = isChecked
-            binding.swDottedline.isEnabled = isChecked
-            if (!isChecked) {
-                dottedLine = false
-                binding.swDottedline.isChecked = false
-            }
-            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
-        }
-        binding.swDottedline.setOnCheckedChangeListener { _, isChecked ->
-            dottedLine = isChecked
-            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
-        }
-        binding.tvTextColor.setOnClickListener {
-            ColorPickerDialog.newBuilder()
-                .setColor(curTextColor())
-                .setShowAlphaSlider(false)
-                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
-                .setDialogId(TEXT_COLOR)
-                .show(requireActivity())
         }
         binding.tvBgColor.setOnClickListener {
             val bgColor =

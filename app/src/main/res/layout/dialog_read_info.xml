@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingHorizontal="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingBottom="16dp"
+        android:paddingHorizontal="16dp">
+
+        <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingVertical="16dp"
+            android:minHeight="0dp"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:id="@+id/bottom_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/header_footer"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/global_setting"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        app:overflowMode="wrap">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_padding_setting"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/padding"/>
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_tip_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/text_color" />
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_divider_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/tip_divider_color" />
+
+    </com.google.android.material.button.MaterialButtonGroup>
+
+    <LinearLayout
+        android:id="@+id/ll_header_show"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:id="@+id/tv_header_padding"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/header"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/btn_header_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="@string/header" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_header_left"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/left" />
+
+        <TextView
+            android:id="@+id/tv_header_left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_header_middle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/middle" />
+
+        <TextView
+            android:id="@+id/tv_header_middle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_header_right"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/right" />
+
+        <TextView
+            android:id="@+id/tv_header_right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_footer_show"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <io.legado.app.ui.widget.text.AccentTextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/footer"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/btn_footer_mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="@string/footer" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_footer_left"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/left" />
+
+        <TextView
+            android:id="@+id/tv_footer_left"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_footer_middle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/middle" />
+
+        <TextView
+            android:id="@+id/tv_footer_middle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/ll_footer_right"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:layout_weight="1"
+            android:text="@string/right" />
+
+        <TextView
+            android:id="@+id/tv_footer_right"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textColor="?attr/colorSecondary"
+            android:layout_gravity="end|bottom"
+            tools:text="@string/title" />
+
+    </LinearLayout>
+
+</LinearLayout>

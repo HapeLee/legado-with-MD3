@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvSeekTitleVertical"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/text"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="8dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="?attr/colorSecondaryContainer">
+
+            <TextView
+                android:id="@+id/tvSeekValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="4dp"
+                android:layout_marginVertical="2dp"
+                android:text="@string/text"
+                android:textColor="?attr/colorSecondary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+
+
+    </LinearLayout>
+
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:stepSize="1"
+        app:thumbStrokeWidth="4dp"
+        app:thumbStrokeColor="?attr/colorSecondary"
+        app:thumbTrackGapSize="0dp"
+        app:thumbWidth="24dp"
+        app:thumbColor="?attr/colorSurface"
+        app:tickColorActive="@android:color/transparent"
+        app:tickColorInactive="@android:color/transparent"
+        app:trackColorActive="?attr/colorSecondary"
+        app:trackColorInactive="?attr/colorSurfaceContainerHighest"
+        android:valueFrom="0"
+        android:valueTo="20"
+        app:thumbHeight="24dp"
+        app:trackHeight="24dp" />
+
+</LinearLayout>

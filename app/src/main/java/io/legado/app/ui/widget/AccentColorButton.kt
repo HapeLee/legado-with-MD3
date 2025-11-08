@@ -20,10 +20,10 @@ class AccentColorButton @JvmOverloads constructor(
         }
 
     init {
-        setPaddingRelative(14.dpToPx(), 8.dpToPx(), 6.dpToPx(), 8.dpToPx())
+        setPaddingRelative(14.dpToPx(), 8.dpToPx(), 10.dpToPx(), 8.dpToPx())
         iconGravity = ICON_GRAVITY_END
         iconPadding = 8.dpToPx()
-        iconSize = 28.dpToPx()
+        iconSize = 24.dpToPx()
     }
 
     private fun createColorPreviewDrawable(color: Int): Drawable {

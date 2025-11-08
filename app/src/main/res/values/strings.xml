@@ -1332,4 +1332,8 @@
     <string name="coll_volume">折叠所有卷</string>
     <string name="expand_volume">展开所有卷</string>
     <string name="custom">自定义</string>
+    <string name="global_setting">全局设置</string>
+    <string name="text_typeface">字体样式</string>
+    <string name="shadow_typeface">阴影样式</string>
+    <string name="long_click_to_custom">长按自定义</string>
 </resources>
