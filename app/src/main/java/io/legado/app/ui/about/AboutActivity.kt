@@ -8,6 +8,7 @@ import android.view.MenuItem
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseActivity
 import io.legado.app.constant.AppConst.appInfo
@@ -15,8 +16,10 @@ import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ActivityAboutBinding
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.update.AppUpdate
+import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.FileDoc
@@ -34,9 +37,14 @@ import io.legado.app.utils.share
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 
 class AboutActivity : BaseActivity<ActivityAboutBinding>() {
@@ -70,7 +78,9 @@ class AboutActivity : BaseActivity<ActivityAboutBinding>() {
         }
 
         binding.llUpdateLog.setOnClickListener {
-            showMdFile(getString(R.string.update_log), "updateLog.md")
+            lifecycleScope.launch {
+                upVersion()
+            }
         }
 
         binding.llPrivacyPolicy.setOnClickListener {
@@ -111,6 +121,33 @@ class AboutActivity : BaseActivity<ActivityAboutBinding>() {
             )
         }
         return super.onCompatOptionsItemSelected(item)
+    }
+
+    private suspend fun upVersion() {
+        try {
+            val info = withContext(Dispatchers.IO) {
+                AppUpdateGitHub.getReleaseByTag(BuildConfig.VERSION_NAME)
+            }
+
+            withContext(Dispatchers.Main) {
+                val dialog = if (info != null) {
+                    UpdateDialog(info, UpdateDialog.Mode.VIEW_LOG)
+                } else {
+                    val fallback = String(assets.open("updateLog.md").readBytes())
+                    TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
+                }
+
+                showDialogFragment(dialog)
+            }
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val fallback = String(assets.open("updateLog.md").readBytes())
+            val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
+            withContext(Dispatchers.Main) {
+                showDialogFragment(dialog)
+            }
+        }
     }
 
     private fun showMdFile(title: String, fileName: String) {
