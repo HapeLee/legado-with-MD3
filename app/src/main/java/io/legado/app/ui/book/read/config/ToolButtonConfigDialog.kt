@@ -114,7 +114,7 @@ class ToolButtonConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_too
     }
 
     private fun getAllButtonIds(): List<String> {
-        return listOf("search", "auto_page", "catalog", "read_aloud", "setting", "addBookmark", "theme", "prev_chapter", "next_chapter")
+        return listOf("search", "auto_page", "catalog", "read_aloud", "setting", "addBookmark", "theme", "prev_chapter", "next_chapter", "replace")
     }
 
     private fun getButtonInfo(id: String): Pair<Int, String> {
@@ -128,6 +128,7 @@ class ToolButtonConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_too
             "theme" -> R.drawable.ic_daytime to getString(R.string.day_night_switch)
             "prev_chapter" -> R.drawable.ic_previous to getString(R.string.previous_chapter)
             "next_chapter" -> R.drawable.ic_next to getString(R.string.next_chapter)
+            "replace" -> R.drawable.ic_find_replace to getString(R.string.replace_purify)
             else -> R.drawable.ic_help to id
         }
     }

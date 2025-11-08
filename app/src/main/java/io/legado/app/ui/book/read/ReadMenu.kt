@@ -50,8 +50,10 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.themeColor
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import splitties.views.onClick
+import splitties.views.onLongClick
 
 /**
  * 阅读界面菜单
@@ -107,7 +109,7 @@ class ReadMenu @JvmOverloads constructor(
     private val bgColor: Int
         get() = when (AppConfig.readBarStyle) {
             0 -> colorSurfaceContainer
-            1 -> kotlin.runCatching {
+            1 -> runCatching {
                 ReadBookConfig.durConfig.curBgStr().toColorInt()
             }.getOrDefault(colorSurfaceContainer)
             else -> ReadBookConfig.durConfig.curMenuBg()
@@ -117,7 +119,7 @@ class ReadMenu @JvmOverloads constructor(
     private val acColor: Int
         get() = when (AppConfig.readBarStyle) {
             0 -> colorSecondary
-            1 -> kotlin.runCatching {
+            1 -> runCatching {
                 ReadBookConfig.durConfig.curTextColor()
             }.getOrDefault(colorSecondary)
             else -> ReadBookConfig.durConfig.curMenuAc()
@@ -127,11 +129,11 @@ class ReadMenu @JvmOverloads constructor(
     private val bgcColor: Int
         get() = when (AppConfig.readBarStyle) {
             0 -> colorSecondaryContainer
-            1 -> kotlin.runCatching {
+            1 -> runCatching {
                 val baseColor = ReadBookConfig.durConfig.curTextColor()
-                ColorUtils.setAlphaComponent(baseColor, (255 * 0.2f).toInt())
+                ColorUtils.setAlphaComponent(baseColor, (255 * 0.1f).toInt())
             }.getOrDefault(colorSecondaryContainer)
-            else -> ColorUtils.setAlphaComponent(acColor, (255 * 0.2f).toInt())
+            else -> ColorUtils.setAlphaComponent(acColor, (255 * 0.1f).toInt())
         }
 
     private var onMenuOutEnd: (() -> Unit)? = null
@@ -317,6 +319,7 @@ class ReadMenu @JvmOverloads constructor(
         this.visible()
         binding.titleBar.visible()
         binding.bottomMenu.visible()
+        changeReplace(ReadBook.book?.getUseReplaceRule() ?: false)
         if (anim) {
             binding.titleBar.startAnimation(menuTopIn)
             binding.bottomMenu.startAnimation(menuBottomIn)
@@ -552,8 +555,29 @@ class ReadMenu @JvmOverloads constructor(
                 strokeWidth = 0
                 iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
                 iconTint = ColorStateList.valueOf(acColor)
+                val bgColorState = ColorStateList(
+                    arrayOf(
+                        intArrayOf(android.R.attr.state_checked),
+                        intArrayOf(-android.R.attr.state_checked)
+                    ),
+                    intArrayOf(
+                        bgcColor,
+                        bgColor
+                    )
+                )
+                backgroundTintList = bgColorState
                 maxLines = 1
-                setOnClickListener { btn.onClick() }
+                if (btn.onCheck != null) {
+                    isCheckable = true
+                    isChecked = btn.state
+                    setOnClickListener {
+                        isChecked = !isChecked
+                        btn.state = isChecked
+                        btn.onCheck.invoke()
+                    }
+                } else {
+                    setOnClickListener { btn.onClick() }
+                }
                 btn.onLongClick?.let { longAction ->
                     setOnLongClickListener {
                         longAction()
@@ -634,8 +658,20 @@ class ReadMenu @JvmOverloads constructor(
                 iconRes = R.drawable.ic_next,
                 description = context.getString(R.string.next_chapter),
                 onClick = { ReadBook.moveToNextChapter(true) }
+            ),
+            ToolButton(
+                id = "replace",
+                iconRes = R.drawable.ic_find_replace,
+                description = context.getString(R.string.replace_purify),
+                onLongClick = { runMenuOut { callBack.openReplaceRule() } },
+                onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
+                onClick = {  }
             )
         )
+    }
+
+    fun changeReplace(boolean: Boolean) {
+        buttonMap["replace"]?.isChecked = boolean
     }
 
     private fun getUserButtons(): List<ToolButton> {
@@ -808,6 +844,7 @@ class ReadMenu @JvmOverloads constructor(
         fun skipToChapter(index: Int)
         fun onMenuShow()
         fun onMenuHide()
+        fun changeReplaceRuleState()
     }
 
     data class ToolButton(
@@ -816,6 +853,7 @@ class ReadMenu @JvmOverloads constructor(
         val description: String,    // contentDescription / tooltipText
         val onClick: () -> Unit,    // 点击事件
         val onLongClick: (() -> Unit)? = null, // 可选长按
+        val onCheck: (() -> Unit)? = null,// 可选
         var state: Boolean = false // 动态
     )
 }

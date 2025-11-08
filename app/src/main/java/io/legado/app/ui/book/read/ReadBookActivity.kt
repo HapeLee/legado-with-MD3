@@ -1665,6 +1665,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             it.setUseReplaceRule(!it.getUseReplaceRule())
             ReadBook.saveRead()
             menu?.findItem(R.id.menu_enable_replace)?.isChecked = it.getUseReplaceRule()
+            binding.readMenu.changeReplace(it.getUseReplaceRule())
             viewModel.replaceRuleChanged()
         }
     }
