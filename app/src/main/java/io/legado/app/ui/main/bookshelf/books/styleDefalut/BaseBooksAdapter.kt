@@ -18,7 +18,8 @@ abstract class BaseBooksAdapter<VB : ViewBinding>(context: Context) :
         object : DiffUtil.ItemCallback<Book>() {
 
             override fun areItemsTheSame(oldItem: Book, newItem: Book): Boolean {
-                return oldItem.bookUrl == newItem.bookUrl
+                return oldItem.bookUrl == newItem.bookUrl &&
+                        oldItem.durChapterTime == newItem.durChapterTime
             }
 
             override fun areContentsTheSame(oldItem: Book, newItem: Book): Boolean {
