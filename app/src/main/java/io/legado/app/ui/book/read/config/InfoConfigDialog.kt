@@ -2,7 +2,6 @@ package io.legado.app.ui.book.read.config
 
 import android.os.Bundle
 import android.view.View
-import com.google.android.material.chip.Chip
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
@@ -11,17 +10,13 @@ import io.legado.app.databinding.DialogReadInfoBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.lib.dialogs.selector
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
-import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlin.collections.component1
-import kotlin.collections.component2
 
 class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info) {
 

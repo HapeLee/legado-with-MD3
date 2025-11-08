@@ -3,11 +3,8 @@ package io.legado.app.ui.book.read.config
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import androidx.appcompat.widget.Toolbar
 import io.legado.app.help.config.ReadBookConfig
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -35,7 +32,6 @@ import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.RealPathUtil
-import io.legado.app.utils.applyTint
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getPrefString
@@ -51,7 +47,6 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import kotlinx.coroutines.launch
-import splitties.resources.color
 import java.io.File
 import java.net.URLDecoder
 

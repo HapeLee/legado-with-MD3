@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.widget.TooltipCompat
 import androidx.core.graphics.toColorInt
-import androidx.core.view.isGone
 import androidx.documentfile.provider.DocumentFile
 import com.google.android.material.slider.Slider
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
@@ -19,14 +18,12 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogReadBgTextBinding
 import io.legado.app.databinding.ItemBgImageBinding
 import io.legado.app.help.DefaultData
-import io.legado.app.help.book.isImage
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.FileUtils

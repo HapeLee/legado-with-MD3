@@ -3,7 +3,6 @@ package io.legado.app.ui.book.read.config
 import android.os.Bundle
 import android.text.InputType
 import android.view.View
-import com.google.android.material.chip.Chip
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
@@ -12,14 +11,10 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogTipConfigBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.dialogs.selector
-import io.legado.app.utils.hexString
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.requestInputMethod
-import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
@@ -58,7 +53,6 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         }
         val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
         val weightValues = listOf(0, 1, 2)
-        val initialIndex = weightValues.indexOf(ReadBookConfig.titleBold)
         binding.textFontWeightConverter.setOnClickListener {
             context?.alert(titleResource = R.string.text_font_weight_converter) {
                 weightOptions?.let { options ->
