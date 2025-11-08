@@ -663,7 +663,8 @@ class TextChapterLayout(
                 textPage.height = durY
             }
         }
-        //durY += textHeight * paragraphSpacing / 10f
+        if(!isTitle)
+            durY += textHeight * paragraphSpacing / 10f
     }
 
     private fun calcTextLinePosition(
