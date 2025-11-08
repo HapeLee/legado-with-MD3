@@ -80,6 +80,20 @@ class MangaFooterSettingDialog :
             }
         }
 
+        binding.checkboxScrollAnimation.apply {
+            isChecked = AppConfig.disableMangaScrollAnimation
+            setOnCheckedChangeListener { _, isChecked ->
+                callback?.onScrollAniDisabledChanged(isChecked)
+            }
+        }
+
+        binding.checkboxMangaCrossFade.apply {
+            isChecked = AppConfig.disableMangaCrossFade
+            setOnCheckedChangeListener { _, isChecked ->
+                callback?.onCrossFadeDisabledChanged(isChecked)
+            }
+        }
+
         binding.checkboxDisableMangaScale.apply {
             isChecked = AppConfig.disableMangaScale
             setOnCheckedChangeListener { _, isChecked ->
@@ -265,6 +279,8 @@ class MangaFooterSettingDialog :
         fun onScrollModeChanged(mode: Int)
         fun upSidePadding(padding: Int)
         fun onClickScrollDisabledChanged(disabled: Boolean)
+        fun onScrollAniDisabledChanged(disabled: Boolean)
+        fun onCrossFadeDisabledChanged(disabled: Boolean)
         fun onMangaScaleDisabledChanged(disabled: Boolean)
         fun onHideMangaTitleChanged(hide: Boolean)
         fun onVolumeKeyPageChanged(enable: Boolean)

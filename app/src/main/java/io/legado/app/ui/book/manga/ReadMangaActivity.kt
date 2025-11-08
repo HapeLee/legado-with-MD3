@@ -635,6 +635,14 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         AppConfig.disableClickScroll = disabled
     }
 
+    override fun onScrollAniDisabledChanged(disabled: Boolean) {
+        AppConfig.disableMangaScrollAnimation = disabled
+    }
+
+    override fun onCrossFadeDisabledChanged(disabled: Boolean) {
+        AppConfig.disableMangaCrossFade = disabled
+    }
+
     //双击缩放
     override fun onMangaScaleDisabledChanged(disabled: Boolean) {
         AppConfig.disableMangaScale = disabled
@@ -873,7 +881,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         dx *= direction
         dy *= direction
-        binding.recyclerView.smoothScrollBy(dx, dy)
+        if (!AppConfig.disableMangaScrollAnimation)
+            binding.recyclerView.smoothScrollBy(dx, dy)
+        else
+            binding.recyclerView.scrollBy(dx, dy)
+
     }
 
     private fun showNumberPickerDialog(

@@ -147,19 +147,23 @@ object BookCover {
         if (sourceOrigin != null) {
             options = options.set(OkHttpModelLoader.sourceOriginOption, sourceOrigin)
         }
-        return ImageLoader.load(context, path)
+        var builder = ImageLoader.load(context, path)
             .apply(options)
             .override(context.resources.displayMetrics.widthPixels, SIZE_ORIGINAL)
             .diskCacheStrategy(DiskCacheStrategy.ALL)
-            .skipMemoryCache(true).let {
-                if (transformation != null) {
-                    it.transform(transformation)
-                } else {
-                    it
-                }
-            }
-            .transition(DrawableTransitionOptions.withCrossFade())
+            .skipMemoryCache(true)
+        if (transformation != null) {
+            builder = builder.transform(transformation)
+        }
+        builder = if (AppConfig.disableMangaCrossFade) {
+            builder
+        } else {
+            builder.transition(DrawableTransitionOptions.withCrossFade())
+        }
+
+        return builder
     }
+
 
     fun preloadManga(
         context: Context,

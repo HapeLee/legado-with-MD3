@@ -211,5 +211,9 @@ object PreferKey {
     const val systemMediaControlCompatibilityChange = "systemMediaControlCompatibilityChange"
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
     const val replaceSortMode = "desc"
-    const val readBarStyle = "0"
+    const val readBarStyle = "readBarStyle"
+    //我在干什么
+
+    const val disableMangaScrollAnimation = "disableMangaScrollAnimation"
+    const val disableMangaCrossFade = "disableMangaCrossFade"
 }

@@ -251,6 +251,12 @@
                 android:text="@string/disable_manga_scale" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkboxScrollAnimation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/disable_manga_scroll_animation" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/checkboxHideMangaTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -267,6 +273,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/manga_long_click" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/checkboxMangaCrossFade"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/manga_cross_fade" />
+
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButtonGroup

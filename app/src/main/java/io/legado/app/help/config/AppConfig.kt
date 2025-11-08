@@ -722,6 +722,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.disableMangaScale, value)
         }
 
+    var disableMangaScrollAnimation: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.disableMangaScrollAnimation, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.disableMangaScrollAnimation, value)
+        }
+
+    var disableMangaCrossFade: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.disableMangaCrossFade, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.disableMangaCrossFade, value)
+        }
+
     //漫画预加载数量
     var mangaPreDownloadNum
         get() = appCtx.getPrefInt(PreferKey.mangaPreDownloadNum, 10)

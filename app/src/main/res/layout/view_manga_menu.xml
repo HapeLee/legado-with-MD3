@@ -90,6 +90,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+                app:backgroundTint="?attr/colorSurfaceContainer"
                 app:icon="@drawable/ic_previous"
                 tools:ignore="TouchTargetSizeCheck" />
 
@@ -113,6 +114,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+                app:backgroundTint="?attr/colorSurfaceContainer"
                 app:icon="@drawable/ic_next"
                 tools:ignore="TouchTargetSizeCheck" />
         </LinearLayout>

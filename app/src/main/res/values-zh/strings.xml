@@ -1335,4 +1335,6 @@
     <string name="text_typeface">字体样式</string>
     <string name="shadow_typeface">阴影样式</string>
     <string name="long_click_to_custom">长按自定义</string>
+    <string name="disable_manga_scroll_animation">禁用翻页动画</string>
+    <string name="manga_cross_fade">禁用加载淡入动画</string>
 </resources>
