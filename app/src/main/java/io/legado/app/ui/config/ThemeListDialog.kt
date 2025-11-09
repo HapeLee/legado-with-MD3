@@ -2,10 +2,12 @@ package io.legado.app.ui.config
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
+import androidx.core.graphics.toColorInt
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
@@ -15,6 +17,7 @@ import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemThemeConfigBinding
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.theme.primaryColor
 //import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.*
@@ -41,7 +44,6 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
 
     private fun initView() = binding.run {
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        recyclerView.addItemDecoration(VerticalDivider(requireContext()))
         recyclerView.adapter = adapter
     }
 
@@ -100,8 +102,13 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
         ) {
             binding.apply {
                 tvName.text = item.themeName
+                if (item.primaryColor.toColorInt() == context.primaryColor)
+                    cdRoot.setCardBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer))
+                else
+                    cdRoot.setCardBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
             }
         }
+
 
         override fun registerListener(holder: ItemViewHolder, binding: ItemThemeConfigBinding) {
             binding.apply {
