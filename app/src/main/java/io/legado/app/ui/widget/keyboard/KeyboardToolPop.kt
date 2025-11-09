@@ -20,6 +20,7 @@ import io.legado.app.databinding.PopupKeyboardToolBinding
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.activity
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.windowSize
 import kotlinx.coroutines.CoroutineScope
@@ -98,6 +99,9 @@ class KeyboardToolPop(
                 root.setOnClickListener {
                     helpAlert()
                 }
+                val lp = root.layoutParams as? ViewGroup.MarginLayoutParams
+                lp?.setMargins(0, 0, 4.dpToPx(), 0)
+                root.layoutParams = lp
             }
         }
     }
@@ -134,7 +138,11 @@ class KeyboardToolPop(
         RecyclerAdapter<KeyboardAssist, ItemFilletTextBinding>(context) {
 
         override fun getViewBinding(parent: ViewGroup): ItemFilletTextBinding {
-            return ItemFilletTextBinding.inflate(inflater, parent, false)
+            return ItemFilletTextBinding.inflate(inflater, parent, false).apply {
+                val lp = root.layoutParams as ViewGroup.MarginLayoutParams
+                lp.setMargins(0, 0, 4.dpToPx(), 0)
+                root.layoutParams = lp
+            }
         }
 
         override fun convert(
