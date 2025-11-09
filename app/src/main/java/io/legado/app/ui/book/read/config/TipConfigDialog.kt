@@ -12,7 +12,6 @@ import io.legado.app.databinding.DialogTipConfigBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.requestInputMethod

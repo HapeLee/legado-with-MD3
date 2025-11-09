@@ -1,55 +1,21 @@
 package io.legado.app.ui.book.read.config
 
-import android.content.Context
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import io.legado.app.help.config.ReadBookConfig
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
-import io.legado.app.base.adapter.ItemViewHolder
-import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogFontConfigBinding
-import io.legado.app.databinding.DialogFontSelectBinding
-import io.legado.app.databinding.ItemFontBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig.dottedLine
 import io.legado.app.help.config.ReadBookConfig.underline
-import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.lib.permission.Permissions
-import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.book.read.ReadBookActivity
-import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.utils.FileDoc
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.RealPathUtil
-import io.legado.app.utils.cnCompare
-import io.legado.app.utils.externalFiles
-import io.legado.app.utils.getPrefString
-import io.legado.app.utils.invisible
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.list
-import io.legado.app.utils.listFileDocs
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.putPrefString
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import io.legado.app.utils.visible
-import kotlinx.coroutines.launch
-import java.io.File
-import java.net.URLDecoder
 
 /**
  * 字体选择对话框
@@ -60,7 +26,6 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
         const val S_COLOR = 123
         const val TEXT_COLOR = 121
     }
-    private val fontRegex = Regex("(?i).*\\.[ot]tf")
     private val binding by viewBinding(DialogFontConfigBinding::bind)
 
     private val callBack2 get() = activity as? ReadBookActivity
