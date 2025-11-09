@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.app.ActivityOptionsCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -159,6 +161,16 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
                 }
             }
         })
+        ViewCompat.setOnApplyWindowInsetsListener(binding.rvBookshelf) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(
+                view.paddingLeft,
+                view.paddingTop,
+                view.paddingRight,
+                systemBars.bottom
+            )
+            WindowInsetsCompat.CONSUMED
+        }
         startLastUpdateTimeJob()
     }
 
