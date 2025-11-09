@@ -61,13 +61,7 @@ class SearchContentActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        val bbg = bottomBackground
-//        val btc = getPrimaryTextColor(ColorUtils.isColorLight(bbg))
-//        binding.llSearchBaseInfo.setBackgroundColor(bbg)
         binding.llSearchBaseInfo.applyNavigationBarPadding()
-//        binding.tvCurrentSearchInfo.setTextColor(btc)
-//        binding.ivSearchContentTop.setColorFilter(btc)
-//        binding.ivSearchContentBottom.setColorFilter(btc)
         val searchResultList = IntentData.get<List<SearchResult>>("searchResultList")
         val position = intent.getIntExtra("searchResultIndex", 0)
         val noSearchResult = searchResultList == null
@@ -143,7 +137,6 @@ class SearchContentActivity :
 
     private fun initRecyclerView() {
         binding.recyclerView.layoutManager = mLayoutManager
-        binding.recyclerView.addItemDecoration(VerticalDivider(this))
         binding.recyclerView.adapter = adapter
     }
 

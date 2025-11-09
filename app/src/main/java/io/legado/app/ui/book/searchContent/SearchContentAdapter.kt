@@ -1,21 +1,19 @@
 package io.legado.app.ui.book.searchContent
 
-//import io.legado.app.lib.theme.accentColor
 import android.content.Context
 import android.view.ViewGroup
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.ItemSearchListBinding
-import io.legado.app.utils.hexString
 import io.legado.app.utils.themeColor
 
 
 class SearchContentAdapter(context: Context, val callback: Callback) :
     RecyclerAdapter<SearchResult, ItemSearchListBinding>(context) {
 
-    val textColor = context.themeColor(com.google.android.material.R.attr.colorOnSurface).hexString.substring(2)
-    val accentColor =
-        context.themeColor(androidx.appcompat.R.attr.colorPrimary).hexString.substring(2)
+    private val textColorInt = context.themeColor(com.google.android.material.R.attr.colorOnSurface)
+    private val accentColorInt = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
+    private val bgColorInt = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
 
     override fun getViewBinding(parent: ViewGroup): ItemSearchListBinding {
         return ItemSearchListBinding.inflate(inflater, parent, false)
@@ -30,14 +28,19 @@ class SearchContentAdapter(context: Context, val callback: Callback) :
         binding.run {
             val isDur = callback.durChapterIndex() == item.chapterIndex
             if (payloads.isEmpty()) {
-                tvSearchResult.text = item.getHtmlCompat(textColor, accentColor)
-                tvSearchResult.paint.isFakeBoldText = isDur
+                tvTitle.text = item.getTitleSpannable(textColorInt)
+                tvContent.text = item.getContentSpannable(textColorInt, accentColorInt, bgColorInt)
+
+                cdRoot.setCardBackgroundColor(
+                    if (isDur) context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+                    else context.themeColor(com.google.android.material.R.attr.colorSurface)
+                )
             }
         }
     }
 
     override fun registerListener(holder: ItemViewHolder, binding: ItemSearchListBinding) {
-        holder.itemView.setOnClickListener {
+        binding.cdRoot.setOnClickListener {
             getItem(holder.layoutPosition)?.let {
                 if (it.query.isNotBlank()) callback.openSearchResult(it, holder.layoutPosition)
             }
