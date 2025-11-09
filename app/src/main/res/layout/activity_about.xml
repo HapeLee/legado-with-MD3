@@ -24,7 +24,7 @@
             app:titleCollapseMode="scale">
 
             <com.google.android.material.appbar.MaterialToolbar
-android:theme="@style/ThemeOverlay.Material3.Toolbar.CircleNavigationButton"
+                android:theme="@style/ThemeOverlay.Material3.Toolbar.CircleNavigationButton"
 
                 android:id="@+id/top_bar"
                 android:layout_width="match_parent"
@@ -44,7 +44,8 @@ android:theme="@style/ThemeOverlay.Material3.Toolbar.CircleNavigationButton"
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginVertical="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="60dp"
             android:orientation="vertical"
             app:layout_behavior="@string/appbar_scrolling_view_behavior">
 

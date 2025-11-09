@@ -25,8 +25,14 @@
             android:id="@+id/loading"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:progress="50"
+            app:trackColor="?attr/colorOnSurfaceVariant"
+            app:indicatorColor="?attr/colorPrimaryVariant"
             android:indeterminate="false"
             app:indicatorSize="64dp"
+            app:waveAmplitude="2dp"
+            app:wavelength="16dp"
+            app:waveSpeed="50dp"
             android:layout_gravity="center" />
 
 
@@ -44,8 +50,7 @@
             app:icon="@drawable/ic_refresh"
             app:iconSize="24sp"
             app:iconTint="?attr/colorSurfaceVariant"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/progress"

@@ -27,7 +27,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_style),
-    FontSelectDialog.CallBack {
+    FontConfigDialog.CallBack {
 
     sealed class ReadStyleItem {
         data class ConfigItem(val config: ReadBookConfig.Config) : ReadStyleItem()
@@ -66,10 +66,11 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
         styleAdapter.addFooterView {
             ItemReadStyleBinding.inflate(layoutInflater, it, false).apply {
                 tvStyle.text = ""
-                cdStyle.cardElevation = 2f.dpToPx()
-                cdStyle.radius = 32f.dpToPx()
-                cdStyle.strokeWidth = 0
+                cdStyle.cardElevation = 0f
+                cdStyle.radius = 8f.dpToPx()
+                cdStyle.strokeWidth = 1.dpToPx()
                 ivStyle.setImageResource(R.drawable.ic_add)
+                ivStyle.setPadding(12.dpToPx(),12.dpToPx(),12.dpToPx(),12.dpToPx())
                 root.setOnClickListener {
                     ReadBookConfig.configList.add(ReadBookConfig.Config())
                     showBgTextConfig(ReadBookConfig.configList.lastIndex)
@@ -100,11 +101,13 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
         }
 
         tvTextFont.setOnClickListener {
-            showDialogFragment<FontSelectDialog>()
+            dismissAllowingStateLoss()
+            callBack?.showFont()
         }
+
         tvPadding.setOnClickListener {
             dismissAllowingStateLoss()
-            callBack?.showPaddingConfig()
+            callBack?.showInfoConfig()
         }
         tvTip.setOnClickListener {
             TipConfigDialog().show(childFragmentManager, "tipConfigDialog")

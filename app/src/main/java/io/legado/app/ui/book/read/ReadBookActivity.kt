@@ -75,8 +75,10 @@ import io.legado.app.ui.book.changesource.ChangeChapterSourceDialog
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.config.AutoReadDialog
 import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.BG_COLOR
-import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.TEXT_COLOR
-import io.legado.app.ui.book.read.config.FontSelectDialog.Companion.S_COLOR
+import io.legado.app.ui.book.read.config.FontConfigDialog
+import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_COLOR
+import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.S_COLOR
+import io.legado.app.ui.book.read.config.FontSelectDialog
 import io.legado.app.ui.book.read.config.ReadAloudDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
@@ -160,6 +162,8 @@ class ReadBookActivity : BaseReadBookActivity(),
     ToolButtonConfigDialog.CallBack,
     TxtTocRuleDialog.CallBack,
     ColorPickerDialogListener,
+    FontConfigDialog.CallBack,
+    FontSelectDialog.CallBack,
     LayoutProgressListener {
 
     private val tocActivity =
@@ -220,6 +224,19 @@ class ReadBookActivity : BaseReadBookActivity(),
     private val popupAction: PopupAction by lazy {
         PopupAction(this)
     }
+
+    // 当前使用的字体路径（给 FontDialog 用）
+    override val curFontPath: String
+        get() = ReadBookConfig.textFont
+
+    // 当选择了字体时被调用
+    override fun selectFont(path: String) {
+        // path 为空表示恢复系统默认字体
+        ReadBookConfig.textFont = path
+        // 通知阅读界面刷新字体
+        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+    }
+
     override val isInitFinish: Boolean get() = viewModel.isInitFinish
     override val isScroll: Boolean get() = binding.readView.isScroll
     private val isAutoPage get() = binding.readView.isAutoPage

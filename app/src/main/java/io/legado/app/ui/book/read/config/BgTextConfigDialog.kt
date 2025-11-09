@@ -57,7 +57,6 @@ import java.io.FileOutputStream
 class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg_text) {
 
     companion object {
-        const val TEXT_COLOR = 121
         const val BG_COLOR = 122
     }
 

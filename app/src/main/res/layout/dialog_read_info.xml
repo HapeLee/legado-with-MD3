@@ -12,22 +12,22 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center"
-        android:paddingBottom="16dp"
+        android:paddingBottom="8dp"
         android:paddingHorizontal="16dp">
 
         <com.google.android.material.bottomsheet.BottomSheetDragHandleView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingVertical="16dp"
+            android:layout_gravity="center_horizontal"
             android:minHeight="0dp"
-            android:layout_gravity="center_horizontal" />
+            android:paddingVertical="8dp" />
 
         <TextView
             android:id="@+id/bottom_sheet_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/header_footer"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
     </LinearLayout>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingTop="32dp"
+    android:paddingBottom="16dp"
+    android:orientation="vertical"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/dsb_shadow_dx"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:isBottomBackground="true"
+            app:max="20"
+            app:title="@string/text_shadow_x" />
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/dsb_shadow_dy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:isBottomBackground="true"
+            app:max="20"
+            app:title="@string/text_shadow_y" />
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/dsb_shadow_radius"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:isBottomBackground="true"
+            app:max="50"
+            app:title="@string/text_shadow_radius" />
+
+
+</LinearLayout>

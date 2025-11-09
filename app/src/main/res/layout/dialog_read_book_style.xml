@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingBottom="4dp"
+            android:paddingBottom="8dp"
             android:paddingHorizontal="16dp">
 
             <com.google.android.material.bottomsheet.BottomSheetDragHandleView
@@ -30,7 +30,7 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingVertical="8dp"
+                android:paddingTop="8dp"
                 android:orientation="horizontal">
 
                 <TextView
@@ -287,6 +287,7 @@
                     app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                     tool:listitem="@layout/item_read_style"
                     app:layout_constraintStart_toEndOf="@id/cb_share_layout"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"/>
 

@@ -16,13 +16,13 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingBottom="16dp"
+            android:paddingBottom="8dp"
             android:paddingHorizontal="16dp">
 
             <com.google.android.material.bottomsheet.BottomSheetDragHandleView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingVertical="16dp"
+                android:paddingVertical="8dp"
                 android:minHeight="0dp"
                 android:layout_gravity="center_horizontal" />
 
@@ -31,7 +31,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/read_config"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
         </LinearLayout>

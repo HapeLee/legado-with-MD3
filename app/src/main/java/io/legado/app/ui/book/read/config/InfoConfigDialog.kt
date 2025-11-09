@@ -10,6 +10,7 @@ import io.legado.app.databinding.DialogReadInfoBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.lib.dialogs.selector
+import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
 import io.legado.app.utils.getCompatColor
@@ -21,6 +22,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info) {
 
     private val binding by viewBinding(DialogReadInfoBinding::bind)
+    private val callBack get() = activity as? ReadBookActivity
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         initView()
@@ -55,7 +57,8 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
             }
         }
         binding.btnPaddingSetting.setOnClickListener {
-            showDialogFragment<PaddingConfigDialog>()
+            dismissAllowingStateLoss()
+            callBack?.showPaddingConfig()
         }
         upTvTipColor()
         upTvTipDividerColor()
