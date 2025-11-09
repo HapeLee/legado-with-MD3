@@ -434,6 +434,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
             searchView.editText.requestFocus()
         } else {
             searchView.setText(key)
+            searchView.postDelayed({doSearch()},500)
         }
     }
 
