@@ -46,6 +46,7 @@
     <style name="ThemeOverlay.PureBlack" parent="">
         <item name="android:colorBackground">@color/black</item>
         <item name="colorSurface">@color/black</item>
+        <item name="colorSurfaceContainer">?attr/colorSurfaceContainerLowest</item>
     </style>
 
 </resources>
