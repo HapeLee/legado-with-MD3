@@ -13,6 +13,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/navigation_rail_view"
         app:layout_constraintTop_toTopOf="parent"
+
         tools:ignore="SpeakableTextPresentCheck" />
 
     <!-- 底部导航栏 -->

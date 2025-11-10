@@ -2,6 +2,7 @@ package io.legado.app.ui.main.bookshelf.books
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.OnBackPressedCallback
@@ -120,6 +121,8 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         initBookGroupData()
         initAllBooksData()
         initBooksData()
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
+            binding.titleBar.fitsSystemWindows = true
         backCallback = object : OnBackPressedCallback(false) { // 初始禁用
             override fun handleOnBackPressed() {
                 if (back()) {

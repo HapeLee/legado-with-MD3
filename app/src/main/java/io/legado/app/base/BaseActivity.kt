@@ -97,7 +97,7 @@ abstract class BaseActivity<VB : ViewBinding>(
 
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q)
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
             enableEdgeToEdge()
         else{
             setupSystemBar()

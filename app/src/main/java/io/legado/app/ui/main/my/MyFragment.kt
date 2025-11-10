@@ -1,6 +1,7 @@
 package io.legado.app.ui.main.my
 
 import android.content.SharedPreferences
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -56,6 +57,8 @@ class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInte
         if (preferenceFragment == null) preferenceFragment = MyPreferenceFragment()
         childFragmentManager.beginTransaction()
             .replace(R.id.pre_fragment, preferenceFragment, fragmentTag).commit()
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
+            binding.titleBar.fitsSystemWindows = true
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu) {

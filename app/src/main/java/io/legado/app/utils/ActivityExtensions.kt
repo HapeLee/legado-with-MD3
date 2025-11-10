@@ -146,12 +146,13 @@ fun Activity.setLightStatusBar(isLightBar: Boolean) {
  */
 @Suppress("DEPRECATION")
 fun Window.setNavigationBarColorAuto(@ColorInt color: Int) {
-    val isLightBor = ColorUtils.isColorLight(color)
+    if (Build.VERSION.SDK_INT >= 35) return
+    val isLightBar = ColorUtils.isColorLight(color)
     navigationBarColor = color
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         insetsController?.let {
-            if (isLightBor) {
+            if (isLightBar) {
                 it.setSystemBarsAppearance(
                     WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
                     WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
@@ -163,19 +164,17 @@ fun Window.setNavigationBarColorAuto(@ColorInt color: Int) {
                 )
             }
         }
-    }
-
-    @Suppress("DEPRECATION")
-    if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.Q) {
-        var systemUiVisibility = decorView.systemUiVisibility
-        systemUiVisibility = if (isLightBor) {
-            systemUiVisibility or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+    } else{
+        var flags = decorView.systemUiVisibility
+        flags = if (isLightBar) {
+            flags or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
         } else {
-            systemUiVisibility and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
+            flags and View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR.inv()
         }
-        decorView.systemUiVisibility = systemUiVisibility
+        decorView.systemUiVisibility = flags
     }
 }
+
 
 
 fun Activity.keepScreenOn(on: Boolean) {

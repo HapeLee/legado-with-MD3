@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.rss
 
+import android.os.Build
 import android.os.Bundle
 import android.transition.TransitionManager
 import android.view.Menu
@@ -72,6 +73,8 @@ class RssFragment() : VMBaseFragment<RssViewModel>(R.layout.fragment_rss),
         initRecyclerView()
         initGroupData()
         upRssFlowJob()
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
+            binding.appBar.fitsSystemWindows = true
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu) {

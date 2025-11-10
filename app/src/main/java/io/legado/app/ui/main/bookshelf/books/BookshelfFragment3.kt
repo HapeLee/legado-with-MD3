@@ -3,6 +3,7 @@
 package io.legado.app.ui.main.bookshelf.books
 
 import android.annotation.SuppressLint
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.widget.SearchView
@@ -50,6 +51,8 @@ class BookshelfFragment3() : BaseBookshelfFragment(R.layout.fragment_bookshelf3)
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.topBar)
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
+            binding.titleBar.fitsSystemWindows = true
         initView()
         initBookGroupData()
     }

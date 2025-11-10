@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.explore
 
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -74,6 +75,8 @@ class ExploreFragment() : VMBaseFragment<ExploreViewModel>(R.layout.fragment_exp
         initRecyclerView()
         initGroupData()
         upExploreData()
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
+            binding.appBar.fitsSystemWindows = true
     }
 
     override fun onPause() {

@@ -4,6 +4,7 @@ package io.legado.app.ui.main
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.Gravity
@@ -12,6 +13,7 @@ import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.get
@@ -129,7 +131,8 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         if (savedInstanceState != null) {
             pagePosition = savedInstanceState.getInt("currentPagePosition", 0)
         }
-
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S)
+            binding.viewPagerMain.fitsSystemWindows = true
         // 其他初始化逻辑
         setupBackCallback()
         upBottomMenu()
