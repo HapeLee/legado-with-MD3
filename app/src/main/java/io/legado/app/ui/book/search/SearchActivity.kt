@@ -548,11 +548,13 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
                         precisionSearchMenuItem?.isChecked = false
                         viewModel.searchKey = ""
                         viewModel.search(searchView.text.toString())
+                        doSearch()
                     }
                 } else {
                     setMessage("${displayScope}分组搜索结果为空，是否切换到全部分组？")
                     yesButton {
                         viewModel.searchScope.update("")
+                        doSearch()
                     }
                 }
                 noButton()
