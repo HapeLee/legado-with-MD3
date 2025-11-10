@@ -178,11 +178,17 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         ReadTipConfig.apply {
             tvHeaderLeft.isGone = tipHeaderLeft == none
-            tvHeaderRight.isInvisible = tipHeaderRight == none
             tvHeaderMiddle.isGone = tipHeaderMiddle == none
+            if (tvHeaderLeft.isGone && tvHeaderMiddle.isGone)
+                tvHeaderRight.isGone = tipHeaderRight == none
+            else
+                tvHeaderRight.isInvisible = tipHeaderRight == none
             tvFooterLeft.isGone = tipFooterLeft == none
-            tvFooterRight.isInvisible = tipFooterRight == none
             tvFooterMiddle.isGone = tipFooterMiddle == none
+            if (tvFooterLeft.isGone && tvFooterMiddle.isGone)
+                tvFooterRight.isGone = tipFooterRight == none
+            else
+                tvFooterRight.isInvisible = tipFooterRight == none
         }
         tvTitle = getTipView(ReadTipConfig.chapterTitle)?.apply {
             tag = ReadTipConfig.chapterTitle
