@@ -4,13 +4,17 @@ package io.legado.app.ui.book.changesource
 //import io.legado.app.lib.theme.primaryColor
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
+import androidx.core.view.isInvisible
 import androidx.core.view.isVisible
+import androidx.core.view.postDelayed
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
@@ -112,6 +116,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     override fun onDestroy() {
         super.onDestroy()
         viewModel.searchFinishCallback = null
+        viewModel.stopSearch()
     }
 
     private fun showTitle() {
@@ -210,24 +215,31 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
         }
     }
 
+    private var switchHandler: Handler? = null
+    private var switchRunnable: Runnable? = null
+
+
     @SuppressLint("SetTextI18n")
     private fun initLiveData() {
-        viewModel.searchStateData.observe(viewLifecycleOwner) {
-            binding.refreshProgressBar.isVisible = it
 
-            if (it) {
+        viewModel.searchStateData.observe(viewLifecycleOwner) { isSearching ->
+            if (isSearching) {
+                binding.refreshProgressBar.isInvisible = false
                 startStopMenuItem?.let { item ->
                     item.setIcon(R.drawable.ic_stop_black_24dp)
                     item.setTitle(R.string.stop)
                 }
             } else {
+                binding.refreshProgressBar.isIndeterminate = false
+                binding.refreshProgressBar.progress = 0
+                binding.refreshProgressBar.isInvisible = true
                 startStopMenuItem?.let { item ->
                     item.setIcon(R.drawable.ic_refresh)
                     item.setTitle(R.string.refresh)
                 }
             }
-            //binding.toolBar.menu.applyTint(requireContext())
         }
+
         lifecycleScope.launch {
             repeatOnLifecycle(STARTED) {
                 viewModel.searchDataFlow.conflate().collect {
@@ -243,15 +255,47 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
 
         lifecycleScope.launch {
             repeatOnLifecycle(STARTED) {
+                var canSwitchToDeterminate = false
+
+                switchHandler?.removeCallbacks(switchRunnable ?: Runnable { })
+                switchHandler = Handler(Looper.getMainLooper())
+                switchRunnable = Runnable { canSwitchToDeterminate = true }
+                switchHandler?.postDelayed(switchRunnable!!, 5000)
+
                 viewModel.changeSourceProgress
                     .drop(1)
                     .collect { (count, name) ->
                         val total = viewModel.totalSourceCount
-                        val progress = if (total > 0) (count * 100 / total) else 0
+                        val progressPercent = if (total > 0) (count * 100f / total) else 0f
 
-                        binding.refreshProgressBar.isIndeterminate = false
-                        binding.refreshProgressBar.progress = progress
+                        binding.refreshProgressBar.isIndeterminate = true
+                        binding.refreshProgressBar.show()
+
                         binding.llInfo.visible()
+
+                        if (count == 0) {
+                            canSwitchToDeterminate = false
+                            switchHandler?.removeCallbacks(switchRunnable!!)
+                            switchHandler?.postDelayed(switchRunnable!!, 5000)
+                        }
+
+                        val shouldBeIndeterminate = when {
+                            !canSwitchToDeterminate -> true
+                            progressPercent in 10f..90f -> false
+                            else -> true
+                        }
+
+                        if (shouldBeIndeterminate) {
+                            if (!binding.refreshProgressBar.isIndeterminate) {
+                                binding.refreshProgressBar.isIndeterminate = true
+                                binding.refreshProgressBar.show()
+                            }
+                        } else {
+                            if (binding.refreshProgressBar.isIndeterminate) {
+                                binding.refreshProgressBar.isIndeterminate = false
+                            }
+                            binding.refreshProgressBar.setProgressCompat(progressPercent.toInt(), true)
+                        }
 
                         binding.tvProgress.text = "$count / $total"
                         binding.tvResult.text =
