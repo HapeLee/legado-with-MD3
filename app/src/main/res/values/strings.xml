@@ -1340,4 +1340,5 @@
     <string name="manga_cross_fade">禁用加载淡入动画</string>
     <string name="text_shadow_set">阴影设置</string>
     <string name="paragraph_typeface">段落样式</string>
+    <string name="same_name_book">已有相同书籍</string>
 </resources>
