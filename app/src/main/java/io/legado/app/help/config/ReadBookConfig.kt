@@ -382,6 +382,12 @@ object ReadBookConfig {
             config.underline = value
         }
 
+    var underlineHeight: Int
+        get() = config.underlineHeight
+        set(value) {
+            config.underlineHeight = value
+        }
+
     var dottedLine: Boolean
         get() = config.dottedLine
         set(value) {
@@ -622,6 +628,9 @@ object ReadBookConfig {
         var titleSegFlag: String = "",//分段判断，碰到指定值时分段
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
+        var underlineHeight: Int = 1,
+        var underlineColor: String = "#3E3D3B",
+        var underlineColorNight: String = "#ADADAD",
         var dottedLine: Boolean = false, //虚线
         var dottedBase: Float = 6f, //长度
         var dottedRatio: Float = 6f,
@@ -679,6 +688,12 @@ object ReadBookConfig {
         private var menuAcColorNightInt = -1
 
         @Transient
+        private var underlineColorInt = -1
+
+        @Transient
+        private var underlineColorNightInt = -1
+
+        @Transient
         private var initColorInt = false
 
         private fun initColorInt() {
@@ -691,6 +706,8 @@ object ReadBookConfig {
             menuBgColorNightInt = menuBgColorNight.toColorInt()
             menuAcColorInt = menuAcColor.toColorInt()
             menuAcColorNightInt = menuAcColorNight.toColorInt()
+            underlineColorInt = underlineColor.toColorInt()
+            underlineColorNightInt = underlineColorNight.toColorInt()
             initColorInt = true
         }
 
@@ -842,6 +859,27 @@ object ReadBookConfig {
                 else -> {
                     menuAcColor = "#${bg.hexString}"
                     menuAcColorInt = bg
+                }
+            }
+        }
+
+        fun curUnderlineColor(): Int {
+            return when {
+                AppConfig.isNightTheme -> underlineColorNightInt
+                else -> underlineColorInt
+            }
+        }
+
+        fun setUnderlineColor(bg: Int) {
+            when {
+                AppConfig.isNightTheme -> {
+                    underlineColorNight = "#${bg.hexString}"
+                    underlineColorNightInt = bg
+                }
+
+                else -> {
+                    underlineColor = "#${bg.hexString}"
+                    underlineColorInt = bg
                 }
             }
         }

@@ -94,6 +94,18 @@
 		<item>Only slider</item>
 	</string-array>
 
+	<string-array name="title_bar_mode">
+		<item>Auto</item>
+		<item>Show in TopBar</item>
+		<item>Show in another line</item>
+	</string-array>
+
+	<string-array name="title_chapter_mode">
+		<item>Disable title display</item>
+		<item>Disable chapter display</item>
+		<item>Disable title and chapter display</item>
+	</string-array>
+
 	<string-array name="screen_direction_title">
 		<item>@string/screen_unspecified</item>
 		<item>@string/screen_portrait</item>

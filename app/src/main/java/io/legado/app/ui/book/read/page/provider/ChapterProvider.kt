@@ -61,7 +61,7 @@ object ChapterProvider {
         Paint(contentPaint).apply {
             clearShadowLayer()
             isAntiAlias = true
-            strokeWidth = 1.dpToPx().toFloat()
+            strokeWidth = ReadBookConfig.underlineHeight.toFloat()
             style = Paint.Style.STROKE
         }
     }

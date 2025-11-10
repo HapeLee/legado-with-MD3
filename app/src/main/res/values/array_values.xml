@@ -98,4 +98,16 @@
         <item>4</item>
     </string-array>
 
+    <string-array name="title_bar_mode_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
+    <string-array name="title_chapter_mode_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+    </string-array>
+
 </resources>

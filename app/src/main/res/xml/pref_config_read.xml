@@ -41,6 +41,14 @@
             android:title="@string/padding_display_cutouts"
             app:isBottomBackground="true" />
 
+        <io.legado.app.lib.prefs.NameListPreference
+            android:defaultValue="0"
+            android:entries="@array/read_slider_mode"
+            android:entryValues="@array/read_slider_mode_value"
+            android:key="title_bar_mode"
+            android:title="@string/read_slider_mode"
+            app:isBottomBackground="true" />
+
         <io.legado.app.lib.prefs.Preference
             android:key="menuAlpha"
             android:summary="@string/menu_alpha_sum"
