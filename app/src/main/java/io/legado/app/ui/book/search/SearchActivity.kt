@@ -576,8 +576,8 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
     /**
      * 是否已经加入书架
      */
-    override fun isInBookshelf(name: String, author: String): Boolean {
-        return viewModel.isInBookShelf(name, author)
+    override fun getBookShelfState(name: String, author: String, url: String?): BookShelfState {
+        return viewModel.isInBookShelf(name, author, url)
     }
 
     /**

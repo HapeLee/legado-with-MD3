@@ -12,6 +12,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.databinding.ItemSearchBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.book.search.BookShelfState
 import io.legado.app.ui.widget.text.AccentBgTextView
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
@@ -46,7 +47,19 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
         binding.run {
             tvName.text = item.name
             tvAuthor.text = context.getString(R.string.author_show, item.author)
-            ivInBookshelf.isVisible = callBack.isInBookshelf(item.name, item.author)
+            when (callBack.getBookShelfState(item.name, item.author, item.bookUrl)) {
+                BookShelfState.IN_SHELF -> {
+                    ivInBookshelf.isVisible = true
+                    tvBookshelf.text = context.getString(R.string.remove_from_bookshelf)
+                }
+                BookShelfState.SAME_NAME_AUTHOR -> {
+                    ivInBookshelf.isVisible = true
+                    tvBookshelf.text = context.getString(R.string.same_name_book)
+                }
+                BookShelfState.NOT_IN_SHELF -> {
+                    ivInBookshelf.isVisible = false
+                }
+            }
             if (item.latestChapterTitle.isNullOrEmpty()) {
                 tvLasted.gone()
             } else {
@@ -90,8 +103,21 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
         binding.run {
             bundle.keySet().forEach {
                 when (it) {
-                    "isInBookshelf" -> ivInBookshelf.isVisible =
-                        callBack.isInBookshelf(item.name, item.author)
+                    "isInBookshelf" -> {
+                        when (callBack.getBookShelfState(item.name, item.author, item.bookUrl)) {
+                            BookShelfState.IN_SHELF -> {
+                                ivInBookshelf.isVisible = true
+                                tvBookshelf.text = context.getString(R.string.remove_from_bookshelf)
+                            }
+                            BookShelfState.SAME_NAME_AUTHOR -> {
+                                ivInBookshelf.isVisible = true
+                                tvBookshelf.text = context.getString(R.string.same_name_book)
+                            }
+                            BookShelfState.NOT_IN_SHELF -> {
+                                ivInBookshelf.isVisible = false
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -109,7 +135,7 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
         /**
          * 是否已经加入书架
          */
-        fun isInBookshelf(name: String, author: String): Boolean
+        fun getBookShelfState(name: String, author: String, url: String?): BookShelfState
 
         fun showBookInfo(book: Book)
     }

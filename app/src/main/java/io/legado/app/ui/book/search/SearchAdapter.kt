@@ -86,8 +86,19 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
         binding.run {
             tvName.text = searchBook.name
             tvAuthor.text = context.getString(R.string.author_show, searchBook.author)
-            ivInBookshelf.isVisible =
-                callBack.isInBookshelf(searchBook.name, searchBook.author)
+            when (callBack.getBookShelfState(searchBook.name, searchBook.author, searchBook.bookUrl)) {
+                BookShelfState.IN_SHELF -> {
+                    ivInBookshelf.isVisible = true
+                    tvBookshelf.text = context.getString(R.string.remove_from_bookshelf)
+                }
+                BookShelfState.SAME_NAME_AUTHOR -> {
+                    ivInBookshelf.isVisible = true
+                    tvBookshelf.text = context.getString(R.string.same_name_book)
+                }
+                BookShelfState.NOT_IN_SHELF -> {
+                    ivInBookshelf.isVisible = false
+                }
+            }
             bvOriginCount.text = searchBook.origins.size.toString()
             upLasted(binding, searchBook.latestChapterTitle)
             tvIntroduce.text = searchBook.trimIntro(context)
@@ -110,8 +121,21 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
                     "last" -> upLasted(binding, searchBook.latestChapterTitle)
                     "intro" -> tvIntroduce.text = searchBook.trimIntro(context)
                     "kind" -> upKind(binding, searchBook.getKindList())
-                    "isInBookshelf" -> ivInBookshelf.isVisible =
-                        callBack.isInBookshelf(searchBook.name, searchBook.author)
+                    "isInBookshelf" -> {
+                        when (callBack.getBookShelfState(searchBook.name, searchBook.author, searchBook.bookUrl)) {
+                            BookShelfState.IN_SHELF -> {
+                                ivInBookshelf.isVisible = true
+                                tvBookshelf.text = context.getString(R.string.remove_from_bookshelf)
+                            }
+                            BookShelfState.SAME_NAME_AUTHOR -> {
+                                ivInBookshelf.isVisible = true
+                                tvBookshelf.text = context.getString(R.string.same_name_book)
+                            }
+                            BookShelfState.NOT_IN_SHELF -> {
+                                ivInBookshelf.isVisible = false
+                            }
+                        }
+                    }
                     "cover" -> ivCover.load(
                         searchBook.coverUrl,
                         searchBook.name,
@@ -165,7 +189,7 @@ class SearchAdapter(context: Context, val callBack: CallBack) :
         /**
          * 是否已经加入书架
          */
-        fun isInBookshelf(name: String, author: String): Boolean
+        fun getBookShelfState(name: String, author: String, url: String?): BookShelfState
 
         /**
          * 显示书籍详情

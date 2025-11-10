@@ -11,6 +11,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.databinding.ActivityExploreShowBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
 import io.legado.app.ui.book.info.BookInfoActivity
+import io.legado.app.ui.book.search.BookShelfState
 import io.legado.app.ui.widget.recycler.LoadMoreView
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.startActivity
@@ -81,8 +82,8 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
         }
     }
 
-    override fun isInBookshelf(name: String, author: String): Boolean {
-        return viewModel.isInBookShelf(name, author)
+    override fun getBookShelfState(name: String, author: String, url: String?): BookShelfState {
+        return viewModel.isInBookShelf(name, author, url)
     }
 
     override fun showBookInfo(book: Book) {

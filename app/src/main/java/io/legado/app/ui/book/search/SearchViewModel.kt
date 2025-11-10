@@ -20,10 +20,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapLatest
 import java.util.concurrent.ConcurrentHashMap
 
+enum class BookShelfState {
+    IN_SHELF,
+    SAME_NAME_AUTHOR,
+    NOT_IN_SHELF
+}
+
+data class BookKey(val name: String, val author: String, val url: String?)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(application: Application) : BaseViewModel(application) {
     val handler = Handler(Looper.getMainLooper())
-    val bookshelf: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    val bookshelf: MutableSet<BookKey> = ConcurrentHashMap.newKeySet()
     val upAdapterLiveData = MutableLiveData<String>()
     var searchBookLiveData = ConflateLiveData<List<SearchBook>>(1000)
     val searchScope: SearchScope = SearchScope(AppConfig.searchScope)
@@ -70,18 +78,12 @@ class SearchViewModel(application: Application) : BaseViewModel(application) {
     init {
         execute {
             appDb.bookDao.flowAll().mapLatest { books ->
-                val keys = arrayListOf<String>()
                 books.filterNot { it.isNotShelf }
-                    .forEach {
-                        keys.add("${it.name}-${it.author}")
-                        keys.add(it.name)
-                    }
-                keys
             }.catch {
                 AppLog.put("搜索界面获取书籍列表失败\n${it.localizedMessage}", it)
-            }.collect {
+            }.collect { books ->
                 bookshelf.clear()
-                bookshelf.addAll(it)
+                bookshelf.addAll(books.map { BookKey(it.name, it.author, it.bookUrl) })
                 upAdapterLiveData.postValue("isInBookshelf")
             }
         }.onError {
@@ -89,12 +91,14 @@ class SearchViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun isInBookShelf(name: String, author: String): Boolean {
-        return if (author.isNotBlank()) {
-            bookshelf.contains("$name-$author")
-        } else {
-            bookshelf.contains(name)
-        }
+    fun isInBookShelf(name: String, author: String, url: String?): BookShelfState {
+        val exactMatch = bookshelf.any { it.name == name && it.author == author && it.url == url }
+        if (exactMatch) return BookShelfState.IN_SHELF
+
+        val sameNameAuthor = bookshelf.any { it.name == name && it.author == author && it.url != url }
+        if (sameNameAuthor) return BookShelfState.SAME_NAME_AUTHOR
+
+        return BookShelfState.NOT_IN_SHELF
     }
 
     /**
