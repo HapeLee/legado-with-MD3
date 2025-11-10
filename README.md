@@ -3,10 +3,6 @@
 与[官方版本](https://github.com/gedoor/legado)的区别：
 重新设计界面，使用Material Design 3设计，增加一些奇怪的新功能（和新的bug。
 
-应用截图：
-![retouch_2025090304371780](https://github.com/user-attachments/assets/679c7a0e-088a-42fe-856b-cccb6f1d1880)
-![retouch_2025090604321772](https://github.com/user-attachments/assets/c687086b-3bec-4572-9f0b-19328b50f1a1)
-
 # Function-主要功能
 [English](English.md)
 <details><summary>中文</summary>
