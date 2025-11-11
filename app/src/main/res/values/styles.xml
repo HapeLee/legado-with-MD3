@@ -35,6 +35,7 @@
     <style name="Widget.MyApp.Chip.Assist" parent="Widget.Material3.Chip.Assist">
         <item name="chipBackgroundColor">@color/chip_background_selector</item>
         <item name="chipStrokeColor">@color/chip_stroke_selector</item>
+        <item name="chipMinTouchTargetSize">0dp</item>
     </style>
 
     <style name="NoBackgroundNavi" parent="ThemeOverlay.Material3.Toolbar.CircleNavigationButton">

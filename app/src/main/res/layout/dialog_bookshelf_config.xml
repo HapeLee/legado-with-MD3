@@ -93,7 +93,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingTop="8dp"
+                android:paddingVertical="8dp"
                 android:text="@string/group_style"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -103,7 +103,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:checkableBehavior="single"
-                android:paddingBottom="8dp"
                 app:selectionRequired="true"
                 app:singleSelection="true" />
 
@@ -111,6 +110,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_vertical"
+                android:paddingVertical="8dp"
                 android:text="@string/sortview"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -119,7 +119,6 @@
                 android:id="@+id/chip_group_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:chipSpacingVertical="0dp"
                 android:checkableBehavior="single"
                 app:selectionRequired="true"
                 app:singleSelection="true">
@@ -191,6 +190,7 @@
                     android:id="@+id/chipGroupOrder"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginVertical="8dp"
                     app:selectionRequired="true"
                     app:singleSelection="true">
 
@@ -218,7 +218,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                app:chipSpacingVertical="0dp"
                 app:selectionRequired="true"
                 app:singleSelection="true" />
 

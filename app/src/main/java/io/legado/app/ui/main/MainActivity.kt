@@ -50,6 +50,7 @@ import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
 import io.legado.app.ui.main.bookshelf.books.BookshelfFragment1
 import io.legado.app.ui.main.bookshelf.books.BookshelfFragment2
 import io.legado.app.ui.main.bookshelf.books.BookshelfFragment3
+import io.legado.app.ui.main.bookshelf.books.BookshelfFragment4
 import io.legado.app.ui.main.explore.ExploreFragment
 import io.legado.app.ui.main.my.MyFragment
 import io.legado.app.ui.main.rss.RssFragment
@@ -86,6 +87,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     private val idBookshelf1 = 11
     private val idBookshelf2 = 12
     private val idBookshelf3 = 13
+    private val idBookshelf4 = 14
     private val idExplore = 1
     private val idRss = 2
     private val idMy = 3
@@ -508,6 +510,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                 0 -> idBookshelf1
                 1 -> idBookshelf2
                 2 -> idBookshelf3
+                3 -> idBookshelf4
                 else -> idBookshelf1
             }
         }
@@ -543,6 +546,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                 idBookshelf1 -> BookshelfFragment1(position)
                 idBookshelf2 -> BookshelfFragment2(position)
                 idBookshelf3 -> BookshelfFragment3(position)
+                idBookshelf4 -> BookshelfFragment4(position)
                 idExplore -> ExploreFragment(position)
                 idRss -> RssFragment(position)
                 else -> MyFragment(position)

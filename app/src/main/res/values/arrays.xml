@@ -16,6 +16,7 @@
 		<item>Tab</item>
 		<item>Folder</item>
 		<item>Hide Tab</item>
+		<item>Material Tab</item>
 	</string-array>
 
 	<string-array name="book_sort">
