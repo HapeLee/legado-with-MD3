@@ -29,113 +29,28 @@ class PermissionActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             onRequestPermissionFinish()
         }
-    private val settingActivityResultAwait =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult())
-    private val requestPermissionResult =
-        registerForActivityResult(ActivityResultContracts.RequestPermission())
     private val requestPermissionsResult =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions())
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            if (result.values.all { it }) {
+                onRequestPermissionFinish()
+            } else {
+                openSettingsActivity()
+            }
+        }
 
-    @SuppressLint("BatteryLife")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val rationale = intent.getStringExtra(KEY_RATIONALE)
-        val requestCode = intent.getIntExtra(KEY_INPUT_PERMISSIONS_CODE, 1000)
         val permissions = intent.getStringArrayExtra(KEY_INPUT_PERMISSIONS)!!
-        when (intent.getIntExtra(KEY_INPUT_REQUEST_TYPE, Request.TYPE_REQUEST_PERMISSION)) {
-            //权限请求
-            Request.TYPE_REQUEST_PERMISSION -> showSettingDialog(permissions, rationale) {
-                lifecycleScope.launch {
-                    try {
-                        val result = requestPermissionsResult.launch(permissions)
-                        if (result.values.all { it }) {
-                            onRequestPermissionFinish()
-                        } else {
-                            openSettingsActivity()
-                        }
-                    } catch (e: Exception) {
-                        AppLog.put("请求权限出错\n$e", e, true)
-                        RequestPlugins.sRequestCallback?.onError(e)
-                        finish()
-                    }
-                }
-            }
-            //跳转到设置界面
-            Request.TYPE_REQUEST_SETTING -> showSettingDialog(permissions, rationale) {
-                openSettingsActivity()
-            }
-            //所有文件的管理权限
-            Request.TYPE_MANAGE_ALL_FILES_ACCESS -> showSettingDialog(permissions, rationale) {
-                try {
-                    if (Permissions.isManageExternalStorage()) {
-                        val settingIntent =
-                            Intent(
-                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                                "package:$packageName".toUri()
-                            )
-                        settingActivityResult.launch(settingIntent)
-                    } else {
-                        throw NoStackTraceException("no MANAGE_ALL_FILES_ACCESS_PERMISSION")
-                    }
-                } catch (e: Exception) {
-                    AppLog.put("请求所有文件的管理权限出错\n$e", e, true)
-                    RequestPlugins.sRequestCallback?.onError(e)
-                    finish()
-                }
-            }
 
-            Request.TYPE_REQUEST_NOTIFICATIONS -> showSettingDialog(permissions, rationale) {
-                lifecycleScope.launch {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-                            && requestPermissionResult.launch(Permissions.POST_NOTIFICATIONS)
-                        ) {
-                            onRequestPermissionFinish()
-                        } else
-                            intent.action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                            intent.putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                            intent.putExtra(Settings.EXTRA_CHANNEL_ID, applicationInfo.uid)
-                            settingActivityResult.launch(intent)
-                    } catch (e: Exception) {
-                        AppLog.put("请求通知权限出错\n$e", e, true)
-                        RequestPlugins.sRequestCallback?.onError(e)
-                        finish()
-                    }
-                }
+        showSettingDialog(permissions, rationale) {
+            try {
+                requestPermissionsResult.launch(permissions)
+            } catch (e: Exception) {
+                AppLog.put("请求权限出错\n$e", e, true)
+                RequestPlugins.sRequestCallback?.onError(e)
+                finish()
             }
-
-            Request.TYPE_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -> showSettingDialog(
-                permissions, rationale
-            ) {
-                lifecycleScope.launch {
-                    try {
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                        intent.setData("package:$packageName".toUri())
-                        val className =
-                            "com.android.settings.fuelgauge.RequestIgnoreBatteryOptimizations"
-                        val activities = packageManager.queryIntentActivities(
-                            intent,
-                            PackageManager.MATCH_DEFAULT_ONLY
-                        )
-                        if (activities.any { it.activityInfo.name == className }) {
-                            val component = intent.resolveActivity(packageManager)
-                            if (component.className != className) {
-                                intent.setClassName("com.android.settings", className)
-                                settingActivityResultAwait.launch(intent)
-                            }
-                        }
-                        intent.component = null
-                        settingActivityResult.launch(intent)
-                    } catch (e: Exception) {
-                        AppLog.put("请求后台权限出错\n$e", e, true)
-                        RequestPlugins.sRequestCallback?.onError(e)
-                        finish()
-                    }
-                }
-            }
-        }
-        onBackPressedDispatcher.addCallback(this) {
-
         }
     }
 
@@ -189,25 +104,23 @@ class PermissionActivity : AppCompatActivity() {
     ) {
         rationaleDialog?.dismiss()
         if (rationale.isNullOrEmpty()) {
-            finish()
+            onOk.invoke()
             return
         }
+
         rationaleDialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.dialog_title)
             .setMessage(rationale)
-            .setPositiveButton(R.string.dialog_setting) { _, _ ->
-                onOk.invoke()
-            }
+            .setPositiveButton(R.string.dialog_setting) { _, _ -> onOk() }
             .setNegativeButton(R.string.dialog_cancel) { _, _ ->
                 RequestPlugins.sRequestCallback?.onRequestPermissionsResult(
-                    permissions,
-                    IntArray(0)
+                    permissions, IntArray(0)
                 )
                 finish()
-            }.setOnCancelListener {
+            }
+            .setOnCancelListener {
                 RequestPlugins.sRequestCallback?.onRequestPermissionsResult(
-                    permissions,
-                    IntArray(0)
+                    permissions, IntArray(0)
                 )
                 finish()
             }

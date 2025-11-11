@@ -90,6 +90,11 @@ class OtherConfigFragment : PreferenceFragment(),
         preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        updatePermissionSummary()
+    }
+
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         when (preference.key) {
             PreferKey.userAgent -> showUserAgentDialog()
@@ -288,17 +293,22 @@ class OtherConfigFragment : PreferenceFragment(),
     }
 
     private fun checkPermission(int: Int) {
-        if (int == 1) {
-            PermissionsCompat.Builder()
-                .addPermissions(Permissions.POST_NOTIFICATIONS)
-                .rationale(R.string.notification_permission_rationale)
-                .request()
-        }
-        if (int == 2 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            PermissionsCompat.Builder()
-                .addPermissions(Permissions.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                .rationale(R.string.ignore_battery_permission_rationale)
-                .request()
+        when (int) {
+            1 -> {
+                PermissionsCompat.Builder()
+                    .addPermissions(Permissions.POST_NOTIFICATIONS)
+                    .rationale(R.string.notification_permission_rationale)
+                    .onGranted { updatePermissionSummary() }
+                    .request()
+            }
+            2 -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    PermissionsCompat.Builder()
+                        .addPermissions(Permissions.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        .rationale(R.string.ignore_battery_permission_rationale)
+                        .request()
+                }
+            }
         }
     }
 

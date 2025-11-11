@@ -75,9 +75,7 @@ internal class Request : OnRequestPermissionsResultCallback {
             } else if (deniedPermissions.contains(Permissions.POST_NOTIFICATIONS)) {
                 toNotificationSetting(deniedPermissions)
             } else if (deniedPermissions.contains(Permissions.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    toIgnoreBatterySetting(deniedPermissions)
-                }
+                toIgnoreBatterySetting(deniedPermissions)
             } else if (deniedPermissions.isNotEmpty()) {
                 appCtx.startActivity<PermissionActivity> {
                     putExtra(PermissionActivity.KEY_RATIONALE, rationale)
@@ -113,10 +111,8 @@ internal class Request : OnRequestPermissionsResultCallback {
                 }
 
                 Permissions.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -> {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        if (!powerManager.isIgnoringBatteryOptimizations(appCtx.packageName)) {
-                            deniedPermissionList.add(permission)
-                        }
+                    if (!powerManager.isIgnoringBatteryOptimizations(appCtx.packageName)) {
+                        deniedPermissionList.add(permission)
                     }
                 }
 
@@ -140,7 +136,7 @@ internal class Request : OnRequestPermissionsResultCallback {
     private fun onPermissionsGranted() {
         try {
             grantedCallback?.onPermissionsGranted()
-        } catch (ignore: Exception) {
+        } catch (_: Exception) {
         }
 
         RequestPlugins.sResultCallback?.onPermissionsGranted()
@@ -149,7 +145,7 @@ internal class Request : OnRequestPermissionsResultCallback {
     private fun onPermissionsDenied(deniedPermissions: Array<String>) {
         try {
             deniedCallback?.onPermissionsDenied(deniedPermissions)
-        } catch (ignore: Exception) {
+        } catch (_: Exception) {
         }
 
         RequestPlugins.sResultCallback?.onPermissionsDenied(deniedPermissions)
@@ -225,4 +221,5 @@ internal class Request : OnRequestPermissionsResultCallback {
         const val TYPE_REQUEST_NOTIFICATIONS = 4
         const val TYPE_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS = 5
     }
+
 }
