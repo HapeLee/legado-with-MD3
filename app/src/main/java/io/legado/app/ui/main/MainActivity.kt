@@ -232,8 +232,6 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         viewPagerMain.offscreenPageLimit = 3
         viewPagerMain.adapter = adapter
         viewPagerMain.registerOnPageChangeCallback(PageChangeCallback())
-
-        window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
     }
 
     /**
@@ -404,6 +402,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         binding.viewPagerMain.adapter = TabFragmentPageAdapter(this)
 
         if (AppConfig.showBottomView) {
+            window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
             val navView = getNavigationBarView()
             navView.visible()
             if (navView === binding.bottomNavigationView) {
@@ -421,6 +420,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             }
 
         } else {
+            window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurface))
             binding.bottomNavigationView.gone()
             binding.navigationRailView.gone()
         }
