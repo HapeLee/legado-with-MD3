@@ -411,7 +411,8 @@ data class Book(
 
         val mangaColorFilter: String? = null,
         var mangaScrollMode: Int? = null,
-        var webtoonSidePaddingDp: Int? = null
+        var webtoonSidePaddingDp: Int? = null,
+        var mangaBackground: String? = null
 
     ) : Parcelable
 

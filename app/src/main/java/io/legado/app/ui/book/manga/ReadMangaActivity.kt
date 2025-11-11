@@ -13,6 +13,7 @@ import android.view.animation.LinearInterpolator
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -25,6 +26,7 @@ import com.bumptech.glide.request.target.Target.SIZE_ORIGINAL
 import com.bumptech.glide.util.FixedPreloadSizeProvider
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
+import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
@@ -52,6 +54,7 @@ import io.legado.app.ui.book.manga.config.MangaClickActionConfigDialog
 import io.legado.app.ui.book.manga.config.MangaColorFilterConfig
 import io.legado.app.ui.book.manga.config.MangaColorFilterDialog
 import io.legado.app.ui.book.manga.config.MangaFooterSettingDialog
+import io.legado.app.ui.book.manga.config.MangaFooterSettingDialog.Companion.MANGA_B
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.ui.book.manga.entities.BaseMangaPage
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
@@ -88,7 +91,7 @@ import kotlin.math.ceil
 class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewModel>(),
     ReadManga.Callback, ChangeBookSourceDialog.CallBack, MangaMenu.CallBack,
     MangaColorFilterDialog.Callback, ScrollTimer.ScrollCallback, MangaFooterSettingDialog.Callback,
-    MangaAutoReadDialog.Callback {
+    MangaAutoReadDialog.Callback, ColorPickerDialogListener {
 
     private val mLayoutManager by lazy {
         MangaLayoutManager(this)
@@ -300,8 +303,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 }
             }
         }
-
-
+        setBackground()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -450,6 +452,16 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         mScrollTimer.isEnabledPage = false
         mScrollTimer.isEnabled = false
     }
+
+    override fun onColorSelected(dialogId: Int, color: Int){
+        if (dialogId == MANGA_B)
+        {
+            AppConfig.mangaBackground = color
+            setBackground()
+        }
+    }
+
+    override fun onDialogDismissed(dialogId: Int) = Unit
 
     override fun loadFail(msg: String) {
         lifecycleScope.launch {
@@ -812,6 +824,10 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             }
         }
 
+    }
+
+    private fun setBackground() {
+        binding.webtoonFrame.setBackgroundColor(AppConfig.mangaBackground)
     }
 
 

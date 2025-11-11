@@ -62,7 +62,6 @@
             android:orientation="horizontal"
             android:paddingHorizontal="16dp"
             android:singleLine="false"
-            app:chipSpacingVertical="0dp"
             app:selectionRequired="true"
             app:singleSelection="true" />
 
@@ -166,6 +165,7 @@
         <com.google.android.material.chip.ChipGroup
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
             android:paddingHorizontal="16dp">
 
             <com.google.android.material.chip.Chip
@@ -281,6 +281,15 @@
                 android:text="@string/manga_cross_fade" />
 
         </LinearLayout>
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_background_color"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="8dp"
+            android:text="@string/bg_color"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"/>
 
         <com.google.android.material.button.MaterialButtonGroup
             android:layout_width="match_parent"

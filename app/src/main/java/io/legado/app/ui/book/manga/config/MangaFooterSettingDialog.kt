@@ -4,15 +4,19 @@ import android.content.DialogInterface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.transition.TransitionManager
 import com.google.android.material.chip.Chip
+import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogMangaFooterSettingBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
 import io.legado.app.ui.widget.ReaderInfoBarView
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -22,6 +26,10 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class MangaFooterSettingDialog :
     BaseBottomSheetDialogFragment(R.layout.dialog_manga_footer_setting) {
+
+    companion object {
+        const val MANGA_B = 1919
+    }
 
     val config = GSON.fromJsonObject<MangaFooterConfig>(AppConfig.mangaFooterConfig).getOrNull()
         ?: MangaFooterConfig()
@@ -60,6 +68,17 @@ class MangaFooterSettingDialog :
                     true
                 }
             })
+        }
+
+        binding.btnBackgroundColor.color = AppConfig.mangaBackground
+        binding.btnBackgroundColor.setOnClickListener {
+            dismiss()
+            ColorPickerDialog.newBuilder()
+                .setColor(AppConfig.mangaBackground)
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(MANGA_B)
+                .show(requireActivity())
         }
 
         binding.llWebtoon.isVisible = initialScrollMode == MangaScrollMode.WEBTOON ||

@@ -243,6 +243,7 @@ class MangaMenu @JvmOverloads constructor(
 
         ivSetting.setOnClickListener {
             callBack.showFooterConfig()
+            runMenuOut()
         }
 
         btnAutoPage.setOnClickListener {
