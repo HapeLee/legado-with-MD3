@@ -1,25 +1,16 @@
 package io.legado.app.lib.permission
 
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.legado.app.R
 import io.legado.app.constant.AppLog
-import io.legado.app.exception.NoStackTraceException
-import io.legado.app.utils.registerForActivityResult
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 
 class PermissionActivity : AppCompatActivity() {
 

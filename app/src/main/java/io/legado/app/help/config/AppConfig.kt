@@ -775,6 +775,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.mangaLongClick, value)
         }
 
+    var mangaBackground: Int
+        get() = appCtx.getPrefInt(PreferKey.mangaBackground, 0xFF000000.toInt())
+        set(value) {
+            appCtx.putPrefInt(PreferKey.mangaBackground, value)
+        }
+
     //漫画滤镜
     var mangaColorFilter
         get() = appCtx.getPrefString(PreferKey.mangaColorFilter, "")

@@ -28,7 +28,10 @@ class PaddingConfigDialog : BaseDialogFragment(R.layout.dialog_read_padding) {
 
     override fun onStart() {
         super.onStart()
-        setLayout(0.9f, 0.9f)
+        if (resources.configuration.smallestScreenWidthDp > 600)
+            setLayout(0.6f, 0.6f)
+        else
+            setLayout(0.9f, 0.8f)
     }
 
     private fun initData() = binding.run {
