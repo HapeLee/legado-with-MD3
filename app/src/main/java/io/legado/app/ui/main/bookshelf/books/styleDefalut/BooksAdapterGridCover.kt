@@ -74,15 +74,15 @@ class BooksAdapterGridCover(context: Context, private val callBack: CallBack) :
         binding: ItemBookshelfGridCompactBinding
     ) {
 
-        binding.cvContent.setOnClickListener {
+        holder.itemView.setOnClickListener {
             getItem(holder.layoutPosition)?.let {
-                callBack.open(it, binding.cvContent)
+                callBack.open(it, binding.root)
             }
         }
 
-        binding.cvContent.setOnLongClickListener {
+        holder.itemView.setOnLongClickListener {
             getItem(holder.layoutPosition)?.let {
-                callBack.openBookInfo(it, binding.cvContent)
+                callBack.openBookInfo(it, binding.root)
             }
             true
         }

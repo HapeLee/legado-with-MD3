@@ -77,7 +77,7 @@ abstract class BaseBooksAdapter<VB : ViewBinding>(context: Context) :
     fun notification(bookUrl: String) {
         getItems().forEachIndexed { i, it ->
             if (it.bookUrl == bookUrl) {
-                notifyItemChanged(i, bundleOf("refresh" to true, "lastUpdateTime" to true))
+                notifyItemChanged(i, bundleOf(Pair("refresh", null), Pair("lastUpdateTime", null)))
                 return
             }
         }
