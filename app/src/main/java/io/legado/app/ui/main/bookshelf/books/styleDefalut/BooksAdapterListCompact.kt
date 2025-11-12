@@ -34,7 +34,6 @@ class BooksAdapterListCompact(
         item: Book,
         payloads: MutableList<Any>
     ) = binding.run {
-        binding.cdCover.transitionName = "book_${item.bookUrl}"
         if (payloads.isEmpty()) {
             tvName.text = item.name
             tvAuthor.text =

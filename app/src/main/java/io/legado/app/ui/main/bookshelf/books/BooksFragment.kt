@@ -187,9 +187,11 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
 
     fun upBookSort(sort: Int) {
         if (!isAdded || view == null) return
-        arguments?.putInt("bookSort", sort)
-        bookSort = sort
-        upRecyclerData()
+        binding.root.post {
+            arguments?.putInt("bookSort", sort)
+            bookSort = sort
+            upRecyclerData()
+        }
     }
 
     fun setEnableRefresh(enable: Boolean) {
@@ -246,6 +248,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
                 binding.emptyView.isGone = list.isNotEmpty()
                 binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
                 booksAdapter.setItems(list)
+                delay(100)
             }
         }
     }
