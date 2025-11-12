@@ -108,6 +108,7 @@ class SearchMenu @JvmOverloads constructor(
                 "${context.getString(R.string.search_content_size)}: ${searchResultList.size}"
             binding.tvCurrentChapter.text = "当前章节: ${it.title}"
         }
+        updateSearchProgress()
     }
 
     fun updateSearchResultIndex(updateIndex: Int) {
@@ -116,6 +117,17 @@ class SearchMenu @JvmOverloads constructor(
             updateIndex < 0 -> 0
             updateIndex >= searchResultList.size -> searchResultList.size - 1
             else -> updateIndex
+        }
+        updateSearchProgress()
+    }
+
+    private fun updateSearchProgress() {
+        val total = searchResultList.size
+        if (total == 0) {
+            binding.tvSearchProgress.text = "0%"
+        } else {
+            val progress = ((currentSearchResultIndex + 1) * 100 / total)
+            binding.tvSearchProgress.text = "$progress%"
         }
     }
 
