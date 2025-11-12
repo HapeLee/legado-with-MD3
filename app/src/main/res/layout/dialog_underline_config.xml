@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingBottom="8dp"
+        android:paddingHorizontal="16dp">
+
+        <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingVertical="8dp"
+            android:minHeight="0dp"
+            android:layout_gravity="center_horizontal" />
+
+        <TextView
+            android:id="@+id/bottom_sheet_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="8dp"
+            android:text="@string/text_underline"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sw_underline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_underline"
+            android:checkable="true"
+            android:focusable="true"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/sw_dottedline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            app:icon="@drawable/ic_dottedline"
+            android:checkable="true"
+            android:focusable="true"/>
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btnUnderlineColor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/underline_color" />
+
+    </com.google.android.material.button.MaterialButtonGroup>
+
+    <io.legado.app.ui.widget.SimpleSliderView
+        android:id="@+id/btn_underline_height"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="@string/underline_height"
+        app:max="20" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="@string/text_dottedline"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="8dp"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="bottom">
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/btn_dotted_line_black"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="32dp"
+            app:title="@string/dotted_line_black"
+            app:max="20" />
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/btn_dotted_line_while"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:title="@string/dotted_line_while"
+            app:max="20" />
+
+    </LinearLayout>
+
+</LinearLayout>

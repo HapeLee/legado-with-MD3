@@ -38,6 +38,7 @@ import io.legado.app.ui.book.read.config.InfoConfigDialog
 import io.legado.app.ui.book.read.config.PaddingConfigDialog
 import io.legado.app.ui.book.read.config.PageKeyDialog
 import io.legado.app.ui.book.read.config.ShadowSetDialog
+import io.legado.app.ui.book.read.config.UnderlineConfigDialog
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.FileDoc
@@ -148,6 +149,10 @@ abstract class BaseReadBookActivity :
 
     fun showFontSelect() {
         showDialogFragment<FontSelectDialog>()
+    }
+
+    fun showUnderlineConfig() {
+        showDialogFragment<UnderlineConfigDialog>()
     }
 
     fun showBgTextConfig() {

@@ -1325,7 +1325,7 @@
     <string name="sort_new_to_old">从新到旧</string>
     <string name="sort_name_asc">名称升序</string>
     <string name="sort_name_desc">名称降序</string>
-    <string name="text_dottedline">文字下划虚线</string>
+    <string name="text_dottedline">下划虚线</string>
     <string name="jump_to_volume">跳转到卷</string>
     <string name="cancel_select">取消选择</string>
     <string name="coll_volume">折叠所有卷</string>
@@ -1340,4 +1340,8 @@
     <string name="text_shadow_set">阴影设置</string>
     <string name="paragraph_typeface">段落样式</string>
     <string name="same_name_book">已有相同书籍</string>
+    <string name="underline_color">下划线颜色</string>
+    <string name="dotted_line_black">实线段长</string>
+    <string name="dotted_line_while">空隙比例</string>
+    <string name="underline_height">线段高度</string>
 </resources>

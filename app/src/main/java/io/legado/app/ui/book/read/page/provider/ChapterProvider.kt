@@ -66,7 +66,7 @@ object ChapterProvider {
         }
     }
 
-    val dashEffect = DashPathEffect(floatArrayOf(dottedBase, dottedRatio), 0f)
+    var dashEffect = DashPathEffect(floatArrayOf(dottedBase, dottedRatio), 0f)
 
     @JvmStatic
     var viewWidth = 0
@@ -877,6 +877,10 @@ object ChapterProvider {
 //            reviewPaint.textSize = contentPaint.textSize * 0.45f
 //            reviewPaint.textAlign = Paint.Align.CENTER
         }
+        dashEffect = DashPathEffect(
+            floatArrayOf(ReadBookConfig.durConfig.dottedBase, ReadBookConfig.durConfig.dottedRatio),
+            0f
+        )
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
         titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra / 10f

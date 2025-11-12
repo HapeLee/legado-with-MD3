@@ -86,6 +86,7 @@ import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
 import io.legado.app.ui.book.read.config.ToolButtonConfigDialog
+import io.legado.app.ui.book.read.config.UnderlineConfigDialog.Companion.U_COLOR
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
@@ -1571,6 +1572,12 @@ class ReadBookActivity : BaseReadBookActivity(),
             A_COLOR -> {
                 setMenuCurAc(color)
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            U_COLOR -> {
+                setUnderlineColor(color)
+                postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
             }
         }
     }

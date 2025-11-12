@@ -211,14 +211,17 @@ data class TextLine(
      */
     private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
         val paint = ChapterProvider.linePaint
-        paint.pathEffect =
-            if (dottedLine && !AppConfig.isEInkMode)
-                ChapterProvider.dashEffect
-            else
-                null
+        paint.color = ReadBookConfig.durConfig.curUnderlineColor()
+        paint.strokeWidth = ReadBookConfig.underlineHeight.toFloat()
+        paint.pathEffect = if (dottedLine && !AppConfig.isEInkMode)
+            ChapterProvider.dashEffect
+        else
+            null
+
         val lineY = height - 1.dpToPx()
         canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, paint)
     }
+
 
 
     fun checkFastDraw(): Boolean {

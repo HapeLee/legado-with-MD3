@@ -9,7 +9,6 @@ import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogFontConfigBinding
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig.dottedLine
 import io.legado.app.help.config.ReadBookConfig.underline
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.book.read.ReadBookActivity
@@ -50,8 +49,6 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
     private fun initView() = binding.run {
         binding.btnTextColor.color = ReadBookConfig.durConfig.curTextColor()
         binding.swUnderline.isChecked = underline
-        binding.swDottedline.isChecked = dottedLine
-        binding.swDottedline.isEnabled = underline
         dsbTextLetterSpacing.valueFormat = {
             ((it - 50) / 100f).toString()
         }
@@ -136,18 +133,10 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
         }
 
         binding.swUnderline.addOnCheckedChangeListener { _, isChecked ->
-            underline = isChecked
-            binding.swDottedline.isEnabled = isChecked
-            if (!isChecked) {
-                dottedLine = false
-                binding.swDottedline.isChecked = false
-            }
-            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+            callBack2?.showUnderlineConfig()
+            dismissAllowingStateLoss()
         }
-        binding.swDottedline.addOnCheckedChangeListener { _, isChecked ->
-            dottedLine = isChecked
-            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
-        }
+
         binding.btnDefaultFonts.setOnClickListener {
             val requireContext = requireContext()
             alert(titleResource = R.string.system_typeface) {
