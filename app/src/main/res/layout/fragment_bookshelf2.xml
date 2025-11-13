@@ -39,6 +39,7 @@
         android:id="@+id/refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginHorizontal="8dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <FrameLayout
@@ -48,7 +49,8 @@
             <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
                 android:id="@+id/rv_bookshelf"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_height="match_parent"
+                android:clipToPadding="false"/>
 
             <io.legado.app.ui.widget.recycler.scroller.FastScroller
                 android:id="@+id/fast_scroller"
