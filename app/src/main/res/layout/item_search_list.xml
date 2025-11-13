@@ -1,45 +1,68 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.listitem.ListItemCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/cd_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:checkable="true"
+    app:cardCornerRadius="16dp"
     android:layout_margin="8dp">
-    
-    <com.google.android.material.listitem.ListItemCardView
-        android:id="@+id/cd_root"
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:orientation="vertical"
+        android:padding="8dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:checkable="true"
-        app:cardCornerRadius="16dp">
+        android:layout_height="wrap_content">
 
-        <LinearLayout
-            android:orientation="vertical"
-            android:padding="8dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:paddingBottom="2dp"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/cd_count"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cd_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            app:cardCornerRadius="8dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="?attr/colorSecondaryVariant"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
 
             <TextView
-                android:id="@+id/tvTitle"
-                android:layout_width="match_parent"
+                android:id="@+id/tv_count"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingBottom="2dp"
-                android:textColor="?attr/colorOnSurface"
+                android:textColor="?attr/colorOnSecondary"
+                android:textSize="10sp"
+                android:padding="4dp"
                 android:textStyle="bold"
-                android:textSize="14sp"/>
+                android:includeFontPadding="false"
+                tools:text="5"
+                tools:ignore="SmallSp" />
 
-            <TextView
-                android:id="@+id/tvContent"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="?attr/colorOnSurface"
-                android:textSize="13sp"
-                android:lineSpacingExtra="2dp"/>
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
+        <TextView
+            android:id="@+id/tvContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="13sp"
+            android:lineSpacingExtra="2dp"
+            app:layout_constraintTop_toBottomOf="@id/tvTitle"/>
 
-    </com.google.android.material.listitem.ListItemCardView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.google.android.material.listitem.ListItemCardView>
 
 
-
-</LinearLayout>

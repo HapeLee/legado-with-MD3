@@ -20,7 +20,8 @@ data class SearchResult(
     val chapterIndex: Int = 0,
     val pageIndex: Int = 0,
     val queryIndexInResult: Int = 0,
-    val queryIndexInChapter: Int = 0
+    val queryIndexInChapter: Int = 0,
+    val progressPercent: Float = 0f
 ) {
 
     fun getTitleSpannable(accentColor: Int): SpannableString {

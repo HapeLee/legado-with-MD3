@@ -2,6 +2,7 @@ package io.legado.app.ui.book.searchContent
 
 import android.content.Context
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.ItemSearchListBinding
@@ -30,6 +31,13 @@ class SearchContentAdapter(context: Context, val callback: Callback) :
             if (payloads.isEmpty()) {
                 tvTitle.text = item.getTitleSpannable(textColorInt)
                 tvContent.text = item.getContentSpannable(textColorInt, accentColorInt, bgColorInt)
+
+                if (item.progressPercent > 0) {
+                    cdCount.isVisible = true
+                    tvCount.text = String.format("%.1f%%", item.progressPercent)
+                } else {
+                    tvCount.isVisible = false
+                }
 
                 cdRoot.setCardBackgroundColor(
                     if (isDur) context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)

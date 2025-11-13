@@ -211,13 +211,23 @@ class SearchContentActivity :
             kotlin.runCatching {
                 appDb.bookChapterDao.getChapterList(viewModel.bookUrl).forEach { bookChapter ->
                     ensureActive()
+                    val totalChapters = viewModel.book?.totalChapterNum
+                        ?: appDb.bookChapterDao.getChapterCount(viewModel.bookUrl)
+
                     val searchResults = if (isLocalBook
                         || viewModel.cacheChapterNames.contains(bookChapter.getFileName())
                     ) {
-                        viewModel.searchChapter(query, bookChapter)
+                        viewModel.searchChapter(query, bookChapter).map { result ->
+                            if (totalChapters > 0) {
+                                result.copy(progressPercent = (bookChapter.index + 1).toFloat() / totalChapters * 100f)
+                            } else {
+                                result
+                            }
+                        }
                     } else {
                         return@forEach
                     }
+
                     ensureActive()
                     if (searchResults.isNotEmpty()) {
                         viewModel.searchResultList.addAll(searchResults)
