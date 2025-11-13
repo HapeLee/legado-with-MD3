@@ -19,7 +19,7 @@ class BatteryView @JvmOverloads constructor(
     private val binding: ViewBatteryBinding =
         ViewBatteryBinding.inflate(LayoutInflater.from(context), this, true)
 
-    enum class BatteryMode { OUTER, INNER, ICON, ARROW, TIME, CLASSIC, NO_BATTERY }
+    enum class BatteryMode { OUTER, INNER, ICON, ARROW, TIME, CLASSIC, NO_BATTERY, EMPTY }
 
     private var battery: Int = 0
 
@@ -166,6 +166,15 @@ class BatteryView @JvmOverloads constructor(
                 binding.batteryTextEnd.visibility = GONE
                 binding.batteryTextInner.visibility = GONE
                 binding.arrowIcon.visibility = GONE
+                binding.batteryClassic.visibility = GONE
+            }
+            BatteryMode.EMPTY -> {
+                binding.batteryFill.visibility = GONE
+                binding.batteryIcon.visibility = GONE
+                binding.batteryText.visibility = GONE
+                binding.batteryTextEnd.visibility = GONE
+                binding.batteryTextInner.visibility = GONE
+                binding.arrowIcon.visibility = INVISIBLE
                 binding.batteryClassic.visibility = GONE
             }
         }
