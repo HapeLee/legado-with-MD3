@@ -126,7 +126,11 @@ abstract class BaseActivity<VB : ViewBinding>(
         if (fullScreen && !isInMultiWindow) {
             fullScreen()
         }
-        setStatusBarColorAuto(Color.TRANSPARENT, false, fullScreen)
+        setStatusBarColorAuto(
+            themeColor(com.google.android.material.R.attr.colorSurface),
+            true,
+            fullScreen
+        )
         val isDarkTheme = when (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
             Configuration.UI_MODE_NIGHT_YES -> true
             Configuration.UI_MODE_NIGHT_NO,
