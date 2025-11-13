@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.ViewConfiguration
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityOptionsCompat
@@ -144,6 +145,7 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
     }
 
     private fun initRecyclerView() {
+        upFastScrollerBar()
         binding.refreshLayout.setOnRefreshListener {
             val books = booksAdapter.getBookItems()
             val refreshList = if (AppConfig.bookshelfRefreshingLimit > 0) {
@@ -185,6 +187,17 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
                 systemBars.bottom
             )
             WindowInsetsCompat.CONSUMED
+        }
+    }
+
+    private fun upFastScrollerBar() {
+        val showBookshelfFastScroller = AppConfig.showBookshelfFastScroller
+        binding.rvBookshelf.setFastScrollEnabled(showBookshelfFastScroller)
+        if (showBookshelfFastScroller) {
+            binding.rvBookshelf.scrollBarSize = 0
+        } else {
+            binding.rvBookshelf.scrollBarSize =
+                ViewConfiguration.get(requireContext()).scaledScrollBarSize
         }
     }
 

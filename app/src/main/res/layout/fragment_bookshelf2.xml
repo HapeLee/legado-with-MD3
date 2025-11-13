@@ -39,17 +39,26 @@
         android:id="@+id/refresh_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingHorizontal="8dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_bookshelf"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            tools:listitem="@layout/item_bookshelf_list" />
+            android:layout_height="match_parent">
 
+            <io.legado.app.ui.widget.recycler.scroller.FastScrollRecyclerView
+                android:id="@+id/rv_bookshelf"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+            <io.legado.app.ui.widget.recycler.scroller.FastScroller
+                android:id="@+id/fast_scroller"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_gravity="end" />
+
+        </FrameLayout>
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
 
     <TextView
         android:id="@+id/tv_empty_msg"
