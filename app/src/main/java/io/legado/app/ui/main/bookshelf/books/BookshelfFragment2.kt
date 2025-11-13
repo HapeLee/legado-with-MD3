@@ -11,6 +11,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -51,6 +52,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
@@ -118,6 +120,10 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         setSupportToolbar(binding.topBar)
+        postponeEnterTransition()
+        view.doOnPreDraw {
+            startPostponedEnterTransition()
+        }
         initRecyclerView()
         initBookGroupData()
         initAllBooksData()
@@ -205,7 +211,7 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         if (data != bookGroups) {
             bookGroups = data
             booksAdapter.updateItems()
-            binding.tvEmptyMsg.isGone = getItemCount() > 0
+            binding.emptyView.isGone = getItemCount() > 0
             binding.refreshLayout.isEnabled = enableRefresh && getItemCount() > 0
         }
     }
@@ -299,10 +305,11 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
             ).catch {
                 AppLog.put("书架更新出错", it)
             }.conflate().flowOn(Dispatchers.Default).collect { list ->
-                books = list
+                if (view == null) return@collect
+                binding.emptyView.isGone = list.isNotEmpty()
+                binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
                 booksAdapter.updateItems()
-                binding.tvEmptyMsg.isGone = getItemCount() > 0
-                binding.refreshLayout.isEnabled = enableRefresh && getItemCount() > 0
+                delay(500)
             }
         }
     }

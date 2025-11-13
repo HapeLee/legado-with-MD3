@@ -10,6 +10,7 @@ import android.view.ViewConfiguration
 import androidx.core.app.ActivityOptionsCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnPreDraw
 import androidx.core.view.isGone
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -115,6 +116,10 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     private var enableRefresh = true
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
+        postponeEnterTransition()
+        view.doOnPreDraw {
+            startPostponedEnterTransition()
+        }
         arguments?.let {
             position = it.getInt("position", 0)
             groupId = it.getLong("groupId", -1)
@@ -243,10 +248,11 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
             ).catch {
                 AppLog.put("书架更新出错", it)
             }.conflate().flowOn(Dispatchers.Default).collect { list ->
+                if (view == null) return@collect
                 binding.emptyView.isGone = list.isNotEmpty()
                 binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
                 booksAdapter.setItems(list)
-                delay(100)
+                delay(500)
             }
         }
     }

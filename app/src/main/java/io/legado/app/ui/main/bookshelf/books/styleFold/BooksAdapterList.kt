@@ -113,10 +113,10 @@ class BooksAdapterList(context: Context, callBack: CallBack) :
 
         fun registerListener(item: Any) {
             binding.cvContent.setOnClickListener {
-                callBack.onItemClick(item, binding.cvContent)
+                callBack.onItemClick(item, binding.cdCover)
             }
             binding.cvContent.onLongClick {
-                callBack.onItemLongClick(item, binding.cvContent)
+                callBack.onItemLongClick(item, binding.cdCover)
             }
         }
 
