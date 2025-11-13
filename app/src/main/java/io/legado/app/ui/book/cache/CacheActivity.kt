@@ -509,10 +509,10 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     @SuppressLint("SetTextI18n")
     private fun alertExportFileName() {
         alert(R.string.export_file_name) {
-            val message = "Variable: name, author."
+            val message = "支持变量：name(书籍名),author(作者),group(分组),source(书源名), 使用半角逗号分割，按照输入排序导出，其他字段视作备注。"
             setMessage(message)
             val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
-                editView.hint = "file name js"
+                editLayout.hint = "name,author,xxx"
                 editView.setText(AppConfig.bookExportFileName)
             }
             customView { alertBinding.root }
@@ -522,6 +522,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
             cancelButton()
         }
     }
+
 
     private fun getTypeName(): String {
         return exportTypes.getOrElse(AppConfig.exportType) {

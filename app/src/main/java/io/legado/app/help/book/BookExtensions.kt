@@ -32,6 +32,7 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
+import androidx.core.net.toUri
 
 
 val Book.isAudio: Boolean
@@ -113,7 +114,7 @@ fun Book.getLocalUri(): Uri {
         return uri
     }
     uri = if (bookUrl.isUri()) {
-        Uri.parse(bookUrl)
+        bookUrl.toUri()
     } else {
         Uri.fromFile(File(bookUrl))
     }
@@ -148,7 +149,7 @@ fun Book.getLocalUri(): Uri {
     // 查找添加本地选择的目录
     if (!importBookDir.isNullOrBlank() && defaultBookDir != importBookDir) {
         val treeUri = if (importBookDir.isUri()) {
-            Uri.parse(importBookDir)
+            importBookDir.toUri()
         } else {
             Uri.fromFile(File(importBookDir))
         }
@@ -170,7 +171,7 @@ fun Book.getLocalUri(): Uri {
 fun Book.getArchiveUri(): Uri? {
     val defaultBookDir = AppConfig.defaultBookTreeUri
     return if (isArchive && !defaultBookDir.isNullOrBlank()) {
-        FileDoc.fromUri(Uri.parse(defaultBookDir), true)
+        FileDoc.fromUri(defaultBookDir.toUri(), true)
             .find(archiveName)?.uri
     } else {
         null
@@ -308,20 +309,43 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
 }
 
 fun Book.getExportFileName(suffix: String): String {
-    val jsStr = AppConfig.bookExportFileName
-    if (jsStr.isNullOrBlank()) {
+    val template = AppConfig.bookExportFileName
+    if (template.isNullOrBlank()) {
         return "$name 作者：${getRealAuthor()}.$suffix"
     }
-    val bindings = buildScriptBindings { bindings ->
-        bindings["epubIndex"] = ""// 兼容老版本,修复可能存在的错误
-        bindings["name"] = name
-        bindings["author"] = getRealAuthor()
+    return try {
+        val fields = template.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        val parts = fields.map { field ->
+            when (field.lowercase()) {
+                "name" -> name
+                "author" -> getRealAuthor()
+                "group" -> group
+                "source" -> originName
+                else -> field
+            }
+        }
+        val fileName = buildString {
+            var prevIsVariable = false
+            parts.forEachIndexed { index, part ->
+                val isVariable = part == name || part == getRealAuthor() || part == group || part == originName
+
+                if (index > 0) {
+                    if (prevIsVariable && isVariable) {
+                        append("-")
+                    } else if (!isVariable) {
+                        append("_")
+                    }
+                }
+
+                append(part)
+                prevIsVariable = isVariable
+            }
+        }
+        "$fileName.$suffix"
+    } catch (e: Exception) {
+        AppLog.put("导出书名规则错误,使用默认规则\n${e.localizedMessage}", e)
+        "$name 作者：${getRealAuthor()}.$suffix"
     }
-    return kotlin.runCatching {
-        RhinoScriptEngine.eval(jsStr, bindings).toString() + "." + suffix
-    }.onFailure {
-        AppLog.put("导出书名规则错误,使用默认规则\n${it.localizedMessage}", it)
-    }.getOrDefault("$name 作者：${getRealAuthor()}.$suffix")
 }
 
 /**
