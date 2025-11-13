@@ -179,16 +179,30 @@ class PageView(context: Context) : FrameLayout(context) {
         ReadTipConfig.apply {
             tvHeaderLeft.isGone = tipHeaderLeft == none
             tvHeaderMiddle.isGone = tipHeaderMiddle == none
-            if (tvHeaderLeft.isGone && tvHeaderMiddle.isGone)
-                tvHeaderRight.isGone = tipHeaderRight == none
-            else
-                tvHeaderRight.isInvisible = tipHeaderRight == none
+            if (tipHeaderRight == none) {
+                if (tipHeaderMiddle == none && tipHeaderLeft == none) {
+                    tvHeaderRight.isGone = true
+                } else {
+                    tvHeaderRight.isGone = false
+                    tvHeaderRight.batteryMode = BatteryView.BatteryMode.EMPTY
+                }
+            } else {
+                tvHeaderRight.isGone = false
+                tvHeaderRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
+            }
             tvFooterLeft.isGone = tipFooterLeft == none
             tvFooterMiddle.isGone = tipFooterMiddle == none
-            if (tvFooterLeft.isGone && tvFooterMiddle.isGone)
-                tvFooterRight.isGone = tipFooterRight == none
-            else
-                tvFooterRight.isInvisible = tipFooterRight == none
+            if (tipFooterRight == none) {
+                if (tipFooterLeft == none && tipFooterMiddle == none) {
+                    tvFooterRight.isGone = true
+                } else {
+                    tvFooterRight.isGone = false
+                    tvFooterRight.batteryMode = BatteryView.BatteryMode.EMPTY
+                }
+            } else {
+                tvFooterRight.isGone = false
+                tvFooterRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
+            }
         }
         tvTitle = getTipView(ReadTipConfig.chapterTitle)?.apply {
             tag = ReadTipConfig.chapterTitle
