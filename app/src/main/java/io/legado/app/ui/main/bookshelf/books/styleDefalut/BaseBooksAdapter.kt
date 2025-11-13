@@ -12,6 +12,13 @@ import io.legado.app.data.entities.Book
 abstract class BaseBooksAdapter<VB : ViewBinding>(context: Context) :
     DiffRecyclerAdapter<Book, VB>(context) {
 
+    init {
+        setHasStableIds(true)
+    }
+    override fun getItemId(position: Int): Long {
+        return getItems()[position].bookUrl.hashCode().toLong()
+    }
+
     override val keepScrollPosition = true
 
     override val diffItemCallback: DiffUtil.ItemCallback<Book> =

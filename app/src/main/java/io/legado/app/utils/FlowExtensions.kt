@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.buffer
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.firstOrNull
@@ -235,29 +236,16 @@ fun <T> Flow<T>.flowWithLifecycleAndDatabaseChange(
 
 fun <T> Flow<T>.flowWithLifecycleAndDatabaseChangeFirst(
     lifecycle: Lifecycle,
-    minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
+    minActiveState: Lifecycle.State = Lifecycle.State.RESUMED,
     table: String
 ): Flow<T> = callbackFlow {
-    var update = 0
-    val isActive = lifecycle.currentState.isAtLeast(minActiveState)
-    val channel = appDb.invalidationTracker
-        .createFlow(table, emitInitialState = isActive)
+    val invalidationFlow = appDb.invalidationTracker
+        .createFlow(table, emitInitialState = true)
         .conflate()
-        .onEach { update++ }
-        .produceIn(this)
-    if (!isActive) {
-        firstOrNull()?.let {
-            send(it)
-        }
-    }
+
     lifecycle.repeatOnLifecycle(minActiveState) {
-        if (update == 0) {
-            channel.receive()
-        }
-        this@flowWithLifecycleAndDatabaseChangeFirst.collect {
-            update = 0
-            send(it)
-        }
+        combine(this@flowWithLifecycleAndDatabaseChangeFirst, invalidationFlow) { data, _ -> data }
+            .collect { send(it) }
     }
     close()
 }
