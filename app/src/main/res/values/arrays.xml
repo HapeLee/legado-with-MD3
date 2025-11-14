@@ -96,9 +96,10 @@
 	</string-array>
 
 	<string-array name="title_bar_mode">
-		<item>Auto</item>
 		<item>Show in TopBar</item>
 		<item>Show in another line</item>
+		<item>Only Chapter</item>
+		<item>Not show</item>
 	</string-array>
 
 	<string-array name="title_chapter_mode">

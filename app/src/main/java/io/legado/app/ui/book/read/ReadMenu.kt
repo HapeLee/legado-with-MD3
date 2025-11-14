@@ -259,6 +259,7 @@ class ReadMenu @JvmOverloads constructor(
     fun reset() {
         upColorConfig()
         initView()
+        upBookView()
     }
 
     fun refreshMenuColorFilter() {
@@ -725,14 +726,33 @@ class ReadMenu @JvmOverloads constructor(
     fun upBookView() {
         val bookName = ReadBook.book?.name ?: ""
 
-        val isTablet = (resources.configuration.screenLayout and Configuration.SCREENLAYOUT_SIZE_MASK) >= Configuration.SCREENLAYOUT_SIZE_LARGE
+        val mode = AppConfig.titleBarMode?.toInt()
 
-        if (isTablet || resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            binding.titleBar.title = bookName
-            binding.tvBookName.gone()
-        } else {
-            binding.titleBar.title = " "
-            binding.tvBookName.text = bookName
+        when (mode) {
+            0 -> { // 在应用栏上显示
+                binding.titleBar.title = bookName
+                binding.llBook.visible()
+                binding.tvBookName.gone()
+            }
+            1 -> { // 在独立行上显示
+                binding.titleBar.title = " "
+                binding.tvBookName.text = bookName
+                binding.llBook.visible()
+                binding.tvBookName.visible()
+            }
+            2 -> { // 仅显示标题
+                binding.titleBar.title = bookName
+                binding.llBook.gone()
+            }
+            3 -> { // 不显示
+                binding.titleBar.title = " "
+                binding.llBook.gone()
+            }
+            else -> {
+                binding.titleBar.title = " "
+                binding.tvBookName.text = bookName
+                binding.llBook.visible()
+            }
         }
 
         ReadBook.curTextChapter?.let {
@@ -743,13 +763,15 @@ class ReadMenu @JvmOverloads constructor(
             } else {
                 binding.tvChapterUrl.gone()
             }
+
             upSeekBar()
             binding.tvPre.isEnabled = ReadBook.durChapterIndex != 0
             binding.tvNext.isEnabled = ReadBook.durChapterIndex != ReadBook.simulatedChapterSize - 1
-        } ?: let {
+        } ?: run {
             binding.tvChapterUrl.gone()
         }
     }
+
 
     fun upSeekBar() {
         //孩子们 土方法丑陋但有效

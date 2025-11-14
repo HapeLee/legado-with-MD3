@@ -177,15 +177,10 @@
     </string-array>
 
     <string-array name="title_bar_mode">
-        <item>自动</item>
         <item>在应用栏上显示</item>
         <item>在独立行上显示</item>
-    </string-array>
-
-    <string-array name="title_chapter_mode">
-        <item>不显示标题</item>
-        <item>不显示章节</item>
-        <item>Disable title and chapter display</item>
+        <item>仅显示标题</item>
+        <item>不显示</item>
     </string-array>
 
     <string name="all_version">所有版本</string>

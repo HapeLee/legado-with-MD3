@@ -217,4 +217,6 @@ object PreferKey {
 
     const val disableMangaScrollAnimation = "disableMangaScrollAnimation"
     const val disableMangaCrossFade = "disableMangaCrossFade"
+
+    const val titleBarMode = "titleBarMode"
 }

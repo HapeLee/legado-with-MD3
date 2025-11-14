@@ -42,11 +42,11 @@
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.NameListPreference
-            android:defaultValue="0"
-            android:entries="@array/read_slider_mode"
-            android:entryValues="@array/read_slider_mode_value"
-            android:key="title_bar_mode"
-            android:title="@string/read_slider_mode"
+            android:defaultValue="1"
+            android:entries="@array/title_bar_mode"
+            android:entryValues="@array/title_bar_mode_value"
+            android:key="titleBarMode"
+            android:title="@string/title_bar_mode"
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.Preference

@@ -89,7 +89,7 @@ class MoreConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_more_conf
                 }
 
                 PreferKey.keepLight -> postEvent(key, true)
-                PreferKey.readSliderMode -> postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+                PreferKey.readSliderMode, PreferKey.titleBarMode -> postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 PreferKey.textSelectAble -> postEvent(key, getPrefBoolean(key))
                 PreferKey.screenOrientation -> {
                     (activity as? ReadBookActivity)?.setOrientation()

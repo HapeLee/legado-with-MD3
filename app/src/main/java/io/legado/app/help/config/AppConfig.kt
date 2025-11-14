@@ -734,6 +734,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.disableMangaCrossFade, value)
         }
 
+    var titleBarMode
+        get() = appCtx.getPrefString(PreferKey.titleBarMode, "1")
+        set(value) {
+            appCtx.putPrefString(PreferKey.titleBarMode, value)
+        }
+
     //漫画预加载数量
     var mangaPreDownloadNum
         get() = appCtx.getPrefInt(PreferKey.mangaPreDownloadNum, 10)
