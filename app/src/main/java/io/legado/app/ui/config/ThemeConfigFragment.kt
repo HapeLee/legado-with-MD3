@@ -133,7 +133,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
 
         themePref?.setOnPreferenceChangeListener { _, newValue ->
             colorPrimary?.isVisible = newValue == "12"
-            colorImage?.isVisible = currentTheme == "12"
+            colorImage?.isVisible = newValue  == "12"
             customMode?.isVisible = newValue == "12"
             true
         }

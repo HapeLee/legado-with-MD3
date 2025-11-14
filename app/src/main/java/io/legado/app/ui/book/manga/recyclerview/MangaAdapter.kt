@@ -22,6 +22,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter.Companion.TYPE_FOOTER_VIEW
 import io.legado.app.databinding.ItemBookMangaEdgeBinding
 import io.legado.app.databinding.ItemBookMangaPageBinding
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.progress.ProgressManager
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadManga
@@ -107,6 +108,7 @@ class MangaAdapter(private val context: Context) :
 
         fun onBind(item: MangaPage) {
             setImageColorFilter()
+            setBackground()
             val isLastImage = item.imageCount > 0 && item.index == item.imageCount - 1
             loadImageWithRetry(item.mImageUrl, isHorizontal, isLastImage, mTransformation)
         }
@@ -127,6 +129,11 @@ class MangaAdapter(private val context: Context) :
                 0f, 0f, 0f, (255 - mConfig.a) / 255f, 0f
             )
             binding.image.colorFilter = ColorMatrixColorFilter(ColorMatrix(matrix))
+        }
+
+        fun setBackground() {
+            binding.rootView.setBackgroundColor(AppConfig.mangaBackground)
+            binding.flProgress.setBackgroundColor(AppConfig.mangaBackground)
         }
     }
 

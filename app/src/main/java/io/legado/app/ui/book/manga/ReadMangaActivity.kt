@@ -828,6 +828,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     private fun setBackground() {
         binding.webtoonFrame.setBackgroundColor(AppConfig.mangaBackground)
+        binding.recyclerView.setBackgroundColor(AppConfig.mangaBackground)
+        mAdapter.notifyItemRangeChanged(0, mAdapter.itemCount)
     }
 
 
