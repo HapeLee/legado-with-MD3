@@ -350,12 +350,14 @@ class ChapterListAdapter(
 
                 isDur -> {
                     ivVolume.gone()
+                    tvChapterName.textSize = 14f
                     tvChapterName.setTextColor(context.themeColor(androidx.appcompat.R.attr.colorPrimary))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
                 }
 
                 else -> {
                     ivVolume.gone()
+                    tvChapterName.textSize = 14f
                     tvChapterName.setTextColor(context.themeColor(com.google.android.material.R.attr.colorOnSurface))
                     tvChapterItem.setBackgroundColor(context.themeColor(com.google.android.material.R.attr.colorSurface))
                 }
