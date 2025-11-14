@@ -203,50 +203,47 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     private fun upRecyclerData() {
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
-            appDb.bookDao.flowByGroup(groupId).map { list ->
-                //排序
 
-                val isDescending = AppConfig.bookshelfSortOrder == 1
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
 
-                when (bookSort) {
-                    1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
-                    else list.sortedBy { it.latestChapterTime }
+                appDb.bookDao.flowByGroup(groupId)
+                    .map { list ->
+                        val isDescending = AppConfig.bookshelfSortOrder == 1
 
-                    2 -> if (isDescending)
-                        list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
-                    else
-                        list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
+                        when (bookSort) {
+                            1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
+                            else list.sortedBy { it.latestChapterTime }
 
-                    3 -> if (isDescending) list.sortedByDescending { it.order }
-                    else list.sortedBy { it.order }
+                            2 -> if (isDescending)
+                                list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
+                            else
+                                list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
 
-                    4 -> if (isDescending) list.sortedByDescending {
-                        max(
-                            it.latestChapterTime,
-                            it.durChapterTime
-                        )
+                            3 -> if (isDescending) list.sortedByDescending { it.order }
+                            else list.sortedBy { it.order }
+
+                            4 -> if (isDescending)
+                                list.sortedByDescending { max(it.latestChapterTime, it.durChapterTime) }
+                            else
+                                list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
+
+                            5 -> if (isDescending)
+                                list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
+                            else
+                                list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
+
+                            else ->
+                                if (isDescending) list.sortedByDescending { it.durChapterTime }
+                                else list.sortedBy { it.durChapterTime }
+                        }
                     }
-                    else list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
-
-                    5 -> if (isDescending)
-                        list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
-                    else
-                        list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
-
-                    else -> if (isDescending) list.sortedByDescending { it.durChapterTime }
-                    else list.sortedBy { it.durChapterTime }
-                }
-            }.flowWithLifecycleAndDatabaseChangeFirst(
-                viewLifecycleOwner.lifecycle,
-                Lifecycle.State.RESUMED,
-                AppDatabase.BOOK_TABLE_NAME
-            ).catch {
-                AppLog.put("书架更新出错", it)
-            }.conflate().flowOn(Dispatchers.Default).collect { list ->
-                binding.emptyView.isGone = list.isNotEmpty()
-                binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
-                booksAdapter.setItems(list)
-                delay(500)
+                    .flowOn(Dispatchers.Default)
+                    .catch { AppLog.put("书架更新出错", it) }
+                    .collect { list ->
+                        binding.emptyView.isGone = list.isNotEmpty()
+                        binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
+                        booksAdapter.setItems(list)
+                    }
             }
         }
     }
