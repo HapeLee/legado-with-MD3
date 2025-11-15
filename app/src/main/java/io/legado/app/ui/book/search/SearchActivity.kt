@@ -428,6 +428,7 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         val searchScope = intent?.getStringExtra("searchScope")
         searchScope?.let {
             viewModel.searchScope.update(searchScope, false)
+            updateSearchScopeChip()
         }
         val key = intent?.getStringExtra("key")
         if (key.isNullOrBlank()) {

@@ -19,6 +19,7 @@
         android:id="@+id/rg_scope"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        style="@style/Widget.Material3.MaterialButtonGroup.Connected"
         android:layout_marginHorizontal="16dp"
         android:clickable="true"
         android:focusable="true"
@@ -33,7 +34,7 @@
             android:id="@+id/rb_group"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
             android:layout_weight="1"
             android:checked="true"
             android:text="@string/group" />
@@ -42,7 +43,7 @@
             android:id="@+id/rb_source"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
             android:layout_weight="1"
             android:singleLine="true"
             android:text="@string/book_source" />
