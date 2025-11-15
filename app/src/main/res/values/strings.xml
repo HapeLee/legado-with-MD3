@@ -1297,7 +1297,7 @@
     <string name="seed_photo_summary">使用图片生成主题颜色</string>
     <string name="seed_photo_alart">若需使用种子颜色，请取消种子图片选择</string>
     <string name="click_to_delete">Click to delete or change</string>
-    <string name="tip_custom_mode">切换至自定义主题或调整自定义设置时，部分选项需要重启。</string>
+    <string name="tip_custom_mode">由于主题引擎依赖Monet，对于低于Android12的设备，动态取色与自定义主题不会生效。</string>
     <string name="restart_required_message">修改该选项需要重启</string>
     <string name="restart_later_message">稍后重启</string>
     <string name="search_select_group">选择书源分组</string>
