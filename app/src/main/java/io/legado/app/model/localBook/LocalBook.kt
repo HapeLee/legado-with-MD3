@@ -195,7 +195,7 @@ object LocalBook {
                 return StringEscapeUtils.unescapeHtml4(content)
             }
         }
-        if (content.isNullOrEmpty()) {
+        if (content.isNullOrEmpty() && !chapter.isVolume) {
             return null
         }
         return content
