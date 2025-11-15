@@ -100,7 +100,7 @@ class SimpleSliderView @JvmOverloads constructor(
     private fun showSeekBarDialog() {
         context.alert(title = null, message = null) {
             customView {
-                val detailSeekBar = DetailSeekBar(ctx).apply {
+                val detailSeekBar = SimpleCounterView(ctx).apply {
                     max = _max
                     min = _min
                     progress = _progress
