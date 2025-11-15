@@ -1101,12 +1101,15 @@ object ChapterProvider {
         visibleRight = viewWidth - paddingRight
         visibleBottom = paddingTop + visibleHeight
 
+        val shadowPad = (contentPaint.shadowLayerRadius + 2).toInt()
+
         visibleRect.set(
-            paddingLeft.toFloat(),
-            paddingTop.toFloat(),
-            visibleRight.toFloat(),
-            visibleBottom.toFloat()
+            (paddingLeft - shadowPad).toFloat(),
+            (paddingTop - shadowPad).toFloat(),
+            (visibleRight + shadowPad).toFloat(),
+            (visibleBottom + shadowPad).toFloat()
         )
+
         //TODO: 有关测量相关问题
     }
 

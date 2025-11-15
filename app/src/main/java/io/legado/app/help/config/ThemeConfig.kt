@@ -52,6 +52,7 @@ object ThemeConfig {
         initNightMode()
         BookCover.upDefaultCover()
         postEvent(EventBus.RECREATE, "")
+        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
     }
 
     fun applyDayNightInit(context: Context) {

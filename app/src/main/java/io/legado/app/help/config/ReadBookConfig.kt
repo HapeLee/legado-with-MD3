@@ -670,10 +670,10 @@ object ReadBookConfig {
         private var textColorInt = -1
 
         @Transient
-        private var textColorSIntNight = -1
+        private var shadowColorNightInt = -1
 
         @Transient
-        private var textColorSInt = -1
+        private var shadowColorInt = -1
 
         @Transient
         private var menuBgColorInt = -1
@@ -700,8 +700,8 @@ object ReadBookConfig {
             textColorIntEInk = textColorEInk.toColorInt()
             textColorIntNight = textColorNight.toColorInt()
             textColorInt = textColor.toColorInt()
-            textColorSIntNight = shadowColorN.toColorInt()
-            textColorSInt = shadowColor.toColorInt()
+            shadowColorNightInt = shadowColorN.toColorInt()
+            shadowColorInt = shadowColor.toColorInt()
             menuBgColorInt = menuBgColor.toColorInt()
             menuBgColorNightInt = menuBgColorNight.toColorInt()
             menuAcColorInt = menuAcColor.toColorInt()
@@ -715,11 +715,11 @@ object ReadBookConfig {
             when {
                 AppConfig.isNightTheme -> {
                     shadowColorN = "#${color.hexString}"
-                    textColorSIntNight = color
+                    shadowColorNightInt = color
                 }
                 else -> {
                     shadowColor = "#${color.hexString}"
-                    textColorSInt = color
+                    shadowColorInt = color
                 }
             }
         }
@@ -759,8 +759,8 @@ object ReadBookConfig {
                 initColorInt()
             }
             return when {
-                AppConfig.isNightTheme -> textColorSIntNight
-                else -> textColorSInt
+                AppConfig.isNightTheme -> shadowColorNightInt
+                else -> shadowColorInt
             }
         }
 
