@@ -313,40 +313,46 @@ fun Book.getExportFileName(suffix: String): String {
     if (template.isNullOrBlank()) {
         return "$name 作者：${getRealAuthor()}.$suffix"
     }
+
     return try {
-        val fields = template.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        val parts = fields.map { field ->
-            when (field.lowercase()) {
-                "name" -> name
-                "author" -> getRealAuthor()
-                "group" -> group
-                "source" -> originName
-                else -> field
-            }
-        }
-        val fileName = buildString {
-            var prevIsVariable = false
-            parts.forEachIndexed { index, part ->
-                val isVariable = part == name || part == getRealAuthor() || part == group || part == originName
+        val regex = Regex("\\{([^}]*)\\}")
+        val result = StringBuilder()
+        var lastEnd = 0
 
-                if (index > 0) {
-                    if (prevIsVariable && isVariable) {
-                        append("-")
-                    } else if (!isVariable) {
-                        append("_")
-                    }
-                }
+        for (match in regex.findAll(template)) {
+            result.append(template.substring(lastEnd, match.range.first))
 
-                append(part)
-                prevIsVariable = isVariable
+            val inside = match.groupValues[1]
+
+            val field = when {
+                inside.equals("name", ignoreCase = true) -> name
+                inside.equals("author", ignoreCase = true) -> getRealAuthor()
+                inside.equals("group", ignoreCase = true) -> group
+                inside.equals("source", ignoreCase = true) -> originName
+                else -> null
             }
+
+            if (field != null) {
+                result.append(field)
+            } else {
+                result.append(inside)
+            }
+
+            lastEnd = match.range.last + 1
         }
-        "$fileName.$suffix"
+        
+        if (lastEnd < template.length) {
+            result.append(template.substring(lastEnd))
+        }
+
+        "${result}.$suffix"
+
     } catch (e: Exception) {
         AppLog.put("导出书名规则错误,使用默认规则\n${e.localizedMessage}", e)
         "$name 作者：${getRealAuthor()}.$suffix"
     }
 }
+
 
 /**
  * 获取分割文件后的文件名

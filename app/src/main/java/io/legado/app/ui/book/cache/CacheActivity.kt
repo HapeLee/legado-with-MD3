@@ -509,19 +509,34 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     @SuppressLint("SetTextI18n")
     private fun alertExportFileName() {
         alert(R.string.export_file_name) {
-            val message = "支持变量：name(书籍名),author(作者),group(分组),source(书源名), 使用半角逗号分割，按照输入排序导出，其他字段视作备注。"
+            val message = """
+支持变量：{name}（书名）、{author}（作者）、{group}（分组）、{source}（书源）。
+可以在字段前后加任意字符。
+
+示例：
+书名：《{name}》 作者：{author}
+输出：书名：《三体》 作者：刘慈欣
+
+书名：《{name}》-作者：{author}_备注
+输出：书名：《三体》-作者：刘慈欣_备注
+        """.trimIndent()
+
             setMessage(message)
+
             val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
-                editLayout.hint = "name,author,xxx"
+                editLayout.hint = "书名：《{name}》 作者：{author}"
                 editView.setText(AppConfig.bookExportFileName)
             }
+
             customView { alertBinding.root }
+
             okButton {
                 AppConfig.bookExportFileName = alertBinding.editView.text?.toString()
             }
             cancelButton()
         }
     }
+
 
 
     private fun getTypeName(): String {
