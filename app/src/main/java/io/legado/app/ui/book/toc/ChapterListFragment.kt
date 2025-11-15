@@ -38,6 +38,7 @@ import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.observeEvent
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -369,6 +370,7 @@ class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapt
             }.let {
                 adapter.setItems(it)
             }
+            postEvent(EventBus.UP_TOC,true)
         }
     }
 

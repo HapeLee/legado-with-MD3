@@ -26,7 +26,9 @@ import androidx.fragment.app.FragmentPagerAdapter
 import com.google.android.material.tabs.TabLayout
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
+import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.databinding.ActivityChapterListBinding
 import io.legado.app.databinding.DialogDownloadChoiceBinding
 import io.legado.app.help.book.isLocalTxt
@@ -40,8 +42,10 @@ import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
+import io.legado.app.utils.applyTint
 import io.legado.app.utils.gone
 import io.legado.app.utils.hideSoftInput
+import io.legado.app.utils.observeEvent
 import io.legado.app.utils.shouldHideSoftInput
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -110,11 +114,9 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
 
     private fun setupMoreMenuButton() {
         val tag = "android:switcher:${binding.viewPager.id}:0"
-        binding.viewPager.postDelayed({
-            val chapterFragment = supportFragmentManager.findFragmentByTag(tag) as? ChapterListFragment
-            val volumes = chapterFragment?.getAllVolumes().orEmpty()
-            binding.btnChapterMenu.isVisible = volumes.isNotEmpty()
-        }, 200)
+        val chapterFragment = supportFragmentManager.findFragmentByTag(tag) as? ChapterListFragment
+        val volumes = chapterFragment?.getAllVolumes().orEmpty()
+        binding.btnChapterMenu.isVisible = volumes.isNotEmpty()
         binding.btnChapterMenu.setOnClickListener { view ->
             showChapterActionsMenu(view)
         }
@@ -170,6 +172,12 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
             binding.btnChapterMenu.isChecked = false
         }
         popup.show()
+    }
+
+    override fun observeLiveBus() {
+        observeEvent<Boolean>(EventBus.UP_TOC) {
+            setupMoreMenuButton()
+        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
