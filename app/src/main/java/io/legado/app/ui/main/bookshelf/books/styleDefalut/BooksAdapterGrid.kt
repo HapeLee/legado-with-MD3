@@ -9,7 +9,6 @@ import io.legado.app.databinding.ItemBookshelfGridBinding
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
-import io.legado.app.utils.invisible
 import io.legado.app.utils.visible
 
 class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
@@ -45,7 +44,7 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
 
     private fun upRefresh(binding: ItemBookshelfGridBinding, item: Book) {
         if (!item.isLocal && callBack.isUpdate(item.bookUrl)) {
-            binding.cdUnread.invisible()
+            binding.cdUnread.gone()
             binding.rlLoading.visible()
         } else {
             binding.rlLoading.gone()
@@ -55,25 +54,25 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
                     binding.cdUnread.visible()
                     binding.tvUnread.text = unreadCount.toString()
                 } else {
-                    binding.cdUnread.invisible()
+                    binding.cdUnread.gone()
                 }
             } else {
-                binding.cdUnread.invisible()
+                binding.cdUnread.gone()
             }
         }
     }
 
     override fun registerListener(holder: ItemViewHolder, binding: ItemBookshelfGridBinding) {
 
-        holder.itemView.setOnClickListener {
+        binding.cvContent.setOnClickListener {
             getItem(holder.layoutPosition)?.let {
-                callBack.open(it, binding.root)
+                callBack.open(it, binding.cdCover)
             }
         }
 
-        holder.itemView.setOnLongClickListener {
+        binding.cvContent.setOnLongClickListener {
             getItem(holder.layoutPosition)?.let {
-                callBack.openBookInfo(it, binding.root)
+                callBack.openBookInfo(it, binding.cdCover)
             }
             true
         }

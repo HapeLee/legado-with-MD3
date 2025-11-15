@@ -108,13 +108,13 @@ class BooksAdapterListCompact(
         holder.itemView.apply {
             binding.cvContent.setOnClickListener {
                 getItem(holder.layoutPosition)?.let {
-                    callBack.open(it, binding.cvContent)
+                    callBack.open(it, binding.cdCover)
                 }
             }
 
             binding.cvContent.onLongClick {
                 getItem(holder.layoutPosition)?.let {
-                    callBack.openBookInfo(it, binding.cvContent)
+                    callBack.openBookInfo(it, binding.cdCover)
                 }
             }
         }

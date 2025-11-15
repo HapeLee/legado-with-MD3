@@ -170,7 +170,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginBottom="4dp"
                 android:text="@string/page_anim"
                 android:textStyle="bold"
                 android:textSize="12sp" />
@@ -269,6 +268,7 @@
                     style="@style/Widget.Material3Expressive.Button.TonalButton"
                     android:checkable="true"
                     android:clickable="true"
+                    android:layout_marginVertical="2dp"
                     app:icon="@drawable/ic_share_layout"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
@@ -293,7 +293,7 @@
 
                 <ImageView
                     android:layout_width="16dp"
-                    android:layout_height="44dp"
+                    android:layout_height="48dp"
                     app:layout_constraintStart_toEndOf="@id/cb_share_layout"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"

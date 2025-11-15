@@ -124,7 +124,9 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     }
 
     private fun initRecyclerView() {
+        //binding.rvBookshelf.setEdgeEffectColor(primaryColor)
         upFastScrollerBar()
+        //binding.refreshLayout.setColorSchemeColors(accentColor)
         binding.refreshLayout.setOnRefreshListener {
             val books = booksAdapter.getItems()
             val refreshList = if (AppConfig.bookshelfRefreshingLimit > 0) {
@@ -281,6 +283,8 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         /**
          * 将 RecyclerView 中的视图全部回收到 RecycledViewPool 中
          */
+        upLastUpdateTimeJob?.cancel()
+        booksFlowJob?.cancel()
         binding.rvBookshelf.setItemViewCacheSize(0)
         binding.rvBookshelf.adapter = null
     }
