@@ -114,7 +114,7 @@ class ToolButtonConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_too
     }
 
     private fun getAllButtonIds(): List<String> {
-        return listOf("search", "auto_page", "catalog", "read_aloud", "setting", "addBookmark", "theme", "prev_chapter", "next_chapter", "replace")
+        return listOf("search", "auto_page", "catalog", "read_aloud", "setting", "addBookmark", "theme", "prev_chapter", "next_chapter", "replace", "replace_badge")
     }
 
     private fun getButtonInfo(id: String): Pair<Int, String> {
@@ -129,6 +129,7 @@ class ToolButtonConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_too
             "prev_chapter" -> R.drawable.ic_previous to getString(R.string.previous_chapter)
             "next_chapter" -> R.drawable.ic_next to getString(R.string.next_chapter)
             "replace" -> R.drawable.ic_find_replace to getString(R.string.replace_purify)
+            "replace_badge" -> R.drawable.ic_find_replace to getString(R.string.replace_purify_badge)
             else -> R.drawable.ic_help to id
         }
     }

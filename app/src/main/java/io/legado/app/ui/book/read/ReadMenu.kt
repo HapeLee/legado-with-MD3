@@ -13,12 +13,16 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.widget.FrameLayout
 import android.widget.SeekBar
+import androidx.annotation.OptIn
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnAttach
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import com.google.android.material.badge.BadgeDrawable
+import com.google.android.material.badge.BadgeUtils
+import com.google.android.material.badge.ExperimentalBadgeUtils
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonGroup
 import com.google.android.material.overflow.OverflowLinearLayout
@@ -50,10 +54,8 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.themeColor
-import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import splitties.views.onClick
-import splitties.views.onLongClick
 
 /**
  * 阅读界面菜单
@@ -321,6 +323,7 @@ class ReadMenu @JvmOverloads constructor(
         binding.titleBar.visible()
         binding.bottomMenu.visible()
         changeReplace(ReadBook.book?.getUseReplaceRule() ?: false)
+        updateBadge("replace_badge", ReadBook.curTextChapter?.effectiveReplaceRules?.size ?: 0)
         if (anim) {
             binding.titleBar.startAnimation(menuTopIn)
             binding.bottomMenu.startAnimation(menuBottomIn)
@@ -597,6 +600,35 @@ class ReadMenu @JvmOverloads constructor(
         }
     }
 
+    private val badgeMap = mutableMapOf<MaterialButton, BadgeDrawable>()
+
+    @OptIn(ExperimentalBadgeUtils::class)
+    fun updateBadge(id: String, count: Int) {
+        val btn = buttonMap[id] ?: return
+        if (count != 0 && btn.isChecked) {
+            btn.addBadge(count)
+        } else {
+            badgeMap[btn]?.let { BadgeUtils.detachBadgeDrawable(it, btn) }
+            badgeMap.remove(btn)
+        }
+    }
+
+    @OptIn(ExperimentalBadgeUtils::class)
+    private fun MaterialButton.addBadge(count: Int) {
+        val badgeDrawable = BadgeDrawable.create(context).apply {
+            number = count
+            backgroundColor = colorSecondary
+            badgeTextColor = colorSecondaryContainer
+            maxCharacterCount = 3
+            badgeGravity = BadgeDrawable.TOP_END
+            verticalOffset = (16).dpToPx()
+        }
+
+        BadgeUtils.attachBadgeDrawable(badgeDrawable, this, null)
+        badgeMap[this] = badgeDrawable
+    }
+
+
     private fun getAllButtons(): List<ToolButton> {
         return listOf(
             ToolButton(
@@ -667,12 +699,21 @@ class ReadMenu @JvmOverloads constructor(
                 onLongClick = { runMenuOut { callBack.openReplaceRule() } },
                 onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
                 onClick = {  }
+            ),
+            ToolButton(
+                id = "replace_badge",
+                iconRes = R.drawable.ic_find_replace,
+                description = context.getString(R.string.replace_purify),
+                onLongClick = { runMenuOut { callBack.openReplaceRule() } },
+                onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
+                onClick = {  }
             )
         )
     }
 
     fun changeReplace(boolean: Boolean) {
         buttonMap["replace"]?.isChecked = boolean
+        buttonMap["replace_badge"]?.isChecked = boolean
     }
 
     private fun getUserButtons(): List<ToolButton> {
