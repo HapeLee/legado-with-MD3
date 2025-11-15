@@ -33,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
 import androidx.core.net.toUri
+import io.legado.app.utils.normalizeFileName
 
 
 val Book.isAudio: Boolean
@@ -376,7 +377,7 @@ fun Book.getExportFileName(
         RhinoScriptEngine.eval(jsStr, bindings).toString() + "." + suffix
     }.onFailure {
         AppLog.put("导出书名规则错误,使用默认规则\n${it.localizedMessage}", it)
-    }.getOrDefault(default)
+    }.getOrDefault(default).normalizeFileName()
 }
 
 // 根据当前日期计算章节总数

@@ -1345,4 +1345,5 @@
     <string name="dotted_line_while">空隙比例</string>
     <string name="underline_height">线段高度</string>
     <string name="title_bar_mode">菜单标题显示方式</string>
+    <string name="sure_cache_book">是否确认开始缓存？</string>
 </resources>

@@ -34,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.util.LinkedList
@@ -120,6 +121,8 @@ class TextChapterLayout(
         }.onError {
             exception = it
             onException(it)
+        }.onCancel {
+            channel.cancel()
         }.onFinally {
             isCompleted = true
         }
@@ -304,7 +307,7 @@ class TextChapterLayout(
         var isSetTypedImage = false
         var wordCount = 0
         contents.forEach { content ->
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             if (isTextImageStyle) {
                 //图片样式为文字嵌入类型
                 var text = content.replace(ChapterProvider.srcReplaceChar, "丨") //▣
@@ -342,7 +345,7 @@ class TextChapterLayout(
                     val text = content.replace(ChapterProvider.srcReplaceChar, "丨")
                     val matcher = AppPattern.imgPattern.matcher(text)
                     while (matcher.find()) {
-                        coroutineContext.ensureActive()
+                        currentCoroutineContext().ensureActive()
                         val imgSrc = matcher.group(1)!!
                         var iStyle = imageStyle
                         var isSmallImage = true
@@ -450,7 +453,7 @@ class TextChapterLayout(
             textPage.height += endPadding
         }
         textPage.text = stringBuilder.toString()
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         onPageCompleted()
         onCompleted()
     }
@@ -915,7 +918,7 @@ class TextChapterLayout(
                     textPage.leftLineSize = textPage.lineSize
                 }
                 textPage.text = stringBuilder.toString()
-                coroutineContext.ensureActive()
+                currentCoroutineContext().ensureActive()
                 onPageCompleted()
                 //新建页面
                 pendingTextPage = TextPage()

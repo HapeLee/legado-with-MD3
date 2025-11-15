@@ -77,7 +77,7 @@ object Backup {
             "backup${backupDate}-${deviceName}.zip"
         } else {
             "backup${backupDate}.zip"
-        }
+        }.normalizeFileName()
     }
 
     private fun shouldBackup(): Boolean {

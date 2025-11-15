@@ -187,6 +187,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             binding.llRetry.isGone = true
             ReadManga.loadOrUpContent()
         }
+        binding.flLoading.isVisible = !AppConfig.isEInkMode
         mAdapter.addFooterView {
             ViewLoadMoreBinding.bind(loadMoreView)
         }
@@ -313,10 +314,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-//        Looper.myQueue().addIdleHandler {
-//            viewModel.initData(intent)
-//            false
-//        }
+        viewModel.initData(intent)
         justInitData = true
     }
 

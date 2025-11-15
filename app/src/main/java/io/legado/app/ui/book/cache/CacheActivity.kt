@@ -171,7 +171,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
         when (item.itemId) {
             R.id.menu_download,
             R.id.menu_download_after -> {
-                if (!CacheBook.isRun) {
+                if (!CacheBook.isRun) sureCacheBook {
                     adapter.getItems().forEach { book ->
                         val indices = (book.durChapterIndex..book.lastChapterIndex).toList()
                         CacheBook.start(this@CacheActivity, book, indices)
@@ -182,7 +182,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
             }
 
             R.id.menu_download_all -> {
-                if (!CacheBook.isRun) {
+                if (!CacheBook.isRun) sureCacheBook {
                     adapter.getItems().forEach { book ->
                         val indices = (0..book.lastChapterIndex).toList()
                         CacheBook.start(this@CacheActivity, book, indices)
@@ -546,7 +546,15 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
         }
     }
 
-
+    private fun sureCacheBook(action: () -> Unit) {
+        alert(R.string.draw) {
+            setMessage(R.string.sure_cache_book)
+            noButton()
+            yesButton {
+                action.invoke()
+            }
+        }
+    }
 
     private fun getTypeName(): String {
         return exportTypes.getOrElse(AppConfig.exportType) {

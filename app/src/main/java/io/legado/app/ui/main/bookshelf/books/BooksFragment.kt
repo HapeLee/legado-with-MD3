@@ -201,7 +201,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
 
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
 
                 appDb.bookDao.flowByGroup(groupId)
                     .map { list ->
@@ -250,7 +250,7 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
         if (!AppConfig.showLastUpdateTime || (bookshelfLayoutMode != 0 && bookshelfLayoutMode != 4)) {
             return
         }
-        upLastUpdateTimeJob = lifecycleScope.launch {
+        upLastUpdateTimeJob = viewLifecycleOwner.lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 while (isActive) {
                     booksAdapter.upLastUpdateTime()

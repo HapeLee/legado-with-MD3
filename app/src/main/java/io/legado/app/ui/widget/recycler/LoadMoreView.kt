@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.recycler
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import io.legado.app.R
@@ -26,7 +27,7 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     init {
         super.setOnClickListener {
-            if (!showErrorDialog()) {
+            if (!showErrorDialog(it)) {
                 onClickListener?.onClick(it)
             }
         }
@@ -38,7 +39,7 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+        layoutParams.width = LayoutParams.MATCH_PARENT
     }
 
     fun startLoad() {
@@ -79,12 +80,17 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         binding.tvText.visible()
     }
 
-    private fun showErrorDialog(): Boolean {
+    private fun showErrorDialog(view: View): Boolean {
         if (errorMsg.isBlank()) {
             return false
         }
         context.alert(R.string.error) {
             setMessage(errorMsg)
+            if (onClickListener != null) {
+                neutralButton(R.string.retry) {
+                    onClickListener?.onClick(view)
+                }
+            }
         }
         return true
     }

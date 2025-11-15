@@ -169,7 +169,7 @@ liveeventbus = { module = "com.github.michaellee123:LiveEventBus", version.ref =
 material = { module = "com.google.android.material:material", version.ref = "material" }
 
 mozilla-rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
-
+renderscript-intrinsics-replacement-toolkit = { module = "com.github.TomasValenta:renderscript-intrinsics-replacement-toolkit", version = "8eaa829ddd" }
 zxing-lite = { module = "com.github.jenly1314:zxing-lite", version.ref = "zxingLite" }
 
 [bundles]
