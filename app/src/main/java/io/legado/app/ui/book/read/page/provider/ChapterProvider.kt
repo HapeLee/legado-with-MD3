@@ -12,7 +12,6 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.net.toUri
 import androidx.core.os.postDelayed
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
