@@ -12,6 +12,7 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.net.toUri
 import androidx.core.os.postDelayed
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
@@ -1101,7 +1102,11 @@ object ChapterProvider {
         visibleRight = viewWidth - paddingRight
         visibleBottom = paddingTop + visibleHeight
 
-        val shadowPad = (contentPaint.shadowLayerRadius + 2).toInt()
+        val shadowPad = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            (contentPaint.shadowLayerRadius + 2).toInt()
+        } else {
+            20
+        }
 
         visibleRect.set(
             (paddingLeft - shadowPad).toFloat(),
