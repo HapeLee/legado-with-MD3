@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
@@ -311,7 +312,7 @@ class ChapterListAdapter(
         payloads: MutableList<Any>
     ) {
         val isDur = callback.durChapterIndex() == item.index
-        val cached = callback.isLocalBook || item.isVolume || cacheFileNames.contains(item.getFileName())
+        val cached = item.isVolume || cacheFileNames.contains(item.getFileName())
         val isSelected = selectedIndices.contains(item.index)
         val isCollapsed = collapsedVolumes.contains(item.index)
 
@@ -320,6 +321,8 @@ class ChapterListAdapter(
                 tvChapterName.text = getDisplayTitle(item)
                 tvChapterItem.foreground =
                     ThemeUtils.resolveDrawable(context, android.R.attr.selectableItemBackground)
+
+                ivChecked.isVisible = !callback.isLocalBook
 
                 if (!item.tag.isNullOrEmpty() && !item.isVolume) {
                     tvTag.text = item.tag
@@ -402,7 +405,6 @@ class ChapterListAdapter(
 
     private fun upHasCache(binding: ItemChapterListBinding, cached: Boolean) = binding.apply {
         ivChecked.setImageResource(if (cached) R.drawable.ic_download_done else R.drawable.ic_outline_cloud_24)
-        ivChecked.visible()
     }
 
     interface Callback {
