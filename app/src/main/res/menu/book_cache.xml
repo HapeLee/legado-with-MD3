@@ -27,9 +27,9 @@
 
     <item
         android:id="@+id/menu_enable_replace"
-        android:checkable="true"
         android:title="@string/replace_purify"
-        app:showAsAction="never" />
+        android:icon="@drawable/ic_find_replace"
+        app:showAsAction="always" />
 
     <!--自定义导出章节 选择菜单-->
     <item

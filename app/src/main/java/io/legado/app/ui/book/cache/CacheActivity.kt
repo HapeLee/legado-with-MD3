@@ -141,7 +141,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     }
 
     override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
-        menu.findItem(R.id.menu_enable_replace)?.isChecked = AppConfig.exportUseReplace
+        menu.findItem(R.id.menu_enable_replace)?.setIcon(if (AppConfig.exportUseReplace) R.drawable.ic_cfg_replace_enable else R.drawable.ic_find_replace)
         // 菜单打开时读取状态[enableCustomExport]
         menu.findItem(R.id.menu_enable_custom_export)?.isChecked = AppConfig.enableCustomExport
         menu.findItem(R.id.menu_export_no_chapter_name)?.isChecked = AppConfig.exportNoChapterName
@@ -193,7 +193,16 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
             }
 
             R.id.menu_export_all -> exportAll()
-            R.id.menu_enable_replace -> AppConfig.exportUseReplace = !item.isChecked
+            R.id.menu_enable_replace -> {
+                AppConfig.exportUseReplace = !AppConfig.exportUseReplace
+                item.setIcon(if (AppConfig.exportUseReplace) R.drawable.ic_cfg_replace_enable else R.drawable.ic_find_replace)
+                val message = if (AppConfig.exportUseReplace) {
+                    "替换净化功能已开启"
+                } else {
+                    "替换净化功能已关闭"
+                }
+                toastOnUi(message)
+            }
             // 更改菜单状态[enableCustomExport]
             R.id.menu_enable_custom_export -> AppConfig.enableCustomExport = !item.isChecked
             R.id.menu_export_no_chapter_name -> AppConfig.exportNoChapterName = !item.isChecked

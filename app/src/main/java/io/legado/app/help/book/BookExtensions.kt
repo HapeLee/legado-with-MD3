@@ -340,7 +340,7 @@ fun Book.getExportFileName(suffix: String): String {
 
             lastEnd = match.range.last + 1
         }
-        
+
         if (lastEnd < template.length) {
             result.append(template.substring(lastEnd))
         }
