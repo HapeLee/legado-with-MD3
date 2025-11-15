@@ -1107,10 +1107,12 @@ object ChapterProvider {
             20
         }
 
+        val italicPad = if (ReadBookConfig.textItalic)  (ReadBookConfig.textSize * 0.25f).spToPx() else 0f
+
         visibleRect.set(
-            (paddingLeft - shadowPad).toFloat(),
+            (paddingLeft - shadowPad - italicPad),
             (paddingTop - shadowPad).toFloat(),
-            (visibleRight + shadowPad).toFloat(),
+            (visibleRight + shadowPad + italicPad),
             (visibleBottom + shadowPad).toFloat()
         )
 
