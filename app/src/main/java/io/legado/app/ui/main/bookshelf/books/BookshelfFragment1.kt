@@ -3,9 +3,12 @@
 package io.legado.app.ui.main.bookshelf.books
 
 import android.annotation.SuppressLint
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
@@ -21,6 +24,7 @@ import io.legado.app.ui.book.group.GroupEditDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.main.bookshelf.BaseBookshelfFragment
 import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.themeColor
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlin.collections.set
@@ -58,6 +62,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
             binding.titleBar.fitsSystemWindows = true
         initView()
         initBookGroupData()
+        setupExpandButton()
     }
 
     private val selectedGroup: BookGroup?
@@ -71,6 +76,58 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
         TabLayoutMediator(binding.tabLayout, binding.viewPagerBookshelf) { tab, position ->
             tab.text = bookGroups[position].groupName
         }.attach()
+
+        updateTabFadeEffect()
+    }
+
+    private fun setupExpandButton() {
+        binding.btnExpandTabs.setOnClickListener {
+            showTabSelectionMenu()
+        }
+    }
+
+    private fun updateTabFadeEffect() {
+        binding.titleBar.addOnOffsetChangedListener({ appBarLayout, verticalOffset ->
+            if (-verticalOffset >= appBarLayout.totalScrollRange) {
+                val drawable = binding.tabRightFade.background as? GradientDrawable
+                drawable?.colors = intArrayOf(Color.TRANSPARENT,
+                    requireContext().themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
+            } else {
+                val drawable = binding.tabRightFade.background as? GradientDrawable
+                drawable?.colors = intArrayOf(Color.TRANSPARENT,
+                    requireContext().themeColor(com.google.android.material.R.attr.colorSurface))
+            }
+        })
+    }
+
+    private fun showTabSelectionMenu() {
+        val popup = PopupMenu(requireContext(), binding.btnExpandTabs)
+
+        bookGroups.forEachIndexed { index, bookGroup ->
+            popup.menu.add(0, index, index, bookGroup.groupName)
+        }
+
+        popup.setOnMenuItemClickListener { item ->
+            val position = item.itemId
+            if (position in bookGroups.indices) {
+                binding.viewPagerBookshelf.setCurrentItem(position, true)
+            }
+            true
+        }
+
+        popup.setOnDismissListener {
+            binding.btnExpandTabs.isChecked = false
+        }
+
+        popup.show()
+    }
+
+    private fun updateExpandButtonVisibility() {
+        binding.btnExpandTabs.visibility = if (AppConfig.shouldShowExpandButton) {
+            View.VISIBLE
+        } else {
+            View.GONE
+        }
     }
 
     override fun onQueryTextSubmit(query: String?): Boolean {
@@ -99,6 +156,8 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
                     tab.text = bookGroups[position].groupName
                 }.attach()
 
+                updateExpandButtonVisibility()
+                updateTabFadeEffect()
                 selectLastTab()
 
                 binding.tabLayout.post {

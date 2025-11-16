@@ -883,5 +883,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.isPredictiveBackEnabled, value)
         }
+
+    var shouldShowExpandButton: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.shouldShowExpandButton, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.shouldShowExpandButton, value)
+        }
+
 }
 

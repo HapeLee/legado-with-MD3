@@ -1349,4 +1349,5 @@
     <string name="sure_cache_book">是否确认开始缓存？</string>
     <string name="replace_purify_badge">计数替换净化</string>
     <string name="page_anim_fade">渐变</string>
+    <string name="show_bookshelf_tab_menu">显示更多分组按钮</string>
 </resources>

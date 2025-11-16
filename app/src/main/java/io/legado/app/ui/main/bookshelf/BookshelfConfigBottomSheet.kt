@@ -31,12 +31,6 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
             AppConfig.bookshelfLayoutModePortrait
         }
 
-        val isList = bookshelfLayout == 0
-        val isGrid = bookshelfLayout == 1
-        val isGridCompact = bookshelfLayout == 2
-        val isGridCover = bookshelfLayout == 3
-        val isListCompact = bookshelfLayout == 4
-
         val columnCount = requireContext().bookshelfLayoutGrid.takeIf { it > 0 } ?: 1
 
         val bookshelfSort = AppConfig.bookshelfSort
@@ -73,27 +67,36 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
             swShowLastUpdateTime.isChecked = AppConfig.showLastUpdateTime
             swShowWaitUpBooks.isChecked = AppConfig.showWaitUpCount
             swShowBookshelfFastScroller.isChecked = AppConfig.showBookshelfFastScroller
+            swShowBookshelfTabMenu.isChecked = AppConfig.shouldShowExpandButton
 
-            chipList.isChecked = isList
-            chipListCompact.isChecked = isListCompact
-            chipGrid.isChecked = isGrid
-            chipGridCompact.isChecked = isGridCompact
-            chipGridCover.isChecked = isGridCover
+            when (bookshelfLayout) {
+                0 -> chipGroupLayout.check(R.id.chip_list)
+                1 -> chipGroupLayout.check(R.id.chip_grid)
+                2 -> chipGroupLayout.check(R.id.chip_grid_compact)
+                3 -> chipGroupLayout.check(R.id.chip_grid_cover)
+                4 -> chipGroupLayout.check(R.id.chip_list_compact)
+            }
+
             sliderGridCount.progress = columnCount
 
-            binding.tvValue.text = if (AppConfig.bookshelfRefreshingLimit <= 0) "无限制"
-                                    else "${AppConfig.bookshelfRefreshingLimit} 本"
+            updateControlsEnableState()
 
+            chipGroupLayout.setOnCheckedStateChangeListener { group, checkedIds ->
+                updateControlsEnableState()
+            }
+
+            chipGroupStyle.setOnCheckedStateChangeListener { group, checkedIds ->
+                updateControlsEnableState()
+            }
+
+            binding.tvValue.text = if (AppConfig.bookshelfRefreshingLimit <= 0) "无限制"
+            else "${AppConfig.bookshelfRefreshingLimit} 本"
+
+            binding.tvValue.setOnClickListener {
+                showNumberPicker()
+            }
             binding.layoutRefreshLimit.setOnClickListener {
-                NumberPickerDialog(requireContext())
-                    .setTitle("书架更新数量限制")
-                    .setMinValue(0) // 0 表示无限制
-                    .setMaxValue(500) // 可根据需求设定最大值
-                    .setValue(AppConfig.bookshelfRefreshingLimit)
-                    .show { selected ->
-                        AppConfig.bookshelfRefreshingLimit = selected
-                        tvValue.text = if (selected <= 0) "无限制" else "$selected 本"
-                    }
+                showNumberPicker()
             }
 
             when (AppConfig.bookshelfSortOrder) {
@@ -128,19 +131,22 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
                     AppConfig.showBookshelfFastScroller = swShowBookshelfFastScroller.isChecked
                     postEvent(EventBus.BOOKSHELF_REFRESH, "")
                 }
-
+                if (AppConfig.shouldShowExpandButton != swShowBookshelfTabMenu.isChecked) {
+                    AppConfig.shouldShowExpandButton = swShowBookshelfTabMenu.isChecked
+                    postEvent(EventBus.BOOKSHELF_REFRESH, "")
+                }
                 if (bookshelfSort != chipGroupSort.checkedChipId) {
                     AppConfig.bookshelfSort = chipGroupSort.checkedChipId
                     (requireParentFragment() as? BaseBookshelfFragment)?.upSort()
                 }
 
                 val selectedColumn = sliderGridCount.progress
-                val newLayout = when {
-                    chipList.isChecked -> 0
-                    chipGrid.isChecked -> 1
-                    chipGridCompact.isChecked -> 2
-                    chipGridCover.isChecked -> 3
-                    chipListCompact.isChecked -> 4
+                val newLayout = when (chipGroupLayout.checkedChipId) {
+                    R.id.chip_list -> 0
+                    R.id.chip_grid -> 1
+                    R.id.chip_grid_compact -> 2
+                    R.id.chip_grid_cover -> 3
+                    R.id.chip_list_compact -> 4
                     else -> 0
                 }
 
@@ -186,5 +192,27 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
                 dismiss()
             }
         }
+    }
+    private fun showNumberPicker() {
+        NumberPickerDialog(requireContext())
+            .setTitle("书架更新数量限制")
+            .setMinValue(0) // 0 表示无限制
+            .setMaxValue(500) // 可根据需求设定最大值
+            .setValue(AppConfig.bookshelfRefreshingLimit)
+            .show { selected ->
+                AppConfig.bookshelfRefreshingLimit = selected
+                binding.tvValue.text = if (selected <= 0) "无限制" else "$selected 本"
+            }
+    }
+
+    private fun updateControlsEnableState() {
+        val checkedLayoutId = binding.chipGroupLayout.checkedChipId
+        val isListMode = checkedLayoutId == R.id.chip_list || checkedLayoutId == R.id.chip_list_compact
+        binding.swShowLastUpdateTime.isEnabled = isListMode
+
+
+        val checkedStyleChip = binding.chipGroupStyle.findViewById<Chip>(binding.chipGroupStyle.checkedChipId)
+        val isGroupStyle0 = binding.chipGroupStyle.indexOfChild(checkedStyleChip) == 0
+        binding.swShowBookshelfTabMenu.isEnabled = isGroupStyle0
     }
 }

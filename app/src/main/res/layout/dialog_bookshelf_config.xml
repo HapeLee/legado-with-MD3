@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -67,14 +66,18 @@
                 android:layout_height="wrap_content"
                 android:text="@string/show_bookshelf_fast_scroller" />
 
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/sw_show_bookshelf_tab_menu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/show_bookshelf_tab_menu" />
+
             <LinearLayout
                 android:id="@+id/layout_refresh_limit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingHorizontal="2dp"
                 android:orientation="horizontal"
-                android:clickable="true"
-                android:background="?attr/selectableItemBackground">
+                android:clickable="true">
 
                 <TextView
                     android:id="@+id/tv_title"
@@ -84,10 +87,17 @@
                     android:paddingVertical="16dp"
                     android:text="@string/bookshelf_update_limit" />
 
-                <TextView
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/tv_value"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"/>
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingHorizontal="0dp"
+                    android:paddingVertical="8dp"
+                    style="@style/Widget.Material3Expressive.Button.OutlinedButton"/>
+
             </LinearLayout>
 
             <TextView
