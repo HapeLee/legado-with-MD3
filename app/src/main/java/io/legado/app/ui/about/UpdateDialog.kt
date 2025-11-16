@@ -74,6 +74,7 @@ class UpdateDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_update) {
                 val url = arguments?.getString("url")
                 val fileName = arguments?.getString("name")
                 binding.ivAward.gone()
+                binding.tvUrl.text = url
                 binding.btnUpdate.setOnClickListener {
                     if (url.isNullOrBlank() || fileName.isNullOrBlank()) {
                         toastOnUi("下载信息不完整")
