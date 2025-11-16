@@ -236,16 +236,29 @@ fun <T> Flow<T>.flowWithLifecycleAndDatabaseChange(
 
 fun <T> Flow<T>.flowWithLifecycleAndDatabaseChangeFirst(
     lifecycle: Lifecycle,
-    minActiveState: Lifecycle.State = Lifecycle.State.RESUMED,
+    minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
     table: String
 ): Flow<T> = callbackFlow {
-    val invalidationFlow = appDb.invalidationTracker
-        .createFlow(table, emitInitialState = true)
+    var update = 0
+    val isActive = lifecycle.currentState.isAtLeast(minActiveState)
+    val channel = appDb.invalidationTracker
+        .createFlow(table, emitInitialState = isActive)
         .conflate()
-
+        .onEach { update++ }
+        .produceIn(this)
+    if (!isActive) {
+        firstOrNull()?.let {
+            send(it)
+        }
+    }
     lifecycle.repeatOnLifecycle(minActiveState) {
-        combine(this@flowWithLifecycleAndDatabaseChangeFirst, invalidationFlow) { data, _ -> data }
-            .collect { send(it) }
+        if (update == 0) {
+            channel.receive()
+        }
+        this@flowWithLifecycleAndDatabaseChangeFirst.collect {
+            update = 0
+            send(it)
+        }
     }
     close()
 }
