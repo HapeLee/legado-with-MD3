@@ -43,7 +43,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_brightness"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 app:max="255"
                 app:title="@string/brightness" />
@@ -105,7 +105,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_r"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 app:max="255"
                 app:title="R" />
@@ -117,7 +117,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_g"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 app:max="255"
                 app:title="G" />
@@ -130,7 +130,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_b"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 app:max="255"
                 app:title="B" />
@@ -142,7 +142,7 @@
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_a"
-                android:layout_width="wrap_content"
+                android:layout_width="120dp"
                 android:layout_height="wrap_content"
                 app:max="255"
                 app:title="A" />
