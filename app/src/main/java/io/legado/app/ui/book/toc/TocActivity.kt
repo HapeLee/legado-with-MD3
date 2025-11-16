@@ -20,6 +20,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentPagerAdapter
@@ -44,6 +45,7 @@ import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.applyTint
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
@@ -105,10 +107,23 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
                 updateButtonVisibility(tab.position)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
+
             override fun onTabReselected(tab: TabLayout.Tab) {
-                updateButtonVisibility(tab.position)
+                if (tab.position == 0) {
+                    doReverseToc()
+                }
             }
         })
+    }
+
+    private fun doReverseToc() {
+        viewModel.reverseToc {
+            viewModel.chapterListCallBack?.upChapterList(searchView?.query?.toString())
+            setResult(RESULT_OK, Intent().apply {
+                putExtra("index", it.durChapterIndex)
+                putExtra("chapterPos", 0)
+            })
+        }
     }
 
     private fun updateButtonVisibility(tabPosition: Int) {
@@ -286,13 +301,7 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
                 }
             }
 
-            R.id.menu_reverse_toc -> viewModel.reverseToc {
-                viewModel.chapterListCallBack?.upChapterList(searchView?.query?.toString())
-                setResult(RESULT_OK, Intent().apply {
-                    putExtra("index", it.durChapterIndex)
-                    putExtra("chapterPos", 0)
-                })
-            }
+            R.id.menu_reverse_toc -> doReverseToc()
 
             R.id.menu_use_replace -> {
                 AppConfig.tocUiUseReplace = !item.isChecked
