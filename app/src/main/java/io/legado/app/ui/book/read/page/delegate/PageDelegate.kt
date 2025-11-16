@@ -141,7 +141,7 @@ abstract class PageDelegate(protected val readView: ReadView) {
     /**
      * 按下
      */
-    fun onDown() {
+    open fun onDown() {
         //是否移动
         isMoved = false
         //是否存在下一章

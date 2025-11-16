@@ -13,7 +13,8 @@ object PageAnim {
 
     const val scrollPageAnim = 3
 
-    const val noAnim = 4
+    const val fadePageAnim = 4
+    const val noAnim = 5
 
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)

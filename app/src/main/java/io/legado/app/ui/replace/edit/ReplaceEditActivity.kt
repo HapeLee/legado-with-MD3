@@ -21,7 +21,6 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import androidx.core.content.edit
 import io.legado.app.data.appDb
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.utils.toastOnUi

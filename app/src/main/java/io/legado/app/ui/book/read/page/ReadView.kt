@@ -21,6 +21,7 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ContentEditDialog
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
+import io.legado.app.ui.book.read.page.delegate.FadePageDelegate
 import io.legado.app.ui.book.read.page.delegate.HorizontalPageDelegate
 import io.legado.app.ui.book.read.page.delegate.NoAnimPageDelegate
 import io.legado.app.ui.book.read.page.delegate.PageDelegate
@@ -535,6 +536,10 @@ class ReadView(context: Context, attrs: AttributeSet) :
 
             PageAnim.scrollPageAnim -> if (pageDelegate !is ScrollPageDelegate) {
                 pageDelegate = ScrollPageDelegate(this)
+            }
+
+            PageAnim.fadePageAnim -> if (pageDelegate !is FadePageDelegate) {
+                pageDelegate = FadePageDelegate(this)
             }
 
             else -> if (pageDelegate !is NoAnimPageDelegate) {
