@@ -31,11 +31,7 @@ class SearchMenu @JvmOverloads constructor(
 
     private val menuBottomIn: Animation = loadAnimation(context, R.anim.anim_readbook_bottom_in)
     private val menuBottomOut: Animation = loadAnimation(context, R.anim.anim_readbook_bottom_out)
-    //private val bgColor: Int = context.bottomBackground
-    //private val textColor: Int = context.getPrimaryTextColor(ColorUtils.isColorLight(bgColor))
-//    private val bottomBackgroundList: ColorStateList =
-//        Selector.colorBuild().setDefaultColor(bgColor)
-//            .setPressedColor(ColorUtils.darkenColor(bgColor)).create()
+
     private var onMenuOutEnd: (() -> Unit)? = null
     private var isMenuOutAnimating = false
 
@@ -64,22 +60,6 @@ class SearchMenu @JvmOverloads constructor(
     }
 
     private fun initView() = binding.run {
-//        llSearchBaseInfo.setBackgroundColor(bgColor)
-//        tvCurrentSearchInfo.setTextColor(bottomBackgroundList)
-//        llBottomBg.setBackgroundColor(bgColor)
-//        fabLeft.backgroundTintList = bottomBackgroundList
-//        fabLeft.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        fabRight.backgroundTintList = bottomBackgroundList
-//        fabRight.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        tvMainMenu.setTextColor(textColor)
-//        tvSearchResults.setTextColor(textColor)
-//        tvSearchExit.setTextColor(textColor)
-//        ivMainMenu.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        ivSearchResults.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        ivSearchExit.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        ivSearchContentUp.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        ivSearchContentDown.setColorFilter(textColor, PorterDuff.Mode.SRC_IN)
-//        tvCurrentSearchInfo.setTextColor(textColor)
         applyNavigationBarPadding()
     }
 
@@ -104,8 +84,6 @@ class SearchMenu @JvmOverloads constructor(
     @SuppressLint("SetTextI18n")
     fun updateSearchInfo() {
         ReadBook.curTextChapter?.let {
-            binding.tvCurrentSearchInfo.text =
-                "${context.getString(R.string.search_content_size)}: ${searchResultList.size}"
             binding.tvCurrentChapter.text = "当前章节: ${it.title}"
         }
         updateSearchProgress()
@@ -125,9 +103,12 @@ class SearchMenu @JvmOverloads constructor(
         val total = searchResultList.size
         if (total == 0) {
             binding.tvSearchProgress.text = "0%"
+            binding.tvSearchFraction.text = "0/0"
         } else {
-            val progress = ((currentSearchResultIndex + 1) * 100 / total)
+            val current = currentSearchResultIndex + 1
+            val progress = (current * 100 / total)
             binding.tvSearchProgress.text = "$progress%"
+            binding.tvSearchFraction.text = "$current / $total"
         }
     }
 
