@@ -120,6 +120,9 @@ interface ReplaceRuleDao {
     )
     fun findEnabledByTitleScope(name: String, origin: String): List<ReplaceRule>
 
+    @Query("UPDATE replace_rules SET `group` = NULL WHERE `group` IN (:groups)")
+    suspend fun clearGroups(groups: List<String>)
+
     @Query("select * from replace_rules where `group` like '%' || :group || '%'")
     fun getByGroup(group: String): List<ReplaceRule>
 

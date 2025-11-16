@@ -22,8 +22,11 @@ import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import androidx.core.content.edit
+import io.legado.app.data.appDb
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 /**
  * 编辑替换规则
@@ -31,53 +34,6 @@ import io.legado.app.utils.toastOnUi
 class ReplaceEditActivity :
     VMBaseActivity<ActivityReplaceEditBinding, ReplaceEditViewModel>(),
     KeyboardToolPop.CallBack {
-
-    object GroupManager {
-        private const val PREF_NAME = "replace_groups"
-        private const val KEY_CUSTOM_GROUPS = "custom_groups"
-        private const val KEY_LAST_SELECTED = "last_selected_group"
-
-        private val presetGroups = listOf(
-            "默认", "地名", "国家", "企业", "人名", "敏感词", "生僻字", "乱码或广告"
-        )
-
-        private fun prefs(context: Context) =
-            context.getSharedPreferences(PREF_NAME, MODE_PRIVATE)
-
-        fun getAllGroups(context: Context): List<String> =
-            (getCustomGroups(context) + presetGroups).distinct()
-
-        fun getCustomGroups(context: Context): List<String> {
-            val json = prefs(context).getString(KEY_CUSTOM_GROUPS, "[]") ?: "[]"
-            return GSON.fromJson(json, Array<String>::class.java).toList()
-        }
-
-        fun saveCustomGroups(context: Context, groups: List<String>) {
-            prefs(context).edit { putString(KEY_CUSTOM_GROUPS, GSON.toJson(groups)) }
-        }
-
-        fun addCustomGroup(context: Context, group: String) {
-            if (group.isBlank() || presetGroups.contains(group)) return
-            val custom = getCustomGroups(context).toMutableList()
-            if (group !in custom) {
-                custom += group
-                saveCustomGroups(context, custom)
-            }
-        }
-
-        fun removeCustomGroups(context: Context, groupsToRemove: List<String>) {
-            if (groupsToRemove.isEmpty()) return
-            val updated = getCustomGroups(context).filterNot { it in groupsToRemove }
-            saveCustomGroups(context, updated)
-        }
-
-        fun getLastSelectedGroup(context: Context): String =
-            prefs(context).getString(KEY_LAST_SELECTED, "默认") ?: "默认"
-
-        fun setLastSelectedGroup(context: Context, group: String) {
-            prefs(context).edit { putString(KEY_LAST_SELECTED, group) }
-        }
-    }
 
     companion object {
         fun startIntent(
@@ -147,63 +103,50 @@ class ReplaceEditActivity :
     }
 
     private fun setupGroupAutoComplete() = binding.run {
-        val allGroups = GroupManager.getAllGroups(this@ReplaceEditActivity)
-        val adapter = ArrayAdapter(
-            this@ReplaceEditActivity,
-            android.R.layout.simple_dropdown_item_1line,
-            allGroups
-        )
-        etGroup.setAdapter(adapter)
-
-        etGroup.setText(GroupManager.getLastSelectedGroup(this@ReplaceEditActivity), false)
-
-        etGroup.setOnFocusChangeListener { _, hasFocus ->
-            if (!hasFocus) saveCurrentGroup()
+        lifecycleScope.launch {
+            appDb.replaceRuleDao.flowGroups().collectLatest { groups ->
+                val allGroups = listOf("默认") + groups
+                val adapter = ArrayAdapter(
+                    this@ReplaceEditActivity,
+                    android.R.layout.simple_dropdown_item_1line,
+                    allGroups
+                )
+                etGroup.setAdapter(adapter)
+            }
         }
 
-        etGroup.setOnItemClickListener { parent, _, position, _ ->
-            val selected = parent.getItemAtPosition(position) as String
-            GroupManager.setLastSelectedGroup(this@ReplaceEditActivity, selected)
-        }
+        val defaultGroup = viewModel.replaceRule?.group ?: "默认"
+        etGroup.setText(defaultGroup, false)
     }
 
-    private fun refreshGroupList() {
-        val allGroups = GroupManager.getAllGroups(this)
-        val adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_dropdown_item_1line,
-            allGroups
-        )
-        binding.etGroup.setAdapter(adapter)
-    }
-
-    private fun saveCurrentGroup() {
-        val current = binding.etGroup.text.toString().trim()
-        if (current.isNotBlank()) {
-            GroupManager.addCustomGroup(this, current)
-            GroupManager.setLastSelectedGroup(this, current)
-        }
-    }
 
     private fun showGroupManageDialog() {
-        val allGroups = GroupManager.getCustomGroups(this).toMutableList()
-        if (allGroups.isEmpty()) {
-            toastOnUi("暂无自定义分组")
-            return
-        }
+        lifecycleScope.launch {
+            val allGroups = appDb.replaceRuleDao.allGroups()
 
-        val checked = BooleanArray(allGroups.size)
-        alert(title = getString(R.string.group_manage)) {
-            multiChoiceItems(allGroups.toTypedArray(), checked) { _, _, _ -> }
-            negativeButton("关闭")
-            neutralButton("删除所选") {
-                val toDelete = allGroups.filterIndexed { i, _ -> checked[i] }
-                if (toDelete.isNotEmpty()) {
-                    GroupManager.removeCustomGroups(this@ReplaceEditActivity, toDelete)
-                    refreshGroupList()
-                    toastOnUi("已删除 ${toDelete.size} 个分组")
-                } else {
-                    toastOnUi("未选择任何分组")
+            if (allGroups.isEmpty()) {
+                toastOnUi("暂无分组")
+                return@launch
+            }
+
+            val checked = BooleanArray(allGroups.size)
+
+            alert(title = getString(R.string.group_manage)) {
+                multiChoiceItems(allGroups.toTypedArray(), checked) { _, _, _ -> }
+                negativeButton("关闭")
+                neutralButton("删除所选") {
+
+                    val toDelete = allGroups.filterIndexed { i, _ -> checked[i] }
+
+                    if (toDelete.isEmpty()) {
+                        toastOnUi("未选择任何分组")
+                        return@neutralButton
+                    }
+
+                    lifecycleScope.launch {
+                        appDb.replaceRuleDao.clearGroups(toDelete)
+                        toastOnUi("已清空 ${toDelete.size} 个分组")
+                    }
                 }
             }
         }
@@ -224,15 +167,14 @@ class ReplaceEditActivity :
     }
 
     private fun getReplaceRule(): ReplaceRule = binding.run {
-        saveCurrentGroup()
         val rule = viewModel.replaceRule ?: ReplaceRule()
 
         rule.name = etName.text.toString()
-        val groupText = etGroup.text.toString().trim()
-        rule.group = if (groupText == "默认") {
-            null
-        } else {
-            groupText.ifBlank { null }
+        val groupText = binding.etGroup.text.toString().trim()
+        rule.group = when {
+            groupText.isBlank()       -> null
+            groupText == "默认"        -> null
+            else                      -> groupText
         }
         rule.pattern = etReplaceRule.text.toString()
         rule.isRegex = cbUseRegex.isChecked
