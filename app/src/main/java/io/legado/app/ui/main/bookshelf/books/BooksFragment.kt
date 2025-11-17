@@ -45,6 +45,8 @@ import io.legado.app.utils.bookshelfLayoutGrid
 import io.legado.app.utils.bookshelfLayoutMode
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.observeEvent
+import io.legado.app.utils.startActivity
+import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -290,46 +292,60 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     }
 
     override fun open(book: Book, sharedView: View) {
-        val transitionName = "book_${book.bookUrl}"
-        sharedView.transitionName = transitionName
+        if (AppConfig.sharedElementEnterTransitionEnable){
+            val transitionName = "book_${book.bookUrl}"
+            sharedView.transitionName = transitionName
 
-        val cls = when {
-            book.isAudio -> AudioPlayActivity::class.java
-            book.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
-            else -> ReadBookActivity::class.java
+            val cls = when {
+                book.isAudio -> AudioPlayActivity::class.java
+                book.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
+                else -> ReadBookActivity::class.java
+            }
+
+            val intent = Intent(requireContext(), cls).apply {
+                putExtra("bookUrl", book.bookUrl)
+                putExtra("transitionName", transitionName)
+            }
+
+            val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                requireActivity(),
+                sharedView,
+                transitionName
+            )
+
+            startActivity(intent, options.toBundle())
+        } else {
+            startActivityForBook(book)
         }
-
-        val intent = Intent(requireContext(), cls).apply {
-            putExtra("bookUrl", book.bookUrl)
-            putExtra("transitionName", transitionName)
-        }
-
-        val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-            requireActivity(),
-            sharedView,
-            transitionName
-        )
-
-        startActivity(intent, options.toBundle())
     }
 
     override fun openBookInfo(book: Book, sharedView: View) {
-        val intent = Intent(requireContext(), BookInfoActivity::class.java).apply {
-            putExtra("name", book.name)
-            putExtra("author", book.author)
-            putExtra("bookUrl", book.bookUrl)
-            putExtra("transitionName", "book_${book.bookUrl}") // 给共享元素唯一标识
+        if (AppConfig.sharedElementEnterTransitionEnable){
+            val intent = Intent(requireContext(), BookInfoActivity::class.java).apply {
+                putExtra("name", book.name)
+                putExtra("author", book.author)
+                putExtra("bookUrl", book.bookUrl)
+                putExtra("transitionName", "book_${book.bookUrl}")
+            }
+
+            sharedView.transitionName = "book_${book.bookUrl}"
+
+            val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                requireActivity(),
+                sharedView,
+                sharedView.transitionName
+            )
+
+            startActivity(intent, options.toBundle())
+        } else {
+            startActivity<BookInfoActivity> {
+                putExtra("name", book.name)
+                putExtra("author", book.author)
+                putExtra("bookUrl", book.bookUrl)
+            }
+
         }
 
-        sharedView.transitionName = "book_${book.bookUrl}"
-
-        val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-            requireActivity(),
-            sharedView,
-            sharedView.transitionName
-        )
-
-        startActivity(intent, options.toBundle())
     }
 
 

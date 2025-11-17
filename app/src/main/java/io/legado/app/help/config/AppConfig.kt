@@ -586,7 +586,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         get() = appCtx.getPrefBoolean(PreferKey.delayBookLoadEnable, true)
 
     val sharedElementEnterTransitionEnable
-        get() = appCtx.getPrefBoolean(PreferKey.sharedElementEnterTransitionEnable, true)
+        get() = appCtx.getPrefBoolean(PreferKey.sharedElementEnterTransitionEnable, false)
 
     var searchScope: String
         get() = appCtx.getPrefString("searchScope") ?: ""

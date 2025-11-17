@@ -49,6 +49,8 @@ import io.legado.app.utils.cnCompare
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.startActivity
+import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -338,62 +340,86 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
     }
 
     override fun onItemClick(item: Any, sharedView: View) {
-        when (item) {
-            is Book -> {
-                val transitionName = "book_${item.bookUrl}"
-                sharedView.transitionName = transitionName
+        if (AppConfig.sharedElementEnterTransitionEnable){
+            when (item) {
+                is Book -> {
+                    val transitionName = "book_${item.bookUrl}"
+                    sharedView.transitionName = transitionName
 
-                val cls = when {
-                    item.isAudio -> AudioPlayActivity::class.java
-                    item.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
-                    else -> ReadBookActivity::class.java
+                    val cls = when {
+                        item.isAudio -> AudioPlayActivity::class.java
+                        item.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
+                        else -> ReadBookActivity::class.java
+                    }
+
+                    val intent = Intent(requireContext(), cls).apply {
+                        putExtra("bookUrl", item.bookUrl)
+                        putExtra("transitionName", transitionName)
+                    }
+
+                    val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                        requireActivity(),
+                        sharedView,
+                        transitionName
+                    )
+
+                    startActivity(intent, options.toBundle())
                 }
 
-                val intent = Intent(requireContext(), cls).apply {
-                    putExtra("bookUrl", item.bookUrl)
-                    putExtra("transitionName", transitionName)
+                is BookGroup -> {
+                    groupId = item.groupId
+                    initBooksData()
+                    groupIdChangeListener?.onGroupIdChanged()
+                    updateBackCallbackState()
                 }
-
-                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                    requireActivity(),
-                    sharedView,
-                    transitionName
-                )
-
-                startActivity(intent, options.toBundle())
             }
+        } else {
+            when (item) {
+                is Book -> startActivityForBook(item)
 
-            is BookGroup -> {
-                groupId = item.groupId
-                initBooksData()
-                groupIdChangeListener?.onGroupIdChanged()
-                updateBackCallbackState()
+                is BookGroup -> {
+                    groupId = item.groupId
+                    initBooksData()
+                }
             }
         }
+
     }
 
     override fun onItemLongClick(item: Any, sharedView: View) {
-        when (item) {
-            is Book -> {
-                val intent = Intent(requireContext(), BookInfoActivity::class.java).apply {
+        if (AppConfig.sharedElementEnterTransitionEnable){
+            when (item) {
+                is Book -> {
+                    val intent = Intent(requireContext(), BookInfoActivity::class.java).apply {
+                        putExtra("name", item.name)
+                        putExtra("author", item.author)
+                        putExtra("bookUrl", item.bookUrl)
+                        putExtra("transitionName", "book_${item.bookUrl}") // 给共享元素唯一标识
+                    }
+
+                    sharedView.transitionName = "book_${item.bookUrl}"
+
+                    val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
+                        requireActivity(),
+                        sharedView,
+                        sharedView.transitionName
+                    )
+
+                    startActivity(intent, options.toBundle())
+                }
+
+                is BookGroup -> showDialogFragment(GroupEditDialog(item))
+            }
+        } else {
+            when (item) {
+                is Book -> startActivity<BookInfoActivity> {
                     putExtra("name", item.name)
                     putExtra("author", item.author)
                     putExtra("bookUrl", item.bookUrl)
-                    putExtra("transitionName", "book_${item.bookUrl}") // 给共享元素唯一标识
                 }
 
-                sharedView.transitionName = "book_${item.bookUrl}"
-
-                val options = ActivityOptionsCompat.makeSceneTransitionAnimation(
-                    requireActivity(),
-                    sharedView,
-                    sharedView.transitionName
-                )
-
-                startActivity(intent, options.toBundle())
+                is BookGroup -> showDialogFragment(GroupEditDialog(item))
             }
-
-            is BookGroup -> showDialogFragment(GroupEditDialog(item))
         }
     }
 

@@ -162,7 +162,7 @@
         app:layout="@layout/view_preference_category">
 
         <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="sharedElementEnterTransitionEnable"
             android:summary="@string/opt_animation"
             android:title="@string/use_animation" />

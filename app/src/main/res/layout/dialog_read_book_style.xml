@@ -184,6 +184,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
+                    android:layout_marginVertical="8dp"
                     app:singleLine="true"
                     app:singleSelection="true"
                     app:selectionRequired="true">
@@ -301,6 +302,7 @@
                 <ImageView
                     android:layout_width="16dp"
                     android:layout_height="48dp"
+                    android:importantForAccessibility="no"
                     app:layout_constraintStart_toEndOf="@id/cb_share_layout"
                     app:layout_constraintTop_toTopOf="parent"
                     app:layout_constraintBottom_toBottomOf="parent"

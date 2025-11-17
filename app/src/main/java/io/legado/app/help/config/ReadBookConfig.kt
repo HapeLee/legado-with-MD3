@@ -61,7 +61,7 @@ object ReadBookConfig {
     var bgMeanColor: Int = 0
     val textColor: Int get() = durConfig.curTextColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
-
+    val menuColor: Int get() = durConfig.curMenuAc()
     init {
         initConfigs()
         initShareConfig()

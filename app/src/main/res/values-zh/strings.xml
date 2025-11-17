@@ -1280,9 +1280,9 @@
     <string name="privacy">隐私</string>
     <string name="notification_permission">通知权限</string>
     <string name="background_permission">后台权限</string>
-    <string name="opt_animation">从书架进入阅读界面时，优化动画效果。</string>
+    <string name="opt_animation">从书架进入阅读界面时，优化动画效果。在某些设备上可能无法正常工作</string>
     <string name="use_animation">使用共享元素动画</string>
-    <string name="reduce_stutter">减少进入阅读界面时的卡顿，但加载书籍时间会延长。</string>
+    <string name="reduce_stutter">减少进入阅读界面时的卡顿，但加载书籍时间会延长。仅在开启共享元素动画时生效</string>
     <string name="delay_book_load">延缓书籍加载</string>
     <string name="compact_list">紧凑列表</string>
     <string name="author_read">%s • %d章未读</string>

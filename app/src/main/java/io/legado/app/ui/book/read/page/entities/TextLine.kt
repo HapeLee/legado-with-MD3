@@ -18,7 +18,6 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.canvasrecorder.recordIfNeededThenDraw
 import io.legado.app.utils.dpToPx
-import io.legado.app.utils.themeColor
 
 /**
  * 行信息
@@ -178,7 +177,7 @@ data class TextLine(
             ChapterProvider.contentPaint
         }
         val textColor = if (isReadAloud) {
-            view.context.themeColor(androidx.appcompat.R.attr.colorPrimary)
+            ReadBookConfig.menuColor
         } else {
             ReadBookConfig.textColor
         }

@@ -287,21 +287,21 @@ class ReadBookActivity : BaseReadBookActivity(),
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        if (AppConfig.sharedElementEnterTransitionEnable) {
-            setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-            setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-            val transform = MaterialContainerTransform().apply {
-                addTarget(binding.root)
-                scrimColor = Color.TRANSPARENT
-                duration = delayMillis
-            }
-            window.sharedElementEnterTransition = transform
-            window.sharedElementReturnTransition = transform
+
+        setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
+        setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
+        val transform = MaterialContainerTransform().apply {
+            addTarget(binding.root)
+            scrimColor = Color.TRANSPARENT
+            duration = delayMillis
         }
+        window.sharedElementEnterTransition = transform
+        window.sharedElementReturnTransition = transform
+
         super.onCreate(savedInstanceState)
-        if (AppConfig.sharedElementEnterTransitionEnable){
-            binding.rootView.transitionName = intent.getStringExtra("transitionName")
-        }
+
+        binding.rootView.transitionName = intent.getStringExtra("transitionName")
+
         upScreenTimeOut()
         ReadBook.register(this)
         binding.readMenu.colorSurfaceContainer =
