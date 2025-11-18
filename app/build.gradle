@@ -5,7 +5,7 @@ plugins {
 //    //id 'kotlin-kapt'
 //    id 'com.google.devtools.ksp'
 //    id "com.google.gms.google-services"
-
+    alias libs.plugins.compose.compiler
     alias libs.plugins.android.application
     alias libs.plugins.kotlin.android
     alias libs.plugins.kotlin.parcelize
@@ -48,6 +48,11 @@ def getGitCommitHash() {
 android {
     compileSdk = compile_sdk_version
     namespace = "io.legado.app"
+
+    buildFeatures {
+        compose = true
+    }
+
     kotlin {
         jvmToolchain {
             languageVersion.set(JavaLanguageVersion.of(21))
@@ -334,4 +339,42 @@ dependencies {
     implementation libs.androidx.palette
     implementation libs.androidx.core.splashscreen
     implementation libs.androidx.startup.runtime
+
+    // Compose 基础
+    implementation platform(libs.androidx.compose.bom)
+    implementation libs.activity.compose
+    implementation libs.androidx.compose.ui
+    implementation libs.androidx.compose.ui.tooling.preview
+    debugImplementation libs.androidx.compose.ui.tooling
+
+    // Material3
+    implementation libs.androidx.compose.material3
+
+    // Lifecycle
+    implementation libs.androidx.lifecycle.runtime.compose
+
+    // Activity
+    implementation libs.androidx.activity.compose
+
+    // Navigation（用于弹框或未来扩展）
+    implementation libs.navigation.compose
+
+    // Coil
+    implementation libs.coil.compose
+
+    // accompanist – WebView（打开网页）
+    implementation libs.accompanist.webview
+
+    // Markdown 渲染（Compose MD）
+    implementation libs.markdown.compose
+
+    // 协程
+    implementation libs.kotlinx.coroutines.android
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.androidx.lifecycle.runtime.compose
+    implementation libs.androidx.compose.animation
+    implementation libs.androidx.compose.foundation
+    implementation libs.androidx.constraintlayout.compose
+    implementation libs.androidx.compose.ui.viewbinding
+
 }

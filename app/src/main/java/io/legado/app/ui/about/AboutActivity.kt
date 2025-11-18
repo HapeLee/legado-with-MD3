@@ -5,7 +5,11 @@ package io.legado.app.ui.about
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.core.app.ComponentActivity
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.BuildConfig
@@ -47,9 +51,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 
-class AboutActivity : BaseActivity<ActivityAboutBinding>() {
-
-    override val binding by viewBinding(ActivityAboutBinding::inflate)
+class AboutActivity : AppCompatActivity() {
 
     private val waitDialog by lazy {
         WaitDialog(this).setText(R.string.checking_update)
@@ -57,96 +59,36 @@ class AboutActivity : BaseActivity<ActivityAboutBinding>() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setSupportActionBar(binding.topBar)
 
-        binding.tvVersion.text = appInfo.versionName
-
-        binding.btnUpdate.setOnClickListener {
-            checkUpdate()
-        }
-
-        binding.btnGithub.setOnClickListener {
-            openUrl(R.string.github_url)
-        }
-
-        binding.btnWeb.setOnClickListener {
-            openUrl(R.string.legado_url)
-        }
-
-        binding.llContributors.setOnClickListener {
-            openUrl(R.string.contributors_url)
-        }
-
-        binding.llUpdateLog.setOnClickListener {
-            lifecycleScope.launch {
-                upVersion()
+        setContent {
+            MaterialTheme {
+                AboutScreen(
+                    onCheckUpdate = { checkUpdate() },
+                    onOpenUrl = { openUrl(it) },
+                    onShowMdFile = { title, file -> showMdFile(title, file) },
+                    onSaveLog = { saveLog() },
+                    onCreateHeapDump = { createHeapDump() },
+                    onShowCrashLogs = { showDialogFragment<CrashLogsDialog>() }
+                )
             }
-        }
-
-        binding.llPrivacyPolicy.setOnClickListener {
-            showMdFile(getString(R.string.privacy_policy), "privacyPolicy.md")
-        }
-
-        binding.llLicense.setOnClickListener {
-            showMdFile(getString(R.string.license), "LICENSE.md")
-        }
-
-        binding.llDisclaimer.setOnClickListener {
-            showMdFile(getString(R.string.disclaimer), "disclaimer.md")
-        }
-
-        binding.llCrashLog.setOnClickListener {
-            showDialogFragment<CrashLogsDialog>()
-        }
-
-        binding.llSaveLog.setOnClickListener {
-            saveLog()
-        }
-
-        binding.llCreateHeapDump.setOnClickListener {
-            createHeapDump()
         }
     }
 
-    override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.about, menu)
-        return super.onCompatCreateOptionsMenu(menu)
+        return true
     }
 
-    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_share_it -> share(
-                getString(R.string.app_share_description),
-                getString(R.string.app_name)
-            )
-        }
-        return super.onCompatOptionsItemSelected(item)
-    }
-
-    private suspend fun upVersion() {
-        try {
-            val info = withContext(Dispatchers.IO) {
-                AppUpdateGitHub.getReleaseByTag(BuildConfig.VERSION_NAME)
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.menu_share_it -> {
+                share(
+                    getString(R.string.app_share_description),
+                    getString(R.string.app_name)
+                )
+                true
             }
-
-            withContext(Dispatchers.Main) {
-                val dialog = if (info != null) {
-                    UpdateDialog(info, UpdateDialog.Mode.VIEW_LOG)
-                } else {
-                    val fallback = String(assets.open("updateLog.md").readBytes())
-                    TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
-                }
-
-                showDialogFragment(dialog)
-            }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            val fallback = String(assets.open("updateLog.md").readBytes())
-            val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
-            withContext(Dispatchers.Main) {
-                showDialogFragment(dialog)
-            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
@@ -158,9 +100,9 @@ class AboutActivity : BaseActivity<ActivityAboutBinding>() {
     private fun checkUpdate() {
         waitDialog.show()
         AppUpdate.gitHubUpdate?.run {
-            check(lifecycleScope)
+            kotlin.check(lifecycleScope)
                 .onSuccess {
-                    showDialogFragment(UpdateDialog(it, UpdateDialog.Mode.UPDATE))
+                    showDialogFragment(UpdateDialog(it))
                 }.onError {
                     appCtx.toastOnUi("${getString(R.string.check_update)}\n${it.localizedMessage}")
                 }.onFinally {

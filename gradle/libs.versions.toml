@@ -1,8 +1,12 @@
 [versions]
 
+accompanistWebview = "0.36.0"
+coilCompose = "2.7.0"
+composeBom = "2025.11.00"
 coreSplashscreen = "1.2.0-rc01"
 datastorePreferences = "1.1.7"
 kotlin = "2.2.20"
+kotlinxCoroutinesAndroid = "1.8.1"
 ksp = "2.2.20-2.0.4"
 agp = "8.13.1"
 appcompat = "1.7.1"
@@ -28,6 +32,7 @@ jsoup = "1.16.2"
 jsoupxpath = "2.5.3"
 coroutines = "1.10.2"
 liveeventbus = "1.8.14"
+markdownCompose = "0.5.0"
 markwon = "4.6.2"
 material = "1.14.0-alpha06"
 media = "1.7.1"
@@ -59,22 +64,31 @@ zxingLite = "3.3.0"
 
 [libraries]
 
+accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
 activity-activity = { module = "androidx.activity:activity", version.ref = "activity" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "activity" }
 
+androidx-activity-compose = { module = "androidx.activity:activity-compose" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version = "1.9.1" }
 #androidx-annotation-experimental = { group = "androidx.annotation", name = "annotation-experimental", version = "1.3.1" }
 
 androidx-collection = { module = "androidx.collection:collection", version.ref = "collection" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-ui = { module = "androidx.compose.ui:ui" }
+androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose" }
 androidx-palette = { module = "androidx.palette:palette", version.ref = "palette" }
 androidx-startup-runtime = { module = "androidx.startup:startup-runtime", version.ref = "startupRuntime" }
 appcompat-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 
 
+coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coilCompose" }
 core-core = { module = "androidx.core:core", version.ref = "core" }
 core-ktx = { module = "androidx.core:core-ktx", version.ref = "core" }
 
@@ -93,10 +107,12 @@ androidx-junit = { module = "androidx.test.ext:junit", version = "1.3.0" }
 
 hutool-crypto = { module = "cn.hutool:hutool-crypto", version.ref = "hutool" }
 
+kotlinx-coroutines-android-v181 = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
 libarchive = { module = "me.zhanghai.android.libarchive:library", version.ref = "libarchive" }
 lifecycle-common-java8 = { module = "androidx.lifecycle:lifecycle-common-java8", version.ref = "lifecycle" }
 lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 
+markdown-compose = { module = "com.mikepenz:markdown-compose", version.ref = "markdownCompose" }
 media-media = { module = "androidx.media:media", version.ref = "media" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
@@ -112,6 +128,7 @@ nanohttpd-nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanoH
 nanohttpd-websocket = { module = "org.nanohttpd:nanohttpd-websocket", version.ref = "nanoHttpd" }
 
 
+navigation-compose = { module = "androidx.navigation:navigation-compose" }
 preference-preference = { module = "androidx.preference:preference", version.ref = "preference" }
 preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preference" }
 
