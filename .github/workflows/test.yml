@@ -270,7 +270,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name:
-          创建 Pre-Release Tag: v${{ needs.prepare.outputs.versionL }}
+          创建 Pre-Release Tag ${{ needs.prepare.outputs.versionL }}
         # 创建一个 Tag，供下一轮计算版本号时使用
         run: |
           git tag v${{ needs.prepare.outputs.versionL }}
