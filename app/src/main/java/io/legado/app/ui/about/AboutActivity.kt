@@ -1,7 +1,5 @@
 package io.legado.app.ui.about
 
-//import io.legado.app.lib.theme.accentColor
-//import io.legado.app.lib.theme.filletBackground
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -9,21 +7,16 @@ import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material3.MaterialTheme
-import androidx.core.app.ComponentActivity
+import androidx.compose.runtime.Composable
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
-import io.legado.app.BuildConfig
 import io.legado.app.R
-import io.legado.app.base.BaseActivity
-import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.base.BaseComposeActivity
 import io.legado.app.constant.AppLog
-import io.legado.app.databinding.ActivityAboutBinding
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.update.AppUpdate
-import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.FileDoc
@@ -40,18 +33,24 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.share
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 
-class AboutActivity : AppCompatActivity() {
+class AboutActivity : BaseComposeActivity() {
+
+    @Composable
+    override fun Content() {
+        AboutScreen(
+            onCheckUpdate = { checkUpdate() },
+            onOpenUrl = { openUrl(it) },
+            onShowMdFile = { title, file -> showMdFile(title, file) },
+            onSaveLog = { saveLog() },
+            onCreateHeapDump = { createHeapDump() },
+            onShowCrashLogs = { showDialogFragment<CrashLogsDialog>() },
+        )
+    }
 
     private val waitDialog by lazy {
         WaitDialog(this).setText(R.string.checking_update)
@@ -60,18 +59,6 @@ class AboutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
-            MaterialTheme {
-                AboutScreen(
-                    onCheckUpdate = { checkUpdate() },
-                    onOpenUrl = { openUrl(it) },
-                    onShowMdFile = { title, file -> showMdFile(title, file) },
-                    onSaveLog = { saveLog() },
-                    onCreateHeapDump = { createHeapDump() },
-                    onShowCrashLogs = { showDialogFragment<CrashLogsDialog>() }
-                )
-            }
-        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -100,9 +87,9 @@ class AboutActivity : AppCompatActivity() {
     private fun checkUpdate() {
         waitDialog.show()
         AppUpdate.gitHubUpdate?.run {
-            kotlin.check(lifecycleScope)
+            check(lifecycleScope)
                 .onSuccess {
-                    showDialogFragment(UpdateDialog(it))
+                    showDialogFragment(UpdateDialog(it, UpdateDialog.Mode.UPDATE))
                 }.onError {
                     appCtx.toastOnUi("${getString(R.string.check_update)}\n${it.localizedMessage}")
                 }.onFinally {
@@ -119,17 +106,17 @@ class AboutActivity : AppCompatActivity() {
     private fun saveLog() {
         Coroutine.async {
             val backupPath = AppConfig.backupPath ?: let {
-                appCtx.toastOnUi("未设置备份目录")
+                toastOnUi("未设置备份目录")
                 return@async
             }
             if (!AppConfig.recordLog) {
-                appCtx.toastOnUi("未开启日志记录，请去其他设置里打开记录日志")
+                toastOnUi("未开启日志记录，请去其他设置里打开记录日志")
                 delay(3000)
             }
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             copyLogs(doc)
             copyHeapDump(doc)
-            appCtx.toastOnUi("已保存至备份目录")
+            toastOnUi("已保存至备份目录")
         }.onError {
             AppLog.put("保存日志出错\n${it.localizedMessage}", it, true)
         }
@@ -138,21 +125,21 @@ class AboutActivity : AppCompatActivity() {
     private fun createHeapDump() {
         Coroutine.async {
             val backupPath = AppConfig.backupPath ?: let {
-                appCtx.toastOnUi("未设置备份目录")
+                toastOnUi("未设置备份目录")
                 return@async
             }
             if (!AppConfig.recordHeapDump) {
-                appCtx.toastOnUi("未开启堆转储记录，请去其他设置里打开记录堆转储")
+                toastOnUi("未开启堆转储记录，请去其他设置里打开记录堆转储")
                 delay(3000)
             }
-            appCtx.toastOnUi("开始创建堆转储")
+            toastOnUi("开始创建堆转储")
             System.gc()
             CrashHandler.doHeapDump(true)
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             if (!copyHeapDump(doc)) {
-                appCtx.toastOnUi("未找到堆转储文件")
+                toastOnUi("未找到堆转储文件")
             } else {
-                appCtx.toastOnUi("已保存至备份目录")
+                toastOnUi("已保存至备份目录")
             }
         }.onError {
             AppLog.put("保存堆转储失败\n${it.localizedMessage}", it)
@@ -160,7 +147,7 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun copyLogs(doc: FileDoc) {
-        val cacheDir = appCtx.externalCache
+        val cacheDir = externalCache
         val logFiles = File(cacheDir, "logs")
         val crashFiles = File(cacheDir, "crash")
         val logcatFile = File(cacheDir, "logcat.txt")
@@ -182,7 +169,7 @@ class AboutActivity : AppCompatActivity() {
     }
 
     private fun copyHeapDump(doc: FileDoc): Boolean {
-        val heapFile = FileDoc.fromFile(File(appCtx.externalCache, "heapDump")).list()
+        val heapFile = FileDoc.fromFile(File(externalCache, "heapDump")).list()
             ?.firstOrNull() ?: return false
         doc.find("heapDump")?.delete()
         val heapDumpDoc = doc.createFolderIfNotExist("heapDump")

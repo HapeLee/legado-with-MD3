@@ -191,13 +191,13 @@
                     android:id="@+id/tv_clear_history"
                     style="@style/Widget.Material3Expressive.Button"
                     android:text="@string/delete_all"
-                    app:backgroundTint="?attr/colorTertiary"
-                    app:iconTint="?attr/colorOnTertiary"
-                    android:textColor="?attr/colorOnTertiary"
+                    app:backgroundTint="?attr/colorSecondaryContainer"
+                    app:iconTint="?attr/colorOnSecondaryContainer"
+                    android:textColor="?attr/colorOnSecondaryContainer"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     app:icon="@drawable/ic_clear_all"
-                    app:strokeColor="?attr/colorTertiary"
+                    app:strokeColor="?attr/colorSecondaryContainer"
                     app:iconGravity="textStart" />
 
             </LinearLayout>
