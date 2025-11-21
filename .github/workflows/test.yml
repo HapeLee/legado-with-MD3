@@ -50,10 +50,18 @@ jobs:
       - name: 计算版本号和构建号
         id: set-ver
         run: |
-          # 1. 读取 version.properties 文件获取基础版本号
-          MAJOR=$(grep 'VERSION_MAJOR' version.properties | cut -d'=' -f2)
-          MINOR=$(grep 'VERSION_MINOR' version.properties | cut -d'=' -f2)
-          PATCH=$(grep 'VERSION_PATCH' version.properties | cut -d'=' -f2)
+          PROPERTIES_FILE="./app/version.properties"  
+          if [[ ! -f "$PROPERTIES_FILE" ]]; then
+          echo "错误：version.properties 文件不存在于 $PROPERTIES_FILE"
+          echo "当前目录内容："
+          ls -la
+          echo "app 目录内容："
+          ls -la app/
+          exit 1
+          fi   
+          MAJOR=$(grep 'VERSION_MAJOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
+          MINOR=$(grep 'VERSION_MINOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
+          PATCH=$(grep 'VERSION_PATCH' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
           CURRENT_VERSION="$MAJOR.$MINOR.$PATCH"
           
           # 2. 尝试获取最近一次成功的构建号 (beta build number)
@@ -137,7 +145,7 @@ jobs:
       - name: 统一版本号
         run: |
           # 1. 临时修改 version.properties 中的 VERSION_SUFFIX，供 build.gradle 读取 versionName
-          echo "VERSION_SUFFIX=-beta.${{ env.BUILD_NUMBER }}" >> $GITHUB_WORKSPACE/version.properties
+          echo "VERSION_SUFFIX=-beta.${{ env.BUILD_NUMBER }}" >> ./app/version.properties
           
           # 2. 覆盖 build.gradle 中复杂的 versionCode 计算逻辑
           # 将 versionCode 设为 10000 + BUILD_NUMBER，忽略 gitCommits
