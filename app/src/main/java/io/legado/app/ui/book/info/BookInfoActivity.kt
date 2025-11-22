@@ -656,6 +656,7 @@ class BookInfoActivity :
         when {
             isLoading -> {
                 binding.tvToc.text = getString(R.string.toc_s, getString(R.string.loading))
+                binding.tvTocView.isEnabled = false
             }
 
             chapterList.isNullOrEmpty() -> {
@@ -663,12 +664,14 @@ class BookInfoActivity :
                     R.string.toc_s,
                     getString(R.string.error_load_toc)
                 )
+                binding.tvTocView.isEnabled = false
             }
 
             else -> {
                 book?.let {
                     binding.tvToc.text = getString(R.string.toc_s, it.durChapterTitle)
                     binding.tvLasted.text = getString(R.string.lasted_show, it.latestChapterTitle)
+                    binding.tvTocView.isEnabled = true
                 }
             }
         }
