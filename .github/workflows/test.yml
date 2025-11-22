@@ -39,7 +39,7 @@ jobs:
       version: ${{ steps.set-ver.outputs.current_version }}
       # build_number: 增量构建号，例如 1
       build_number: ${{ steps.set-ver.outputs.build_number }}
-      # latest_tag: 最近一个用于版本递增的 tag，例如 v3.26.2-beta.5
+      # latest_tag: 最近一个用于版本递增的 tag，例如 3.26.2-beta.5 (不带v前缀)
       latest_tag: ${{ steps.set-ver.outputs.last_tag }}
     steps:
       - uses: actions/checkout@v4
@@ -50,46 +50,44 @@ jobs:
       - name: 计算版本号和构建号
         id: set-ver
         run: |
-          PROPERTIES_FILE="./app/version.properties"  
+          PROPERTIES_FILE="./app/version.properties"
           if [[ ! -f "$PROPERTIES_FILE" ]]; then
           echo "错误：version.properties 文件不存在于 $PROPERTIES_FILE"
-          echo "当前目录内容："
-          ls -la
-          echo "app 目录内容："
-          ls -la app/
           exit 1
-          fi   
-          MAJOR=$(grep 'VERSION_MAJOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
-          MINOR=$(grep 'VERSION_MINOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
-          PATCH=$(grep 'VERSION_PATCH' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
+          fi
+          # 确保获取到的版本号没有空格
+          MAJOR=$(cat "$PROPERTIES_FILE" | grep 'VERSION_MAJOR' | cut -d'=' -f2 | tr -d '[:space:]')
+          MINOR=$(cat "$PROPERTIES_FILE" | grep 'VERSION_MINOR' | cut -d'=' -f2 | tr -d '[:space:]')
+          PATCH=$(cat "$PROPERTIES_FILE" | grep 'VERSION_PATCH' | cut -d'=' -f2 | tr -d '[:space:]')
           CURRENT_VERSION="$MAJOR.$MINOR.$PATCH"
+
+          # 1. 找到仓库中最近创建的任意 TAG (无论是正式版还是测试版)，作为日志起点
+          LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
           
-          # 2. 尝试获取最近一次成功的构建号 (beta build number)
-          # 查找最近的、格式为 vX.Y.Z-beta.N 的标签，且 X.Y.Z 部分与当前版本匹配
-          # 只有在推送到 main 分支时才进行自增计算
+          # 2. 尝试获取匹配当前 CURRENT_VERSION 的上一个 TAG (用于版本号递增)
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-              LAST_TAG=$(git tag --list "v*.*.*-beta.*" --sort=-committerdate | head -n 1)
           
-              # 查找匹配当前 CURRENT_VERSION 的上一个 TAG
-              LAST_MATCHING_TAG=$(git tag --list "v$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
-          
-              if [[ $LAST_MATCHING_TAG =~ v[0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
+              # 查找匹配当前 CURRENT_VERSION 的上一个 TAG (e.g., v3.26.3-beta.X)
+              LAST_MATCHING_TAG_WITH_V=$(git tag --list "v$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
+              LAST_MATCHING_TAG="${LAST_MATCHING_TAG_WITH_V#v}" # 移除 'v'
+
+              if [[ $LAST_MATCHING_TAG =~ [0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
                 # 如果找到匹配当前 PATCH 版本的 beta 标签，则递增
                 LAST_BUILD_NUM="${BASH_REMATCH[1]}"
                 NEW_BUILD_NUM=$((LAST_BUILD_NUM + 1))
                 LAST_TAG_FOR_LOG="$LAST_MATCHING_TAG"
                 echo "版本 $CURRENT_VERSION 未变更，构建号自增：$LAST_BUILD_NUM -> $NEW_BUILD_NUM"
               else
-                # 如果找不到匹配的标签 (可能是 PATCH 刚修改，或首次构建)，则重置为 1
+                # 如果找不到匹配的标签 (PATCH 刚修改，或首次构建)，则重置为 1
                 NEW_BUILD_NUM=1
-                # 如果是 PATCH 首次构建，则使用仓库中最近的那个 tag 作为日志起点
-                LAST_TAG_FOR_LOG="$LAST_TAG"
-                echo "版本 $CURRENT_VERSION 为新版本或首次构建，构建号重置为 $NEW_BUILD_NUM"
+                # 此时，日志应该从最近的 '非本次构建' 的 TAG 开始
+                LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+                echo "版本 $CURRENT_VERSION 为新版本或首次构建，构建号重置为 $NEW_BUILD_NUM。日志将从 $LAST_TAG_FOR_LOG 开始。"
               fi
           else
               # 对于 PR 或其他分支，使用一个固定的构建号 0
               NEW_BUILD_NUM=0
-              LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 1)
+              LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
               echo "非 main 分支推送，构建号设置为 $NEW_BUILD_NUM"
           fi
           
@@ -144,14 +142,12 @@ jobs:
 
       - name: 统一版本号
         run: |
-          # 1. 临时修改 version.properties 中的 VERSION_SUFFIX，供 build.gradle 读取 versionName
+          # 1. 临时修改 version.properties 中的 VERSION_SUFFIX
           echo "VERSION_SUFFIX=-beta.${{ env.BUILD_NUMBER }}" >> ./app/version.properties
-          
+
           # 2. 覆盖 build.gradle 中复杂的 versionCode 计算逻辑
-          # 将 versionCode 设为 10000 + BUILD_NUMBER，忽略 gitCommits
-          # 替换 app/build.gradle 中 versionCode 所在行
           sed -i "s/versionCode 10000 + gitCommits/versionCode 10000 + ${{ env.BUILD_NUMBER }}/" $GITHUB_WORKSPACE/app/build.gradle
-          
+
           echo "versionName 已设置为 ${{ env.VERSIONL }}"
           echo "versionCode 已设置为 10000 + ${{ env.BUILD_NUMBER }}"
 
@@ -159,16 +155,15 @@ jobs:
         run: |
           echo "开始${{ env.product }}${{ env.type }}构建"
           chmod +x gradlew
-          # Gradle 现在会读取修改后的 version.properties 来获取 versionName
           ./gradlew assemble${{ env.product }}Release
 
       - name: Move Missing Rules Files
         run: |
           echo "移动missing_rules.txt文件"
-          mkdir -p ${{ github.workspace }}/mapping/
-          for file in `ls ${{ github.workspace }}/app/build/outputs/mapping/*/missing_rules.txt`; do
-            mv "$file" ${{ github.workspace }}/mapping/missing_rules.txt
-          done
+          MAPPING_DIR="${{ github.workspace }}/mapping"
+          mkdir -p "$MAPPING_DIR"
+          # 使用 find 代替 ls，避免参数列表过长
+          find ${{ github.workspace }}/app/build/outputs/mapping/ -name "missing_rules.txt" -exec mv {} "$MAPPING_DIR/missing_rules.txt" \;
 
       - name: Upload Missing Rules File To Artifact
         uses: actions/upload-artifact@v4
@@ -179,9 +174,10 @@ jobs:
 
       - name: Check Build production
         run: |
-          echo "查看 APK 输出目录"
-          ls -R $GITHUB_WORKSPACE/app/build/outputs/apk/
-          if ! ls $GITHUB_WORKSPACE/app/build/outputs/apk/*/*/*.apk 1> /dev/null 2>&1; then
+          echo "检查 APK 输出目录"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk"
+          # 检查是否有任何 APK 文件生成
+          if [ -z "$(find "$APK_PATH" -name "*.apk" -print -quit)" ]; then
             echo "Build production not found! Check gradle logs."
             exit 1
           fi
@@ -222,7 +218,12 @@ jobs:
         with:
           path: apk/
       - working-directory: apk/
-        run: mv */*.apk . ;rm -rf */
+        run: |
+          # 使用 find 安全地移动文件
+          find . -type f -name "*.apk" -exec mv {} . \;
+          # 清理子目录
+          find . -type d -mindepth 1 -exec rm -rf {} +
+
       - name: Push To "test" Branch
         run: |
           cd $GITHUB_WORKSPACE/apk/
@@ -238,8 +239,8 @@ jobs:
   create_pre_release:
     needs: [ prepare, build ]
     if: |
-      github.event_name == 'push' && 
-      github.ref == 'refs/heads/main' && 
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
       needs.prepare.outputs.build_number > 0 &&
       success()
     runs-on: ubuntu-latest
@@ -251,36 +252,29 @@ jobs:
       - name: 获取所有 Commit 消息作为 Release Body
         id: get_commits
         run: |
-          # 获取从上一个 tag 到当前 commit 之间的所有 commit 消息
-          # 如果 latest_tag 为空，则从第一个 commit 开始获取
-          
           LATEST_TAG="${{ needs.prepare.outputs.latest_tag }}"
-          
+
           if [ -z "$LATEST_TAG" ]; then
-            # 如果没有找到任何 tag，则从第一个 commit 开始
+            # 如果没有找到任何 tag，则从第一个 commit 开始获取所有日志
             COMMIT_LOG=$(git log --pretty=format:'* %s (%an)' --reverse)
           else
-            # 从最近的 tag 到当前 HEAD
-            # 使用 ^$LATEST_TAG 来排除 LATEST_TAG 本身的 commit
-            COMMIT_LOG=$(git log $LATEST_TAG..HEAD --pretty=format:'* %s (%an)')
+            # 从最近一个 Tag 到当前 HEAD 获取 Commit 记录
+            COMMIT_LOG=$(git log v$LATEST_TAG..HEAD --pretty=format:'* %s (%an)')
           fi
-          
-          # 检查是否获取到日志
+
           if [ -z "$COMMIT_LOG" ]; then
             RELEASE_BODY="本次发布无新增 Commit。"
           else
             RELEASE_BODY="# 本次更新内容\n\n$COMMIT_LOG"
           fi
-          
-          # 输出给下一步使用
+
           echo "release_body<<EOF" >> $GITHUB_OUTPUT
           echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name:
-          创建 Pre-Release Tag ${{ needs.prepare.outputs.versionL }}
-        # 创建一个 Tag，供下一轮计算版本号时使用
+      - name: 创建 Pre-Release Tag
         run: |
+          # 在 push tag 时加上 "v" 前缀
           git tag v${{ needs.prepare.outputs.versionL }}
           git push origin v${{ needs.prepare.outputs.versionL }}
         env:
@@ -292,10 +286,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Tag 名称：3.26.3-beta.1
+          # Tag 名称：例如 3.26.3-beta.1
           tag_name: ${{ needs.prepare.outputs.versionL }}
-          # Release 标题：3.26.3-beta.1
-          release_name: ${{ needs.prepare.outputs.versionL }}
+          # Release 标题：例如 Pre-release 3.26.3-beta.1
+          release_name: Pre-release ${{ needs.prepare.outputs.versionL }}
           # Release 内容为所有 Commit 消息
           body: ${{ steps.get_commits.outputs.release_body }}
           draft: false
@@ -316,6 +310,5 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: artifacts/*.apk
-          # 重新命名上传的 APK 文件，使其包含版本号
           asset_name: legado-${{ needs.prepare.outputs.versionL }}.apk
           asset_content_type: application/zip
