@@ -462,6 +462,10 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             view: WebView,
             request: WebResourceRequest
         ): Boolean {
+            val targetUri = request.url
+            if (targetUri.scheme == "legado" || targetUri.scheme == "yuedu") {
+                return shouldOverrideUrlLoading(targetUri)
+            }
             val currentUrl = lastUrl ?: view.url
             val targetUrl = request.url.toString()
             lastUrl = targetUrl
@@ -475,6 +479,10 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
 
         @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION", "KotlinRedundantDiagnosticSuppress")
         override fun shouldOverrideUrlLoading(view: WebView, url: String): Boolean {
+            val targetUri = url.toUri()
+            if (targetUri.scheme == "legado" || targetUri.scheme == "yuedu") {
+                return shouldOverrideUrlLoading(targetUri)
+            }
             val currentUrl = lastUrl ?: view.url
             val targetUrl = url
             lastUrl = targetUrl
@@ -538,71 +546,6 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 .show()
         }
 
-        /**
-         * 如果有黑名单,黑名单匹配返回空白,
-         * 没有黑名单再判断白名单,在白名单中的才通过,
-         * 都没有不做处理
-         */
-        override fun shouldInterceptRequest(
-            view: WebView,
-            request: WebResourceRequest
-        ): WebResourceResponse? {
-            val url = request.url.toString()
-            val source = viewModel.rssSource ?: return super.shouldInterceptRequest(view, request)
-            val blacklist = source.contentBlacklist?.splitNotBlank(",")
-            if (!blacklist.isNullOrEmpty()) {
-                blacklist.forEach {
-                    try {
-                        if (url.startsWith(it) || url.matches(it.toRegex())) {
-                            return createEmptyResource()
-                        }
-                    } catch (e: PatternSyntaxException) {
-                        AppLog.put("黑名单规则正则语法错误 源名称:${source.sourceName} 正则:$it", e)
-                    }
-                }
-            } else {
-                val whitelist = source.contentWhitelist?.splitNotBlank(",")
-                if (!whitelist.isNullOrEmpty()) {
-                    whitelist.forEach {
-                        try {
-                            if (url.startsWith(it) || url.matches(it.toRegex())) {
-                                return super.shouldInterceptRequest(view, request)
-                            }
-                        } catch (e: PatternSyntaxException) {
-                            val msg = "白名单规则正则语法错误 源名称:${source.sourceName} 正则:$it"
-                            AppLog.put(msg, e)
-                        }
-                    }
-                    return createEmptyResource()
-                }
-            }
-            return super.shouldInterceptRequest(view, request)
-        }
-
-        override fun onPageFinished(view: WebView, url: String?) {
-            super.onPageFinished(view, url)
-            view.title?.let { title ->
-                if (title != url && title != view.url && title.isNotBlank() && url != "about:blank") {
-                    binding.titleBar.title = title
-                } else {
-                    binding.titleBar.title = intent.getStringExtra("title")
-                }
-            }
-            viewModel.rssSource?.injectJs?.let {
-                if (it.isNotBlank()) {
-                    view.evaluateJavascript(it, null)
-                }
-            }
-        }
-
-        private fun createEmptyResource(): WebResourceResponse {
-            return WebResourceResponse(
-                "text/plain",
-                "utf-8",
-                ByteArrayInputStream("".toByteArray())
-            )
-        }
-
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
             val source = viewModel.rssSource
             val js = source?.shouldOverrideUrlLoading
@@ -654,7 +597,6 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         ) {
             handler?.proceed()
         }
-
     }
 
 }
