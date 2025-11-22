@@ -68,7 +68,6 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
           
               # 查找匹配当前 CURRENT_VERSION 的上一个 TAG (e.g., 3.26.3-beta.X)
-              # 注意：这里查找的是不带 'v' 的标签
               LAST_MATCHING_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
 
               if [[ $LAST_MATCHING_TAG =~ [0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
@@ -81,7 +80,7 @@ jobs:
                 # 如果找不到匹配的标签 (PATCH 刚修改，或首次构建)，则重置为 1
                 NEW_BUILD_NUM=1
                 # 此时，日志应该从最近的 '非本次构建' 的 TAG 开始
-                LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}" # 尽管没有 v，但保留这一行以防未来格式变化
+                LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
                 echo "版本 $CURRENT_VERSION 为新版本或首次构建，构建号重置为 $NEW_BUILD_NUM。日志将从 $LAST_TAG_FOR_LOG 开始。"
               fi
           else
@@ -255,7 +254,6 @@ jobs:
           LATEST_TAG="${{ needs.prepare.outputs.latest_tag }}"
           
           if [ -z "$LATEST_TAG" ]; then
-            # 如果没有找到任何 tag，则从第一个 commit 开始获取所有日志
             COMMIT_LOG=$(git log --pretty=format:'* %s (%an)' --reverse)
           else
             COMMIT_LOG=$(git log $LATEST_TAG..HEAD --pretty=format:'* %s (%an)')
@@ -285,12 +283,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.prepare.outputs.versionL }}
-          # Release 标题：例如 Pre-release 3.26.3-beta.1
           release_name: Pre-release ${{ needs.prepare.outputs.versionL }}
-          # Release 内容为所有 Commit 消息
           body: ${{ steps.get_commits.outputs.release_body }}
           draft: false
-          # 标记为预发布版本
           prerelease: true
 
       - name: 下载所有 APK Artifacts
@@ -300,12 +295,62 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: 上传 Release Assets
+      - name: 整理并重命名 APK 文件
+        id: organize_apks
+        run: |
+          VERSIONL="${{ needs.prepare.outputs.versionL }}"
+          
+          echo "正在查找并重命名 APK 文件..."
+          
+          # 查找 Universal APK (文件名不含 ABI)
+          find artifacts -maxdepth 1 -type f -name '*app_*.apk' \
+            ! -name '*arm64-v8a.apk' \
+            ! -name '*armeabi-v7a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}.apk" \;
+          
+          # 查找 arm64-v8a APK
+          find artifacts -maxdepth 1 -type f -name '*arm64-v8a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}-arm64-v8a.apk" \;
+          
+          # 查找 armeabi-v7a APK
+          find artifacts -maxdepth 1 -type f -name '*armeabi-v7a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}-armeabi-v7a.apk" \;
+          
+          # 检查文件是否成功找到并重命名，如果找不到则退出
+          if [ ! -f "artifacts/legado-${VERSIONL}.apk" ]; then
+            echo "错误：未找到 Universal APK。请检查 build 作业的命名规则。"
+            exit 1
+          fi
+          
+          echo "文件重命名完成，准备上传："
+          ls -l artifacts/
+
+      - name: 上传 Universal APK
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/*.apk
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}.apk
           asset_name: legado-${{ needs.prepare.outputs.versionL }}.apk
-          asset_content_type: application/zip
+          asset_content_type: application/vnd.android.package-archive # APK MIME 类型
+
+      - name: 上传 arm64-v8a APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}-arm64-v8a.apk
+          asset_name: legado-${{ needs.prepare.outputs.versionL }}-arm64-v8a.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: 上传 armeabi-v7a APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}-armeabi-v7a.apk
+          asset_name: legado-${{ needs.prepare.outputs.versionL }}-armeabi-v7a.apk
+          asset_content_type: application/vnd.android.package-archive
