@@ -224,7 +224,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' && github.actor == 'gedoor' }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           path: apk/
       - working-directory: apk/
@@ -287,7 +287,7 @@ jobs:
           prerelease: ${{ needs.prepare.outputs.is_release == 'true' && 'false' || 'true' }}
 
       - name: 下载所有 APK Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           pattern: '*-apk'
           path: artifacts
