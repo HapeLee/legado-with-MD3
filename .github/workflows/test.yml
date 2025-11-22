@@ -67,9 +67,9 @@ jobs:
           # 2. 尝试获取匹配当前 CURRENT_VERSION 的上一个 TAG (用于版本号递增)
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
           
-              # 查找匹配当前 CURRENT_VERSION 的上一个 TAG (e.g., v3.26.3-beta.X)
-              LAST_MATCHING_TAG_WITH_V=$(git tag --list "v$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
-              LAST_MATCHING_TAG="${LAST_MATCHING_TAG_WITH_V#v}" # 移除 'v'
+              # 查找匹配当前 CURRENT_VERSION 的上一个 TAG (e.g., 3.26.3-beta.X)
+              # 注意：这里查找的是不带 'v' 的标签
+              LAST_MATCHING_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
 
               if [[ $LAST_MATCHING_TAG =~ [0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
                 # 如果找到匹配当前 PATCH 版本的 beta 标签，则递增
@@ -81,7 +81,7 @@ jobs:
                 # 如果找不到匹配的标签 (PATCH 刚修改，或首次构建)，则重置为 1
                 NEW_BUILD_NUM=1
                 # 此时，日志应该从最近的 '非本次构建' 的 TAG 开始
-                LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+                LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}" # 尽管没有 v，但保留这一行以防未来格式变化
                 echo "版本 $CURRENT_VERSION 为新版本或首次构建，构建号重置为 $NEW_BUILD_NUM。日志将从 $LAST_TAG_FOR_LOG 开始。"
               fi
           else
@@ -253,13 +253,12 @@ jobs:
         id: get_commits
         run: |
           LATEST_TAG="${{ needs.prepare.outputs.latest_tag }}"
-
+          
           if [ -z "$LATEST_TAG" ]; then
             # 如果没有找到任何 tag，则从第一个 commit 开始获取所有日志
             COMMIT_LOG=$(git log --pretty=format:'* %s (%an)' --reverse)
           else
-            # 从最近一个 Tag 到当前 HEAD 获取 Commit 记录
-            COMMIT_LOG=$(git log v$LATEST_TAG..HEAD --pretty=format:'* %s (%an)')
+            COMMIT_LOG=$(git log $LATEST_TAG..HEAD --pretty=format:'* %s (%an)')
           fi
 
           if [ -z "$COMMIT_LOG" ]; then
@@ -274,9 +273,8 @@ jobs:
 
       - name: 创建 Pre-Release Tag
         run: |
-          # 在 push tag 时加上 "v" 前缀
-          git tag v${{ needs.prepare.outputs.versionL }}
-          git push origin v${{ needs.prepare.outputs.versionL }}
+          git tag ${{ needs.prepare.outputs.versionL }} 
+          git push origin ${{ needs.prepare.outputs.versionL }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -286,7 +284,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Tag 名称：例如 3.26.3-beta.1
           tag_name: ${{ needs.prepare.outputs.versionL }}
           # Release 标题：例如 Pre-release 3.26.3-beta.1
           release_name: Pre-release ${{ needs.prepare.outputs.versionL }}
