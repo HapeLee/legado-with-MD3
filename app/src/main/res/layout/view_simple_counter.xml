@@ -65,6 +65,7 @@
                         android:minWidth="64dp"
                         android:contentDescription="@string/reduce"
                         app:backgroundTint="?attr/colorSurfaceContainer"
+                        app:iconTint="?attr/colorSecondary"
                         app:icon="@drawable/ic_reduce"
                         app:iconGravity="textStart"
                         app:iconSize="18dp" />
@@ -90,6 +91,7 @@
                         android:contentDescription="@string/plus"
                         app:backgroundTint="?attr/colorSurfaceContainer"
                         app:icon="@drawable/ic_add"
+                        app:iconTint="?attr/colorSecondary"
                         app:iconGravity="textStart"
                         app:iconSize="18dp" />
                 </LinearLayout>

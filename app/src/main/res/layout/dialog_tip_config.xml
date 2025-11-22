@@ -30,8 +30,9 @@
                 android:id="@+id/bottom_sheet_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginVertical="8dp"
                 android:text="@string/read_config"
-                android:textSize="16sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
         </LinearLayout>
