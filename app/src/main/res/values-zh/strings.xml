@@ -96,9 +96,7 @@
     <string name="offline_cache_t">离线缓存</string>
     <string name="offline_cache_s">缓存选择的章节到本地</string>
     <string name="change_origin">换源</string>
-    <string name="about_description">
-        全新设计的阅读 3.0
-    </string>
+    <string name="about_description">全新设计的阅读 3.0</string>
     <string name="app_share_description">
         阅读 3.0 下载地址：\nhttps://github.com/gedoor/legado/releases
     </string>

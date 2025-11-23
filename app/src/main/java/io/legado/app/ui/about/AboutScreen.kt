@@ -3,20 +3,18 @@ package io.legado.app.ui.about
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.ButtonGroup
-import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
@@ -26,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,8 +32,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.base.AppTheme
 import io.legado.app.constant.AppConst.appInfo
@@ -57,61 +56,6 @@ fun PreviewAboutScreen() {
             onSaveLog = {},
             onCreateHeapDump = {},
             onShowCrashLogs = {}
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun ButtonGroup(
-    onOpenUrl: (String) -> Unit,
-    onCheckUpdate: () -> Unit
-) {
-
-    ButtonGroup(
-        modifier = Modifier.fillMaxWidth(),
-        overflowIndicator = { menuState ->
-            ButtonGroupDefaults.OverflowIndicator(menuState = menuState)
-        },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        clickableItem(
-            onClick = { onOpenUrl("https://example.com") },
-            weight = 1f,
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_web_outline),
-                    contentDescription = stringResource(R.string.back),
-                    tint = colorScheme.onSurface
-                )
-            },
-            label = ""
-        )
-
-        clickableItem(
-            onClick = { onOpenUrl("https://github.com/HapeLee/legado-with-MD3") },
-            weight = 1f,
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_github),
-                    contentDescription = stringResource(R.string.back),
-                    tint = colorScheme.onSurface
-                )
-            },
-            label = ""
-        )
-
-        clickableItem(
-            onClick = { onCheckUpdate() },
-            weight = 1f,
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_import),
-                    contentDescription = stringResource(R.string.back),
-                    tint = colorScheme.onSurface
-                )
-            },
-            label = ""
         )
     }
 }
@@ -148,19 +92,23 @@ fun AboutScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = "",
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .height(120.dp)
+                    .width(160.dp)
+                    .align(Alignment.CenterHorizontally)
             )
             Text(
-                text = stringResource(R.string.app_name), style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.bodyLarge,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentWidth(Alignment.CenterHorizontally))
@@ -172,12 +120,15 @@ fun AboutScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentWidth(Alignment.CenterHorizontally)
-            )
+                    .padding(vertical = 4.dp))
             Text(
-                text = stringResource(R.string.about_description), style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(R.string.about_description),
+                style = MaterialTheme.typography.bodyLarge,
+                fontSize = 12.sp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentWidth(Alignment.CenterHorizontally))
+                    .wrapContentWidth(Alignment.CenterHorizontally)
+                    .padding(bottom = 4.dp))
             Row (modifier = Modifier
                 .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center){
@@ -204,51 +155,58 @@ fun AboutScreen(
             }
 
             SplicedColumnGroup(
-                title = stringResource(R.string.about),
+                title = "",
                 content = listOf(
                     {
                         SettingItem(
                             modifier = Modifier.background(colorScheme.surfaceBright),
                             title = stringResource(R.string.contributors),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = {
                                 onOpenUrl("https://github.com/gedoor/legado/graphs/contributors")
                             }
                         )
                         SettingItem(
                             title = stringResource(R.string.privacy_policy),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = {
                                 onShowMdFile("隐私政策", "privacyPolicy.md")
                             }
                         )
                         SettingItem(
                             title = stringResource(R.string.license),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = {
                                 onShowMdFile("许可证", "LICENSE.md")
                             }
                         )
                         SettingItem(
                             title = stringResource(R.string.disclaimer),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = {
                                 onShowMdFile("免责声明", "disclaimer.md")
                             }
                         )
                         SettingItem(
                             title = stringResource(R.string.crash_log),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = onShowCrashLogs
                         )
                         SettingItem(
                             title = stringResource(R.string.save_log),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = onSaveLog
                         )
                         SettingItem(
                             title = stringResource(R.string.create_heap_dump),
-                            description = "",
+                            description = null,
+                            option = null,
                             onClick = onCreateHeapDump
                         )
                     }
