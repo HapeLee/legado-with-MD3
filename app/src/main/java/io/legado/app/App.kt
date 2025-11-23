@@ -32,6 +32,7 @@ import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
+import io.legado.app.di.appDatabaseModule
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -60,6 +61,7 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
 import kotlinx.coroutines.launch
 import org.chromium.base.ThreadUtils
+import org.koin.core.context.GlobalContext.startKoin
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.io.File
@@ -72,7 +74,9 @@ class App : Application() {
     private lateinit var oldConfig: Configuration
 
     override fun onCreate() {
-
+        startKoin {
+            modules(appDatabaseModule)
+        }
         if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")
                 setTheme(R.style.ThemeOverlay_WhiteBackground)
