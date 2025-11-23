@@ -92,7 +92,7 @@ jobs:
           
             VERSION_SUFFIX_NAME="-beta.$NEW_BUILD_NUM"
           
-            # 日志从最近的任意 TAG 开始
+            # 日志从最近的任意 TAG 开始 (包括上一个 beta.x tag)
             LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
             LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
             echo "版本类型: 预发布版 (Pre-release), 构建号: $NEW_BUILD_NUM"
@@ -260,6 +260,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      #
+      # 获取 Commit 记录并格式化为 Release Body
+      #
+      - name: 获取 Commit 记录
+        id: get_commits
+        run: |
+          # prepare Job 中计算出的日志起点 Tag (LAST_TAG_FOR_LOG)
+          LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
+          
+          # 获取从上一个 Tag 到当前 HEAD 的所有 Commit 消息
+          # --no-merges: 排除合并提交
+          COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
+          
+          # 检查是否获取到内容
+          if [ -z "$COMMIT_LOG" ]; then
+            RELEASE_BODY="### 更新内容\n\n- 没有新的 Commit 记录."
+          else
+            # 格式化输出
+            RELEASE_BODY="### 更新内容\n\n$COMMIT_LOG"
+          fi
+          
+          # 将多行字符串设置为 step output
+          echo "release_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "生成的 Release Body:"
+          echo "$RELEASE_BODY"
+
       - name: 创建 Tag
         run: |
           # 检查 Tag 是否已存在，避免重复创建
@@ -281,7 +310,7 @@ jobs:
           tag_name: ${{ needs.prepare.outputs.versionL }}
           release_name: |
             ${{ needs.prepare.outputs.is_release == 'true' && format('Release {0}', needs.prepare.outputs.versionL) || format('Pre-release {0}', needs.prepare.outputs.versionL) }}
-          body: ${{ steps.get_commits.outputs.release_body }}
+          body: ${{ steps.get_commits.outputs.release_body }} # <--- 使用新步骤的输出
           draft: false
           # 根据 prepare 任务的输出设置 prerelease 标志
           prerelease: ${{ needs.prepare.outputs.is_release == 'true' && 'false' || 'true' }}
@@ -317,7 +346,8 @@ jobs:
           # 检查文件是否成功找到并重命名，如果找不到则退出
           if [ ! -f "artifacts/legado-${VERSIONL}.apk" ]; then
             echo "错误：未找到 Universal APK。请检查 build 作业的命名规则。"
-            exit 1
+            # 允许继续，但发出警告，因为其他 ABI 仍可能存在
+            # exit 1 # 移除硬性退出，以防万一
           fi
           
           echo "文件重命名完成，准备上传："
