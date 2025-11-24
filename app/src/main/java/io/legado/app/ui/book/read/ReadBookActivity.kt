@@ -337,8 +337,10 @@ class ReadBookActivity : BaseReadBookActivity(),
                 return@addCallback
             }
             if (savedInstanceState != null || !ReadBook.inBookshelf) {
+                ReadBook.commitReadSession()
                 finish()
             } else {
+                ReadBook.commitReadSession()
                 supportFinishAfterTransition()
             }
             //TODO: 有关测量相关问题
@@ -421,6 +423,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         autoPageStop()
         backupJob?.cancel()
         ReadBook.saveRead()
+        ReadBook.commitReadSession()
         ReadBook.cancelPreDownloadTask()
         unregisterReceiver(timeBatteryReceiver)
         upSystemUiVisibility()

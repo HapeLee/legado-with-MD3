@@ -1,4 +1,4 @@
-package io.legado.app.data.entities
+package io.legado.app.data.entities.readRecord
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

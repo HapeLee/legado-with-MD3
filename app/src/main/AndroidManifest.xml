@@ -333,6 +333,11 @@
             android:theme="@style/AppTheme.Transparent" />
         <!-- 阅读记录 -->
         <activity
+            android:name=".ui.book.readRecord.ReadRecordActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
+        <activity
             android:name=".ui.about.ReadRecordActivity"
             android:enableOnBackInvokedCallback="true"
             android:configChanges="orientation|screenSize"

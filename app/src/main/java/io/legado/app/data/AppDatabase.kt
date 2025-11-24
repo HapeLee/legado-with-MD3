@@ -39,7 +39,7 @@ import io.legado.app.data.entities.Cookie
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
-import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
@@ -50,6 +50,8 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.data.entities.readRecord.ReadRecordDetail
+import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.help.DefaultData
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
@@ -65,11 +67,12 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 78,
+    version = 79,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
-        RssSource::class, Bookmark::class, RssArticle::class, RssReadRecord::class,
+        RssSource::class, Bookmark::class, RssArticle::class,
+        RssReadRecord::class, ReadRecordDetail::class, ReadRecordSession::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class],
     views = [BookSourcePart::class],
@@ -108,7 +111,8 @@ val appDb by lazy {
         AutoMigration(from = 74, to = 75),
         AutoMigration(from = 75, to = 76),
         AutoMigration(from = 76, to = 77),
-        AutoMigration(from = 77, to = 78)
+        AutoMigration(from = 77, to = 78),
+        AutoMigration(from = 78, to = 79)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

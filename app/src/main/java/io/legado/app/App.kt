@@ -33,6 +33,7 @@ import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
+import io.legado.app.di.readRecordModule
 import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
@@ -75,7 +76,7 @@ class App : Application() {
 
     override fun onCreate() {
         startKoin {
-            modules(appDatabaseModule)
+            modules(appDatabaseModule, readRecordModule)
         }
         if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")

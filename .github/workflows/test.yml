@@ -273,19 +273,27 @@ jobs:
           # --no-merges: 排除合并提交
           COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
           
-          # 检查是否获取到内容
           if [ -z "$COMMIT_LOG" ]; then
-            RELEASE_BODY="### 更新内容\n\n- 没有新的 Commit 记录."
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+    
+          - 没有新的 Commit 记录.
+          EOF
+          )
           else
-            # 格式化输出
-            RELEASE_BODY="### 更新内容\n\n$COMMIT_LOG"
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+      
+          $COMMIT_LOG
+          EOF
+          )
           fi
-          
-          # 将多行字符串设置为 step output
+      
+            # 设置 step 输出
           echo "release_body<<EOF" >> $GITHUB_OUTPUT
           echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
-          
+    
           echo "生成的 Release Body:"
           echo "$RELEASE_BODY"
 

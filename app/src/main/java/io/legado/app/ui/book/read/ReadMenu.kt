@@ -41,7 +41,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ConstraintModify
-import io.legado.app.utils.VibrationUtils
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
@@ -451,14 +450,14 @@ class ReadMenu @JvmOverloads constructor(
             if (fromUser) {
                 if (AppConfig.progressBarBehavior == "page")
                     ReadBook.skipToPage(value.toInt() - 1)
-                VibrationUtils.vibrate(context, 12)
+                //VibrationUtils.vibrate(context, 12)
             }
         }
 
         seekReadPage.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {
                 vwMenuBg.setOnClickListener(null)
-                VibrationUtils.vibrate(context, 16)
+                //VibrationUtils.vibrate(context, 16)
             }
 
             override fun onStopTrackingTouch(slider: Slider) {

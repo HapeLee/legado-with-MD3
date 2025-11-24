@@ -8,7 +8,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.ReadRecord
+import io.legado.app.data.entities.readRecord.ReadRecord
+import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -50,6 +52,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import splitties.init.appCtx
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
@@ -58,7 +62,7 @@ import kotlin.math.min
 
 
 @Suppress("MemberVisibilityCanBePrivate")
-object ReadBook : CoroutineScope by MainScope() {
+object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var book: Book? = null
     var callBack: CallBack? = null
     var inBookshelf = false
@@ -73,6 +77,8 @@ object ReadBook : CoroutineScope by MainScope() {
     var nextTextChapter: TextChapter? = null
     var bookSource: BookSource? = null
     var msg: String? = null
+    private val readRecordRepository: ReadRecordRepository by inject()
+    private var lastReadLength: Long = 0
     private val loadingChapters = arrayListOf<Int>()
     private val readRecord = ReadRecord()
     private val chapterLoadingJobs = ConcurrentHashMap<Int, Coroutine<*>>()
@@ -280,16 +286,91 @@ object ReadBook : CoroutineScope by MainScope() {
         }
     }
 
+    // 阅读暂停的阈值
+    private const val PAUSE_THRESHOLD = 5 * 60 * 1000L
+    // 存储当前正在累积的阅读会话对象
+    private var currentActiveSession: ReadRecordSession? = null
+    //占位
+    private var currentReadLength: Long = 10L
+
     fun upReadTime() {
-        executor.execute {
-            if (!AppConfig.enableReadRecord) {
-                return@execute
-            }
-            readRecord.readTime = readRecord.readTime + System.currentTimeMillis() - readStartTime
-            readStartTime = System.currentTimeMillis()
-            readRecord.lastRead = System.currentTimeMillis()
-            appDb.readRecordDao.insert(readRecord)
+        val currentLength = currentReadLength
+        if (!AppConfig.enableReadRecord) {
+            return
         }
+        val currentBookName = book?.name ?: return
+        val endTime = System.currentTimeMillis()
+
+        //计算本次片段的时长和字数
+        val duration = endTime - readStartTime
+        var wordChange = currentLength - lastReadLength
+        if (wordChange < 0) wordChange = 0
+
+        //过滤无效记录
+        if (duration < 1000L && wordChange == 0L) {
+            readStartTime = endTime
+            lastReadLength = currentLength
+            return
+        }
+
+        //检查是否中断
+        if (currentActiveSession != null) {
+            // 计算从上一个片段结束到当前片段开始的时间间隔
+            val timeSinceLastUpdate = readStartTime - currentActiveSession!!.endTime
+
+            if (timeSinceLastUpdate > PAUSE_THRESHOLD) {
+                // 如果间隔时间过长，说明用户暂停阅读后又回来了，提交旧会话
+                commitReadSession()
+            }
+        }
+
+
+        //累加或创建新会话
+        if (currentActiveSession == null) {
+            // 创建新的会话对象，使用 readStartTime 作为整个会话的起始时间
+            currentActiveSession = ReadRecordSession(
+                deviceId = "",
+                bookName = currentBookName,
+                startTime = readStartTime,
+                endTime = endTime,
+                words = 0
+            )
+        } else {
+            // 累加数据：只更新结束时间和总字数
+            currentActiveSession = currentActiveSession!!.copy(
+                endTime = endTime,
+                words = currentActiveSession!!.words + wordChange
+            )
+        }
+
+        readStartTime = endTime
+        lastReadLength = currentLength
+    }
+
+    /**
+     * 将当前累积的阅读会话（ReadRecordSession）写入数据库，并重置状态。
+     * 此方法必须在后台线程上调用。
+     */
+    fun commitReadSession() {
+        // 检查是否有需要保存的数据
+        val sessionToSave = currentActiveSession ?: return
+
+        // 确保时长和字数有效
+        if (sessionToSave.words <= 0 && (sessionToSave.endTime - sessionToSave.startTime) < 10L) {
+            currentActiveSession = null
+            return
+        }
+
+        //使用 runBlocking 确保数据库保存操作在当前线程上同步完成
+        try {
+            kotlinx.coroutines.runBlocking {
+                readRecordRepository.saveReadSession(sessionToSave)
+            }
+        } catch (e: Exception) {
+            AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
+        }
+
+        currentActiveSession = null
     }
 
     fun upMsg(msg: String?) {

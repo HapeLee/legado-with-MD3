@@ -8,6 +8,9 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.Calendar
 import java.util.Locale
 import java.util.regex.Matcher
@@ -95,6 +98,30 @@ object StringUtils {
             it.printOnDebug()
         }
         return ""
+    }
+
+    /**
+     * 将日期字符串转换为“今天”、“昨天”、“N天前”或标准日期格式
+     * @param dateString 待转换的日期字符串 yyyy-MM-dd
+     * @param pattern 用于解析 dateString 的格式，通常是 yyyy-MM-dd
+     */
+    fun formatFriendlyDate(dateString: String, pattern: String = "yyyy-MM-dd"): String {
+        return kotlin.runCatching {
+            val format = SimpleDateFormat(pattern, Locale.getDefault())
+            val date = format.parse(dateString) ?: return@runCatching dateString
+            val inputDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+            val today = LocalDate.now(ZoneId.systemDefault())
+            val daysBetween = ChronoUnit.DAYS.between(inputDate, today)
+            when (daysBetween) {
+                0L -> "今天"
+                1L -> "昨天"
+                in 2L..5L -> "${daysBetween}天前"
+                else -> dateString
+            }
+        }.getOrElse {
+            it.printStackTrace()
+            dateString
+        }
     }
 
     /**
