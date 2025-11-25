@@ -101,12 +101,10 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
 
         binding.btnShadowSet.setOnClickListener {
             callBack2?.showShadowSet()
-            dismissAllowingStateLoss()
         }
 
         binding.btnSelectFonts.setOnClickListener {
             callBack2?.showFontSelect()
-            dismissAllowingStateLoss()
         }
         binding.btnTextItalic.isChecked = ReadBookConfig.textItalic
         binding.btnTextShadow.isChecked = ReadBookConfig.textShadow
@@ -134,7 +132,6 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
 
         binding.swUnderline.addOnCheckedChangeListener { _, isChecked ->
             callBack2?.showUnderlineConfig()
-            dismissAllowingStateLoss()
         }
 
         binding.btnDefaultFonts.setOnClickListener {
@@ -145,7 +142,6 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
                 ) { _, i ->
                     AppConfig.systemTypefaces = i
                     onDefaultFontChange()
-                    dismissAllowingStateLoss()
                 }
             }
         }
