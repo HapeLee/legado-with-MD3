@@ -2,6 +2,8 @@ package io.legado.app.ui.book.readRecord
 
 import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,10 +38,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.stringResource
 import cn.hutool.core.date.DateUtil
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.ui.widget.compose.AnimatedTextLine
+import io.legado.app.ui.widget.compose.EmptyMessageView
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import org.koin.androidx.compose.koinViewModel
 
@@ -108,8 +113,25 @@ fun ReadRecordScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                LargeTopAppBar(
-                    title = { Text("阅读记录") },
+                MediumTopAppBar(
+                    title = {
+                        val (mainTitle, subTitle) = when (displayMode) {
+                            DisplayMode.AGGREGATE -> "阅读记录" to "汇总视图"
+                            DisplayMode.TIMELINE -> "阅读记录" to "时间线视图"
+                            DisplayMode.LATEST -> "阅读记录" to "最后阅读"
+                        }
+                        Column {
+                            Text(
+                                text = mainTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                            )
+
+                            AnimatedTextLine(
+                                text = subTitle,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -151,66 +173,87 @@ fun ReadRecordScreen(
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
 
             TotalTimeHeader(state.totalReadTime)
+            val isEmpty = when (displayMode) {
+                DisplayMode.AGGREGATE -> state.groupedRecords.isEmpty()
+                DisplayMode.TIMELINE -> state.timelineRecords.isEmpty()
+                DisplayMode.LATEST -> state.latestRecords.isEmpty()
+            }
+            Crossfade(
+                targetState = isEmpty,
+                animationSpec = tween(durationMillis = 500),
+                label = "ContentCrossfade"
+            ) { isListEmpty ->
+                if (isListEmpty){
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyMessageView(
+                            message = "没有记录"
+                        )
+                    }
+                } else {
+                    LazyColumn {
+                        when(displayMode){
+                            DisplayMode.AGGREGATE -> {
+                                state.groupedRecords.forEach { (date, details) ->
 
-                LazyColumn {
-                    when(displayMode){
-                        DisplayMode.AGGREGATE -> {
-                            state.groupedRecords.forEach { (date, details) ->
+                                    val dailyTotalTime = details.sumOf { it.readTime }
 
-                                val dailyTotalTime = details.sumOf { it.readTime }
+                                    stickyHeader {
+                                        DateHeader(date, dailyTotalTime)
+                                    }
 
-                                stickyHeader {
-                                    DateHeader(date, dailyTotalTime)
+                                    items(
+                                        items = details,
+                                        key = { it.bookName + it.readTime.toString() }
+                                    ) { detail ->
+                                        ReadRecordItem(
+                                            detail = detail,
+                                            viewModel = viewModel,
+                                            onClick = { onBookClick(detail.bookName) },
+                                            onDelete = { viewModel.deleteDetail(detail) },
+                                            modifier = Modifier.animateItem()
+                                        )
+                                    }
                                 }
+                            }
+                            DisplayMode.TIMELINE -> {
+                                state.timelineRecords.forEach { (date, sessions) ->
+                                    val dailyTotalTime = sessions.sumOf { it.endTime - it.startTime }
+                                    stickyHeader { DateHeader(date, dailyTotalTime) }
 
-                                items(
-                                    items = details,
-                                    key = { it.bookName + it.readTime.toString() }
-                                ) { detail ->
-                                    ReadRecordItem(
-                                        detail = detail,
+                                    val timelineItems = sessions.mapIndexed { index, session ->
+                                        val previousSession = sessions.getOrNull(index - 1)
+
+                                        val showHeader = index == 0 || session.bookName != previousSession?.bookName
+                                        TimelineItem(session, showHeader)
+                                    }
+
+                                    items(items = timelineItems, key = { it.session.id }) { item ->
+                                        TimelineSessionItem(
+                                            item = item,
+                                            onBookClick = onBookClick,
+                                            viewModel = viewModel
+                                        )
+                                    }
+                                }
+                            }
+                            DisplayMode.LATEST -> {
+                                items(items = state.latestRecords, key = { it.bookName + it.deviceId }) { record ->
+                                    LatestReadItem(
+                                        record = record,
                                         viewModel = viewModel,
-                                        onClick = { onBookClick(detail.bookName) },
-                                        onDelete = { viewModel.deleteDetail(detail) },
+                                        onClick = { onBookClick(record.bookName) },
                                         modifier = Modifier.animateItem()
                                     )
                                 }
                             }
                         }
-                        DisplayMode.TIMELINE -> {
-                            state.timelineRecords.forEach { (date, sessions) ->
-                                val dailyTotalTime = sessions.sumOf { it.endTime - it.startTime }
-                                stickyHeader { DateHeader(date, dailyTotalTime) }
-
-                                val timelineItems = sessions.mapIndexed { index, session ->
-                                    val previousSession = sessions.getOrNull(index - 1)
-
-                                    val showHeader = index == 0 || session.bookName != previousSession?.bookName
-                                    TimelineItem(session, showHeader)
-                                }
-
-                                items(items = timelineItems, key = { it.session.id }) { item ->
-                                    TimelineSessionItem(
-                                        item = item,
-                                        onBookClick = onBookClick,
-                                        viewModel = viewModel
-                                    )
-                                }
-                            }
-                        }
-                        DisplayMode.LATEST -> {
-                            items(items = state.latestRecords, key = { it.bookName + it.deviceId }) { record ->
-                                LatestReadItem(
-                                    record = record,
-                                    viewModel = viewModel,
-                                    onClick = { onBookClick(record.bookName) },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
-                        }
                     }
-
                 }
+            }
         }
     }
 }
@@ -232,7 +275,7 @@ fun LatestReadItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BookCoverWithPlaceholder(coverPath)
@@ -344,11 +387,11 @@ fun TimelineSessionItem(
                     "时长: ${formatDuring(duration)}",
                     style = MaterialTheme.typography.bodySmall
                 )
-               // Text(
-               //     "字数: ${session.words}",
-               //     style = MaterialTheme.typography.bodySmall,
-               //     color = MaterialTheme.colorScheme.onSurfaceVariant
-               // )
+                // Text(
+                //     "字数: ${session.words}",
+                //     style = MaterialTheme.typography.bodySmall,
+                //     color = MaterialTheme.colorScheme.onSurfaceVariant
+                // )
             }
         }
     }
@@ -372,7 +415,7 @@ fun ReadRecordItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BookCoverWithPlaceholder(coverPath)
@@ -431,9 +474,8 @@ fun DateHeader(
     dailyTotalTime: Long
 ) {
     val dateText = formatFriendlyDate(date)
-    val totalTimeText = "阅读时长: ${formatDuring(dailyTotalTime)}"
+    val totalTimeText = "已读 ${formatDuring(dailyTotalTime)}"
     Surface(
-        color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -446,8 +488,6 @@ fun DateHeader(
                 color = MaterialTheme.colorScheme.secondary
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             Text(
                 text = totalTimeText,
                 style = MaterialTheme.typography.bodySmall,
@@ -459,21 +499,35 @@ fun DateHeader(
 
 @Composable
 fun TotalTimeHeader(time: Long) {
-    Column(
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        shape = MaterialTheme.shapes.medium,
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text("总阅读时长", style = MaterialTheme.typography.labelMedium)
-        Text(
-            text = formatDuring(time),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Column(
+            modifier = Modifier
+                .padding(12.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = "阅读时长",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Text(
+                text = formatDuring(time),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
