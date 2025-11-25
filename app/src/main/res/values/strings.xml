@@ -946,6 +946,7 @@
     <string name="select_book_folder">Select the folder where the books are saved</string>
     <string name="user_agent">User agent</string>
     <string name="bg_alpha">Background alpha</string>
+    <string name="private_storage">Apply private storage</string>
 
     <!-- check source config string -->
     <string name="check_source_config">Check setting</string>
