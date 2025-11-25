@@ -325,7 +325,7 @@ fun TimelineSessionItem(
     val timelineX = 24.dp
     val contentPaddingStart = 32.dp
 
-    val lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    val lineColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val nodeColor = MaterialTheme.colorScheme.primary
 
     Box(
@@ -364,7 +364,7 @@ fun TimelineSessionItem(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = startTimeText,
+                    text = endTimeText,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -385,7 +385,8 @@ fun TimelineSessionItem(
 
                 Text(
                     "时长: ${formatDuring(duration)}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
                 // Text(
                 //     "字数: ${session.words}",

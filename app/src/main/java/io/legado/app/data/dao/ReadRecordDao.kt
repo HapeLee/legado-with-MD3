@@ -93,6 +93,19 @@ interface ReadRecordDao {
     fun deleteDetailByName(bookName: String)
 
     /**
+     * 获取指定书籍的最后一条阅读会话
+     * 用于判断是否可以合并
+     */
+    @Query("SELECT * FROM readRecordSession WHERE bookName = :bookName ORDER BY endTime DESC LIMIT 1")
+    suspend fun getLatestSessionByBook(bookName: String): ReadRecordSession?
+
+    /**
+     * 更新现有的会话
+     */
+    @Update
+    suspend fun updateSession(session: ReadRecordSession)
+
+    /**
      * 插入阅读会话记录。
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)

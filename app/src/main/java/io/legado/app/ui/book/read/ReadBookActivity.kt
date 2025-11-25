@@ -392,6 +392,8 @@ class ReadBookActivity : BaseReadBookActivity(),
     override fun onResume() {
         super.onResume()
         ReadBook.readStartTime = System.currentTimeMillis()
+        ReadBook.initReadTime()
+        ReadBook.startAutoSaveSession()
         if (bookChanged) {
             bookChanged = false
             ReadBook.callBack = this
@@ -423,6 +425,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         autoPageStop()
         backupJob?.cancel()
         ReadBook.saveRead()
+        ReadBook.stopAutoSaveSession()
         ReadBook.commitReadSession()
         ReadBook.cancelPreDownloadTask()
         unregisterReceiver(timeBatteryReceiver)
