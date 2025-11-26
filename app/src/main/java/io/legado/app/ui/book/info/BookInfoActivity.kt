@@ -552,9 +552,12 @@ class BookInfoActivity :
                     color = Color.BLACK
                 }
                 binding.cdInfo?.setCardBackgroundColor(color)
-                binding.llInfo.setBackgroundColor(color)
-                (binding.llCover.background as? GradientDrawable)?.colors =
-                    intArrayOf(Color.TRANSPARENT, color)
+                if (!AppConfig.isTransparent)
+                {
+                    binding.llInfo.setBackgroundColor(color)
+                    (binding.llCover.background as? GradientDrawable)?.colors =
+                        intArrayOf(Color.TRANSPARENT, color)
+                }
             }
         }
 
@@ -592,7 +595,8 @@ class BookInfoActivity :
                 duration = 400L
                 addUpdateListener { animation ->
                     val color = animation.animatedValue as Int
-                    binding.bgBookMask.setBackgroundColor(color)
+                    if (!AppConfig.isTransparent)
+                        binding.bgBookMask.setBackgroundColor(color)
                 }
             }
 

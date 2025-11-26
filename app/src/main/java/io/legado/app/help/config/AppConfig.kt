@@ -26,7 +26,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val isCronet = appCtx.getPrefBoolean(PreferKey.cronet)
     var useAntiAlias = appCtx.getPrefBoolean(PreferKey.antiAlias)
     var userAgent: String = getPrefUserAgent()
-    var isEInkMode = appCtx.getPrefString(PreferKey.themeMode) == "3"
+    var isEInkMode = appCtx.getPrefString("app_theme", "0") == "4"
+    var isTransparent = appCtx.getPrefString("app_theme", "0") == "13"
     var customMode = appCtx.getPrefString(PreferKey.customMode)
     var clickActionTL = appCtx.getPrefInt(PreferKey.clickActionTL, 2)
     var clickActionTC = appCtx.getPrefInt(PreferKey.clickActionTC, 2)
