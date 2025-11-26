@@ -221,7 +221,7 @@ jobs:
   test_Branch:
     needs: [ prepare, build ]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' && github.actor == 'gedoor' }}
+    if: ${{ github.event_name != 'pull_request'}}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
