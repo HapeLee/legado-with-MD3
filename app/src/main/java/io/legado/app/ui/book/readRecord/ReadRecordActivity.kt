@@ -38,13 +38,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
 import cn.hutool.core.date.DateUtil
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordSession
-import io.legado.app.ui.widget.compose.AnimatedTextLine
-import io.legado.app.ui.widget.compose.EmptyMessageView
+import io.legado.app.ui.widget.components.AnimatedTextLine
+import io.legado.app.ui.widget.components.Cover
+import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import org.koin.androidx.compose.koinViewModel
 
@@ -278,7 +279,7 @@ fun LatestReadItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BookCoverWithPlaceholder(coverPath)
+        Cover(coverPath)
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -372,7 +373,7 @@ fun TimelineSessionItem(
             Column(modifier = Modifier.weight(1f)) {
                 if (item.showHeader) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        BookCoverWithPlaceholder(coverPath)
+                        Cover(coverPath)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = session.bookName,
@@ -419,7 +420,7 @@ fun ReadRecordItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BookCoverWithPlaceholder(coverPath)
+        Cover(coverPath)
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -444,32 +445,6 @@ fun ReadRecordItem(
 }
 
 @Composable
-fun BookCoverWithPlaceholder(path: String?) {
-    Box(
-        modifier = Modifier
-            .width(48.dp)
-            .height(68.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFFEEEEEE)), // 灰色背景
-        contentAlignment = Alignment.Center
-    ) {
-        if (path == null) {
-            Icon(Icons.Default.Book, null, tint = Color.Gray)
-        } else {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(path)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-    }
-}
-
-@Composable
 fun DateHeader(
     date: String,
     dailyTotalTime: Long
@@ -477,15 +452,13 @@ fun DateHeader(
     val dateText = formatFriendlyDate(date)
     val totalTimeText = "已读 ${formatDuring(dailyTotalTime)}"
     Surface(
-        tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(
                 text = dateText,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold
-                ),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
             )
 
@@ -526,47 +499,6 @@ fun TotalTimeHeader(time: Long) {
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-    }
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SearchBarSection(
-    query: String,
-    onQueryChange: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-
-        TextField(
-            value = query,
-            onValueChange = onQueryChange,
-            placeholder = { Text("搜索书名…") },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
-                        }
-                    }
-                }
-            },
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            )
-        )
     }
 }
 
