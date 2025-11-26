@@ -83,6 +83,8 @@ class BooksAdapterListCompact(
                 if (unreadCount > 0) {
                     binding.cdUnread.visible()
                     binding.tvUnread.text = unreadCount.toString()
+                    if (AppConfig.showUnreadNew)
+                        binding.newChapter.isVisible = item.lastCheckCount > 0
                 } else {
                     binding.cdUnread.gone()
                 }

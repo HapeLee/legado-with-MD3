@@ -64,6 +64,7 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
             }
 
             swShowUnread.isChecked = AppConfig.showUnread
+            swShowUnreadNew.isChecked = AppConfig.showUnreadNew
             swShowLastUpdateTime.isChecked = AppConfig.showLastUpdateTime
             swShowWaitUpBooks.isChecked = AppConfig.showWaitUpCount
             swShowBookshelfFastScroller.isChecked = AppConfig.showBookshelfFastScroller
@@ -117,6 +118,10 @@ class BookshelfConfigBottomSheet : BaseBottomSheetDialogFragment(R.layout.dialog
 
                 if (AppConfig.showUnread != swShowUnread.isChecked) {
                     AppConfig.showUnread = swShowUnread.isChecked
+                    postEvent(EventBus.BOOKSHELF_REFRESH, "")
+                }
+                if (AppConfig.showUnreadNew != swShowUnreadNew.isChecked) {
+                    AppConfig.showUnreadNew = swShowUnreadNew.isChecked
                     postEvent(EventBus.BOOKSHELF_REFRESH, "")
                 }
                 if (AppConfig.showLastUpdateTime != swShowLastUpdateTime.isChecked) {

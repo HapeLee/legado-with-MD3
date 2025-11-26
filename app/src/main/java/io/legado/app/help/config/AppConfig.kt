@@ -157,6 +157,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.showUnread, value)
         }
 
+    var showUnreadNew: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.showUnreadNew, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.showUnreadNew, value)
+        }
+
     var showLastUpdateTime: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showLastUpdateTime, false)
         set(value) {

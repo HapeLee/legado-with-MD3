@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.data.entities.Book
@@ -131,6 +132,8 @@ class BooksAdapterList(context: Context, callBack: CallBack) :
                     if (unreadCount > 0) {
                         binding.cdUnread.visible()
                         binding.tvUnread.text = unreadCount.toString()
+                        if (AppConfig.showUnreadNew)
+                            binding.newChapter.isVisible = item.lastCheckCount > 0
                     } else {
                         binding.cdUnread.gone()
                     }

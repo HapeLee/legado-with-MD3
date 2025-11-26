@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.isVisible
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemBookshelfGridCompactBinding
@@ -60,6 +61,8 @@ class BooksAdapterGridCover(context: Context, private val callBack: CallBack) :
                 if (unreadCount > 0) {
                     binding.cdUnread.visibility = View.VISIBLE
                     binding.tvUnread.text = unreadCount.toString()
+                    if (AppConfig.showUnreadNew)
+                        binding.newChapter.isVisible = item.lastCheckCount > 0
                 } else {
                     binding.cdUnread.visibility = View.GONE
                 }

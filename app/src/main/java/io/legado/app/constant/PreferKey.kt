@@ -7,6 +7,7 @@ object PreferKey {
     const val themeMode = "themeMode"
     const val userAgent = "userAgent"
     const val showUnread = "showUnread"
+    const val showUnreadNew = "showUnreadNew"
     const val bookGroupStyle = "bookGroupStyle"
     const val useDefaultCover = "useDefaultCover"
     const val loadCoverOnlyWifi = "loadCoverOnlyWifi"

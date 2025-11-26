@@ -64,20 +64,35 @@
                     app:cardCornerRadius="4dp"
                     app:strokeWidth="0dp"
                     app:cardBackgroundColor="?attr/colorSecondaryVariant"
-                    app:layout_constraintTop_toTopOf="@id/iv_cover"
-                    app:layout_constraintEnd_toEndOf="@id/iv_cover">
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
 
-                    <TextView
-                        android:id="@+id/tv_unread"
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="?attr/colorOnSecondary"
-                        android:textSize="10sp"
-                        android:padding="4dp"
-                        android:textStyle="bold"
-                        android:includeFontPadding="false"
-                        tools:text="5"
-                        tools:ignore="SmallSp" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.circularreveal.cardview.CircularRevealCardView
+                            android:id="@+id/new_chapter"
+                            android:layout_width="8dp"
+                            android:layout_height="8dp"
+                            android:layout_marginStart="4dp"
+                            app:strokeWidth="0dp"
+                            app:cardBackgroundColor="?attr/colorSecondaryContainer" />
+
+                        <TextView
+                            android:id="@+id/tv_unread"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/colorOnSecondary"
+                            android:textSize="9sp"
+                            android:padding="4dp"
+                            android:textStyle="bold"
+                            android:includeFontPadding="false"
+                            tools:text="5"
+                            tools:ignore="SmallSp" />
+                    </LinearLayout>
 
                 </com.google.android.material.card.MaterialCardView>
 
