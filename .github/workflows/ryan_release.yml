@@ -1,0 +1,392 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**'
+      # - '!**/assets/**'
+      # - '!**.md'
+      - '!**/ISSUE_TEMPLATE/**'
+      - '!**/modules/web/**'
+  pull_request:
+    paths-ignore:
+      - '**/modules/web/**'
+  workflow_run:
+    workflows: [Build Web]
+    branches: [master]
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  prepare:
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.event.head_commit.message, 'Merge pull request') }}
+    outputs:
+      versionL: ${{ steps.set-ver.outputs.full_version_name }}
+      version: ${{ steps.set-ver.outputs.current_version }}
+      build_number: ${{ steps.set-ver.outputs.build_number }}
+      latest_tag: ${{ steps.set-ver.outputs.last_tag }}
+      is_release: ${{ steps.set-ver.outputs.is_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 计算版本号和构建号
+        id: set-ver
+        run: |
+          PROPERTIES_FILE="./app/version.properties"
+          if [[ ! -f "$PROPERTIES_FILE" ]]; then
+            echo "错误：version.properties 文件不存在于 $PROPERTIES_FILE"
+            exit 1
+          fi
+          
+          # --- 1. 读取基础版本和发布标志 ---
+          MAJOR=$(cat "$PROPERTIES_FILE" | grep 'VERSION_MAJOR' | cut -d'=' -f2 | tr -d '[:space:]')
+          MINOR=$(cat "$PROPERTIES_FILE" | grep 'VERSION_MINOR' | cut -d'=' -f2 | tr -d '[:space:]')
+          PATCH=$(cat "$PROPERTIES_FILE" | grep 'VERSION_PATCH' | cut -d'=' -f2 | tr -d '[:space:]')
+          RELEASE_FLAG=$(cat "$PROPERTIES_FILE" | grep 'VERSION_SUFFIX' | cut -d'=' -f2 | tr -d '[:space:]')
+          
+          CURRENT_VERSION="$MAJOR.$MINOR.$PATCH"
+          NEW_BUILD_NUM=0
+          VERSION_SUFFIX_NAME=""
+          IS_RELEASE="false" # 默认为 Pre-release
+          
+          # 2. 确定版本类型和后缀
+          if [[ "${RELEASE_FLAG}" == "0" ]]; then
+            # 标记为正式版 (VERSION_SUFFIX=0)
+            VERSION_SUFFIX_NAME=""
+            IS_RELEASE="true"
+            echo "版本类型: 正式版 (Release), 版本名: $CURRENT_VERSION"
+          
+            # 找到最近的正式版本 tag 作为日志起点
+            LAST_TAG_FOR_LOG=$(git tag --list "$MAJOR.$MINOR.*" --sort=-committerdate | grep -v 'beta' | head -n 2 | tail -n 1)
+            if [ -z "$LAST_TAG_FOR_LOG" ]; then
+                # 如果找不到上一个正式版，则从最近的非本次构建的 tag 开始
+                LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 2 | tail -n 1)
+            fi
+          
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            # 标记为测试版 (VERSION_SUFFIX=1 或其他/空)，且在 main 分支推送
+          
+            # 查找匹配当前 CURRENT_VERSION 的上一个 BETA TAG (e.g., 3.26.4-beta.X)
+            LAST_MATCHING_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
+          
+            if [[ $LAST_MATCHING_TAG =~ [0-9]+\.[0-9]+\.[0-9]+-beta\.([0-9]+) ]]; then
+              LAST_BUILD_NUM="${BASH_REMATCH[1]}"
+              NEW_BUILD_NUM=$((LAST_BUILD_NUM + 1))
+            else
+              NEW_BUILD_NUM=1
+            fi
+          
+            VERSION_SUFFIX_NAME="-beta.$NEW_BUILD_NUM"
+          
+            # 日志从最近的任意 TAG 开始 (包括上一个 beta.x tag)
+            LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
+            LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+            echo "版本类型: 预发布版 (Pre-release), 构建号: $NEW_BUILD_NUM"
+          
+          else
+            # 其它情况 (PR, 非 main 分支推送等)，构建号设为 0
+            NEW_BUILD_NUM=0
+            LAST_ANY_TAG=$(git tag --sort=-committerdate | head -n 1)
+            LAST_TAG_FOR_LOG="${LAST_ANY_TAG#v}"
+            echo "非 main 分支推送/PR，构建号设置为 $NEW_BUILD_NUM"
+          fi
+          
+          # 3. 构造最终版本信息
+          FULL_VERSION_NAME="${CURRENT_VERSION}${VERSION_SUFFIX_NAME}"
+          
+          # 4. 设置输出供后续作业使用
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "full_version_name=$FULL_VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "build_number=$NEW_BUILD_NUM" >> $GITHUB_OUTPUT
+          echo "last_tag=$LAST_TAG_FOR_LOG" >> $GITHUB_OUTPUT
+          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT # 新的输出标志
+
+  build:
+    needs: prepare
+    strategy:
+      matrix:
+        product: [ app ]
+        type: [ release ]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    env:
+      product: ${{ matrix.product }}
+      type: ${{ matrix.type }}
+      # 使用 prepare job 的输出
+      VERSION: ${{ needs.prepare.outputs.version }}
+      VERSIONL: ${{ needs.prepare.outputs.versionL }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 17
+      - name: Clear 18PlusList.txt
+        run: |
+          echo "清空18PlusList.txt"
+          echo "">$GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
+      - name: Release Apk Sign
+        run: |
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > $GITHUB_WORKSPACE/app/my-release-key.jks
+          echo "RELEASE_STORE_FILE=my-release-key.jks" >> $GITHUB_WORKSPACE/gradle.properties
+          echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_WORKSPACE/gradle.properties
+          echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_WORKSPACE/gradle.properties
+          echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_WORKSPACE/gradle.properties
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 统一版本号
+        run: |
+          VERSIONL="${{ env.VERSIONL }}"
+          BUILD_NUMBER="${{ env.BUILD_NUMBER }}"
+          echo "开始修改 build.gradle 中的版本号..."
+          sed -i "s/ext.versionName = .*/ext.versionName = \"$VERSIONL\"/" $GITHUB_WORKSPACE/app/build.gradle
+
+      - name: Build With Gradle
+        run: |
+          echo "开始${{ env.product }}${{ env.type }}构建"
+          chmod +x gradlew
+          ./gradlew assemble${{ env.product }}Release
+
+      - name: Move Missing Rules Files
+        run: |
+          echo "移动missing_rules.txt文件"
+          MAPPING_DIR="${{ github.workspace }}/mapping"
+          mkdir -p "$MAPPING_DIR"
+          # 使用 find 代替 ls，避免参数列表过长
+          find ${{ github.workspace }}/app/build/outputs/mapping/ -name "missing_rules.txt" -exec mv {} "$MAPPING_DIR/missing_rules.txt" \;
+
+      - name: Upload Missing Rules File To Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado.${{ env.product }}.${{ env.type }}.mapping.missing_rules
+          if-no-files-found: ignore
+          path: ${{ github.workspace }}/mapping/missing_rules.txt
+
+      - name: Check Build production
+        run: |
+          echo "检查 APK 输出目录"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk"
+          # 检查是否有任何 APK 文件生成
+          if [ -z "$(find "$APK_PATH" -name "*.apk" -print -quit)" ]; then
+            echo "Build production not found! Check gradle logs."
+            exit 1
+          fi
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-apk
+          path: app/build/outputs/apk/app/release/legado_app_*[0-9].apk
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: arm64-v8a-apk
+          path: app/build/outputs/apk/app/release/*arm64-v8a.apk
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: armeabi-v7a-apk
+          path: app/build/outputs/apk/app/release/*armeabi-v7a.apk
+
+      - name: Upload Mapping File To Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado.${{ env.product }}.${{ env.type }}.mapping
+          if-no-files-found: ignore
+          path: ${{ github.workspace }}/mapping/mapping.txt
+
+
+  test_Branch:
+    needs: [ prepare, build ]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request'}}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          path: apk/
+      - working-directory: apk/
+        run: |
+          # 使用 find 安全地移动文件
+          find . -type f -name "*.apk" -exec mv {} . \;
+          # 清理子目录
+          find . -type d -mindepth 1 -exec rm -rf {} +
+
+      - name: Push To "test" Branch
+        run: |
+          cd $GITHUB_WORKSPACE/apk/
+          git init
+          git checkout -b test
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.ACTIONS_TOKEN }}@github.com/${{ github.actor }}/release"
+          git add *.apk
+          git commit -m "${{ needs.prepare.outputs.versionL }}"
+          git push -f -u origin test
+
+  create_release:
+    needs: [ prepare, build ]
+    # 触发条件：只有在 main 分支推送，且构建号大于 0（针对 beta 版） 或 明确标记为正式版时才执行
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      (needs.prepare.outputs.build_number > 0 || needs.prepare.outputs.is_release == 'true') &&
+      success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      #
+      # 获取 Commit 记录并格式化为 Release Body
+      #
+      - name: 获取 Commit 记录
+        id: get_commits
+        run: |
+          # prepare Job 中计算出的日志起点 Tag (LAST_TAG_FOR_LOG)
+          LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
+          
+          # 获取从上一个 Tag 到当前 HEAD 的所有 Commit 消息
+          # --no-merges: 排除合并提交
+          COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
+          
+          if [ -z "$COMMIT_LOG" ]; then
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+    
+          - 没有新的 Commit 记录.
+          EOF
+          )
+          else
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+      
+          $COMMIT_LOG
+          EOF
+          )
+          fi
+      
+            # 设置 step 输出
+          echo "release_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+    
+          echo "生成的 Release Body:"
+          echo "$RELEASE_BODY"
+
+      - name: 创建 Tag
+        run: |
+          # 检查 Tag 是否已存在，避免重复创建
+          if ! git tag -l ${{ needs.prepare.outputs.versionL }} | grep -q ${{ needs.prepare.outputs.versionL }}; then
+            git tag ${{ needs.prepare.outputs.versionL }} 
+            git push origin ${{ needs.prepare.outputs.versionL }}
+          else
+            echo "Tag ${{ needs.prepare.outputs.versionL }} 已存在，跳过创建。"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 创建 GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ needs.prepare.outputs.versionL }}
+          release_name: |
+            ${{ needs.prepare.outputs.is_release == 'true' && format('Release {0}', needs.prepare.outputs.versionL) || format('Pre-release {0}', needs.prepare.outputs.versionL) }}
+          body: ${{ steps.get_commits.outputs.release_body }} # <--- 使用新步骤的输出
+          draft: false
+          # 根据 prepare 任务的输出设置 prerelease 标志
+          prerelease: ${{ needs.prepare.outputs.is_release == 'true' && 'false' || 'true' }}
+
+      - name: 下载所有 APK Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-apk'
+          path: artifacts
+          merge-multiple: true
+
+      - name: 整理并重命名 APK 文件
+        id: organize_apks
+        run: |
+          VERSIONL="${{ needs.prepare.outputs.versionL }}"
+          
+          echo "正在查找并重命名 APK 文件..."
+          
+          # 查找 Universal APK (文件名不含 ABI)
+          find artifacts -maxdepth 1 -type f -name '*app_*.apk' \
+            ! -name '*arm64-v8a.apk' \
+            ! -name '*armeabi-v7a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}.apk" \;
+          
+          # 查找 arm64-v8a APK
+          find artifacts -maxdepth 1 -type f -name '*arm64-v8a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}-arm64-v8a.apk" \;
+          
+          # 查找 armeabi-v7a APK
+          find artifacts -maxdepth 1 -type f -name '*armeabi-v7a.apk' \
+            -exec mv {} "artifacts/legado-${VERSIONL}-armeabi-v7a.apk" \;
+          
+          # 检查文件是否成功找到并重命名，如果找不到则退出
+          if [ ! -f "artifacts/legado-${VERSIONL}.apk" ]; then
+            echo "错误：未找到 Universal APK。请检查 build 作业的命名规则。"
+            # 允许继续，但发出警告，因为其他 ABI 仍可能存在
+            # exit 1 # 移除硬性退出，以防万一
+          fi
+          
+          echo "文件重命名完成，准备上传："
+          ls -l artifacts/
+
+      - name: 上传 Universal APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}.apk
+          asset_name: legado-${{ needs.prepare.outputs.versionL }}.apk
+          asset_content_type: application/vnd.android.package-archive # APK MIME 类型
+
+      - name: 上传 arm64-v8a APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}-arm64-v8a.apk
+          asset_name: legado-${{ needs.prepare.outputs.versionL }}-arm64-v8a.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      - name: 上传 armeabi-v7a APK
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/legado-${{ needs.prepare.outputs.versionL }}-armeabi-v7a.apk
+          asset_name: legado-${{ needs.prepare.outputs.versionL }}-armeabi-v7a.apk
+          asset_content_type: application/vnd.android.package-archive
