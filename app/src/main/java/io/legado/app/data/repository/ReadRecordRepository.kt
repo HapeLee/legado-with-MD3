@@ -14,75 +14,19 @@ import kotlin.math.min
 class ReadRecordRepository(
     private val dao: ReadRecordDao
 ) {
-
-    companion object {
-        // 10秒内重新打开书本，视为同一次阅读
-        private const val CONTINUE_THRESHOLD = 10 * 1000L
-        // 会话总时长小于10秒则不记录
-        private const val MIN_READ_DURATION = 0 * 1000L
-    }
-
     private fun getCurrentDeviceId(): String = ""
 
-    /**
-     * 智能保存阅读会话。
-     * 自动判断是插入新会话还是合并到上一次会话
-     */
-    @Transaction
-    suspend fun saveOrMergeReadSession(newSession: ReadRecordSession) {
-
-        val segmentDuration = newSession.endTime - newSession.startTime
-
-        if (segmentDuration < MIN_READ_DURATION) {
-            return
-        }
-
-        val latestSession = dao.getLatestSessionByBook(newSession.bookName)
-
-        if (latestSession != null) {
-            val timeGap = newSession.startTime - latestSession.endTime
-
-            if (timeGap <= CONTINUE_THRESHOLD && timeGap >= 0) {
-
-                val durationDelta = segmentDuration
-                val wordsDelta = newSession.words
-
-                val mergedSession = latestSession.copy(
-                    endTime = newSession.endTime,
-                    words = latestSession.words + wordsDelta
-                )
-
-                dao.updateSession(mergedSession)
-
-                val dateString = DateUtil.format(Date(mergedSession.startTime), DatePattern.NORM_DATE_PATTERN)
-                updateReadRecordDetail(mergedSession, durationDelta, wordsDelta, dateString)
-                updateReadRecord(mergedSession, durationDelta)
-
-                return
-            }
-        }
-
-        // 处理新会话
-        dao.insertSession(newSession)
-
-        val dateString = DateUtil.format(Date(newSession.startTime), DatePattern.NORM_DATE_PATTERN)
-        updateReadRecordDetail(newSession, segmentDuration, newSession.words, dateString)
-        updateReadRecord(newSession, segmentDuration)
-    }
 
     /**
      * 保存一个完整的阅读会话
-     * 没几把用
      */
     @Transaction
-    suspend fun saveReadSession(session: ReadRecordSession) {
-        dao.insertSession(session)
-
-        val sessionDuration = session.endTime - session.startTime
-        val dateString = DateUtil.format(Date(session.startTime), DatePattern.NORM_DATE_PATTERN)
-        updateReadRecordDetail(session, sessionDuration, session.words, dateString)
-
-        updateReadRecord(session, sessionDuration)
+    suspend fun saveReadSession(newSession: ReadRecordSession) {
+        val segmentDuration = newSession.endTime - newSession.startTime
+        dao.insertSession(newSession)
+        val dateString = DateUtil.format(Date(newSession.startTime), DatePattern.NORM_DATE_PATTERN)
+        updateReadRecordDetail(newSession, segmentDuration, newSession.words, dateString)
+        updateReadRecord(newSession, segmentDuration)
     }
 
     /**
