@@ -1,23 +1,23 @@
 name: Test Build
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '**'
-      # - '!**/assets/**'
-      # - '!**.md'
-      - '!**/ISSUE_TEMPLATE/**'
-      - '!**/modules/web/**'
-  pull_request:
-    paths-ignore:
-      - '**/modules/web/**'
-  workflow_run:
-    workflows: [Build Web]
-    branches: [master]
-    types:
-      - completed
+#  push:
+#    branches:
+#      - main
+#    paths:
+#      - '**'
+#      # - '!**/assets/**'
+#      # - '!**.md'
+#      - '!**/ISSUE_TEMPLATE/**'
+#      - '!**/modules/web/**'
+#  pull_request:
+#    paths-ignore:
+#      - '**/modules/web/**'
+#  workflow_run:
+#    workflows: [Build Web]
+#    branches: [master]
+#    types:
+#      - completed
   workflow_dispatch:
 
 permissions:
