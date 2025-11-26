@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.compose
+package io.legado.app.ui.widget.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInVertically

@@ -39,9 +39,9 @@ import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.base.AppTheme
 import io.legado.app.constant.AppConst.appInfo
-import io.legado.app.ui.widget.compose.SettingItem
-import io.legado.app.ui.widget.compose.SplicedColumnGroup
-import io.legado.app.ui.widget.compose.TextCard
+import io.legado.app.ui.widget.components.SettingItem
+import io.legado.app.ui.widget.components.SplicedColumnGroup
+import io.legado.app.ui.widget.components.TextCard
 
 @Preview(showBackground = true, name = "Light Mode")
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "Dark Mode")
