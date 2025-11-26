@@ -123,6 +123,7 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
         activity?.onBackPressedDispatcher?.addCallback(this) {
             if (binding.clToc.isVisible) {
                 binding.clToc.gone()
+                binding.recyclerView.visible()
                 return@addCallback
             }
             dismissAllowingStateLoss()
@@ -155,6 +156,7 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
     private fun initView() {
         binding.ivHideToc.setOnClickListener {
             binding.clToc.gone()
+            binding.recyclerView.visible()
         }
         //binding.flHideToc.elevation = requireContext().elevation
     }
@@ -307,6 +309,7 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
     override fun openToc(searchBook: SearchBook) {
         this.searchBook = searchBook
         tocAdapter.setItems(null)
+        binding.recyclerView.gone()
         binding.clToc.visible()
         binding.loadingToc.visible()
         val book = searchBook.toBook()
