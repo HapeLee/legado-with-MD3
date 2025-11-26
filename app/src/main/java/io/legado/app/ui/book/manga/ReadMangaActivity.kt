@@ -429,6 +429,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         if (enableAutoScroll) {
             mScrollTimer.isEnabled = true
         }
+        ReadManga.initReadTime()
+        ReadManga.startAutoSaveSession()
     }
 
     override fun onPause() {
@@ -444,6 +446,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 Backup.autoBack(this)
             }
         }
+        ReadManga.stopAutoSaveSession()
         ReadManga.commitReadSession()
         ReadManga.cancelPreDownloadTask()
         networkChangedListener.unRegister()

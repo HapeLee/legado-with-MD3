@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.koin.core.component.KoinComponent
@@ -74,6 +75,16 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     val hasNextChapter get() = durChapterIndex < simulatedChapterSize - 1
 
     private val readRecordRepository: ReadRecordRepository by inject()
+
+    private val ioScope = CoroutineScope(IO)
+
+    private var autoSaveJob: Job? = null
+
+    private var currentActiveSession: ReadRecordSession? = null
+    private var currentReadLength: Long = 10L
+    private const val AUTO_SAVE_INTERVAL = 120 * 1000L
+
+    private const val MIN_READ_DURATION = 10 * 1000L
 
     private var lastReadLength: Long = 0
     fun resetData(book: Book) {
@@ -134,92 +145,84 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         nextMangaChapter = null
     }
 
-    //每次切换章节更新阅读记录
-    // 阅读暂停的阈值
-    private const val PAUSE_THRESHOLD = 5 * 60 * 1000L
-    // 存储当前正在累积的阅读会话对象
-    private var currentActiveSession: ReadRecordSession? = null
-    //占位
-    private var currentReadLength: Long = 10L
-
-    fun upReadTime() {
-        val currentLength = currentReadLength
-        if (!AppConfig.enableReadRecord) {
-            return
-        }
+    fun initReadTime() {
         val currentBookName = book?.name ?: return
-        val endTime = System.currentTimeMillis()
-
-        //计算本次片段的时长和字数
-        val duration = endTime - readStartTime
-        var wordChange = currentLength - lastReadLength
-        if (wordChange < 0) wordChange = 0
-
-        //过滤无效记录
-        if (duration < 1000L && wordChange == 0L) {
-            readStartTime = endTime
-            lastReadLength = currentLength
-            return
+        if (currentActiveSession != null && currentActiveSession!!.bookName != currentBookName) {
+            commitReadSession()
         }
 
-        //检查是否中断
-        if (currentActiveSession != null) {
-            // 计算从上一个片段结束到当前片段开始的时间间隔
-            val timeSinceLastUpdate = readStartTime - currentActiveSession!!.endTime
-
-            if (timeSinceLastUpdate > PAUSE_THRESHOLD) {
-                // 如果间隔时间过长，说明用户暂停阅读后又回来了，提交旧会话
-                commitReadSession()
-            }
-        }
-
-
-        //累加或创建新会话
         if (currentActiveSession == null) {
-            // 创建新的会话对象，使用 readStartTime 作为整个会话的起始时间
+            lastReadLength = currentReadLength
             currentActiveSession = ReadRecordSession(
                 deviceId = "",
                 bookName = currentBookName,
                 startTime = readStartTime,
-                endTime = endTime,
+                endTime = readStartTime,
                 words = 0
             )
-        } else {
-            // 累加数据：只更新结束时间和总字数
-            currentActiveSession = currentActiveSession!!.copy(
-                endTime = endTime,
-                words = currentActiveSession!!.words + wordChange
-            )
         }
+    }
+
+    fun upReadTime() {
+        val currentLength = currentReadLength
+        val currentBookName = book?.name ?: return
+        val endTime = System.currentTimeMillis()
+
+        if (currentActiveSession == null || currentActiveSession!!.bookName != currentBookName) {
+            initReadTime()
+            return
+        }
+
+        var wordChange = currentLength - lastReadLength
+        if (wordChange < 0) wordChange = 0
+
+        currentActiveSession = currentActiveSession!!.copy(
+            endTime = endTime,
+            words = currentActiveSession!!.words + wordChange
+        )
 
         readStartTime = endTime
         lastReadLength = currentLength
     }
 
-    /**
-     * 将当前累积的阅读会话（ReadRecordSession）写入数据库，并重置状态。
-     * 此方法必须在后台线程上调用。
-     */
-    fun commitReadSession() {
-        // 检查是否有需要保存的数据
-        val sessionToSave = currentActiveSession ?: return
+    fun startAutoSaveSession() {
+        autoSaveJob?.cancel()
+        autoSaveJob = ioScope.launch {
+            while (isActive) {
+                delay(AUTO_SAVE_INTERVAL)
+                commitSessionInternal()
+            }
+        }
+    }
 
-        // 确保时长和字数有效
-        if (sessionToSave.words <= 0 && (sessionToSave.endTime - sessionToSave.startTime) < 10L) {
+    fun stopAutoSaveSession() {
+        autoSaveJob?.cancel()
+        autoSaveJob = null
+    }
+
+    fun commitReadSession() {
+        ioScope.launch {
+            commitSessionInternal()
+        }
+    }
+
+    /**
+     * 内部提交逻辑
+     */
+    private suspend fun commitSessionInternal() {
+        val sessionToSave = currentActiveSession ?: return
+        val sessionDuration = sessionToSave.endTime - sessionToSave.startTime
+        if (sessionDuration < MIN_READ_DURATION) {
             currentActiveSession = null
             return
         }
-
-        //使用 runBlocking 确保数据库保存操作在当前线程上同步完成
         try {
-            kotlinx.coroutines.runBlocking {
-                readRecordRepository.saveReadSession(sessionToSave)
-            }
+            readRecordRepository.saveOrMergeReadSession(sessionToSave)
         } catch (e: Exception) {
             AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
+        } finally {
+            currentActiveSession = null
         }
-
-        currentActiveSession = null
     }
 
     @Synchronized

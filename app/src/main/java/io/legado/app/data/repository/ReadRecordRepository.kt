@@ -15,10 +15,64 @@ class ReadRecordRepository(
     private val dao: ReadRecordDao
 ) {
 
+    companion object {
+        // 2分钟内重新打开书本，视为同一次阅读
+        private const val CONTINUE_THRESHOLD = 120 * 1000L
+        // 会话总时长小于10秒则不记录
+        private const val MIN_READ_DURATION = 0 * 1000L
+    }
+
     private fun getCurrentDeviceId(): String = ""
 
     /**
-     * 保存一个完整的阅读会话，并同步更新 ReadRecordDetail 和 ReadRecord。
+     * 智能保存阅读会话。
+     * 自动判断是插入新会话还是合并到上一次会话
+     */
+    @Transaction
+    suspend fun saveOrMergeReadSession(newSession: ReadRecordSession) {
+
+        val segmentDuration = newSession.endTime - newSession.startTime
+
+        if (segmentDuration < MIN_READ_DURATION) {
+            return
+        }
+
+        val latestSession = dao.getLatestSessionByBook(newSession.bookName)
+
+        if (latestSession != null) {
+            val timeGap = newSession.startTime - latestSession.endTime
+
+            if (timeGap <= CONTINUE_THRESHOLD && timeGap >= 0) {
+
+                val durationDelta = segmentDuration
+                val wordsDelta = newSession.words
+
+                val mergedSession = latestSession.copy(
+                    endTime = newSession.endTime,
+                    words = latestSession.words + wordsDelta
+                )
+
+                dao.updateSession(mergedSession)
+
+                val dateString = DateUtil.format(Date(mergedSession.startTime), DatePattern.NORM_DATE_PATTERN)
+                updateReadRecordDetail(mergedSession, durationDelta, wordsDelta, dateString)
+                updateReadRecord(mergedSession, durationDelta)
+
+                return
+            }
+        }
+
+        // 处理新会话
+        dao.insertSession(newSession)
+
+        val dateString = DateUtil.format(Date(newSession.startTime), DatePattern.NORM_DATE_PATTERN)
+        updateReadRecordDetail(newSession, segmentDuration, newSession.words, dateString)
+        updateReadRecord(newSession, segmentDuration)
+    }
+
+    /**
+     * 保存一个完整的阅读会话
+     * 没几把用
      */
     @Transaction
     suspend fun saveReadSession(session: ReadRecordSession) {
@@ -26,17 +80,23 @@ class ReadRecordRepository(
 
         val sessionDuration = session.endTime - session.startTime
         val dateString = DateUtil.format(Date(session.startTime), DatePattern.NORM_DATE_PATTERN)
+        updateReadRecordDetail(session, sessionDuration, session.words, dateString)
 
-        updateReadRecordDetail(session, sessionDuration, dateString)
         updateReadRecord(session, sessionDuration)
     }
 
-    private suspend fun updateReadRecord(session: ReadRecordSession, sessionDuration: Long) {
+    /**
+     * 更新总记录表 (ReadRecord)
+     * @param durationDelta 增加的时长
+     */
+    private suspend fun updateReadRecord(session: ReadRecordSession, durationDelta: Long) {
+        if (durationDelta <= 0) return
+
         val existingRecord = dao.getReadRecord(session.deviceId, session.bookName)
 
         if (existingRecord != null) {
             val updatedRecord = existingRecord.copy(
-                readTime = existingRecord.readTime + sessionDuration,
+                readTime = existingRecord.readTime + durationDelta,
                 lastRead = session.endTime
             )
             dao.update(updatedRecord)
@@ -44,19 +104,31 @@ class ReadRecordRepository(
             val newRecord = ReadRecord(
                 deviceId = session.deviceId,
                 bookName = session.bookName,
-                readTime = sessionDuration,
+                readTime = durationDelta,
                 lastRead = session.endTime
             )
             dao.insert(newRecord)
         }
     }
 
-    private suspend fun updateReadRecordDetail(session: ReadRecordSession, sessionDuration: Long, dateString: String) {
+    /**
+     * 更新每日详情表 (ReadRecordDetail)
+     * @param durationDelta 增加的时长
+     * @param wordsDelta 增加的字数
+     */
+    private suspend fun updateReadRecordDetail(
+        session: ReadRecordSession,
+        durationDelta: Long,
+        wordsDelta: Long,
+        dateString: String
+    ) {
+        if (durationDelta <= 0 && wordsDelta <= 0) return
+
         val existingDetail = dao.getDetail(session.deviceId, session.bookName, dateString)
 
         if (existingDetail != null) {
-            existingDetail.readTime += sessionDuration
-            existingDetail.readWords += session.words
+            existingDetail.readTime += durationDelta
+            existingDetail.readWords += wordsDelta
             existingDetail.firstReadTime = min(existingDetail.firstReadTime, session.startTime)
             existingDetail.lastReadTime = max(existingDetail.lastReadTime, session.endTime)
             dao.insertDetail(existingDetail)
@@ -65,8 +137,8 @@ class ReadRecordRepository(
                 deviceId = session.deviceId,
                 bookName = session.bookName,
                 date = dateString,
-                readTime = sessionDuration,
-                readWords = session.words,
+                readTime = durationDelta,
+                readWords = wordsDelta,
                 firstReadTime = session.startTime,
                 lastReadTime = session.endTime
             )
@@ -115,5 +187,4 @@ class ReadRecordRepository(
     // 暴露总时长
     val allTime: Long
         get() = dao.allTime
-
 }
