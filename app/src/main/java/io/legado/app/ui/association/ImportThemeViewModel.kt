@@ -1,6 +1,7 @@
 package io.legado.app.ui.association
 
 import android.app.Application
+import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
@@ -13,6 +14,7 @@ import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
 import io.legado.app.utils.*
+import splitties.init.appCtx
 
 class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
 
@@ -80,6 +82,9 @@ class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
                 }
             text.isAbsUrl() -> {
                 importSourceUrl(text)
+            }
+            text.isUri() -> {
+                importSourceAwait(text.toUri().readText(appCtx))
             }
             else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
         }

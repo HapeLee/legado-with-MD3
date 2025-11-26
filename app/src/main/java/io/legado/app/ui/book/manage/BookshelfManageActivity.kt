@@ -118,20 +118,6 @@ class BookshelfManageActivity :
         upBookDataByGroupId()
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN) {
-            currentFocus?.let {
-                if (it.shouldHideSoftInput(ev)) {
-                    it.post {
-                        it.clearFocus()
-                        it.hideSoftInput()
-                    }
-                }
-            }
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
     override fun observeLiveBus() {
         viewModel.batchChangeSourceState.observe(this) {
             if (it) {

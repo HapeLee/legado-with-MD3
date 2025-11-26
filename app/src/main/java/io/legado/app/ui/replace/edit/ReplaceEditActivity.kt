@@ -203,6 +203,8 @@ class ReplaceEditActivity :
             val edit = view.editableText
             if (start < 0 || start >= edit.length) {
                 edit.append(text)
+            } else if (start > end) {
+                edit.replace(end, start, text)
             } else {
                 edit.replace(start, end, text)
             }

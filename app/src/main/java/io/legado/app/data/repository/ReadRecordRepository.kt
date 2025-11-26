@@ -16,8 +16,8 @@ class ReadRecordRepository(
 ) {
 
     companion object {
-        // 2分钟内重新打开书本，视为同一次阅读
-        private const val CONTINUE_THRESHOLD = 120 * 1000L
+        // 10秒内重新打开书本，视为同一次阅读
+        private const val CONTINUE_THRESHOLD = 10 * 1000L
         // 会话总时长小于10秒则不记录
         private const val MIN_READ_DURATION = 0 * 1000L
     }

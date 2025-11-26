@@ -101,12 +101,10 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
         }
 
         tvTextFont.setOnClickListener {
-            dismissAllowingStateLoss()
             callBack?.showFont()
         }
 
         tvPadding.setOnClickListener {
-            dismissAllowingStateLoss()
             callBack?.showInfoConfig()
         }
         tvTip.setOnClickListener {
@@ -168,7 +166,6 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
     }
 
     private fun showBgTextConfig(index: Int): Boolean {
-        dismissAllowingStateLoss()
         changeBgTextConfig(index)
         callBack?.showBgTextConfig()
         return true

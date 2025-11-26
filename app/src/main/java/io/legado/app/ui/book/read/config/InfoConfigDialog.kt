@@ -57,7 +57,6 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
             }
         }
         binding.btnPaddingSetting.setOnClickListener {
-            dismissAllowingStateLoss()
             callBack?.showPaddingConfig()
         }
         upTvTipColor()

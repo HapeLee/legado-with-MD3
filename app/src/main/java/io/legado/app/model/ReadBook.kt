@@ -371,7 +371,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             return
         }
         try {
-            readRecordRepository.saveOrMergeReadSession(sessionToSave)
+            readRecordRepository.saveReadSession(sessionToSave)
         } catch (e: Exception) {
             AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
         } finally {

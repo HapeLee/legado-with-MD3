@@ -95,20 +95,6 @@ class SearchContentActivity :
         return super.onCompatOptionsItemSelected(item)
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN) {
-            currentFocus?.let {
-                if (it.shouldHideSoftInput(ev)) {
-                    it.post {
-                        it.clearFocus()
-                        it.hideSoftInput()
-                    }
-                }
-            }
-        }
-        return super.dispatchTouchEvent(ev)
-    }
-
     private fun initSearchResultList(list: List<SearchResult>?, position: Int) {
         list ?: return
         viewModel.searchResultList.addAll(list)

@@ -34,7 +34,8 @@ class ServerConfigDialog() : BaseDialogFragment(R.layout.dialog_webdav_server, t
     private val webDavServerUi = listOf(
         RowUi("url"),
         RowUi("username"),
-        RowUi("password", RowUi.Type.password)
+        RowUi("password", RowUi.Type.password),
+        RowUi("ipRange")
     )
 
     override fun onStart() {

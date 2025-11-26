@@ -16,7 +16,7 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
     private val slopSquare get() = readView.pageSlopSquare2
 
     private var fadeProgress = 0f
-    private val flipThreshold = 0.2f
+    private val flipThreshold = 0.1f
 
     override fun setDirection(direction: PageDirection) {
         super.setDirection(direction)
