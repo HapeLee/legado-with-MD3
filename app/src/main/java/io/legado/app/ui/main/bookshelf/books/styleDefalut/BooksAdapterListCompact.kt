@@ -87,6 +87,7 @@ class BooksAdapterListCompact(
                         binding.newChapter.isVisible = item.lastCheckCount > 0
                 } else {
                     binding.cdUnread.gone()
+                    binding.newChapter.gone()
                 }
             } else {
                 binding.cdUnread.gone()

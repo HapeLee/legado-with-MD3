@@ -10,6 +10,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemBookshelfGridCompactBinding
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
+import io.legado.app.utils.gone
 
 class BooksAdapterGridCompact(context: Context, private val callBack: CallBack) :
     BaseBooksAdapter<ItemBookshelfGridCompactBinding>(context) {
@@ -64,6 +65,7 @@ class BooksAdapterGridCompact(context: Context, private val callBack: CallBack) 
                         binding.newChapter.isVisible = item.lastCheckCount > 0
                 } else {
                     binding.cdUnread.visibility = View.GONE
+                    binding.newChapter.gone()
                 }
             } else {
                 binding.cdUnread.visibility = View.GONE

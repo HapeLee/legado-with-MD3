@@ -75,9 +75,10 @@
 
                         <com.google.android.material.circularreveal.cardview.CircularRevealCardView
                             android:id="@+id/new_chapter"
-                            android:layout_width="8dp"
-                            android:layout_height="8dp"
-                            android:layout_marginStart="4dp"
+                            android:layout_width="6dp"
+                            android:layout_height="6dp"
+                            android:visibility="gone"
+                            android:layout_marginStart="6dp"
                             app:strokeWidth="0dp"
                             app:cardBackgroundColor="?attr/colorSecondaryContainer" />
 

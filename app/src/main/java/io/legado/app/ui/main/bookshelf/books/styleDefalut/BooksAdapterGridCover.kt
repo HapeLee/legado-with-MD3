@@ -65,6 +65,7 @@ class BooksAdapterGridCover(context: Context, private val callBack: CallBack) :
                         binding.newChapter.isVisible = item.lastCheckCount > 0
                 } else {
                     binding.cdUnread.visibility = View.GONE
+                    binding.newChapter.gone()
                 }
             } else {
                 binding.cdUnread.visibility = View.GONE
