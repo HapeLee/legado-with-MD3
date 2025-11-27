@@ -132,7 +132,7 @@ class ReadRecordActivity : BaseActivity<ActivityReadRecordBinding>() {
     private fun initAllTime() {
         lifecycleScope.launch {
             val allTime = withContext(IO) {
-                appDb.readRecordDao.allTime
+                appDb.readRecordDao.getTotalReadTime()
             }
             binding.tvReadingTime.text = formatDuring(allTime)
         }

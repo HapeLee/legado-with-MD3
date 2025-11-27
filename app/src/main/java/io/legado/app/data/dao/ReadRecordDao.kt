@@ -26,8 +26,8 @@ interface ReadRecordDao {
     )
     val allShow: List<ReadRecordShow>
 
-    @get:Query("select sum(readTime) from readRecord")
-    val allTime: Long
+    @Query("select sum(readTime) from readRecord")
+    suspend fun getTotalReadTime(): Long
 
     @Query(
         """
@@ -138,9 +138,12 @@ interface ReadRecordDao {
     SELECT * FROM readRecordSession 
     WHERE deviceId = :deviceId 
     AND STRFTIME('%Y-%m-%d', datetime(startTime/1000, 'unixepoch', 'localtime')) = :date 
-    ORDER BY startTime DESC
+    ORDER BY startTime ASC
     """)
     suspend fun getSessionsByDate(deviceId: String, date: String): List<ReadRecordSession>
+
+    @Query("SELECT * FROM readRecordDetail WHERE deviceId = :deviceId AND date = :date AND bookName LIKE '%' || :query || '%'")
+    suspend fun searchDetailsByDate(deviceId: String, date: String, query: String): List<ReadRecordDetail>
 
     // 清除会话记录
     @Query("DELETE FROM readRecordSession WHERE bookName = :bookName")

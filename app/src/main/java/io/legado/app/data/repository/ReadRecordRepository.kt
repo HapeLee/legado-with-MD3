@@ -90,14 +90,6 @@ class ReadRecordRepository(
         }
     }
 
-    suspend fun getDailyDetails(deviceId: String, date: String): List<ReadRecordDetail> {
-        return dao.getDetailsByDate(deviceId, date)
-    }
-
-    suspend fun getDailySessions(deviceId: String, bookName: String, date: String): List<ReadRecordSession> {
-        return dao.getSessionsByBookAndDate(deviceId, bookName, date)
-    }
-
     suspend fun getLatestReadRecords(query: String = ""): List<ReadRecord> {
         return if (query.isBlank()) {
             dao.getAllReadRecordsSortedByLastRead()
@@ -106,17 +98,26 @@ class ReadRecordRepository(
         }
     }
 
-    suspend fun getAllSessionsForDate(date: String): List<ReadRecordSession> {
-        val deviceId = getCurrentDeviceId()
-        return dao.getSessionsByDate(deviceId, date)
-    }
-
     suspend fun getAllRecordDetails(query: String = ""): List<ReadRecordDetail> {
         return if (query.isBlank()) {
             dao.getAllDetails()
         } else {
             dao.searchDetails(query)
         }
+    }
+
+    suspend fun getAllRecordDetailsByDate(dateString: String, query: String = ""): List<ReadRecordDetail> {
+        val deviceId = getCurrentDeviceId()
+        return if (query.isBlank()) {
+            dao.getDetailsByDate(deviceId, dateString)
+        } else {
+            dao.searchDetailsByDate(deviceId, dateString, query)
+        }
+    }
+
+    suspend fun getAllSessionsByDate(dateString: String): List<ReadRecordSession> {
+        val deviceId = getCurrentDeviceId()
+        return dao.getSessionsByDate(deviceId, dateString)
     }
 
     suspend fun deleteDetail(detail: ReadRecordDetail) {
@@ -129,6 +130,8 @@ class ReadRecordRepository(
     }
 
     // 暴露总时长
-    val allTime: Long
-        get() = dao.allTime
+    suspend fun getTotalReadTime(): Long {
+        return dao.getTotalReadTime()
+    }
+
 }
