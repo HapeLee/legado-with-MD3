@@ -897,5 +897,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.shouldShowExpandButton, value)
         }
 
+    var exploreFilterState: Int
+        get() = appCtx.getPrefInt(PreferKey.exploreFilterState, 0)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.exploreFilterState, value)
+        }
 }
 

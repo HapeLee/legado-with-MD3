@@ -219,6 +219,7 @@ object PreferKey {
     const val disableMangaScrollAnimation = "disableMangaScrollAnimation"
     const val disableMangaCrossFade = "disableMangaCrossFade"
     const val titleBarMode = "titleBarMode"
-
     const val shouldShowExpandButton = "shouldShowExpandButton"
+
+    const val exploreFilterState = "explore_filter_state"
 }

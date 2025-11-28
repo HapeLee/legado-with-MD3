@@ -12,6 +12,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.config.AppConfig
+import io.legado.app.model.BookShelfState
 import io.legado.app.model.webBook.SearchModel
 import io.legado.app.utils.ConflateLiveData
 import io.legado.app.utils.toastOnUi
@@ -19,12 +20,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapLatest
 import java.util.concurrent.ConcurrentHashMap
-
-enum class BookShelfState {
-    IN_SHELF,
-    SAME_NAME_AUTHOR,
-    NOT_IN_SHELF
-}
 
 data class BookKey(val name: String, val author: String, val url: String?)
 

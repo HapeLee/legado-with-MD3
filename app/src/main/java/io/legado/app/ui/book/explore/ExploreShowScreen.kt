@@ -1,0 +1,379 @@
+package io.legado.app.ui.book.explore
+
+import android.content.Intent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.legado.app.data.entities.SearchBook
+import io.legado.app.model.BookShelfState
+import io.legado.app.ui.widget.components.Cover
+import org.koin.androidx.compose.koinViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExploreShowScreen(
+    title: String,
+    intent: Intent,
+    onBack: () -> Unit,
+    onBookClick: (SearchBook) -> Unit,
+    viewModel: ExploreShowViewModel = koinViewModel()
+) {
+
+    LaunchedEffect(Unit) {
+        viewModel.initData(intent)
+    }
+
+    val books by viewModel.uiBooks.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val errorMsg by viewModel.errorMsg.collectAsState()
+    val filterState by viewModel.filterState.collectAsState()
+    val listState = rememberLazyListState()
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            ExploreTopBar(
+                title = title,
+                filterState = filterState,
+                onBack = onBack,
+                onFilterSelect = viewModel::setFilterState,
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(
+                    items = books,
+                    key = { it.bookUrl }
+                ) { book ->
+                    val shelfState = viewModel.getCurrentBookShelfState(book)
+                    ExploreBookItem(
+                        book = book,
+                        shelfState = shelfState,
+                        onClick = { onBookClick(book) },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+
+                item {
+                    LoadMoreFooter(
+                        isLoading = isLoading,
+                        errorMsg = errorMsg,
+                        onRetry = { viewModel.loadMore() }
+                    )
+                }
+            }
+
+            if (!isLoading && books.isEmpty() && errorMsg == null) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("暂无书籍", color = Color.Gray)
+                }
+            }
+
+            val shouldLoadMore = remember {
+                derivedStateOf {
+                    val totalItems = listState.layoutInfo.totalItemsCount
+                    val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                    totalItems > 0 && lastVisibleIndex >= totalItems - 2
+                }
+            }
+
+            LaunchedEffect(shouldLoadMore.value) {
+                if (shouldLoadMore.value) {
+                    viewModel.loadMore()
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExploreTopBar(
+    title: String,
+    filterState: BookFilterState,
+    onBack: () -> Unit,
+    onFilterSelect: (BookFilterState) -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    MediumTopAppBar(
+        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        navigationIcon = {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+        },
+        actions = {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.FilterList, contentDescription = "Filter")
+            }
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("全部显示") },
+                    onClick = {
+                        onFilterSelect(BookFilterState.SHOW_ALL)
+                        showMenu = false
+                    },
+                    trailingIcon = { if(filterState == BookFilterState.SHOW_ALL) Icon(Icons.Default.Check, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("隐藏已在书架的同源书籍") },
+                    onClick = {
+                        onFilterSelect(BookFilterState.HIDE_IN_SHELF)
+                        showMenu = false
+                    },
+                    trailingIcon = { if(filterState == BookFilterState.HIDE_IN_SHELF) Icon(Icons.Default.Check, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("隐藏已在书架的非同源书籍") },
+                    onClick = {
+                        onFilterSelect(BookFilterState.HIDE_SAME_NAME_AUTHOR)
+                        showMenu = false
+                    },
+                    trailingIcon = { if(filterState == BookFilterState.HIDE_SAME_NAME_AUTHOR) Icon(Icons.Default.Check, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("只显示不在书架的书籍") },
+                    onClick = {
+                        onFilterSelect(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
+                        showMenu = false
+                    },
+                    trailingIcon = { if(filterState == BookFilterState.SHOW_NOT_IN_SHELF_ONLY) Icon(Icons.Default.Check, null) }
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior
+    )
+}
+
+@Composable
+fun ExploreBookItem(
+    book: SearchBook,
+    shelfState: BookShelfState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Column {
+
+            Cover(path = book.coverUrl)
+
+            if (shelfState != BookShelfState.NOT_IN_SHELF) {
+                Spacer(modifier = Modifier.height(4.dp))
+                BookshelfStatusBadge(
+                    shelfState = shelfState,
+                    modifier = Modifier
+                        .width(48.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Column(modifier = Modifier
+            .weight(1f)
+            .align(Alignment.CenterVertically)) {
+
+            Text(
+                text = book.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Row {
+                Text(
+                    text = book.author,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+
+                val latestChapter = book.latestChapterTitle
+                if (!latestChapter.isNullOrEmpty()) {
+                    Text(
+                        text = " • ",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 1
+                    )
+
+                    Text(
+                        text = "最新: $latestChapter",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
+            if (intro.isNotEmpty()) {
+                Text(
+                    text = intro,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.DarkGray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            val kinds = book.getKindList()
+            if (kinds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                    kinds.forEach { kind ->
+                        TagChip(text = kind)
+                        Spacer(modifier = Modifier.width(6.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BookshelfStatusBadge(
+    shelfState: BookShelfState,
+    modifier: Modifier = Modifier
+) {
+    val text = when (shelfState) {
+        BookShelfState.IN_SHELF -> "已在书架"
+        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
+        else -> null
+    }
+
+    if (text != null) {
+        Surface(
+            modifier = modifier,
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
+    }
+}
+
+// 简单的标签组件
+@Composable
+fun TagChip(text: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun LoadMoreFooter(
+    isLoading: Boolean,
+    errorMsg: String?,
+    onRetry: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isLoading) {
+            LoadingIndicator()
+        } else if (errorMsg != null) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "加载失败: $errorMsg", color = Color.Red, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = onRetry) {
+                    Text("重试")
+                }
+            }
+        } else {
+            // 没有在加载且没有错误，可能到底了，或者等待滑动触发
+            Spacer(modifier = Modifier.height(1.dp))
+        }
+    }
+}

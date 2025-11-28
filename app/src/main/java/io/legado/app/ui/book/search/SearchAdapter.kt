@@ -12,6 +12,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.databinding.ItemSearchBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.model.BookShelfState
 import io.legado.app.ui.widget.text.AccentBgTextView
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone

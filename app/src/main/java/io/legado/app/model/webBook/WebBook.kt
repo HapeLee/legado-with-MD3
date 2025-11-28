@@ -134,6 +134,14 @@ object WebBook {
         )
     }
 
+    suspend fun exploreBookSuspend(
+        bookSource: BookSource,
+        url: String,
+        page: Int? = 1,
+    ): List<SearchBook> {
+        return exploreBookAwait(bookSource, url, page)
+    }
+
     /**
      * 书籍信息
      */

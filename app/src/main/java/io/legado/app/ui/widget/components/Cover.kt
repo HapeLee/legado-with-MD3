@@ -1,47 +1,83 @@
 package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 
+private val DefaultCoverModifier = Modifier
+    .width(48.dp)
+    .height(68.dp)
+
 @Composable
-fun Cover(path: String?) {
+fun Cover(
+    path: String?,
+    modifier: Modifier = DefaultCoverModifier,
+    badgeContent: (@Composable RowScope.() -> Unit)? = null
+) {
     Box(
-        modifier = Modifier
-            .width(48.dp)
-            .height(68.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Color(0xFFEEEEEE)), // 灰色背景
-        contentAlignment = Alignment.Center
+        modifier = modifier
     ) {
-        if (path == null) {
-            Icon(Icons.Default.Book, null, tint = Color.Gray)
-        } else {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(path)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow),
+            contentAlignment = Alignment.Center
+        ) {
+            if (path == null) {
+                Icon(Icons.Default.Book, null, tint = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(24.dp))
+            } else {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(path)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        if (badgeContent != null) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp),
+                shape = RoundedCornerShape(4.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                tonalElevation = 2.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    content = badgeContent
+                )
+            }
         }
     }
 }

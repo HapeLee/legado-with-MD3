@@ -33,6 +33,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.databinding.ActivityBookSearchBinding
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.model.BookShelfState
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
