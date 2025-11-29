@@ -191,54 +191,15 @@ class ChapterListAdapter(
         if (!volume.isVolume) return
 
         val all = getItems()
+        val volumeIndex = volume.index
         val startIndex = all.indexOf(volume)
         if (startIndex == -1) return
 
-        val currentPos = visibleItems.indexOf(volume)
-        if (currentPos == -1) return
+        val visiblePos = visibleItems.indexOf(volume)
+        if (visiblePos == -1) return
 
-        if (collapsedVolumes.contains(volume.index)) {
-            collapsedVolumes.remove(volume.index)
-
-            val toAdd = mutableListOf<BookChapter>()
-            for (i in startIndex + 1 until all.size) {
-                val next = all[i]
-                if (next.isVolume) break
-                toAdd.add(next)
-            }
-
-            val insertPos = currentPos + 1
-            visibleItems.addAll(insertPos, toAdd)
-
-            notifyItemRangeInserted(insertPos, toAdd.size)
-            notifyItemChanged(currentPos)
-
-        } else {
-            collapsedVolumes.add(volume.index)
-            val toRemove = mutableListOf<BookChapter>()
-            for (i in startIndex + 1 until all.size) {
-                val next = all[i]
-                if (next.isVolume) break
-                toRemove.add(next)
-            }
-            if (toRemove.isNotEmpty()) {
-                val removeStart = currentPos + 1
-                visibleItems.removeAll(toRemove)
-                notifyItemRangeRemoved(removeStart, toRemove.size)
-                notifyItemChanged(currentPos)
-            }
-        }
-    }
-
-    fun expandAllVolumes() {
-        val all = getItems()
-        var offset = 0
-
-        collapsedVolumes.forEach { volumeIndex ->
-            val volume = all.firstOrNull { it.index == volumeIndex } ?: return@forEach
-            val startIndex = all.indexOf(volume)
-            val currentPos = visibleItems.indexOf(volume)
-            if (currentPos == -1) return@forEach
+        if (collapsedVolumes.contains(volumeIndex)) {
+            collapsedVolumes.remove(volumeIndex)
 
             val toAdd = mutableListOf<BookChapter>()
             for (i in startIndex + 1 until all.size) {
@@ -248,37 +209,88 @@ class ChapterListAdapter(
             }
 
             if (toAdd.isNotEmpty()) {
-                visibleItems.addAll(currentPos + 1, toAdd)
-                notifyItemRangeInserted(currentPos + 1, toAdd.size)
-                notifyItemChanged(currentPos)
-                offset += toAdd.size
+                val insertPos = visiblePos + 1
+                visibleItems.addAll(insertPos, toAdd)
+                notifyItemRangeInserted(insertPos, toAdd.size)
+            }
+
+            notifyItemChanged(visiblePos)
+
+        } else {
+            collapsedVolumes.add(volumeIndex)
+
+            val toRemove = mutableListOf<BookChapter>()
+            for (i in startIndex + 1 until all.size) {
+                val next = all[i]
+                if (next.isVolume) break
+                toRemove.add(next)
+            }
+
+            if (toRemove.isNotEmpty()) {
+                val removeStart = visiblePos + 1
+                visibleItems.removeAll(toRemove)
+                notifyItemRangeRemoved(removeStart, toRemove.size)
+            }
+
+            notifyItemChanged(visiblePos)
+        }
+    }
+
+    fun expandAllVolumes() {
+        val all = getItems()
+        var insertedOffset = 0
+
+        val collapsedCopy = collapsedVolumes.toList()
+        collapsedVolumes.clear()
+
+        for (volumeIndex in collapsedCopy) {
+            val volume = all.firstOrNull { it.isVolume && it.index == volumeIndex } ?: continue
+            val start = all.indexOf(volume)
+            if (start == -1) continue
+
+            val visiblePos = visibleItems.indexOf(volume)
+            if (visiblePos == -1) continue
+
+            val children = mutableListOf<BookChapter>()
+            for (i in start + 1 until all.size) {
+                val next = all[i]
+                if (next.isVolume) break
+                children.add(next)
+            }
+
+            if (children.isNotEmpty()) {
+                val insertPos = visiblePos + 1
+                visibleItems.addAll(insertPos, children)
+                notifyItemRangeInserted(insertPos, children.size)
+                notifyItemChanged(visiblePos)
+                insertedOffset += children.size
             }
         }
-
-        collapsedVolumes.clear()
     }
 
     fun collapseAllVolumes() {
         val all = getItems()
 
-        all.filter { it.isVolume }.forEach { volume ->
-            val startIndex = visibleItems.indexOf(volume)
-            if (startIndex == -1) return@forEach
+        for (volume in all.filter { it.isVolume }) {
+            val visiblePos = visibleItems.indexOf(volume)
+            if (visiblePos == -1) continue
+
+            val volumeIndex = volume.index
+            collapsedVolumes.add(volumeIndex)
 
             val toRemove = mutableListOf<BookChapter>()
-            for (i in startIndex + 1 until visibleItems.size) {
+            for (i in visiblePos + 1 until visibleItems.size) {
                 val next = visibleItems[i]
                 if (next.isVolume) break
                 toRemove.add(next)
             }
 
             if (toRemove.isNotEmpty()) {
+                val removeStart = visiblePos + 1
                 visibleItems.removeAll(toRemove)
-                notifyItemRangeRemoved(startIndex + 1, toRemove.size)
-                notifyItemChanged(startIndex)
+                notifyItemRangeRemoved(removeStart, toRemove.size)
+                notifyItemChanged(visiblePos)
             }
-
-            collapsedVolumes.add(volume.index)
         }
     }
 
@@ -286,8 +298,10 @@ class ChapterListAdapter(
         return getItems().filter { it.isVolume }.map { it.title }
     }
 
-    fun getVolumeStartPosition(volumeName: String): Int {
-        return getItems().indexOfFirst { it.isVolume && it.title == volumeName }
+    fun getVolumeStartPosition(volumePosition: Int): Int {
+        val volumes = getItems().filter { it.isVolume }
+        val volume = volumes.getOrNull(volumePosition) ?: return -1
+        return getItems().indexOf(volume)
     }
 
     fun areAllVolumesExpanded(): Boolean {

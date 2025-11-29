@@ -179,8 +179,9 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
                     true
                 }
                 else -> {
-                    if (item.groupId == R.id.action_jump_to_volume_section && item.itemId in volumes.indices) {
-                        chapterFragment?.scrollToVolume(volumes[item.itemId])
+                    if (item.groupId == R.id.action_jump_to_volume_section) {
+                        val index = item.itemId
+                        chapterFragment?.scrollToVolume(index)
                         true
                     } else false
                 }

@@ -301,11 +301,16 @@ class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapt
         return adapter.getAllVolumes()
     }
 
-    fun scrollToVolume(volumeName: String) {
-        val position = adapter.getVolumeStartPosition(volumeName)
+    fun scrollToVolume(volumeIndex: Int) {
+        val volumes = getAllVolumes()
+        val volumeName = volumes.getOrNull(volumeIndex) ?: "未知卷"
+
+        val position = adapter.getVolumeStartPosition(volumeIndex)
         if (position >= 0) {
-            (binding.recyclerView.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(position, 0)
-            toastOnUi("已跳转到 $volumeName")
+            (binding.recyclerView.layoutManager as? LinearLayoutManager)
+                ?.scrollToPositionWithOffset(position, 0)
+
+            toastOnUi("已跳转到：$volumeName")
         }
     }
 
