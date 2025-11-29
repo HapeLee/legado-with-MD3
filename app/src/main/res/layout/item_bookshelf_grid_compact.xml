@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:clickable="true"
             android:focusable="true"
-            android:background="?attr/selectableItemBackground"
+            app:cardBackgroundColor="@android:color/transparent"
             app:cardCornerRadius="6dp"
             app:layout_constraintTop_toTopOf="parent"
             app:strokeWidth="0dp">
