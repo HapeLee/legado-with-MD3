@@ -2,6 +2,7 @@ package io.legado.app.ui.book.readRecord
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
@@ -36,7 +37,8 @@ enum class DisplayMode {
 
 class ReadRecordViewModel(
     private val repository: ReadRecordRepository,
-    private val bookDao: BookDao
+    private val bookDao: BookDao,
+    private val bookChapterDao: BookChapterDao
 ) : ViewModel() {
     private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)
     val displayMode = _displayMode.asStateFlow()
@@ -147,6 +149,25 @@ class ReadRecordViewModel(
         }
 
         return mergedList
+    }
+
+    suspend fun getChapterTitle(
+        bookName: String,
+        chapterIndexLong: Long
+    ): String? {
+        val chapterIndex = chapterIndexLong.toInt()
+        val book = withContext(Dispatchers.IO) {
+            bookDao.findByName(bookName).firstOrNull()
+        }
+
+        val bookUrl = book?.bookUrl
+        if (bookUrl.isNullOrEmpty()) {
+            return null
+        }
+
+        return withContext(Dispatchers.IO) {
+            bookChapterDao.getChapterTitleByUrlAndIndex(bookUrl, chapterIndex)
+        }
     }
 
     fun deleteDetail(detail: ReadRecordDetail) {

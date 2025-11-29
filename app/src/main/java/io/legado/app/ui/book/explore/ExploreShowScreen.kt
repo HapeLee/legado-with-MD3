@@ -337,7 +337,6 @@ fun ExploreBookItem(
                 Text(
                     text = book.author,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
                     maxLines = 1
                 )
 
@@ -365,7 +364,7 @@ fun ExploreBookItem(
                 Text(
                     text = intro,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray,
+                    color = Color.Gray,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )

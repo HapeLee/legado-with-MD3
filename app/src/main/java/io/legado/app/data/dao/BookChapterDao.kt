@@ -43,4 +43,13 @@ interface BookChapterDao {
     @Query("update chapters set wordCount = :wordCount where bookUrl = :bookUrl and url = :url")
     fun upWordCount(bookUrl: String, url: String, wordCount: String)
 
+    /**
+     * 根据书籍的唯一标识 bookUrl 和章节索引 index 查找章节标题。
+     */
+    @Query("""
+        SELECT title FROM chapters 
+        WHERE bookUrl = :bookUrl 
+        AND `index` = :chapterIndex
+    """)
+    suspend fun getChapterTitleByUrlAndIndex(bookUrl: String, chapterIndex: Int): String?
 }

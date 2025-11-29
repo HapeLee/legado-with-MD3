@@ -9,7 +9,8 @@ import org.koin.dsl.module
 val readRecordModule = module {
     single { get<AppDatabase>().readRecordDao }
     single { get<AppDatabase>().bookDao }
+    single { get<AppDatabase>().bookChapterDao }
     single { ReadRecordRepository(get()) }
 
-    viewModel { ReadRecordViewModel(get(), get()) }
+    viewModel { ReadRecordViewModel(get(), get(), get()) }
 }

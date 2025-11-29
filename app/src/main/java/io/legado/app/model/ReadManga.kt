@@ -158,7 +158,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 bookName = currentBookName,
                 startTime = readStartTime,
                 endTime = readStartTime,
-                words = 0
+                words = durChapterIndex.toLong()
             )
         }
     }
@@ -173,12 +173,9 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
             return
         }
 
-        var wordChange = currentLength - lastReadLength
-        if (wordChange < 0) wordChange = 0
-
         currentActiveSession = currentActiveSession!!.copy(
             endTime = endTime,
-            words = currentActiveSession!!.words + wordChange
+            words = durChapterIndex.toLong()
         )
 
         readStartTime = endTime

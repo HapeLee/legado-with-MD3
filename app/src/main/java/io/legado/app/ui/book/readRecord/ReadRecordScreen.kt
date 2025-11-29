@@ -52,6 +52,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
@@ -272,8 +273,7 @@ fun ReadRecordScreen(
                         }
                         DisplayMode.TIMELINE -> {
                             state.timelineRecords.forEach { (date, sessions) ->
-                                val dailyTotalTime = sessions.sumOf { it.endTime - it.startTime }
-                                stickyHeader { DateHeader(date, dailyTotalTime) }
+                                stickyHeader { DateHeader(date) }
 
                                 val timelineItems = sessions.mapIndexed { index, session ->
                                     val showHeader = true
@@ -360,14 +360,15 @@ fun TimelineSessionItem(
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
+    var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
 
     LaunchedEffect(session.bookName) {
         coverPath = viewModel.getBookCover(session.bookName)
+        val title = viewModel.getChapterTitle(session.bookName, session.words)
+        chapterTitle = title ?: "第 ${session.words} 章"
     }
 
-    val startTimeText = DateUtil.format(Date(session.startTime), "HH:mm")
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")
-    val duration = session.endTime - session.startTime
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
@@ -380,7 +381,6 @@ fun TimelineSessionItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 0.dp)
             .clickable { onBookClick(session.bookName) }
             .drawBehind {
                 val x = timelineX.toPx()
@@ -399,7 +399,6 @@ fun TimelineSessionItem(
                     radius = nodeRadius.toPx(),
                     center = Offset(x, cy)
                 )
-
             }
     ) {
         Row(
@@ -418,28 +417,26 @@ fun TimelineSessionItem(
                 )
             }
 
-            Column(modifier = Modifier.weight(1f)) {
-                if (item.showHeader) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Cover(coverPath)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = session.bookName,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 2
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Cover(coverPath)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
                     Text(
-                        "时长: ${formatDuring(duration)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
+                        text = session.bookName,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        minLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    // Text(
-                    //     "字数: ${session.words}",
-                    //     style = MaterialTheme.typography.bodySmall,
-                    //     color = MaterialTheme.colorScheme.onSurfaceVariant
-                    // )
+                    Text(
+                        text = chapterTitle.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -494,10 +491,9 @@ fun ReadRecordItem(
 @Composable
 fun DateHeader(
     date: String,
-    dailyTotalTime: Long
+    dailyTotalTime: Long? = null
 ) {
     val dateText = formatFriendlyDate(date)
-    val totalTimeText = "已读 ${formatDuring(dailyTotalTime)}"
     Surface(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -509,11 +505,13 @@ fun DateHeader(
                 color = MaterialTheme.colorScheme.secondary
             )
 
-            Text(
-                text = totalTimeText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            dailyTotalTime?.let { total ->
+                Text(
+                    text = "已读 ${formatDuring(total)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
     }
 }
