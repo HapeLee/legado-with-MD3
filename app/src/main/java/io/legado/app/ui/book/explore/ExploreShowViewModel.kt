@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookShelfState
@@ -52,7 +53,10 @@ class ExploreShowViewModel(
     private var page = 1
     private var isEnd = false
     private val _bookshelf = MutableStateFlow<Set<BookKey>>(emptySet())
-
+    private val _kinds = MutableStateFlow<List<ExploreKind>>(emptyList())
+    val kinds = _kinds.asStateFlow()
+    private val _selectedKindTitle = MutableStateFlow<String?>(null)
+    val selectedKindTitle = _selectedKindTitle.asStateFlow()
     val uiBooks = combine(
         _rawBooks,
         _filterState,
@@ -96,9 +100,22 @@ class ExploreShowViewModel(
         viewModelScope.launch {
             if (bookSource == null && sourceUrl != null) {
                 bookSource = repository.getBookSource(sourceUrl)
+                loadKinds(sourceUrl)
             }
             loadMore(isRefresh = true)
         }
+    }
+
+    fun loadKinds(sourceUrl: String) {
+        viewModelScope.launch {
+            _kinds.value = repository.getSourceExploreKinds(sourceUrl)
+        }
+    }
+
+    fun switchExploreUrl(kind: ExploreKind) {
+        _selectedKindTitle.value = kind.title
+        exploreUrl = kind.url
+        loadMore(isRefresh = true)
     }
 
     fun setFilterState(state: BookFilterState) {

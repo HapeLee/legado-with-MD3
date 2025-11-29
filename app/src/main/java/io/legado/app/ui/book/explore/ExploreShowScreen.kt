@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,19 +19,23 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -55,7 +60,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
+import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import org.koin.androidx.compose.koinViewModel
 
@@ -74,21 +81,61 @@ fun ExploreShowScreen(
     }
 
     val books by viewModel.uiBooks.collectAsState()
+    val kinds by viewModel.kinds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMsg by viewModel.errorMsg.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
+    val selectedTitle by viewModel.selectedKindTitle.collectAsState()
     val listState = rememberLazyListState()
-
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    var showKindSheet by remember { mutableStateOf(false) }
+
+    if (showKindSheet) {
+        val scrollState = rememberScrollState() // 记住滚动状态
+
+        ModalBottomSheet(
+            onDismissRequest = { showKindSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(12.dp)
+            ) {
+                Text(
+                    "选择分类",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                )
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    kinds.forEach { kind ->
+                        KindListItem(
+                            kind = kind,
+                            currentTitle = selectedTitle ?: title,
+                            onClick = {
+                                showKindSheet = false
+                                viewModel.switchExploreUrl(kind)
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             ExploreTopBar(
-                title = title,
+                title = selectedTitle ?: title,
                 filterState = filterState,
                 onBack = onBack,
                 onFilterSelect = viewModel::setFilterState,
+                onSelectKindClick = { showKindSheet = true },
                 scrollBehavior = scrollBehavior
             )
         }
@@ -147,6 +194,37 @@ fun ExploreShowScreen(
     }
 }
 
+@Composable
+fun KindListItem(
+    kind: ExploreKind,
+    currentTitle: String?,
+    onClick: () -> Unit
+) {
+    val isClickable = !kind.url.isNullOrBlank()
+    val isSelected = kind.title == currentTitle
+    FilterChip(
+        onClick = { if (isClickable) onClick() },
+        enabled = isClickable,
+        selected = isSelected,
+        label = {
+            Text(
+                text = kind.title,
+                fontSize = 14.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        modifier = Modifier
+            .then(
+                if (!isClickable) Modifier.fillMaxWidth()
+                else Modifier.fillMaxWidth(1 / 3f)
+            )
+            .padding(horizontal = 4.dp)
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreTopBar(
@@ -154,12 +232,13 @@ fun ExploreTopBar(
     filterState: BookFilterState,
     onBack: () -> Unit,
     onFilterSelect: (BookFilterState) -> Unit,
+    onSelectKindClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     MediumTopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -169,7 +248,9 @@ fun ExploreTopBar(
             IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Default.FilterList, contentDescription = "Filter")
             }
-
+            IconButton(onClick = { onSelectKindClick() }) {
+                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "分类")
+            }
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
