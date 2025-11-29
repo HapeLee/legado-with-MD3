@@ -32,13 +32,16 @@ private val DefaultCoverModifier = Modifier
 
 @Composable
 fun Cover(
-    path: String?,
+    path: Any?,
     modifier: Modifier = DefaultCoverModifier,
-    badgeContent: (@Composable RowScope.() -> Unit)? = null
+    badgeContent: (@Composable RowScope.() -> Unit)? = null,
+    loadOnlyWifi: Boolean = false,
+    sourceOrigin: String? = null,
+    onLoadFinish: (() -> Unit)? = null
 ) {
-    Box(
-        modifier = modifier
-    ) {
+    val context = LocalContext.current
+
+    Box(modifier = modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -47,12 +50,25 @@ fun Cover(
             contentAlignment = Alignment.Center
         ) {
             if (path == null) {
-                Icon(Icons.Default.Book, null, tint = MaterialTheme.colorScheme.surfaceContainerHighest, modifier = Modifier.size(24.dp))
+                Icon(
+                    Icons.Default.Book,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    modifier = Modifier.size(24.dp)
+                )
             } else {
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(path)
+                    model = ImageRequest.Builder(context)
+                        .data(path) // 可以是 URL、File、Uri、DrawableRes
                         .crossfade(true)
+                        .apply {
+                            if (sourceOrigin != null) setParameter("sourceOrigin", sourceOrigin)
+                            if (loadOnlyWifi) setParameter("loadOnlyWifi", true)
+                        }
+                        .listener(
+                            onSuccess = { _, _ -> onLoadFinish?.invoke() },
+                            onError = { _, _ -> onLoadFinish?.invoke() }
+                        )
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
