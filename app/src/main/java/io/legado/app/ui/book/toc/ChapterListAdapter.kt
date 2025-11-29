@@ -335,12 +335,10 @@ class ChapterListAdapter(
                 } else tvWordCount.gone()
 
                 if (item.isVip && !item.isPay) ivLocked.visible() else ivLocked.gone()
-
-                upHasCache(binding, cached)
             } else {
                 tvChapterName.text = getDisplayTitle(item)
-                upHasCache(binding, cached)
             }
+            upHasCache(binding, cached, isDur)
 
             when {
                 item.isVolume -> {
@@ -403,8 +401,11 @@ class ChapterListAdapter(
         }
     }
 
-    private fun upHasCache(binding: ItemChapterListBinding, cached: Boolean) = binding.apply {
-        ivChecked.setImageResource(if (cached) R.drawable.ic_download_done else R.drawable.ic_outline_cloud_24)
+    private fun upHasCache(binding: ItemChapterListBinding, cached: Boolean, isDur: Boolean = false) = binding.apply {
+        ivChecked.setImageResource(
+            if (cached) R.drawable.ic_download_done
+            else if (isDur) R.drawable.ic_locate
+            else R.drawable.ic_outline_cloud_24)
     }
 
     interface Callback {
