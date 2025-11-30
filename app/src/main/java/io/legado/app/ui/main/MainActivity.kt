@@ -139,7 +139,6 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         upBottomMenu()
         initView()
         upHomePage()
-        bindNavigationListener()
     }
 
     override fun onResume() {
@@ -387,7 +386,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         realPositions[index] = idMy
         bottomMenuCount = index + 1
 
-        binding.viewPagerMain.adapter = TabFragmentPageAdapter(this)
+        binding.viewPagerMain.adapter?.notifyDataSetChanged()
 
         if (AppConfig.showBottomView) {
             window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
@@ -460,16 +459,16 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             }
         }
 
-    }
-
-    private fun bindNavigationListener() {
-        val navView = getNavigationBarView()
         navView.setOnItemSelectedListener { onNavigationItemSelected(it) }
         navView.setOnItemReselectedListener { onNavigationItemReselected(it) }
+
         binding.viewPagerMain.post {
-            binding.viewPagerMain.setCurrentItem(pagePosition, false)
-            getNavigationBarView().menu[pagePosition].isChecked = true
+            val currentPosition = if (pagePosition < bottomMenuCount) pagePosition else 0
+            binding.viewPagerMain.setCurrentItem(currentPosition, false)
+            getNavigationBarView().menu[currentPosition].isChecked = true
+            updateBackCallbackState()
         }
+
     }
 
     private fun upHomePage() {
