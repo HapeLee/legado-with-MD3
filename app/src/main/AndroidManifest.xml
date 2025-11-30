@@ -141,6 +141,7 @@
         <activity
             android:name=".ui.book.read.ReadBookActivity"
             android:enableOnBackInvokedCallback="true"
+            android:configChanges="uiMode|orientation|screenSize"
             android:exported="true"
             android:launchMode="singleTask">
             <intent-filter>
