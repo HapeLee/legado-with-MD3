@@ -146,7 +146,7 @@ fun AboutScreen(
                     )
                 }
 
-                FilledTonalIconButton (onClick = { onCheckUpdate }) {
+                FilledTonalIconButton(onClick = onCheckUpdate) {
                     Icon(
                         painter = painterResource(R.drawable.ic_import),
                         contentDescription = stringResource(R.string.back)
