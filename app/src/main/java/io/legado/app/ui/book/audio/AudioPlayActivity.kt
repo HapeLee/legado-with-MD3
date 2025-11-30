@@ -538,7 +538,19 @@ class AudioPlayActivity :
         binding.cdTimer.setCardBackgroundColor(colorSurfaceContainer)
         binding.cdSpeed.setCardBackgroundColor(colorSurfaceContainer)
 
-        val stateList = ColorStateList.valueOf(colorOnSurface)
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked),
+            intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked),
+            intArrayOf(-android.R.attr.state_enabled)
+        )
+
+        val colors = intArrayOf(
+            colorSurface,
+            colorOnSurface,
+            colorOnSurface.copy(alpha = 0.3f)
+        )
+
+        val stateList = ColorStateList(states, colors)
         listOf(
             binding.ivSkipNext, binding.ivSkipPrevious, binding.ivPlayMode, binding.ivTimer,
             binding.ivChapter, binding.ivFastForward, binding.btnReset, binding.fabPlayStop
