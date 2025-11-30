@@ -31,13 +31,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -311,11 +309,11 @@ fun ExploreTopBar(
                 Icon(Icons.Default.FilterList, contentDescription = "Filter")
             }
             IconButton(onClick = { onSelectKindClick() }) {
-                Icon(Icons.AutoMirrored.Filled.List, contentDescription = "分类")
+                Icon(Icons.Outlined.FilterAlt, contentDescription = "分类")
             }
             IconButton(onClick = { onToggleGridMode() }) {
                 Icon(
-                    imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                    imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
                     contentDescription = "切换布局"
                 )
             }
