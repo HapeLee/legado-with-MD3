@@ -63,7 +63,7 @@ swiperefreshlayout = "1.1.0"
 #noinspection GradleDependency
 recyclerview = "1.4.0"
 #noinspection GradleDependency
-uiViewbinding = "1.9.4"
+uiViewbinding = "1.9.5"
 viewpager2 = "1.1.0"
 webkit = "1.14.0"
 collection = "1.5.0"
