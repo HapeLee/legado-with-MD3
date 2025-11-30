@@ -71,7 +71,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
     private fun initView() {
         adapter = TabFragmentPageAdapter(this)
         binding.viewPagerBookshelf.adapter = adapter
-        binding.viewPagerBookshelf.offscreenPageLimit = 1
+        binding.viewPagerBookshelf.offscreenPageLimit = 3
 
         TabLayoutMediator(binding.tabLayout, binding.viewPagerBookshelf) { tab, position ->
             tab.text = bookGroups[position].groupName

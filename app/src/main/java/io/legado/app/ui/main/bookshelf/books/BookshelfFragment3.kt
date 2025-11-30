@@ -26,7 +26,6 @@ import kotlin.collections.set
  * 书架界面
  */
 class BookshelfFragment3() : BaseBookshelfFragment(R.layout.fragment_bookshelf3),
-    TabLayout.OnTabSelectedListener,
     SearchView.OnQueryTextListener {
 
     constructor(position: Int) : this() {
@@ -63,12 +62,13 @@ class BookshelfFragment3() : BaseBookshelfFragment(R.layout.fragment_bookshelf3)
     private fun initView() {
         adapter = TabFragmentPageAdapter(this)
         binding.viewPagerBookshelf.adapter = adapter
-        binding.viewPagerBookshelf.offscreenPageLimit = 1
+        binding.viewPagerBookshelf.offscreenPageLimit = 3
 
         binding.viewPagerBookshelf.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
                 updateToolbarTitle(position)
+                AppConfig.saveTabPosition = position
             }
         })
     }
@@ -100,8 +100,8 @@ class BookshelfFragment3() : BaseBookshelfFragment(R.layout.fragment_bookshelf3)
                 adapter.notifyDataSetChanged()
                 adapter = TabFragmentPageAdapter(this)
                 binding.viewPagerBookshelf.adapter = adapter
-
                 updateToolbarTitle(binding.viewPagerBookshelf.currentItem)
+                selectLastTab()
             }
         }
     }
@@ -117,17 +117,21 @@ class BookshelfFragment3() : BaseBookshelfFragment(R.layout.fragment_bookshelf3)
         }
     }
 
-    override fun onTabReselected(tab: TabLayout.Tab) {
-    }
-
-    override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-
-    override fun onTabSelected(tab: TabLayout.Tab) {
-        AppConfig.saveTabPosition = tab.position
-    }
-
     override fun gotoTop() {
         fragmentMap[groupId]?.gotoTop()
+    }
+
+    private fun selectLastTab() {
+        val lastPosition = AppConfig.saveTabPosition
+        if (lastPosition in 0 until bookGroups.size) {
+            binding.viewPagerBookshelf.post {
+                binding.viewPagerBookshelf.setCurrentItem(lastPosition, false)
+                updateToolbarTitle(lastPosition)
+            }
+        } else {
+            AppConfig.saveTabPosition = 0
+            updateToolbarTitle(0)
+        }
     }
 
     private inner class TabFragmentPageAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
