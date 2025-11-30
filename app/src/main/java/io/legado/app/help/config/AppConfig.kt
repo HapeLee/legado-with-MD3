@@ -902,5 +902,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefInt(PreferKey.exploreFilterState, value)
         }
+
+    var exploreLayoutState: Int
+        get() = appCtx.getPrefInt(PreferKey.exploreLayoutState, 0)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.exploreLayoutState, value)
+        }
+
 }
 

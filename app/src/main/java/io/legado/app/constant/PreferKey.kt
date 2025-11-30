@@ -222,4 +222,6 @@ object PreferKey {
     const val shouldShowExpandButton = "shouldShowExpandButton"
 
     const val exploreFilterState = "explore_filter_state"
+
+    const val exploreLayoutState = "exploreLayoutState"
 }

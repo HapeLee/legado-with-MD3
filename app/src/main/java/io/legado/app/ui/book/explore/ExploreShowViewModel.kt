@@ -12,6 +12,7 @@ import io.legado.app.model.BookShelfState
 import io.legado.app.ui.book.search.BookKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -57,6 +58,9 @@ class ExploreShowViewModel(
     val kinds = _kinds.asStateFlow()
     private val _selectedKindTitle = MutableStateFlow<String?>(null)
     val selectedKindTitle = _selectedKindTitle.asStateFlow()
+    private val _layoutState = MutableStateFlow(AppConfig.exploreLayoutState) // 0=列表, 1=网格
+    val layoutState: StateFlow<Int> = _layoutState.asStateFlow()
+
     val uiBooks = combine(
         _rawBooks,
         _filterState,
@@ -109,6 +113,12 @@ class ExploreShowViewModel(
     fun setFilterState(state: BookFilterState) {
         _filterState.value = state
         AppConfig.exploreFilterState = state.id
+    }
+
+    fun setLayout() {
+        val newState = if (_layoutState.value == 0) 1 else 0
+        _layoutState.value = newState
+        AppConfig.exploreLayoutState = newState
     }
 
     fun loadMore(isRefresh: Boolean = false) {

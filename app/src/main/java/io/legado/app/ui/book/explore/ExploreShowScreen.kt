@@ -1,20 +1,29 @@
 package io.legado.app.ui.book.explore
 
 import android.content.Intent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -23,8 +32,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
@@ -90,7 +104,8 @@ fun ExploreShowScreen(
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showKindSheet by remember { mutableStateOf(false) }
-
+    val layoutState by viewModel.layoutState.collectAsState()
+    val isGridMode = layoutState == 1
     if (showKindSheet) {
         val scrollState = rememberScrollState() // 记住滚动状态
 
@@ -137,6 +152,8 @@ fun ExploreShowScreen(
                 onBack = onBack,
                 onFilterSelect = viewModel::setFilterState,
                 onSelectKindClick = { showKindSheet = true },
+                onToggleGridMode = { viewModel.setLayout() },
+                isGridMode = isGridMode,
                 scrollBehavior = scrollBehavior
             )
         }
@@ -151,29 +168,71 @@ fun ExploreShowScreen(
                     EmptyMessageView(message = "暂无书籍")
                 }
             } else {
-                LazyColumn(
-                    state = listState,
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(
-                        items = books,
-                        key = { it.bookUrl }
-                    ) { book ->
-                        val shelfState = viewModel.getCurrentBookShelfState(book)
-                        ExploreBookItem(
-                            book = book,
-                            shelfState = shelfState,
-                            onClick = { onBookClick(book) },
-                            modifier = Modifier.animateItem()
-                        )
-                    }
+                Crossfade(
+                    targetState = isGridMode,
+                    animationSpec = tween(250),
+                    label = "LayoutCrossfade"
+                ) { isGrid ->
+                    if (isGrid) {
+                        LazyVerticalGrid(
+                            modifier = Modifier.fillMaxSize(),
+                            columns = GridCells.Adaptive(minSize = 90.dp),
+                            contentPadding = PaddingValues(
+                                start = 12.dp,
+                                end = 12.dp,
+                                top = 8.dp,
+                                bottom = 12.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(
+                                items = books,
+                                key = { it.bookUrl }
+                            ) { book ->
+                                val shelfState = viewModel.getCurrentBookShelfState(book)
+                                ExploreBookGridItem(
+                                    book = book,
+                                    shelfState = shelfState,
+                                    onClick = { onBookClick(book) },
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
 
-                    item {
-                        LoadMoreFooter(
-                            isLoading = isLoading,
-                            errorMsg = errorMsg,
-                            onRetry = viewModel::loadMore
-                        )
+                            item {
+                                LoadMoreFooter(
+                                    isLoading = isLoading,
+                                    errorMsg = errorMsg,
+                                    onRetry = viewModel::loadMore
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(
+                                items = books,
+                                key = { it.bookUrl }
+                            ) { book ->
+                                val shelfState = viewModel.getCurrentBookShelfState(book)
+                                ExploreBookItem(
+                                    book = book,
+                                    shelfState = shelfState,
+                                    onClick = { onBookClick(book) },
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+
+                            item {
+                                LoadMoreFooter(
+                                    isLoading = isLoading,
+                                    errorMsg = errorMsg,
+                                    onRetry = viewModel::loadMore
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -234,6 +293,8 @@ fun ExploreTopBar(
     onBack: () -> Unit,
     onFilterSelect: (BookFilterState) -> Unit,
     onSelectKindClick: () -> Unit,
+    onToggleGridMode: () -> Unit,
+    isGridMode: Boolean,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -251,6 +312,12 @@ fun ExploreTopBar(
             }
             IconButton(onClick = { onSelectKindClick() }) {
                 Icon(Icons.AutoMirrored.Filled.List, contentDescription = "分类")
+            }
+            IconButton(onClick = { onToggleGridMode() }) {
+                Icon(
+                    imageVector = if (isGridMode) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                    contentDescription = "切换布局"
+                )
             }
             DropdownMenu(
                 expanded = showMenu,
@@ -383,6 +450,59 @@ fun ExploreBookItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ExploreBookGridItem(
+    book: SearchBook,
+    onClick: () -> Unit,
+    shelfState: BookShelfState,
+    modifier: Modifier = Modifier
+) {
+
+    val badgeText: String? = when (shelfState) {
+        BookShelfState.IN_SHELF -> "已在书架"
+        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
+        BookShelfState.NOT_IN_SHELF -> null
+    }
+
+    val content: (@Composable RowScope.() -> Unit)? = if (!badgeText.isNullOrBlank()) {
+        {
+            Text(
+                text = badgeText,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp)
+            )
+        }
+    } else {
+        null
+    }
+
+    Column(
+        modifier = modifier
+            .width(IntrinsicSize.Min)
+            .clip(RoundedCornerShape(4.dp))
+            .clickable(onClick = onClick)
+            .padding(4.dp)
+    ) {
+
+        Cover(
+            path = book.coverUrl,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(12 / 17f),
+            badgeContent = content
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = book.name,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
