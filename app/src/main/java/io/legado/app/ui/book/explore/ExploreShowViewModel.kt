@@ -63,19 +63,7 @@ class ExploreShowViewModel(
         _bookshelf
     ) { books, filter, bookshelf ->
         books.filter { item ->
-            val state = getBookShelfState(item, bookshelf)
-            when (filter) {
-                BookFilterState.SHOW_ALL -> true
-
-                BookFilterState.HIDE_IN_SHELF ->
-                    state != BookShelfState.IN_SHELF
-
-                BookFilterState.HIDE_SAME_NAME_AUTHOR ->
-                    state != BookShelfState.SAME_NAME_AUTHOR
-
-                BookFilterState.SHOW_NOT_IN_SHELF_ONLY ->
-                    state == BookShelfState.NOT_IN_SHELF
-            }
+            isBookValid(item, filter, bookshelf)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -167,6 +155,16 @@ class ExploreShowViewModel(
 
     fun getCurrentBookShelfState(item: SearchBook): BookShelfState {
         return getBookShelfState(item, _bookshelf.value)
+    }
+
+    private fun isBookValid(book: SearchBook, filter: BookFilterState, shelf: Set<BookKey>): Boolean {
+        val state = getBookShelfState(book, shelf)
+        return when (filter) {
+            BookFilterState.SHOW_ALL -> true
+            BookFilterState.HIDE_IN_SHELF -> state != BookShelfState.IN_SHELF
+            BookFilterState.HIDE_SAME_NAME_AUTHOR -> state != BookShelfState.SAME_NAME_AUTHOR
+            BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state == BookShelfState.NOT_IN_SHELF
+        }
     }
 
     private fun getBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {

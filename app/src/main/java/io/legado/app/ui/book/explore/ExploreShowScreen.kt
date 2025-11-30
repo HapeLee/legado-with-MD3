@@ -64,6 +64,7 @@ import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
+import io.legado.app.ui.widget.components.EmptyMessageView
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,35 +146,35 @@ fun ExploreShowScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            LazyColumn(
-                state = listState,
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(
-                    items = books,
-                    key = { it.bookUrl }
-                ) { book ->
-                    val shelfState = viewModel.getCurrentBookShelfState(book)
-                    ExploreBookItem(
-                        book = book,
-                        shelfState = shelfState,
-                        onClick = { onBookClick(book) },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                item {
-                    LoadMoreFooter(
-                        isLoading = isLoading,
-                        errorMsg = errorMsg,
-                        onRetry = { viewModel.loadMore() }
-                    )
-                }
-            }
-
             if (!isLoading && books.isEmpty() && errorMsg == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("暂无书籍", color = Color.Gray)
+                    EmptyMessageView(message = "暂无书籍")
+                }
+            } else {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    items(
+                        items = books,
+                        key = { it.bookUrl }
+                    ) { book ->
+                        val shelfState = viewModel.getCurrentBookShelfState(book)
+                        ExploreBookItem(
+                            book = book,
+                            shelfState = shelfState,
+                            onClick = { onBookClick(book) },
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+
+                    item {
+                        LoadMoreFooter(
+                            isLoading = isLoading,
+                            errorMsg = errorMsg,
+                            onRetry = viewModel::loadMore
+                        )
+                    }
                 }
             }
 
@@ -181,7 +182,7 @@ fun ExploreShowScreen(
                 derivedStateOf {
                     val totalItems = listState.layoutInfo.totalItemsCount
                     val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                    totalItems > 0 && lastVisibleIndex >= totalItems - 2
+                    totalItems > 0 && lastVisibleIndex >= totalItems - 9
                 }
             }
 
@@ -366,6 +367,7 @@ fun ExploreBookItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     maxLines = 2,
+                    minLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -442,18 +444,23 @@ fun LoadMoreFooter(
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        if (isLoading) {
-            LoadingIndicator()
-        } else if (errorMsg != null) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "加载失败: $errorMsg", color = Color.Red, style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = onRetry) {
-                    Text("重试")
+        when {
+            isLoading -> LoadingIndicator()
+
+            errorMsg != null -> {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("加载失败: $errorMsg", color = Color.Red)
+                    TextButton(onClick = onRetry) { Text("重试") }
                 }
             }
-        } else {
-            // 没有在加载且没有错误，可能到底了，或者等待滑动触发
-            Spacer(modifier = Modifier.height(1.dp))
+
+            else -> {
+                Text(
+                    text = "已经到底了~",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
     }
 }
