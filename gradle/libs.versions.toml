@@ -1,7 +1,7 @@
 [versions]
 
 accompanistWebview = "0.36.0"
-animation = "1.9.4"
+animation = "1.9.5"
 coilCompose = "2.7.0"
 composeBom = "2025.11.01"
 constraintlayoutCompose = "1.1.1"
