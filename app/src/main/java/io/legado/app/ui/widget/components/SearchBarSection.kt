@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +15,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -25,7 +23,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SearchBarSection(
     query: String,
-    onQueryChange: (String) -> Unit
+    onQueryChange: (String) -> Unit,
+    placeholder: String = "搜索书名"
 ) {
     Surface(
         modifier = Modifier
@@ -38,14 +37,12 @@ fun SearchBarSection(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = { Text("搜索书名…") },
+            placeholder = { Text(placeholder) },
             leadingIcon = { Icon(Icons.Default.Search, null) },
             trailingIcon = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Clear, contentDescription = null)
-                        }
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }) {
+                        Icon(Icons.Default.Clear, null)
                     }
                 }
             },

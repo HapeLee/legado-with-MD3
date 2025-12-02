@@ -2,6 +2,7 @@
 
 accompanistWebview = "0.36.0"
 animation = "1.9.4"
+biometric = "1.2.0"
 coilCompose = "2.7.0"
 composeBom = "2025.11.01"
 constraintlayoutCompose = "1.1.1"
@@ -71,6 +72,7 @@ collection = "1.5.0"
 zxingLite = "3.3.0"
 
 koin-bom = "4.1.1"
+biometricKtx = "1.1.0"
 [libraries]
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
@@ -82,6 +84,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version = "1.9.1" }
 #androidx-annotation-experimental = { group = "androidx.annotation", name = "annotation-experimental", version = "1.3.1" }
 
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 androidx-collection = { module = "androidx.collection:collection", version.ref = "collection" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "animation" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
@@ -211,6 +214,7 @@ material = { module = "com.google.android.material:material", version.ref = "mat
 mozilla-rhino = { module = "org.mozilla:rhino", version.ref = "rhino" }
 renderscript-intrinsics-replacement-toolkit = { module = "com.github.TomasValenta:renderscript-intrinsics-replacement-toolkit", version = "8eaa829ddd" }
 zxing-lite = { module = "com.github.jenly1314:zxing-lite", version.ref = "zxingLite" }
+androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometricKtx" }
 
 [bundles]
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]

@@ -33,6 +33,7 @@ import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
 import io.legado.app.di.appDatabaseModule
+import io.legado.app.di.bookmarkModule
 import io.legado.app.di.exploreModule
 import io.legado.app.di.readRecordModule
 import io.legado.app.help.AppFreezeMonitor
@@ -63,6 +64,7 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
 import kotlinx.coroutines.launch
 import org.chromium.base.ThreadUtils
+import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
@@ -77,7 +79,8 @@ class App : Application() {
 
     override fun onCreate() {
         startKoin {
-            modules(appDatabaseModule, readRecordModule, exploreModule)
+            androidContext(this@App)
+            modules(appDatabaseModule, readRecordModule, exploreModule, bookmarkModule)
         }
         if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")

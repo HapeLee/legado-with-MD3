@@ -48,6 +48,17 @@ interface BookmarkDao {
     )
     fun search(bookName: String, bookAuthor: String, key: String): List<Bookmark>
 
+    // 模糊搜索
+    @Query("""
+        SELECT * FROM bookmarks 
+        WHERE (bookName LIKE '%'||:query||'%' 
+           OR bookText LIKE '%'||:query||'%' 
+           OR chapterName LIKE '%'||:query||'%' 
+           OR content LIKE '%'||:query||'%')
+        ORDER BY bookName COLLATE LOCALIZED, bookAuthor COLLATE LOCALIZED, chapterIndex, chapterPos
+    """)
+    fun flowSearchAll(query: String): Flow<List<Bookmark>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg bookmark: Bookmark)
 
