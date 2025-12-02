@@ -16,6 +16,7 @@ import android.graphics.drawable.TransitionDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -28,6 +29,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.scale
 import androidx.core.view.doOnPreDraw
 import androidx.lifecycle.lifecycleScope
+import androidx.transition.TransitionManager
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
 import com.google.android.material.color.MaterialColors
@@ -811,6 +813,12 @@ class BookInfoActivity :
                 }
             }
         }
+        tvName.setOnLongClickListener {
+            TransitionManager.beginDelayedTransition(scrollView)
+            tvName.maxLines = if (tvName.maxLines == 3) 10 else 3
+            true
+        }
+
         refreshLayout.setOnRefreshListener {
             refreshLayout.isRefreshing = false
             refreshBook()
