@@ -143,29 +143,29 @@ internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<Ale
 
     override fun build(): AlertDialog {
         val dialog = builder.create()
-        if (AppConfig.isEInkMode) {
-            dialog.window?.run {
-                val attr = attributes
-                attr.dimAmount = 0f
-                attr.windowAnimations = 0
-                attributes = attr
-                setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
-            }
-        }
+        //if (AppConfig.isEInkMode) {
+            //dialog.window?.run {
+                //val attr = attributes
+                //attr.dimAmount = 0f
+                //attr.windowAnimations = 0
+                //attributes = attr
+                //setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
+                //   }
+                //}
         return dialog
     }
 
     override fun show(): AlertDialog {
         val dialog = builder.show()
-        if (AppConfig.isEInkMode) {
-            dialog.window?.run {
-                val attr = attributes
-                attr.dimAmount = 0f
-                attr.windowAnimations = 0
-                attributes = attr
-                setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
-            }
-        }
+        //if (AppConfig.isEInkMode) {
+            //dialog.window?.run {
+                //val attr = attributes
+                //attr.dimAmount = 0f
+                //attr.windowAnimations = 0
+                //attributes = attr
+                //setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
+        //    }
+        //}
         return dialog
     }
 }
