@@ -239,7 +239,7 @@ fun ExploreShowScreen(
                 derivedStateOf {
                     val totalItems = listState.layoutInfo.totalItemsCount
                     val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                    totalItems > 0 && lastVisibleIndex >= totalItems - 9
+                    totalItems > 0 && lastVisibleIndex >= totalItems - 5
                 }
             }
 
