@@ -98,6 +98,32 @@
 
                 </com.google.android.material.card.MaterialCardView>
 
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cd_tip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:visibility="visible"
+                    app:cardCornerRadius="4dp"
+                    app:strokeWidth="0dp"
+                    app:cardBackgroundColor="?attr/colorSecondaryVariant"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintBottom_toBottomOf="parent">
+
+                    <TextView
+                        android:id="@+id/tv_tip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorOnSecondary"
+                        android:textSize="8sp"
+                        android:padding="3dp"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        tools:text="5"
+                        tools:ignore="SmallSp" />
+
+                </com.google.android.material.card.MaterialCardView>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
         </com.google.android.material.card.MaterialCardView>
 

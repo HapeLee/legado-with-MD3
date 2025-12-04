@@ -90,6 +90,22 @@ val Book.archiveName: String
         return origin.substringAfter("::").substringAfterLast("/")
     }
 
+fun Book.getBookTypeName(): String {
+    return when {
+        isLocalTxt   -> "TXT"
+        isEpub       -> "EPUB"
+        isUmd        -> "UMD"
+        isPdf        -> "PDF"
+        isMobi       -> "MOBI"
+        isAudio      -> "有声书"
+        isImage      -> "漫画"
+        isOnLineTxt  -> "小说"
+        isWebFile    -> "网页文件"
+        else         -> "未知类型"
+    }
+}
+
+
 fun Book.contains(word: String?): Boolean {
     if (word.isNullOrEmpty()) {
         return true

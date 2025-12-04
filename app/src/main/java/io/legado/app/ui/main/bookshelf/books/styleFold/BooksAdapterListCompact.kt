@@ -11,6 +11,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.ItemBookshelfListCompactBinding
 import io.legado.app.databinding.ItemBookshelfListCompactGroupBinding
+import io.legado.app.help.book.getBookTypeName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
@@ -137,6 +138,12 @@ class BooksAdapterListCompact(context: Context, callBack: CallBack) :
                     }
                 } else {
                     binding.cdUnread.gone()
+                }
+                if (AppConfig.showTip){
+                    binding.cdTip.visible()
+                    binding.tvTip.text = item.getBookTypeName()
+                } else {
+                    binding.cdTip.gone()
                 }
             }
         }

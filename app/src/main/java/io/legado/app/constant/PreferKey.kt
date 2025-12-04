@@ -226,4 +226,6 @@ object PreferKey {
     const val exploreLayoutState = "exploreLayoutState"
 
     const val defaultSourceChangeAll = "defaultSourceChangeAll"
+
+    const val showTip = "showTip"
 }

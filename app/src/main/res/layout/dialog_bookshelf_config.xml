@@ -55,6 +55,12 @@
                 android:text="@string/show_unread_new" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/sw_show_tip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/show_tip" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/sw_show_last_update_time"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

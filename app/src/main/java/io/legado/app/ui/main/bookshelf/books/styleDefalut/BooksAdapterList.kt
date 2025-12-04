@@ -9,6 +9,7 @@ import androidx.lifecycle.Lifecycle
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemBookshelfListBinding
+import io.legado.app.help.book.getBookTypeName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
@@ -87,6 +88,12 @@ class BooksAdapterList(
                 }
             } else {
                 binding.cdUnread.gone()
+            }
+            if (AppConfig.showTip){
+                binding.cdTip.visible()
+                binding.tvTip.text = item.getBookTypeName()
+            } else {
+                binding.cdTip.gone()
             }
         }
     }

@@ -10,6 +10,7 @@ import io.legado.app.R
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemBookshelfListCompactBinding
+import io.legado.app.help.book.getBookTypeName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
@@ -91,6 +92,12 @@ class BooksAdapterListCompact(
                 }
             } else {
                 binding.cdUnread.gone()
+            }
+            if (AppConfig.showTip){
+                binding.cdTip.visible()
+                binding.tvTip.text = item.getBookTypeName()
+            } else {
+                binding.cdTip.gone()
             }
         }
     }

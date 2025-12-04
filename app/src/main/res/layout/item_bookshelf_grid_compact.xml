@@ -7,23 +7,22 @@
     app:cardBackgroundColor="@android:color/transparent"
     app:strokeWidth="0dp">
 
-    <FrameLayout
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cv_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingHorizontal="8dp"
-        android:paddingTop="2dp"
-        android:paddingBottom="12dp">
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="12dp"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="6dp"
+        app:strokeWidth="0dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cv_content"
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardBackgroundColor="@android:color/transparent"
-            app:cardCornerRadius="6dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:strokeWidth="0dp">
+            android:layout_height="match_parent">
 
             <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover"
@@ -32,31 +31,36 @@
                 android:scaleType="centerCrop"
                 android:src="@drawable/image_cover_default"
                 android:transitionName="img_cover"
-                tools:ignore="ImageContrastCheck" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/rl_loading"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top"
                 android:layout_marginHorizontal="12dp"
-                android:layout_marginVertical="4dp"
+                android:layout_marginTop="4dp"
                 android:indeterminate="true"
-                android:visibility="invisible" />
+                android:visibility="invisible"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cd_unread"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_margin="4dp"
-                android:visibility="visible"
                 app:cardCornerRadius="4dp"
-                app:strokeWidth="0dp"
                 app:cardBackgroundColor="?attr/colorSecondaryVariant"
-                android:layout_gravity="end|top">
+                app:strokeWidth="0dp"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
@@ -65,8 +69,8 @@
                         android:id="@+id/new_chapter"
                         android:layout_width="6dp"
                         android:layout_height="6dp"
-                        android:visibility="gone"
                         android:layout_marginStart="6dp"
+                        android:visibility="gone"
                         app:strokeWidth="0dp"
                         app:cardBackgroundColor="?attr/colorSecondaryContainer" />
 
@@ -74,9 +78,9 @@
                         android:id="@+id/tv_unread"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:padding="4dp"
                         android:textColor="?attr/colorOnSecondary"
                         android:textSize="9sp"
-                        android:padding="4dp"
                         android:textStyle="bold"
                         android:includeFontPadding="false"
                         tools:text="5"
@@ -85,25 +89,52 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cd_tip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:visibility="visible"
+                app:cardCornerRadius="4dp"
+                app:strokeWidth="0dp"
+                app:cardBackgroundColor="?attr/colorSecondaryVariant"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintBottom_toTopOf="@id/tv_name">
+
+                <TextView
+                    android:id="@+id/tv_tip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorOnSecondary"
+                    android:textSize="8sp"
+                    android:padding="3dp"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    tools:text="5"
+                    tools:ignore="SmallSp" />
+
+            </com.google.android.material.card.MaterialCardView>
+
             <TextView
                 android:id="@+id/tv_name"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_gravity="bottom"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
                 android:background="@drawable/bg_gradient_black"
                 android:ellipsize="end"
                 android:gravity="bottom|start"
-                android:lines="2"
+                android:maxLines="2"
                 android:paddingHorizontal="6dp"
-                android:paddingVertical="6dp"
+                android:paddingBottom="6dp"
                 android:text="@string/book_name"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
                 android:textStyle="bold"
-                tools:ignore="RtlHardcoded" />
-        </com.google.android.material.card.MaterialCardView>
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
 
-    </FrameLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </com.google.android.material.card.MaterialCardView>
-

@@ -7,6 +7,7 @@ import androidx.core.view.isVisible
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemBookshelfGridBinding
+import io.legado.app.help.book.getBookTypeName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
@@ -46,6 +47,7 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
     private fun upRefresh(binding: ItemBookshelfGridBinding, item: Book) {
         if (!item.isLocal && callBack.isUpdate(item.bookUrl)) {
             binding.cdUnread.gone()
+            binding.cdTip.visible()
             binding.rlLoading.visible()
         } else {
             binding.rlLoading.gone()
@@ -62,6 +64,12 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
                 }
             } else {
                 binding.cdUnread.gone()
+            }
+            if (AppConfig.showTip){
+                binding.cdTip.visible()
+                binding.tvTip.text = item.getBookTypeName()
+            } else {
+                binding.cdTip.gone()
             }
         }
     }

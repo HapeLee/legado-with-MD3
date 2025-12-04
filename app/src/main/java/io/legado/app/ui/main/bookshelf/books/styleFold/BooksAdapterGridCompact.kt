@@ -12,9 +12,11 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.ItemBookshelfGridCompactBinding
 import io.legado.app.databinding.ItemBookshelfGridCompactGroupBinding
+import io.legado.app.help.book.getBookTypeName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.gone
+import io.legado.app.utils.visible
 import splitties.views.onLongClick
 
 @Suppress("UNUSED_PARAMETER")
@@ -125,6 +127,12 @@ class BooksAdapterGridCompact(context: Context, callBack: CallBack) :
                     }
                 } else {
                     binding.cdUnread.visibility = View.GONE
+                }
+                if (AppConfig.showTip){
+                    binding.cdTip.visible()
+                    binding.tvTip.text = item.getBookTypeName()
+                } else {
+                    binding.cdTip.gone()
                 }
             }
         }
