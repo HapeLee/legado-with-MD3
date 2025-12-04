@@ -691,6 +691,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         setAutoReadEnabled(enable)
     }
 
+    override fun onAutoPageToggle2() {
+        val toggle = !enableScroll
+        setAutoReadEnabled(toggle)
+    }
+
     //自动翻页速度
     override fun onAutoPageSpeedChanged(speed: Int) {
         setAutoReadEnabled(false)

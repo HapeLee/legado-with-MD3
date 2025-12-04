@@ -35,31 +35,27 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="32dp"
         android:paddingHorizontal="16dp">
 
-        <LinearLayout
-            android:layout_width="match_parent"
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_autoPage"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="vertical">
+            android:checkable="true"
+            android:text="@string/enable_auto_page_scroll" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chip_autoPage"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="@string/enable_auto_page_scroll" />
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/scv_autoPageSpeed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:max="100"
+            app:min="1"
+            app:title="翻页速度" />
 
-            <io.legado.app.ui.widget.DetailSeekBar
-                android:id="@+id/scv_autoPageSpeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:max="100"
-                app:min="1"
-                app:title="翻页速度" />
-
-        </LinearLayout>
 
     </LinearLayout>
 
