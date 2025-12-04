@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -100,10 +101,32 @@ fun ExploreShowScreen(
     val filterState by viewModel.filterState.collectAsState()
     val selectedTitle by viewModel.selectedKindTitle.collectAsState()
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showKindSheet by remember { mutableStateOf(false) }
     val layoutState by viewModel.layoutState.collectAsState()
     val isGridMode = layoutState == 1
+    val shouldLoadMore = remember {
+        derivedStateOf {
+            val totalItems: Int
+            val lastVisibleIndex: Int
+            if (isGridMode) {
+                totalItems = gridState.layoutInfo.totalItemsCount
+                lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            } else {
+                totalItems = listState.layoutInfo.totalItemsCount
+                lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            }
+            totalItems > 0 && lastVisibleIndex >= totalItems - 3
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore.value) {
+        if (shouldLoadMore.value) {
+            viewModel.loadMore()
+        }
+    }
+
     if (showKindSheet) {
         val scrollState = rememberScrollState() // 记住滚动状态
 
@@ -173,6 +196,7 @@ fun ExploreShowScreen(
                 ) { isGrid ->
                     if (isGrid) {
                         LazyVerticalGrid(
+                            state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             columns = GridCells.Adaptive(minSize = 90.dp),
                             contentPadding = PaddingValues(
@@ -232,20 +256,6 @@ fun ExploreShowScreen(
                             }
                         }
                     }
-                }
-            }
-
-            val shouldLoadMore = remember {
-                derivedStateOf {
-                    val totalItems = listState.layoutInfo.totalItemsCount
-                    val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-                    totalItems > 0 && lastVisibleIndex >= totalItems - 5
-                }
-            }
-
-            LaunchedEffect(shouldLoadMore.value) {
-                if (shouldLoadMore.value) {
-                    viewModel.loadMore()
                 }
             }
         }
