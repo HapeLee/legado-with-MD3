@@ -63,6 +63,13 @@
 
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
+            android:key="defaultSourceChangeAll"
+            android:title="@string/read_change_all"
+            android:summary="@string/read_change_all_s"
+            app:isBottomBackground="true" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
             android:key="textFullJustify"
             android:title="@string/text_full_justify"
             app:isBottomBackground="true" />

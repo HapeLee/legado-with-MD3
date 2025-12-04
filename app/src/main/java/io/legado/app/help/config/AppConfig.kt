@@ -909,5 +909,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.exploreLayoutState, value)
         }
 
+    var defaultSourceChangeAll: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.defaultSourceChangeAll, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.defaultSourceChangeAll, value)
+        }
 }
 

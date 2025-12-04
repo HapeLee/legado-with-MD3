@@ -522,12 +522,34 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
     }
 
+    private fun defaultChangeSource() {
+        if (AppConfig.defaultSourceChangeAll)
+        {
+            binding.readMenu.runMenuOut()
+            ReadBook.book?.let {
+                showDialogFragment(ChangeBookSourceDialog(it.name, it.author))
+            }
+        } else {
+            lifecycleScope.launch {
+                val book = ReadBook.book ?: return@launch
+                val chapter =
+                    appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+                        ?: return@launch
+                binding.readMenu.runMenuOut()
+                showDialogFragment(
+                    ChangeChapterSourceDialog(book.name, book.author, chapter.index, chapter.title)
+                )
+            }
+        }
+    }
+
     /**
      * 菜单
      */
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_change_source,
+            R.id.menu_change_source -> { defaultChangeSource() }
+
             R.id.menu_book_change_source -> {
                 binding.readMenu.runMenuOut()
                 ReadBook.book?.let {

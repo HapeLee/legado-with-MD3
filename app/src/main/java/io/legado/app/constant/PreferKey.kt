@@ -224,4 +224,6 @@ object PreferKey {
     const val exploreFilterState = "explore_filter_state"
 
     const val exploreLayoutState = "exploreLayoutState"
+
+    const val defaultSourceChangeAll = "defaultSourceChangeAll"
 }

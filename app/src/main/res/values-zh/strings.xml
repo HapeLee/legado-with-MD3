@@ -1348,4 +1348,6 @@
     <string name="page_anim_fade">渐变</string>
     <string name="show_bookshelf_tab_menu">显示更多分组按钮</string>
     <string name="show_unread_new">显示新章节更新标志</string>
+    <string name="read_change_all">换源按钮默认弹出整书换源</string>
+    <string name="read_change_all_s">反之则默认弹出单章换源</string>
 </resources>
