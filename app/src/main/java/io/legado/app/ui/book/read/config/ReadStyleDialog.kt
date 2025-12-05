@@ -106,6 +106,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
 
         tvPadding.setOnClickListener {
             callBack?.showInfoConfig()
+            dismissAllowingStateLoss()
         }
         tvTip.setOnClickListener {
             TipConfigDialog().show(childFragmentManager, "tipConfigDialog")
