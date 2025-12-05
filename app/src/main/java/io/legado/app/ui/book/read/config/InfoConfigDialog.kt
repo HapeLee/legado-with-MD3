@@ -16,7 +16,6 @@ import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_C
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info) {
