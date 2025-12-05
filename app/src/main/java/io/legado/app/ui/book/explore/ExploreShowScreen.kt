@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -60,6 +61,7 @@ import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -79,6 +81,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,7 +98,7 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.utils.bookshelfLayoutGrid
 import org.koin.androidx.compose.koinViewModel
 
-@SuppressLint("LocalContextConfigurationRead")
+@SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreShowScreen(
@@ -169,7 +172,12 @@ fun ExploreShowScreen(
 
     if (showKindSheet) {
         val scrollState = rememberScrollState()
-        val sheetState = rememberModalBottomSheetState()
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { newValue ->
+                newValue != SheetValue.PartiallyExpanded
+            }
+        )
         ModalBottomSheet(
             sheetState = sheetState,
             onDismissRequest = { showKindSheet = false }
@@ -177,6 +185,7 @@ fun ExploreShowScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
                     .verticalScroll(scrollState)
                     .padding(12.dp)
             ) {
@@ -310,7 +319,7 @@ fun KindListItem(
         label = {
             Text(
                 text = kind.title,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
