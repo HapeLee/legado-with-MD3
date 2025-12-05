@@ -1,8 +1,14 @@
 package io.legado.app.ui.book.explore
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -19,9 +25,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -36,6 +44,7 @@ import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,12 +57,14 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
+import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
@@ -95,6 +107,8 @@ fun ExploreShowScreen(
     }
 
     val books by viewModel.uiBooks.collectAsState()
+    val isBookEnd by viewModel.isRawDataEmptyAndEnd.collectAsState()
+    val shouldTriggerAutoLoad by viewModel.shouldTriggerAutoLoad.collectAsState()
     val kinds by viewModel.kinds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMsg by viewModel.errorMsg.collectAsState()
@@ -106,6 +120,7 @@ fun ExploreShowScreen(
     var showKindSheet by remember { mutableStateOf(false) }
     val layoutState by viewModel.layoutState.collectAsState()
     val isGridMode = layoutState == 1
+
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItems: Int
@@ -117,7 +132,7 @@ fun ExploreShowScreen(
                 totalItems = listState.layoutInfo.totalItemsCount
                 lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             }
-            totalItems > 0 && lastVisibleIndex >= totalItems - 3
+            totalItems > 0 && lastVisibleIndex >= totalItems - 6
         }
     }
 
@@ -127,10 +142,29 @@ fun ExploreShowScreen(
         }
     }
 
-    if (showKindSheet) {
-        val scrollState = rememberScrollState() // 记住滚动状态
+    LaunchedEffect(shouldTriggerAutoLoad) {
+        if (shouldTriggerAutoLoad) {
+            viewModel.loadMore()
+        }
+    }
 
+    LaunchedEffect(isGridMode) {
+        if (isGridMode) {
+            if (listState.firstVisibleItemIndex > 0) {
+                gridState.scrollToItem(listState.firstVisibleItemIndex)
+            }
+        } else {
+            if (gridState.firstVisibleItemIndex > 0) {
+                listState.scrollToItem(gridState.firstVisibleItemIndex)
+            }
+        }
+    }
+
+    if (showKindSheet) {
+        val scrollState = rememberScrollState()
+        val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
+            sheetState = sheetState,
             onDismissRequest = { showKindSheet = false }
         ) {
             Column(
@@ -142,13 +176,10 @@ fun ExploreShowScreen(
                 Text(
                     "选择分类",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier
-                        .padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                FlowRow(modifier = Modifier.fillMaxWidth()) {
                     kinds.forEach { kind ->
                         KindListItem(
                             kind = kind,
@@ -184,7 +215,7 @@ fun ExploreShowScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (!isLoading && books.isEmpty() && errorMsg == null) {
+            if (!isLoading && isBookEnd && errorMsg == null) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyMessageView(message = "暂无书籍")
                 }
@@ -199,12 +230,7 @@ fun ExploreShowScreen(
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
                             columns = GridCells.Adaptive(minSize = 90.dp),
-                            contentPadding = PaddingValues(
-                                start = 12.dp,
-                                end = 12.dp,
-                                top = 8.dp,
-                                bottom = 12.dp
-                            ),
+                            contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -221,7 +247,7 @@ fun ExploreShowScreen(
                                 )
                             }
 
-                            item {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 LoadMoreFooter(
                                     isLoading = isLoading,
                                     errorMsg = errorMsg,
@@ -376,25 +402,44 @@ fun ExploreBookItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+
+    val badge: (@Composable RowScope.() -> Unit)?
+            = when (shelfState) {
+
+        BookShelfState.IN_SHELF -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "已在书架",
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
+
+        BookShelfState.SAME_NAME_AUTHOR -> {
+            {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "同名书籍",
+                    modifier = Modifier.size(12.dp)
+                )
+
+            }
+        }
+
+        BookShelfState.NOT_IN_SHELF -> null
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Column {
 
-            Cover(path = book.coverUrl)
-
-            if (shelfState != BookShelfState.NOT_IN_SHELF) {
-                Spacer(modifier = Modifier.height(4.dp))
-                BookshelfStatusBadge(
-                    shelfState = shelfState,
-                    modifier = Modifier
-                        .width(48.dp)
-                )
-            }
-        }
+        Cover(
+            path = book.coverUrl,
+            badgeContent = badge)
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -514,35 +559,6 @@ fun ExploreBookGridItem(
     }
 }
 
-@Composable
-fun BookshelfStatusBadge(
-    shelfState: BookShelfState,
-    modifier: Modifier = Modifier
-) {
-    val text = when (shelfState) {
-        BookShelfState.IN_SHELF -> "已在书架"
-        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
-        else -> null
-    }
-
-    if (text != null) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(4.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        ) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp),
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .padding(horizontal = 4.dp, vertical = 2.dp)
-            )
-        }
-    }
-}
-
 // 简单的标签组件
 @Composable
 fun TagChip(text: String) {
@@ -572,23 +588,35 @@ fun LoadMoreFooter(
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-        when {
-            isLoading -> LoadingIndicator()
 
-            errorMsg != null -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("加载失败: $errorMsg", color = Color.Red)
-                    TextButton(onClick = onRetry) { Text("重试") }
-                }
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-            else -> {
+            AnimatedContent(
+                targetState = when {
+                    isLoading -> "加载中…"
+                    errorMsg != null -> "加载失败: $errorMsg"
+                    else -> "已经到底了~"
+                },
+                label = "FooterTextChange"
+            ) { text ->
                 Text(
-                    text = "已经到底了~",
-                    color = Color.Gray,
+                    text = text,
+                    color = when {
+                        errorMsg != null -> Color.Red
+                        else -> Color.Gray
+                    },
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            AnimatedTextButton(
+                isLoading = isLoading,
+                onClick = onRetry,
+                text = if (errorMsg != null) "重试" else "再试一次",
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
