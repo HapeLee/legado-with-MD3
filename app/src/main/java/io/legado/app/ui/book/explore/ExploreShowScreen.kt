@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.explore
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
@@ -78,6 +79,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -90,8 +92,10 @@ import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.utils.bookshelfLayoutGrid
 import org.koin.androidx.compose.koinViewModel
 
+@SuppressLint("LocalContextConfigurationRead")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExploreShowScreen(
@@ -120,7 +124,10 @@ fun ExploreShowScreen(
     var showKindSheet by remember { mutableStateOf(false) }
     val layoutState by viewModel.layoutState.collectAsState()
     val isGridMode = layoutState == 1
-
+    val context = LocalContext.current
+    val gridColumnCount = remember(context.resources.configuration.orientation) {
+        context.bookshelfLayoutGrid
+    }
     val shouldLoadMore = remember {
         derivedStateOf {
             val totalItems: Int
@@ -229,7 +236,7 @@ fun ExploreShowScreen(
                         LazyVerticalGrid(
                             state = gridState,
                             modifier = Modifier.fillMaxSize(),
-                            columns = GridCells.Adaptive(minSize = 90.dp),
+                            columns = GridCells.Fixed(gridColumnCount),
                             contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
