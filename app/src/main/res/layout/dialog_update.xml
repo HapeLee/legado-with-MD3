@@ -99,7 +99,7 @@
                 android:textStyle="bold"
                 android:text="@string/abi_arm64_v8a"
                 android:textAppearance="?attr/textAppearanceBodySmall"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="?attr/colorOnPrimaryContainer" />
         </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
 

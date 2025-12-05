@@ -57,7 +57,7 @@
                     android:paddingHorizontal="4dp"
                     android:paddingVertical="2dp"
                     android:text="@string/progress"
-                    android:textColor="?attr/colorTertiary"
+                    android:textColor="?attr/colorOnTertiaryContainer"
                     android:textSize="10sp"
                     android:textStyle="bold"
                     tools:ignore="SmallSp" />
