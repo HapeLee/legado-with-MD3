@@ -235,7 +235,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         // path 为空表示恢复系统默认字体
         ReadBookConfig.textFont = path
         // 通知阅读界面刷新字体
-        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5, 2))
     }
 
     override val isInitFinish: Boolean get() = viewModel.isInitFinish
