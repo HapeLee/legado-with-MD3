@@ -123,25 +123,29 @@ fun ExploreShowScreen(
     val gridColumnCount = remember(context.resources.configuration.orientation) {
         context.bookshelfLayoutGrid
     }
-    val shouldLoadMore = remember {
+
+    val shouldLoadMoreList = remember {
         derivedStateOf {
-            val totalItems: Int
-            val lastVisibleIndex: Int
-            if (isGridMode) {
-                totalItems = gridState.layoutInfo.totalItemsCount
-                lastVisibleIndex = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            } else {
-                totalItems = listState.layoutInfo.totalItemsCount
-                lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            }
-            totalItems > 0 && lastVisibleIndex >= totalItems - 6
+            val total = listState.layoutInfo.totalItemsCount
+            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && last >= total - 6
         }
     }
 
-    LaunchedEffect(shouldLoadMore.value) {
-        if (shouldLoadMore.value) {
-            viewModel.loadMore()
+    val shouldLoadMoreGrid = remember {
+        derivedStateOf {
+            val total = gridState.layoutInfo.totalItemsCount
+            val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && last >= total - 6
         }
+    }
+
+    LaunchedEffect(shouldLoadMoreList.value, isGridMode) {
+        if (!isGridMode && shouldLoadMoreList.value) viewModel.loadMore()
+    }
+
+    LaunchedEffect(shouldLoadMoreGrid.value, isGridMode) {
+        if (isGridMode && shouldLoadMoreGrid.value) viewModel.loadMore()
     }
 
     LaunchedEffect(shouldTriggerAutoLoad) {
