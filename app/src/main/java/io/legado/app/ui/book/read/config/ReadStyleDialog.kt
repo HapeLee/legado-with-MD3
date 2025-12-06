@@ -103,8 +103,6 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
             alert(titleResource = R.string.chinese_converter) {
                 items(resources.getStringArray(R.array.chinese_mode).toList()) { _, i ->
                     AppConfig.chineseConverterType = i
-
-                    // 不需要更新文字，也不需要切换图标
                     ChineseUtils.unLoad(*TransType.entries.toTypedArray())
                     postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                     updateChineseIcon()
