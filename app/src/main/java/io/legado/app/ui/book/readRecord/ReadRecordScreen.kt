@@ -63,6 +63,7 @@ import io.legado.app.ui.widget.components.Calendar
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import kotlinx.coroutines.delay
 import java.time.LocalDate
@@ -494,26 +495,28 @@ fun DateHeader(
     dailyTotalTime: Long? = null
 ) {
     val dateText = formatFriendlyDate(date)
-    Surface(
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-            Text(
-                text = dateText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary
-            )
-
-            dailyTotalTime?.let { total ->
+    SectionHeader(
+        titleContent = {
+            Column {
                 Text(
-                    text = "已读 ${formatDuring(total)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = dateText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
                 )
+
+                dailyTotalTime?.let { total ->
+                    Text(
+                        text = "已读 ${formatDuring(total)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
             }
-        }
-    }
+        },
+        detailContent = null,
+        horizontalArrangement = Arrangement.Start
+    )
 }
 
 @Composable

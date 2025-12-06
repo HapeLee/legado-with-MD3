@@ -35,6 +35,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+data class BookmarkGroupHeader(
+    val bookName: String,
+    val bookAuthor: String
+) {
+    override fun toString(): String = "$bookName|${bookAuthor}"
+}
+
 class AllBookmarkViewModel(
     application: Application,
     private val bookmarkDao: BookmarkDao
@@ -46,16 +53,9 @@ class AllBookmarkViewModel(
     private val _collapsedGroups = MutableStateFlow<Set<String>>(emptySet())
     val collapsedGroups = _collapsedGroups.asStateFlow()
 
-    private val refreshTrigger = MutableSharedFlow<Unit>(
-        replay = 1,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST
-    )
 
-    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class) // FlowPreview 用于 debounce
-    val bookmarksState: StateFlow<Map<String, List<Bookmark>>> = combine(
-        refreshTrigger.onStart { emit(Unit) },
-        _searchQuery
-    ) { _, query -> query }
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
+    val bookmarksState: StateFlow<Map<BookmarkGroupHeader, List<Bookmark>>> = _searchQuery
         .debounce(300L)
         .flatMapLatest { query ->
             if (query.isBlank()) {
@@ -65,7 +65,7 @@ class AllBookmarkViewModel(
             }
         }
         .map { list ->
-            list.groupBy { "${it.bookName}(${it.bookAuthor})" }
+            list.groupBy { BookmarkGroupHeader(it.bookName, it.bookAuthor) }
         }
         .catch { e -> e.printStackTrace() }
         .flowOn(Dispatchers.IO)
@@ -75,27 +75,23 @@ class AllBookmarkViewModel(
             emptyMap()
         )
 
-    private fun refreshBookmarks() {
-        viewModelScope.launch {
-            refreshTrigger.emit(Unit)
-        }
-    }
-
-    fun toggleGroupCollapse(groupKey: String) {
+    fun toggleGroupCollapse(groupKey: BookmarkGroupHeader) {
+        val stringKey = groupKey.toString()
         val current = _collapsedGroups.value
-        if (current.contains(groupKey)) {
-            _collapsedGroups.value = current - groupKey
+        if (current.contains(stringKey)) {
+            _collapsedGroups.value = current - stringKey
         } else {
-            _collapsedGroups.value = current + groupKey // 折叠
+            _collapsedGroups.value = current + stringKey
         }
     }
 
-    fun toggleAllCollapse(currentKeys: Set<String>) {
+    fun toggleAllCollapse(currentKeys: Set<BookmarkGroupHeader>) {
+        val stringKeys = currentKeys.map { it.toString() }.toSet()
         val currentCollapsed = _collapsedGroups.value
-        if (currentCollapsed.containsAll(currentKeys) && currentKeys.isNotEmpty()) {
+        if (currentCollapsed.containsAll(stringKeys) && currentKeys.isNotEmpty()) {
             _collapsedGroups.value = emptySet()
         } else {
-            _collapsedGroups.value = currentKeys
+            _collapsedGroups.value = stringKeys
         }
     }
 
@@ -108,7 +104,6 @@ class AllBookmarkViewModel(
             withContext(Dispatchers.IO) {
                 bookmarkDao.insert(bookmark)
             }
-            refreshBookmarks()
         }
     }
 
@@ -117,7 +112,6 @@ class AllBookmarkViewModel(
             withContext(Dispatchers.IO) {
                 bookmarkDao.delete(bookmark)
             }
-            refreshBookmarks()
         }
     }
 

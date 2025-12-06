@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
-import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.SearchBarSection
 import org.koin.androidx.compose.koinViewModel
 
@@ -57,7 +56,7 @@ fun AllBookmarkScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val allKeys = bookmarksGrouped.keys
-    val isAllCollapsed = allKeys.isNotEmpty() && collapsedGroups.containsAll(allKeys)
+    val isAllCollapsed = allKeys.isNotEmpty() && allKeys.all { collapsedGroups.contains(it.toString()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -74,9 +73,8 @@ fun AllBookmarkScreen(
             Column {
                 MediumTopAppBar(
                     title = {
-                        val text = if (showSearch) "搜索" else "所有书签"
-                        AnimatedTextLine(
-                            text = text,
+                        Text(
+                            text = "所有书签",
                             style = MaterialTheme.typography.titleLarge
                         )
                     },
@@ -149,39 +147,40 @@ fun AllBookmarkScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            bookmarksGrouped.forEach { (headerTitle, bookmarks) ->
+            bookmarksGrouped.forEach { (headerKey, bookmarks) ->
 
-                val isCollapsed = collapsedGroups.contains(headerTitle)
+                val isCollapsed = collapsedGroups.contains(headerKey.toString())
 
-                item(key = headerTitle) {
-                    Column {
-                        BookmarkHeader(
-                            text = headerTitle,
-                            isCollapsed = isCollapsed,
-                            onToggle = { viewModel.toggleGroupCollapse(headerTitle) }
-                        )
-                        AnimatedVisibility(
-                            visible = !isCollapsed,
-                            enter = expandVertically() + fadeIn(),
-                            exit = shrinkVertically() + fadeOut()
+                stickyHeader(key = headerKey.toString()) {
+                    BookAuthorHeader(
+                        bookTitle = headerKey.bookName,
+                        bookAuthor = headerKey.bookAuthor,
+                        isCollapsed = isCollapsed,
+                        onToggle = { viewModel.toggleGroupCollapse(headerKey) }
+                    )
+                }
+
+                item(key = "content_${headerKey}") {
+                    AnimatedVisibility(
+                        visible = !isCollapsed,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .animateContentSize()
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .animateContentSize()
-                            ) {
-                                bookmarks.forEach { bookmark ->
-
-                                    BookmarkItem(
-                                        bookmark = bookmark,
-                                        modifier = Modifier
-                                            .animateItem()
-                                            .fillMaxWidth(),
-                                        onClick = {
-                                            editingBookmark = bookmark
-                                            showBottomSheet = true
-                                        }
-                                    )
-                                }
+                            bookmarks.forEach { bookmark ->
+                                BookmarkItem(
+                                    bookmark = bookmark,
+                                    modifier = Modifier
+                                        .animateItem()
+                                        .fillMaxWidth(),
+                                    onClick = {
+                                        editingBookmark = bookmark
+                                        showBottomSheet = true
+                                    }
+                                )
                             }
                         }
                     }
@@ -210,8 +209,9 @@ fun AllBookmarkScreen(
 }
 
 @Composable
-fun BookmarkHeader(
-    text: String,
+fun BookAuthorHeader(
+    bookTitle: String,
+    bookAuthor: String,
     isCollapsed: Boolean,
     onToggle: () -> Unit
 ) {
@@ -226,15 +226,30 @@ fun BookmarkHeader(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 标题
-            Text(
-                text = text,
-                style = MaterialTheme.typography.titleSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                ),
+
+            Column(
                 modifier = Modifier.weight(1f)
-            )
+            ) {
+
+                Text(
+                    text = bookTitle,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = bookAuthor,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             val rotation by animateFloatAsState(
                 targetValue = if (isCollapsed) 0f else 180f,
@@ -243,7 +258,7 @@ fun BookmarkHeader(
 
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
+                contentDescription = if (isCollapsed) "展开书签" else "折叠书签",
                 modifier = Modifier.rotate(rotation),
                 tint = MaterialTheme.colorScheme.primary
             )
