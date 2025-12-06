@@ -87,7 +87,18 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
         styleAdapter.setItems(ReadBookConfig.configList)
     }
 
+    private fun updateChineseIcon() {
+        val text = when (AppConfig.chineseConverterType) {
+            1 -> " 简"
+            2 -> " 繁"
+            else -> null
+        }
+        binding.btnChineseConverter.text = text
+    }
+
+
     private fun initViewEvent() = binding.run {
+        updateChineseIcon()
         btnChineseConverter.setOnClickListener {
             alert(titleResource = R.string.chinese_converter) {
                 items(resources.getStringArray(R.array.chinese_mode).toList()) { _, i ->
@@ -96,6 +107,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
                     // 不需要更新文字，也不需要切换图标
                     ChineseUtils.unLoad(*TransType.entries.toTypedArray())
                     postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+                    updateChineseIcon()
                 }
             }
         }
