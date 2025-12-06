@@ -3,8 +3,12 @@ package io.legado.app.ui.book.explore
 import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +44,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Grid4x4
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FilterAlt
@@ -53,8 +58,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -74,7 +81,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,7 +93,7 @@ import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.utils.bookshelfLayoutGrid
+import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
@@ -106,7 +112,7 @@ fun ExploreShowScreen(
     }
 
     val books by viewModel.uiBooks.collectAsState()
-    val isBookEnd by viewModel.isRawDataEmptyAndEnd.collectAsState()
+    val isBookEnd by viewModel.isEnd.collectAsState()
     val shouldTriggerAutoLoad by viewModel.shouldTriggerAutoLoad.collectAsState()
     val kinds by viewModel.kinds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -119,16 +125,14 @@ fun ExploreShowScreen(
     var showKindSheet by remember { mutableStateOf(false) }
     val layoutState by viewModel.layoutState.collectAsState()
     val isGridMode = layoutState == 1
-    val context = LocalContext.current
-    val gridColumnCount = remember(context.resources.configuration.orientation) {
-        context.bookshelfLayoutGrid
-    }
+    var showGridCountSheet by remember { mutableStateOf(false) }
+    val gridColumnCount by viewModel.gridCount.collectAsState()
 
     val shouldLoadMoreList = remember {
         derivedStateOf {
             val total = listState.layoutInfo.totalItemsCount
             val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 6
+            total > 0 && last >= total - 3
         }
     }
 
@@ -136,7 +140,7 @@ fun ExploreShowScreen(
         derivedStateOf {
             val total = gridState.layoutInfo.totalItemsCount
             val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 6
+            total > 0 && last >= total - 1
         }
     }
 
@@ -162,6 +166,50 @@ fun ExploreShowScreen(
         } else {
             if (gridState.firstVisibleItemIndex > 0) {
                 listState.scrollToItem(gridState.firstVisibleItemIndex)
+            }
+        }
+    }
+
+    if (showGridCountSheet) {
+        val sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true
+        )
+
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = { showGridCountSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+
+                Text(
+                    text = "当前：$gridColumnCount 列",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
+                Slider(
+                    value = gridColumnCount.toFloat(),
+                    onValueChange = {
+                        val col = it.toInt().coerceIn(1, 10)
+                        viewModel.saveGridCount(col)
+                    },
+                    valueRange = 1f..10f,
+                    steps = 8,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                OutlinedButton (
+                    onClick = { showGridCountSheet = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("完成")
+                }
             }
         }
     }
@@ -218,6 +266,7 @@ fun ExploreShowScreen(
                 onSelectKindClick = { showKindSheet = true },
                 onToggleGridMode = { viewModel.setLayout() },
                 isGridMode = isGridMode,
+                onGridCountClick = { showGridCountSheet = true },
                 scrollBehavior = scrollBehavior
             )
         }
@@ -227,74 +276,72 @@ fun ExploreShowScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (!isLoading && isBookEnd && errorMsg == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyMessageView(message = "暂无书籍")
-                }
-            } else {
-                Crossfade(
-                    targetState = isGridMode,
-                    animationSpec = tween(250),
-                    label = "LayoutCrossfade"
-                ) { isGrid ->
-                    if (isGrid) {
-                        LazyVerticalGrid(
-                            state = gridState,
-                            modifier = Modifier.fillMaxSize(),
-                            columns = GridCells.Fixed(gridColumnCount),
-                            contentPadding = PaddingValues(12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(
-                                items = books,
-                                key = { it.bookUrl }
-                            ) { book ->
-                                val shelfState = viewModel.getCurrentBookShelfState(book)
-                                ExploreBookGridItem(
-                                    book = book,
-                                    shelfState = shelfState,
-                                    onClick = { onBookClick(book) },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
 
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                LoadMoreFooter(
-                                    isLoading = isLoading,
-                                    errorMsg = errorMsg,
-                                    onRetry = viewModel::loadMore
-                                )
-                            }
+            Crossfade(
+                targetState = isGridMode,
+                animationSpec = tween(250),
+                label = "LayoutCrossfade"
+            ) { isGrid ->
+                if (isGrid) {
+                    LazyVerticalGrid(
+                        state = gridState,
+                        modifier = Modifier.fillMaxSize(),
+                        columns = GridCells.Fixed(gridColumnCount),
+                        contentPadding = PaddingValues(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(
+                            items = books,
+                            key = { it.bookUrl }
+                        ) { book ->
+                            val shelfState = viewModel.getCurrentBookShelfState(book)
+                            ExploreBookGridItem(
+                                book = book,
+                                shelfState = shelfState,
+                                onClick = { onBookClick(book) },
+                                modifier = Modifier.animateItem()
+                            )
                         }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            contentPadding = PaddingValues(bottom = 16.dp)
-                        ) {
-                            items(
-                                items = books,
-                                key = { it.bookUrl }
-                            ) { book ->
-                                val shelfState = viewModel.getCurrentBookShelfState(book)
-                                ExploreBookItem(
-                                    book = book,
-                                    shelfState = shelfState,
-                                    onClick = { onBookClick(book) },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
 
-                            item {
-                                LoadMoreFooter(
-                                    isLoading = isLoading,
-                                    errorMsg = errorMsg,
-                                    onRetry = viewModel::loadMore
-                                )
-                            }
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            LoadMoreFooter(
+                                isLoading = isLoading,
+                                errorMsg = errorMsg,
+                                isEnd = isBookEnd,
+                                onRetry = viewModel::loadMore
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
+                        items(
+                            items = books,
+                            key = { it.bookUrl }
+                        ) { book ->
+                            val shelfState = viewModel.getCurrentBookShelfState(book)
+                            ExploreBookItem(
+                                book = book,
+                                shelfState = shelfState,
+                                onClick = { onBookClick(book) },
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+
+                        item {
+                            LoadMoreFooter(
+                                isLoading = isLoading,
+                                errorMsg = errorMsg,
+                                isEnd = isBookEnd,
+                                onRetry = viewModel::loadMore
+                            )
                         }
                     }
                 }
+
             }
         }
     }
@@ -341,6 +388,7 @@ fun ExploreTopBar(
     onSelectKindClick: () -> Unit,
     onToggleGridMode: () -> Unit,
     isGridMode: Boolean,
+    onGridCountClick: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -353,11 +401,25 @@ fun ExploreTopBar(
             }
         },
         actions = {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.FilterList, contentDescription = "Filter")
-            }
-            IconButton(onClick = { onSelectKindClick() }) {
-                Icon(Icons.Outlined.FilterAlt, contentDescription = "分类")
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.animateContentSize(tween(300))
+            ) {
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                }
+                IconButton(onClick = { onSelectKindClick() }) {
+                    Icon(Icons.Outlined.FilterAlt, contentDescription = "分类")
+                }
+                AnimatedVisibility(
+                    visible = isGridMode,
+                    enter = fadeIn(tween(300)),
+                    exit = fadeOut(tween(300))
+                ) {
+                    IconButton(onClick = onGridCountClick) {
+                        Icon(Icons.Default.Grid4x4, contentDescription = "列数设置")
+                    }
+                }
             }
             IconButton(onClick = { onToggleGridMode() }) {
                 Icon(
@@ -592,22 +654,33 @@ fun TagChip(text: String) {
 fun LoadMoreFooter(
     isLoading: Boolean,
     errorMsg: String?,
+    isEnd: Boolean,
     onRetry: () -> Unit
 ) {
+
+    LaunchedEffect(isLoading, errorMsg, isEnd) {
+        if (!isLoading && errorMsg == null && !isEnd) {
+            while (true) {
+                onRetry()
+                delay(1000L)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
-
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
             AnimatedContent(
                 targetState = when {
                     isLoading -> "加载中…"
                     errorMsg != null -> "加载失败: $errorMsg"
-                    else -> "已经到底了~"
+                    isEnd -> "已经到底了~"
+                    else -> "我爱你"
                 },
                 label = "FooterTextChange"
             ) { text ->

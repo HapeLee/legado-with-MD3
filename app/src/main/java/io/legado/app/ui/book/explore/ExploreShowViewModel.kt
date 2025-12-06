@@ -10,6 +10,7 @@ import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookShelfState
 import io.legado.app.ui.book.search.BookKey
+import io.legado.app.utils.exploreLayoutGrid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import splitties.init.appCtx
 
 sealed class BookFilterState(val id: Int) {
     data object SHOW_ALL : BookFilterState(0)
@@ -60,7 +62,13 @@ class ExploreShowViewModel(
     val selectedKindTitle = _selectedKindTitle.asStateFlow()
     private val _layoutState = MutableStateFlow(AppConfig.exploreLayoutState) // 0=列表, 1=网格
     val layoutState: StateFlow<Int> = _layoutState.asStateFlow()
-
+    private val _gridCount = MutableStateFlow(appCtx.exploreLayoutGrid)
+    val gridCount = _gridCount.asStateFlow()
+    val isEnd: StateFlow<Boolean> = _isEndStateFlow.asStateFlow()
+    fun saveGridCount(value: Int) {
+        appCtx.exploreLayoutGrid = value
+        _gridCount.value = value
+    }
     val uiBooks = combine(
         _rawBooks,
         _filterState,
@@ -70,13 +78,6 @@ class ExploreShowViewModel(
             isBookValid(item, filter, bookshelf)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    val isRawDataEmptyAndEnd = combine(
-        _rawBooks,
-        _isEndStateFlow
-    ) { rawBooks, isEndValue ->
-        rawBooks.isEmpty() && isEndValue
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     val shouldTriggerAutoLoad = combine(
         _isLoading,
@@ -138,20 +139,13 @@ class ExploreShowViewModel(
     }
 
     fun loadMore(isRefresh: Boolean = false) {
-        if (_isLoading.value || (_isEndStateFlow.value && !isRefresh)) return
+        val source = bookSource
+        val url = exploreUrl
+        if (source == null || url == null || _isLoading.value || (_isEndStateFlow.value && !isRefresh)) return
 
         viewModelScope.launch {
             _isLoading.value = true
             _errorMsg.value = null
-
-            val source = bookSource
-            val url = exploreUrl
-
-            if (source == null || url == null) {
-                _isLoading.value = false
-                _errorMsg.value = "源或URL为空"
-                return@launch
-            }
 
             if (isRefresh) {
                 page = 1
@@ -165,16 +159,21 @@ class ExploreShowViewModel(
                         _isEndStateFlow.value = true
                     } else {
                         repository.saveSearchBooks(newBooks)
-                        val currentList = if (page == 1) emptyList() else _rawBooks.value
-                        if (page == 1) {
-                            _rawBooks.value = newBooks.distinctBy { it.bookUrl }
+
+                        val currentList = _rawBooks.value
+                        val existingUrls = currentList.map { it.bookUrl }.toSet()
+
+                        val uniqueNewBooks = newBooks
+                            .filter { it.bookUrl !in existingUrls }
+                            .distinctBy { it.bookUrl }
+
+                        if (uniqueNewBooks.isEmpty()) {
+                            _isEndStateFlow.value = true
                         } else {
-                            val existingUrls = currentList.map { it.bookUrl }.toSet()
-                            val uniqueNewBooks = newBooks.filter { it.bookUrl !in existingUrls }
                             _rawBooks.value = currentList + uniqueNewBooks
+                            page++
+                            _isEndStateFlow.value = false
                         }
-                        page++
-                        _isEndStateFlow.value = false
                     }
                 }
                 .onFailure {

@@ -237,6 +237,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.bookshelfLayoutGridPortrait, value)
         }
 
+    var exploreLayoutGridLandscape: Int
+        get() = appCtx.getPrefInt(PreferKey.exploreLayoutGridLandscape, 7)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.exploreLayoutGridLandscape, value)
+        }
+
+    var exploreLayoutGridPortrait: Int
+        get() = appCtx.getPrefInt(PreferKey.exploreLayoutGridPortrait, 3)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.exploreLayoutGridPortrait, value)
+        }
+
     var bookshelfLayoutGridLandscape: Int
         get() = appCtx.getPrefInt(PreferKey.bookshelfLayoutGridLandscape, 7)
         set(value) {

@@ -204,6 +204,10 @@ object PreferKey {
     const val sharedElementEnterTransitionEnable = "sharedElementEnterTransitionEnable"
     const val bookshelfLayoutGridLandscape = "bookshelfLayoutGridLandscape"
     const val bookshelfLayoutGridPortrait = "bookshelfLayoutGridPortrait"
+
+    const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
+
+    const val exploreLayoutGridPortrait = "exploreLayoutGridPortrait"
     const val tabletInterface = "tabletInterface"
     const val pureBlack = "pure_black"
     const val labelVisibilityMode = "labelVisibilityMode"
