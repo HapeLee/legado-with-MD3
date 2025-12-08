@@ -92,7 +92,6 @@ import io.legado.app.model.BookShelfState
 import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
-import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
