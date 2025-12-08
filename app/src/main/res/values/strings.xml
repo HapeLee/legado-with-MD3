@@ -1354,4 +1354,9 @@
     <string name="read_change_all">换源按钮默认弹出整书换源</string>
     <string name="read_change_all_s">反之则默认弹出单章换源</string>
     <string name="show_tip">显示书籍类型</string>
+    <string name="is_reading">在读</string>
+    <string name="is_unread">未读</string>
+    <string name="is_read_finished">已读</string>
+    <string name="manga">漫画</string>
+    <string name="noval">小说</string>
 </resources>

@@ -26,7 +26,12 @@ interface BookDao {
             BookGroup.IdAudio -> flowAudio()
             BookGroup.IdNetNone -> flowNetNoGroup()
             BookGroup.IdLocalNone -> flowLocalNoGroup()
+            BookGroup.IdManga -> flowManga()
+            BookGroup.IdText -> flowText()
             BookGroup.IdError -> flowUpdateError()
+            BookGroup.IdUnread -> flowUnread()
+            BookGroup.IdReading -> flowReading()
+            BookGroup.IdReadFinished -> flowReadFinished()
             else -> flowByUserGroup(groupId)
         }.map { list ->
             list.filterNot { it.isNotShelf }
@@ -76,6 +81,21 @@ interface BookDao {
 
     @Query("SELECT * FROM books where type & ${BookType.updateError} > 0 order by durChapterTime desc")
     fun flowUpdateError(): Flow<List<Book>>
+
+    @Query("""SELECT * FROM books WHERE durChapterIndex = 0 AND durChapterPos = 0""")
+    fun flowUnread(): Flow<List<Book>>
+
+    @Query("""SELECT * FROM books WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1""")
+    fun flowReadFinished(): Flow<List<Book>>
+
+    @Query("""SELECT * FROM books WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1""")
+    fun flowReading(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE type & ${BookType.image} > 0")
+    fun flowManga(): Flow<List<Book>>
+
+    @Query("SELECT * FROM books WHERE type & ${BookType.text} > 0")
+    fun flowText(): Flow<List<Book>>
 
     @Query("SELECT * FROM books WHERE (`group` & :group) > 0")
     fun getBooksByGroup(group: Long): List<Book>

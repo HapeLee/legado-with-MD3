@@ -129,6 +129,10 @@
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
                 android:textStyle="bold"
+                android:shadowColor="#80000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="4.0"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />
