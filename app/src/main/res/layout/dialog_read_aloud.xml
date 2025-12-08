@@ -120,7 +120,6 @@
         android:layout_marginVertical="6dp"
         android:layout_marginHorizontal="3dp">
 
-        <!-- 上一章按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/tv_pre"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
@@ -133,8 +132,6 @@
             android:text="@string/previous_chapter"
             android:textSize="14sp"/>
 
-
-        <!-- 计时器文本按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_timer"
             style="@style/Widget.Material3Expressive.Button.TonalButton"
@@ -145,7 +142,6 @@
             android:padding="0dp"
             android:text="@string/timer_m" />
 
-        <!-- 下一章按钮 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/tv_next"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
@@ -222,14 +218,13 @@
                 app:icon="@drawable/ic_reduce"
                 tools:ignore="UnusedAttribute" />
 
-            <!-- 滑动条 (保持不变) -->
             <io.legado.app.lib.theme.view.ThemeSlider
                 android:id="@+id/seek_tts_speechRate"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:valueFrom="0"
-                android:valueTo="45"
+                android:valueTo="80"
                 android:stepSize="1"/>
 
             <com.google.android.material.button.MaterialButton
@@ -253,7 +248,6 @@
         android:baselineAligned="false"
         android:orientation="horizontal">
 
-        <!--目录按钮-->
         <LinearLayout
             android:id="@+id/ll_catalog"
             android:layout_width="wrap_content"
@@ -289,7 +283,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1" />
-        <!--调节按钮-->
+
         <LinearLayout
             android:id="@+id/ll_main_menu"
             android:layout_width="wrap_content"
@@ -326,7 +320,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1" />
-        <!--界面按钮-->
+
         <LinearLayout
             android:id="@+id/ll_to_backstage"
             android:layout_width="wrap_content"
@@ -362,7 +356,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1" />
-        <!--设置按钮-->
+
         <LinearLayout
             android:id="@+id/ll_setting"
             android:layout_width="wrap_content"
