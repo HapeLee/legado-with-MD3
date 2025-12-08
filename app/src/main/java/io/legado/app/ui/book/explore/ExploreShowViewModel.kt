@@ -11,11 +11,14 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookShelfState
 import io.legado.app.ui.book.search.BookKey
 import io.legado.app.utils.exploreLayoutGrid
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
@@ -196,6 +199,12 @@ class ExploreShowViewModel(
             BookFilterState.HIDE_SAME_NAME_AUTHOR -> state != BookShelfState.SAME_NAME_AUTHOR
             BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state == BookShelfState.NOT_IN_SHELF
         }
+    }
+
+    fun getBookShelfStateFlow(item: SearchBook): Flow<BookShelfState> {
+        return _bookshelf.map { shelf ->
+            getBookShelfState(item, shelf)
+        }.distinctUntilChanged()
     }
 
     private fun getBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {

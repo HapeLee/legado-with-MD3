@@ -93,7 +93,9 @@ import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.SearchBarSection
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
@@ -216,6 +218,7 @@ fun ExploreShowScreen(
 
     if (showKindSheet) {
         val scrollState = rememberScrollState()
+        var kindQuery by remember { mutableStateOf("") }
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
             confirmValueChange = { newValue ->
@@ -231,16 +234,30 @@ fun ExploreShowScreen(
                     .fillMaxWidth()
                     .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
                     .verticalScroll(scrollState)
-                    .padding(12.dp)
             ) {
-                Text(
-                    "选择分类",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
+
+                var kindQuery by remember { mutableStateOf("") }
+
+                SearchBarSection(
+                    query = kindQuery,
+                    onQueryChange = { kindQuery = it },
+                    placeholder = "选择或搜索分类",
+                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 )
 
-                FlowRow(modifier = Modifier.fillMaxWidth()) {
-                    kinds.forEach { kind ->
+                val filteredKinds = remember(kindQuery, kinds) {
+                    if (kindQuery.isBlank()) kinds
+                    else kinds.filter { kind ->
+                        kind.title.contains(kindQuery, ignoreCase = true) ||
+                                (kind.url?.contains(kindQuery, ignoreCase = true) == true)
+                    }
+                }
+
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    filteredKinds.forEach { kind ->
                         KindListItem(
                             kind = kind,
                             currentTitle = selectedTitle ?: title,
@@ -295,10 +312,9 @@ fun ExploreShowScreen(
                             items = books,
                             key = { it.bookUrl }
                         ) { book ->
-                            val shelfState = viewModel.getCurrentBookShelfState(book)
                             ExploreBookGridItem(
                                 book = book,
-                                shelfState = shelfState,
+                                shelfState = viewModel.getBookShelfStateFlow(book),
                                 onClick = { onBookClick(book) },
                                 modifier = Modifier.animateItem()
                             )
@@ -325,7 +341,7 @@ fun ExploreShowScreen(
                             val shelfState = viewModel.getCurrentBookShelfState(book)
                             ExploreBookItem(
                                 book = book,
-                                shelfState = shelfState,
+                                shelfState = viewModel.getBookShelfStateFlow(book),
                                 onClick = { onBookClick(book) },
                                 modifier = Modifier.animateItem()
                             )
@@ -372,7 +388,7 @@ fun KindListItem(
         modifier = Modifier
             .then(
                 if (!isClickable) Modifier.fillMaxWidth()
-                else Modifier.fillMaxWidth(1 / 3f)
+                else Modifier.fillMaxWidth(1f / 3f)
             )
             .padding(horizontal = 4.dp)
     )
@@ -472,10 +488,11 @@ fun ExploreTopBar(
 @Composable
 fun ExploreBookItem(
     book: SearchBook,
-    shelfState: BookShelfState,
+    shelfState: Flow<BookShelfState>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
 
     val badge: (@Composable RowScope.() -> Unit)?
             = when (shelfState) {
@@ -584,9 +601,11 @@ fun ExploreBookItem(
 fun ExploreBookGridItem(
     book: SearchBook,
     onClick: () -> Unit,
-    shelfState: BookShelfState,
+    shelfState: Flow<BookShelfState>,
     modifier: Modifier = Modifier
 ) {
+
+    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
 
     val badgeText: String? = when (shelfState) {
         BookShelfState.IN_SHELF -> "已在书架"

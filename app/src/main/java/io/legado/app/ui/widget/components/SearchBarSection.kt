@@ -24,14 +24,15 @@ import androidx.compose.ui.unit.dp
 fun SearchBarSection(
     query: String,
     onQueryChange: (String) -> Unit,
-    placeholder: String = "搜索书名"
+    placeholder: String = "搜索书名",
+    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerLow
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(32.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        color = backgroundColor
     ) {
 
         TextField(
