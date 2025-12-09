@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 
 
 data class ReplaceEditUiState(
-    val id: Long = -1,
+    val id: Long = System.currentTimeMillis(),
     val name: TextFieldValue = TextFieldValue(""),
     val group: String = "默认",
     val pattern: TextFieldValue = TextFieldValue(""),
@@ -61,7 +61,6 @@ class ReplaceEditViewModel(
             } else {
                 _uiState.update {
                     it.copy(
-                        id = -1,
                         name = TextFieldValue(""),
                         pattern = TextFieldValue(savedStateHandle["pattern"] ?: ""),
                         isRegex = savedStateHandle["isRegex"] ?: false,
