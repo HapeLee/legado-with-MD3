@@ -813,43 +813,47 @@ class ReadMenu @JvmOverloads constructor(
     }
 
 
-    fun upSeekBar() {
-        //孩子们 土方法丑陋但有效
-        binding.seekReadPage.apply {
-            when (AppConfig.progressBarBehavior) {
-                "page" -> {
-                    ReadBook.curTextChapter?.let { chapter ->
-                        if (chapter.pageSize >= 0 && ReadBook.durPageIndex >= 0) {
-                            valueFrom = 1f
-                            valueTo = chapter.pageSize.toFloat().coerceAtLeast(2f)
-                            stepSize = 1f
-                            value = (ReadBook.durPageIndex).coerceIn(1, chapter.pageSize).toFloat()
-                        } else {
-                            valueFrom = 0f
-                            valueTo = 100000f
-                            stepSize = 0f
-                            value = 0f
-                        }
+    fun upSeekBar() = binding.seekReadPage.apply {
+
+        fun safeSet(rangeFrom: Float, rangeTo: Float, step: Float, rawValue: Float) {
+            valueFrom = rangeFrom
+            valueTo = rangeTo
+            stepSize = step
+            val safeValue = rawValue.coerceIn(rangeFrom, rangeTo)
+            if (value != safeValue) value = safeValue
+        }
+
+        when (AppConfig.progressBarBehavior) {
+            "page" -> {
+                ReadBook.curTextChapter?.let { chapter ->
+                    if (chapter.pageSize > 0 && ReadBook.durPageIndex >= 0) {
+                        safeSet(
+                            rangeFrom = 1f,
+                            rangeTo = chapter.pageSize.toFloat().coerceAtLeast(2f),
+                            step = 1f,
+                            rawValue = ReadBook.durPageIndex.toFloat()
+                        )
+                    } else {
+                        safeSet(0f, 100000f, 0f, 0f)
                     }
                 }
+            }
 
-                "chapter" -> {
-                    if (ReadBook.simulatedChapterSize > 0)
-                    {
-                        valueFrom = 1f
-                        valueTo = ReadBook.simulatedChapterSize.toFloat().coerceAtLeast(2f)
-                        stepSize = 1f
-                        value = (ReadBook.durChapterIndex).coerceIn(1, ReadBook.simulatedChapterSize).toFloat()
-                    } else {
-                        valueFrom = 0f
-                        valueTo = 100000f
-                        stepSize = 0f
-                        value = 0f
-                    }
+            "chapter" -> {
+                if (ReadBook.simulatedChapterSize > 0) {
+                    safeSet(
+                        rangeFrom = 1f,
+                        rangeTo = ReadBook.simulatedChapterSize.toFloat().coerceAtLeast(2f),
+                        step = 1f,
+                        rawValue = ReadBook.durChapterIndex.toFloat()
+                    )
+                } else {
+                    safeSet(0f, 100000f, 0f, 0f)
                 }
             }
         }
     }
+
 
 //    fun upSeekBar() {
 //        binding.seekReadPage.apply {
