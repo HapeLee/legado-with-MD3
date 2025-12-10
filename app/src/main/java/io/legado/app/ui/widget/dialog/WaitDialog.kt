@@ -14,7 +14,7 @@ class WaitDialog(context: Context) {
 
     private val dialog: Dialog = MaterialAlertDialogBuilder(context)
         .setView(binding.root)
-        .setCancelable(false)
+        .setCancelable(true)
         .create()
 
     init {
