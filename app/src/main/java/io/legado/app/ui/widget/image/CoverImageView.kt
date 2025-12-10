@@ -22,7 +22,6 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.help.glide.OkHttpModelLoader
-//import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.BookCover
 import io.legado.app.utils.spToPx
 import io.legado.app.utils.textHeight
@@ -47,6 +46,9 @@ class CoverImageView @JvmOverloads constructor(
     private var author: String? = null
     private var nameHeight = 0f
     private var authorHeight = 0f
+    private val isNightTheme = AppConfig.isNightTheme
+    val colorKey = if (isNightTheme) BookCover.coverTextColorN else BookCover.coverTextColor
+    val shadowKey = if (isNightTheme) BookCover.coverShadowColorN else BookCover.coverShadowColor
     private val namePaint by lazy {
         val textPaint = TextPaint()
         textPaint.typeface = Typeface.DEFAULT_BOLD
@@ -119,21 +121,35 @@ class CoverImageView @JvmOverloads constructor(
     }
 
     private fun drawNameAuthor(canvas: Canvas) {
+        var startX = width * 0.2f
+        var startY = viewHeight * 0.2f
         if (BookCover.drawBookName) {
-            var startX = width * 0.2f
-            var startY = viewHeight * 0.2f
-
             name?.toStringArray()?.let { nameChars ->
                 val textSize = viewWidth / 8
                 namePaint.textSize = textSize
                 namePaint.strokeWidth = textSize / 8
 
-                nameChars.forEach { char ->
-                    namePaint.color = Color.WHITE
-                    namePaint.style = Paint.Style.STROKE
-                    canvas.drawText(char, startX, startY, namePaint)
+                if (BookCover.drawBookShadow) {
+                    namePaint.setShadowLayer(
+                        4f,
+                        0f,
+                        0f,
+                        shadowKey
+                    )
+                } else {
+                    namePaint.clearShadowLayer()
+                }
 
-                    namePaint.color = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
+                nameChars.forEach { char ->
+                    if (BookCover.drawBookStroke) {
+                        namePaint.color = Color.WHITE
+                        namePaint.style = Paint.Style.STROKE
+                        canvas.drawText(char, startX, startY, namePaint)
+                    }
+                    if (BookCover.coverDefaultColor)
+                        namePaint.color = context.themeColor(com.google.android.material.R.attr.colorSecondary)
+                    else
+                        namePaint.color = colorKey
                     namePaint.style = Paint.Style.FILL
                     canvas.drawText(char, startX, startY, namePaint)
 
@@ -144,33 +160,48 @@ class CoverImageView @JvmOverloads constructor(
                         startY = viewHeight * 0.2f
                     }
                 }
+                namePaint.clearShadowLayer()
             }
         }
 
         if (BookCover.drawBookAuthor) {
-            author?.toStringArray()?.let { authorChars ->
-                val textSize = viewWidth / 10
-                authorPaint.textSize = textSize
-                authorPaint.strokeWidth = textSize / 5
+            author?.toStringArray()?.let { author ->
+                authorPaint.textSize = viewWidth / 10
+                authorPaint.strokeWidth = authorPaint.textSize / 5
+                startX = width * 0.8f
+                startY = viewHeight * 0.95f - author.size * authorPaint.textHeight
+                startY = maxOf(startY, viewHeight * 0.2f)
+                if (BookCover.drawBookShadow) {
+                    authorPaint.setShadowLayer(
+                        4f,
+                        0f,
+                        0f,
+                        shadowKey
+                    )
+                } else {
+                    authorPaint.clearShadowLayer()
+                }
 
-                var startX = width * 0.8f
-                var startY = viewHeight * 0.8f
-
-                authorChars.forEach { char ->
-
-                    authorPaint.color = Color.WHITE
-                    authorPaint.style = Paint.Style.STROKE
-                    canvas.drawText(char, startX, startY, authorPaint)
-
-                    authorPaint.color =
-                        context.themeColor(com.google.android.material.R.attr.colorSecondary)
+                author.forEach {
+                    if (BookCover.drawBookStroke) {
+                        authorPaint.color = Color.WHITE
+                        authorPaint.style = Paint.Style.STROKE
+                        canvas.drawText(it, startX, startY, authorPaint)
+                    }
+                    if (BookCover.coverDefaultColor)
+                        authorPaint.color = context.themeColor(com.google.android.material.R.attr.colorSecondary)
+                    else
+                        authorPaint.color = colorKey
                     authorPaint.style = Paint.Style.FILL
-                    canvas.drawText(char, startX, startY, authorPaint)
+                    canvas.drawText(it, startX, startY, authorPaint)
 
                     startY += authorPaint.textHeight
 
-                    if (startY > viewHeight * 0.95f) return@let
+                    if (startY > viewHeight * 0.95) {
+                        return@let
+                    }
                 }
+                authorPaint.clearShadowLayer()
             }
         }
     }

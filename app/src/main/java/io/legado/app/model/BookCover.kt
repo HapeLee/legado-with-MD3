@@ -3,6 +3,7 @@ package io.legado.app.model
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
 import androidx.core.graphics.drawable.toDrawable
@@ -35,10 +36,11 @@ import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
+import kotlinx.coroutines.currentCoroutineContext
 import splitties.init.appCtx
 import java.io.File
-import kotlin.coroutines.coroutineContext
 
 @Keep
 object BookCover {
@@ -47,6 +49,20 @@ object BookCover {
     var drawBookName = true
         private set
     var drawBookAuthor = true
+        private set
+    var drawBookShadow = true
+        private set
+    var drawBookStroke = true
+        private set
+    var coverTextColor: Int = Color.WHITE
+        private set
+    var coverShadowColor: Int = Color.WHITE
+        private set
+    var coverTextColorN: Int = Color.WHITE
+        private set
+    var coverShadowColorN: Int = Color.WHITE
+        private set
+    var coverDefaultColor = true
         private set
     lateinit var defaultDrawable: Drawable
         private set
@@ -69,6 +85,21 @@ object BookCover {
         } else {
             appCtx.getPrefBoolean(PreferKey.coverShowAuthor, true)
         }
+        drawBookShadow =
+            appCtx.getPrefBoolean(PreferKey.coverShowShadow, false)
+        drawBookStroke =
+            appCtx.getPrefBoolean(PreferKey.coverShowStroke, true)
+        coverDefaultColor =
+            appCtx.getPrefBoolean(PreferKey.coverDefaultColor, true)
+        coverTextColor =
+            appCtx.getPrefInt(PreferKey.coverTextColor, Color.WHITE)
+        coverTextColorN =
+            appCtx.getPrefInt(PreferKey.coverTextColorN, Color.BLACK)
+        coverShadowColor =
+            appCtx.getPrefInt(PreferKey.coverShadowColor, Color.WHITE)
+        coverShadowColorN =
+            appCtx.getPrefInt(PreferKey.coverShadowColorN, Color.BLACK)
+
         val key = if (isNightTheme) PreferKey.defaultCoverDark else PreferKey.defaultCover
         val path = appCtx.getPrefString(key)
         if (path.isNullOrBlank()) {
@@ -222,12 +253,12 @@ object BookCover {
             config.searchUrl,
             book.name,
             source = config,
-            coroutineContext = coroutineContext,
+            coroutineContext = currentCoroutineContext(),
             hasLoginHeader = false
         )
         val res = analyzeUrl.getStrResponseAwait()
         val analyzeRule = AnalyzeRule(book)
-        analyzeRule.setCoroutineContext(coroutineContext)
+        analyzeRule.setCoroutineContext(currentCoroutineContext())
         analyzeRule.setContent(res.body)
         analyzeRule.setRedirectUrl(res.url)
         return analyzeRule.getString(config.coverRule, isUrl = true)

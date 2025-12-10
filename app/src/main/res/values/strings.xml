@@ -1359,4 +1359,7 @@
     <string name="is_read_finished">已读</string>
     <string name="manga">漫画</string>
     <string name="noval">小说</string>
+    <string name="cover_show_shadow">显示字体阴影</string>
+    <string name="cover_show_stroke">显示字体描边</string>
+    <string name="default_color">使用默认字体颜色</string>
 </resources>

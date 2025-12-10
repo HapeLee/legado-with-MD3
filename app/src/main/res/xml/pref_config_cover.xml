@@ -25,6 +25,29 @@
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false" />
 
+    <io.legado.app.lib.prefs.SwitchPreference
+        android:key="coverShowShadow"
+        android:title="@string/cover_show_shadow"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false" />
+
+    <io.legado.app.lib.prefs.SwitchPreference
+        android:key="coverShowStroke"
+        android:title="@string/cover_show_stroke"
+        android:defaultValue="true"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false" />
+
+    <io.legado.app.lib.prefs.SwitchPreference
+        android:key="coverDefaultColor"
+        android:title="@string/default_color"
+        android:defaultValue="true"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false" />
+
     <io.legado.app.lib.prefs.PreferenceCategory
         android:key="dayThemeCategory"
         android:title="@string/day"
@@ -38,6 +61,20 @@
             android:title="@string/default_cover"
             app:allowDividerAbove="false"
             app:allowDividerBelow="false"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.ColorPreference
+            android:defaultValue="@color/md_green_500"
+            android:key="coverTextColor"
+            android:title="@string/text_color"
+            app:cpv_dialogType="preset"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.ColorPreference
+            android:defaultValue="@color/md_green_500"
+            android:key="coverShadowColor"
+            android:title="@string/text_shadow_color"
+            app:cpv_dialogType="preset"
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.SwitchPreference
@@ -73,6 +110,20 @@
             android:title="@string/default_cover"
             app:allowDividerAbove="false"
             app:allowDividerBelow="false"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.ColorPreference
+            android:defaultValue="@color/md_green_500"
+            android:key="coverTextColorN"
+            android:title="@string/text_color"
+            app:cpv_dialogType="preset"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.ColorPreference
+            android:defaultValue="@color/md_green_500"
+            android:key="coverShadowColorN"
+            android:title="@string/text_shadow_color"
+            app:cpv_dialogType="preset"
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.SwitchPreference

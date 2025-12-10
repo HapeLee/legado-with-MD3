@@ -589,7 +589,6 @@
     <color name="disabled">@color/md_light_disabled</color>
 
     <color name="divider">#66666666</color>
-
     <color name="lightBlue_color">#FF578FCC</color>
 
     <color name="error">#eb4333</color>

@@ -74,6 +74,13 @@ class CoverConfigFragment : PreferenceFragment(),
                     ?.isEnabled = getPrefBoolean(key)
                 BookCover.upDefaultCover()
             }
+            PreferKey.coverTextColor,
+            PreferKey.coverTextColorN,
+            PreferKey.coverShadowColor,
+            PreferKey.coverShadowColorN,
+            PreferKey.coverDefaultColor,
+            PreferKey.coverShowShadow,
+            PreferKey.coverShowStroke,
             PreferKey.coverShowAuthor,
             PreferKey.coverShowAuthorN -> {
                 BookCover.upDefaultCover()
