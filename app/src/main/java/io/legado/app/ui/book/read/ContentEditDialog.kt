@@ -41,8 +41,11 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
     val binding by viewBinding(DialogContentEditBinding::bind)
     val viewModel by viewModels<ContentEditViewModel>()
 
+    private val targetOffset: Int
+        get() = arguments?.getInt("start_position", -1).takeIf { it != -1 }
+            ?: ReadBook.durChapterPos
+
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        //binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.title = ReadBook.curTextChapter?.title
         initMenu()
         binding.toolBar.setOnClickListener {
@@ -67,12 +70,11 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
                 val layout = binding.contentView.layout ?: return@post
                 val targetY = binding.contentView.top +
                         layout.getLineTop(
-                            layout.getLineForOffset(ReadBook.durChapterPos)
+                            layout.getLineForOffset(targetOffset)
                         )
 
                 binding.scrollView.smoothScrollTo(0, targetY)
-
-                highlightCurrentLineTwice()
+                highlightSelectedTextTwice()
             }
         }
 
@@ -117,14 +119,16 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
         }
     }
 
-    private fun highlightCurrentLineTwice() {
+    private fun highlightSelectedTextTwice() {
         val editText = binding.contentView
-        val layout = editText.layout ?: return
-        val offset = ReadBook.durChapterPos
-        val lineIndex = layout.getLineForOffset(offset)
+        val content = editText.text ?: return
 
-        val start = layout.getLineStart(lineIndex)
-        val end = layout.getLineEnd(lineIndex)
+        val start = arguments?.getInt("start_position", -1) ?: -1
+        val selectedText = arguments?.getString("selected_text") ?: ""
+
+        if (start == -1 || selectedText.isEmpty()) return
+
+        val end = (start + selectedText.length).coerceAtMost(content.length)
 
         val spannable = editText.text as Spannable
         val span =

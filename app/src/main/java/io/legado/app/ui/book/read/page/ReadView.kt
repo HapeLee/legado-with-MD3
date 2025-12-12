@@ -674,6 +674,14 @@ class ReadView(context: Context, attrs: AttributeSet) :
         return curPage.selectedText
     }
 
+    fun getSelectTextPos(): Int {
+        val selectStartPos = curPage.selectStartPos
+        return curPage.textPage.getPosByLineColumn(
+            selectStartPos.lineIndex,
+            selectStartPos.columnIndex
+        )
+    }
+
     fun getCurVisiblePage(): TextPage {
         return curPage.getCurVisiblePage()
     }

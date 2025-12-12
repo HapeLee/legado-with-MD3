@@ -11,6 +11,10 @@
         android:title="@android:string/copy" />
 
     <item
+        android:id="@+id/menu_edit"
+        android:title="@string/edit" />
+
+    <item
         android:id="@+id/menu_bookmark"
         android:title="@string/bookmark" />
 
