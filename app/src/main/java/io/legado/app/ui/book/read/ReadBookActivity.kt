@@ -622,7 +622,6 @@ class ReadBookActivity : BaseReadBookActivity(),
                 loadChapterList(it)
             }
             R.id.menu_enable_replace -> {
-                binding.readMenu.runMenuOut()
                 changeReplaceRuleState()
             }
             R.id.menu_re_segment -> ReadBook.book?.let {
@@ -1732,6 +1731,7 @@ class ReadBookActivity : BaseReadBookActivity(),
     }
 
     override fun changeReplaceRuleState() {
+        binding.readMenu.runMenuOut()
         ReadBook.book?.let {
             it.setUseReplaceRule(!it.getUseReplaceRule())
             ReadBook.saveRead()
