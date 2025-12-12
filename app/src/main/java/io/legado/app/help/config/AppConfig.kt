@@ -932,5 +932,11 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.defaultSourceChangeAll, value)
         }
+
+    var sliderVibrator: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.sliderVibrator, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.sliderVibrator, value)
+        }
 }
 

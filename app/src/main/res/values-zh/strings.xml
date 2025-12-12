@@ -1359,4 +1359,5 @@
     <string name="cover_show_shadow">显示字体阴影</string>
     <string name="cover_show_stroke">显示字体描边</string>
     <string name="default_color">使用默认字体颜色</string>
+    <string name="enable_slider_vibrator">滑动进度条时震动</string>
 </resources>

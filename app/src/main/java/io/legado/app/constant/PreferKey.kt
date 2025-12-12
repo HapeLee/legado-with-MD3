@@ -239,4 +239,5 @@ object PreferKey {
     const val defaultSourceChangeAll = "defaultSourceChangeAll"
 
     const val showTip = "showTip"
+    const val sliderVibrator = "sliderVibrator"
 }
