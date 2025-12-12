@@ -27,9 +27,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:textStyle="bold"
-            android:visibility="gone"
             android:paddingHorizontal="4dp"
-            android:autoSizeMaxTextSize="12sp"
+            android:autoSizeMaxTextSize="10sp"
             android:autoSizeMinTextSize="6sp"
             android:autoSizeStepGranularity="1sp"
             android:autoSizeTextType="uniform"
@@ -37,4 +36,5 @@
             android:singleLine="true"
             android:text="@string/text" />
     </com.google.android.material.card.MaterialCardView>
+
 </LinearLayout>

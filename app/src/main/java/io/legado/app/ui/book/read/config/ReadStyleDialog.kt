@@ -29,11 +29,6 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_style),
     FontConfigDialog.CallBack {
 
-    sealed class ReadStyleItem {
-        data class ConfigItem(val config: ReadBookConfig.Config) : ReadStyleItem()
-        data object ShareLayoutItem : ReadStyleItem()
-    }
-
     private val binding by viewBinding(DialogReadBookStyleBinding::bind)
     private val callBack get() = activity as? ReadBookActivity
     private lateinit var styleAdapter: StyleAdapter
@@ -236,14 +231,14 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
 
         override fun registerListener(holder: ItemViewHolder, binding: ItemReadStyleBinding) {
             binding.apply {
-                // ivStyle 现在是 MaterialCardView
                 cdStyle.setOnClickListener {
                     changeBgTextConfig(holder.layoutPosition)
                 }
 
                 cdStyle.setOnLongClickListener {
+                    dismissAllowingStateLoss()
                     showBgTextConfig(holder.layoutPosition)
-                    true // 表示事件已消费
+                    true
                 }
             }
         }
