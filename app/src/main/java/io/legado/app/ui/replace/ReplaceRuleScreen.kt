@@ -1,0 +1,703 @@
+package io.legado.app.ui.replace
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.gson.Gson
+import io.legado.app.R
+import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.ui.replace.edit.ReplaceEditActivity
+import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.SelectionBottomBar
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun ReplaceRuleScreen(
+    viewModel: ReplaceRuleViewModel = koinViewModel(),
+    onBackClick: () -> Unit
+) {
+    //TODO: 期望换为Navigation
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val rules = uiState.rules
+    val groups = uiState.groups
+
+    var isSearch by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteRuleDialog by remember { mutableStateOf<ReplaceRule?>(null) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
+
+    val sheetState = rememberModalBottomSheetState()
+    var showGroupManageSheet by remember { mutableStateOf(false) }
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    val selectedRuleIds by viewModel.selectedRuleIds.collectAsState()
+    val inSelectionMode = selectedRuleIds.isNotEmpty()
+
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabItems = listOf(stringResource(R.string.all)) + groups
+
+    val importDoc = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            uri?.let {
+                context.contentResolver.openInputStream(it)?.use { stream ->
+                    val text = stream.reader().readText()
+                    // show import dialog
+                }
+            }
+        }
+    )
+
+    val exportDoc = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json"),
+        onResult = { uri ->
+            uri?.let {
+                scope.launch {
+                    val rulesToExport = rules
+                        .filter { selectedRuleIds.contains(it.id) }
+                        .map { it.rule }
+
+                    val json = Gson().toJson(rulesToExport)
+                    context.contentResolver.openOutputStream(it)?.use { stream ->
+                        stream.writer().write(json)
+                    }
+                }
+            }
+        }
+    )
+
+    if (showGroupManageSheet) {
+        GroupManageBottomSheet(
+            groups = groups,
+            onDismissRequest = { showGroupManageSheet = false },
+            sheetState = sheetState,
+            viewModel = viewModel
+        )
+    }
+
+    if (showDeleteRuleDialog != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteRuleDialog = null },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.sure_del) + showDeleteRuleDialog!!.name) },
+            confirmButton = {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.delete(showDeleteRuleDialog!!)
+                        showDeleteRuleDialog = null
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        containerColor = Color.Transparent,
+                    ),
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteRuleDialog = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDeleteSelectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedDialog = false },
+            title = { Text(stringResource(R.string.delete)) },
+            text = { Text(stringResource(R.string.del_msg)) },
+            confirmButton = {
+                OutlinedButton(
+                    onClick = {
+                        viewModel.delSelectionByIds(selectedRuleIds)
+                        viewModel.setSelection(emptySet())
+                        showDeleteSelectedDialog = false
+                    },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                        containerColor = Color.Transparent,
+                    ),
+                ) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSelectedDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            Column {
+                MediumTopAppBar(
+                    title = {
+                        AnimatedText(
+                            text = if (inSelectionMode) {
+                                stringResource(
+                                    R.string.select_count,
+                                    selectedRuleIds.size,
+                                    rules.size
+                                )
+                            } else {
+                                stringResource(R.string.replace_rule)
+                            }
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                if (inSelectionMode) {
+                                    viewModel.setSelection(emptySet())
+                                } else {
+                                    onBackClick()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (inSelectionMode) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = if (inSelectionMode) "Cancel" else "Back"
+                            )
+                        }
+                    },
+                    actions = {
+                        if (!inSelectionMode) {
+                            IconButton(onClick = { isSearch = !isSearch }) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                            IconButton(onClick = { showMenu = !showMenu }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("在线导入") },
+                                    onClick = { /*TODO*/ showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("本地导入") },
+                                    onClick = { importDoc.launch(arrayOf("text/plain", "application/json")); showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("分组管理") },
+                                    onClick = { showGroupManageSheet = true; showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("帮助") },
+                                    onClick = { /*TODO*/ showMenu = false }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("旧的在前") },
+                                    onClick = { viewModel.setSortMode("asc"); showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("新的在前") },
+                                    onClick = { viewModel.setSortMode("desc"); showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("名称升序") },
+                                    onClick = { viewModel.setSortMode("name_asc"); showMenu = false }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("名称降序") },
+                                    onClick = { viewModel.setSortMode("name_desc"); showMenu = false }
+                                )
+                            }
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+                AnimatedVisibility(visible = isSearch && !inSelectionMode) {
+                    SearchBarSection(
+                        query = uiState.searchKey ?: "",
+                        onQueryChange = {
+                            viewModel.setSearchKey(it)
+                            selectedTabIndex = 0
+                        },
+                        placeholder = stringResource(id = R.string.replace_purify_search)
+                    )
+                }
+                AnimatedVisibility(visible = !inSelectionMode) {
+                    val allString = stringResource(R.string.all)
+                    PrimaryScrollableTabRow(
+                        selectedTabIndex = selectedTabIndex,
+                        edgePadding = 0.dp,
+                        divider = {},
+                    ) {
+                        tabItems.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = {
+                                    selectedTabIndex = index
+                                    val group = tabItems.getOrNull(index)
+                                    if (group == allString) {
+                                        viewModel.setSearchKey("")
+                                    } else if (group != null) {
+                                        viewModel.setSearchKey("group:$group")
+                                    }
+                                },
+                                modifier = Modifier.wrapContentWidth(),
+                                text = {
+                                    Text(
+                                        text = title,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        floatingActionButton = {
+            AnimatedVisibility(
+                visible = !inSelectionMode,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                FloatingActionButton(onClick = {
+                    context.startActivity(ReplaceEditActivity.startIntent(context))
+                }) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Rule")
+                }
+            }
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+        ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 12.dp,
+                    end = 12.dp,
+                    top = 8.dp,
+                    bottom = 120.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(rules, key = { it.id }) { ui ->
+                    val isSelected = selectedRuleIds.contains(ui.id)
+
+                    ReplaceRuleItem(
+                        modifier = Modifier.animateItem(),
+                        name = ui.name,
+                        isEnabled = ui.isEnabled,
+                        isSelected = isSelected,
+                        inSelectionMode = inSelectionMode,
+                        onEnabledChange = { enabled ->
+                            viewModel.update(ui.rule.copy(isEnabled = enabled))
+                        },
+                        onDelete = { showDeleteRuleDialog = ui.rule },
+                        onToTop = { viewModel.toTop(ui.rule) },
+                        onToBottom = { viewModel.toBottom(ui.rule) },
+                        onToggleSelection = {
+                            viewModel.toggleSelection(ui.id)
+                        },
+                        onClickEdit = {
+                            context.startActivity(
+                                ReplaceEditActivity.startIntent(context, ui.id)
+                            )
+                        }
+                    )
+                }
+            }
+            /*if (inSelectionMode) {
+                DraggableSelectionHandler(
+                    listState = listState,
+                    rules = rules,
+                    selectedRuleIds = selectedRuleIds,
+                    onSelectionChange = viewModel::setSelection,
+                    haptic = haptic,
+                    modifier = Modifier
+                        .padding(padding)
+                        .fillMaxHeight()
+                        .width(60.dp)
+                        .align(Alignment.TopStart)
+                )
+            }*/
+            AnimatedVisibility(
+                visible = inSelectionMode,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp),
+                enter = slideInVertically { it } + fadeIn(),
+                exit = slideOutVertically { it } + fadeOut()
+            ) {
+                SelectionBottomBar(
+                    onSelectAll = {
+                        viewModel.setSelection(rules.map { it.id }.toSet())
+                    },
+                    onSelectInvert = {
+                        val allIds = rules.map { it.id }.toSet()
+                        viewModel.setSelection(allIds - selectedRuleIds)
+                    },
+                    primaryAction = ActionItem(
+                        text = stringResource(R.string.delete),
+                        icon = { Icon(Icons.Default.Delete, null) },
+                        onClick = { showDeleteSelectedDialog = true }
+                    ),
+                    secondaryActions = listOf(
+                        ActionItem(
+                            text = stringResource(R.string.enable),
+                            onClick = {
+                                viewModel.enableSelectionByIds(selectedRuleIds)
+                                viewModel.setSelection(emptySet())
+                            }
+                        ),
+                        ActionItem(
+                            text = stringResource(R.string.disable_selection),
+                            onClick = {
+                                viewModel.disableSelectionByIds(selectedRuleIds)
+                                viewModel.setSelection(emptySet())
+                            }
+                        ),
+                        ActionItem(
+                            text = stringResource(R.string.to_top),
+                            onClick = {
+                                viewModel.topSelectByIds(selectedRuleIds)
+                                viewModel.setSelection(emptySet())
+                            }
+                        ),
+                        ActionItem(
+                            text = stringResource(R.string.to_bottom),
+                            onClick = {
+                                viewModel.bottomSelectByIds(selectedRuleIds)
+                                viewModel.setSelection(emptySet())
+                            }
+                        ),
+                        ActionItem(
+                            text = stringResource(R.string.export),
+                            onClick = { exportDoc.launch("exportReplaceRule.json") }
+                        )
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DraggableSelectionHandler(
+    listState: LazyListState,
+    rules: List<ReplaceRuleItemUi>,
+    selectedRuleIds: Set<Long>,
+    onSelectionChange: (Set<Long>) -> Unit,
+    haptic: HapticFeedback,
+    modifier: Modifier = Modifier
+) {
+    var isAddingMode by remember { mutableStateOf(true) }
+    var lastProcessedIndex by remember { mutableIntStateOf(-1) }
+
+    fun findRuleAtOffset(offsetY: Float): Pair<Int, ReplaceRuleItemUi>? {
+        val visibleItem = listState.layoutInfo.visibleItemsInfo.find { item ->
+            offsetY >= item.offset && offsetY <= item.offset + item.size
+        }
+        return visibleItem?.let { item ->
+            rules.getOrNull(item.index)?.let { rule ->
+                item.index to rule
+            }
+        }
+    }
+
+    fun applySelection(id: Long, add: Boolean) {
+        onSelectionChange(
+            if (add) selectedRuleIds + id
+            else selectedRuleIds - id
+        )
+    }
+
+    Box(
+        modifier = modifier.pointerInput(Unit) {
+            coroutineScope {
+                launch {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            val result = findRuleAtOffset(offset.y)
+                            if (result != null) {
+                                val (_, rule) = result
+                                val id = rule.id
+                                onSelectionChange(
+                                    if (selectedRuleIds.contains(id))
+                                        selectedRuleIds - id
+                                    else
+                                        selectedRuleIds + id
+                                )
+                                haptic.performHapticFeedback(
+                                    HapticFeedbackType.TextHandleMove
+                                )
+                            }
+                        }
+                    )
+                }
+
+                launch {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            val result = findRuleAtOffset(offset.y)
+                            if (result != null) {
+                                val (index, rule) = result
+                                lastProcessedIndex = index
+
+                                val id = rule.id
+                                isAddingMode = !selectedRuleIds.contains(id)
+                                applySelection(id, isAddingMode)
+
+                                haptic.performHapticFeedback(
+                                    HapticFeedbackType.LongPress
+                                )
+                            }
+                        },
+                        onDrag = { change, _ ->
+                            val result = findRuleAtOffset(change.position.y)
+                            if (result != null) {
+                                val (index, rule) = result
+                                if (index != lastProcessedIndex) {
+                                    lastProcessedIndex = index
+                                    applySelection(rule.id, isAddingMode)
+                                    haptic.performHapticFeedback(
+                                        HapticFeedbackType.TextHandleMove
+                                    )
+                                }
+                            }
+                        },
+                        onDragEnd = {
+                            lastProcessedIndex = -1
+                        },
+                        onDragCancel = {
+                            lastProcessedIndex = -1
+                        }
+                    )
+                }
+            }
+        }
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GroupManageBottomSheet(
+    groups: List<String>,
+    sheetState: SheetState,
+    onDismissRequest: () -> Unit,
+    viewModel: ReplaceRuleViewModel
+) {
+    var editingGroup by remember { mutableStateOf<String?>(null) }
+    var updatedGroupName by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(stringResource(R.string.group_manage), style = MaterialTheme.typography.titleLarge)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(groups) { group ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (editingGroup == group) {
+                            OutlinedTextField(
+                                value = updatedGroupName,
+                                onValueChange = { updatedGroupName = it },
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = {
+                                viewModel.upGroup(group, updatedGroupName)
+                                editingGroup = null
+                            }) {
+                                Icon(Icons.Default.Check, contentDescription = stringResource(id = R.string.ok))
+                            }
+                        } else {
+                            Text(group, modifier = Modifier.weight(1f))
+                            Row {
+                                IconButton(onClick = {
+                                    editingGroup = group
+                                    updatedGroupName = group
+                                }) {
+                                    Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit))
+                                }
+                                IconButton(onClick = { viewModel.delGroup(group) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ReplaceRuleItem(
+    name: String,
+    isEnabled: Boolean,
+    isSelected: Boolean,
+    inSelectionMode: Boolean,
+    onToggleSelection: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    onDelete: () -> Unit,
+    onToTop: () -> Unit,
+    onToBottom: () -> Unit,
+    onClickEdit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showRuleMenu by remember { mutableStateOf(false) }
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = { onToggleSelection() },
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    ) {
+        ListItem(
+            modifier = Modifier.animateContentSize(),
+
+            headlineContent = {
+                AnimatedContent(targetState = name, label = "RuleNameAnimation") { targetName ->
+                    Text(
+                        text = targetName,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            leadingContent = {
+                AnimatedContent(
+                    targetState = inSelectionMode,
+                    label = "LeadingCheckbox"
+                ) { visible ->
+                    if (visible) {
+                        Checkbox(
+                            checked = isSelected,
+                            onCheckedChange = null
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.width(0.dp))
+                    }
+                }
+            },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(
+                        checked = isEnabled,
+                        onCheckedChange = onEnabledChange
+                    )
+                    IconButton(onClick = onClickEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit")
+                    }
+                    Box {
+                        IconButton(onClick = { showRuleMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More Actions")
+                        }
+                        DropdownMenu(
+                            expanded = showRuleMenu,
+                            onDismissRequest = { showRuleMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("删除") },
+                                onClick = {
+                                    onDelete()
+                                    showRuleMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("置顶") },
+                                onClick = {
+                                    onToTop()
+                                    showRuleMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("置底") },
+                                onClick = {
+                                    onToBottom()
+                                    showRuleMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            },
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent
+            )
+        )
+    }
+}

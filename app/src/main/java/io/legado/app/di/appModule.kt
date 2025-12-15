@@ -7,6 +7,7 @@ import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
+import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import org.koin.android.ext.koin.androidApplication
 import org.koin.core.module.dsl.viewModel
@@ -15,6 +16,8 @@ import org.koin.dsl.module
 val appModule = module {
 
     viewModel { ReplaceEditViewModel(get(), get(), get()) }
+
+    viewModel { ReplaceRuleViewModel(androidApplication()) }
 
     // ReadRecord
     single { get<AppDatabase>().readRecordDao }

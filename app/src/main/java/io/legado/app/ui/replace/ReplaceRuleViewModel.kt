@@ -1,24 +1,46 @@
 package io.legado.app.ui.replace
 
 import android.app.Application
-import android.text.TextUtils
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefString
-import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import splitties.init.appCtx
+
+@Immutable
+data class ReplaceRuleItemUi(
+    val id: Long,
+    val name: String,
+    val isEnabled: Boolean,
+    val group: String?,
+    val rule: ReplaceRule
+)
+
+data class ReplaceRuleUiState(
+    val sortMode: String = "desc",
+    val searchKey: String? = null,
+    val groups: List<String> = emptyList(),
+    val rules: List<ReplaceRuleItemUi> = emptyList(),
+    val isLoading: Boolean = false
+)
 
 /**
  * 替换规则数据修改
@@ -26,11 +48,103 @@ import splitties.init.appCtx
  */
 class ReplaceRuleViewModel(application: Application) : BaseViewModel(application) {
 
+    private val repository = ReplaceRuleRepository()
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     private val _searchKey = MutableStateFlow<String?>(null)
 
-    val sortMode: StateFlow<String> = _sortMode
-    val searchKey: StateFlow<String?> = _searchKey
+    private val _selectedRuleIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedRuleIds: StateFlow<Set<Long>> = _selectedRuleIds
+
+    fun toggleSelection(id: Long) {
+        _selectedRuleIds.update {
+            if (it.contains(id)) it - id else it + id
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val rulesFlow = combine(_searchKey, _sortMode) { search, sort ->
+        Pair(search, sort)
+    }.flatMapLatest { (searchKey, sortMode) ->
+        // 先获取基础数据
+        val baseFlow = when {
+            searchKey.isNullOrEmpty() -> repository.flowAll()
+            searchKey == appCtx.getString(R.string.no_group) -> repository.flowNoGroup()
+            searchKey.startsWith("group:") -> {
+                val key = searchKey.substringAfter("group:")
+                repository.flowGroupSearch("%$key%")
+            }
+            else -> repository.flowSearch("%$searchKey%")
+        }
+
+        baseFlow
+            .map { rules ->
+                val comparator = when (sortMode) {
+                    "asc" -> compareBy<ReplaceRule> {
+                        when (it.order) {
+                            -1 -> Long.MIN_VALUE
+                            -2 -> Long.MAX_VALUE
+                            else -> it.order.toLong()
+                        }
+                    }
+                    "desc" -> compareByDescending<ReplaceRule> {
+                        when (it.order) {
+                            -1 -> Long.MAX_VALUE
+                            -2 -> Long.MIN_VALUE
+                            else -> it.order.toLong()
+                        }
+                    }
+                    "name_asc" -> compareBy<ReplaceRule> {
+                        when (it.order) {
+                            -1 -> Long.MIN_VALUE
+                            -2 -> Long.MAX_VALUE
+                            else -> 0
+                        }
+                    }.thenBy { it.name.lowercase() }
+                    "name_desc" -> compareBy<ReplaceRule> {
+                        when (it.order) {
+                            -1 -> Long.MIN_VALUE
+                            -2 -> Long.MAX_VALUE
+                            else -> 0
+                        }
+                    }.thenByDescending { it.name.lowercase() }
+                    else -> null
+                }
+
+                if (comparator != null) rules.sortedWith(comparator) else rules
+            }
+    }.flowOn(Dispatchers.Default)
+
+    private val ruleUiFlow: Flow<List<ReplaceRuleItemUi>> =
+        rulesFlow.map { rules ->
+            rules.map { rule ->
+                ReplaceRuleItemUi(
+                    id = rule.id,
+                    name = rule.name,
+                    isEnabled = rule.isEnabled,
+                    group = rule.group,
+                    rule = rule
+                )
+            }
+        }
+
+    val uiState: StateFlow<ReplaceRuleUiState> = combine(
+        _sortMode,
+        _searchKey,
+        repository.flowGroups(),
+        ruleUiFlow
+    ) { sortMode, searchKey, groups, rules ->
+        ReplaceRuleUiState(
+            sortMode = sortMode,
+            searchKey = searchKey,
+            groups = groups,
+            rules = rules,
+            isLoading = false
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = ReplaceRuleUiState(isLoading = true)
+    )
 
     fun setSortMode(mode: String) {
         _sortMode.value = mode
@@ -41,188 +155,98 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
         _searchKey.value = key
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    val rulesFlow = combine(_searchKey, _sortMode) { search, sort ->
-        Pair(search, sort)
-    }.flatMapLatest { (searchKey, sortMode) ->
-        // 先获取基础数据
-        val baseFlow = when {
-            searchKey.isNullOrEmpty() -> appDb.replaceRuleDao.flowAll()
-            searchKey == appCtx.getString(R.string.no_group) -> appDb.replaceRuleDao.flowNoGroup()
-            searchKey.startsWith("group:") -> {
-                val key = searchKey.substringAfter("group:")
-                appDb.replaceRuleDao.flowGroupSearch("%$key%")
-            }
-            else -> appDb.replaceRuleDao.flowSearch("%$searchKey%")
-        }
-
-        baseFlow.map { rules ->
-            val comparator = when (sortMode) {
-                "asc" -> Comparator<ReplaceRule> { a, b ->
-                    when {
-                        // 置顶优先
-                        a.order == -1 && b.order != -1 -> -1
-                        a.order != -1 && b.order == -1 -> 1
-                        // 置底最后
-                        a.order == -2 && b.order != -2 -> 1
-                        a.order != -2 && b.order == -2 -> -1
-                        // 普通规则按order排序
-                        else -> a.order.compareTo(b.order)
-                    }
-                }
-                "desc" -> Comparator<ReplaceRule> { a, b ->
-                    when {
-                        a.order == -1 && b.order != -1 -> -1
-                        a.order != -1 && b.order == -1 -> 1
-                        a.order == -2 && b.order != -2 -> 1
-                        a.order != -2 && b.order == -2 -> -1
-                        else -> b.order.compareTo(a.order)
-                    }
-                }
-                "name_asc" -> Comparator<ReplaceRule> { a, b ->
-                    when {
-                        a.order == -1 && b.order != -1 -> -1
-                        a.order != -1 && b.order == -1 -> 1
-                        a.order == -2 && b.order != -2 -> 1
-                        a.order != -2 && b.order == -2 -> -1
-                        else -> a.name.lowercase().compareTo(b.name.lowercase())
-                    }
-                }
-                "name_desc" -> Comparator<ReplaceRule> { a, b ->
-                    when {
-                        a.order == -1 && b.order != -1 -> -1
-                        a.order != -1 && b.order == -1 -> 1
-                        a.order == -2 && b.order != -2 -> 1
-                        a.order != -2 && b.order == -2 -> -1
-                        else -> b.name.lowercase().compareTo(a.name.lowercase())
-                    }
-                }
-                else -> null
-            }
-
-            if (comparator != null) rules.sortedWith(comparator) else rules
-        }
-    }.flowOn(Dispatchers.Default)
+    fun setSelection(ids: Set<Long>) {
+        _selectedRuleIds.value = ids
+    }
 
     fun update(vararg rule: ReplaceRule) {
         execute {
-            appDb.replaceRuleDao.update(*rule)
+            repository.update(*rule)
         }
     }
 
     fun delete(rule: ReplaceRule) {
         execute {
-            appDb.replaceRuleDao.delete(rule)
+            repository.delete(rule)
         }
     }
 
     fun toTop(rule: ReplaceRule) {
         execute {
-            rule.order = -1
-            appDb.replaceRuleDao.update(rule)
-        }
-    }
-
-    fun topSelect(rules: List<ReplaceRule>) {
-        execute {
-            rules.forEach {
-                it.order = -1
-            }
-            appDb.replaceRuleDao.update(*rules.toTypedArray())
+            repository.toTop(rule)
         }
     }
 
     fun toBottom(rule: ReplaceRule) {
         execute {
-            rule.order = -2
-            appDb.replaceRuleDao.update(rule)
-        }
-    }
-
-    fun bottomSelect(rules: List<ReplaceRule>) {
-        execute {
-            rules.forEach {
-                it.order = -2
-            }
-            appDb.replaceRuleDao.update(*rules.toTypedArray())
+            repository.toBottom(rule)
         }
     }
 
     fun upOrder() {
         execute {
-            // 重置所有非特殊排序的规则
-            val rules = appDb.replaceRuleDao.all
-            var normalOrder = 1
-            rules.forEach { rule ->
-                if (rule.order >= 0) { // 只重置普通排序的规则
-                    rule.order = normalOrder++
-                }
-            }
-            appDb.replaceRuleDao.update(*rules.toTypedArray())
+            repository.upOrder()
         }
     }
 
     fun enableSelection(rules: List<ReplaceRule>) {
         execute {
-            val array = Array(rules.size) {
-                rules[it].copy(isEnabled = true)
-            }
-            appDb.replaceRuleDao.update(*array)
+            repository.enableSelection(rules)
         }
     }
 
     fun disableSelection(rules: List<ReplaceRule>) {
         execute {
-            val array = Array(rules.size) {
-                rules[it].copy(isEnabled = false)
-            }
-            appDb.replaceRuleDao.update(*array)
+            repository.disableSelection(rules)
         }
     }
 
-    fun delSelection(rules: List<ReplaceRule>) {
+    fun enableSelectionByIds(ids: Set<Long>) {
         execute {
-            appDb.replaceRuleDao.delete(*rules.toTypedArray())
+            repository.enableByIds(ids)
         }
     }
+
+    fun disableSelectionByIds(ids: Set<Long>) {
+        execute {
+            repository.disableByIds(ids)
+        }
+    }
+
+    fun delSelectionByIds(ids: Set<Long>) {
+        execute {
+            repository.deleteByIds(ids)
+        }
+    }
+
+    fun topSelectByIds(ids: Set<Long>) {
+        execute {
+            repository.topByIds(ids)
+        }
+    }
+
+    fun bottomSelectByIds(ids: Set<Long>) {
+        execute {
+            repository.bottomByIds(ids)
+        }
+    }
+
 
     fun addGroup(group: String) {
         execute {
-            val sources = appDb.replaceRuleDao.noGroup
-            sources.forEach { source ->
-                source.group = group
-            }
-            appDb.replaceRuleDao.update(*sources.toTypedArray())
+            repository.addGroup(group)
         }
     }
 
     fun upGroup(oldGroup: String, newGroup: String?) {
         execute {
-            val sources = appDb.replaceRuleDao.getByGroup(oldGroup)
-            sources.forEach { source ->
-                source.group?.splitNotBlank(",")?.toHashSet()?.let {
-                    it.remove(oldGroup)
-                    if (!newGroup.isNullOrEmpty())
-                        it.add(newGroup)
-                    source.group = TextUtils.join(",", it)
-                }
-            }
-            appDb.replaceRuleDao.update(*sources.toTypedArray())
+            repository.upGroup(oldGroup, newGroup)
         }
     }
 
     fun delGroup(group: String) {
         execute {
-            execute {
-                val sources = appDb.replaceRuleDao.getByGroup(group)
-                sources.forEach { source ->
-                    source.group?.splitNotBlank(",")?.toHashSet()?.let {
-                        it.remove(group)
-                        source.group = TextUtils.join(",", it)
-                    }
-                }
-                appDb.replaceRuleDao.update(*sources.toTypedArray())
-            }
+            repository.delGroup(group)
         }
     }
 }

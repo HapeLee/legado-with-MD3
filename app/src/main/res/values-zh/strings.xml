@@ -637,7 +637,7 @@
     <string name="auto_dark_mode_s">夜间模式跟随系统</string>
     <string name="go_back">上级</string>
     <string name="tone_colour">在线朗读音色</string>
-    <string name="select_count">（%1$d/%2$d）</string>
+    <string name="select_count">已选 %1$d / %2$d</string>
     <string name="show_rss">显示订阅</string>
     <string name="service_stop">服务已停止</string>
     <string name="service_start">正在启动服务\n具体信息请查看通知栏</string>

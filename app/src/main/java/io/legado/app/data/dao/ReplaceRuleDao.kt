@@ -120,6 +120,21 @@ interface ReplaceRuleDao {
     )
     fun findEnabledByTitleScope(name: String, origin: String): List<ReplaceRule>
 
+    @Query("UPDATE replace_rules SET isEnabled = :enabled WHERE id = :id")
+    suspend fun updateEnabled(id: Long, enabled: Boolean)
+
+    @Query("UPDATE replace_rules SET isEnabled = :enabled WHERE id IN (:ids)")
+    suspend fun updateEnabled(ids: List<Long>, enabled: Boolean)
+
+    @Query("DELETE FROM replace_rules WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<Long>)
+
+    @Query("UPDATE replace_rules SET sortOrder = :order WHERE id = :id")
+    suspend fun updateOrder(id: Long, order: Int)
+
+    @Query("SELECT * FROM replace_rules WHERE id IN (:ids)")
+    fun getByIds(ids: Set<Long>): List<ReplaceRule>
+
     @Query("UPDATE replace_rules SET `group` = NULL WHERE `group` IN (:groups)")
     suspend fun clearGroups(groups: List<String>)
 

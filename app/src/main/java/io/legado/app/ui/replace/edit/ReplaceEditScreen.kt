@@ -306,7 +306,7 @@ fun ManageGroupDialog(
             if (groups.isEmpty()) Text("暂无其他分组")
             else Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 groups.forEach { group ->
                     val isSelected = selected[group] ?: false
@@ -319,7 +319,7 @@ fun ManageGroupDialog(
                                 shape = MaterialTheme.shapes.small
                             )
                             .clickable { selected[group] = !isSelected }
-                            .padding(8.dp),
+                            .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = isSelected, onCheckedChange = null)
