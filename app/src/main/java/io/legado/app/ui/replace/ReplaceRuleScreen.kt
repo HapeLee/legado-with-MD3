@@ -364,7 +364,7 @@ fun ReplaceRuleScreen(
                     )
                 }
             }
-            /*if (inSelectionMode) {
+            if (inSelectionMode) {
                 DraggableSelectionHandler(
                     listState = listState,
                     rules = rules,
@@ -377,7 +377,7 @@ fun ReplaceRuleScreen(
                         .width(60.dp)
                         .align(Alignment.TopStart)
                 )
-            }*/
+            }
             AnimatedVisibility(
                 visible = inSelectionMode,
                 modifier = Modifier
@@ -448,24 +448,27 @@ fun DraggableSelectionHandler(
     haptic: HapticFeedback,
     modifier: Modifier = Modifier
 ) {
+    val latestSelectedRuleIds by rememberUpdatedState(selectedRuleIds)
     var isAddingMode by remember { mutableStateOf(true) }
     var lastProcessedIndex by remember { mutableIntStateOf(-1) }
 
     fun findRuleAtOffset(offsetY: Float): Pair<Int, ReplaceRuleItemUi>? {
-        val visibleItem = listState.layoutInfo.visibleItemsInfo.find { item ->
-            offsetY >= item.offset && offsetY <= item.offset + item.size
-        }
-        return visibleItem?.let { item ->
-            rules.getOrNull(item.index)?.let { rule ->
-                item.index to rule
+        val itemInfo = listState.layoutInfo.visibleItemsInfo
+            .firstOrNull { item ->
+                offsetY >= item.offset && offsetY <= item.offset + item.size
+            }
+
+        return itemInfo?.let { info ->
+            rules.getOrNull(info.index)?.let { rule ->
+                info.index to rule
             }
         }
     }
 
     fun applySelection(id: Long, add: Boolean) {
+        val current = latestSelectedRuleIds
         onSelectionChange(
-            if (add) selectedRuleIds + id
-            else selectedRuleIds - id
+            if (add) current + id else current - id
         )
     }
 
@@ -479,11 +482,10 @@ fun DraggableSelectionHandler(
                             if (result != null) {
                                 val (_, rule) = result
                                 val id = rule.id
+                                val current = latestSelectedRuleIds
                                 onSelectionChange(
-                                    if (selectedRuleIds.contains(id))
-                                        selectedRuleIds - id
-                                    else
-                                        selectedRuleIds + id
+                                    if (current.contains(id)) current - id
+                                    else current + id
                                 )
                                 haptic.performHapticFeedback(
                                     HapticFeedbackType.TextHandleMove
@@ -493,6 +495,7 @@ fun DraggableSelectionHandler(
                     )
                 }
 
+                // 拖拽多选
                 launch {
                     detectDragGestures(
                         onDragStart = { offset ->
@@ -502,7 +505,8 @@ fun DraggableSelectionHandler(
                                 lastProcessedIndex = index
 
                                 val id = rule.id
-                                isAddingMode = !selectedRuleIds.contains(id)
+                                val current = latestSelectedRuleIds
+                                isAddingMode = !current.contains(id)
                                 applySelection(id, isAddingMode)
 
                                 haptic.performHapticFeedback(
