@@ -3,11 +3,13 @@ package io.legado.app.data.repository
 import android.text.TextUtils
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.ui.replace.ReplaceRuleItemUi
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlin.collections.map
 
 class ReplaceRuleRepository {
 
@@ -169,5 +171,15 @@ class ReplaceRuleRepository {
             val updated = rules.map { it.copy(order = -2) }
             appDb.replaceRuleDao.update(*updated.toTypedArray())
         }
+
+    suspend fun moveOrder(currentRules: List<ReplaceRuleItemUi>) {
+        withContext(Dispatchers.IO) {
+            val updatedRules = currentRules.mapIndexed { index, itemUi ->
+                itemUi.rule.copy(order = index + 1)
+            }
+
+            appDb.replaceRuleDao.update(*updatedRules.toTypedArray())
+        }
+    }
 
 }

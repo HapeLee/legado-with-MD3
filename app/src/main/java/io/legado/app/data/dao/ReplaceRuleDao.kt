@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.ReplaceRule
@@ -158,6 +159,13 @@ interface ReplaceRuleDao {
 
     @Delete
     fun delete(vararg replaceRules: ReplaceRule)
+
+    @Transaction
+    suspend fun updateAllOrders(rules: List<ReplaceRule>) {
+        rules.forEachIndexed { index, rule ->
+            updateOrder(rule.id, index + 1)
+        }
+    }
 
     private fun dealGroups(list: List<String>): List<String> {
         val groups = linkedSetOf<String>()

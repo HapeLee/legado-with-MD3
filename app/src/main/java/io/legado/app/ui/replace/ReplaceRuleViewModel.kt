@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -51,7 +50,7 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
     private val repository = ReplaceRuleRepository()
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     private val _searchKey = MutableStateFlow<String?>(null)
-
+    private val _uiRules = MutableStateFlow<List<ReplaceRuleItemUi>>(emptyList())
     private val _selectedRuleIds = MutableStateFlow<Set<Long>>(emptySet())
     val selectedRuleIds: StateFlow<Set<Long>> = _selectedRuleIds
 
@@ -97,14 +96,14 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
                         when (it.order) {
                             -1 -> Long.MIN_VALUE
                             -2 -> Long.MAX_VALUE
-                            else -> 0
+                            else -> 0L
                         }
                     }.thenBy { it.name.lowercase() }
                     "name_desc" -> compareBy<ReplaceRule> {
                         when (it.order) {
                             -1 -> Long.MIN_VALUE
                             -2 -> Long.MAX_VALUE
-                            else -> 0
+                            else -> 0L
                         }
                     }.thenByDescending { it.name.lowercase() }
                     else -> null
@@ -249,4 +248,21 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
             repository.delGroup(group)
         }
     }
+
+    fun moveItemInList(fromIndex: Int, toIndex: Int) {
+        _uiRules.update { currentList ->
+            val list = currentList.toMutableList()
+            val item = list.removeAt(fromIndex)
+            list.add(toIndex, item)
+            list
+        }
+    }
+
+    fun saveSortOrder() {
+        val currentRules = _uiRules.value
+        execute {
+            repository.moveOrder(currentRules)
+        }
+    }
+
 }
