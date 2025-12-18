@@ -11,10 +11,6 @@
         android:title="@android:string/copy" />
 
     <item
-        android:id="@+id/menu_edit"
-        android:title="@string/edit" />
-
-    <item
         android:id="@+id/menu_bookmark"
         android:title="@string/bookmark" />
 
@@ -25,6 +21,10 @@
     <item
         android:id="@+id/menu_dict"
         android:title="@string/dict" />
+
+    <item
+        android:id="@+id/menu_edit"
+        android:title="@string/edit" />
 
     <item
         android:id="@+id/menu_search_content"

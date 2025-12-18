@@ -972,7 +972,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
 
             R.id.menu_edit -> {
-                val startPos = binding.readView.getSelectTextPos() + ReadBook.durChapterPos - 13
+                val startPos = ReadBook.durChapterPos
                 showDialogFragment<ContentEditDialog> {
                     putInt("start_position", startPos)
                     putString("selected_text", binding.readView.getSelectText())

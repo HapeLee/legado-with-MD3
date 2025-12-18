@@ -61,8 +61,8 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
         SupportMenuInflater(context).inflate(R.menu.content_select_action, myMenu)
         onInitializeMenu(otherMenu)
         menuItems = myMenu.visibleItems + otherMenu.visibleItems
-        visibleMenuItems.addAll(menuItems.subList(0, 5))
-        moreMenuItems.addAll(menuItems.subList(5, menuItems.size))
+        visibleMenuItems.addAll(menuItems.subList(0, 6))
+        moreMenuItems.addAll(menuItems.subList(6, menuItems.size))
         binding.recyclerView.adapter = adapter
         binding.recyclerViewMore.adapter = adapter
         setOnDismissListener {

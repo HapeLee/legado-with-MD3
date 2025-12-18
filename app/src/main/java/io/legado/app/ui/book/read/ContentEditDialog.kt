@@ -74,7 +74,7 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
                         )
 
                 binding.scrollView.smoothScrollTo(0, targetY)
-                highlightSelectedTextTwice()
+                //highlightSelectedTextTwice()
             }
         }
 
