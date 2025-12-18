@@ -346,6 +346,7 @@ fun Book.getExportFileName(suffix: String): String {
                 inside.equals("author", ignoreCase = true) -> getRealAuthor()
                 inside.equals("group", ignoreCase = true) -> group
                 inside.equals("source", ignoreCase = true) -> originName
+                inside.equals("remark", ignoreCase = true) -> remark
                 else -> null
             }
 

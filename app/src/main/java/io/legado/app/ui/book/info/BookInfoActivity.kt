@@ -45,6 +45,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityBookInfoBinding
+import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.addType
@@ -396,13 +397,13 @@ class BookInfoActivity :
                             book.removeType(BookType.notShelf)
                             book.save()
                             viewModel.inBookshelf = true
-                            super.finish()
+                            super.finishAfterTransition()
                         }
-                        noButton { super.finish() }
+                        noButton { super.finishAfterTransition() }
                     }
                 }
             } else {
-                finish()
+                finishAfterTransition()
             }
         }
     }
@@ -440,6 +441,11 @@ class BookInfoActivity :
         showCover(book)
         addColorScheme(binding.ivCover.drawable)
         tvName.text = book.name
+        tvRemark.text = book.remark
+        if (book.remark == null)
+            cdRemark.gone()
+        else
+            cdRemark.visible()
         tvAuthor.text = getString(R.string.author_show, book.getRealAuthor())
         tvOrigin.text = getString(R.string.origin_show, book.originName)
         tvLasted.text = getString(R.string.lasted_show, book.latestChapterTitle)
@@ -599,6 +605,7 @@ class BookInfoActivity :
                     val color = animation.animatedValue as Int
                     binding.lbKind.applyColorScheme(color, colorOnSurface)
                     binding.collTopBar.setContentScrimColor(color)
+                    binding.cdRemark.strokeColor = color
                 }
             }
 
@@ -618,6 +625,7 @@ class BookInfoActivity :
                 }
                 binding.div.setTextColor(color)
                 binding.tvChapterIndex.setTextColor(color)
+                binding.tvRemark.setTextColor(color)
             }
         }
 
@@ -844,7 +852,19 @@ class BookInfoActivity :
             tvName.maxLines = if (tvName.maxLines == 3) 10 else 3
             true
         }
-
+        cdRemark.setOnClickListener {
+            alert(R.string.edit_remark) {
+                val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
+                    editLayout.hint = "编辑备注"
+                    editView.setText(book?.remark)
+                }
+                customView { alertBinding.root }
+                okButton {
+                    viewModel.saveRemark(alertBinding.editView.text.toString())
+                }
+                cancelButton()
+            }
+        }
         refreshLayout.setOnRefreshListener {
             refreshLayout.isRefreshing = false
             refreshBook()

@@ -378,6 +378,17 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
+    fun saveRemark(remark: String, success: (() -> Unit)? = null) {
+        execute {
+            bookData.value?.let {
+                it.remark = remark
+                it.save()
+            }
+        }.onSuccess {
+            success?.invoke()
+        }
+    }
+
     fun saveBook(book: Book?, success: (() -> Unit)? = null) {
         book ?: return
         execute {

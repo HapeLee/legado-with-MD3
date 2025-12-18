@@ -72,7 +72,6 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_gradient_mask"
-                    android:paddingTop="8dp"
                     android:paddingBottom="4dp"
                     app:layout_constraintTop_toTopOf="parent">
 
@@ -235,7 +234,6 @@
                             app:iconPadding="4dp"
                             app:iconSize="20dp" />
 
-                        <!-- 查看目录按钮 -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/tv_toc_view"
                             style="@style/Widget.Material3Expressive.Button.TextButton"
@@ -251,7 +249,6 @@
                             app:iconPadding="4dp"
                             app:iconSize="20dp" />
 
-                        <!-- 更换分组按钮 -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/tv_change_group"
                             style="@style/Widget.Material3Expressive.Button.TextButton"
@@ -267,7 +264,6 @@
                             app:iconPadding="4dp"
                             app:iconSize="20dp" />
 
-                        <!-- 更换来源按钮（保持原样） -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_change_source"
                             style="@style/Widget.Material3Expressive.Button.TextButton"
@@ -310,7 +306,6 @@
                         app:layout_constraintTop_toBottomOf="@id/tv_toc"
                         tools:text="@string/read_dur_progress" />
 
-
                     <TextView
                         android:id="@+id/tv_chapter"
                         android:layout_width="wrap_content"
@@ -349,12 +344,40 @@
                         app:layout_constraintStart_toEndOf="@id/div"
                         tools:text="@string/read_chapter_index" />
 
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cd_remark"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@android:color/transparent"
+                        android:layout_marginHorizontal="16dp"
+                        android:layout_marginVertical="8dp"
+                        android:visibility="gone"
+                        app:layout_constraintTop_toBottomOf="@id/tv_chapter">
+
+                        <TextView
+                            android:id="@+id/tv_remark"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:clickable="false"
+                            android:focusable="false"
+                            android:layout_margin="12dp"
+                            android:lineSpacingExtra="4dp"
+                            android:text="@string/book_intro"
+                            android:textIsSelectable="true"
+                            android:textSize="12sp"
+                            tools:text="@string/book_intro" />
+
+                    </com.google.android.material.card.MaterialCardView>
+
+
                     <TextView
                         android:id="@+id/tv_detail"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginHorizontal="16dp"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="8dp"
                         android:paddingBottom="120dp"
                         android:clickable="true"
                         android:focusable="true"
@@ -365,7 +388,7 @@
                         android:visibility="visible"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/tv_chapter"
+                        app:layout_constraintTop_toBottomOf="@id/cd_remark"
                         tools:text="@string/book_intro" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>

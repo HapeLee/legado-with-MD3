@@ -67,6 +67,7 @@ data class Book(
     var intro: String? = null,
     // 简介内容(用户修改)
     var customIntro: String? = null,
+    var remark: String? = null,
     // 自定义字符集名称(仅适用于本地书籍)
     var charset: String? = null,
     // 类型,详见BookType

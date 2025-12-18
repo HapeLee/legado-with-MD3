@@ -521,7 +521,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     private fun alertExportFileName() {
         alert(R.string.export_file_name) {
             val message = """
-支持变量：{name}（书名）、{author}（作者）、{group}（分组）、{source}（书源）。
+支持变量：{name}（书名）、{author}（作者）、{group}（分组）、{source}（书源）、{remark}（备注）。
 可以在字段前后加任意字符。
 
 示例：
