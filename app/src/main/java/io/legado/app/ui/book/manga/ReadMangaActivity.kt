@@ -928,28 +928,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             }
     }
 
-    override fun finish() {
-        val book = ReadManga.book ?: return super.finish()
-
-        if (ReadManga.inBookshelf) {
-            return super.finish()
-        }
-
-        if (!AppConfig.showAddToShelfAlert) {
-            viewModel.removeFromBookshelf { super.finish() }
-        } else {
-            alert(title = getString(R.string.add_to_bookshelf)) {
-                setMessage(getString(R.string.check_add_bookshelf, book.name))
-                okButton {
-                    ReadManga.book?.removeType(BookType.notShelf)
-                    ReadManga.book?.save()
-                    ReadManga.inBookshelf = true
-                    setResult(RESULT_OK)
-                }
-                noButton { viewModel.removeFromBookshelf { super.finish() } }
-            }
-        }
-    }
     fun resetWindowToSystemBrightness() {
         val layoutParams = window.attributes
         layoutParams.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE

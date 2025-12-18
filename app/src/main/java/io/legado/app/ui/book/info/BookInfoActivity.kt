@@ -22,6 +22,8 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.app.ActivityOptionsCompat
@@ -51,6 +53,7 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalTxt
+import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -58,6 +61,7 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.BookCover
+import io.legado.app.model.ReadBook
 import io.legado.app.model.remote.RemoteBookWebDav
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.audio.AudioPlayActivity
@@ -153,7 +157,7 @@ class BookInfoActivity :
             viewModel.refreshBook(book)
         }
     }
-
+    private lateinit var backCallback: OnBackPressedCallback
     private var surfaceFinalColor: Int = 0
     private var surfaceContainerFinalColor: Int = 0
     private var secondaryFinalColor: Int = 0
@@ -184,6 +188,7 @@ class BookInfoActivity :
         window.sharedElementReturnTransition = transform
         window.sharedElementsUseOverlay = false
         super.onCreate(savedInstanceState)
+        setupBackCallback()
         surfaceFinalColor =
             MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, -1)
         secondaryFinalColor =
@@ -380,6 +385,27 @@ class BookInfoActivity :
 //        }
 //        return super.dispatchTouchEvent(ev)
 //    }
+
+    private fun setupBackCallback() {
+        onBackPressedDispatcher.addCallback(this) {
+            if (!viewModel.inBookshelf) {
+                viewModel.getBook()?.let { book ->
+                    alert(title = getString(R.string.add_to_bookshelf)) {
+                        setMessage(getString(R.string.check_add_bookshelf, book.name))
+                        okButton {
+                            book.removeType(BookType.notShelf)
+                            book.save()
+                            viewModel.inBookshelf = true
+                            super.finish()
+                        }
+                        noButton { super.finish() }
+                    }
+                }
+            } else {
+                finish()
+            }
+        }
+    }
 
     private fun refreshBook() {
         upLoading(true)

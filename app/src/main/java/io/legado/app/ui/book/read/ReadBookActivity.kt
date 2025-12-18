@@ -1787,30 +1787,6 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
     }
 
-    override fun finish() {
-        val book = ReadBook.book ?: return super.finish()
-
-        if (ReadBook.inBookshelf) {
-            return super.finish()
-        }
-
-        if (!AppConfig.showAddToShelfAlert) {
-            viewModel.removeFromBookshelf { super.finish() }
-        } else {
-            alert(title = getString(R.string.add_to_bookshelf)) {
-                setMessage(getString(R.string.check_add_bookshelf, book.name))
-                okButton {
-                    ReadBook.book?.removeType(BookType.notShelf)
-                    ReadBook.book?.save()
-                    ReadBook.inBookshelf = true
-                    setResult(RESULT_OK)
-                    super.finish()
-                }
-                noButton { viewModel.removeFromBookshelf { super.finish() } }
-            }
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         tts?.clearTts()
