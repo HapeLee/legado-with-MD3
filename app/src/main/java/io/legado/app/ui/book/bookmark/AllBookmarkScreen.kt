@@ -34,6 +34,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.ui.widget.components.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.Scroller
 import io.legado.app.ui.widget.components.SearchBarSection
 import org.koin.androidx.compose.koinViewModel
 
@@ -142,7 +144,7 @@ fun AllBookmarkScreen(
             }
         }
     ) { paddingValues ->
-        LazyColumn(
+        FastScrollLazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -151,7 +153,7 @@ fun AllBookmarkScreen(
 
                 val isCollapsed = collapsedGroups.contains(headerKey.toString())
 
-                stickyHeader(key = headerKey.toString()) {
+                stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${headerKey}") {
                     BookAuthorHeader(
                         bookTitle = headerKey.bookName,
                         bookAuthor = headerKey.bookAuthor,

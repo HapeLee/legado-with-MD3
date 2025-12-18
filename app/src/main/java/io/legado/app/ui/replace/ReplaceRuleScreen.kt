@@ -46,6 +46,7 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import kotlinx.coroutines.coroutineScope
@@ -325,14 +326,12 @@ fun ReplaceRuleScreen(
             modifier = Modifier
                 .fillMaxSize()
         ) {
-            LazyColumn(
+            FastScrollLazyColumn(
                 state = listState,
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize(),
                 contentPadding = PaddingValues(
-                    start = 12.dp,
-                    end = 12.dp,
                     top = 8.dp,
                     bottom = 120.dp
                 ),
@@ -342,7 +341,9 @@ fun ReplaceRuleScreen(
                     val isSelected = selectedRuleIds.contains(ui.id)
 
                     ReplaceRuleItem(
-                        modifier = Modifier.animateItem(),
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp)
+                            .animateItem(),
                         name = ui.name,
                         isEnabled = ui.isEnabled,
                         isSelected = isSelected,
@@ -631,8 +632,8 @@ fun ReplaceRuleItem(
         )
     ) {
         ListItem(
-            modifier = Modifier.animateContentSize(),
-
+            modifier = Modifier
+                .animateContentSize(),
             headlineContent = {
                 AnimatedContent(targetState = name, label = "RuleNameAnimation") { targetName ->
                     Text(
