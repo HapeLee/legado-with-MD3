@@ -33,6 +33,7 @@ import splitties.init.appCtx
 import java.io.File
 import kotlin.String
 import androidx.core.graphics.drawable.toDrawable
+import io.legado.app.utils.FileDoc
 import io.legado.app.utils.putPrefBoolean
 
 /**
@@ -162,6 +163,25 @@ object ReadBookConfig {
             return true
         }
         return false
+    }
+
+    fun clearBgAndCache() {
+        val bgs = hashSetOf<String>()
+        configList.forEach { config ->
+            repeat(3) {
+                config.getBgPath(it)?.let { path ->
+                    bgs.add(path)
+                }
+            }
+        }
+        appCtx.externalFiles.getFile("bg").listFiles()?.forEach {
+            if (!bgs.contains(it.absolutePath)) {
+                it.delete()
+            }
+        }
+        FileUtils.delete(appCtx.externalCache.getFile("readConfig"))
+        val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
+        FileUtils.delete(configZipPath)
     }
 
     private fun resetAll() {
@@ -541,13 +561,18 @@ object ReadBookConfig {
         val configFile = configDir.getFile(configFileName)
         val config: Config = GSON.fromJsonObject<Config>(configFile.readText()).getOrThrow()
         if (config.textFont.isNotEmpty()) {
-            val fontName = FileUtils.getName(config.textFont)
+            val fontName = config.textFont
             val fontPath =
                 FileUtils.getPath(appCtx.externalFiles, "font", fontName)
-            if (!FileUtils.exist(fontPath)) {
-                configDir.getFile(fontName).copyTo(File(fontPath))
+            val fontFile = configDir.getFile(fontName)
+            if (fontFile.exists()) {
+                if (!FileUtils.exist(fontPath)) {
+                    fontFile.copyTo(File(fontPath))
+                }
+                config.textFont = fontPath
+            } else {
+                config.textFont = ""
             }
-            config.textFont = fontPath
         }
         if (config.bgType == 2) {
             val bgName = FileUtils.getName(config.bgStr)
@@ -695,6 +720,30 @@ object ReadBookConfig {
 
         @Transient
         private var initColorInt = false
+
+        fun getBgPath(bgIndex: Int): String? {
+            val bgType = when (bgIndex) {
+                0 -> bgType
+                1 -> bgTypeNight
+                2 -> bgTypeEInk
+                else -> error("unknown bgIndex: $bgIndex")
+            }
+            if (bgType != 2) {
+                return null
+            }
+            val bgStr = when (bgIndex) {
+                0 -> bgStr
+                1 -> bgStrNight
+                2 -> bgStrEInk
+                else -> error("unknown bgIndex: $bgIndex")
+            }
+            val path = if (bgStr.contains(File.separator)) {
+                bgStr
+            } else {
+                FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
+            }
+            return path
+        }
 
         private fun initColorInt() {
             textColorIntEInk = textColorEInk.toColorInt()

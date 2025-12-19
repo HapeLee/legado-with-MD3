@@ -1185,7 +1185,7 @@
     <string name="read_aloud_read_phone_state_permission_rationale">阅读需要读取手机状态实现来电期间暂停朗读功能</string>
     <string name="read_aloud_by_media_button_title">耳机按键启动朗读</string>
     <string name="read_aloud_by_media_button_summary">通过耳机按键来启动朗读</string>
-    <string name="show_same_source">显示重复书源</string>
+    <string name="group_sources_by_domain">按域名分组显示</string>
     <string name="theme_config">主题配置</string>
     <string name="show_manga_ui">漫画浏览</string>
     <string name="disable_manga_scale">禁用漫画缩放</string>
@@ -1344,6 +1344,7 @@
     <string name="underline_height">线段高度</string>
     <string name="title_bar_mode">菜单标题显示方式</string>
     <string name="sure_cache_book">是否确认开始缓存？</string>
+    <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="replace_purify_badge">计数替换净化</string>
     <string name="page_anim_fade">渐变</string>
     <string name="show_bookshelf_tab_menu">显示更多分组按钮</string>
@@ -1362,4 +1363,5 @@
     <string name="enable_slider_vibrator">滑动进度条时震动</string>
     <string name="edit_remark">编辑备注</string>
     <string name="book_remark">书籍备注</string>
+    <string name="auto_check_new_backup_t">自动检查新备份</string>
 </resources>

@@ -52,6 +52,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -240,15 +241,11 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
         }
 
         lifecycleScope.launch {
-            repeatOnLifecycle(STARTED) {
-                viewModel.searchDataFlow.conflate().collect {
-                    adapter.setItems(it)
+            lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
+            viewModel.searchDataFlow.conflate().collect {
+                adapter.setItems(it)
+                delay(1000)
 
-                    binding.tvEmptyMsg.isVisible = it.isEmpty()
-                    binding.recyclerView.isVisible = it.isNotEmpty()
-
-                    delay(1000)
-                }
             }
         }
 

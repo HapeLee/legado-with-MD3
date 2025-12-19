@@ -26,20 +26,25 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.compress.ZipUtils
+import io.legado.app.utils.createFileIfNotExist
 import io.legado.app.utils.createFileReplace
 import io.legado.app.utils.createFolderReplace
+import io.legado.app.utils.delete
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.externalFiles
+import io.legado.app.utils.find
 import io.legado.app.utils.getFile
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
 import io.legado.app.utils.longToast
+import io.legado.app.utils.openInputStream
 import io.legado.app.utils.openOutputStream
 import io.legado.app.utils.outputStream
 import io.legado.app.utils.parseToUri
@@ -238,68 +243,37 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
             configDir.createFolderReplace()
             val configFile = configDir.getFile("readConfig.json")
             configFile.createFileReplace()
-            configFile.writeText(GSON.toJson(ReadBookConfig.getExportConfig()))
-            exportFiles.add(configFile)
+            val config = ReadBookConfig.getExportConfig()
             val fontPath = ReadBookConfig.textFont
             if (fontPath.isNotEmpty()) {
-                val fontName = FileUtils.getName(fontPath)
-                val fontInputStream =
-                    fontPath.parseToUri().inputStream(requireContext()).getOrNull()
+                val fontDoc = FileDoc.fromFile(fontPath)
+                val fontName = fontDoc.name
+                val fontInputStream = fontDoc.openInputStream().getOrNull()
                 fontInputStream?.use {
                     val fontExportFile = FileUtils.createFileIfNotExist(configDir, fontName)
-                    it.copyTo(fontExportFile.outputStream())
+                    fontExportFile.outputStream().use { out ->
+                        it.copyTo(out)
+                    }
+                    config.textFont = fontName
                     exportFiles.add(fontExportFile)
                 }
             }
-            if (ReadBookConfig.durConfig.bgType == 2) {
-                val bgName = FileUtils.getName(ReadBookConfig.durConfig.bgStr)
-                val bgFile = File(ReadBookConfig.durConfig.bgStr)
-                if (bgFile.exists()) {
-                    val bgExportFile = File(FileUtils.getPath(configDir, bgName))
-                    if (!bgExportFile.exists()) {
-                        bgFile.copyTo(bgExportFile)
-                        exportFiles.add(bgExportFile)
-                    }
-                }
-            }
-            if (ReadBookConfig.durConfig.bgTypeNight == 2) {
-                val bgName = FileUtils.getName(ReadBookConfig.durConfig.bgStrNight)
-                val bgFile = File(ReadBookConfig.durConfig.bgStrNight)
-                if (bgFile.exists()) {
-                    val bgExportFile = File(FileUtils.getPath(configDir, bgName))
-                    if (!bgExportFile.exists()) {
-                        bgFile.copyTo(bgExportFile)
-                        exportFiles.add(bgExportFile)
-                    }
-                }
-            }
-            if (ReadBookConfig.durConfig.bgTypeEInk == 2) {
-                val bgName = FileUtils.getName(ReadBookConfig.durConfig.bgStrEInk)
-                val bgFile = File(ReadBookConfig.durConfig.bgStrEInk)
-                if (bgFile.exists()) {
-                    val bgExportFile = File(FileUtils.getPath(configDir, bgName))
-                    if (!bgExportFile.exists()) {
-                        bgFile.copyTo(bgExportFile)
-                        exportFiles.add(bgExportFile)
-                    }
-                }
+            configFile.writeText(GSON.toJson(config))
+            exportFiles.add(configFile)
+            repeat(3) {
+                val path = ReadBookConfig.durConfig.getBgPath(it) ?: return@repeat
+                val bgExportFile = copyBgImage(path, configDir) ?: return@repeat
+                exportFiles.add(bgExportFile)
             }
             val configZipPath = FileUtils.getPath(requireContext().externalCache, configFileName)
             if (ZipUtils.zipFiles(exportFiles, File(configZipPath))) {
-                if (uri.isContentScheme()) {
-                    DocumentFile.fromTreeUri(requireContext(), uri)?.let { treeDoc ->
-                        treeDoc.findFile(exportFileName)?.delete()
-                        val out = treeDoc.createFile("", exportFileName)?.openOutputStream()
-                        out?.use {
-                            File(configZipPath).inputStream().use {
-                                it.copyTo(out)
-                            }
-                        }
+                val exportDir = FileDoc.fromDir(uri)
+                exportDir.find(exportFileName)?.delete()
+                val exportFileDoc = exportDir.createFileIfNotExist(exportFileName)
+                exportFileDoc.openOutputStream().getOrThrow().use { out ->
+                    File(configZipPath).inputStream().use {
+                        it.copyTo(out)
                     }
-                } else {
-                    val exportPath = FileUtils.getPath(File(uri.path!!), exportFileName)
-                    FileUtils.delete(exportPath)
-                    File(configZipPath).copyTo(FileUtils.createFileIfNotExist(exportPath))
                 }
             }
         }.onSuccess {
@@ -309,6 +283,19 @@ class BgTextConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_bg
             AppLog.put("导出失败:${it.localizedMessage}", it)
             longToast("导出失败:${it.localizedMessage}")
         }
+    }
+
+    private fun copyBgImage(path: String, configDir: File): File? {
+        val bgName = FileUtils.getName(path)
+        val bgFile = File(path)
+        if (bgFile.exists()) {
+            val bgExportFile = File(FileUtils.getPath(configDir, bgName))
+            if (!bgExportFile.exists()) {
+                bgFile.copyTo(bgExportFile)
+                return bgExportFile
+            }
+        }
+        return null
     }
 
     @SuppressLint("InflateParams")

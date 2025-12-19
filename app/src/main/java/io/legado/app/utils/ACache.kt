@@ -457,7 +457,7 @@ class ACache private constructor(cacheDir: File, max_size: Long, max_count: Int)
      * title 时间计算工具类
      */
     private object Utils {
-
+        @Suppress("ConstPropertyName")
         private const val mSeparator = ' '
 
         /**
@@ -762,8 +762,8 @@ class ACache private constructor(cacheDir: File, max_size: Long, max_count: Int)
 
                 var fileSize: Long = 0
                 if (mostLongUsedFile != null) {
-                    fileSize = calculateSize(mostLongUsedFile!!)
-                    if (mostLongUsedFile!!.delete()) {
+                    fileSize = calculateSize(mostLongUsedFile)
+                    if (mostLongUsedFile.delete()) {
                         lastUsageDates.remove(mostLongUsedFile)
                     }
                 }

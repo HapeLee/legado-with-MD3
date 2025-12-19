@@ -14,9 +14,11 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.BookCover
 import io.legado.app.utils.*
 import io.legado.app.utils.compress.ZipUtils
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -29,6 +31,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
+import androidx.core.content.edit
+import androidx.core.net.toUri
 
 /**
  * 备份
@@ -65,6 +69,7 @@ object Backup {
             ReadBookConfig.configFileName,
             ReadBookConfig.shareConfigFileName,
             ThemeConfig.configFileName,
+            BookCover.configFileName,
             "config.xml"
         )
     }
@@ -139,7 +144,7 @@ object Backup {
                     .writeText(it)
             }
         }
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         GSON.toJson(ReadBookConfig.configList).let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
                 .writeText(it)
@@ -156,31 +161,35 @@ object Backup {
             FileUtils.createFileIfNotExist(backupPath + File.separator + DirectLinkUpload.ruleFileName)
                 .writeText(GSON.toJson(it))
         }
-        coroutineContext.ensureActive()
+        BookCover.getConfig()?.let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
+                .writeText(GSON.toJson(it))
+        }
+        currentCoroutineContext().ensureActive()
         appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
-            val edit = sp.edit()
-            appCtx.defaultSharedPreferences.all.forEach { (key, value) ->
-                if (BackupConfig.keyIsNotIgnore(key)) {
-                    when (key) {
-                        PreferKey.webDavPassword -> {
-                            edit.putString(key, aes.runCatching {
-                                encryptBase64(value.toString())
-                            }.getOrDefault(value.toString()))
-                        }
+            sp.edit(commit = true) {
+                appCtx.defaultSharedPreferences.all.forEach { (key, value) ->
+                    if (BackupConfig.keyIsNotIgnore(key)) {
+                        when (key) {
+                            PreferKey.webDavPassword -> {
+                                putString(key, aes.runCatching {
+                                    encryptBase64(value.toString())
+                                }.getOrDefault(value.toString()))
+                            }
 
-                        else -> when (value) {
-                            is Int -> edit.putInt(key, value)
-                            is Boolean -> edit.putBoolean(key, value)
-                            is Long -> edit.putLong(key, value)
-                            is Float -> edit.putFloat(key, value)
-                            is String -> edit.putString(key, value)
+                            else -> when (value) {
+                                is Int -> putInt(key, value)
+                                is Boolean -> putBoolean(key, value)
+                                is Long -> putLong(key, value)
+                                is Float -> putFloat(key, value)
+                                is String -> putString(key, value)
+                            }
                         }
                     }
                 }
             }
-            edit.commit()
         }
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         val zipFileName = getNowZipFileName()
         val paths = arrayListOf(*backupFileNames)
         for (i in 0 until paths.size) {
@@ -200,7 +209,7 @@ object Backup {
                 }
 
                 path.isContentScheme() -> {
-                    copyBackup(context, Uri.parse(path), backupFileName)
+                    copyBackup(context, path.toUri(), backupFileName)
                 }
 
                 else -> {
@@ -215,7 +224,7 @@ object Backup {
         }
         FileUtils.delete(backupPath)
         FileUtils.delete(zipFilePath)
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         ReadBookConfig.getAllPicBgStr().map {
             if (it.contains(File.separator)) {
                 File(it)
@@ -228,7 +237,7 @@ object Backup {
     }
 
     private suspend fun writeListToJson(list: List<Any>, fileName: String, path: String) {
-        coroutineContext.ensureActive()
+        currentCoroutineContext().ensureActive()
         withContext(IO) {
             if (list.isNotEmpty()) {
                 LogUtils.d(TAG, "阅读备份 $fileName 列表大小 ${list.size}")

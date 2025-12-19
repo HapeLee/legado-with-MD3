@@ -55,6 +55,7 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 import androidx.core.content.edit
+import kotlinx.coroutines.currentCoroutineContext
 
 class BackupConfigFragment : PreferenceFragment(),
     SharedPreferences.OnSharedPreferenceChangeListener,
@@ -363,7 +364,7 @@ class BackupConfigFragment : PreferenceFragment(),
             context.toastOnUi("由于坚果云限制列出文件数量，部分备份可能未显示，请及时清理旧备份")
         }
         if (names.isNotEmpty()) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             withContext(Main) {
                 context.selector(
                     title = context.getString(R.string.select_restore_file),

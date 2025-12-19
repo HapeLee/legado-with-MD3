@@ -241,7 +241,7 @@ object ZipUtils {
             if (!entryFile.canonicalPath.startsWith(dir.canonicalPath)) {
                 throw SecurityException("压缩文件只能解压到指定路径")
             }
-            if (entry!!.isDirectory) {
+            if (entry.isDirectory) {
                 if (!entryFile.exists()) {
                     entryFile.mkdirs()
                 }
@@ -286,7 +286,7 @@ object ZipUtils {
             if (entry!!.isDirectory) {
                 continue
             }
-            val fileName = entry!!.name
+            val fileName = entry.name
             if (filter != null && filter.invoke(fileName))
                 fileNames.add(fileName)
         }

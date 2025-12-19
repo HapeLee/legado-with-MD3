@@ -206,7 +206,7 @@ object PreferKey {
     const val notificationsPost = "notificationsPost"
     const val ignoreBatteryPermission = "ignoreBatteryPermission"
     const val paddingDisplayCutouts = "paddingDisplayCutouts"
-
+    const val autoCheckNewBackup = "autoCheckNewBackup"
     const val delayBookLoadEnable = "delayBookLoadEnable"
     const val sharedElementEnterTransitionEnable = "sharedElementEnterTransitionEnable"
     const val bookshelfLayoutGridLandscape = "bookshelfLayoutGridLandscape"

@@ -17,6 +17,7 @@ import io.legado.app.databinding.DialogChangeCoverBinding
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -63,11 +64,10 @@ class ChangeCoverDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_change
 
     private fun initData() {
         lifecycleScope.launch {
-            repeatOnLifecycle(STARTED) {
-                viewModel.dataFlow.conflate().collect {
-                    adapter.setItems(it)
-                    delay(1000)
-                }
+            lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
+            viewModel.dataFlow.conflate().collect {
+                adapter.setItems(it)
+                delay(1000)
             }
         }
     }

@@ -81,6 +81,10 @@ data class FileDoc(
             return fromUri(path.toUri(), false)
         }
 
+        fun fromDir(uri: Uri): FileDoc {
+            return fromUri(uri, true)
+        }
+
         fun fromUri(uri: Uri, isDir: Boolean): FileDoc {
             if (uri.isContentScheme()) {
                 val doc = if (isDir) {
@@ -92,7 +96,7 @@ data class FileDoc(
                         if (it.moveToFirst()) {
                             val lUriColum = it.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
                             val lUri = it.getString(lUriColum)
-                            DocumentFile.fromSingleUri(appCtx, Uri.parse(lUri))!!
+                            DocumentFile.fromSingleUri(appCtx, lUri.toUri())!!
                         } else {
                             DocumentFile.fromSingleUri(appCtx, uri)!!
                         }

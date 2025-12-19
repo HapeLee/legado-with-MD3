@@ -16,9 +16,11 @@ import io.legado.app.model.BookCover
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
+import io.legado.app.utils.externalFiles
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getCompatColor
+import io.legado.app.utils.getFile
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
@@ -236,9 +238,20 @@ object ThemeConfig {
     /**
      * 更新主题
      */
-//    fun applyTheme(context: Context) = with(context) {
-//
-//    }
+    fun clearBg() {
+        val bgImagePath = appCtx.getPrefString(PreferKey.bgImage)
+        appCtx.externalFiles.getFile(PreferKey.bgImage).listFiles()?.forEach {
+            if (it.absolutePath != bgImagePath) {
+                it.delete()
+            }
+        }
+        val bgImageNPath = appCtx.getPrefString(PreferKey.bgImageN)
+        appCtx.externalFiles.getFile(PreferKey.bgImageN).listFiles()?.forEach {
+            if (it.absolutePath != bgImageNPath) {
+                it.delete()
+            }
+        }
+    }
 
     @Keep
     data class Config(

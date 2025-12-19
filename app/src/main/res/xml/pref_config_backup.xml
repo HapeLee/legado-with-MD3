@@ -60,6 +60,15 @@
             app:allowDividerBelow="false"
             app:iconSpaceReserved="false" />
 
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
+            android:key="autoCheckNewBackup"
+            android:summary="@string/auto_check_new_backup_s"
+            android:title="@string/auto_check_new_backup_t"
+            app:allowDividerAbove="false"
+            app:allowDividerBelow="false"
+            app:iconSpaceReserved="false" />
+
     </io.legado.app.lib.prefs.PreferenceCategory>
 
     <io.legado.app.lib.prefs.PreferenceCategory

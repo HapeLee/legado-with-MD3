@@ -285,6 +285,9 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
      * 备份同步
      */
     private fun backupSync() {
+        if (!AppConfig.autoCheckNewBackup) {
+            return
+        }
         lifecycleScope.launch {
             val lastBackupFile =
                 withContext(IO) { AppWebDav.lastBackUp().getOrNull() } ?: return@launch

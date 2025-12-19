@@ -48,6 +48,7 @@ import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 
@@ -233,11 +234,11 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             binding.toolBar.menu.applyTint(requireContext())
         }
         lifecycleScope.launch {
-            repeatOnLifecycle(STARTED) {
-                viewModel.searchDataFlow.conflate().collect {
-                    searchBookAdapter.setItems(it)
-                    delay(1000)
-                }
+            lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
+            viewModel.searchDataFlow.conflate().collect {
+                searchBookAdapter.setItems(it)
+                delay(1000)
+
             }
         }
         lifecycleScope.launch {

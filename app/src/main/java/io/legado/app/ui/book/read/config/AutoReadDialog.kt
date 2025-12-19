@@ -33,7 +33,7 @@ class AutoReadDialog : BaseBottomSheetDialogFragment(R.layout.dialog_auto_read) 
         val bottomDialog = (activity as ReadBookActivity).bottomDialog++
         if (bottomDialog > 0) {
             dismiss()
-            return
+            return@run
         }
         initOnChange()
         initData()

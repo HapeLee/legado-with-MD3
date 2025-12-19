@@ -16,6 +16,7 @@ import io.legado.app.utils.findNSPrefix
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toRequestBody
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -257,7 +258,7 @@ open class WebDav(
                 method("PROPFIND", requestBody)
             }.use { it.isSuccessful }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
         }.getOrDefault(false)
     }
 
@@ -273,7 +274,7 @@ open class WebDav(
                 method("PROPFIND", requestBody)
             }.use { it.code != 401 }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
         }.getOrDefault(true)
     }
 
@@ -294,7 +295,7 @@ open class WebDav(
                 }
             }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             AppLog.put("WebDav创建目录失败\n${it.localizedMessage}", it)
         }.isSuccess
     }
@@ -351,7 +352,7 @@ open class WebDav(
                 }
             }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
             throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
         }
@@ -372,7 +373,7 @@ open class WebDav(
                 }
             }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
             throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
         }
@@ -393,7 +394,7 @@ open class WebDav(
                 }
             }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
             throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
         }
@@ -424,7 +425,7 @@ open class WebDav(
                 checkResult(it)
             }
         }.onFailure {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             AppLog.put("WebDav删除失败\n${it.localizedMessage}", it)
         }.isSuccess
     }

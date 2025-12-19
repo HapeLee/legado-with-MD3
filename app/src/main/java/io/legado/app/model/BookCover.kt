@@ -46,6 +46,7 @@ import java.io.File
 object BookCover {
 
     private const val coverRuleConfigKey = "legadoCoverRuleConfig"
+    const val configFileName = "coverRule.json"
     var drawBookName = true
         private set
     var drawBookAuthor = true
@@ -239,9 +240,12 @@ object BookCover {
     }
 
     fun getCoverRule(): CoverRule {
+        return getConfig() ?: DefaultData.coverRule
+    }
+
+    fun getConfig(): CoverRule? {
         return GSON.fromJsonObject<CoverRule>(CacheManager.get(coverRuleConfigKey))
             .getOrNull()
-            ?: DefaultData.coverRule
     }
 
     suspend fun searchCover(book: Book): String? {
@@ -266,6 +270,10 @@ object BookCover {
 
     fun saveCoverRule(config: CoverRule) {
         val json = GSON.toJson(config)
+        saveCoverRule(json)
+    }
+
+    fun saveCoverRule(json: String) {
         CacheManager.put(coverRuleConfigKey, json)
     }
 
