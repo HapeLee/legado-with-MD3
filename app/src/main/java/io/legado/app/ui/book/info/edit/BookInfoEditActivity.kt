@@ -19,7 +19,12 @@ class BookInfoEditActivity : BaseComposeActivity(), ChangeCoverDialog.CallBack {
                 BookInfoEditScreen(
                     viewModel = viewModel,
                     onBack = { finish() },
-                    onSave = ::saveData
+                    onSave = {
+                        viewModel.save {
+                            setResult(RESULT_OK)
+                            finish()
+                        }
+                    }
                 )
             }
         }
@@ -32,16 +37,9 @@ class BookInfoEditActivity : BaseComposeActivity(), ChangeCoverDialog.CallBack {
         }
     }
 
-    private fun saveData() {
-        viewModel.saveBook {
-            setResult(RESULT_OK)
-            finish()
-        }
-    }
-
     override fun coverChangeTo(coverUrl: String) {
         // 更新封面 URL
-        viewModel.updateCoverUrl(coverUrl)
+        viewModel.onCoverUrlChange(coverUrl)
     }
 
 }

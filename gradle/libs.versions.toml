@@ -41,8 +41,7 @@ markdownCompose = "0.5.0"
 markwon = "4.6.2"
 material = "1.14.0-alpha08"
 material3 = "1.5.0-alpha11"
-material3IconsExtended = "1.2.0"
-materialIconsExtended = "1.7.8"
+material3IconsExtended = "1.7.8"
 media = "1.7.1"
 media3 = "1.8.0"
 nanoHttpd = "2.3.1"
@@ -90,9 +89,8 @@ androidx-compose-animation = { module = "androidx.compose.animation:animation", 
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "foundation" }
 androidx-compose-material = { module = "androidx.compose.material:material" }
-compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version = "1.7.8" }
+compose-materialIcons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-androidx-compose-material3-icons-extended = { module = "androidx.compose.material3:material3-icons-extended", version.ref = "material3IconsExtended" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }

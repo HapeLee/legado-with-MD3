@@ -13,6 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.DropdownMenuItem
@@ -21,16 +23,16 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,9 +45,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.data.entities.Book
-import io.legado.app.help.book.isAudio
-import io.legado.app.help.book.isImage
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.utils.SelectImageContract
@@ -59,7 +58,7 @@ fun BookInfoEditScreen(
     onBack: () -> Unit,
     onSave: () -> Unit
 ) {
-    val book by viewModel.bookData.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -76,7 +75,9 @@ fun BookInfoEditScreen(
                     }
                 },
                 actions = {
-                    FilledTonalButton(onClick = onSave) {
+                    FilledTonalIconButton(
+                        onClick = { viewModel.save(onSave) },
+                        shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             imageVector = Icons.Default.Save,
                             contentDescription = stringResource(id = R.string.action_save)
@@ -87,13 +88,13 @@ fun BookInfoEditScreen(
             )
         },
         content = { paddingValues ->
-            book?.let {
+            uiState.book?.let {
                 BookInfoEditContent(
                     modifier = Modifier
                         .padding(paddingValues)
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
-                    book = it,
+                    uiState = uiState,
                     viewModel = viewModel
                 )
             }
@@ -101,37 +102,19 @@ fun BookInfoEditScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BookInfoEditContent(
     modifier: Modifier = Modifier,
-    book: Book,
+    uiState: BookInfoEditUiState,
     viewModel: BookInfoEditViewModel
 ) {
     val context = LocalContext.current
-    var name by remember(book.name) { mutableStateOf(book.name) }
-    var author by remember(book.author) { mutableStateOf(book.author) }
-    var coverUrl by remember(book.customCoverUrl) { mutableStateOf(book.getDisplayCover()) }
-    var intro by remember(book.customIntro) { mutableStateOf(book.getDisplayIntro()) }
-    var remark by remember(book.remark) { mutableStateOf(book.remark) }
-
-    val bookTypes = arrayOf("文本", "音频", "图片")
-    val selectedTypeIndex = when {
-        book.isImage -> 2
-        book.isAudio -> 1
-        else -> 0
-    }
-    var selectedType by remember { mutableStateOf(bookTypes[selectedTypeIndex]) }
 
     val selectCover = rememberLauncherForActivityResult(SelectImageContract()) {
         it.uri?.let { uri ->
-            viewModel.coverChangeTo(context, uri) { newCoverUrl ->
-                coverUrl = newCoverUrl
-            }
+            viewModel.coverChangeTo(context, uri)
         }
-    }
-
-    LaunchedEffect(coverUrl) {
-        viewModel.book?.customCoverUrl = coverUrl
     }
 
     Column(
@@ -139,21 +122,36 @@ fun BookInfoEditContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Cover(
-            path = coverUrl,
+            path = uiState.coverUrl,
             modifier = Modifier
                 .fillMaxWidth(0.3f)
         )
         Spacer(modifier = Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = {
-                (context as? BookInfoEditActivity)?.showDialogFragment(ChangeCoverDialog(book.name, book.author))
-            }) {
-                Text("网络搜索")
+            FilledTonalIconButton(
+                onClick = {
+                    (context as? BookInfoEditActivity)?.showDialogFragment(
+                        ChangeCoverDialog(
+                            uiState.name,
+                            uiState.author
+                        )
+                    )
+                },
+                shapes = IconButtonDefaults.shapes()) {
+                Icon(
+                    Icons.Default.ImageSearch,
+                    contentDescription = stringResource(id = R.string.default_cover)
+                )
             }
-            FilledTonalButton(onClick = { selectCover.launch() }) {
-                Text("本地选择")
+            FilledTonalIconButton(onClick = { selectCover.launch() },
+                shapes = IconButtonDefaults.shapes()) {
+                Icon(
+                    Icons.Default.FolderOpen,
+                    contentDescription = stringResource(id = R.string.default_cover)
+                )
             }
-            FilledTonalButton(onClick = { coverUrl = book.coverUrl ?: "" }) {
+            FilledTonalIconButton(onClick = { viewModel.resetCover() },
+                shapes = IconButtonDefaults.shapes()) {
                 Icon(
                     Icons.Default.Replay,
                     contentDescription = stringResource(id = R.string.default_cover)
@@ -162,57 +160,53 @@ fun BookInfoEditContent(
         }
         Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
+            value = uiState.name,
+            onValueChange = { viewModel.onNameChange(it) },
             label = { Text("书名") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = author,
-            onValueChange = { author = it },
+            value = uiState.author,
+            onValueChange = { viewModel.onAuthorChange(it) },
             label = { Text("作者") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         BookTypeDropdown(
-            bookTypes = bookTypes,
-            selectedType = selectedType,
-            onTypeSelected = { selectedType = it }
+            bookTypes = uiState.bookTypes,
+            selectedType = uiState.selectedType,
+            onTypeSelected = { viewModel.onBookTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = coverUrl ?: "",
-            onValueChange = { coverUrl = it },
+            value = uiState.coverUrl ?: "",
+            onValueChange = { viewModel.onCoverUrlChange(it) },
             label = { Text("封面链接") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = intro ?: "",
-            onValueChange = { intro = it },
+            value = uiState.intro ?: "",
+            onValueChange = { viewModel.onIntroChange(it) },
             label = { Text("简介") },
             modifier = Modifier.fillMaxWidth(),
             maxLines = 5
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
-            value = remark ?: "",
-            onValueChange = { remark = it },
+            value = uiState.remark ?: "",
+            onValueChange = { viewModel.onRemarkChange(it) },
             label = { Text("备注") },
             modifier = Modifier.fillMaxWidth()
         )
-    }
-
-    LaunchedEffect(name, author, selectedType, coverUrl, intro, remark) {
-        viewModel.updateBookState(name, author, selectedType, bookTypes, coverUrl, intro, remark)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookTypeDropdown(
-    bookTypes: Array<String>,
+    bookTypes: List<String>,
     selectedType: String,
     onTypeSelected: (String) -> Unit
 ) {
@@ -223,10 +217,12 @@ fun BookTypeDropdown(
         onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
-            modifier = Modifier.fillMaxWidth().menuAnchor(
-                ExposedDropdownMenuAnchorType.PrimaryEditable,
-                true
-            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(
+                    ExposedDropdownMenuAnchorType.PrimaryEditable,
+                    true
+                ),
             readOnly = true,
             value = selectedType,
             onValueChange = {},

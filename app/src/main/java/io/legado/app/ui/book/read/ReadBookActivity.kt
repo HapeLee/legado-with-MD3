@@ -286,8 +286,6 @@ class ReadBookActivity : BaseReadBookActivity(),
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-
-
         setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
         val transform = MaterialContainerTransform().apply {

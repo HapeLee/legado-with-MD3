@@ -11,6 +11,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
+import io.legado.app.help.book.isAudio
+import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.model.ReadBook
@@ -23,30 +25,99 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileOutputStream
 
+data class BookInfoEditUiState(
+    val name: String = "",
+    val author: String = "",
+    val coverUrl: String? = null,
+    val intro: String? = null,
+    val remark: String? = null,
+    val selectedType: String = "文本",
+    val bookTypes: List<String> = listOf("文本", "音频", "图片"),
+    val book: Book? = null,
+)
+
 class BookInfoEditViewModel(application: Application) : BaseViewModel(application) {
     var book: Book? = null
-    private val _bookData = MutableStateFlow<Book?>(null)
-    val bookData: StateFlow<Book?> = _bookData.asStateFlow()
+    private val _uiState = MutableStateFlow(BookInfoEditUiState())
+    val uiState: StateFlow<BookInfoEditUiState> = _uiState.asStateFlow()
 
     fun loadBook(bookUrl: String) {
         execute {
             book = appDb.bookDao.getBook(bookUrl)
             book?.let {
-                _bookData.value = it
+                val selectedTypeIndex = when {
+                    it.isImage -> 2
+                    it.isAudio -> 1
+                    else -> 0
+                }
+                _uiState.value = BookInfoEditUiState(
+                    name = it.name,
+                    author = it.author,
+                    coverUrl = it.getDisplayCover(),
+                    intro = it.getDisplayIntro(),
+                    remark = it.remark,
+                    selectedType = _uiState.value.bookTypes[selectedTypeIndex],
+                    book = it
+                )
             }
         }
     }
 
-    fun saveBook(success: (() -> Unit)?) {
+    fun onNameChange(name: String) {
+        _uiState.value = _uiState.value.copy(name = name)
+    }
+
+    fun onAuthorChange(author: String) {
+        _uiState.value = _uiState.value.copy(author = author)
+    }
+
+    fun onCoverUrlChange(coverUrl: String) {
+        _uiState.value = _uiState.value.copy(coverUrl = coverUrl)
+    }
+
+    fun onIntroChange(intro: String) {
+        _uiState.value = _uiState.value.copy(intro = intro)
+    }
+
+    fun onRemarkChange(remark: String) {
+        _uiState.value = _uiState.value.copy(remark = remark)
+    }
+
+    fun onBookTypeChange(bookType: String) {
+        _uiState.value = _uiState.value.copy(selectedType = bookType)
+    }
+
+    fun resetCover() {
+        _uiState.value = _uiState.value.copy(coverUrl = book?.coverUrl ?: "")
+    }
+
+    fun save(onSuccess: () -> Unit) {
         execute {
+            val currentState = _uiState.value
             book?.let { book ->
+                val oldBook = book.copy()
+                book.name = currentState.name
+                book.author = currentState.author
+                book.remark = currentState.remark
+                val local = if (book.isLocal) BookType.local else 0
+                val bookType = when (currentState.selectedType) {
+                    currentState.bookTypes[2] -> BookType.image or local
+                    currentState.bookTypes[1] -> BookType.audio or local
+                    else -> BookType.text or local
+                }
+                book.removeType(BookType.local, BookType.image, BookType.audio, BookType.text)
+                book.addType(bookType)
+                book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
+                book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
+                BookHelp.updateCacheFolder(oldBook, book)
+
                 if (ReadBook.book?.bookUrl == book.bookUrl) {
                     ReadBook.book = book
                 }
                 appDb.bookDao.update(book)
             }
         }.onSuccess {
-            success?.invoke()
+            onSuccess.invoke()
         }.onError {
             if (it is SQLiteConstraintException) {
                 AppLog.put("书籍信息保存失败，存在相同书名作者书籍\n$it", it, true)
@@ -56,35 +127,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         }
     }
 
-    fun updateBookState(
-        name: String,
-        author: String,
-        selectedType: String,
-        bookTypes: Array<String>,
-        coverUrl: String?,
-        intro: String?,
-        remark: String?
-    ) {
-        book?.let { book ->
-            val oldBook = book.copy()
-            book.name = name
-            book.author = author
-            book.remark = remark
-            val local = if (book.isLocal) BookType.local else 0
-            val bookType = when (selectedType) {
-                bookTypes[2] -> BookType.image or local
-                bookTypes[1] -> BookType.audio or local
-                else -> BookType.text or local
-            }
-            book.removeType(BookType.local, BookType.image, BookType.audio, BookType.text)
-            book.addType(bookType)
-            book.customCoverUrl = if (coverUrl == book.coverUrl) null else coverUrl
-            book.customIntro = if (intro == book.intro) null else intro
-            BookHelp.updateCacheFolder(oldBook, book)
-        }
-    }
-
-    fun coverChangeTo(context: Context, uri: Uri, onFinally: (coverUrl: String) -> Unit) {
+    fun coverChangeTo(context: Context, uri: Uri) {
         execute {
             runCatching {
                 context.externalCacheDir?.let { externalCacheDir ->
@@ -97,7 +140,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                             inputStream.copyTo(outputStream)
                         }
                     }
-                    onFinally(coverFile.absolutePath)
+                    _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
                 } ?: run {
                     AppLog.put("External cache directory is null", Throwable("Null directory"), true)
                 }
@@ -106,13 +149,4 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
             }
         }
     }
-
-
-    fun updateCoverUrl(coverUrl: String) {
-        book?.let {
-            val updatedBook = it.copy(customCoverUrl = coverUrl)
-            _bookData.value = updatedBook
-        }
-    }
-
 }
