@@ -1,14 +1,20 @@
 package io.legado.app.ui.replace
 
+import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,6 +33,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,36 +41,54 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.gson.Gson
 import io.legado.app.R
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
+import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
+import io.legado.app.ui.widget.components.exportComponents.FilePickerSheetMode
+import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
+import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
+import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun ReplaceRuleScreen(
     viewModel: ReplaceRuleViewModel = koinViewModel(),
     onBackClick: () -> Unit
 ) {
+
+    val uploadRepository: UploadRepository = koinInject()
+
     //TODO: 期望换为Navigation
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val rules = uiState.rules
@@ -85,13 +110,21 @@ fun ReplaceRuleScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = listOf(stringResource(R.string.all)) + groups
 
+    val importState by viewModel.importState.collectAsStateWithLifecycle()
+    var showUrlInput by remember { mutableStateOf(false) }
+
+    var showFilePickerSheet by remember { mutableStateOf(false) }
+    var filePickerMode by remember { mutableStateOf(FilePickerSheetMode.EXPORT) }
+    var isUploading by remember { mutableStateOf(false) }
+    val clipboardManager = LocalClipboard.current
+
     val importDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
         onResult = { uri ->
             uri?.let {
                 context.contentResolver.openInputStream(it)?.use { stream ->
                     val text = stream.reader().readText()
-                    // show import dialog
+                    viewModel.importSource(text)
                 }
             }
         }
@@ -100,7 +133,7 @@ fun ReplaceRuleScreen(
     val exportDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json"),
         onResult = { uri ->
-            uri?.let {
+            uri?.let { it ->
                 scope.launch {
                     val rulesToExport = rules
                         .filter { selectedRuleIds.contains(it.id) }
@@ -114,6 +147,104 @@ fun ReplaceRuleScreen(
             }
         }
     )
+
+    if (showUrlInput) {
+        SourceInputDialog(
+            title = stringResource(R.string.import_on_line),
+            onDismissRequest = { showUrlInput = false },
+            onConfirm = {
+                showUrlInput = false
+                viewModel.importSource(it)
+            }
+        )
+    }
+
+    if (showFilePickerSheet) {
+        FilePickerSheet(
+            sheetState = sheetState,
+            onDismissRequest = { showFilePickerSheet = false },
+            mode = filePickerMode,
+            onSelectSysDir = {
+                showFilePickerSheet = false
+                exportDoc.launch("exportReplaceRule.json")
+            },
+            onSelectSysFile = {},
+            onUpload = {
+                showFilePickerSheet = false
+                scope.launch {
+                    val rulesToExport = rules
+                        .filter { selectedRuleIds.contains(it.id) }
+                        .map { it.rule }
+                    val json = Gson().toJson(rulesToExport)
+
+                    // [新增] 设置加载状态
+                    isUploading = true
+
+                    try {
+                        // 使用 runCatching 处理上传
+                        runCatching {
+                            uploadRepository.upload(
+                                fileName = "exportReplaceRule.json",
+                                file = json,
+                                contentType = "application/json"
+                            )
+                        }.onSuccess { url ->
+                            isUploading = false
+                            val result = snackbarHostState.showSnackbar(
+                                message = "上传成功: $url",
+                                actionLabel = "复制链接",
+                                withDismissAction = true
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                clipboardManager.setClipEntry(
+                                    ClipEntry(ClipData.newPlainText("export url", url))
+                                )
+                            }
+                        }.onFailure { e ->
+                            isUploading = false
+                            snackbarHostState.showSnackbar("上传失败: ${e.localizedMessage}")
+                        }
+                    } finally {
+                        isUploading = false
+                    }
+                }
+            },
+            allowExtensions = arrayOf("json")
+        )
+    }
+
+    (importState as? BaseImportUiState.Success<ReplaceRule>)?.let { state ->
+        BatchImportDialog(
+            title = stringResource(R.string.import_replace_rule),
+            importState = state,
+            onDismissRequest = { viewModel.cancelImport() },
+            onToggleItem = { viewModel.toggleImportSelection(it) },
+            onToggleAll = { viewModel.toggleImportAll(it) },
+            onConfirm = { viewModel.saveImportedRules() },
+            topBarActions = {},
+            itemContent = { rule, _ ->
+                Column {
+                    Text(rule.name, style = MaterialTheme.typography.titleMedium)
+                    if (!rule.group.isNullOrBlank()) {
+                        Text(rule.group!!, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        )
+    }
+
+    if (importState is BaseImportUiState.Loading) {
+        Dialog(onDismissRequest = { viewModel.cancelImport() }) { LoadingIndicator() }
+    }
+
+    LaunchedEffect(importState) {
+        (importState as? BaseImportUiState.Error)?.let {
+            scope.launch {
+                snackbarHostState.showSnackbar(it.msg)
+            }
+            viewModel.cancelImport()
+        }
+    }
 
     if (showGroupManageSheet) {
         GroupManageBottomSheet(
@@ -181,20 +312,20 @@ fun ReplaceRuleScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
+                val titleText = remember(isUploading, inSelectionMode, selectedRuleIds.size, rules.size) {
+                    when {
+                        isUploading -> "正在上传..."
+                        inSelectionMode -> "已选择 ${selectedRuleIds.size}/${rules.size}"
+                        else -> "替换规则"
+                    }
+                }
                 MediumTopAppBar(
                     title = {
                         AnimatedText(
-                            text = if (inSelectionMode) {
-                                stringResource(
-                                    R.string.select_count,
-                                    selectedRuleIds.size,
-                                    rules.size
-                                )
-                            } else {
-                                stringResource(R.string.replace_rule)
-                            }
+                            text = titleText
                         )
                     },
                     navigationIcon = {
@@ -227,7 +358,10 @@ fun ReplaceRuleScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("在线导入") },
-                                    onClick = { /*TODO*/ showMenu = false }
+                                    onClick = {
+                                        showMenu = false
+                                        showUrlInput = true // 触发输入框
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("本地导入") },
@@ -431,7 +565,7 @@ fun ReplaceRuleScreen(
                         ),
                         ActionItem(
                             text = stringResource(R.string.export),
-                            onClick = { exportDoc.launch("exportReplaceRule.json") }
+                            onClick = { showFilePickerSheet = true }
                         )
                     )
                 )
@@ -618,6 +752,19 @@ fun ReplaceRuleItem(
     modifier: Modifier = Modifier
 ) {
     var showRuleMenu by remember { mutableStateOf(false) }
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected)
+            MaterialTheme.colorScheme.secondaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceContainerLow,
+        animationSpec = tween(
+            durationMillis = 200,
+            easing = FastOutSlowInEasing
+        ),
+        label = "CardColor"
+    )
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -628,7 +775,7 @@ fun ReplaceRuleItem(
             ),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = containerColor
         )
     ) {
         ListItem(
