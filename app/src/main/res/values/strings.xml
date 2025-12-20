@@ -1367,4 +1367,6 @@
     <string name="enable_slider_vibrator">滑动进度条时震动</string>
     <string name="edit_remark">编辑备注</string>
     <string name="book_remark">书籍备注</string>
+    <string name="save_to_local">保存至本地</string>
+    <string name="select_operation">选择操作</string>
 </resources>

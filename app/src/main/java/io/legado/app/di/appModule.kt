@@ -1,9 +1,11 @@
 package io.legado.app.di
 
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
@@ -25,6 +27,8 @@ val appModule = module {
     single { get<AppDatabase>().bookChapterDao }
     single { ReadRecordRepository(get()) }
     viewModel { ReadRecordViewModel(get(), get(), get()) }
+
+    single<UploadRepository> { DirectLinkUploadRepository() }
 
     // Explore
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
