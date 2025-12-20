@@ -3,13 +3,19 @@ package io.legado.app.ui.book.info.edit
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -17,6 +23,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -27,18 +34,26 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Modifier.Companion
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -118,43 +133,65 @@ fun BookInfoEditContent(
     }
 
     Column(
-        modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.padding(16.dp)
     ) {
-        Cover(
-            path = uiState.coverUrl,
-            modifier = Modifier
-                .fillMaxWidth(0.3f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalIconButton(
-                onClick = {
-                    (context as? BookInfoEditActivity)?.showDialogFragment(
-                        ChangeCoverDialog(
-                            uiState.name,
-                            uiState.author
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Cover(
+                path = uiState.coverUrl,
+                modifier = Modifier
+                    .width(110.dp)
+                    .height(154.dp)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            (context as? BookInfoEditActivity)?.showDialogFragment(
+                                ChangeCoverDialog(
+                                    uiState.name,
+                                    uiState.author
+                                )
+                            )
+                        },
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        Icon(
+                            Icons.Default.ImageSearch,
+                            contentDescription = stringResource(id = R.string.default_cover)
                         )
-                    )
-                },
-                shapes = IconButtonDefaults.shapes()) {
-                Icon(
-                    Icons.Default.ImageSearch,
-                    contentDescription = stringResource(id = R.string.default_cover)
-                )
-            }
-            FilledTonalIconButton(onClick = { selectCover.launch() },
-                shapes = IconButtonDefaults.shapes()) {
-                Icon(
-                    Icons.Default.FolderOpen,
-                    contentDescription = stringResource(id = R.string.default_cover)
-                )
-            }
-            FilledTonalIconButton(onClick = { viewModel.resetCover() },
-                shapes = IconButtonDefaults.shapes()) {
-                Icon(
-                    Icons.Default.Replay,
-                    contentDescription = stringResource(id = R.string.default_cover)
+                    }
+                    OutlinedButton(
+                        onClick = { selectCover.launch() },
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = stringResource(id = R.string.default_cover)
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.resetCover() },
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        Icon(
+                            Icons.Default.Replay,
+                            contentDescription = stringResource(id = R.string.default_cover)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                BookTypeDropdown(
+                    bookTypes = uiState.bookTypes,
+                    selectedType = uiState.selectedType,
+                    onTypeSelected = { viewModel.onBookTypeChange(it) }
                 )
             }
         }
@@ -171,12 +208,6 @@ fun BookInfoEditContent(
             onValueChange = { viewModel.onAuthorChange(it) },
             label = { Text("作者") },
             modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        BookTypeDropdown(
-            bookTypes = uiState.bookTypes,
-            selectedType = uiState.selectedType,
-            onTypeSelected = { viewModel.onBookTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -212,32 +243,44 @@ fun BookTypeDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
+    val textFieldState = rememberTextFieldState(
+        initialText = selectedType
+    )
+
+    LaunchedEffect(selectedType) {
+        textFieldState.setTextAndPlaceCursorAtEnd(selectedType)
+    }
+
     ExposedDropdownMenuBox(
+        modifier = Modifier.padding(horizontal = 8.dp),
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
+            state = textFieldState,
+            readOnly = true,
+            lineLimits = TextFieldLineLimits.SingleLine,
+            label = { Text("书籍类型") },
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .menuAnchor(
                     ExposedDropdownMenuAnchorType.PrimaryEditable,
-                    true
+                    enabled = true
                 ),
-            readOnly = true,
-            value = selectedType,
-            onValueChange = {},
-            label = { Text("书籍类型") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
         )
+
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            bookTypes.forEach { selectionOption ->
+            bookTypes.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(selectionOption) },
+                    text = { Text(option) },
                     onClick = {
-                        onTypeSelected(selectionOption)
+                        onTypeSelected(option)
                         expanded = false
                     }
                 )
@@ -245,3 +288,4 @@ fun BookTypeDropdown(
         }
     }
 }
+
