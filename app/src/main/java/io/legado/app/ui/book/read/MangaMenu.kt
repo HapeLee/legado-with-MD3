@@ -7,6 +7,7 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.widget.FrameLayout
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.slider.Slider
@@ -37,6 +38,22 @@ class MangaMenu @JvmOverloads constructor(
     private val binding = ViewMangaMenuBinding.inflate(LayoutInflater.from(context), this, true)
     private val callBack: CallBack get() = activity as CallBack
     var canShowMenu: Boolean = false
+
+    private val sourceMenu by lazy {
+        PopupMenu(context, binding.tvSourceAction).apply {
+            inflate(R.menu.book_read_source)
+            setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.menu_login -> callBack.showLogin()
+                    R.id.menu_chapter_pay -> callBack.payAction()
+                    R.id.menu_edit_source -> callBack.openSourceEditActivity()
+                    R.id.menu_disable_source -> callBack.disableSource()
+                }
+                true
+            }
+        }
+    }
+
     private val menuTopIn: Animation by lazy {
         loadAnimation(context, R.anim.anim_readbook_top_in)
     }
@@ -207,11 +224,17 @@ class MangaMenu @JvmOverloads constructor(
             }
             true
         }
+        tvBookName.setOnClickListener{
+            callBack.openBookInfoActivity()
+        }
         tvChapterName.setOnClickListener(chapterViewClickListener)
         tvChapterName.setOnLongClickListener(chapterViewLongClickListener)
         tvChapterUrl.setOnClickListener(chapterViewClickListener)
         tvChapterUrl.setOnLongClickListener(chapterViewLongClickListener)
-
+        tvSourceAction.setOnLongClickListener {
+            sourceMenu.show()
+            true
+        }
         tvNext.setOnClickListener {
             ReadManga.moveToNextChapter(true)
         }
@@ -282,6 +305,10 @@ class MangaMenu @JvmOverloads constructor(
         fun showFooterConfig()
         fun showScrollModeDialog()
         fun onAutoPageToggle2()
+        fun showLogin()
+        fun payAction()
+        fun openSourceEditActivity()
+        fun disableSource()
     }
 
 }

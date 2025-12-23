@@ -24,6 +24,7 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
@@ -117,6 +118,31 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
         if (!book.isLocal && ReadManga.bookSource == null) {
             autoChangeSource(book.name, book.author)
             return
+        }
+    }
+
+    fun upBookSource(success: (() -> Unit)?) {
+        execute {
+            ReadManga.book?.let { book ->
+                ReadManga.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
+            }
+        }.onSuccess {
+            success?.invoke()
+        }
+    }
+
+    fun loadChapterList(book: Book) {
+        execute {
+            loadChapterListAwait(book)
+        }
+    }
+
+    fun disableSource() {
+        execute {
+            ReadManga.bookSource?.let {
+                it.enabled = false
+                appDb.bookSourceDao.update(it)
+            }
         }
     }
 

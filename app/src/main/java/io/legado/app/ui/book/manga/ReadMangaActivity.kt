@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.doOnLayout
@@ -29,22 +30,33 @@ import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
+import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityMangaBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.AppFreezeMonitor.handler
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
+import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.source.getSourceType
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.ReadManga
+import io.legado.app.model.analyzeRule.AnalyzeRule
+import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
+import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.ui.book.changesource.ChangeBookSourceDialog
 import io.legado.app.ui.book.info.BookInfoActivity
@@ -64,7 +76,10 @@ import io.legado.app.ui.book.manga.recyclerview.ScrollTimer
 import io.legado.app.ui.book.manga.recyclerview.WebtoonFrame
 import io.legado.app.ui.book.read.MangaMenu
 import io.legado.app.ui.book.read.ReadBookActivity.Companion.RESULT_DELETED
+import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
+import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.recycler.LoadMoreView
 import io.legado.app.utils.GSON
@@ -75,8 +90,11 @@ import io.legado.app.utils.fastBinarySearch
 import io.legado.app.utils.findCenterViewPosition
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.gone
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isTrue
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -134,6 +152,17 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private val mLinearInterpolator by lazy {
         LinearInterpolator()
     }
+
+    private val sourceEditActivity =
+        registerForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
+            if (it.resultCode == RESULT_OK) {
+                viewModel.upBookSource {
+                    handler.post {
+                        binding.mangaMenu.upBookView()
+                    }
+                }
+            }
+        }
 
     private val loadMoreView by lazy {
         LoadMoreView(this).apply {
@@ -563,6 +592,77 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         menuInflater.inflate(R.menu.book_manga, menu)
         upMenu(menu)
         return super.onCompatCreateOptionsMenu(menu)
+    }
+
+
+    override fun showLogin() {
+        ReadManga.bookSource?.let {
+            startActivity<SourceLoginActivity> {
+                putExtra("type", "bookSource")
+                putExtra("key", it.bookSourceUrl)
+            }
+        }
+    }
+
+    override fun payAction() {
+        val book = ReadManga.book ?: return
+        if (book.isLocal) return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadManga.durChapterIndex)
+        if (chapter == null) {
+            toastOnUi("no chapter")
+            return
+        }
+        alert(R.string.chapter_pay) {
+            setMessage(chapter.title)
+            yesButton {
+                Coroutine.async(lifecycleScope) {
+                    val source =
+                        ReadManga.bookSource ?: throw NoStackTraceException("no book source")
+                    val payAction = source.getContentRule().payAction
+                    if (payAction.isNullOrBlank()) {
+                        throw NoStackTraceException("no pay action")
+                    }
+                    val analyzeRule = AnalyzeRule(book, source)
+                    analyzeRule.setCoroutineContext(coroutineContext)
+                    analyzeRule.setBaseUrl(chapter.url)
+                    analyzeRule.setChapter(chapter)
+                    analyzeRule.evalJS(payAction).toString()
+                }.onSuccess(IO) {
+                    if (it.isAbsUrl()) {
+                        startActivity<WebViewActivity> {
+                            val bookSource = ReadManga.bookSource
+                            putExtra("title", getString(R.string.chapter_pay))
+                            putExtra("url", it)
+                            putExtra("sourceOrigin", bookSource?.bookSourceUrl)
+                            putExtra("sourceName", bookSource?.bookSourceName)
+                            putExtra("sourceType", bookSource?.getSourceType())
+                        }
+                    } else if (it.isTrue()) {
+                        //购买成功后刷新目录
+                        ReadManga.book?.let {
+                            ReadManga.curMangaChapter = null
+                            BookHelp.delContent(book, chapter)
+                            viewModel.loadChapterList(book)
+                        }
+                    }
+                }.onError {
+                    AppLog.put("执行购买操作出错\n${it.localizedMessage}", it, true)
+                }
+            }
+            noButton()
+        }
+    }
+
+    override fun disableSource() {
+        viewModel.disableSource()
+    }
+
+    override fun openSourceEditActivity() {
+        ReadManga.bookSource?.let {
+            sourceEditActivity.launch {
+                putExtra("sourceUrl", it.bookSourceUrl)
+            }
+        }
     }
 
     /**
