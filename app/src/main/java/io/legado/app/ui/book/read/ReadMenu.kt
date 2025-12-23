@@ -18,6 +18,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.toColorInt
 import androidx.core.view.doOnAttach
+import androidx.core.view.forEach
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.badge.BadgeDrawable
@@ -242,6 +243,10 @@ class ReadMenu @JvmOverloads constructor(
         seekReadPage.tickInactiveTintList = ColorStateList.valueOf(acColor)
         tvPre.iconTint = ColorStateList.valueOf(acColor)
         tvNext.iconTint = ColorStateList.valueOf(acColor)
+        tvBookName.setTextColor(acColor)
+        tvChapterName.setTextColor(acColor)
+        tvChapterUrl.setTextColor(acColor)
+        tvSourceAction.setTextColor(acColor)
         tvPre.backgroundTintList = ColorStateList.valueOf(bgColor)
         tvNext.backgroundTintList = ColorStateList.valueOf(bgColor)
         tvPre.alpha = AppConfig.menuAlpha / 100f * 255
@@ -256,6 +261,18 @@ class ReadMenu @JvmOverloads constructor(
             bottomView.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
             binding.bottomView.applyNavigationBarPadding()
         }
+    }
+
+    fun updateToolBarColor(){
+        binding.titleBar.toolbar.navigationIcon?.setTint(acColor)
+        binding.titleBar.toolbar.apply {
+            setTitleTextColor(acColor)
+            setSubtitleTextColor(acColor)
+        }
+        binding.titleBar.toolbar.menu.forEach { item ->
+            item.icon?.setTint(acColor)
+        }
+        binding.titleBar.toolbar.overflowIcon?.setTint(acColor)
     }
 
     fun reset() {
@@ -322,6 +339,7 @@ class ReadMenu @JvmOverloads constructor(
         this.visible()
         binding.titleBar.visible()
         binding.bottomMenu.visible()
+        updateToolBarColor()
         changeReplace(ReadBook.book?.getUseReplaceRule() ?: false)
         updateBadge("replace_badge", ReadBook.curTextChapter?.effectiveReplaceRules?.size ?: 0)
         if (anim) {
