@@ -9,6 +9,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.data.entities.DictRule
 import io.legado.app.databinding.DialogDictBinding
+import io.legado.app.help.GlideImageGetter
 import io.legado.app.utils.gone
 import io.legado.app.utils.setHtml
 import io.legado.app.utils.toastOnUi
@@ -28,8 +29,8 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
 
     private val viewModel by viewModels<DictViewModel>()
     private val binding by viewBinding(DialogDictBinding::bind)
-
     private var word: String? = null
+    private var glideImageGetter: GlideImageGetter? = null
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         binding.tvDict.movementMethod = LinkMovementMethod()
@@ -42,6 +43,12 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
 
         setupTabs()
         observeDicts()
+    }
+
+    override fun onDestroyView() {
+        glideImageGetter?.clear()
+        glideImageGetter = null
+        super.onDestroyView()
     }
 
     private fun setupTabs() {
@@ -90,6 +97,9 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
             } else {
                 binding.tvDict.visible()
                 binding.tvDict.setHtml(result)
+                glideImageGetter?.clear()
+                glideImageGetter = GlideImageGetter.create(requireContext(), binding.tvDict, result)
+                binding.tvDict.setHtml(result, glideImageGetter)
             }
         }
     }

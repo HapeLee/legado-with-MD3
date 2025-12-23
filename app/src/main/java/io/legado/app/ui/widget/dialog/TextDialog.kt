@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.textclassifier.TextClassifier
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.databinding.DialogTextViewBinding
@@ -66,13 +67,11 @@ class TextDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_text_view) {
             val content = IntentData.get(it.getString("content")) ?: ""
             when (it.getString("mode")) {
                 Mode.MD.name -> viewLifecycleOwner.lifecycleScope.launch {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        binding.textView.setTextClassifier(TextClassifier.NO_OP)
-                    }
+                    binding.textView.setTextClassifier(TextClassifier.NO_OP)
                     val markwon: Markwon
                     val markdown = withContext(IO) {
                         markwon = Markwon.builder(requireContext())
-                            .usePlugin(GlideImagesPlugin.create(requireContext()))
+                            .usePlugin(GlideImagesPlugin.create(Glide.with(requireContext())))
                             .usePlugin(HtmlPlugin.create())
                             .usePlugin(TablePlugin.create(requireContext()))
                             .build()
