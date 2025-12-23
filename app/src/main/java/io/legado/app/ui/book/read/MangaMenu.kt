@@ -259,10 +259,18 @@ class MangaMenu @JvmOverloads constructor(
 
     fun upSeekBar(value: Int, count: Int) {
         binding.seekReadPage.apply {
-            valueFrom = 1f
-            valueTo = count.toFloat()
-            stepSize = 1f
-            this.value = value.toFloat().coerceIn(valueFrom, valueTo)
+            if (count <= 1) {
+                isEnabled = false
+                valueFrom = 1f
+                valueTo = 2f
+                this.value = 1f
+            } else {
+                isEnabled = true
+                valueFrom = 1f
+                valueTo = count.toFloat()
+                stepSize = 1f
+                this.value = value.toFloat().coerceIn(valueFrom, valueTo)
+            }
         }
     }
 
