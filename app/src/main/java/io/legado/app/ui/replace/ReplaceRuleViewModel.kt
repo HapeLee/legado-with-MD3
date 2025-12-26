@@ -102,34 +102,10 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
         baseFlow
             .map { rules ->
                 val comparator = when (sortMode) {
-                    "asc" -> compareBy<ReplaceRule> {
-                        when (it.order) {
-                            -1 -> Long.MIN_VALUE
-                            -2 -> Long.MAX_VALUE
-                            else -> it.order.toLong()
-                        }
-                    }
-                    "desc" -> compareByDescending<ReplaceRule> {
-                        when (it.order) {
-                            -1 -> Long.MAX_VALUE
-                            -2 -> Long.MIN_VALUE
-                            else -> it.order.toLong()
-                        }
-                    }
-                    "name_asc" -> compareBy<ReplaceRule> {
-                        when (it.order) {
-                            -1 -> Long.MIN_VALUE
-                            -2 -> Long.MAX_VALUE
-                            else -> 0L
-                        }
-                    }.thenBy { it.name.lowercase() }
-                    "name_desc" -> compareBy<ReplaceRule> {
-                        when (it.order) {
-                            -1 -> Long.MIN_VALUE
-                            -2 -> Long.MAX_VALUE
-                            else -> 0L
-                        }
-                    }.thenByDescending { it.name.lowercase() }
+                    "asc" -> compareBy<ReplaceRule> { it.order.toLong() }
+                    "desc" -> compareByDescending<ReplaceRule> { it.order.toLong() }
+                    "name_asc" -> compareBy<ReplaceRule> { it.name.lowercase() }
+                    "name_desc" -> compareByDescending<ReplaceRule> { it.name.lowercase() }
                     else -> null
                 }
 
@@ -154,7 +130,7 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
         _sortMode,
         _searchKey,
         repository.flowGroups(),
-        ruleUiFlow
+        _uiRules
     ) { sortMode, searchKey, groups, rules ->
         ReplaceRuleUiState(
             sortMode = sortMode,
@@ -168,6 +144,14 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = ReplaceRuleUiState(isLoading = true)
     )
+
+    init {
+        viewModelScope.launch {
+            ruleUiFlow.collect { rules ->
+                _uiRules.value = rules
+            }
+        }
+    }
 
     fun setSortMode(mode: String) {
         _sortMode.value = mode
@@ -196,13 +180,13 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun toTop(rule: ReplaceRule) {
         execute {
-            repository.toTop(rule)
+            repository.toTop(rule, _sortMode.value == "desc")
         }
     }
 
     fun toBottom(rule: ReplaceRule) {
         execute {
-            repository.toBottom(rule)
+            repository.toBottom(rule, _sortMode.value == "desc")
         }
     }
 
@@ -244,13 +228,13 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun topSelectByIds(ids: Set<Long>) {
         execute {
-            repository.topByIds(ids)
+            repository.topByIds(ids, _sortMode.value == "desc")
         }
     }
 
     fun bottomSelectByIds(ids: Set<Long>) {
         execute {
-            repository.bottomByIds(ids)
+            repository.bottomByIds(ids, _sortMode.value == "desc")
         }
     }
 
@@ -284,8 +268,9 @@ class ReplaceRuleViewModel(application: Application) : BaseViewModel(application
 
     fun saveSortOrder() {
         val currentRules = _uiRules.value
+        val isDesc = _sortMode.value == "desc"
         execute {
-            repository.moveOrder(currentRules)
+            repository.moveOrder(currentRules, isDesc)
         }
     }
 

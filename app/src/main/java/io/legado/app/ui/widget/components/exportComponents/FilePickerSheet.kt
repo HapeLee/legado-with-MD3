@@ -40,14 +40,14 @@ fun FilePickerSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 32.dp),
+                .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
             Text(
+                modifier = Modifier.padding(bottom = 16.dp),
                 text = stringResource(R.string.select_operation),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Row(

@@ -45,16 +45,24 @@ class ReplaceRuleRepository {
         }
     }
 
-    suspend fun toTop(rule: ReplaceRule) {
+    suspend fun toTop(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
-            rule.order = -1
+            if (isDesc) {
+                rule.order = appDb.replaceRuleDao.maxOrder + 1
+            } else {
+                rule.order = appDb.replaceRuleDao.minOrder - 1
+            }
             appDb.replaceRuleDao.update(rule)
         }
     }
 
-    suspend fun toBottom(rule: ReplaceRule) {
+    suspend fun toBottom(rule: ReplaceRule, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
-            rule.order = -2
+            if (isDesc) {
+                rule.order = appDb.replaceRuleDao.minOrder - 1
+            } else {
+                rule.order = appDb.replaceRuleDao.maxOrder + 1
+            }
             appDb.replaceRuleDao.update(rule)
         }
     }
@@ -154,28 +162,55 @@ class ReplaceRuleRepository {
             appDb.replaceRuleDao.delete(*rules.toTypedArray())
         }
 
-    suspend fun topByIds(ids: Set<Long>) =
+    suspend fun topByIds(ids: Set<Long>, isDesc: Boolean = false) =
+        withContext(Dispatchers.IO) {
+            if (ids.isEmpty()) return@withContext
+            val rules = appDb.replaceRuleDao.getByIds(ids)
+            if (isDesc) {
+                var maxOrder = appDb.replaceRuleDao.maxOrder
+                val updated = rules.map {
+                    maxOrder++
+                    it.copy(order = maxOrder)
+                }
+                appDb.replaceRuleDao.update(*updated.toTypedArray())
+            } else {
+                var minOrder = appDb.replaceRuleDao.minOrder
+                val updated = rules.map {
+                    minOrder--
+                    it.copy(order = minOrder)
+                }
+                appDb.replaceRuleDao.update(*updated.toTypedArray())
+            }
+        }
+
+    suspend fun bottomByIds(ids: Set<Long>, isDesc: Boolean = false) =
         withContext(Dispatchers.IO) {
             if (ids.isEmpty()) return@withContext
 
             val rules = appDb.replaceRuleDao.getByIds(ids)
-            val updated = rules.map { it.copy(order = -1) }
-            appDb.replaceRuleDao.update(*updated.toTypedArray())
+            if (isDesc) {
+                var minOrder = appDb.replaceRuleDao.minOrder
+                val updated = rules.map {
+                    minOrder--
+                    it.copy(order = minOrder)
+                }
+                appDb.replaceRuleDao.update(*updated.toTypedArray())
+            } else {
+                var maxOrder = appDb.replaceRuleDao.maxOrder
+                val updated = rules.map {
+                    maxOrder++
+                    it.copy(order = maxOrder)
+                }
+                appDb.replaceRuleDao.update(*updated.toTypedArray())
+            }
         }
 
-    suspend fun bottomByIds(ids: Set<Long>) =
+    suspend fun moveOrder(currentRules: List<ReplaceRuleItemUi>, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
-            if (ids.isEmpty()) return@withContext
-
-            val rules = appDb.replaceRuleDao.getByIds(ids)
-            val updated = rules.map { it.copy(order = -2) }
-            appDb.replaceRuleDao.update(*updated.toTypedArray())
-        }
-
-    suspend fun moveOrder(currentRules: List<ReplaceRuleItemUi>) {
-        withContext(Dispatchers.IO) {
+            val size = currentRules.size
             val updatedRules = currentRules.mapIndexed { index, itemUi ->
-                itemUi.rule.copy(order = index + 1)
+                val order = if (isDesc) size - index else index + 1
+                itemUi.rule.copy(order = order)
             }
 
             appDb.replaceRuleDao.update(*updatedRules.toTypedArray())

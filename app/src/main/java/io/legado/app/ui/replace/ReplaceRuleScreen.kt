@@ -9,12 +9,10 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -43,11 +41,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -59,7 +55,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
-import io.legado.app.ui.widget.components.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
@@ -71,6 +67,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
     ExperimentalMaterial3ExpressiveApi::class
@@ -117,6 +115,16 @@ fun ReplaceRuleScreen(
     var filePickerMode by remember { mutableStateOf(FilePickerSheetMode.EXPORT) }
     var isUploading by remember { mutableStateOf(false) }
     val clipboardManager = LocalClipboard.current
+
+    val hapticFeedback = LocalHapticFeedback.current
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        viewModel.moveItemInList(from.index, to.index)
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+    }
+
+    val canReorder = remember(uiState.sortMode) {
+        uiState.sortMode == "asc" || uiState.sortMode == "desc"
+    }
 
     val importDoc = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument(),
@@ -177,11 +185,9 @@ fun ReplaceRuleScreen(
                         .map { it.rule }
                     val json = Gson().toJson(rulesToExport)
 
-                    // [新增] 设置加载状态
                     isUploading = true
 
                     try {
-                        // 使用 runCatching 处理上传
                         runCatching {
                             uploadRepository.upload(
                                 fileName = "exportReplaceRule.json",
@@ -243,6 +249,12 @@ fun ReplaceRuleScreen(
                 snackbarHostState.showSnackbar(it.msg)
             }
             viewModel.cancelImport()
+        }
+    }
+
+    LaunchedEffect(reorderableState.isAnyItemDragging) {
+        if (!reorderableState.isAnyItemDragging) {
+            viewModel.saveSortOrder()
         }
     }
 
@@ -386,11 +398,23 @@ fun ReplaceRuleScreen(
                                 )
                                 DropdownMenuItem(
                                     text = { Text("名称升序") },
-                                    onClick = { viewModel.setSortMode("name_asc"); showMenu = false }
+                                    onClick = {
+                                        viewModel.setSortMode("name_asc")
+                                        showMenu = false
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("非时间排序模式下将禁用拖动")
+                                        }
+                                    }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("名称降序") },
-                                    onClick = { viewModel.setSortMode("name_desc"); showMenu = false }
+                                    onClick = {
+                                        viewModel.setSortMode("name_desc")
+                                        showMenu = false
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("非时间排序模式下将禁用拖动")
+                                        }
+                                    }
                                 )
                             }
                         }
@@ -432,7 +456,7 @@ fun ReplaceRuleScreen(
                                         text = title,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 12.dp),
+                                        modifier = Modifier.padding(horizontal = 16.dp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -473,30 +497,43 @@ fun ReplaceRuleScreen(
             ) {
                 items(rules, key = { it.id }) { ui ->
                     val isSelected = selectedRuleIds.contains(ui.id)
-
-                    ReplaceRuleItem(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp)
-                            .animateItem(),
-                        name = ui.name,
-                        isEnabled = ui.isEnabled,
-                        isSelected = isSelected,
-                        inSelectionMode = inSelectionMode,
-                        onEnabledChange = { enabled ->
-                            viewModel.update(ui.rule.copy(isEnabled = enabled))
-                        },
-                        onDelete = { showDeleteRuleDialog = ui.rule },
-                        onToTop = { viewModel.toTop(ui.rule) },
-                        onToBottom = { viewModel.toBottom(ui.rule) },
-                        onToggleSelection = {
-                            viewModel.toggleSelection(ui.id)
-                        },
-                        onClickEdit = {
-                            context.startActivity(
-                                ReplaceEditActivity.startIntent(context, ui.id)
-                            )
-                        }
-                    )
+                    ReorderableItem(
+                        state = reorderableState,
+                        key = ui.id
+                    ) { _ ->
+                        ReplaceRuleItem(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .then(
+                                    if (canReorder) {
+                                        Modifier.longPressDraggableHandle(
+                                            interactionSource = remember { MutableInteractionSource() }
+                                        )
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                                .animateItem(),
+                            name = ui.name,
+                            isEnabled = ui.isEnabled,
+                            isSelected = isSelected,
+                            inSelectionMode = inSelectionMode,
+                            onEnabledChange = { enabled ->
+                                viewModel.update(ui.rule.copy(isEnabled = enabled))
+                            },
+                            onDelete = { showDeleteRuleDialog = ui.rule },
+                            onToTop = { viewModel.toTop(ui.rule) },
+                            onToBottom = { viewModel.toBottom(ui.rule) },
+                            onToggleSelection = {
+                                viewModel.toggleSelection(ui.id)
+                            },
+                            onClickEdit = {
+                                context.startActivity(
+                                    ReplaceEditActivity.startIntent(context, ui.id)
+                                )
+                            }
+                        )
+                    }
                 }
             }
             if (inSelectionMode) {
@@ -692,42 +729,65 @@ private fun GroupManageBottomSheet(
         sheetState = sheetState
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(R.string.group_manage), style = MaterialTheme.typography.titleLarge)
+            Text(
+                modifier = Modifier.padding(bottom = 16.dp),
+                text = stringResource(R.string.group_manage),
+                style = MaterialTheme.typography.titleMedium
+            )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(groups) { group ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Card(modifier = Modifier.fillMaxWidth()) {
                         if (editingGroup == group) {
-                            OutlinedTextField(
-                                value = updatedGroupName,
-                                onValueChange = { updatedGroupName = it },
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = {
-                                viewModel.upGroup(group, updatedGroupName)
-                                editingGroup = null
-                            }) {
-                                Icon(Icons.Default.Check, contentDescription = stringResource(id = R.string.ok))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                OutlinedTextField(
+                                    value = updatedGroupName,
+                                    onValueChange = { updatedGroupName = it },
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(onClick = {
+                                    viewModel.upGroup(group, updatedGroupName)
+                                    editingGroup = null
+                                }) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = stringResource(id = R.string.ok)
+                                    )
+                                }
                             }
                         } else {
-                            Text(group, modifier = Modifier.weight(1f))
-                            Row {
-                                IconButton(onClick = {
-                                    editingGroup = group
-                                    updatedGroupName = group
-                                }) {
-                                    Icon(Icons.Default.Edit, contentDescription = stringResource(id = R.string.edit))
+                            ListItem(
+                                headlineContent = { Text(group) },
+                                trailingContent = {
+                                    Row {
+                                        IconButton(onClick = {
+                                            editingGroup = group
+                                            updatedGroupName = group
+                                        }) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = stringResource(id = R.string.edit)
+                                            )
+                                        }
+                                        IconButton(onClick = { viewModel.delGroup(group) }) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = stringResource(id = R.string.delete)
+                                            )
+                                        }
+                                    }
                                 }
-                                IconButton(onClick = { viewModel.delGroup(group) }) {
-                                    Icon(Icons.Default.Delete, contentDescription = stringResource(id = R.string.delete))
-                                }
-                            }
+                            )
                         }
                     }
                 }
@@ -785,6 +845,7 @@ fun ReplaceRuleItem(
                 AnimatedContent(targetState = name, label = "RuleNameAnimation") { targetName ->
                     Text(
                         text = targetName,
+                        style = MaterialTheme.typography.titleMedium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
