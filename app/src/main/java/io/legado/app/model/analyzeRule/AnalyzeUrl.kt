@@ -649,6 +649,11 @@ class AnalyzeUrl(
         return GlideUrl(url, GlideHeaders(headerMap))
     }
 
+    fun getUrlAndHeaders(): Pair<String, Map<String, String>> {
+        setCookie()
+        return Pair(url, headerMap)
+    }
+
     fun getUserAgent(): String {
         return headerMap.get(UA_NAME, true) ?: AppConfig.userAgent
     }

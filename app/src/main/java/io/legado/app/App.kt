@@ -10,6 +10,7 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.graphics.scale
+import coil.ImageLoader
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
@@ -114,7 +115,6 @@ class App : Application() {
                 )
             }
         }
-
         super.onCreate()
         FirebaseManager.init(this)
         CrashHandler(this)
