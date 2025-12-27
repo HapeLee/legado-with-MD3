@@ -54,6 +54,7 @@ import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
@@ -248,14 +249,16 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
     }
 
     private fun initBooksData() {
-        if (groupId == BookGroup.IdRoot) {
+        if (groupId == BookGroup.Companion.IdRoot) {
             if (isAdded) {
                 binding.collTopBar.title = getString(R.string.bookshelf)
                 binding.refreshLayout.isEnabled = true
                 enableRefresh = true
             }
         } else {
-            bookGroups.firstOrNull { groupId == it.groupId }?.let {
+            bookGroups.firstOrNull {
+                groupId == it.groupId
+            }?.let {
                 binding.collTopBar.title = it.groupName
                 binding.refreshLayout.isEnabled = it.enableRefresh
                 enableRefresh = it.enableRefresh
@@ -263,49 +266,48 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         }
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                appDb.bookDao.flowByGroup(groupId)
-                    .map { list ->
-                        val isDescending = AppConfig.bookshelfSortOrder == 1
-                        val sortType = AppConfig.getBookSortByGroupId(groupId)
+            appDb.bookDao.flowByGroup(groupId).map { list ->
+                //排序
+                val isDescending = AppConfig.bookshelfSortOrder == 1
 
-                        when (sortType) {
-                            1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
-                            else list.sortedBy { it.latestChapterTime }
+                val sortType = AppConfig.getBookSortByGroupId(groupId)
+                when (sortType) {
+                    1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
+                    else list.sortedBy { it.latestChapterTime }
 
-                            2 -> if (isDescending)
-                                list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
-                            else
-                                list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
+                    2 -> if (isDescending)
+                        list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
+                    else
+                        list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
 
-                            3 -> if (isDescending) list.sortedByDescending { it.order }
-                            else list.sortedBy { it.order }
+                    3 -> if (isDescending) list.sortedByDescending { it.order }
+                    else list.sortedBy { it.order }
 
-                            4 -> if (isDescending)
-                                list.sortedByDescending { max(it.latestChapterTime, it.durChapterTime) }
-                            else
-                                list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
+                    4 -> if (isDescending) list.sortedByDescending {
+                        max(it.latestChapterTime, it.durChapterTime)
+                    } else list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
 
-                            5 -> if (isDescending)
-                                list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
-                            else
-                                list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
+                    5 -> if (isDescending)
+                        list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
+                    else
+                        list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
 
-                            else ->
-                                if (isDescending) list.sortedByDescending { it.durChapterTime }
-                                else list.sortedBy { it.durChapterTime }
-                        }
-                    }
-                    .flowOn(Dispatchers.Default)
-                    .catch { AppLog.put("书架更新出错", it) }
-                    .collect { list ->
+                    else -> if (isDescending) list.sortedByDescending { it.durChapterTime }
+                    else list.sortedBy { it.durChapterTime }
+                }
 
-                        books = list
-                        booksAdapter.updateItems()
-                        val empty = getItemCount() > 0
-                        binding.emptyView.isGone = empty
-                        binding.refreshLayout.isEnabled = enableRefresh && empty
-                    }
+            }.flowWithLifecycleAndDatabaseChangeFirst(
+                viewLifecycleOwner.lifecycle,
+                Lifecycle.State.RESUMED,
+                AppDatabase.Companion.BOOK_TABLE_NAME
+            ).catch {
+                AppLog.put("书架更新出错", it)
+            }.conflate().flowOn(Dispatchers.Default).collect { list ->
+                if (view == null) return@collect
+                binding.emptyView.isGone = list.isNotEmpty()
+                binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
+                booksAdapter.updateItems()
+                delay(500)
             }
         }
     }

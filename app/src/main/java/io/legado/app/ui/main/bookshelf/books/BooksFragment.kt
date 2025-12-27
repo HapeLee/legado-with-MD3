@@ -23,6 +23,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
+import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
@@ -44,6 +45,7 @@ import io.legado.app.ui.main.bookshelf.books.styleDefalut.BooksAdapterListCompac
 import io.legado.app.utils.bookshelfLayoutGrid
 import io.legado.app.utils.bookshelfLayoutMode
 import io.legado.app.utils.cnCompare
+import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
@@ -52,6 +54,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
@@ -204,47 +207,51 @@ class BooksFragment() : BaseFragment(R.layout.fragment_books),
     private fun upRecyclerData() {
         booksFlowJob?.cancel()
         booksFlowJob = viewLifecycleOwner.lifecycleScope.launch {
+            appDb.bookDao.flowByGroup(groupId).map { list ->
+                //排序
 
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                val isDescending = AppConfig.bookshelfSortOrder == 1
 
-                appDb.bookDao.flowByGroup(groupId)
-                    .map { list ->
-                        val isDescending = AppConfig.bookshelfSortOrder == 1
+                when (bookSort) {
+                    1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
+                    else list.sortedBy { it.latestChapterTime }
 
-                        when (bookSort) {
-                            1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
-                            else list.sortedBy { it.latestChapterTime }
+                    2 -> if (isDescending)
+                        list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
+                    else
+                        list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
 
-                            2 -> if (isDescending)
-                                list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
-                            else
-                                list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
+                    3 -> if (isDescending) list.sortedByDescending { it.order }
+                    else list.sortedBy { it.order }
 
-                            3 -> if (isDescending) list.sortedByDescending { it.order }
-                            else list.sortedBy { it.order }
-
-                            4 -> if (isDescending)
-                                list.sortedByDescending { max(it.latestChapterTime, it.durChapterTime) }
-                            else
-                                list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
-
-                            5 -> if (isDescending)
-                                list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
-                            else
-                                list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
-
-                            else ->
-                                if (isDescending) list.sortedByDescending { it.durChapterTime }
-                                else list.sortedBy { it.durChapterTime }
-                        }
+                    4 -> if (isDescending) list.sortedByDescending {
+                        max(
+                            it.latestChapterTime,
+                            it.durChapterTime
+                        )
                     }
-                    .flowOn(Dispatchers.Default)
-                    .catch { AppLog.put("书架更新出错", it) }
-                    .collect { list ->
-                        binding.emptyView.isGone = list.isNotEmpty()
-                        binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
-                        booksAdapter.setItems(list)
-                    }
+                    else list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
+
+                    5 -> if (isDescending)
+                        list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
+                    else
+                        list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
+
+                    else -> if (isDescending) list.sortedByDescending { it.durChapterTime }
+                    else list.sortedBy { it.durChapterTime }
+                }
+            }.flowWithLifecycleAndDatabaseChangeFirst(
+                viewLifecycleOwner.lifecycle,
+                Lifecycle.State.RESUMED,
+                AppDatabase.BOOK_TABLE_NAME
+            ).catch {
+                AppLog.put("书架更新出错", it)
+            }.conflate().flowOn(Dispatchers.Default).collect { list ->
+                if (view == null) return@collect
+                binding.emptyView.isGone = list.isNotEmpty()
+                binding.refreshLayout.isEnabled = enableRefresh && list.isNotEmpty()
+                booksAdapter.setItems(list)
+                delay(500)
             }
         }
     }
