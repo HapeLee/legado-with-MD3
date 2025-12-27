@@ -50,6 +50,7 @@ interface BookGroupDao {
             SELECT 1 FROM books 
             WHERE totalChapterNum > 0 
             AND durChapterIndex >= totalChapterNum - 1
+            AND durChapterPos != 0
         ))
         
         or (groupId = ${BookGroup.IdError} and exists (select 1 from books where type & ${BookType.updateError} > 0))
