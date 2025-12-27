@@ -22,12 +22,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -43,23 +46,6 @@ import io.legado.app.ui.widget.components.SettingItem
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.TextCard
 
-@Preview(showBackground = true, name = "Light Mode")
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES, name = "Dark Mode")
-@Composable
-fun PreviewAboutScreen() {
-    AppTheme {
-        AboutScreen(
-            versionName = "1.0",
-            onCheckUpdate = {},
-            onOpenUrl = {},
-            onShowMdFile = { _, _ -> },
-            onSaveLog = {},
-            onCreateHeapDump = {},
-            onShowCrashLogs = {}
-        )
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AboutScreen(
@@ -74,9 +60,12 @@ fun AboutScreen(
 ) {
     LocalContext.current
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
+            MediumTopAppBar(
                 title = { Text(stringResource(R.string.about)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -85,7 +74,8 @@ fun AboutScreen(
                             contentDescription = stringResource(R.string.back)
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { padding ->

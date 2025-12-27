@@ -529,7 +529,7 @@ fun ExploreBookItem(
 
         Cover(
             path = book.coverUrl,
-            modifier = Modifier.width(70.dp),
+            modifier = Modifier.width(72.dp),
             badgeContent = badge)
 
         Spacer(modifier = Modifier.width(8.dp))
@@ -556,14 +556,14 @@ fun ExploreBookItem(
                 if (!latestChapter.isNullOrEmpty()) {
                     Text(
                         text = " • ",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray,
                         maxLines = 1
                     )
 
                     Text(
                         text = "最新: $latestChapter",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -575,7 +575,7 @@ fun ExploreBookItem(
             if (intro.isNotEmpty()) {
                 Text(
                     text = intro,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray,
                     maxLines = 2,
                     minLines = 2,

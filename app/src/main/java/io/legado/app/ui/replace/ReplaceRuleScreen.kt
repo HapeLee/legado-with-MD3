@@ -8,6 +8,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -34,6 +35,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -47,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.gson.Gson
 import io.legado.app.R
@@ -500,13 +503,27 @@ fun ReplaceRuleScreen(
                     ReorderableItem(
                         state = reorderableState,
                         key = ui.id
-                    ) { _ ->
+                    ) { isDragging ->
+
+                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
                         ReplaceRuleItem(
                             modifier = Modifier
                                 .padding(horizontal = 12.dp)
+                                .zIndex(if (isDragging) 1f else 0f)
+                                .shadow(
+                                    elevation = elevation,
+                                    shape = MaterialTheme.shapes.medium,
+                                    clip = false
+                                )
                                 .then(
                                     if (canReorder) {
                                         Modifier.longPressDraggableHandle(
+                                            onDragStarted = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                            },
+                                            onDragStopped = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                            },
                                             interactionSource = remember { MutableInteractionSource() }
                                         )
                                     } else {
