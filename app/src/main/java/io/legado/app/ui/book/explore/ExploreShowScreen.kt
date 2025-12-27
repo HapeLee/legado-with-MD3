@@ -529,6 +529,7 @@ fun ExploreBookItem(
 
         Cover(
             path = book.coverUrl,
+            modifier = Modifier.width(70.dp),
             badgeContent = badge)
 
         Spacer(modifier = Modifier.width(8.dp))
