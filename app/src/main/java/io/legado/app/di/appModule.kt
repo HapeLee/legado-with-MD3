@@ -1,14 +1,17 @@
 package io.legado.app.di
 
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
+import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import org.koin.android.ext.koin.androidApplication
@@ -41,4 +44,9 @@ val appModule = module {
             get()
         )
     }
+
+    // Search
+    single { SearchContentRepository() }
+    single { BookRepository() }
+    viewModel { SearchContentViewModel(get(), get()) }
 }

@@ -34,8 +34,10 @@ fun SearchBarSection(
         shape = RoundedCornerShape(32.dp),
         color = backgroundColor
     ) {
-
         TextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
             value = query,
             onValueChange = onQueryChange,
             placeholder = { Text(placeholder) },
