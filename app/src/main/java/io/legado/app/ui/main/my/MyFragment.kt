@@ -1,13 +1,20 @@
 package io.legado.app.ui.main.my
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
 import androidx.preference.Preference
 import io.legado.app.R
+import io.legado.app.ui.theme.AppTheme
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
@@ -26,6 +33,7 @@ import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.main.MainFragmentInterface
+import io.legado.app.ui.main.explore.ExploreFragment
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
@@ -36,136 +44,80 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import org.koin.androidx.compose.koinViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MyFragment() : BaseFragment(R.layout.fragment_my_config), MainFragmentInterface {
+class MyFragment : Fragment(), MainFragmentInterface {
 
-    constructor(position: Int) : this() {
-        val bundle = Bundle()
-        bundle.putInt("position", position)
-        arguments = bundle
-    }
+    companion object {
+        private const val ARG_POSITION = "position"
 
-    override val position: Int? get() = arguments?.getInt("position")
-
-    private val binding by viewBinding(FragmentMyConfigBinding::bind)
-
-    override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        setSupportToolbar(binding.topBar)
-        val fragmentTag = "prefFragment"
-        var preferenceFragment = childFragmentManager.findFragmentByTag(fragmentTag)
-        if (preferenceFragment == null) preferenceFragment = MyPreferenceFragment()
-        childFragmentManager.beginTransaction()
-            .replace(R.id.pre_fragment, preferenceFragment, fragmentTag).commit()
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S)
-            binding.titleBar.fitsSystemWindows = true
-    }
-
-    override fun onCompatCreateOptionsMenu(menu: Menu) {
-        menuInflater.inflate(R.menu.main_my, menu)
-    }
-
-    override fun onCompatOptionsItemSelected(item: MenuItem) {
-        when (item.itemId) {
-            R.id.menu_help -> showHelp("appHelp")
+        fun newInstance(position: Int): MyFragment {
+            return MyFragment().apply {
+                arguments = Bundle().apply {
+                    putInt(ARG_POSITION, position)
+                }
+            }
         }
     }
 
-    /**
-     * 配置
-     */
-    class MyPreferenceFragment : PreferenceFragment(),
-        SharedPreferences.OnSharedPreferenceChangeListener {
+    override val position: Int by lazy {
+        arguments?.getInt(ARG_POSITION) ?: 0
+    }
 
-        override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
-            putPrefBoolean(PreferKey.webService, WebService.isRun)
-            addPreferencesFromResource(R.xml.pref_main)
-            findPreference<SwitchPreference>("webService")?.onLongClick {
-                if (!WebService.isRun) {
-                    return@onLongClick false
+    private val viewModel: MyViewModel by viewModel()
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+
+        return ComposeView(requireContext()).apply {
+
+            setViewCompositionStrategy(
+                ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+            )
+
+            setContent {
+                AppTheme{
+                    MyScreen(
+                        viewModel = viewModel,
+                        onNavigate = { event ->
+                            handleEvent(event)
+                        }
+                    )
                 }
-                context?.selector(arrayListOf("复制地址", "浏览器打开")) { _, i ->
-                    when (i) {
-                        0 -> context?.sendToClip(it.summary.toString())
-                        1 -> context?.openUrl(it.summary.toString())
+            }
+        }
+    }
+
+    private fun handleEvent(event: PrefClickEvent) {
+        when (event) {
+
+            is PrefClickEvent.StartActivity -> {
+                startActivity(
+                    Intent(requireContext(), event.destination).apply {
+                        event.configTag?.let {
+                            putExtra("configTag", it)
+                        }
                     }
-                }
-                true
+                )
             }
-            observeEventSticky<String>(EventBus.WEB_SERVICE) {
-                findPreference<SwitchPreference>(PreferKey.webService)?.let {
-                    it.isChecked = WebService.isRun
-                    it.summary = if (WebService.isRun) {
-                        WebService.hostAddress
-                    } else {
-                        getString(R.string.web_service_desc)
-                    }
-                }
-            }
+
+            is PrefClickEvent.OpenUrl ->
+                requireContext().openUrl(event.url)
+
+            is PrefClickEvent.CopyUrl ->
+                requireContext().sendToClip(event.url)
+
+            is PrefClickEvent.ShowMd ->
+                showHelp(event.title)
+
+            PrefClickEvent.ExitApp ->
+                requireActivity().finish()
+
+            else -> Unit
         }
-
-        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-            super.onViewCreated(view, savedInstanceState)
-            //listView.setEdgeEffectColor(primaryColor)
-        }
-
-        override fun onResume() {
-            super.onResume()
-            preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(this)
-        }
-
-        override fun onPause() {
-            preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
-            super.onPause()
-        }
-
-        override fun onSharedPreferenceChanged(
-            sharedPreferences: SharedPreferences?,
-            key: String?
-        ) {
-            when (key) {
-                PreferKey.webService -> {
-                    if (requireContext().getPrefBoolean("webService")) {
-                        WebService.start(requireContext())
-                    } else {
-                        WebService.stop(requireContext())
-                    }
-                }
-
-                "recordLog" -> LogUtils.upLevel()
-            }
-        }
-
-        override fun onPreferenceTreeClick(preference: Preference): Boolean {
-            when (preference.key) {
-                "bookSourceManage" -> startActivity<BookSourceActivity>()
-                "replaceManage" -> startActivity<ReplaceRuleActivity>()
-                "dictRuleManage" -> startActivity<DictRuleActivity>()
-                "txtTocRuleManage" -> startActivity<TxtTocRuleActivity>()
-                "bookmark" -> startActivity<AllBookmarkActivity>()
-                "setting" -> startActivity<ConfigActivity> {
-                    putExtra("configTag", ConfigTag.OTHER_CONFIG)
-                }
-
-                "web_dav_setting" -> startActivity<ConfigActivity> {
-                    putExtra("configTag", ConfigTag.BACKUP_CONFIG)
-                }
-
-                "theme_setting" -> startActivity<ConfigActivity> {
-                    putExtra("configTag", ConfigTag.THEME_CONFIG)
-                }
-
-                "read_setting" -> startActivity<ConfigActivity> {
-                    putExtra("configTag", ConfigTag.READ_CONFIG)
-                }
-
-                "fileManage" -> startActivity<FileManageActivity>()
-                "readRecord" -> startActivity<ReadRecordActivity>()
-                "about" -> startActivity<AboutActivity>()
-                "exit" -> activity?.finish()
-            }
-            return super.onPreferenceTreeClick(preference)
-        }
-
-
     }
 }

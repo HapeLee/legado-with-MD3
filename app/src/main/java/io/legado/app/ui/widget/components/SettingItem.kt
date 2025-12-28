@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +32,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.legado.app.base.AppTypography
 
 @Preview(showBackground = true)
 @Composable
@@ -101,12 +101,16 @@ fun SettingItem(
     description: String? = null,
     option: String? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     ListItem(
         modifier = modifier
             .clip(RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         leadingContent = {
             when {
                 painter != null -> {

@@ -537,7 +537,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                 idBookshelf4 -> BookshelfFragment4(position)
                 idExplore -> ExploreFragment(position)
                 idRss -> RssFragment(position)
-                else -> MyFragment(position)
+                else -> MyFragment.newInstance(position)
             }
 
             fragmentMap[getFragmentId(position)] = fragment
