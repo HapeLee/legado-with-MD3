@@ -1,11 +1,8 @@
 package io.legado.app.ui.main.my
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
@@ -15,13 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Rule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Web
@@ -30,12 +26,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -195,6 +189,19 @@ fun MyScreen(
                             PrefClickEvent.StartActivity(
                                 ConfigActivity::class.java,
                                 ConfigTag.READ_CONFIG
+                            )
+                        )
+                    }
+                )
+                SettingItem(
+                    title = stringResource(R.string.other_setting),
+                    description = stringResource(R.string.other_setting_s),
+                    imageVector = Icons.Default.Settings,
+                    onClick = {
+                        onNavigate(
+                            PrefClickEvent.StartActivity(
+                                ConfigActivity::class.java,
+                                ConfigTag.OTHER_CONFIG
                             )
                         )
                     }
