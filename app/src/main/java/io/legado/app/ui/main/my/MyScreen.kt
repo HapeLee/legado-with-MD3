@@ -14,7 +14,10 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -43,11 +46,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.about.AboutActivity
+import io.legado.app.ui.book.bookmark.AllBookmarkActivity
+import io.legado.app.ui.book.readRecord.ReadRecordActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.config.ConfigActivity
 import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
+import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.widget.components.SettingItem
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -242,6 +248,27 @@ fun MyScreen(
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = stringResource(R.string.other)) {
+                SettingItem(
+                    title = stringResource(R.string.bookmark),
+                    imageVector = Icons.Default.Bookmark,
+                    onClick = {
+                        onNavigate(PrefClickEvent.StartActivity(AllBookmarkActivity::class.java))
+                    }
+                )
+                SettingItem(
+                    title = stringResource(R.string.read_record),
+                    imageVector = Icons.Default.History,
+                    onClick = {
+                        onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
+                    }
+                )
+                SettingItem(
+                    title = stringResource(R.string.file_manage),
+                    imageVector = Icons.Default.Folder,
+                    onClick = {
+                        onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
+                    }
+                )
                 SettingItem(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
