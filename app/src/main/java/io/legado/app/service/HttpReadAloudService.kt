@@ -265,7 +265,6 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0, 1)
             .splitToSequence("\n")
             .filter { it.isNotEmpty() }
-            .take(10)
             .toList()
         contentList.forEach { content ->
             currentCoroutineContext().ensureActive()
@@ -436,7 +435,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
             if ((!it.name.startsWith(titleMd5)
-                        && System.currentTimeMillis() - it.lastModified() > 600000)
+                        && System.currentTimeMillis() - it.lastModified() > 1800000)
                 || isSilentSound
             ) {
                 FileUtils.delete(it.absolutePath)
