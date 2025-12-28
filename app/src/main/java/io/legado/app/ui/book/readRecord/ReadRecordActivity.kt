@@ -1,9 +1,9 @@
 package io.legado.app.ui.book.readRecord
 
 import android.os.Bundle
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
+import io.legado.app.base.AppTheme
 import io.legado.app.data.appDb
 import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +22,8 @@ class ReadRecordActivity : BaseComposeActivity() {
 
     @Composable
     override fun Content() {
-        MaterialTheme {
-            val viewModel: ReadRecordViewModel = koinViewModel()
+        AppTheme {
             ReadRecordScreen(
-                viewModel = viewModel,
                 onBackClick = { finish() },
                 onBookClick = { bookName ->
                     lifecycleScope.launch {

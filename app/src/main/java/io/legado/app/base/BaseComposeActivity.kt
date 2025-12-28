@@ -45,6 +45,7 @@ abstract class BaseComposeActivity(
 
         super.onCreate(savedInstanceState)
 
+        setupSystemBar()
         // Compose 入口
         setContent {
             AppTheme {
@@ -53,8 +54,6 @@ abstract class BaseComposeActivity(
                 }
             }
         }
-
-        setupSystemBar()
 
         if (imageBg) {
             upBackgroundImage()

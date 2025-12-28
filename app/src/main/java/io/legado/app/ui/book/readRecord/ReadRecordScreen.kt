@@ -66,6 +66,7 @@ import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import kotlinx.coroutines.delay
+import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
@@ -78,7 +79,7 @@ import kotlin.collections.sumOf
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReadRecordScreen(
-    viewModel: ReadRecordViewModel,
+    viewModel: ReadRecordViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onBookClick: (String) -> Unit
 ) {

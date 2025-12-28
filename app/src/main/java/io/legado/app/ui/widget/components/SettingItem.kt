@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.Text
@@ -95,85 +98,64 @@ fun SettingItem(
     painter: Painter? = null,
     imageVector: ImageVector? = null,
     title: String,
+    description: String? = null,
     option: String? = null,
     trailingContent: @Composable (() -> Unit)? = null,
-    description: String? = null,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
+    ListItem(
+        modifier = modifier
             .clip(RoundedCornerShape(4.dp))
-            .then(modifier)
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp)
-            .padding(vertical = 12.dp)
-            .heightIn(min = 56.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+            .clickable(onClick = onClick),
+        leadingContent = {
+            when {
+                painter != null -> {
+                    Icon(
+                        painter = painter,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-        painter?.let {
-            Icon(
-                modifier = Modifier.padding(end = 8.dp).size(24.dp),
-                painter = it,
-                tint = colorScheme.onSurfaceVariant,
-                contentDescription = "Icon"
-            )
-        }
-
-        imageVector?.let {
-            Icon(
-                imageVector = it,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .size(24.dp),
-                tint = colorScheme.onSurfaceVariant
-            )
-        }
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = if (description == null)
-                Arrangement.Center
-            else
-                Arrangement.spacedBy(3.dp)
-        ) {
-
+                imageVector != null -> {
+                    Icon(
+                        imageVector = imageVector,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        headlineContent = {
             Text(
                 text = title,
-                color = colorScheme.onSurface,
-                style = AppTypography.titleMedium,
-                fontWeight = FontWeight.Normal
+                style = MaterialTheme.typography.titleMedium
             )
+        },
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                description?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-            description?.let {
-                Text(
-                    text = it,
-                    color = colorScheme.onSurfaceVariant,
-                    style = AppTypography.labelMedium
-                )
+                option?.let {
+                    AnimatedTextLine(
+                        text = it,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-
-            option?.let {
-                AnimatedTextLine(
-                    text = it,
-                    style = AppTypography.labelMedium,
-                    color = colorScheme.primary,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        trailingContent?.let { composable ->
-            Box(
-                modifier = Modifier
-                    .width(55.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                composable()
-            }
-        }
-    }
+        },
+        trailingContent = trailingContent,
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        )
+    )
 }

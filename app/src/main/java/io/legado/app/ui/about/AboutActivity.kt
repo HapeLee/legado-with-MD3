@@ -43,6 +43,7 @@ class AboutActivity : BaseComposeActivity() {
     @Composable
     override fun Content() {
         AboutScreen(
+            onBack = { finish() },
             onCheckUpdate = { checkUpdate() },
             onOpenUrl = { openUrl(it) },
             onShowMdFile = { title, file -> showMdFile(title, file) },
