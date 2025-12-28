@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import io.legado.app.service.WebService
 
 /**
  * 主界面
@@ -136,6 +137,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             binding.viewPagerMain.fitsSystemWindows = true
         // 其他初始化逻辑
         setupBackCallback()
+        WebService.startForeground(this)
         upBottomMenu()
         initView()
         upHomePage()
