@@ -196,7 +196,6 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0, 1)
             .splitToSequence("\n")
             .filter { it.isNotEmpty() }
-            .take(10)
             .toList()
         contentList.forEach { content ->
             currentCoroutineContext().ensureActive()
