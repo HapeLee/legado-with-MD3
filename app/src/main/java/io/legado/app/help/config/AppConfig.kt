@@ -26,6 +26,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val isCronet = appCtx.getPrefBoolean(PreferKey.cronet)
     var useAntiAlias = appCtx.getPrefBoolean(PreferKey.antiAlias)
     var userAgent: String = getPrefUserAgent()
+
     var isEInkMode = appCtx.getPrefString("app_theme", "0") == "4"
     var isTransparent = appCtx.getPrefString("app_theme", "0") == "13"
     var customMode = appCtx.getPrefString(PreferKey.customMode)
@@ -51,6 +52,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var mangaClickActionBR = appCtx.getPrefInt(PreferKey.mangaClickActionBR, 1)
 
     var themeMode = appCtx.getPrefString(PreferKey.themeMode, "0")
+    var AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
     var useDefaultCover = appCtx.getPrefBoolean(PreferKey.useDefaultCover, false)
     var optimizeRender = CanvasRecorderFactory.isSupport
             && appCtx.getPrefBoolean(PreferKey.optimizeRender, false)
@@ -58,6 +60,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
+
+            PreferKey.appTheme -> {
+                AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
+            }
 
             PreferKey.themeMode -> {
                 themeMode = appCtx.getPrefString(PreferKey.themeMode, "0")

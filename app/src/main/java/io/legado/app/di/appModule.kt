@@ -12,6 +12,7 @@ import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
+import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import org.koin.android.ext.koin.androidApplication
@@ -49,4 +50,6 @@ val appModule = module {
     single { SearchContentRepository() }
     single { BookRepository() }
     viewModel { SearchContentViewModel(get(), get()) }
+
+    viewModel { MyViewModel(get()) }
 }

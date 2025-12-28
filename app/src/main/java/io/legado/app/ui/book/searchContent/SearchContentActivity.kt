@@ -2,7 +2,7 @@ package io.legado.app.ui.book.searchContent
 
 import android.os.Bundle
 import androidx.compose.runtime.Composable
-import io.legado.app.base.AppTheme
+import io.legado.app.ui.theme.AppTheme
 import io.legado.app.base.BaseComposeActivity
 
 class SearchContentActivity : BaseComposeActivity() {
