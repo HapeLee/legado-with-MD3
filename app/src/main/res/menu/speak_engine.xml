@@ -4,6 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/menu_clear"
+        android:title="@string/clear"
+        android:icon="@drawable/ic_clear_all"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/menu_add"
         android:icon="@drawable/ic_add"
         android:title="@string/add"

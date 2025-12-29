@@ -330,15 +330,15 @@ fun ReplaceRuleScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
-                val titleText = remember(isUploading, inSelectionMode, selectedRuleIds.size, rules.size) {
-                    when {
-                        isUploading -> "正在上传..."
-                        inSelectionMode -> "已选择 ${selectedRuleIds.size}/${rules.size}"
-                        else -> "替换规则"
-                    }
-                }
                 MediumTopAppBar(
                     title = {
+                        val titleText = remember(isUploading, inSelectionMode, selectedRuleIds.size, rules.size) {
+                            when {
+                                isUploading -> "正在上传..."
+                                inSelectionMode -> "已选择 ${selectedRuleIds.size}/${rules.size}"
+                                else -> "替换规则"
+                            }
+                        }
                         AnimatedText(
                             text = titleText
                         )
@@ -485,12 +485,12 @@ fun ReplaceRuleScreen(
     ) { padding ->
         Box(
             modifier = Modifier
+                .padding(padding)
                 .fillMaxSize()
         ) {
             FastScrollLazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .padding(padding)
                     .fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = 8.dp,
@@ -561,7 +561,6 @@ fun ReplaceRuleScreen(
                     onSelectionChange = viewModel::setSelection,
                     haptic = haptic,
                     modifier = Modifier
-                        .padding(padding)
                         .fillMaxHeight()
                         .width(60.dp)
                         .align(Alignment.TopStart)

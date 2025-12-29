@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
@@ -121,7 +122,7 @@ fun SearchContentScreen(
                         } else {
                             "搜索内容"
                         }
-                        AnimatedTextLine(
+                        AnimatedText(
                             text = title
                         )
                     },

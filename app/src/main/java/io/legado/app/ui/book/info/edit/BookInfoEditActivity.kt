@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
-import io.legado.app.base.AppTheme
+import io.legado.app.ui.theme.AppTheme
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 

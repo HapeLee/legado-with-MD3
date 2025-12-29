@@ -3,8 +3,12 @@ package io.legado.app.ui.widget.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,7 +18,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Settings Group Container by https://github.com/wxxsfxyzm/InstallerX-Revived
- *
+ * Edit by @Kudomaga
  * @param title the title of the group
  * @param content a list of composable that will be displayed in the group
  * @param modifier Modifier
@@ -23,61 +27,29 @@ import androidx.compose.ui.unit.dp
 fun SplicedColumnGroup(
     modifier: Modifier = Modifier,
     title: String = "",
-    content: List<@Composable () -> Unit>,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    if (content.isEmpty()) return
-
-    val cornerRadius = 16.dp
-    val connectionRadius = 5.dp
-    // Define shapes for different positions.
-    val topShape = RoundedCornerShape(
-        topStart = cornerRadius,
-        topEnd = cornerRadius,
-        bottomStart = connectionRadius,
-        bottomEnd = connectionRadius
-    )
-    val middleShape = RoundedCornerShape(connectionRadius)
-    val bottomShape = RoundedCornerShape(
-        topStart = connectionRadius,
-        topEnd = connectionRadius,
-        bottomStart = cornerRadius,
-        bottomEnd = cornerRadius
-    )
-    val singleShape = RoundedCornerShape(cornerRadius)
-
     Column(modifier = modifier.padding(vertical = 8.dp)) {
-        // Group title
-        if (title != "")
+        if (title.isNotEmpty()) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 12.dp, bottom = 8.dp)
             )
+        }
 
-        // The container for setting items.
-        Column(
-            modifier = Modifier.clip(
-                // Clip the whole column to ensure content stays within the rounded bounds.
-                if (content.size == 1) singleShape else RoundedCornerShape(cornerRadius)
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
             ),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            content.forEachIndexed { index, itemContent ->
-                // Determine the shape based on the pkg's position.
-                val shape = when {
-                    content.size == 1 -> singleShape
-                    index == 0 -> topShape
-                    index == content.size - 1 -> bottomShape
-                    else -> middleShape
-                }
-
-                // Apply background with the correct shape to the pkg.
-                Column(
-                    modifier = Modifier.background(MaterialTheme.colorScheme.surfaceBright, shape)
-                ) {
-                    itemContent()
-                }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                content()
             }
         }
     }

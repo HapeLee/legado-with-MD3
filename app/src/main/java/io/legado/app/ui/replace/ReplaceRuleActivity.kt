@@ -3,17 +3,21 @@ package io.legado.app.ui.replace
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import io.legado.app.base.AppTheme
+import androidx.compose.runtime.Composable
+import io.legado.app.ui.theme.AppTheme
+import io.legado.app.base.BaseComposeActivity
 
-class ReplaceRuleActivity : AppCompatActivity() {
+class ReplaceRuleActivity : BaseComposeActivity() {
+
+    @Composable
+    override fun Content() {
+        AppTheme {
+            ReplaceRuleScreen(onBackClick = { finish() })
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            AppTheme {
-                ReplaceRuleScreen(onBackClick = { finish() })
-            }
-        }
     }
 
 }
