@@ -383,5 +383,6 @@ dependencies {
     implementation(libs.koin.compose.viewmodel)
 
     implementation(libs.reorderable)
+    implementation(libs.material.kolor)
 
 }
