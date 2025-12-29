@@ -7,40 +7,27 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.materialkolor.PaletteStyle
 import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.theme.AppColorSchemes.AugustDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.AugustLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.CarlottaDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.CarlottaLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.ElinkDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.ElinkLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.GRDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.GRLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.KoharuDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.KoharuLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.LemonDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.LemonLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.MujikaDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.MujikaLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.PhoebeDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.PhoebeLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.SoraDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.SoraLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.TransparentDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.TransparentLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.WHDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.WHLightColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.YuukaDarkColorScheme
-import io.legado.app.ui.theme.AppColorSchemes.YuukaLightColorScheme
+import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.colorScheme.AugustColorScheme
+import io.legado.app.ui.theme.colorScheme.CarlottaColorScheme
+import io.legado.app.ui.theme.colorScheme.ElinkColorScheme
+import io.legado.app.ui.theme.colorScheme.GRColorScheme
+import io.legado.app.ui.theme.colorScheme.KoharuColorScheme
+import io.legado.app.ui.theme.colorScheme.LemonColorScheme
+import io.legado.app.ui.theme.colorScheme.MujikaColorScheme
+import io.legado.app.ui.theme.colorScheme.PhoebeColorScheme
+import io.legado.app.ui.theme.colorScheme.SoraColorScheme
+import io.legado.app.ui.theme.colorScheme.TransparentColorScheme
+import io.legado.app.ui.theme.colorScheme.WHColorScheme
+import io.legado.app.ui.theme.colorScheme.YuukaColorScheme
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,49 +36,50 @@ fun AppTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
-    val motionScheme = MotionScheme.expressive()
     val appThemeMode by ThemeState.themeMode.collectAsState()
+    val isAmoled = AppConfig.pureBlack
 
-    var colorScheme = when (appThemeMode) {
-        AppThemeMode.Dynamic, AppThemeMode.ContentBased -> {
+    val colorScheme = when (appThemeMode) {
+        AppThemeMode.Dynamic -> {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             } else {
-                if (darkTheme) darkColorScheme() else lightColorScheme()
+                GRColorScheme.getColorScheme(darkTheme, isAmoled)
             }
         }
-        AppThemeMode.GR -> if (darkTheme) GRDarkColorScheme else GRLightColorScheme
-        AppThemeMode.Lemon -> if (darkTheme) LemonDarkColorScheme else LemonLightColorScheme
-        AppThemeMode.WH -> if (darkTheme) WHDarkColorScheme else WHLightColorScheme
-        AppThemeMode.Elink -> if (darkTheme) ElinkDarkColorScheme else ElinkLightColorScheme
-        AppThemeMode.Sora -> if (darkTheme) SoraDarkColorScheme else SoraLightColorScheme
-        AppThemeMode.August -> if (darkTheme) AugustDarkColorScheme else AugustLightColorScheme
-        AppThemeMode.Carlotta -> if (darkTheme) CarlottaDarkColorScheme else CarlottaLightColorScheme
-        AppThemeMode.Koharu -> if (darkTheme) KoharuDarkColorScheme else KoharuLightColorScheme
-        AppThemeMode.Yuuka -> if (darkTheme) YuukaDarkColorScheme else YuukaLightColorScheme
-        AppThemeMode.Phoebe -> if (darkTheme) PhoebeDarkColorScheme else PhoebeLightColorScheme
-        AppThemeMode.Mujika -> if (darkTheme) MujikaDarkColorScheme else MujikaLightColorScheme
-        AppThemeMode.Transparent -> if (darkTheme) TransparentDarkColorScheme else TransparentLightColorScheme
-    }
-
-    if (darkTheme && AppConfig.pureBlack) {
-        colorScheme = colorScheme.copy(
-            background = Color.Black,
-            surface = Color.Black
-        )
+        AppThemeMode.CUSTOM -> {
+            CustomColorScheme(
+                context = context,
+                seed = context.primaryColor,
+                style = PaletteStyle.Vibrant,
+            ).getColorScheme(darkTheme, isAmoled)
+        }
+        else -> {
+            val scheme = colorSchemes.getOrDefault(appThemeMode, GRColorScheme)
+            scheme.getColorScheme(darkTheme, isAmoled)
+        }
     }
 
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
-        typography = AppTypography,
-        motionScheme = motionScheme,
-        shapes = AppShapes,
+        typography = Typography(),
+        motionScheme = MotionScheme.expressive(),
+        shapes = Shapes(),
         content = content
     )
 }
 
-// Material3 Typography
-val AppTypography = Typography()
-
-// Material3 Shapes
-val AppShapes = Shapes()
+private val colorSchemes: Map<AppThemeMode, BaseColorScheme> = mapOf(
+    AppThemeMode.GR to GRColorScheme,
+    AppThemeMode.Lemon to LemonColorScheme,
+    AppThemeMode.WH to WHColorScheme,
+    AppThemeMode.Elink to ElinkColorScheme,
+    AppThemeMode.Sora to SoraColorScheme,
+    AppThemeMode.August to AugustColorScheme,
+    AppThemeMode.Carlotta to CarlottaColorScheme,
+    AppThemeMode.Koharu to KoharuColorScheme,
+    AppThemeMode.Yuuka to YuukaColorScheme,
+    AppThemeMode.Phoebe to PhoebeColorScheme,
+    AppThemeMode.Mujika to MujikaColorScheme,
+    AppThemeMode.Transparent to TransparentColorScheme,
+)

@@ -42,6 +42,7 @@ markwon = "4.6.2"
 material = "1.14.0-alpha08"
 material3 = "1.5.0-alpha11"
 material3IconsExtended = "1.7.8"
+materialKolor = "4.0.5"
 media = "1.7.1"
 media3 = "1.8.0"
 nanoHttpd = "2.3.1"
@@ -139,6 +140,7 @@ lifecycle-common-java8 = { module = "androidx.lifecycle:lifecycle-common-java8",
 lifecycle-service = { module = "androidx.lifecycle:lifecycle-service", version.ref = "lifecycle" }
 
 markdown-compose = { module = "com.mikepenz:markdown-compose", version.ref = "markdownCompose" }
+material-kolor = { module = "com.materialkolor:material-kolor", version.ref = "materialKolor" }
 media-media = { module = "androidx.media:media", version.ref = "media" }
 media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
