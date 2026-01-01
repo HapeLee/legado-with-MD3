@@ -1,8 +1,7 @@
 package io.legado.app.ui.book.readRecord
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -182,128 +182,134 @@ fun ReadRecordScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-            val isEmpty = when (displayMode) {
-                DisplayMode.AGGREGATE -> state.groupedRecords.isEmpty()
-                DisplayMode.TIMELINE -> state.timelineRecords.isEmpty()
-                DisplayMode.LATEST -> state.latestRecords.isEmpty()
+            val contentState = when {
+                state.isLoading -> "LOADING"
+                (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
+                        (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
+                        (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
+                else -> "CONTENT"
             }
-            Crossfade(
-                targetState = isEmpty,
-                animationSpec = tween(durationMillis = 500),
-                label = "ContentCrossfade"
-            ) { isListEmpty ->
-
-                LazyColumn(
-                    modifier = Modifier
-                        .nestedScroll(scrollBehavior.nestedScrollConnection)
-                ) {
-
-                    item {
-                        val selectedDate = state.selectedDate
-
-                        if (selectedDate != null) {
-                            val dateKey = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                            val dailyDetails = state.groupedRecords[dateKey] ?: emptyList()
-
-                            if (dailyDetails.isNotEmpty()) {
-                                val distinctBooks = dailyDetails.map { it.bookName }.distinct()
-                                val dailyTime = dailyDetails.sumOf { it.readTime }
-
-                                ReadingSummaryCard(
-                                    title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
-                                    bookCount = distinctBooks.size,
-                                    totalTimeMillis = dailyTime,
-                                    bookNamesForCover = distinctBooks.take(3),
-                                    viewModel = viewModel,
-                                    onClick = {  }
-                                )
-                            }
-                        } else {
-                            val allBooksCount = state.latestRecords.size
-                            val totalTime = state.totalReadTime
-
-                            if (allBooksCount > 0) {
-                                ReadingSummaryCard(
-                                    title = "累计阅读成就",
-                                    bookCount = allBooksCount,
-                                    totalTimeMillis = totalTime,
-                                    bookNamesForCover = state.latestRecords.take(5).map { it.bookName },
-                                    viewModel = viewModel,
-                                    onClick = {  }
-                                )
-                            }
-                        }
+            AnimatedContent(
+                targetState = contentState,
+                label = "MainContentAnimation"
+            ) { targetState ->
+                when (targetState) {
+                    "LOADING" -> {
+                        EmptyMessageView(
+                            modifier = Modifier.fillMaxSize(),
+                            message = "加载中"
+                        )
                     }
 
-                    item {
-                        if (isListEmpty){
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                EmptyMessageView(
-                                    message = "没有记录"
-                                )
-                            }
-                        }
+                    "EMPTY" -> {
+                        EmptyMessageView(
+                            modifier = Modifier.fillMaxSize(),
+                            message = "没有记录"
+                        )
                     }
 
-                    when(displayMode){
-                        DisplayMode.AGGREGATE -> {
-                            state.groupedRecords.forEach { (date, details) ->
-
-                                val dailyTotalTime = details.sumOf { it.readTime }
-
-                                stickyHeader {
-                                    DateHeader(date, dailyTotalTime)
-                                }
-
-                                items(
-                                    items = details,
-                                    key = { it.bookName + it.readTime.toString() }
-                                ) { detail ->
-                                    ReadRecordItem(
-                                        detail = detail,
-                                        viewModel = viewModel,
-                                        onClick = { onBookClick(detail.bookName) },
-                                        onDelete = { viewModel.deleteDetail(detail) },
-                                        modifier = Modifier.animateItem()
-                                    )
-                                }
+                    "CONTENT" -> {
+                        LazyColumn(
+                            modifier = Modifier
+                                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        ) {
+                            item(key = "summary_card") {
+                                SummarySection(state, viewModel)
                             }
-                        }
-                        DisplayMode.TIMELINE -> {
-                            state.timelineRecords.forEach { (date, sessions) ->
-                                stickyHeader { DateHeader(date) }
 
-                                val timelineItems = sessions.mapIndexed { index, session ->
-                                    val showHeader = true
-                                    TimelineItem(session, showHeader)
-                                }
-
-                                items(items = timelineItems, key = { it.session.id }) { item ->
-                                    TimelineSessionItem(
-                                        item = item,
-                                        onBookClick = onBookClick,
-                                        viewModel = viewModel
-                                    )
-                                }
-                            }
-                        }
-                        DisplayMode.LATEST -> {
-                            items(items = state.latestRecords, key = { it.bookName + it.deviceId }) { record ->
-                                LatestReadItem(
-                                    record = record,
-                                    viewModel = viewModel,
-                                    onClick = { onBookClick(record.bookName) },
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
+                            renderListByMode(displayMode, state, viewModel, onBookClick)
                         }
                     }
                 }
+            }
+        }
+    }
+}
 
+@Composable
+fun SummarySection(
+    state: ReadRecordUiState,
+    viewModel: ReadRecordViewModel
+) {
+    val selectedDate = state.selectedDate
+
+    if (selectedDate != null) {
+        val dateKey = selectedDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val dailyDetails = state.groupedRecords[dateKey] ?: emptyList()
+
+        if (dailyDetails.isNotEmpty()) {
+            val distinctBooks = dailyDetails.map { it.bookName }.distinct()
+            val dailyTime = dailyDetails.sumOf { it.readTime }
+
+            ReadingSummaryCard(
+                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                bookCount = distinctBooks.size,
+                totalTimeMillis = dailyTime,
+                bookNamesForCover = distinctBooks.take(3),
+                viewModel = viewModel,
+                onClick = { }
+            )
+        }
+    } else {
+        val allBooksCount = state.latestRecords.size
+        val totalTime = state.totalReadTime
+
+        if (allBooksCount > 0) {
+            ReadingSummaryCard(
+                title = "累计阅读成就",
+                bookCount = allBooksCount,
+                totalTimeMillis = totalTime,
+                bookNamesForCover = state.latestRecords.take(5).map { it.bookName },
+                viewModel = viewModel,
+                onClick = {  }
+            )
+        }
+    }
+}
+
+fun LazyListScope.renderListByMode(
+    displayMode: DisplayMode,
+    state: ReadRecordUiState,
+    viewModel: ReadRecordViewModel,
+    onBookClick: (String) -> Unit
+) {
+    when (displayMode) {
+        DisplayMode.AGGREGATE -> {
+            state.groupedRecords.forEach { (date, details) ->
+                stickyHeader(key = "header_$date") {
+                    DateHeader(date, details.sumOf { it.readTime })
+                }
+                items(items = details, key = { "${it.bookName}_${it.readTime}_$date" }) { detail ->
+                    ReadRecordItem(
+                        detail = detail,
+                        viewModel = viewModel,
+                        onClick = { onBookClick(detail.bookName) },
+                        onDelete = { viewModel.deleteDetail(detail) },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+            }
+        }
+        DisplayMode.TIMELINE -> {
+            state.timelineRecords.forEach { (date, sessions) ->
+                stickyHeader(key = "timeline_header_$date") { DateHeader(date) }
+                items(items = sessions, key = { it.id }) { session ->
+                    TimelineSessionItem(
+                        item = TimelineItem(session, true),
+                        onBookClick = onBookClick,
+                        viewModel = viewModel
+                    )
+                }
+            }
+        }
+        DisplayMode.LATEST -> {
+            items(items = state.latestRecords, key = { it.bookName }) { record ->
+                LatestReadItem(
+                    record = record,
+                    viewModel = viewModel,
+                    onClick = { onBookClick(record.bookName) },
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }

@@ -1,6 +1,7 @@
 package io.legado.app.ui.widget.components
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,10 +24,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EmptyMessageView(
     message: String,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
     faces: List<String> = listOf(
         "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
         "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
@@ -40,16 +45,25 @@ fun EmptyMessageView(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AnimatedTextLine(
-            text = currentFace,
-            fontSize = faceTextSize,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .clickable {
-                    currentFace = faces.random()
-                    onFaceClick?.invoke()
-                }
-        )
+        AnimatedContent(
+            targetState = isLoading,
+            label = "LoadingStateAnimation"
+        ) { loading ->
+            if (loading) {
+                LoadingIndicator()
+            } else {
+                AnimatedTextLine(
+                    text = currentFace,
+                    fontSize = faceTextSize,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .clickable {
+                            currentFace = faces.random()
+                            onFaceClick?.invoke()
+                        }
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -67,6 +81,7 @@ fun EmptyMessageView(
 fun EmptyMessageView(
     @StringRes messageResId: Int,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
     faces: List<String> = listOf(
         "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
         "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
@@ -78,6 +93,7 @@ fun EmptyMessageView(
     EmptyMessageView(
         message = message,
         modifier = modifier,
+        isLoading = isLoading,
         faces = faces,
         faceTextSize = faceTextSize,
         onFaceClick = onFaceClick

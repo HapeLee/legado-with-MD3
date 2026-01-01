@@ -339,11 +339,6 @@
             android:enableOnBackInvokedCallback="true"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
-        <activity
-            android:name=".ui.about.ReadRecordActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
-            android:hardwareAccelerated="true" />
         <!-- 字典管理 -->
         <activity
             android:name=".ui.dict.rule.DictRuleActivity"

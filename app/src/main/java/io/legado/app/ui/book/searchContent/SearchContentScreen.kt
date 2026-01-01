@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -31,9 +32,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.animateFloatingActionButton
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,17 +55,17 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.AnimatedText
-import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.TextCard
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchContentScreen(
     bookUrl: String,
+    searchWord: String?,
     onBack: () -> Unit,
     viewModel: SearchContentViewModel = koinViewModel()
 ) {
@@ -73,8 +80,15 @@ fun SearchContentScreen(
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    LaunchedEffect(bookUrl) {
+    var searchQuery by remember(searchWord) { mutableStateOf(searchWord ?: "") }
+    var replaceEnabled by remember { mutableStateOf(false) }
+    var regexReplace by remember { mutableStateOf(false) }
+
+    LaunchedEffect(bookUrl, searchWord) {
         viewModel.initBook(bookUrl)
+        if (!searchWord.isNullOrBlank()) {
+            viewModel.startSearch(searchWord, replaceEnabled, regexReplace)
+        }
     }
 
     /*
@@ -98,9 +112,6 @@ fun SearchContentScreen(
         }
     }*/
 
-    var searchQuery by remember { mutableStateOf("") }
-    var replaceEnabled by remember { mutableStateOf(false) }
-    var regexReplace by remember { mutableStateOf(false) }
     val contentState = when {
         error != null -> SearchContentState.Error(error)
         isSearching -> SearchContentState.Loading
@@ -150,12 +161,22 @@ fun SearchContentScreen(
                     ) {
                         FilterChip(
                             selected = replaceEnabled,
-                            onClick = { replaceEnabled = !replaceEnabled },
+                            onClick = {
+                                replaceEnabled = !replaceEnabled
+                                if (searchQuery.isNotBlank()) {
+                                    viewModel.startSearch(searchQuery, replaceEnabled, regexReplace)
+                                }
+                            },
                             label = { Text("启用替换") }
                         )
                         FilterChip(
                             selected = regexReplace,
-                            onClick = { regexReplace = !regexReplace },
+                            onClick = {
+                                regexReplace = !regexReplace
+                                if (searchQuery.isNotBlank()) {
+                                    viewModel.startSearch(searchQuery, replaceEnabled, regexReplace)
+                                }
+                            },
                             label = { Text("正则匹配") }
                         )
                     }
@@ -168,8 +189,19 @@ fun SearchContentScreen(
             }
         },
         floatingActionButton = {
-            if (isSearching) {
-                FloatingActionButton(onClick = { viewModel.stopSearch() }) {
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Localized description") } },
+                state = rememberTooltipState(),
+            ) {
+                FloatingActionButton(
+                    modifier = Modifier.animateFloatingActionButton(
+                        visible = isSearching,
+                        alignment = Alignment.BottomEnd,
+                    ),
+                    onClick = { viewModel.stopSearch() }
+                ) {
                     Icon(Icons.Default.Stop, contentDescription = "停止搜索")
                 }
             }
@@ -206,7 +238,7 @@ fun SearchContentScreen(
 
                     SearchContentState.EmptyResult -> {
                         EmptyMessageView(
-                            message = "没有找到相关内容",
+                            message = "没有找到相关内容！",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()
@@ -323,5 +355,3 @@ fun SearchResultItem(
         }
     }
 }
-
-
