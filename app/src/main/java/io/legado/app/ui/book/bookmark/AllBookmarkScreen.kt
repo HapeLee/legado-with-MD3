@@ -4,6 +4,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -33,12 +34,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.lazylist.Scroller
 import io.legado.app.ui.widget.components.SearchBarSection
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun AllBookmarkScreen(
     viewModel: AllBookmarkViewModel = koinViewModel(),
@@ -46,7 +50,7 @@ fun AllBookmarkScreen(
 ) {
     val context = LocalContext.current
     val searchText by viewModel.searchQuery.collectAsState()
-    val bookmarksGrouped by viewModel.bookmarksState.collectAsState()
+    val uiState by viewModel.bookmarksState.collectAsState()
     val collapsedGroups by viewModel.collapsedGroups.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
@@ -56,6 +60,7 @@ fun AllBookmarkScreen(
     var pendingExportIsMd by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
+    val bookmarksGrouped = (uiState as? BookmarkUiState.Success)?.bookmarks ?: emptyMap()
     val allKeys = bookmarksGrouped.keys
     val isAllCollapsed = allKeys.isNotEmpty() && allKeys.all { collapsedGroups.contains(it.toString()) }
 
@@ -137,53 +142,88 @@ fun AllBookmarkScreen(
                     SearchBarSection(
                         query = searchText,
                         onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = "模糊搜索"
+                        placeholder = "搜索..."
                     )
                 }
             }
         }
     ) { paddingValues ->
-        FastScrollLazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            bookmarksGrouped.forEach { (headerKey, bookmarks) ->
-
-                val isCollapsed = collapsedGroups.contains(headerKey.toString())
-
-                stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${headerKey}") {
-                    BookAuthorHeader(
-                        bookTitle = headerKey.bookName,
-                        bookAuthor = headerKey.bookAuthor,
-                        isCollapsed = isCollapsed,
-                        onToggle = { viewModel.toggleGroupCollapse(headerKey) }
-                    )
-                }
-
-                item(key = "content_${headerKey}") {
-                    AnimatedVisibility(
-                        visible = !isCollapsed,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut()
-                    ) {
-                        Column(
+            AnimatedContent(
+                targetState = uiState,
+                label = "bookmarkTransition"
+            ) { state ->
+                when (state) {
+                    BookmarkUiState.Loading -> {
+                        EmptyMessageView(
+                            message = "加载中...",
+                            isLoading = true,
                             modifier = Modifier
-                                .animateContentSize()
-                        ) {
-                            bookmarks.forEach { bookmark ->
-                                BookmarkItem(
-                                    bookmark = bookmark,
-                                    modifier = Modifier
-                                        .animateItem()
-                                        .fillMaxWidth(),
-                                    onClick = {
-                                        editingBookmark = bookmark
-                                        showBottomSheet = true
+                                .fillMaxSize()
+                        )
+                    }
+
+                    is BookmarkUiState.Success -> {
+                        if (state.bookmarks.isEmpty()) {
+                            EmptyMessageView(
+                                message = "没有书签！",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                            )
+                        } else {
+                            FastScrollLazyColumn(
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                state.bookmarks.forEach { (headerKey, bookmarks) ->
+
+                                    val isCollapsed = collapsedGroups.contains(headerKey.toString())
+
+                                    stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${headerKey}") {
+                                        BookAuthorHeader(
+                                            bookTitle = headerKey.bookName,
+                                            bookAuthor = headerKey.bookAuthor,
+                                            isCollapsed = isCollapsed,
+                                            onToggle = { viewModel.toggleGroupCollapse(headerKey) }
+                                        )
                                     }
-                                )
+
+                                    item(key = "content_${headerKey}") {
+                                        AnimatedVisibility(
+                                            visible = !isCollapsed,
+                                            enter = expandVertically() + fadeIn(),
+                                            exit = shrinkVertically() + fadeOut()
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.animateContentSize()
+                                            ) {
+                                                bookmarks.forEach { bookmark ->
+                                                    BookmarkItem(
+                                                        bookmark = bookmark,
+                                                        modifier = Modifier
+                                                            .animateItem()
+                                                            .fillMaxWidth(),
+                                                        onClick = {
+                                                            editingBookmark = bookmark
+                                                            showBottomSheet = true
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
+                    }
+
+                    is BookmarkUiState.Error -> {
+                        EmptyMessageView(
+                            message = state.throwable.localizedMessage ?: "发生错误",
+                        )
                     }
                 }
             }

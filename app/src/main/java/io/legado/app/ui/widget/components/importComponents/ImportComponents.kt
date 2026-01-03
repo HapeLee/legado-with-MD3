@@ -103,7 +103,7 @@ fun SourceInputDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            OutlinedButton(
                 onClick = { if (text.isNotBlank()) onConfirm(text) }
             ) { Text(stringResource(android.R.string.ok)) }
         },

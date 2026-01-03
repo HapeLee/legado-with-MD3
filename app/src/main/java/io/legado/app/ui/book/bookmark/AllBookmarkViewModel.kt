@@ -15,14 +15,11 @@ import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -39,7 +36,13 @@ data class BookmarkGroupHeader(
     val bookName: String,
     val bookAuthor: String
 ) {
-    override fun toString(): String = "$bookName|${bookAuthor}"
+    override fun toString(): String = "$bookName|$bookAuthor"
+}
+
+sealed class BookmarkUiState {
+    object Loading : BookmarkUiState()
+    data class Success(val bookmarks: Map<BookmarkGroupHeader, List<Bookmark>>) : BookmarkUiState()
+    data class Error(val throwable: Throwable) : BookmarkUiState()
 }
 
 class AllBookmarkViewModel(
@@ -55,24 +58,28 @@ class AllBookmarkViewModel(
 
 
     @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-    val bookmarksState: StateFlow<Map<BookmarkGroupHeader, List<Bookmark>>> = _searchQuery
+    val bookmarksState: StateFlow<BookmarkUiState> = _searchQuery
         .debounce(300L)
         .flatMapLatest { query ->
-            if (query.isBlank()) {
+            val flow = if (query.isBlank()) {
                 bookmarkDao.flowAll()
             } else {
                 bookmarkDao.flowSearchAll(query)
             }
+            flow.map<List<Bookmark>, BookmarkUiState> { list ->
+                BookmarkUiState.Success(list.groupBy { BookmarkGroupHeader(it.bookName, it.bookAuthor) })
+            }
+                .onStart { emit(BookmarkUiState.Loading) }
+                .catch { e ->
+                    e.printStackTrace()
+                    emit(BookmarkUiState.Error(e))
+                }
         }
-        .map { list ->
-            list.groupBy { BookmarkGroupHeader(it.bookName, it.bookAuthor) }
-        }
-        .catch { e -> e.printStackTrace() }
         .flowOn(Dispatchers.IO)
         .stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5000),
-            emptyMap()
+            BookmarkUiState.Loading
         )
 
     fun toggleGroupCollapse(groupKey: BookmarkGroupHeader) {

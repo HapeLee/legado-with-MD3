@@ -1318,7 +1318,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         val book = ReadBook.book ?: return
         searchContentActivity.launch {
             putExtra("bookUrl", book.bookUrl)
-            putExtra("searchWord", searchWord ?: viewModel.searchContentQuery)
+            putExtra("searchWord", searchWord)
             putExtra("searchResultIndex", viewModel.searchResultIndex)
             viewModel.searchResultList?.first()?.let {
                 if (it.query == viewModel.searchContentQuery) {

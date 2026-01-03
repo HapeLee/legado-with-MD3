@@ -12,12 +12,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,10 +27,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -332,10 +331,10 @@ fun ReplaceRuleScreen(
             Column {
                 MediumTopAppBar(
                     title = {
-                        val titleText = remember(isUploading, inSelectionMode, selectedRuleIds.size, rules.size) {
+                        val titleText = remember(isUploading, inSelectionMode, selectedRuleIds, rules) {
                             when {
                                 isUploading -> "正在上传..."
-                                inSelectionMode -> "已选择 ${selectedRuleIds.size}/${rules.size}"
+                                inSelectionMode -> "已选择 ${rules.count { it.id in selectedRuleIds }}/${rules.size}"
                                 else -> "替换规则"
                             }
                         }
@@ -434,8 +433,8 @@ fun ReplaceRuleScreen(
                         placeholder = stringResource(id = R.string.replace_purify_search)
                     )
                 }
-                AnimatedVisibility(visible = !inSelectionMode) {
-                    val allString = stringResource(R.string.all)
+                val allString = stringResource(R.string.all)
+                AnimatedVisibility(visible = groups.isNotEmpty()) {
                     PrimaryScrollableTabRow(
                         selectedTabIndex = selectedTabIndex,
                         edgePadding = 0.dp,
@@ -470,14 +469,21 @@ fun ReplaceRuleScreen(
             }
         },
         floatingActionButton = {
-            AnimatedVisibility(
-                visible = !inSelectionMode,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
+            TooltipBox(
+                positionProvider =
+                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                tooltip = { PlainTooltip { Text("Localized description") } },
+                state = rememberTooltipState(),
             ) {
-                FloatingActionButton(onClick = {
-                    context.startActivity(ReplaceEditActivity.startIntent(context))
-                }) {
+                FloatingActionButton(
+                    modifier = Modifier.animateFloatingActionButton(
+                        visible = !inSelectionMode,
+                        alignment = Alignment.BottomEnd,
+                    ),
+                    onClick = {
+                        context.startActivity(ReplaceEditActivity.startIntent(context))
+                    }
+                ) {
                     Icon(Icons.Default.Add, contentDescription = "Add Rule")
                 }
             }
@@ -568,9 +574,8 @@ fun ReplaceRuleScreen(
             }
             AnimatedVisibility(
                 visible = inSelectionMode,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp),
+                modifier =
+                    Modifier.align(Alignment.BottomCenter).offset(y = -ScreenOffset).zIndex(1f),
                 enter = slideInVertically { it } + fadeIn(),
                 exit = slideOutVertically { it } + fadeOut()
             ) {
@@ -842,13 +847,9 @@ fun ReplaceRuleItem(
     )
 
     Card(
+        onClick = { onToggleSelection() },
         modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = { onToggleSelection() },
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ),
+            .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = containerColor
@@ -900,23 +901,23 @@ fun ReplaceRuleItem(
                             onDismissRequest = { showRuleMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("删除") },
-                                onClick = {
-                                    onDelete()
-                                    showRuleMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("置顶") },
+                                text = { Text("移至顶部") },
                                 onClick = {
                                     onToTop()
                                     showRuleMenu = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("置底") },
+                                text = { Text("移至底部") },
                                 onClick = {
                                     onToBottom()
+                                    showRuleMenu = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("删除") },
+                                onClick = {
+                                    onDelete()
                                     showRuleMenu = false
                                 }
                             )
