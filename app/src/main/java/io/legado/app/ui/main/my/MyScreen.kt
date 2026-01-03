@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Web
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,9 +36,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -67,7 +63,6 @@ fun MyScreen(
 ) {
 
     val uiState by viewModel.uiState.collectAsState()
-    var showMenu by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -126,35 +121,26 @@ fun MyScreen(
                             }
                         )
                     },
-                    onClick = {
-                        viewModel.onEvent(PrefClickEvent.ToggleWebService)
-                    },
-                    onLongClick = {
-                        if (uiState.isWebServiceRun) {
-                            showMenu = true
+                    dropdownMenu = if (uiState.isWebServiceRun) {
+                        { onDismiss ->
+                            DropdownMenuItem(
+                                text = { Text("复制地址") },
+                                onClick = {
+                                    onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
+                                    onDismiss()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("浏览器打开") },
+                                onClick = {
+                                    onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
+                                    onDismiss()
+                                }
+                            )
                         }
-                    }
+                    } else null,
+                    onClick = { }
                 )
-
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("复制地址") },
-                        onClick = {
-                            onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
-                            showMenu = false
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("浏览器打开") },
-                        onClick = {
-                            onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
-                            showMenu = false
-                        }
-                    )
-                }
             }
 
             SplicedColumnGroup(

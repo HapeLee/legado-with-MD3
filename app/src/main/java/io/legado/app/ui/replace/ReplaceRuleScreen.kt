@@ -57,6 +57,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
@@ -494,139 +495,146 @@ fun ReplaceRuleScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            FastScrollLazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = 120.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(rules, key = { it.id }) { ui ->
-                    val isSelected = selectedRuleIds.contains(ui.id)
-                    ReorderableItem(
-                        state = reorderableState,
-                        key = ui.id
-                    ) { isDragging ->
+            if (rules.isEmpty()) {
+                EmptyMessageView(
+                    modifier = Modifier.fillMaxSize(),
+                    message = "没有替换规则！"
+                )
+            } else {
+                FastScrollLazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = 120.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(rules, key = { it.id }) { ui ->
+                        val isSelected = selectedRuleIds.contains(ui.id)
+                        ReorderableItem(
+                            state = reorderableState,
+                            key = ui.id
+                        ) { isDragging ->
 
-                        val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
-                        ReplaceRuleItem(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .zIndex(if (isDragging) 1f else 0f)
-                                .shadow(
-                                    elevation = elevation,
-                                    shape = MaterialTheme.shapes.medium,
-                                    clip = false
-                                )
-                                .then(
-                                    if (canReorder) {
-                                        Modifier.longPressDraggableHandle(
-                                            onDragStarted = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                            },
-                                            onDragStopped = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                            },
-                                            interactionSource = remember { MutableInteractionSource() }
-                                        )
-                                    } else {
-                                        Modifier
-                                    }
-                                )
-                                .animateItem(),
-                            name = ui.name,
-                            isEnabled = ui.isEnabled,
-                            isSelected = isSelected,
-                            inSelectionMode = inSelectionMode,
-                            onEnabledChange = { enabled ->
-                                viewModel.update(ui.rule.copy(isEnabled = enabled))
-                            },
-                            onDelete = { showDeleteRuleDialog = ui.rule },
-                            onToTop = { viewModel.toTop(ui.rule) },
-                            onToBottom = { viewModel.toBottom(ui.rule) },
-                            onToggleSelection = {
-                                viewModel.toggleSelection(ui.id)
-                            },
-                            onClickEdit = {
-                                context.startActivity(
-                                    ReplaceEditActivity.startIntent(context, ui.id)
-                                )
-                            }
-                        )
+                            val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
+                            ReplaceRuleItem(
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .zIndex(if (isDragging) 1f else 0f)
+                                    .shadow(
+                                        elevation = elevation,
+                                        shape = MaterialTheme.shapes.medium,
+                                        clip = false
+                                    )
+                                    .then(
+                                        if (canReorder) {
+                                            Modifier.longPressDraggableHandle(
+                                                onDragStarted = {
+                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                                },
+                                                onDragStopped = {
+                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                },
+                                                interactionSource = remember { MutableInteractionSource() }
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
+                                    .animateItem(),
+                                name = ui.name,
+                                isEnabled = ui.isEnabled,
+                                isSelected = isSelected,
+                                inSelectionMode = inSelectionMode,
+                                onEnabledChange = { enabled ->
+                                    viewModel.update(ui.rule.copy(isEnabled = enabled))
+                                },
+                                onDelete = { showDeleteRuleDialog = ui.rule },
+                                onToTop = { viewModel.toTop(ui.rule) },
+                                onToBottom = { viewModel.toBottom(ui.rule) },
+                                onToggleSelection = {
+                                    viewModel.toggleSelection(ui.id)
+                                },
+                                onClickEdit = {
+                                    context.startActivity(
+                                        ReplaceEditActivity.startIntent(context, ui.id)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
-            }
-            if (inSelectionMode) {
-                DraggableSelectionHandler(
-                    listState = listState,
-                    rules = rules,
-                    selectedRuleIds = selectedRuleIds,
-                    onSelectionChange = viewModel::setSelection,
-                    haptic = haptic,
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(60.dp)
-                        .align(Alignment.TopStart)
-                )
-            }
-            AnimatedVisibility(
-                visible = inSelectionMode,
-                modifier =
-                    Modifier.align(Alignment.BottomCenter).offset(y = -ScreenOffset).zIndex(1f),
-                enter = slideInVertically { it } + fadeIn(),
-                exit = slideOutVertically { it } + fadeOut()
-            ) {
-                SelectionBottomBar(
-                    onSelectAll = {
-                        viewModel.setSelection(rules.map { it.id }.toSet())
-                    },
-                    onSelectInvert = {
-                        val allIds = rules.map { it.id }.toSet()
-                        viewModel.setSelection(allIds - selectedRuleIds)
-                    },
-                    primaryAction = ActionItem(
-                        text = stringResource(R.string.delete),
-                        icon = { Icon(Icons.Default.Delete, null) },
-                        onClick = { showDeleteSelectedDialog = true }
-                    ),
-                    secondaryActions = listOf(
-                        ActionItem(
-                            text = stringResource(R.string.enable),
-                            onClick = {
-                                viewModel.enableSelectionByIds(selectedRuleIds)
-                                viewModel.setSelection(emptySet())
-                            }
+                if (inSelectionMode) {
+                    DraggableSelectionHandler(
+                        listState = listState,
+                        rules = rules,
+                        selectedRuleIds = selectedRuleIds,
+                        onSelectionChange = viewModel::setSelection,
+                        haptic = haptic,
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(60.dp)
+                            .align(Alignment.TopStart)
+                    )
+                }
+                AnimatedVisibility(
+                    visible = inSelectionMode,
+                    modifier =
+                        Modifier.align(Alignment.BottomCenter).offset(y = -ScreenOffset).zIndex(1f),
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
+                ) {
+                    SelectionBottomBar(
+                        onSelectAll = {
+                            viewModel.setSelection(rules.map { it.id }.toSet())
+                        },
+                        onSelectInvert = {
+                            val allIds = rules.map { it.id }.toSet()
+                            viewModel.setSelection(allIds - selectedRuleIds)
+                        },
+                        primaryAction = ActionItem(
+                            text = stringResource(R.string.delete),
+                            icon = { Icon(Icons.Default.Delete, null) },
+                            onClick = { showDeleteSelectedDialog = true }
                         ),
-                        ActionItem(
-                            text = stringResource(R.string.disable_selection),
-                            onClick = {
-                                viewModel.disableSelectionByIds(selectedRuleIds)
-                                viewModel.setSelection(emptySet())
-                            }
-                        ),
-                        ActionItem(
-                            text = stringResource(R.string.to_top),
-                            onClick = {
-                                viewModel.topSelectByIds(selectedRuleIds)
-                                viewModel.setSelection(emptySet())
-                            }
-                        ),
-                        ActionItem(
-                            text = stringResource(R.string.to_bottom),
-                            onClick = {
-                                viewModel.bottomSelectByIds(selectedRuleIds)
-                                viewModel.setSelection(emptySet())
-                            }
-                        ),
-                        ActionItem(
-                            text = stringResource(R.string.export),
-                            onClick = { showFilePickerSheet = true }
+                        secondaryActions = listOf(
+                            ActionItem(
+                                text = stringResource(R.string.enable),
+                                onClick = {
+                                    viewModel.enableSelectionByIds(selectedRuleIds)
+                                    viewModel.setSelection(emptySet())
+                                }
+                            ),
+                            ActionItem(
+                                text = stringResource(R.string.disable_selection),
+                                onClick = {
+                                    viewModel.disableSelectionByIds(selectedRuleIds)
+                                    viewModel.setSelection(emptySet())
+                                }
+                            ),
+                            ActionItem(
+                                text = stringResource(R.string.to_top),
+                                onClick = {
+                                    viewModel.topSelectByIds(selectedRuleIds)
+                                    viewModel.setSelection(emptySet())
+                                }
+                            ),
+                            ActionItem(
+                                text = stringResource(R.string.to_bottom),
+                                onClick = {
+                                    viewModel.bottomSelectByIds(selectedRuleIds)
+                                    viewModel.setSelection(emptySet())
+                                }
+                            ),
+                            ActionItem(
+                                text = stringResource(R.string.export),
+                                onClick = { showFilePickerSheet = true }
+                            )
                         )
                     )
-                )
+                }
             }
         }
     }
