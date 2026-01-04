@@ -6,16 +6,63 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFlexibleTopAppBar
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,7 +79,7 @@ fun keyboardAsState(): State<Boolean> {
     return rememberUpdatedState(isImeVisible)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReplaceEditScreen(
     onBack: () -> Unit,
@@ -48,7 +95,7 @@ fun ReplaceEditScreen(
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                MediumTopAppBar(
+                MediumFlexibleTopAppBar(
                     title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
@@ -111,7 +158,10 @@ fun ReplaceEditScreen(
                     label = { Text("规则名称") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) viewModel.activeField = ReplaceEditViewModel.ActiveField.Name },
+                        .onFocusChanged {
+                            if (it.isFocused) viewModel.activeField =
+                                ReplaceEditViewModel.ActiveField.Name
+                        },
                     singleLine = true
                 )
 
@@ -129,7 +179,10 @@ fun ReplaceEditScreen(
                     placeholder = { Text("输入正则表达式或关键字") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) viewModel.activeField = ReplaceEditViewModel.ActiveField.Pattern }
+                        .onFocusChanged {
+                            if (it.isFocused) viewModel.activeField =
+                                ReplaceEditViewModel.ActiveField.Pattern
+                        }
                 )
 
                 OutlinedTextField(
@@ -139,7 +192,10 @@ fun ReplaceEditScreen(
                     placeholder = { Text("输入替换内容或捕获组") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) viewModel.activeField = ReplaceEditViewModel.ActiveField.Replacement }
+                        .onFocusChanged {
+                            if (it.isFocused) viewModel.activeField =
+                                ReplaceEditViewModel.ActiveField.Replacement
+                        }
                 )
 
                 Row(
@@ -187,7 +243,10 @@ fun ReplaceEditScreen(
                     placeholder = { Text("指定规则适用的范围") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) viewModel.activeField = ReplaceEditViewModel.ActiveField.Scope }
+                        .onFocusChanged {
+                            if (it.isFocused) viewModel.activeField =
+                                ReplaceEditViewModel.ActiveField.Scope
+                        }
                 )
 
                 OutlinedTextField(
@@ -197,7 +256,10 @@ fun ReplaceEditScreen(
                     placeholder = { Text("指定规则不适用的范围") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { if (it.isFocused) viewModel.activeField = ReplaceEditViewModel.ActiveField.Exclude }
+                        .onFocusChanged {
+                            if (it.isFocused) viewModel.activeField =
+                                ReplaceEditViewModel.ActiveField.Exclude
+                        }
                 )
 
                 OutlinedTextField(
@@ -261,13 +323,15 @@ fun GroupSelector(
                 value = currentGroup,
                 onValueChange = onGroupChange,
                 label = { Text("分组") },
-                placeholder = {Text("默认")},
+                placeholder = { Text("默认") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                modifier = Modifier.fillMaxWidth().menuAnchor(
-                    ExposedDropdownMenuAnchorType.PrimaryEditable,
-                    true
-                )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(
+                        ExposedDropdownMenuAnchorType.PrimaryEditable,
+                        true
+                    )
             )
             ExposedDropdownMenu(
                 expanded = expanded,

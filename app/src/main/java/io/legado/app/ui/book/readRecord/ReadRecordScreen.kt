@@ -28,10 +28,11 @@ import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -70,13 +71,8 @@ import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.isNotEmpty
-import kotlin.collections.map
-import kotlin.collections.sumOf
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReadRecordScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
@@ -98,7 +94,7 @@ fun ReadRecordScreen(
     }
 
     LaunchedEffect(searchText) {
-        if (showSearch) {
+        if (showSearch && searchText.isNotBlank()) {
             delay(100L)
             viewModel.loadData(searchText)
         }
@@ -108,24 +104,21 @@ fun ReadRecordScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                MediumTopAppBar(
+                MediumFlexibleTopAppBar(
                     title = {
-                        val (mainTitle, subTitle) = when (displayMode) {
-                            DisplayMode.AGGREGATE -> "阅读记录" to "汇总视图"
-                            DisplayMode.TIMELINE -> "阅读记录" to "时间线视图"
-                            DisplayMode.LATEST -> "阅读记录" to "最后阅读"
+                        Text(
+                            text = "阅读记录"
+                        )
+                    },
+                    subtitle = {
+                        val subTitle = when (displayMode) {
+                            DisplayMode.AGGREGATE -> "汇总视图"
+                            DisplayMode.TIMELINE -> "时间线视图"
+                            DisplayMode.LATEST -> "最后阅读"
                         }
-                        Column {
-                            Text(
-                                text = mainTitle,
-                                style = MaterialTheme.typography.titleLarge,
-                            )
-
-                            AnimatedTextLine(
-                                text = subTitle,
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
+                        AnimatedTextLine(
+                            text = subTitle
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
@@ -170,18 +163,20 @@ fun ReadRecordScreen(
                         selectedDate = state.selectedDate,
                         onDateSelected = { date ->
                             viewModel.setSelectedDate(date)
-                            showCalendar = false // 选择后自动收起日历
+                            showCalendar = false
                         },
                         onClearDate = {
                             viewModel.setSelectedDate(null)
-                            showCalendar = false // 清除后自动收起
+                            showCalendar = false
                         }
                     )
                 }
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Column(modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()) {
             val contentState = when {
                 state.isLoading -> "LOADING"
                 (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||

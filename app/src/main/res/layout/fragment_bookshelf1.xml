@@ -19,8 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="?attr/collapsingToolbarLayoutMediumSize"
             style="?attr/collapsingToolbarLayoutMediumStyle"
-            app:collapsedTitleTextAppearance="?attr/textAppearanceTitleLarge"
-            app:expandedTitleTextAppearance="?attr/textAppearanceHeadlineLarge"
+            app:expandedTitleTextAppearance="?attr/textAppearanceHeadlineMedium"
             app:titleCollapseMode="scale"
             app:layout_scrollFlags="scroll|exitUntilCollapsed|snap">
 
