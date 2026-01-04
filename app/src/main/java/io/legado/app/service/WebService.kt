@@ -16,6 +16,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.receiver.NetworkChangedListener
 import io.legado.app.utils.NetworkUtils
+import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.postEvent
@@ -108,6 +109,7 @@ class WebService : BaseService() {
             }
             startForegroundNotification()
             postEvent(EventBus.WEB_SERVICE, hostAddress)
+            FlowEventBus.post(EventBus.WEB_SERVICE, hostAddress)
         }
     }
 
@@ -141,6 +143,7 @@ class WebService : BaseService() {
             webSocketServer?.stop()
         }
         postEvent(EventBus.WEB_SERVICE, "")
+        FlowEventBus.post(EventBus.WEB_SERVICE, "")
         upTile(false)
     }
 
@@ -170,6 +173,7 @@ class WebService : BaseService() {
                 hostAddress = notificationList.first()
                 isRun = true
                 postEvent(EventBus.WEB_SERVICE, hostAddress)
+                FlowEventBus.post(EventBus.WEB_SERVICE, hostAddress)
                 startForegroundNotification()
             } catch (e: IOException) {
                 toastOnUi(e.localizedMessage ?: "")
