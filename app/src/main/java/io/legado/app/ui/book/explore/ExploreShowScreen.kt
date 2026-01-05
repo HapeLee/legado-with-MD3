@@ -56,7 +56,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -253,7 +253,8 @@ fun ExploreShowScreen(
                 }
 
                 FlowRow(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp)
                 ) {
                     filteredKinds.forEach { kind ->
@@ -393,7 +394,7 @@ fun KindListItem(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExploreTopBar(
     title: String,
@@ -408,7 +409,7 @@ fun ExploreTopBar(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    MediumTopAppBar(
+    MediumFlexibleTopAppBar(
         title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
             IconButton(onClick = onBack) {
