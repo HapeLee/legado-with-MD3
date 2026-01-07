@@ -384,5 +384,7 @@ dependencies {
 
     implementation(libs.reorderable)
     implementation(libs.material.kolor)
+    implementation(libs.haze.core)
+    implementation(libs.haze.materials)
 
 }

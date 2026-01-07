@@ -21,35 +21,24 @@ import org.koin.dsl.module
 
 val appModule = module {
 
-    viewModel { ReplaceEditViewModel(get(), get(), get()) }
-
-    viewModel { ReplaceRuleViewModel(androidApplication()) }
-
-    // ReadRecord
     single { get<AppDatabase>().readRecordDao }
     single { get<AppDatabase>().bookDao }
     single { get<AppDatabase>().bookChapterDao }
+
     single { ReadRecordRepository(get()) }
-    viewModel { ReadRecordViewModel(get(), get(), get()) }
+
+    single { BookRepository(get(), get()) }
 
     single<UploadRepository> { DirectLinkUploadRepository() }
-
-    // Explore
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
-    viewModel { ExploreShowViewModel(get()) }
-
-    // Bookmark
-    viewModel {
-        AllBookmarkViewModel(
-            androidApplication(),
-            get()
-        )
-    }
-
-    // Search
     single { SearchContentRepository() }
-    single { BookRepository() }
-    viewModel { SearchContentViewModel(get(), get()) }
 
+    viewModel { ReadRecordViewModel(get(), get()) }
+    viewModel { ReplaceEditViewModel(get(), get(), get()) }
+    viewModel { ReplaceRuleViewModel(androidApplication()) }
+    viewModel { ExploreShowViewModel(get()) }
+    viewModel { SearchContentViewModel(get(), get()) }
     viewModel { MyViewModel(get()) }
+
+    viewModel { AllBookmarkViewModel(androidApplication(), get()) }
 }

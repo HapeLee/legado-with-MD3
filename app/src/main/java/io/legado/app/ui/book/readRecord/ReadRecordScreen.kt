@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -66,7 +67,6 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.utils.StringUtils.formatFriendlyDate
-import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -83,20 +83,12 @@ fun ReadRecordScreen(
     val displayMode by viewModel.displayMode.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
-    var searchText by remember { mutableStateOf("") }
-
+    val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
-    LaunchedEffect(showSearch) {
-        if (!showSearch) {
-            viewModel.loadData("")
-        }
-    }
-
-    LaunchedEffect(searchText) {
-        if (showSearch && searchText.isNotBlank()) {
-            delay(100L)
-            viewModel.loadData(searchText)
+    LaunchedEffect(state.searchKey) {
+        if (state.searchKey.isNullOrBlank()) {
+            listState.animateScrollToItem(0)
         }
     }
 
@@ -154,8 +146,8 @@ fun ReadRecordScreen(
 
                 AnimatedVisibility(visible = showSearch) {
                     SearchBarSection(
-                        query = searchText,
-                        onQueryChange = { searchText = it }
+                        query = state.searchKey ?: "",
+                        onQueryChange = { viewModel.setSearchKey(it) }
                     )
                 }
                 AnimatedVisibility(visible = showCalendar) {
@@ -192,7 +184,8 @@ fun ReadRecordScreen(
                     "LOADING" -> {
                         EmptyMessageView(
                             modifier = Modifier.fillMaxSize(),
-                            message = "加载中"
+                            message = "加载中",
+                            isLoading = true
                         )
                     }
 
@@ -205,6 +198,7 @@ fun ReadRecordScreen(
 
                     "CONTENT" -> {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier
                                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                         ) {

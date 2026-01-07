@@ -75,6 +75,7 @@ koin-bom = "4.1.1"
 biometricKtx = "1.1.0"
 
 reorderable = "3.0.0"
+haze = "1.7.1"
 [libraries]
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
@@ -109,6 +110,8 @@ androidx-startup-runtime = { module = "androidx.startup:startup-runtime", versio
 appcompat-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
 
+haze-core = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { group = "io.insert-koin", name = "koin-android" }
