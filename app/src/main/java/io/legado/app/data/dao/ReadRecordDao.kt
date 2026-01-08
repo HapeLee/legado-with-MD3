@@ -6,10 +6,11 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.ReadRecordShow
+import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ReadRecordDao {
@@ -26,8 +27,8 @@ interface ReadRecordDao {
     )
     val allShow: List<ReadRecordShow>
 
-    @Query("select sum(readTime) from readRecord")
-    suspend fun getTotalReadTime(): Long
+    @Query("SELECT sum(readTime) FROM readRecord")
+    fun getTotalReadTime(): Flow<Long?>
 
     @Query(
         """
@@ -113,11 +114,11 @@ interface ReadRecordDao {
 
     /** 获取所有 ReadRecord，按最后阅读时间倒序排列 */
     @Query("SELECT * FROM readRecord ORDER BY lastRead DESC")
-    suspend fun getAllReadRecordsSortedByLastRead(): List<ReadRecord>
+    fun getAllReadRecordsSortedByLastRead(): Flow<List<ReadRecord>>
 
     /** 搜索 ReadRecord，按最后阅读时间倒序排列 */
     @Query("SELECT * FROM readRecord WHERE bookName LIKE '%' || :query || '%' ORDER BY lastRead DESC")
-    suspend fun searchReadRecordsByLastRead(query: String): List<ReadRecord>
+    fun searchReadRecordsByLastRead(query: String): Flow<List<ReadRecord>>
 
     /**
      * 获取某一天某一本书的所有会话记录
@@ -150,10 +151,13 @@ interface ReadRecordDao {
     fun deleteSessionByName(bookName: String)
 
     @Query("SELECT * FROM readRecordDetail ORDER BY date DESC, lastReadTime DESC")
-    suspend fun getAllDetails(): List<ReadRecordDetail>
+    fun getAllDetails(): Flow<List<ReadRecordDetail>>
 
-    @Query("SELECT * FROM readRecordDetail WHERE bookName LIKE '%' || :query || '%' ORDER BY date DESC")
-    suspend fun searchDetails(query: String): List<ReadRecordDetail>
+    @Query("SELECT * FROM readRecordDetail WHERE bookName LIKE '%' || :query || '%' ORDER BY date DESC, lastReadTime DESC")
+    fun searchDetails(query: String): Flow<List<ReadRecordDetail>>
+
+    @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId ORDER BY startTime ASC")
+    fun getAllSessions(deviceId: String): Flow<List<ReadRecordSession>>
 
     @Delete
     suspend fun deleteDetail(detail: ReadRecordDetail)

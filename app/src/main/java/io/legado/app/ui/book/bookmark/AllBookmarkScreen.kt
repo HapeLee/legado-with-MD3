@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -23,6 +22,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -55,6 +56,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,20 +83,27 @@ fun AllBookmarkScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val searchText by viewModel.searchQuery.collectAsState()
-    val uiState by viewModel.bookmarksState.collectAsState()
-    val collapsedGroups by viewModel.collapsedGroups.collectAsState()
 
+    val uiState by viewModel.uiState.collectAsState()
+    val contentState = when {
+        uiState.isLoading -> "LOADING"
+        uiState.bookmarks.isEmpty() -> "EMPTY"
+        else -> "CONTENT"
+    }
+    val searchText = uiState.searchQuery
+    val collapsedGroups = uiState.collapsedGroups
+    val bookmarksGrouped = uiState.bookmarks
+    val allKeys = bookmarksGrouped.keys
+    val isAllCollapsed =
+        allKeys.isNotEmpty() && allKeys.all { collapsedGroups.contains(it.toString()) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
     var showMenu by remember { mutableStateOf(false) }
     var showSearch by remember { mutableStateOf(false) }
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
     var pendingExportIsMd by remember { mutableStateOf(false) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
-    val bookmarksGrouped = (uiState as? BookmarkUiState.Success)?.bookmarks ?: emptyMap()
-    val allKeys = bookmarksGrouped.keys
-    val isAllCollapsed = allKeys.isNotEmpty() && allKeys.all { collapsedGroups.contains(it.toString()) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -173,7 +182,9 @@ fun AllBookmarkScreen(
                     SearchBarSection(
                         query = searchText,
                         onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = "搜索..."
+                        placeholder = "搜索...",
+                        scrollState = listState,
+                        scope = scope
                     )
                 }
             }
@@ -185,11 +196,11 @@ fun AllBookmarkScreen(
                 .padding(paddingValues)
         ) {
             AnimatedContent(
-                targetState = uiState,
+                targetState = contentState,
                 label = "bookmarkTransition"
             ) { state ->
                 when (state) {
-                    BookmarkUiState.Loading -> {
+                    "LOADING" -> {
                         EmptyMessageView(
                             message = "加载中...",
                             isLoading = true,
@@ -198,63 +209,54 @@ fun AllBookmarkScreen(
                         )
                     }
 
-                    is BookmarkUiState.Success -> {
-                        if (state.bookmarks.isEmpty()) {
-                            EmptyMessageView(
-                                message = "没有书签！",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                            )
-                        } else {
-                            FastScrollLazyColumn(
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                state.bookmarks.forEach { (headerKey, bookmarks) ->
+                    "EMPTY" -> {
 
-                                    val isCollapsed = collapsedGroups.contains(headerKey.toString())
+                        EmptyMessageView(
+                            message = "没有书签！",
+                            modifier = Modifier
+                                .fillMaxSize()
+                        )
+                    }
 
-                                    stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${headerKey}") {
-                                        BookAuthorHeader(
-                                            bookTitle = headerKey.bookName,
-                                            bookAuthor = headerKey.bookAuthor,
-                                            isCollapsed = isCollapsed,
-                                            onToggle = { viewModel.toggleGroupCollapse(headerKey) }
-                                        )
-                                    }
+                    "CONTENT" -> {
+                        FastScrollLazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            uiState.bookmarks.forEach { (headerKey, bookmarks) ->
+                                val isCollapsed = collapsedGroups.contains(headerKey.toString())
 
-                                    item(key = "content_${headerKey}") {
-                                        AnimatedVisibility(
-                                            visible = !isCollapsed,
-                                            enter = expandVertically() + fadeIn(),
-                                            exit = shrinkVertically() + fadeOut()
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.animateContentSize()
-                                            ) {
-                                                bookmarks.forEach { bookmark ->
-                                                    BookmarkItem(
-                                                        bookmark = bookmark,
-                                                        modifier = Modifier
-                                                            .animateItem()
-                                                            .fillMaxWidth(),
-                                                        onClick = {
-                                                            editingBookmark = bookmark
-                                                            showBottomSheet = true
-                                                        }
-                                                    )
-                                                }
+                                stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${headerKey}") {
+                                    BookAuthorHeader(
+                                        modifier = Modifier
+                                            .animateItem()
+                                            .fillMaxWidth(),
+                                        bookTitle = headerKey.bookName,
+                                        bookAuthor = headerKey.bookAuthor,
+                                        isCollapsed = isCollapsed,
+                                        onToggle = { viewModel.toggleGroupCollapse(headerKey) }
+                                    )
+                                }
+
+                                if (!isCollapsed) {
+                                    items(
+                                        items = bookmarks,
+                                        key = { it.id }
+                                    ) { bookmarkUi ->
+                                        BookmarkItem(
+                                            bookmark = bookmarkUi,
+                                            modifier = Modifier
+                                                .animateItem()
+                                                .fillMaxWidth(),
+                                            onClick = {
+                                                editingBookmark = bookmarkUi.rawBookmark
+                                                showBottomSheet = true
                                             }
-                                        }
+                                        )
                                     }
                                 }
                             }
                         }
-                    }
-
-                    is BookmarkUiState.Error -> {
-                        EmptyMessageView(
-                            message = state.throwable.localizedMessage ?: "发生错误",
-                        )
                     }
                 }
             }
@@ -282,6 +284,7 @@ fun AllBookmarkScreen(
 
 @Composable
 fun BookAuthorHeader(
+    modifier: Modifier = Modifier,
     bookTitle: String,
     bookAuthor: String,
     isCollapsed: Boolean,
@@ -289,7 +292,7 @@ fun BookAuthorHeader(
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
     ) {
@@ -340,8 +343,8 @@ fun BookAuthorHeader(
 
 @Composable
 fun BookmarkItem(
-    bookmark: Bookmark,
-    modifier: Modifier = Modifier,
+    bookmark: BookmarkItemUi,
+    modifier: Modifier,
     onClick: () -> Unit) {
     Column(
         modifier = modifier

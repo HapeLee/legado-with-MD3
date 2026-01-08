@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -86,6 +87,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
@@ -98,7 +105,7 @@ import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
 @Composable
 fun ExploreShowScreen(
     title: String,
@@ -128,7 +135,7 @@ fun ExploreShowScreen(
     val isGridMode = layoutState == 1
     var showGridCountSheet by remember { mutableStateOf(false) }
     val gridColumnCount by viewModel.gridCount.collectAsState()
-
+    val hazeState = remember { HazeState() }
     val shouldLoadMoreList = remember {
         derivedStateOf {
             val total = listState.layoutInfo.totalItemsCount
@@ -178,12 +185,14 @@ fun ExploreShowScreen(
 
         ModalBottomSheet(
             sheetState = sheetState,
+            dragHandle = null,
             onDismissRequest = { showGridCountSheet = false }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .hazeEffect(state = hazeState, style = HazeMaterials.regular())
+                    .padding(16.dp)
             ) {
 
                 Text(
@@ -217,7 +226,6 @@ fun ExploreShowScreen(
 
     if (showKindSheet) {
         val scrollState = rememberScrollState()
-        var kindQuery by remember { mutableStateOf("") }
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
             confirmValueChange = { newValue ->
@@ -226,12 +234,14 @@ fun ExploreShowScreen(
         )
         ModalBottomSheet(
             sheetState = sheetState,
+            dragHandle = null,
             onDismissRequest = { showKindSheet = false }
         ) {
             Column(
                 modifier = Modifier
+                    .hazeEffect(state = hazeState, style = HazeMaterials.regular())
                     .fillMaxWidth()
-                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f)
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
                     .verticalScroll(scrollState)
             ) {
 
@@ -255,7 +265,9 @@ fun ExploreShowScreen(
                 FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    maxItemsInEachRow = 3, // 强制每行最多 3 个
+                    horizontalArrangement = Arrangement.spacedBy(0.dp) // 因为 Item 内部有 padding，这里设为 0
                 ) {
                     filteredKinds.forEach { kind ->
                         KindListItem(
@@ -273,9 +285,15 @@ fun ExploreShowScreen(
     }
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .nestedScroll(scrollBehavior.nestedScrollConnection)
+            .hazeSource(hazeState),
         topBar = {
             ExploreTopBar(
+                modifier = Modifier.hazeEffect(hazeState) {
+                    progressive =
+                        HazeProgressive.verticalGradient(startIntensity = 1f, endIntensity = 0f)
+                },
                 title = selectedTitle ?: title,
                 filterState = filterState,
                 onBack = onBack,
@@ -293,7 +311,6 @@ fun ExploreShowScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-
             Crossfade(
                 targetState = isGridMode,
                 animationSpec = tween(250),
@@ -338,7 +355,6 @@ fun ExploreShowScreen(
                             items = books,
                             key = { it.bookUrl }
                         ) { book ->
-                            val shelfState = viewModel.getCurrentBookShelfState(book)
                             ExploreBookItem(
                                 book = book,
                                 shelfState = viewModel.getBookShelfStateFlow(book),
@@ -364,13 +380,15 @@ fun ExploreShowScreen(
 }
 
 @Composable
-fun KindListItem(
+fun FlowRowScope.KindListItem(
     kind: ExploreKind,
     currentTitle: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val isClickable = !kind.url.isNullOrBlank()
     val isSelected = kind.title == currentTitle
+
     FilterChip(
         onClick = { if (isClickable) onClick() },
         enabled = isClickable,
@@ -385,18 +403,19 @@ fun KindListItem(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        modifier = Modifier
+        modifier = modifier
+            .padding(horizontal = 4.dp)
             .then(
                 if (!isClickable) Modifier.fillMaxWidth()
-                else Modifier.fillMaxWidth(1f / 3f)
+                else Modifier.weight(1f)
             )
-            .padding(horizontal = 4.dp)
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExploreTopBar(
+    modifier: Modifier = Modifier,
     title: String,
     filterState: BookFilterState,
     onBack: () -> Unit,
@@ -410,6 +429,7 @@ fun ExploreTopBar(
     var showMenu by remember { mutableStateOf(false) }
 
     MediumFlexibleTopAppBar(
+        modifier = modifier,
         title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
             IconButton(onClick = onBack) {
