@@ -8,7 +8,6 @@ import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.utils.themeColor
 
 /**
  * 文字列
@@ -49,7 +48,7 @@ data class TextColumn(
             ChapterProvider.contentPaint
         }
         val textColor = if (textLine.isReadAloud || isSearchResult) {
-            view.context.themeColor(androidx.appcompat.R.attr.colorPrimary)
+            ReadBookConfig.textAccentColor
         } else {
             ReadBookConfig.textColor
         }

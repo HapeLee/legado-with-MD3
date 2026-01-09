@@ -81,7 +81,24 @@
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_text_weight_2"/>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShadowSet"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_fill_colors" />
+
     </com.google.android.material.button.MaterialButtonGroup>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="8dp"
+        android:text="@string/read_color"
+        android:textSize="14sp"
+        android:textStyle="bold" />
 
     <com.google.android.material.button.MaterialButtonGroup
         android:layout_width="match_parent"
@@ -98,20 +115,18 @@
             android:text="@string/text_color" />
 
         <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_text_accent_color"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_accent_color" />
+
+        <io.legado.app.ui.widget.AccentColorButton
             android:id="@+id/btnShadowColor"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
             android:text="@string/text_shadow_color" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnShadowSet"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
-            app:iconSize="20sp"
-            app:iconGravity="textStart"
-            app:icon="@drawable/ic_fill_colors" />
 
     </com.google.android.material.button.MaterialButtonGroup>
 

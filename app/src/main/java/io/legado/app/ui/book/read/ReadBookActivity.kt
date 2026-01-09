@@ -76,8 +76,9 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.config.AutoReadDialog
 import io.legado.app.ui.book.read.config.BgTextConfigDialog.Companion.BG_COLOR
 import io.legado.app.ui.book.read.config.FontConfigDialog
-import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.S_COLOR
+import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_ACCENT_COLOR
+import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.book.read.config.FontSelectDialog
 import io.legado.app.ui.book.read.config.ReadAloudDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
@@ -1529,10 +1530,10 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
             val (result, urlOptionStr) = when {
                 braceIndex != -1 -> {
-                    clickjs.substring(0, braceIndex) to clickjs.substring(braceIndex + 1)
+                    clickjs.take(braceIndex) to clickjs.substring(braceIndex + 1)
                 }
                 else -> {
-                    clickjs.substring(0, braceIndex2) to clickjs.substring(braceIndex2 + 2)
+                    clickjs.take(braceIndex2) to clickjs.substring(braceIndex2 + 2)
                 }
             }
             if (urlOptionStr.isJsonObject()) {
@@ -1602,8 +1603,17 @@ class ReadBookActivity : BaseReadBookActivity(),
                 setCurShadColor(color)
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
             }
+
             TEXT_COLOR -> {
                 setCurTextColor(color)
+                postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
+                if (AppConfig.readBarStyleFollowPage) {
+                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+                }
+            }
+
+            TEXT_ACCENT_COLOR -> {
+                setCurTextAccentColor(color)
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
                 if (AppConfig.readBarStyleFollowPage) {
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
