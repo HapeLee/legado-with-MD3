@@ -1371,4 +1371,5 @@
     <string name="select_operation">选择操作</string>
     <string name="text_accent_color">强调</string>
     <string name="read_color">颜色样式</string>
+    <string name="reverse_volume_key_page">反转音量键翻页方向</string>
 </resources>

@@ -869,6 +869,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.mangaVolumeKeyPage, value)
         }
 
+    var reverseVolumeKeyPage: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.reverseVolumeKeyPage, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.reverseVolumeKeyPage, value)
+        }
+
     var tabletInterface
         get() = appCtx.getPrefString(PreferKey.tabletInterface, "auto")
         set(value) {

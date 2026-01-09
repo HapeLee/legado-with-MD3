@@ -1366,4 +1366,5 @@
     <string name="auto_check_new_backup_t">自动检查新备份</string>
     <string name="text_accent_color">强调</string>
     <string name="read_color">颜色样式</string>
+    <string name="reverse_volume_key_page">反转音量键翻页方向</string>
 </resources>

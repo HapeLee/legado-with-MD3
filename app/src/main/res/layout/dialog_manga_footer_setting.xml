@@ -269,6 +269,12 @@
                 android:text="@string/volume_key_page" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/reverseVolumeKeyPage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/reverse_volume_key_page" />
+
+            <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/checkboxMangaLongClick"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
