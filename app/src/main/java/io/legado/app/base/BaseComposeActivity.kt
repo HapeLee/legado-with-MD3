@@ -1,34 +1,23 @@
 package io.legado.app.base
 
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.core.graphics.drawable.toDrawable
-import androidx.core.graphics.scale
 import androidx.core.view.WindowCompat
-import com.google.android.material.color.DynamicColors
-import com.google.android.material.color.DynamicColorsOptions
-import io.legado.app.R
 import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfig
-import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.AppTheme
-import io.legado.app.ui.theme.ThemeState
+import io.legado.app.ui.theme.ThemeSyncer
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.windowSize
-import java.io.File
 
 abstract class BaseComposeActivity(
     val fullScreen: Boolean = true,
@@ -85,7 +74,7 @@ abstract class BaseComposeActivity(
 
     open fun observeLiveBus() {
         observeEvent<String>(EventBus.RECREATE) {
-            ThemeState.updateThemeMode()
+            ThemeSyncer.syncAll()
             recreate()
         }
     }

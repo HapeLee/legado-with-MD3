@@ -32,6 +32,7 @@ import io.legado.app.lib.prefs.ThemeCardPreference
 import io.legado.app.lib.prefs.ThemeModePreference
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.ThemeSyncer
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ColorUtils
@@ -180,6 +181,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             PreferKey.customMode -> handleRestartRequired()
 
             PreferKey.pureBlack -> {
+                ThemeSyncer.syncAll()
                 Handler(Looper.getMainLooper()).postDelayed({
                     recreateActivities()
                 }, 100)

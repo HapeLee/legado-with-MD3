@@ -881,6 +881,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.getPrefBoolean(PreferKey.pureBlack, value)
         }
 
+    val hasLightBg: Boolean
+        get() = !appCtx.getPrefString(PreferKey.bgImage).isNullOrEmpty()
+
+    val hasDarkBg: Boolean
+        get() = !appCtx.getPrefString(PreferKey.bgImageN).isNullOrEmpty()
+
+    val hasImageBg: Boolean
+        get() = hasLightBg && hasDarkBg
+
     var labelVisibilityMode
         get() = appCtx.getPrefString(PreferKey.labelVisibilityMode, "auto")
         set(value) {

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.AttributeSet
@@ -29,19 +28,20 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfig
+import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.ThemeSyncer
 import io.legado.app.utils.applyOpenTint
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.disableAutoFill
+import io.legado.app.utils.fullScreen
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.windowSize
-import io.legado.app.lib.theme.primaryColor
-import io.legado.app.utils.fullScreen
 import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
+import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.windowSize
 import java.io.File
 
 
@@ -245,6 +245,7 @@ abstract class BaseActivity<VB : ViewBinding>(
 
     open fun observeLiveBus() {
         observeEvent<String>(EventBus.RECREATE) {
+            ThemeSyncer.syncAll()
             recreate()
         }
     }
