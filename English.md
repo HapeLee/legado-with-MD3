@@ -104,13 +104,9 @@ support:
 
 ---
 
-### ✅ 额外建议（可选但很加分）
 
-如果你愿意，我建议你再加一个：
-
-```md
 ## ⚠️ Disclaimer
 
 This project is a **non-official fork** of Legado and is intended for learning,
 personal use, and experimentation only.
-```
+
