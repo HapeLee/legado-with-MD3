@@ -63,7 +63,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
@@ -128,6 +127,7 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -833,7 +833,7 @@ private fun GroupManageBottomSheet(
     var editingGroup by remember { mutableStateOf<String?>(null) }
     var updatedGroupName by remember { mutableStateOf("") }
 
-    ModalBottomSheet(
+    GlobalModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState
     ) {

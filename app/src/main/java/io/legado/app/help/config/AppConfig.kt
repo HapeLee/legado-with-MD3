@@ -869,6 +869,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.mangaVolumeKeyPage, value)
         }
 
+    var reverseVolumeKeyPage: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.reverseVolumeKeyPage, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.reverseVolumeKeyPage, value)
+        }
+
     var tabletInterface
         get() = appCtx.getPrefString(PreferKey.tabletInterface, "auto")
         set(value) {
@@ -880,6 +886,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.getPrefBoolean(PreferKey.pureBlack, value)
         }
+
+    val hasLightBg: Boolean
+        get() = !appCtx.getPrefString(PreferKey.bgImage).isNullOrEmpty()
+
+    val hasDarkBg: Boolean
+        get() = !appCtx.getPrefString(PreferKey.bgImageN).isNullOrEmpty()
+
+    val hasImageBg: Boolean
+        get() = hasLightBg && hasDarkBg
 
     var labelVisibilityMode
         get() = appCtx.getPrefString(PreferKey.labelVisibilityMode, "auto")

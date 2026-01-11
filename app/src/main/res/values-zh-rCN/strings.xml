@@ -577,7 +577,7 @@
     <string name="speak_engine">朗读引擎</string>
     <string name="bg_image">背景图片</string>
     <string name="bg_color">背景颜色</string>
-    <string name="text_color">文字颜色</string>
+    <string name="text_color">正文</string>
     <string name="select_image">选择图片</string>
     <string name="group_manage">分组管理</string>
     <string name="group_select">分组选择</string>
@@ -1306,7 +1306,7 @@
     <string name="text_shadow_x">X轴距离</string>
     <string name="text_shadow_y">Y轴距离</string>
     <string name="text_shadow_radius">阴影半径</string>
-    <string name="text_shadow_color">阴影颜色</string>
+    <string name="text_shadow_color">阴影</string>
     <string name="global_read_setting">阅读显示 • 漫画相关</string>
     <string name="screen_settings">屏幕显示与亮度</string>
     <string name="reading_behavior">阅读行为</string>
@@ -1364,4 +1364,7 @@
     <string name="edit_remark">编辑备注</string>
     <string name="book_remark">书籍备注</string>
     <string name="auto_check_new_backup_t">自动检查新备份</string>
+    <string name="text_accent_color">强调</string>
+    <string name="read_color">颜色样式</string>
+    <string name="reverse_volume_key_page">反转音量键翻页方向</string>
 </resources>

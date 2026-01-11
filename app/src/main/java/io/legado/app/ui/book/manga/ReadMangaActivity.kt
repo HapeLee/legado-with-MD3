@@ -11,7 +11,6 @@ import android.view.MenuItem
 import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import androidx.activity.addCallback
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.doOnLayout
@@ -31,7 +30,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -45,7 +43,6 @@ import io.legado.app.help.AppFreezeMonitor.handler
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
@@ -815,6 +812,10 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         AppConfig.MangaVolumeKeyPage = enable
     }
 
+    override fun onReverseVolumeKeyPageChanged(enable: Boolean) {
+        AppConfig.reverseVolumeKeyPage = enable
+    }
+
     override fun onHideMangaTitleChanged(hide: Boolean) {
         AppConfig.hideMangaTitle = hide
         ReadManga.loadContent()
@@ -1069,17 +1070,29 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (AppConfig.MangaVolumeKeyPage) {
-            when (keyCode) {
-                KeyEvent.KEYCODE_VOLUME_UP -> {
-                    scrollToPrev()
-                    return true
-                }
+        if (!AppConfig.MangaVolumeKeyPage) {
+            return super.onKeyDown(keyCode, event)
+        }
 
-                KeyEvent.KEYCODE_VOLUME_DOWN -> {
+        val isReverse = AppConfig.reverseVolumeKeyPage
+
+        when (keyCode) {
+            KeyEvent.KEYCODE_VOLUME_UP -> {
+                if (isReverse) {
                     scrollToNext()
-                    return true
+                } else {
+                    scrollToPrev()
                 }
+                return true
+            }
+
+            KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                if (isReverse) {
+                    scrollToPrev()
+                } else {
+                    scrollToNext()
+                }
+                return true
             }
         }
 

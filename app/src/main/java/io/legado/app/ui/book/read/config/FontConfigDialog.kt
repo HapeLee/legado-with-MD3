@@ -2,13 +2,13 @@ package io.legado.app.ui.book.read.config
 
 import android.os.Bundle
 import android.view.View
-import io.legado.app.help.config.ReadBookConfig
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogFontConfigBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.underline
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.book.read.ReadBookActivity
@@ -24,6 +24,7 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
     companion object {
         const val S_COLOR = 123
         const val TEXT_COLOR = 121
+        const val TEXT_ACCENT_COLOR = 122
     }
     private val binding by viewBinding(DialogFontConfigBinding::bind)
 
@@ -39,6 +40,7 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
             if (list.contains(2)) {
                 binding.btnTextColor.color = ReadBookConfig.durConfig.curTextColor()
                 binding.btnShadowColor.color = ReadBookConfig.durConfig.curTextShadowColor()
+                binding.btnTextAccentColor.color = ReadBookConfig.durConfig.curTextAccentColor()
             }
         }
         initView()
@@ -48,6 +50,8 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
 
     private fun initView() = binding.run {
         binding.btnTextColor.color = ReadBookConfig.durConfig.curTextColor()
+        binding.btnShadowColor.color = ReadBookConfig.durConfig.curTextShadowColor()
+        binding.btnTextAccentColor.color = ReadBookConfig.durConfig.curTextAccentColor()
         binding.swUnderline.isChecked = underline
         dsbTextLetterSpacing.valueFormat = {
             ((it - 50) / 100f).toString()
@@ -129,7 +133,14 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
                 .setDialogId(TEXT_COLOR)
                 .show(requireActivity())
         }
-
+        binding.btnTextAccentColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(ReadBookConfig.durConfig.curTextAccentColor())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(TEXT_ACCENT_COLOR)
+                .show(requireActivity())
+        }
         binding.swUnderline.addOnCheckedChangeListener { _, isChecked ->
             callBack2?.showUnderlineConfig()
         }

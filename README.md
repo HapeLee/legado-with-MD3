@@ -1,70 +1,83 @@
->此版本为Material Design 3风格重构版本。
+# Legado with MD3
 
-与[官方版本](https://github.com/gedoor/legado)的区别：
-重新设计界面，使用Material Design 3设计，增加一些奇怪的新功能（和新的bug。
+<p align="left">
+  <a href="https://github.com/HapeLee/legado-with-MD3">简体中文</a> ｜ 
+  <a href="https://github.com/HapeLee/legado-with-MD3/blob/main/English.md">English</a>
+</p>
 
-# Function-主要功能
-[English](English.md)
-<details><summary>中文</summary>
-1.自定义书源，自己设置规则，抓取网页数据，规则简单易懂，软件内有规则说明。<br>
-2.列表书架，网格书架自由切换。<br>
-3.书源规则支持搜索及发现，所有找书看书功能全部自定义，找书更方便。<br>
-4.订阅内容,可以订阅想看的任何内容,看你想看<br>
-5.支持替换净化，去除广告替换内容很方便。<br>
-6.支持本地TXT、EPUB阅读，手动浏览，智能扫描。<br>
-7.支持高度自定义阅读界面，切换字体、颜色、背景、行距、段距、加粗、简繁转换等。<br>
-8.支持多种翻页模式，覆盖、仿真、滑动、滚动等。<br>
-9.软件开源，持续优化，无广告。
-</details>
+## 📖 介绍
 
+**Legado with MD3** 是基于开源项目 [阅读 (Legado)](https://github.com/gedoor/legado) 开发的 Material
+Design 3 风格重构版本。
 
-# Community-官方交流社区
+本项目在对 UI 进行重绘的基础上，加入了多项分支独有功能，并正在逐步从传统 View 迁移至 Jetpack Compose
+框架，目标是提供更加现代、流畅且一致的阅读体验。
 
-#### Telegram
-[![Telegram-group](https://img.shields.io/badge/Telegram-%E7%BE%A4%E7%BB%84-blue)](https://t.me/yueduguanfang) [![Telegram-channel](https://img.shields.io/badge/Telegram-%E9%A2%91%E9%81%93-blue)](https://t.me/legado_channels)
+> [!CAUTION]
+> **注意事项：**
+> 由于使用 Monet 引擎重构了主题系统，官方版本的主题在此版本中不再可用。
+>
+> **Android 12 以下设备：**
+> 暂时无法使用自定义主题与动态取色功能。此限制将在 Jetpack Compose
+> 迁移完成后得到解决（由于开发者精力有限，迁移过程将持续较长时间）。
 
-#### Discord
-[![Discord](https://img.shields.io/discord/560731361414086666?color=%235865f2&label=Discord)](https://discord.gg/VtUfRyzRXn)
+---
 
-#### Other
-https://www.yuque.com/legado/wiki/community
+## ✨ 分支特性
 
-# Other-其他
-##### 免责声明
-https://gedoor.github.io/Disclaimer
+相比于官方版本，本项目具有以下独有特性：
 
-##### 阅读3.0
-* [书源规则](https://mgz0227.github.io/The-tutorial-of-Legado/)
-* [更新日志](/app/src/main/assets/updateLog.md)
-* [帮助文档](/app/src/main/assets/web/help/md/appHelp.md)
-* [web端书架](https://github.com/gedoor/legado_web_bookshelf)
-* [web端源编辑](https://github.com/gedoor/legado_web_source_editor)
+* **全新主题：** 全新 Material Design 3 设计界面，支持 **预测性返回手势** 与 **共享元素动画**。
+* **阅读界面：** 更加个性化的阅读界面与菜单配置。
+* **阅读记录：** 提供详尽的阅读记录，支持 **时间轴** 与 **章节维度** 统计。
+* **体验增强：** 更健全的 **漫画阅读** 、 **有声书** 与 **发现** 等界面体验。
+* **书架布局：** 更多的书架布局选择，针对 **平板端** 进行了专门的界面优化。
+* **实用功能：** 新增书籍备注、智能伴生分组（自动归类已读/未读）等。
 
+---
 
-# Grateful-感谢 [![](https://img.shields.io/badge/-Grateful-F5F5F5.svg)](#Grateful-感谢-)
-[gedoor/legado](https://github.com/gedoor/legado)
+## 🛠️ 核心功能
 
-[Luoyacheng/legado](https://github.com/Luoyacheng/legado)
+1. **自定义书源：** 强大的爬虫引擎，规则简单易懂，支持自定义抓取网页数据。
+2. **多格式支持：** 支持本地 TXT、EPUB 阅读，智能扫描本地文件。
+3. **高度自定义：** 切换字体、背景、行距、段距、加粗、简繁转换等。
+4. **订阅内容：** 不止是书，可以订阅任何你想看的内容。
+5. **净化替换：** 强力去除广告，替换正文内容。
+6. **翻页模式：** 覆盖、仿真、滑动、滚动等多种模式随心切换。
+7. **完全开源：** 无广告，持续迭代优化。
 
-[komikku-app/komikku](https://github.com/komikku-app/komikku)
+---
 
-[FoedusProgramme/Gramophone](https://github.com/FoedusProgramme/Gramophone)
+## 🤝 社区与支持
 
-> * org.jsoup:jsoup
-> * cn.wanghaomiao:JsoupXpath
-> * com.jayway.jsonpath:json-path
-> * com.github.gedoor:rhino-android
-> * com.squareup.okhttp3:okhttp
-> * com.github.bumptech.glide:glide
-> * org.nanohttpd:nanohttpd
-> * org.nanohttpd:nanohttpd-websocket
-> * cn.bingoogolapple:bga-qrcode-zxing
-> * com.jaredrummler:colorpicker
-> * org.apache.commons:commons-text
-> * io.noties.markwon:core
-> * io.noties.markwon:image-glide
-> * com.hankcs:hanlp
-> * com.positiondev.epublib:epublib-core
-<a href="#readme">
-    <img src="https://img.shields.io/badge/-返回顶部-orange.svg" alt="#" align="right">
-</a>
+以下为原项目的社区，本项目由于开发者比较忙，暂时没有独立社区。
+
+* **官方 Wiki:** [书源规则教程](https://mgz0227.github.io/The-tutorial-of-Legado/)
+* **交流社区:
+  ** [Telegram 频道](https://t.me/legado_channels) | [Discord](https://discord.gg/VtUfRyzRXn) | [语雀 Wiki](https://www.yuque.com/legado/wiki/community)
+* **相关文档:
+  ** [免责声明](https://gedoor.github.io/Disclaimer) | [更新日志](https://www.google.com/search?q=/app/src/main/assets/updateLog.md)
+
+---
+
+## ❤️ 致谢
+
+感谢以下优秀开源项目提供的灵感与技术支持：
+
+* [gedoor/legado](https://github.com/gedoor/legado) (这个项目最吊的老爹)
+* [Luoyacheng/legado](https://github.com/Luoyacheng/legado) (提供了更多的扩展功能)
+* [komikku-app/komikku](https://github.com/komikku-app/komikku) (提供了界面灵感与一些 Compose
+  的优秀控件)
+* [FoedusProgramme/Gramophone](https://github.com/FoedusProgramme/Gramophone) (提供了界面灵感与 View
+  系统的封面取色方法)
+* [jordond/MaterialKolor](https://github.com/jordond/MaterialKolor) (基于 Jetpack Compose
+  优秀的取色实现)
+* [Calvin-LL/Reorderable](https://github.com/Calvin-LL/Reorderable) (基于 Jetpack Compose
+  优秀的拖动排序实现)
+* 以及更多开源项目...
+
+## ⚠️ 免责声明
+
+本项目为 **Legado（阅读）** 的非官方分支，仅用于学习、交流与个人使用。
+项目内容不代表原作者立场，与原项目作者不存在任何隶属或授权关系。
+

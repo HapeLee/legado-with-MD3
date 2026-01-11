@@ -5,6 +5,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import com.google.android.material.color.MaterialColors
 import io.legado.app.constant.AppLog
@@ -27,14 +28,11 @@ import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.hexString
 import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.resizeAndRecycle
 import splitties.init.appCtx
 import java.io.File
-import kotlin.String
-import androidx.core.graphics.drawable.toDrawable
-import io.legado.app.utils.FileDoc
-import io.legado.app.utils.putPrefBoolean
 
 /**
  * 阅读界面配置
@@ -61,6 +59,7 @@ object ReadBookConfig {
     var bg: Drawable? = null
     var bgMeanColor: Int = 0
     val textColor: Int get() = durConfig.curTextColor()
+    val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
     val menuColor: Int get() = durConfig.curMenuAc()
     init {
@@ -603,6 +602,7 @@ object ReadBookConfig {
             config.bgStrEInk.toColorInt()
         }
         config.curTextColor()
+        config.curTextAccentColor()
         return config
     }
 
@@ -626,6 +626,9 @@ object ReadBookConfig {
         private var textColor: String = "#3E3D3B",//白天文字颜色
         private var textColorNight: String = "#ADADAD",//夜间文字颜色
         private var textColorEInk: String = "#000000",
+        private var textAccentColor: String = "#834E00",//白天强调文字颜色
+        private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
+        private var textAccentColorEInk: String = "#000000",
         private var pageAnim: Int = 0,//翻页动画
         private var pageAnimEInk: Int = 4,
         var textFont: String = "",//字体
@@ -719,6 +722,18 @@ object ReadBookConfig {
         private var underlineColorNightInt = -1
 
         @Transient
+        private var textAccentColorIntEInk = -1
+
+        @Transient
+        private var textAccentColorIntNight = -1
+
+        @Transient
+        private var textAccentColorInt = -1
+
+        @Transient
+        private var initAccentColorInt = false
+
+        @Transient
         private var initColorInt = false
 
         fun getBgPath(bgIndex: Int): String? {
@@ -758,6 +773,43 @@ object ReadBookConfig {
             underlineColorInt = underlineColor.toColorInt()
             underlineColorNightInt = underlineColorNight.toColorInt()
             initColorInt = true
+        }
+
+        private fun initAccentColorInt() {
+            textAccentColorIntEInk = textAccentColorEInk.toColorInt()
+            textAccentColorIntNight = textAccentColorNight.toColorInt()
+            textAccentColorInt = textAccentColor.toColorInt()
+            initAccentColorInt = true
+        }
+
+        fun setCurTextAccentColor(color: Int) {
+            when {
+                AppConfig.isEInkMode -> {
+                    textAccentColorEInk = "#${color.hexString}"
+                    textAccentColorIntEInk = color
+                }
+
+                AppConfig.isNightTheme -> {
+                    textAccentColorNight = "#${color.hexString}"
+                    textAccentColorIntNight = color
+                }
+
+                else -> {
+                    textAccentColor = "#${color.hexString}"
+                    textAccentColorInt = color
+                }
+            }
+        }
+
+        fun curTextAccentColor(): Int {
+            if (!initAccentColorInt) {
+                initAccentColorInt()
+            }
+            return when {
+                AppConfig.isEInkMode -> textAccentColorIntEInk
+                AppConfig.isNightTheme -> textAccentColorIntNight
+                else -> textAccentColorInt
+            }
         }
 
         fun setCurShadColor(color: Int){

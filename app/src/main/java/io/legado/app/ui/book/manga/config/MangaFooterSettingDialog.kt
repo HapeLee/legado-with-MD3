@@ -4,7 +4,6 @@ import android.content.DialogInterface
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import androidx.core.graphics.toColorInt
 import androidx.core.view.isVisible
 import androidx.transition.TransitionManager
 import com.google.android.material.chip.Chip
@@ -14,9 +13,7 @@ import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogMangaFooterSettingBinding
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
 import io.legado.app.ui.widget.ReaderInfoBarView
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -131,6 +128,13 @@ class MangaFooterSettingDialog :
             isChecked = AppConfig.MangaVolumeKeyPage
             setOnCheckedChangeListener { _, isChecked ->
                 callback?.onVolumeKeyPageChanged(isChecked)
+            }
+        }
+
+        binding.reverseVolumeKeyPage.apply {
+            isChecked = AppConfig.reverseVolumeKeyPage
+            setOnCheckedChangeListener { _, isChecked ->
+                callback?.onReverseVolumeKeyPageChanged(isChecked)
             }
         }
 
@@ -303,6 +307,7 @@ class MangaFooterSettingDialog :
         fun onMangaScaleDisabledChanged(disabled: Boolean)
         fun onHideMangaTitleChanged(hide: Boolean)
         fun onVolumeKeyPageChanged(enable: Boolean)
+        fun onReverseVolumeKeyPageChanged(enable: Boolean)
         fun onMangaLongClickChanged(checked: Boolean)
     }
 

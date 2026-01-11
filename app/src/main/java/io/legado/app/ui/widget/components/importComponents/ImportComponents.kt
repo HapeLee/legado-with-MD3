@@ -36,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedToggleButton
@@ -62,6 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
 import kotlinx.coroutines.launch
 
 @Composable
@@ -137,10 +137,10 @@ fun <T> BatchImportDialog(
     val selectedCount = importState.items.count { it.isSelected }
     val totalCount = importState.items.size
 
-    ModalBottomSheet(
+    GlobalModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        containerColor = { it.surfaceContainer }
     ) {
         Scaffold(
             modifier = Modifier

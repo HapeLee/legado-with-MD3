@@ -14,8 +14,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -34,12 +32,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
@@ -58,7 +56,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -92,7 +89,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
@@ -100,6 +96,8 @@ import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.TextCard
+import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
@@ -183,104 +181,118 @@ fun ExploreShowScreen(
             skipPartiallyExpanded = true
         )
 
-        ModalBottomSheet(
+        GlobalModalBottomSheet(
             sheetState = sheetState,
-            dragHandle = null,
+            modifier = Modifier
+                .padding(16.dp),
             onDismissRequest = { showGridCountSheet = false }
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState, style = HazeMaterials.regular())
-                    .padding(16.dp)
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-
                 Text(
-                    text = "当前：$gridColumnCount 列",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    text = "布局列数",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
-                Slider(
-                    value = gridColumnCount.toFloat(),
-                    onValueChange = {
-                        val col = it.toInt().coerceIn(1, 10)
-                        viewModel.saveGridCount(col)
-                    },
-                    valueRange = 1f..10f,
-                    steps = 8,
-                    modifier = Modifier.padding(horizontal = 8.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+
+                TextCard(
+                    text = "$gridColumnCount 列",
+                    textStyle = MaterialTheme.typography.titleSmall,
+                    verticalPadding = 4.dp,
+                    horizontalPadding = 12.dp,
+                    cornerRadius = 12.dp
                 )
+            }
 
-                Spacer(Modifier.height(20.dp))
+            Slider(
+                value = gridColumnCount.toFloat(),
+                onValueChange = {
+                    val col = it.toInt().coerceIn(1, 10)
+                    viewModel.saveGridCount(col)
+                },
+                valueRange = 1f..10f,
+                steps = 8,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
 
-                OutlinedButton (
-                    onClick = { showGridCountSheet = false },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("完成")
-                }
+            Spacer(Modifier.height(24.dp))
+
+            OutlinedButton(
+                onClick = { showGridCountSheet = false },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text("完成")
             }
         }
     }
 
     if (showKindSheet) {
-        val scrollState = rememberScrollState()
         val sheetState = rememberModalBottomSheetState(
             skipPartiallyExpanded = true,
             confirmValueChange = { newValue ->
                 newValue != SheetValue.PartiallyExpanded
             }
         )
-        ModalBottomSheet(
+
+        GlobalModalBottomSheet(
+            onDismissRequest = { showKindSheet = false },
             sheetState = sheetState,
-            dragHandle = null,
-            onDismissRequest = { showKindSheet = false }
+            modifier = Modifier
+                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
         ) {
-            Column(
-                modifier = Modifier
-                    .hazeEffect(state = hazeState, style = HazeMaterials.regular())
-                    .fillMaxWidth()
-                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
-                    .verticalScroll(scrollState)
-            ) {
 
-                var kindQuery by remember { mutableStateOf("") }
+            var kindQuery by remember { mutableStateOf("") }
 
-                SearchBarSection(
-                    query = kindQuery,
-                    onQueryChange = { kindQuery = it },
-                    placeholder = "选择或搜索分类",
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                )
+            SearchBarSection(
+                query = kindQuery,
+                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                onQueryChange = { kindQuery = it },
+                placeholder = "选择或搜索分类",
+            )
 
-                val filteredKinds = remember(kindQuery, kinds) {
-                    if (kindQuery.isBlank()) kinds
-                    else kinds.filter { kind ->
-                        kind.title.contains(kindQuery, ignoreCase = true) ||
-                                (kind.url?.contains(kindQuery, ignoreCase = true) == true)
-                    }
-                }
-
-                FlowRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    maxItemsInEachRow = 3, // 强制每行最多 3 个
-                    horizontalArrangement = Arrangement.spacedBy(0.dp) // 因为 Item 内部有 padding，这里设为 0
-                ) {
-                    filteredKinds.forEach { kind ->
-                        KindListItem(
-                            kind = kind,
-                            currentTitle = selectedTitle ?: title,
-                            onClick = {
-                                showKindSheet = false
-                                viewModel.switchExploreUrl(kind)
-                            }
-                        )
-                    }
+            val filteredKinds = remember(kindQuery, kinds) {
+                if (kindQuery.isBlank()) kinds
+                else kinds.filter { kind ->
+                    kind.title.contains(kindQuery, ignoreCase = true) ||
+                            (kind.url?.contains(kindQuery, ignoreCase = true) == true)
                 }
             }
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                contentPadding = PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                itemsIndexed(
+                    items = filteredKinds,
+                    key = { index, kind -> "${kind.url ?: kind.title}_$index" },
+                    span = { _, kind ->
+                        val isClickable = !kind.url.isNullOrBlank()
+                        if (isClickable) GridItemSpan(1) else GridItemSpan(3)
+                    }
+                ) { _, kind ->
+                    KindGridItem(
+                        modifier = Modifier.animateItem(),
+                        kind = kind,
+                        currentTitle = selectedTitle ?: title,
+                        onClick = {
+                            showKindSheet = false
+                            viewModel.switchExploreUrl(kind)
+                        }
+                    )
+                }
+            }
+
         }
     }
 
@@ -380,7 +392,7 @@ fun ExploreShowScreen(
 }
 
 @Composable
-fun FlowRowScope.KindListItem(
+fun KindGridItem(
     kind: ExploreKind,
     currentTitle: String?,
     onClick: () -> Unit,
@@ -403,12 +415,7 @@ fun FlowRowScope.KindListItem(
                 overflow = TextOverflow.Ellipsis
             )
         },
-        modifier = modifier
-            .padding(horizontal = 4.dp)
-            .then(
-                if (!isClickable) Modifier.fillMaxWidth()
-                else Modifier.weight(1f)
-            )
+        modifier = modifier.fillMaxWidth()
     )
 }
 

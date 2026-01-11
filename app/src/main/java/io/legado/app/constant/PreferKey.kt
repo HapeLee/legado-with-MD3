@@ -191,7 +191,7 @@ object PreferKey {
     const val mangaScrollMode = "mangaScrollMode"
     const val webtoonSidePaddingDp = "webtoonSidePaddingDp"
     const val mangaVolumeKeyPage = "mangaVolumeKeyPage"
-
+    const val reverseVolumeKeyPage = "reverseVolumeKeyPage"
     const val mangaClickActionTL = "mangaClickActionTopLeft"
     const val mangaClickActionTC = "mangaClickActionTopCenter"
     const val mangaClickActionTR = "mangaClickActionTopRight"
