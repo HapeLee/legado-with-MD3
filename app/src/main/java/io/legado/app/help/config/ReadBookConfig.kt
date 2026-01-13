@@ -509,6 +509,30 @@ object ReadBookConfig {
             config.showFooterLine = value
         }
 
+    var underlineColor: Int
+        get() = config.curUnderlineColor()
+        set(value) {
+            config.setUnderlineColor(value)
+        }
+
+    var menuBgColor: Int
+        get() = config.curMenuBg()
+        set(value) {
+            config.setMenuCurBg(value)
+        }
+
+    var menuAcColor: Int
+        get() = config.curMenuAc()
+        set(value) {
+            config.setMenuCurAc(value)
+        }
+
+    var shadowColor: Int
+        get() = config.curTextShadowColor()
+        set(value) {
+            config.setCurShadColor(value)
+        }
+
     fun getExportConfig(): Config {
         val exportConfig = durConfig.copy()
         if (shareLayout) {
@@ -544,7 +568,26 @@ object ReadBookConfig {
             exportConfig.tipFooterRight = shareConfig.tipFooterRight
             exportConfig.tipColor = shareConfig.tipColor
             exportConfig.headerMode = shareConfig.headerMode
+            // MD3专有属性
             exportConfig.footerMode = shareConfig.footerMode
+            exportConfig.textItalic = shareConfig.textItalic
+            exportConfig.textShadow = shareConfig.textShadow
+            exportConfig.shadowRadius = shareConfig.shadowRadius
+            exportConfig.shadowDx = shareConfig.shadowDx
+            exportConfig.shadowDy = shareConfig.shadowDy
+            exportConfig.titleBold = shareConfig.titleBold
+            exportConfig.titleLineSpacingExtra = shareConfig.titleLineSpacingExtra
+            exportConfig.titleSegType = shareConfig.titleSegType
+            exportConfig.titleSegScaling = shareConfig.titleSegScaling
+            exportConfig.titleSegDistance = shareConfig.titleSegDistance
+            exportConfig.titleSegFlag = shareConfig.titleSegFlag
+            exportConfig.paragraphIndent = shareConfig.paragraphIndent
+            exportConfig.underline = shareConfig.underline
+            exportConfig.underlineHeight = shareConfig.underlineHeight
+            exportConfig.dottedLine = shareConfig.dottedLine
+            exportConfig.dottedBase = shareConfig.dottedBase
+            exportConfig.dottedRatio = shareConfig.dottedRatio
+            exportConfig.bgAlpha = shareConfig.bgAlpha
         }
         return exportConfig
     }
@@ -603,6 +646,7 @@ object ReadBookConfig {
         }
         config.curTextColor()
         config.curTextAccentColor()
+        config.curTextShadowColor()
         return config
     }
 
