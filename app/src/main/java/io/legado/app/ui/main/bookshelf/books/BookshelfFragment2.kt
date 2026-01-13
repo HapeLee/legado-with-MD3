@@ -54,7 +54,6 @@ import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
@@ -111,6 +110,8 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         }
     }
 
+    var onGroupIdChangedListener: ((isRoot: Boolean) -> Unit)? = null
+
     private var bookGroups: List<BookGroup> = emptyList()
     private var booksFlowJob: Job? = null
     override var groupId = BookGroup.Companion.IdRoot
@@ -138,9 +139,15 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
     }
 
+    override fun onDestroyView() {
+        onGroupIdChangedListener?.invoke(true)
+        super.onDestroyView()
+    }
+
     private fun updateBackCallbackState() {
-        //每次进出书架时，判断是否启用回调
-        backCallback.isEnabled = groupId != BookGroup.IdRoot
+        val isRoot = groupId == BookGroup.IdRoot
+        backCallback.isEnabled = !isRoot
+        onGroupIdChangedListener?.invoke(isRoot)
     }
 
     @Suppress("UNCHECKED_CAST")

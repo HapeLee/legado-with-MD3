@@ -24,7 +24,7 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
     companion object {
         const val S_COLOR = 123
         const val TEXT_COLOR = 121
-        const val TEXT_ACCENT_COLOR = 122
+        const val TEXT_ACCENT_COLOR = 125
     }
     private val binding by viewBinding(DialogFontConfigBinding::bind)
 
