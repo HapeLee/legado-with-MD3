@@ -9,7 +9,6 @@ import android.os.Bundle
 import android.text.format.DateUtils
 import android.view.Gravity
 import android.view.MenuItem
-import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
@@ -33,6 +32,7 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.databinding.ActivityMainBinding
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
@@ -58,10 +58,8 @@ import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.gone
-import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setNavigationBarColorAuto
-import io.legado.app.utils.shouldHideSoftInput
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.themeColor
@@ -183,10 +181,15 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     override fun onNavigationItemReselected(item: MenuItem) {
         when (item.itemId) {
             R.id.menu_bookshelf -> {
-                if (System.currentTimeMillis() - bookshelfReselected > 300) {
-                    bookshelfReselected = System.currentTimeMillis()
+                val fragment = fragmentMap[getFragmentId(0)] as? BookshelfFragment2
+                if (fragment != null && fragment.groupId != BookGroup.IdRoot) {
+                    fragment.back()
                 } else {
-                    (fragmentMap[getFragmentId(0)] as? BaseBookshelfFragment)?.gotoTop()
+                    if (System.currentTimeMillis() - bookshelfReselected > 300) {
+                        bookshelfReselected = System.currentTimeMillis()
+                    } else {
+                        fragment?.gotoTop()
+                    }
                 }
             }
 
@@ -341,6 +344,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         observeEvent<Boolean>(EventBus.NOTIFY_MAIN) {
             binding.apply {
                 upBottomMenu()
+                updateBookshelfIcon(true)
                 if (it) {
                     viewPagerMain.setCurrentItem(bottomMenuCount - 1, false)
                 }
@@ -474,6 +478,22 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
 
     }
 
+    private fun updateBookshelfIcon(isRoot: Boolean) {
+        val navView = getNavigationBarView()
+        val bookshelfMenuItem = navView.menu.findItem(R.id.menu_bookshelf) ?: return
+
+        if (isRoot) {
+            bookshelfMenuItem.setIcon(R.drawable.ic_bottom_books)
+        } else {
+            val currentFragment = fragmentMap[getFragmentId(0)]
+            if (currentFragment is BookshelfFragment2) {
+                bookshelfMenuItem.setIcon(R.drawable.ic_arrow_back)
+            } else {
+                bookshelfMenuItem.setIcon(R.drawable.ic_bottom_books)
+            }
+        }
+    }
+
     private fun upHomePage() {
         when (AppConfig.defaultHomePage) {
             "bookshelf" -> {}
@@ -515,6 +535,12 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
                 idMy -> R.id.menu_my_config
                 else -> R.id.menu_bookshelf
             }
+            if (position == 0) {
+                val fragment = fragmentMap[getFragmentId(0)] as? BookshelfFragment2
+                updateBookshelfIcon(fragment?.groupId == BookGroup.IdRoot)
+            } else {
+                updateBookshelfIcon(true)
+            }
             updateBackCallbackState()
         }
     }
@@ -532,7 +558,13 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
         override fun createFragment(position: Int): Fragment {
             val fragment = when (getFragmentId(position)) {
                 idBookshelf1 -> BookshelfFragment1(position)
-                idBookshelf2 -> BookshelfFragment2(position)
+                idBookshelf2 -> BookshelfFragment2(position).apply {
+                    this.onGroupIdChangedListener = { isRoot ->
+                        if (pagePosition == 0) {
+                            updateBookshelfIcon(isRoot)
+                        }
+                    }
+                }
                 idBookshelf3 -> BookshelfFragment3(position)
                 idBookshelf4 -> BookshelfFragment4(position)
                 idExplore -> ExploreFragment(position)
