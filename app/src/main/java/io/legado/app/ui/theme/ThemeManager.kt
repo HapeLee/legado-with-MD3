@@ -8,8 +8,8 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.materialkolor.PaletteStyle
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.ThemeResolver.resolvePaletteStyle
 import io.legado.app.ui.theme.colorScheme.AugustColorScheme
 import io.legado.app.ui.theme.colorScheme.CarlottaColorScheme
 import io.legado.app.ui.theme.colorScheme.ElinkColorScheme
@@ -46,10 +46,11 @@ object ThemeManager {
         darkTheme: Boolean = isSystemInDarkTheme(),
         isAmoled: Boolean,
         isImageBg: Boolean,
+        paletteStyle: String?,
         forceOpaque: Boolean = false
     ): ColorScheme {
         val context = LocalContext.current
-
+        val style = resolvePaletteStyle(paletteStyle)
         val actualMode = if (forceOpaque && mode == AppThemeMode.Transparent) {
             AppThemeMode.WH
         } else {
@@ -66,7 +67,7 @@ object ThemeManager {
             }
 
             AppThemeMode.CUSTOM -> {
-                CustomColorScheme(context, context.primaryColor, PaletteStyle.Vibrant)
+                CustomColorScheme(context, context.primaryColor, style)
                     .getColorScheme(darkTheme)
             }
 

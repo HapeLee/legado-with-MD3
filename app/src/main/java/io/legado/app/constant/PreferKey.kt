@@ -172,6 +172,8 @@ object PreferKey {
     const val cPrimary = "colorPrimary"
     const val cAccent = "colorAccent"
     const val customMode = "customMode"
+    const val paletteStyle = "paletteStyle"
+    const val enableBlur = "enableBlur"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val bgImage = "backgroundImage"

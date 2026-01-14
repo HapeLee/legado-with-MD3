@@ -156,6 +156,18 @@
         <item>关闭</item>
     </string-array>
 
+    <string-array name="paletteStyle">
+        <item>柔和</item>
+        <item>中性</item>
+        <item>鲜艳</item>
+        <item>表现力</item>
+        <item>彩虹</item>
+        <item>水果拼盘</item>
+        <item>单色</item>
+        <item>仿真</item>
+        <item>内容取色</item>
+    </string-array>
+
     <string-array name="customMode">
         <item>全局</item>
         <item>仅强调色</item>

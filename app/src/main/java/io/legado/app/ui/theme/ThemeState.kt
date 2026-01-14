@@ -22,6 +22,14 @@ object ThemeState {
         MutableStateFlow(AppConfig.hasImageBg)
     val hasImageBg: StateFlow<Boolean> = _hasImageBg.asStateFlow()
 
+    private val _paletteStyle =
+        MutableStateFlow(AppConfig.paletteStyle)
+    val paletteStyle: StateFlow<String?> = _paletteStyle.asStateFlow()
+
+    private val _enableBlur =
+        MutableStateFlow(AppConfig.enableBlur)
+    val enableBlur: StateFlow<Boolean> = _enableBlur.asStateFlow()
+
     fun updateThemeMode(newMode: AppThemeMode) {
         if (_themeMode.value != newMode) {
             _themeMode.value = newMode
@@ -39,4 +47,17 @@ object ThemeState {
             _hasImageBg.value = enabled
         }
     }
+
+    fun updatePaletteStyle(style: String?) {
+        if (_paletteStyle.value != style) {
+            _paletteStyle.value = style
+        }
+    }
+
+    fun updateEnableBlur(enabled: Boolean) {
+        if (_enableBlur.value != enabled) {
+            _enableBlur.value = enabled
+        }
+    }
+
 }

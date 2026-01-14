@@ -902,6 +902,17 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefString(PreferKey.labelVisibilityMode, value)
         }
 
+    var paletteStyle
+        get() = appCtx.getPrefString(PreferKey.paletteStyle, "tonalSpot")
+        set(value) {
+            appCtx.putPrefString(PreferKey.paletteStyle, value)
+        }
+
+    var enableBlur
+        get() = appCtx.getPrefBoolean(PreferKey.enableBlur, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.enableBlur, value)
+        }
     var menuAlpha: Int
         get() = appCtx.getPrefInt(PreferKey.menuAlpha, 100)
         set(value) {
@@ -961,5 +972,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             appCtx.putPrefBoolean(PreferKey.sliderVibrator, value)
         }
+
+
 }
 

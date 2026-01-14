@@ -34,12 +34,14 @@ fun GlobalModalBottomSheet(
     val themeMode by ThemeState.themeMode.collectAsState()
     val isPureBlack by ThemeState.isPureBlack.collectAsState()
     val hasImageBg by ThemeState.hasImageBg.collectAsState()
+    val paletteStyle by ThemeState.paletteStyle.collectAsState()
 
     val colorScheme = ThemeManager.getColorScheme(
         mode = themeMode,
         isAmoled = isPureBlack,
         isImageBg = hasImageBg,
-        forceOpaque = true
+        forceOpaque = true,
+        paletteStyle = paletteStyle
     )
 
     ModalBottomSheet(

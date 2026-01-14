@@ -43,11 +43,6 @@
             app:cpv_dialogType="preset"
             app:iconSpaceReserved="false" />
 
-        <io.legado.app.lib.prefs.ImagePreviewPreference
-            android:key="colorImage"
-            android:title="种子图片"
-            android:summary="@string/seed_photo_summary"/>
-
         <io.legado.app.lib.prefs.NameListPreference
             android:defaultValue="global"
             android:key="customMode"
@@ -77,6 +72,34 @@
             android:summary="@string/cover_config_summary"
             app:allowDividerAbove="false"
             app:allowDividerBelow="false"
+            app:iconSpaceReserved="false" />
+
+    </io.legado.app.lib.prefs.PreferenceCategory>
+
+    <io.legado.app.lib.prefs.PreferenceCategory
+        android:title="Compose 相关"
+        app:allowDividerAbove="false"
+        app:allowDividerBelow="false"
+        app:iconSpaceReserved="false"
+        app:layout="@layout/view_preference_category">
+
+        <io.legado.app.lib.prefs.TipPreference
+            android:key="tip"
+            android:selectable="false"
+            app:iconSpaceReserved="false"
+            app:tipText="@string/tip_compose_set" />
+
+        <io.legado.app.lib.prefs.NameListPreference
+            android:defaultValue="tonalSpot"
+            android:key="paletteStyle"
+            android:title="@string/palette_style"
+            app:entries="@array/paletteStyle"
+            app:entryValues="@array/paletteStyle_value" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
+            android:key="enableBlur"
+            android:title="@string/is_blur_enable"
             app:iconSpaceReserved="false" />
 
     </io.legado.app.lib.prefs.PreferenceCategory>

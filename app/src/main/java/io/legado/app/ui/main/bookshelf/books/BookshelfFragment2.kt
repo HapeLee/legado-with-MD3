@@ -388,6 +388,8 @@ class BookshelfFragment2() : BaseBookshelfFragment(R.layout.fragment_bookshelf2)
                 is BookGroup -> {
                     groupId = item.groupId
                     initBooksData()
+                    groupIdChangeListener?.onGroupIdChanged()
+                    updateBackCallbackState()
                 }
             }
         }

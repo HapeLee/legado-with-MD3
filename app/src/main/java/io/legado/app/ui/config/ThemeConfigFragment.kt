@@ -139,6 +139,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             true
         }
 
+        // TODO:删掉种子色了喵
         val hasColorImage = !getPrefString(PreferKey.colorImage).isNullOrBlank()
         colorPrimary?.isEnabled = !hasColorImage
         if (hasColorImage)
@@ -178,14 +179,15 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 //recreateActivities()
             }
 
-            PreferKey.customMode -> handleRestartRequired()
 
-            PreferKey.pureBlack -> {
+            PreferKey.paletteStyle, PreferKey.pureBlack, PreferKey.enableBlur -> {
                 ThemeSyncer.syncAll()
                 Handler(Looper.getMainLooper()).postDelayed({
                     recreateActivities()
                 }, 100)
             }
+
+            PreferKey.customMode -> handleRestartRequired()
 
             PreferKey.isPredictiveBackEnabled -> {
                 toastOnUi("重启以应用")
