@@ -11,6 +11,8 @@ object ThemeSyncer {
         syncThemeMode()
         syncPureBlack()
         syncImageBg()
+        syncPaletteStyle()
+        syncEnableBlur()
     }
 
     fun syncThemeMode() {
@@ -25,5 +27,13 @@ object ThemeSyncer {
 
     fun syncImageBg() {
         ThemeState.updateImageBg(AppConfig.hasImageBg)
+    }
+
+    fun syncPaletteStyle() {
+        ThemeState.updatePaletteStyle(AppConfig.paletteStyle)
+    }
+
+    fun syncEnableBlur() {
+        ThemeState.updateEnableBlur(AppConfig.enableBlur)
     }
 }

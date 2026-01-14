@@ -193,7 +193,19 @@
 		<item>Off</item>
 	</string-array>
 
-	<string-array name="customMode">
+    <string-array name="paletteStyle">
+        <item>TonalSpot</item>
+        <item>Neutral</item>
+        <item>Vibrant</item>
+        <item>Expressive</item>
+        <item>Rainbow</item>
+        <item>FruitSalad</item>
+        <item>Monochrome</item>
+        <item>Fidelity</item>
+        <item>Content</item>
+    </string-array>
+
+    <string-array name="customMode">
 		<item>Global</item>
 		<item>Accent</item>
 	</string-array>
