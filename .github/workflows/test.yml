@@ -134,11 +134,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
       - name: Clear 18PlusList.txt
         run: |
           echo "清空18PlusList.txt"
@@ -154,18 +154,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: 统一版本号
-        run: |
-          VERSIONL="${{ env.VERSIONL }}"
-          BUILD_NUMBER="${{ env.BUILD_NUMBER }}"
-          echo "开始修改 build.gradle 中的版本号..."
-          sed -i "s/ext.versionName = .*/ext.versionName = \"$VERSIONL\"/" $GITHUB_WORKSPACE/app/build.gradle
 
       - name: Build With Gradle
         run: |
           echo "开始${{ env.product }}${{ env.type }}构建"
           chmod +x gradlew
           ./gradlew assemble${{ env.product }}Release
+        env:
+          BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+          APP_VERSION_NAME: ${{ env.VERSIONL }}
 
       - name: Move Missing Rules Files
         run: |
