@@ -135,7 +135,14 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             binding.viewPagerMain.fitsSystemWindows = true
         // 其他初始化逻辑
         setupBackCallback()
-        WebService.startForeground(this)
+        
+        // ——————【修改开始】——————
+        // 智能自启：如果上次是手动开启状态（web_service_auto 为 true），则自启
+        if (getPrefBoolean("web_service_auto", false)) {
+            WebService.startForeground(this)
+        }
+        // ——————【修改结束】——————
+        
         upBottomMenu()
         initView()
         upHomePage()
@@ -598,5 +605,3 @@ class Launcher4 : MainActivity()
 class Launcher5 : MainActivity()
 class Launcher6 : MainActivity()
 class Launcher0 : MainActivity()
-
-
