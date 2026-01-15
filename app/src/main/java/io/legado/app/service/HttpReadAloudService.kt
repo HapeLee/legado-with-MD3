@@ -29,7 +29,6 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
-// 核心引用，缺了它构建会挂
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
@@ -70,7 +69,7 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (完美匹配版：修复文件名MD5不一致导致的重复下载 + 修复缓存不可见)
+ * (完美匹配版：修复文件名MD5不一致 + 修复缓存不可见 + 修复0分钟不彻底清理)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -493,15 +492,31 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 移除缓存文件
+     * 修复逻辑：如果时间设置为0，则不再保护当前章节，退出即全删。
      */
     private fun removeCacheFile() {
-        val titleMd5 = MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "")
+        val keepTime = AppConfig.audioCacheCleanTime
+        // 只有当时间大于0时，才需要保护当前章节。如果为0，说明用户想彻底不留缓存。
+        val protectCurrentChapter = keepTime > 0
+        val titleMd5 = if (protectCurrentChapter) MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "") else ""
+
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
-            if ((!it.name.startsWith(titleMd5)
-                        && System.currentTimeMillis() - it.lastModified() > AppConfig.audioCacheCleanTime)
-                || isSilentSound
-            ) {
+
+            // 判断逻辑：
+            // 1. 如果是无声文件 -> 删
+            // 2. 如果保留时间设为0 -> 删 (不管是不是当前章节)
+            // 3. 如果保留时间>0 -> 保护当前章节，且只删过期的
+            val shouldDelete = if (keepTime == 0L) {
+                // 模式：即听即焚 (保留时间0)
+                true
+            } else {
+                // 模式：保留一段时间
+                // 条件：(不是当前章节) 且 (时间过期了)
+                !it.name.startsWith(titleMd5) && (System.currentTimeMillis() - it.lastModified() > keepTime)
+            }
+
+            if (shouldDelete || isSilentSound) {
                 FileUtils.delete(it.absolutePath)
             }
         }
