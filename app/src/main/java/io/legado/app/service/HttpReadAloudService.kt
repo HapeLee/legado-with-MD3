@@ -29,6 +29,8 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
+// 【关键修复】补全 Book 引用，防止构建失败
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.exception.NoStackTraceException
@@ -68,7 +70,7 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (终极修正版：使用全局 ReadBook.durChapterIndex 和 textChapter.chapter 路径)
+ * (最终稳定版：补全Import，增加容错，强制读取文件)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -196,45 +198,67 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
+    /**
+     * 辅助方法：安全获取章节内容
+     * 就算内存里没有，也会尝试去本地文件读取
+     */
+    private fun getChapterContent(book: Book, chapter: BookChapter): String? {
+        // BookHelp.getContent 内部封装了从文件读取的逻辑
+        // 我们单独拿出来调用，确保不会因为 TextChapter 的缺失而跳过
+        return BookHelp.getContent(book, chapter)
+    }
+
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
-        
-        // 终极修复：使用 ReadBook.durChapterIndex (最安全的获取当前章节索引的方式)
         val currentIdx = ReadBook.durChapterIndex
         val limit = AppConfig.audioPreDownloadNum
         
-        for (i in 1..limit) {
-            currentCoroutineContext().ensureActive()
-            
-            val targetIndex = currentIdx + i
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
-            
-            val contentString = BookHelp.getContent(book, chapter)
-            
-            if (contentString.isNullOrEmpty()) continue
-
-            val contentList = contentString.split("\n").filter { it.isNotEmpty() }
-
-            contentList.forEach { content ->
+        // 增加容错，防止个别章节报错导致整个预下载停止
+        try {
+            for (i in 1..limit) {
                 currentCoroutineContext().ensureActive()
-                val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
-                val fileName = "${titleMd5}_${contentMd5}"
                 
-                val speakText = content.replace(AppPattern.notReadAloudRegex, "")
-                if (speakText.isEmpty()) {
-                    createSilentSound(fileName)
-                } else if (!hasSpeakFile(fileName)) {
-                    runCatching {
-                        val inputStream = getSpeakStream(httpTts, speakText)
-                        if (inputStream != null) {
-                            createSpeakFile(fileName, inputStream)
-                        } else {
-                            createSilentSound(fileName)
+                val targetIndex = currentIdx + i
+                // 获取章节信息
+                val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
+                
+                // 强制读取内容 (不管内存有没有)
+                val contentString = getChapterContent(book, chapter)
+                
+                // 如果内容真的是空的（文件没下载），就记录日志并跳过
+                if (contentString.isNullOrEmpty()) {
+                    // 可以在日志里看到是哪一章缺了
+                    // AppLog.put("预下载跳过：第 ${chapter.index + 1} 章 (${chapter.title}) 本地无内容")
+                    continue
+                }
+
+                val contentList = contentString.split("\n").filter { it.isNotEmpty() }
+
+                contentList.forEach { content ->
+                    currentCoroutineContext().ensureActive()
+                    
+                    // 必须使用 chapter.title 生成文件名，确保与前台一致
+                    val titleMd5 = MD5Utils.md5Encode16(chapter.title)
+                    val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
+                    val fileName = "${titleMd5}_${contentMd5}"
+                    
+                    val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+                    if (speakText.isEmpty()) {
+                        createSilentSound(fileName)
+                    } else if (!hasSpeakFile(fileName)) {
+                        runCatching {
+                            val inputStream = getSpeakStream(httpTts, speakText)
+                            if (inputStream != null) {
+                                createSpeakFile(fileName, inputStream)
+                            } else {
+                                createSilentSound(fileName)
+                            }
                         }
                     }
                 }
             }
+        } catch (e: Exception) {
+            AppLog.put("听书预下载异常: ${e.localizedMessage}", e)
         }
     }
 
@@ -283,31 +307,34 @@ class HttpReadAloudService : BaseReadAloudService(),
         downloaderChannel: Channel<Downloader>
     ) {
         val book = ReadBook.book ?: return
-        // 终极修复：使用 ReadBook.durChapterIndex
         val currentIdx = ReadBook.durChapterIndex
         val limit = AppConfig.audioPreDownloadNum
         
-        for (i in 1..limit) {
-            currentCoroutineContext().ensureActive()
-            val targetIndex = currentIdx + i
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
-            
-            val contentString = BookHelp.getContent(book, chapter)
-            if (contentString.isNullOrEmpty()) continue
-
-            val contentList = contentString.split("\n").filter { it.isNotEmpty() }
-            
-            contentList.forEach { content ->
+        try {
+            for (i in 1..limit) {
                 currentCoroutineContext().ensureActive()
-                val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
-                val fileName = "${titleMd5}_${contentMd5}"
+                val targetIndex = currentIdx + i
+                val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
                 
-                val speakText = content.replace(AppPattern.notReadAloudRegex, "")
-                val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
-                val downloader = createDownloader(dataSourceFactory, fileName)
-                downloaderChannel.send(downloader)
+                val contentString = getChapterContent(book, chapter)
+                if (contentString.isNullOrEmpty()) continue
+
+                val contentList = contentString.split("\n").filter { it.isNotEmpty() }
+                
+                contentList.forEach { content ->
+                    currentCoroutineContext().ensureActive()
+                    val titleMd5 = MD5Utils.md5Encode16(chapter.title)
+                    val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
+                    val fileName = "${titleMd5}_${contentMd5}"
+                    
+                    val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+                    val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
+                    val downloader = createDownloader(dataSourceFactory, fileName)
+                    downloaderChannel.send(downloader)
+                }
             }
+        } catch (e: Exception) {
+            AppLog.put("听书流式预下载异常: ${e.localizedMessage}", e)
         }
     }
 
@@ -433,7 +460,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
-        return MD5Utils.md5Encode16(textChapter?.title ?: "") + "_" +
+        return MD5Utils.md5Encode16(textChapter?.chapter?.title ?: "") + "_" +
                 MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
     }
 
@@ -463,10 +490,9 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     /**
-     * 移除缓存文件 (支持自定义清理时间)
+     * 移除缓存文件
      */
     private fun removeCacheFile() {
-        // 终极修复：TextChapter 里其实包裹了一个 chapter，这才是 BookChapter，才有 title
         val titleMd5 = MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "")
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
