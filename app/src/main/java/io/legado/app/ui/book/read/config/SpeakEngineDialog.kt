@@ -236,16 +236,21 @@ class SpeakEngineDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
         adapter.notifyItemRangeChanged(adapter.getHeaderCount(), adapter.itemCount)
     }
 
+    /**
+     * 【核心修改点】清理缓存方法
+     * 原来：只删除 cacheDir (内部存储)
+     * 现在：调用 AppConfig.clearTtsCache()，自动处理 externalCacheDir (外部存储)
+     */
     fun clearCache() {
         execute {
             ReadAloud.upReadAloudClass()
-            val ttsFolderPath = "${requireContext().cacheDir.absolutePath}${File.separator}httpTTS${File.separator}"
-            FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
-                FileUtils.delete(it.absolutePath)
-            }
+            
+            // 调用万能清理函数
+            AppConfig.clearTtsCache()
+            
+            // 显示成功提示
             toastOnUi(R.string.clear_cache_success)
         }
-
     }
 
     inner class Adapter(context: Context) :
