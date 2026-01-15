@@ -29,7 +29,6 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
-// 修复点1：补全 BookChapter 的引用，解决 unresolved reference title
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.exception.NoStackTraceException
@@ -69,7 +68,7 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (最终修复版：修复了 index 命名错误和 import 缺失)
+ * (终极修正版：使用全局 ReadBook.durChapterIndex 和 textChapter.chapter 路径)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -200,8 +199,8 @@ class HttpReadAloudService : BaseReadAloudService(),
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
         
-        // 修复点2：将 chapterIndex 改为 index
-        val currentIdx = this.textChapter?.index ?: return
+        // 终极修复：使用 ReadBook.durChapterIndex (最安全的获取当前章节索引的方式)
+        val currentIdx = ReadBook.durChapterIndex
         val limit = AppConfig.audioPreDownloadNum
         
         for (i in 1..limit) {
@@ -284,8 +283,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         downloaderChannel: Channel<Downloader>
     ) {
         val book = ReadBook.book ?: return
-        // 修复点3：将 chapterIndex 改为 index
-        val currentIdx = this.textChapter?.index ?: return
+        // 终极修复：使用 ReadBook.durChapterIndex
+        val currentIdx = ReadBook.durChapterIndex
         val limit = AppConfig.audioPreDownloadNum
         
         for (i in 1..limit) {
@@ -467,7 +466,8 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 移除缓存文件 (支持自定义清理时间)
      */
     private fun removeCacheFile() {
-        val titleMd5 = MD5Utils.md5Encode16(this.textChapter?.title ?: "")
+        // 终极修复：TextChapter 里其实包裹了一个 chapter，这才是 BookChapter，才有 title
+        val titleMd5 = MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "")
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
             if ((!it.name.startsWith(titleMd5)
