@@ -20,7 +20,7 @@ import io.legado.app.utils.removePref
 import io.legado.app.utils.sysConfiguration
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
-// 【新增引用】为了文件操作
+// 【新增引用】为了支持文件清理操作
 import java.io.File
 import io.legado.app.utils.FileUtils
 
@@ -979,13 +979,16 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     // ================= 自定义功能区域 Start =================
 
     // 1. 听书预加载数量
+    // 逻辑：从设置里读取字符串，转成数字。如果读不到，默认返回 10。
     val audioPreDownloadNum: Int
         get() {
+            // 注意：EditTextPreference 保存的是 String
             val str = appCtx.getPrefString("audioPreDownloadNum")
             return str?.toIntOrNull() ?: 10
         }
 
     // 2. 音频缓存保留时间 (返回毫秒)
+    // 逻辑：用户输入的是“分钟”，我们在这里把它乘以 60000 变成“毫秒”。
     val audioCacheCleanTime: Long
         get() {
             val str = appCtx.getPrefString("audioCacheCleanTime")
