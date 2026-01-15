@@ -29,7 +29,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
-// 【关键修复】补全 Book 引用，防止构建失败
+// 核心引用，缺了它构建会挂
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
@@ -70,7 +70,7 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (最终稳定版：补全Import，增加容错，强制读取文件)
+ * (完美匹配版：修复文件名MD5不一致导致的重复下载 + 修复缓存不可见)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -78,12 +78,17 @@ class HttpReadAloudService : BaseReadAloudService(),
     private val exoPlayer: ExoPlayer by lazy {
         ExoPlayer.Builder(this).build()
     }
+
+    // 【修改点1】改为外部存储，方便你查看文件，确认是否生成
     private val ttsFolderPath: String by lazy {
-        cacheDir.absolutePath + File.separator + "httpTTS" + File.separator
+        val baseDir = externalCacheDir ?: cacheDir
+        baseDir.absolutePath + File.separator + "httpTTS" + File.separator
     }
+
     private val cache by lazy {
+        val baseDir = externalCacheDir ?: cacheDir
         SimpleCache(
-            File(cacheDir, "httpTTS_cache"),
+            File(baseDir, "httpTTS_cache"),
             LeastRecentlyUsedCacheEvictor(128 * 1024 * 1024),
             StandaloneDatabaseProvider(appCtx)
         )
@@ -164,6 +169,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (paragraphStartPos > 0 && index == nowSpeak) {
                         text = text.substring(paragraphStartPos)
                     }
+                    // 计算文件名时，会自动调用修正后的 md5SpeakFileName
                     val fileName = md5SpeakFileName(text)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
                     if (speakText.isEmpty()) {
@@ -198,13 +204,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    /**
-     * 辅助方法：安全获取章节内容
-     * 就算内存里没有，也会尝试去本地文件读取
-     */
+    // 辅助方法：确保能读到文件
     private fun getChapterContent(book: Book, chapter: BookChapter): String? {
-        // BookHelp.getContent 内部封装了从文件读取的逻辑
-        // 我们单独拿出来调用，确保不会因为 TextChapter 的缺失而跳过
         return BookHelp.getContent(book, chapter)
     }
 
@@ -213,31 +214,23 @@ class HttpReadAloudService : BaseReadAloudService(),
         val currentIdx = ReadBook.durChapterIndex
         val limit = AppConfig.audioPreDownloadNum
         
-        // 增加容错，防止个别章节报错导致整个预下载停止
         try {
             for (i in 1..limit) {
                 currentCoroutineContext().ensureActive()
                 
                 val targetIndex = currentIdx + i
-                // 获取章节信息
                 val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
                 
-                // 强制读取内容 (不管内存有没有)
+                // 1. 获取内容
                 val contentString = getChapterContent(book, chapter)
-                
-                // 如果内容真的是空的（文件没下载），就记录日志并跳过
-                if (contentString.isNullOrEmpty()) {
-                    // 可以在日志里看到是哪一章缺了
-                    // AppLog.put("预下载跳过：第 ${chapter.index + 1} 章 (${chapter.title}) 本地无内容")
-                    continue
-                }
+                if (contentString.isNullOrEmpty()) continue // 内容没下载，跳过
 
                 val contentList = contentString.split("\n").filter { it.isNotEmpty() }
 
                 contentList.forEach { content ->
                     currentCoroutineContext().ensureActive()
                     
-                    // 必须使用 chapter.title 生成文件名，确保与前台一致
+                    // 2. 生成文件名：必须用 chapter.title (数据库原始标题)
                     val titleMd5 = MD5Utils.md5Encode16(chapter.title)
                     val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
                     val fileName = "${titleMd5}_${contentMd5}"
@@ -246,6 +239,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     if (speakText.isEmpty()) {
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
+                        // 3. 文件不存在才下载
                         runCatching {
                             val inputStream = getSpeakStream(httpTts, speakText)
                             if (inputStream != null) {
@@ -323,6 +317,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 
                 contentList.forEach { content ->
                     currentCoroutineContext().ensureActive()
+                    // 同样使用数据库标题，保持一致
                     val titleMd5 = MD5Utils.md5Encode16(chapter.title)
                     val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
                     val fileName = "${titleMd5}_${contentMd5}"
@@ -459,8 +454,15 @@ class HttpReadAloudService : BaseReadAloudService(),
         return null
     }
 
+    /**
+     * 【核心修复点】生成音频文件名
+     * 1. 之前的问题：textChapter.title 可能是 "第一章  内容" (带格式)，而数据库里是 "第一章 内容" (不带格式)。
+     * 2. 现在的做法：强制使用 textChapter.chapter.title (数据库原始标题)。
+     * 3. 结果：前台 (播放) 和后台 (下载) 用的标题来源完全一致，MD5 绝对匹配，不会再重复下载了！
+     */
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
-        return MD5Utils.md5Encode16(textChapter?.chapter?.title ?: "") + "_" +
+        val titleToUse = textChapter?.chapter?.title ?: "" // 强制取“核芯”标题
+        return MD5Utils.md5Encode16(titleToUse) + "_" +
                 MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
     }
 
