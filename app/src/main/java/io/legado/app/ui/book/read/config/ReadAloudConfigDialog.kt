@@ -27,6 +27,8 @@ import io.legado.app.utils.StringUtils
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.showDialogFragment
+// 【新增引用】为了显示清理成功的提示
+import io.legado.app.utils.toastOnUi
 
 class ReadAloudConfigDialog : BasePrefDialogFragment() {
     private val readAloudPreferTag = "readAloudPreferTag"
@@ -73,6 +75,18 @@ class ReadAloudConfigDialog : BasePrefDialogFragment() {
             upSpeakEngineSummary()
             findPreference<SwitchPreference>(PreferKey.pauseReadAloudWhilePhoneCalls)?.let {
                 it.isEnabled = AppConfig.ignoreAudioFocus
+            }
+
+            // 【新增代码】绑定清理缓存按钮事件
+            findPreference<Preference>("clear_cache")?.let {
+                it.summary = getString(R.string.clear_cache)
+                it.setOnPreferenceClickListener {
+                    // 调用 AppConfig 中的万能清理函数 (自动处理外部存储)
+                    AppConfig.clearTtsCache()
+                    // 弹出提示
+                    toastOnUi("音频缓存已清理")
+                    true
+                }
             }
         }
 
