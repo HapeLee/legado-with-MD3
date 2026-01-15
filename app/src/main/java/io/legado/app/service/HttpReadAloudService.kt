@@ -31,7 +31,8 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.BookHelp
+// 修正点1：修改 BookHelp 的引用路径
+import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.InputStreamDataSource
@@ -67,7 +68,7 @@ import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (已修改：支持跨章节预缓存 + 自定义清理时间)
+ * (已修正：BookHelp 路径错误 & ReadBook 调用错误)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -154,7 +155,6 @@ class HttpReadAloudService : BaseReadAloudService(),
                 ensureActive()
                 val httpTts = ReadAloud.httpTTS ?: throw NoStackTraceException("tts is null")
                 
-                // 1. 处理当前正在播放的章节
                 contentList.forEachIndexed { index, content ->
                     ensureActive()
                     if (index < nowSpeak) return@forEachIndexed
@@ -189,7 +189,6 @@ class HttpReadAloudService : BaseReadAloudService(),
                         exoPlayer.addMediaItem(mediaItem)
                     }
                 }
-                // 2. 触发预下载 (新逻辑)
                 preDownloadAudios(httpTts)
             }
         }.onError {
@@ -197,40 +196,28 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    // ================================================================
-    // 修改点：强力预缓存逻辑 (循环查库，跨章节)
-    // ================================================================
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
-        // 获取当前章节索引
-        val currentIdx = ReadBook.textChapter?.chapterIndex ?: return
-        // 获取用户设置的预加载数量 (例如 50)
+        
+        // 修正点2：不再使用 ReadBook.textChapter，而是直接使用 Service 类中的 textChapter 属性
+        val currentIdx = this.textChapter?.chapterIndex ?: return
         val limit = AppConfig.audioPreDownloadNum
         
-        // 循环：从下一章开始，往后找 limit 个章节
         for (i in 1..limit) {
             currentCoroutineContext().ensureActive()
             
-            // 计算目标章节索引
             val targetIndex = currentIdx + i
-            
-            // 查数据库获取章节信息 (如果超出了总章数会返回空，就停止)
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
             
-            // 获取章节内容 (这里假设已缓存文本，或者尝试读取)
+            // 修正点3：BookHelp 已在头部正确 Import，这里应该可以正常调用
             val contentString = BookHelp.getContent(book, chapter)
             
-            // 如果内容为空 (还没下载正文)，就跳过，不强行下载正文以免阻塞
             if (contentString.isNullOrEmpty()) continue
 
-            // 模拟 TextChapter 的分割逻辑，转成段落列表
             val contentList = contentString.split("\n").filter { it.isNotEmpty() }
 
-            // 逐段检查并下载音频
             contentList.forEach { content ->
                 currentCoroutineContext().ensureActive()
-                // 注意：跨章节时 MD5 需要基于 targetIndex 对应的 title (虽然 MD5Utils.md5Encode16(chapter.title) 可能和 TextChapter 不完全一致，但通常足够)
-                // 为了保险，我们手动拼装 MD5 文件名逻辑
                 val titleMd5 = MD5Utils.md5Encode16(chapter.title)
                 val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
                 val fileName = "${titleMd5}_${contentMd5}"
@@ -292,21 +279,20 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    // ================================================================
-    // 修改点：流式预缓存逻辑 (循环查库，跨章节)
-    // ================================================================
     private suspend fun preDownloadAudiosStream(
         httpTts: HttpTTS,
         downloaderChannel: Channel<Downloader>
     ) {
         val book = ReadBook.book ?: return
-        val currentIdx = ReadBook.textChapter?.chapterIndex ?: return
+        // 修正点4：同上，使用 this.textChapter
+        val currentIdx = this.textChapter?.chapterIndex ?: return
         val limit = AppConfig.audioPreDownloadNum
         
         for (i in 1..limit) {
             currentCoroutineContext().ensureActive()
             val targetIndex = currentIdx + i
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
+            
             val contentString = BookHelp.getContent(book, chapter)
             if (contentString.isNullOrEmpty()) continue
 
@@ -478,10 +464,11 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     /**
-     * 移除缓存文件 (支持自定义清理时间)
+     * 移除缓存文件 (修正：使用 AppConfig.audioCacheCleanTime)
      */
     private fun removeCacheFile() {
-        val titleMd5 = MD5Utils.md5Encode16(textChapter?.title ?: "")
+        // 修正点5：同上，使用 this.textChapter
+        val titleMd5 = MD5Utils.md5Encode16(this.textChapter?.title ?: "")
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
             if ((!it.name.startsWith(titleMd5)
