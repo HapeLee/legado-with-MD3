@@ -196,6 +196,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0, 1)
             .splitToSequence("\n")
             .filter { it.isNotEmpty() }
+            .take(AppConfig.audioPreDownloadNum) // <--- 修改：读取配置
             .toList()
         contentList.forEach { content ->
             currentCoroutineContext().ensureActive()
@@ -264,6 +265,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         val contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0, 1)
             .splitToSequence("\n")
             .filter { it.isNotEmpty() }
+            .take(AppConfig.audioPreDownloadNum) // <--- 修改：读取配置
             .toList()
         contentList.forEach { content ->
             currentCoroutineContext().ensureActive()
@@ -434,7 +436,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
             val isSilentSound = it.length() == 2160L
             if ((!it.name.startsWith(titleMd5)
-                        && System.currentTimeMillis() - it.lastModified() > 1800000)
+                        && System.currentTimeMillis() - it.lastModified() > AppConfig.audioCacheCleanTime) // <--- 修改：读取配置
                 || isSilentSound
             ) {
                 FileUtils.delete(it.absolutePath)
