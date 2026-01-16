@@ -35,7 +35,7 @@ jobs:
     outputs:
       versionL: ${{ steps.set-ver.outputs.full_version_name }}
       version: ${{ steps.set-ver.outputs.current_version }}
-      build_number: ${{ steps.set-ver.outputs.build_number }}
+      version_code: ${{ steps.set-ver.outputs.version_code }}
       latest_tag: ${{ steps.set-ver.outputs.last_tag }}
       is_release: ${{ steps.set-ver.outputs.is_release }}
     steps:
@@ -48,11 +48,11 @@ jobs:
         run: |
           PROPERTIES_FILE="./app/version.properties"
           if [[ ! -f "$PROPERTIES_FILE" ]]; then
-            echo "错误：version.properties 文件不存在于 $PROPERTIES_FILE"
+            echo "错误：version.properties 文件不存在"
             exit 1
           fi
           
-          # --- 1. 读取基础版本和发布标志 ---
+          # --- 1. 读取基础配置 ---
           MAJOR=$(grep 'VERSION_MAJOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
           MINOR=$(grep 'VERSION_MINOR' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
           PATCH=$(grep 'VERSION_PATCH' "$PROPERTIES_FILE" | cut -d'=' -f2 | tr -d '[:space:]')
@@ -60,50 +60,55 @@ jobs:
           
           CURRENT_VERSION="$MAJOR.$MINOR.$PATCH"
           
-          # --- 2. 获取全局构建号 (使用全量 Commit 计数) ---
-          NEW_BUILD_NUM=$(git rev-list --count HEAD)
+          # --- 2. 计算 Android versionCode ---
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+          VERSION_CODE=$((TOTAL_COMMITS))
           
-          # --- 3. 确定版本类型和后缀 ---
+          # --- 3. 确定版本类型和 Beta 序列号 ---
+          IS_RELEASE="false"
+          VERSION_SUFFIX_NAME=""
+          
           if [[ "${RELEASE_FLAG}" == "0" ]]; then
-            # 正式版 (VERSION_SUFFIX=0)
+            # 正式版逻辑
             IS_RELEASE="true"
-            VERSION_SUFFIX_NAME=""
-          
-            # 查找上一个正式版 Tag 作为 Changelog 起点 (排除带有 beta 的 tag)
+            # 日志起点：找上一个不带 beta 的 tag
             LAST_TAG_FOR_LOG=$(git tag --list --sort=-committerdate | grep -v 'beta' | head -n 1)
-            if [ -z "$LAST_TAG_FOR_LOG" ]; then
-                LAST_TAG_FOR_LOG=$(git rev-list --max-parents=0 HEAD) # 找不到则从第一条 commit 开始
-            fi
-            echo "版本类型: 正式版 (Release), 版本名: $CURRENT_VERSION"
-          
           else
-            # 预发布版 (BETA)
-            IS_RELEASE="false"
-            # 后缀使用当前总 commit 数，例如: 3.26.4-beta.1250
-            VERSION_SUFFIX_NAME="-beta.$NEW_BUILD_NUM"
+            # 预发布版逻辑 (计算 beta.X)
+            # 查找匹配当前主版本号的最新 beta tag
+            LAST_BETA_TAG=$(git tag --list "$CURRENT_VERSION-beta.*" --sort=-committerdate | head -n 1)
           
-            # Changelog 起点设为上一个任意 Tag
-            LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 1)
-            if [ -z "$LAST_TAG_FOR_LOG" ]; then
-                LAST_TAG_FOR_LOG=$(git rev-list --max-parents=0 HEAD)
+            if [[ "$LAST_BETA_TAG" =~ -beta\.([0-9]+) ]]; then
+              BETA_NUM=${BASH_REMATCH[1]}
+              NEW_BETA_NUM=$((BETA_NUM + 1))
+            else
+              NEW_BETA_NUM=1
             fi
-            echo "版本类型: 预发布版 (Pre-release), 构建号(Commit数): $NEW_BUILD_NUM"
+          
+            VERSION_SUFFIX_NAME="-beta.$NEW_BETA_NUM"
+            # 日志起点：上一个任意 tag
+            LAST_TAG_FOR_LOG=$(git tag --sort=-committerdate | head -n 1)
           fi
           
-          # --- 4. 构造最终版本信息 ---
+          # 如果完全没找到 Tag，则从第一个 commit 开始
+          if [ -z "$LAST_TAG_FOR_LOG" ]; then
+            LAST_TAG_FOR_LOG=$(git rev-list --max-parents=0 HEAD)
+          fi
+          
           FULL_VERSION_NAME="${CURRENT_VERSION}${VERSION_SUFFIX_NAME}"
           
-          # --- 5. 设置输出供后续作业使用 ---
+          # --- 4. 设置输出 ---
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "full_version_name=$FULL_VERSION_NAME" >> $GITHUB_OUTPUT
-          echo "build_number=$NEW_BUILD_NUM" >> $GITHUB_OUTPUT
+          echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "last_tag=$LAST_TAG_FOR_LOG" >> $GITHUB_OUTPUT
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           
           echo "-------------------------------"
-          echo "Final Version: $FULL_VERSION_NAME"
-          echo "Build Number: $NEW_BUILD_NUM"
+          echo "Full Name: $FULL_VERSION_NAME"
+          echo "Version Code: $VERSION_CODE"
           echo "Is Release: $IS_RELEASE"
+          echo "Log Start: $LAST_TAG_FOR_LOG"
           echo "-------------------------------"
 
   build:
@@ -120,7 +125,7 @@ jobs:
       # 使用 prepare job 的输出
       VERSION: ${{ needs.prepare.outputs.version }}
       VERSIONL: ${{ needs.prepare.outputs.versionL }}
-      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.version_code }}
     steps:
       - uses: actions/checkout@v5
         with:
