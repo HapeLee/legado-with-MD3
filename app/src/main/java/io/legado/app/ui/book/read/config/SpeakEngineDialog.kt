@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.config
 
+//import io.legado.app.lib.theme.primaryColor
 import android.content.Context
 import android.os.Bundle
 import android.view.MenuItem
@@ -24,15 +25,14 @@ import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
-//import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.association.ImportHttpTtsDialog
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.utils.ACache
-import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
+import io.legado.app.utils.TTSCacheUtils
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.gone
 import io.legado.app.utils.isAbsUrl
@@ -49,7 +49,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
-import java.io.File
 
 /**
  * tts引擎管理
@@ -236,19 +235,10 @@ class SpeakEngineDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
         adapter.notifyItemRangeChanged(adapter.getHeaderCount(), adapter.itemCount)
     }
 
-    /**
-     * 【核心修改点】清理缓存方法
-     * 原来：只删除 cacheDir (内部存储)
-     * 现在：调用 AppConfig.clearTtsCache()，自动处理 externalCacheDir (外部存储)
-     */
     fun clearCache() {
         execute {
             ReadAloud.upReadAloudClass()
-            
-            // 调用万能清理函数
-            AppConfig.clearTtsCache()
-            
-            // 显示成功提示
+            TTSCacheUtils.clearTtsCache()
             toastOnUi(R.string.clear_cache_success)
         }
     }
