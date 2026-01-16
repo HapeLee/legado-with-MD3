@@ -90,6 +90,12 @@
         <item>content</item>
     </string-array>
 
+    <string-array name="composeEngine_value">
+        <item>material</item>
+        <item>salt</item>
+        <item>miuix</item>
+    </string-array>
+
     <string-array name="customMode_value">
         <item>global</item>
         <item>accent</item>

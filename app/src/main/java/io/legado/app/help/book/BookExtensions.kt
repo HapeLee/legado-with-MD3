@@ -3,6 +3,7 @@
 package io.legado.app.help.book
 
 import android.net.Uri
+import androidx.core.net.toUri
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.constant.AppLog
@@ -24,6 +25,7 @@ import io.legado.app.utils.exists
 import io.legado.app.utils.find
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isUri
+import io.legado.app.utils.normalizeFileName
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File
@@ -32,8 +34,6 @@ import java.time.temporal.ChronoUnit
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
-import androidx.core.net.toUri
-import io.legado.app.utils.normalizeFileName
 
 
 val Book.isAudio: Boolean
@@ -41,6 +41,9 @@ val Book.isAudio: Boolean
 
 val Book.isImage: Boolean
     get() = isType(BookType.image)
+
+val Book.isVideo: Boolean
+    get() = isType(BookType.video)
 
 val Book.isLocal: Boolean
     get() {

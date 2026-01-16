@@ -8,6 +8,12 @@ import androidx.annotation.IntDef
  */
 @Suppress("ConstPropertyName")
 object BookType {
+
+    /**
+     * 4 视频
+     */
+    const val video = 0b100
+
     /**
      * 8 文本
      */

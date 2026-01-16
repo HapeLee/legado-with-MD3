@@ -2,6 +2,7 @@ package io.legado.app.help.book
 
 import android.os.Build
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.spaceRegex
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -141,6 +142,14 @@ class ContentProcessor private constructor(
                     }
                 } catch (e: Exception) {
                     appCtx.toastOnUi("简繁转换出错")
+                }
+            }
+            val useHtmlMap = mutableMapOf<String, String>()
+            if (AppConfig.adaptSpecialStyle) { //html处理
+                mContent = AppPattern.useHtmlRegex.replace(mContent) { matchResult ->
+                    val placeholder = "特殊格式的占位不应该被看见${useHtmlMap.size}。"
+                    useHtmlMap[placeholder] = "\n${matchResult.value.replace("\n", "")}\n"
+                    placeholder
                 }
             }
             if (useReplace && book.getUseReplaceRule()) {

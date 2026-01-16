@@ -81,6 +81,13 @@
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
+            android:key="adaptSpecialStyle"
+            android:title="@string/adapt_special_style"
+            app:iconSpaceReserved="false"
+            app:isBottomBackground="true" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="false"
             android:key="useZhLayout"
             android:title="@string/use_zh_layout"
@@ -90,6 +97,12 @@
             android:defaultValue="true"
             android:key="showBrightnessView"
             android:title="@string/show_brightness_view"
+            app:isBottomBackground="true" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="useUnderline"
+            android:title="@string/use_underline"
             app:isBottomBackground="true" />
 
     </io.legado.app.lib.prefs.PreferenceCategory>

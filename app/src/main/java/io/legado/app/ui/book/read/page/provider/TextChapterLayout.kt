@@ -1,10 +1,17 @@
 package io.legado.app.ui.book.read.page.provider
 
 import android.graphics.Paint
+import android.os.Build
 import android.text.Layout
+import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.text.style.URLSpan
 import android.util.Size
+import androidx.core.text.HtmlCompat
+import androidx.core.text.parseAsHtml
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.noWordCountRegex
@@ -21,10 +28,15 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.ui.book.read.page.entities.TextHtmlColumn
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.column.ImageColumn
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
+import io.legado.app.ui.book.read.page.provider.ChapterProvider.reviewChar
+import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceChar
+import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceCharC
+import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceCharD
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.fastSum
@@ -39,7 +51,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import java.util.LinkedList
-import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 
 class TextChapterLayout(
@@ -67,8 +78,6 @@ class TextChapterLayout(
     private val titleTopSpacing = ChapterProvider.titleTopSpacing
     private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
     private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
-    private val titleLineSpacingExtra = ChapterProvider.titleLineSpacingExtra
-
     private val paragraphSpacing = ChapterProvider.paragraphSpacing
 
     private val visibleHeight = ChapterProvider.visibleHeight
@@ -84,12 +93,8 @@ class TextChapterLayout(
     private val useZhLayout = ReadBookConfig.useZhLayout
     private val isMiddleTitle = ReadBookConfig.isMiddleTitle
     private val textFullJustify = ReadBookConfig.textFullJustify
+    private val adaptSpecialStyle = AppConfig.adaptSpecialStyle
     private val pageAnim = book.getPageAnim()
-    private val titleSegType = ReadBookConfig.titleSegType
-    private val titleSegDistance = ReadBookConfig.titleSegDistance
-    private val titleSegFlag = ReadBookConfig.titleSegFlag
-    private val titleSegScaling = ReadBookConfig.titleSegScaling
-
 
     private var pendingTextPage = TextPage()
 
@@ -201,48 +206,6 @@ class TextChapterLayout(
         }
     }
 
-    private fun parseTitleSegments(
-        rawTitle: String,
-        segType: Int,
-        segDistance: Int,
-        segFlag: String
-    ): List<String> {
-        if (rawTitle.isBlank()) return emptyList()
-
-        return when (segType) {
-            // 0：不分段
-            0 -> listOf(rawTitle)
-
-            // 1：按字符数分段
-            1 -> {
-                if (segDistance <= 0 || segDistance >= rawTitle.length)
-                    listOf(rawTitle)
-                else
-                    listOf(
-                        rawTitle.substring(0, segDistance),
-                        rawTitle.substring(segDistance)
-                    )
-            }
-
-            // 2：按标志字符串分段
-            2 -> {
-                val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                if (flags.isEmpty()) return listOf(rawTitle)
-
-                val pattern = flags.joinToString("|") { Regex.escape(it) }
-                val regex = Regex("(?<=$pattern)") // 在分隔符后断开
-                val segments = rawTitle.split(regex)
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-
-                segments.ifEmpty { listOf(rawTitle) }
-            }
-
-            else -> listOf(rawTitle)
-        }
-    }
-
-
     /**
      * 获取拆分完的章节数据
      */
@@ -258,48 +221,37 @@ class TextChapterLayout(
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
-            val baseTitles = displayTitle.splitNotBlank("\n")
-            baseTitles.forEach { rawTitle ->
-                val titleSegments = parseTitleSegments(
-                    rawTitle,
-                    titleSegType,
-                    titleSegDistance,
-                    titleSegFlag
-                )
-                titleSegments.forEachIndexed { index, segment ->
-                    val srcList = LinkedList<String>()
-                    val reviewImg = bookChapter.reviewImg
-                    var reviewTxt = ""
-                    if (reviewImg != null) {
-                        srcList.add(reviewImg)
-                        reviewTxt = if (reviewImg.contains("TEXT")) {
-                            ChapterProvider.reviewChar
-                        } else {
-                            ChapterProvider.srcReplaceChar
-                        }
+            //标题非隐藏
+            displayTitle.splitNotBlank("\n").forEach { text ->
+                val srcList = LinkedList<String>()
+                val reviewImg = bookChapter.reviewImg
+                var reviewTxt = ""
+                if (!reviewImg.isNullOrEmpty()) {
+                    srcList.add(reviewImg)
+                    reviewTxt = if (reviewImg.contains("TEXT")) {
+                        reviewChar
+                    } else {
+                        srcReplaceChar
                     }
-                    val paint = if (index == 0) titlePaint else {
-                        TextPaint(titlePaint).apply {
-                            textSize = titlePaint.textSize * titleSegScaling
-                        }
-                    }
-                    setTypeText(
-                        book,
-                        segment + reviewTxt,
-                        paint,
-                        titlePaintTextHeight,
-                        titlePaintFontMetrics,
-                        imageStyle,
-                        srcList = srcList.ifEmpty { null },
-                        isTitle = true,
-                        emptyContent = contents.isEmpty(),
-                        isVolumeTitle = bookChapter.isVolume
-                    )
-                    pendingTextPage.lines.last().isParagraphEnd = true
-                    stringBuilder.append("\n")
                 }
+                setTypeText(
+                    book,
+                    text + reviewTxt,
+                    titlePaint,
+                    titlePaintTextHeight,
+                    titlePaintFontMetrics,
+                    imageStyle,
+                    srcList = srcList.ifEmpty { null },
+                    isTitle = true,
+                    emptyContent = contents.isEmpty(),
+                    isVolumeTitle = bookChapter.isVolume
+                )
+                pendingTextPage.lines.last().isParagraphEnd = true
+                stringBuilder.append("\n")
             }
             durY += titleBottomSpacing
+
+            // 如果是单图模式且当前页有内容，强制分页
             if (isSingleImageStyle && pendingTextPage.lines.isNotEmpty() && contents.isNotEmpty()) {
                 prepareNextPageIfNeed()
             }
@@ -310,16 +262,26 @@ class TextChapterLayout(
         var wordCount = 0
         contents.forEach { content ->
             currentCoroutineContext().ensureActive()
+            if (adaptSpecialStyle) {
+                val text = content.trim()
+                if (text == "[newpage]") {
+                    prepareNextPageIfNeed()
+                    return@forEach
+                } else if (text.startsWith("<usehtml>")) {
+                    setTypeHtml(book, text.substring(9, text.lastIndexOf("<")))
+                    return@forEach
+                }
+            }
+            var text = content.replace(srcReplaceCharC, srcReplaceCharD)
             if (isTextImageStyle) {
                 //图片样式为文字嵌入类型
-                var text = content.replace(ChapterProvider.srcReplaceChar, "丨") //▣
                 val srcList = LinkedList<String>()
                 sb.setLength(0)
                 val matcher = AppPattern.imgPattern.matcher(text)
                 while (matcher.find()) {
                     matcher.group(1)?.let { src ->
                         srcList.add(src)
-                        matcher.appendReplacement(sb, ChapterProvider.srcReplaceChar)
+                        matcher.appendReplacement(sb, srcReplaceChar)
                     }
                 }
                 matcher.appendTail(sb)
@@ -344,7 +306,6 @@ class TextChapterLayout(
                 sb.setLength(0)
                 var isFirstLine = true
                 if (content.contains("<img")) {
-                    val text = content.replace(ChapterProvider.srcReplaceChar, "丨")
                     val matcher = AppPattern.imgPattern.matcher(text)
                     while (matcher.find()) {
                         currentCoroutineContext().ensureActive()
@@ -355,25 +316,18 @@ class TextChapterLayout(
                         var imgSize: Size? = null
                         if (matchResult != null) {
                             val styleValue = matchResult.groupValues[1].trim()
-                            if (styleValue == "TEXT" && matcher.end() == text.length) {
-                                iStyle = "TEXT"
-                                wordCount--
-                            }
-                            else if (styleValue.equals("text", true)) {
-                                iStyle = "text"
-                            }
-                            else {
+                            if (styleValue.equals("text", true)) { //忽略大小写
+                                iStyle = styleValue
+                            } else {
                                 imgSize = ImageProvider.getImageSize(book, imgSrc, ReadBook.bookSource)
                                 iStyle = styleValue
                                 isSmallImage = false
                             }
-                        }
-                        else {
+                        } else {
                             imgSize = ImageProvider.getImageSize(book, imgSrc, ReadBook.bookSource)
                             if (imgSize.width < 80 && imgSize.height < 80) {
                                 iStyle = "text"
-                            }
-                            else {
+                            } else {
                                 isSmallImage = false
                             }
                         }
@@ -383,9 +337,9 @@ class TextChapterLayout(
                         if (isSmallImage) {
                             sb.append(
                                 if (iStyle == "TEXT")
-                                    ChapterProvider.reviewChar
+                                    reviewChar
                                 else
-                                    ChapterProvider.srcReplaceChar
+                                    srcReplaceChar
                             )
                             srcList.add(imgSrc)
                         } else {
@@ -403,7 +357,7 @@ class TextChapterLayout(
                                     srcList = srcList
                                 )
                                 sb.setLength(0)
-                                isFirstLine=false
+                                isFirstLine = false
                             }
                             setTypeImage(
                                 book,
@@ -425,17 +379,17 @@ class TextChapterLayout(
                     val textAfter = content.substring(start, content.length)
                     sb.append(textAfter)
                 }
-                val text = sb.toString()
+                text = sb.toString()
                 if (text.isNotBlank()) {
                     wordCount += text.replace(noWordCountRegex,"").length
                     setTypeText(
                         book,
-                        if (AppConfig.enableReview) text + ChapterProvider.reviewChar else text,
+                        if (AppConfig.enableReview) text + reviewChar else text,
                         contentPaint,
                         contentPaintTextHeight,
                         contentPaintFontMetrics,
                         "TEXT",
-                        isFirstLine = start == 0,
+                        isFirstLine = isFirstLine,
                         srcList = srcList.ifEmpty { null }
                     )
                 }
@@ -545,6 +499,232 @@ class TextChapterLayout(
     }
 
     /**
+     * 排版html样式
+     */
+    private suspend fun setTypeHtml(
+        book: Book,
+        htmlContent: String,
+    ) {
+        val spanned = htmlContent.parseAsHtml(HtmlCompat.FROM_HTML_MODE_COMPACT)
+        val width = visibleWidth
+        val textPaint = contentPaint
+        val textColor = ReadBookConfig.textColor
+        if (textPaint.color != textColor) {
+            textPaint.color = textColor
+        }
+        val staticLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            StaticLayout.Builder.obtain(spanned, 0, spanned.length, textPaint, width)
+                .setLineSpacing(paragraphSpacing.toFloat(), lineSpacingExtra)
+                .setIncludePad(true)
+                .setUseLineSpacingFromFallbacks(true)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            StaticLayout(
+                spanned,
+                textPaint,
+                width,
+                Layout.Alignment.ALIGN_NORMAL,
+                lineSpacingExtra,
+                paragraphSpacing.toFloat(),
+                true
+            )
+        }
+        val tempPaint = TextPaint(textPaint)
+        for (lineIndex in 0 until staticLayout.lineCount) {
+            val lineStart = staticLayout.getLineStart(lineIndex)
+            val lineEnd = staticLayout.getLineEnd(lineIndex)
+            if (lineStart == lineEnd) { //这一行没有内容，跳过
+                continue
+            }
+            val textLine = TextLine(isHtml = true)
+            val lineText = spanned.subSequence(lineStart, lineEnd).toString()
+            textLine.text = lineText //文本
+            val lineLeft = staticLayout.getLineLeft(lineIndex)
+            textLine.startX = absStartX + lineLeft //x坐标
+            val mLineTop = staticLayout.getLineTop(lineIndex).toFloat()
+            val mLineBottom = staticLayout.getLineBottom(lineIndex).toFloat()
+            val lineHeight = mLineBottom - mLineTop
+            prepareNextPageIfNeed(durY + lineHeight)
+            textLine.upTopBottom(durY, lineHeight, textPaint.fontMetrics) //y坐标
+
+            val columns = mutableListOf<TextHtmlColumn>()
+            var charIndex = lineStart
+            while (charIndex < lineEnd) {
+                val char = spanned[charIndex].toString()
+                if (char == "\n") {
+                    textLine.isParagraphEnd = true
+                    durY += lineHeight * paragraphSpacing / 10f //段距
+                    charIndex++
+                    continue
+                }
+                val charX = staticLayout.getPrimaryHorizontal(charIndex) + lineLeft
+                val textSize = extractTextSize(spanned, charIndex, textPaint.textSize)
+                val textColor = extractTextColor(spanned, charIndex, textPaint.color)
+                val linkUrl = extractLinkUrl(spanned, charIndex)
+
+                val charRight = if (charIndex + 1 < lineEnd) {
+                    staticLayout.getPrimaryHorizontal(charIndex + 1) + lineLeft
+                } else {
+                    tempPaint.textSize = textSize
+                    val charWidth = tempPaint.measureText(char)
+                    charX + charWidth
+                }
+
+                columns.add(
+                    TextHtmlColumn(
+                        absStartX + charX,
+                        absStartX + charRight,
+                        char,
+                        textSize,
+                        textColor,
+                        linkUrl
+                    )
+                )
+                charIndex++
+                if (charIndex == lineEnd && lineIndex == staticLayout.lineCount - 1) {
+                    textLine.isParagraphEnd = true
+                    durY += lineHeight * paragraphSpacing / 10f //段距
+                }
+            }
+            if (textFullJustify && !textLine.isParagraphEnd) {
+                justifyHtmlLine(columns, textLine, visibleWidth)
+            } else {
+                textLine.addColumns(columns)
+            }
+            calcTextLinePosition(textPages, textLine, stringBuilder.length)
+            stringBuilder.append(lineText)
+            val textPage = pendingTextPage
+            textPage.addLine(textLine)
+            durY += lineHeight * lineSpacingExtra //行距
+            if (textPage.height < durY) {
+                textPage.height = durY
+            }
+        }
+    }
+
+    /**
+     * 对HTML行进行两端对齐
+     */
+    private fun justifyHtmlLine(
+        columns: MutableList<TextHtmlColumn>,
+        textLine: TextLine,
+        lineWidth: Int
+    ) {
+        if (columns.isEmpty()) return
+        // 计算当前行的总宽度
+        val firstCol = columns.first()
+        val lastCol = columns.last()
+        val currentWidth = lastCol.end - firstCol.start
+        // 计算剩余空间
+        val residualWidth = lineWidth - currentWidth
+
+        if (residualWidth <= 0) {
+            textLine.addColumns(columns)
+            return
+        }
+
+        // 统计空格数量
+        val spaceCount = columns.count { it.charData == " " }
+
+        if (spaceCount > 1) {
+            // 多个空格：调整单词间距
+            val spaceIncrement = residualWidth / spaceCount
+            textLine.wordSpacing = spaceIncrement
+
+            // 重新计算字符位置
+            var currentX = columns[0].start
+            for (i in columns.indices) {
+                val col = columns[i]
+                val width = col.end - col.start
+
+                if (col.charData == " " && i != columns.lastIndex) {
+                    // 空格，增加额外的间距
+                    col.start = currentX
+                    col.end = currentX + width + spaceIncrement
+                    currentX = col.start
+                } else {
+                    // 非空格或最后一个字符
+                    col.start = currentX
+                    col.end = currentX + width
+                    currentX = col.start
+                }
+
+                textLine.addColumn(col)
+            }
+        } else {
+            // 没有或只有一个空格：调整字符间距
+            val gapCount = columns.lastIndex
+            if (gapCount > 0) {
+                val charIncrement = residualWidth / gapCount
+                var currentX = columns[0].start
+                for (i in columns.indices) {
+                    val col = columns[i]
+                    val width = col.end - col.start
+
+                    if (i != columns.lastIndex) {
+                        // 非最后一个字符，增加额外的间距
+                        col.start = currentX
+                        col.end = currentX + width + charIncrement
+                        currentX = col.end
+                    } else {
+                        // 最后一个字符，不增加额外间距
+                        col.start = currentX
+                        col.end = currentX + width
+                    }
+
+                    textLine.addColumn(col)
+                }
+            } else {
+                // 只有一个字符，不需要调整
+                textLine.addColumns(columns)
+            }
+        }
+    }
+
+    private fun extractTextSize(spanned: Spanned, index: Int, defaultSize: Float): Float {
+        val relativeSpans = spanned.getSpans(index, index + 1, RelativeSizeSpan::class.java)
+        // 如果有 RelativeSizeSpan，基于基准大小计算
+        relativeSpans.firstOrNull()?.let { span ->
+            return defaultSize * span.sizeChange
+        }
+//        val sizeSpans = spanned.getSpans(index, index + 1, AbsoluteSizeSpan::class.java)
+//        sizeSpans.firstOrNull()?.let { span ->
+//            return span.size.toFloat()
+//        }
+        return defaultSize
+    }
+
+    private fun extractTextColor(spanned: Spanned, index: Int, defaultColor: Int): Int {
+        // 检查 ForegroundColorSpan（前景色）
+        val foregroundSpans = spanned.getSpans(index, index + 1, ForegroundColorSpan::class.java)
+        foregroundSpans.firstOrNull()?.let { span ->
+            return span.foregroundColor
+        }
+
+        // 2. 检查自定义的彩色 Span
+//        val customColorSpans = spanned.getSpans(index, index + 1, CharacterStyle::class.java)
+//        customColorSpans.firstOrNull()?.let { span ->
+//            if (span is ForegroundColorSpan) {
+//                return span.foregroundColor
+//            }
+//        }
+
+        // 默认返回 Paint 的颜色
+        return defaultColor
+    }
+
+    private fun extractLinkUrl(spanned: Spanned, index: Int): String? {
+        // 检查URLSpan（超链接）
+        val urlSpans = spanned.getSpans(index, index + 1, URLSpan::class.java)
+        urlSpans.firstOrNull()?.let { span ->
+            return span.url
+        }
+        return null
+    }
+
+
+    /**
      * 排版文字
      */
     @Suppress("DEPRECATION")
@@ -614,8 +794,8 @@ class TextChapterLayout(
             val (words, widths) = measureTextSplit(lineText, widthsArray, lineStart)
             val desiredWidth = widths.fastSum()
             textLine.text = lineText
-            when {
-                lineIndex == 0 && layout.lineCount > 1 && !isTitle && isFirstLine -> {
+            when (lineIndex) {
+                0 if layout.lineCount > 1 && !isTitle && isFirstLine -> {
                     //多行的第一行 非标题
                     addCharsToLineFirst(
                         book, absStartX, textLine, words, textPaint,
@@ -623,7 +803,7 @@ class TextChapterLayout(
                     )
                 }
 
-                lineIndex == layout.lineCount - 1 -> {
+                layout.lineCount - 1 -> {
                     //最后一行、单行
                     //标题x轴居中
                     val startX = if (
@@ -640,7 +820,6 @@ class TextChapterLayout(
                         startX, !isTitle && lineIndex == 0, widths, srcList
                     )
                 }
-
                 else -> {
                     if (
                         isTitle &&
@@ -670,13 +849,12 @@ class TextChapterLayout(
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             val textPage = pendingTextPage
             textPage.addLine(textLine)
-            durY += textHeight * if (isTitle) titleLineSpacingExtra else lineSpacingExtra
+            durY += textHeight * lineSpacingExtra
             if (textPage.height < durY) {
                 textPage.height = durY
             }
         }
-        if(!isTitle)
-            durY += textHeight * paragraphSpacing / 10f
+        durY += textHeight * paragraphSpacing / 10f
     }
 
     private fun calcTextLinePosition(
@@ -852,7 +1030,7 @@ class TextChapterLayout(
         srcList: LinkedList<String>?
     ) {
         val column = when {
-            !srcList.isNullOrEmpty() && (char == ChapterProvider.srcReplaceChar || char == ChapterProvider.reviewChar && isLineEnd) -> {
+            !srcList.isNullOrEmpty() && (char == srcReplaceChar || char == reviewChar) -> {
                 val src = srcList.removeFirst()
                 ImageProvider.cacheImage(book, src, ReadBook.bookSource)
                 ImageColumn(
@@ -861,13 +1039,13 @@ class TextChapterLayout(
                     src = src
                 )
             }
-            /*isLineEnd && char == ChapterProvider.reviewChar -> {
-                ReviewColumn(
-                    start = absStartX + xStart,
-                    end = absStartX + xEnd,
-                    count = 10
-                )
-            }*/
+//            isLineEnd && char == ChapterProvider.reviewChar -> {
+//                ReviewColumn(
+//                    start = absStartX + xStart,
+//                    end = absStartX + xEnd,
+//                    count = 10
+//                )
+//            }
 
             else -> {
                 TextColumn(

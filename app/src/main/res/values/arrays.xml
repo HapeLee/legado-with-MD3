@@ -205,6 +205,12 @@
         <item>Content</item>
     </string-array>
 
+    <string-array name="composeEngine">
+        <item>Material Design</item>
+        <item>SaltUI</item>
+        <item>Miuix</item>
+    </string-array>
+
     <string-array name="customMode">
 		<item>Global</item>
 		<item>Accent</item>

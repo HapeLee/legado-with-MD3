@@ -37,6 +37,7 @@ data class TextLine(
     val isTitle: Boolean = false,
     var isParagraphEnd: Boolean = false,
     var isImage: Boolean = false,
+    var isHtml: Boolean = false,
     var startX: Float = 0f,
     var indentSize: Int = 0,
     var extraLetterSpacing: Float = 0f,
@@ -66,13 +67,22 @@ data class TextLine(
         }
     var textPage: TextPage = emptyTextPage
     var isLeftLine = true
-
+    val useUnderline: Boolean
+        get() = AppConfig.useUnderline
     fun addColumn(column: BaseColumn) {
         if (column !is TextColumn) {
             onlyTextColumn = false
         }
         column.textLine = this
         textColumns.add(column)
+    }
+
+    fun addColumns(columns: Collection<BaseColumn>) {
+        onlyTextColumn = false
+        columns.forEach { column ->
+            column.textLine = this
+        }
+        textColumns.addAll(columns)
     }
 
     fun getColumn(index: Int): BaseColumn {
@@ -158,7 +168,7 @@ data class TextLine(
             for (i in columns.indices) columns[i].draw(view, canvas)
         }
 
-        if (AppConfig.isEInkMode && (isReadAloud || searchResultColumnCount > 0)) {
+        if (useUnderline && (isReadAloud || searchResultColumnCount > 0)) {
             val linePaint = ChapterProvider.linePaint
             val lineY = height - 1.dpToPx()
             canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, linePaint)

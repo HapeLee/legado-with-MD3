@@ -97,7 +97,7 @@ class MoreConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_more_conf
 
                 PreferKey.textFullJustify,
                 PreferKey.textBottomJustify,
-                PreferKey.useZhLayout -> {
+                PreferKey.useZhLayout, PreferKey.adaptSpecialStyle, PreferKey.useUnderline -> {
                     postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                 }
 

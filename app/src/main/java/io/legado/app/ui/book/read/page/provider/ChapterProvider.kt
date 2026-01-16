@@ -50,7 +50,9 @@ import java.util.Locale
 @Suppress("DEPRECATION", "ConstPropertyName")
 object ChapterProvider {
     //用于图片字的替换
-    const val srcReplaceChar = "⼁"//▩ 丨
+    const val srcReplaceChar = "袮" //▩▣ 丨⼁ //换成袮，这是不应该存在的汉字,替换为祢
+    const val srcReplaceCharC = '袮' //可能有略微的提升
+    const val srcReplaceCharD = '祢'
 
     //用于评论按钮的替换
     const val reviewChar = "꧁"
