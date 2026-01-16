@@ -57,7 +57,7 @@ android {
         applicationId = "io.legato.kazusa"
         minSdk = 26
         targetSdk = 36
-        versionCode = System.getenv("BUILD_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
+        versionCode = System.getenv("COMMIT_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
         versionName = System.getenv("APP_VERSION_NAME") ?: projectVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
