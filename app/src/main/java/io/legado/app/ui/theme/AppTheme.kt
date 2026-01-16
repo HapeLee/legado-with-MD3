@@ -20,13 +20,15 @@ fun AppTheme(
     val isPureBlack by ThemeState.isPureBlack.collectAsState()
     val hasImageBg by ThemeState.hasImageBg.collectAsState()
     val paletteStyle by ThemeState.paletteStyle.collectAsState()
+    val opacity by ThemeState.containerOpacity.collectAsState()
 
     val colorScheme = ThemeManager.getColorScheme(
         mode = appThemeMode,
         darkTheme = darkTheme,
         isAmoled = isPureBlack,
         isImageBg = hasImageBg,
-        paletteStyle = paletteStyle
+        paletteStyle = paletteStyle,
+        opacity = opacity
     )
 
     MaterialExpressiveTheme(

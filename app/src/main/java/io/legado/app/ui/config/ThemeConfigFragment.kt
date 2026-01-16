@@ -87,6 +87,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
         addPreferencesFromResource(R.xml.pref_config_theme)
 
         upPreferenceSummary(PreferKey.fontScale)
+        upPreferenceSummary(PreferKey.containerOpacity)
 
         findPreference<ColorPreference>(PreferKey.cBackground)?.let {
             it.onSaveColor = { color ->
@@ -254,6 +255,20 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                     recreateActivities()
                 }
 
+            PreferKey.containerOpacity -> NumberPickerDialog(requireContext())
+                .setTitle(getString(R.string.container_opacity))
+                .setMaxValue(100)
+                .setMinValue(0)
+                .setValue(100)
+                .setCustomButton((R.string.btn_default_s)) {
+                    putPrefInt(PreferKey.containerOpacity, 100)
+                    ThemeSyncer.syncContainerOpacity()
+                }
+                .show {
+                    putPrefInt(PreferKey.containerOpacity, it)
+                    ThemeSyncer.syncContainerOpacity()
+                }
+
             PreferKey.bgImage -> selectBgAction(false)
             PreferKey.bgImageN -> selectBgAction(true)
             "colorImage" -> selectBgAction(null)
@@ -402,6 +417,10 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
         when (preferenceKey) {
             //PreferKey.barElevation -> preference.summary =
             //    getString(R.string.bar_elevation_s, value)
+            PreferKey.containerOpacity -> {
+                preference.summary =
+                    getString(R.string.container_opacity_summary, AppConfig.containerOpacity)
+            }
 
             PreferKey.fontScale -> {
                 val fontScale = AppContextWrapper.getFontScale(requireContext())

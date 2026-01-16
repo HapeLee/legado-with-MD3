@@ -1375,6 +1375,11 @@
     <string name="palette_style">调色板样式</string>
     <string name="tip_compose_set">这里的选项仅可以控制使用Compose重写的界面。</string>
     <string name="is_blur_enable">启用控件模糊</string>
+    <string name="use_underline">总是使用下划线表示强调文本</string>
+    <string name="adapt_special_style">适配特殊样式</string>
+    <string name="compose_engine">主题风格</string>
+    <string name="container_opacity">容器背景不透明度</string>
+    <string name="container_opacity_summary">%d</string>
     <string name="web_service_auto_start">启动应用时打开Web服务</string>
     <string name="read_aloud_preload">听书预加载数量</string>
     <string name="read_aloud_preload_summary">%d</string>

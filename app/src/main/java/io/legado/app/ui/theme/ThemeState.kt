@@ -30,6 +30,10 @@ object ThemeState {
         MutableStateFlow(AppConfig.enableBlur)
     val enableBlur: StateFlow<Boolean> = _enableBlur.asStateFlow()
 
+    private val _containerOpacity =
+        MutableStateFlow(AppConfig.containerOpacity)
+    val containerOpacity: StateFlow<Int> = _containerOpacity
+
     fun updateThemeMode(newMode: AppThemeMode) {
         if (_themeMode.value != newMode) {
             _themeMode.value = newMode
@@ -57,6 +61,12 @@ object ThemeState {
     fun updateEnableBlur(enabled: Boolean) {
         if (_enableBlur.value != enabled) {
             _enableBlur.value = enabled
+        }
+    }
+
+    fun updateContainerOpacity(opacity: Int) {
+        if (_containerOpacity.value != opacity) {
+            _containerOpacity.value = opacity
         }
     }
 

@@ -53,13 +53,25 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     var themeMode = appCtx.getPrefString(PreferKey.themeMode, "0")
     var AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
+    var containerOpacity = appCtx.getPrefInt(PreferKey.containerOpacity, 100)
     var useDefaultCover = appCtx.getPrefBoolean(PreferKey.useDefaultCover, false)
     var optimizeRender = CanvasRecorderFactory.isSupport
             && appCtx.getPrefBoolean(PreferKey.optimizeRender, false)
     var recordLog = appCtx.getPrefBoolean(PreferKey.recordLog)
+
+    // -- lyc 版本特性 --
+    var adaptSpecialStyle = appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)
+    var useUnderline = appCtx.getPrefBoolean(PreferKey.useUnderline, false)
+
     var webServiceAutoStart = appCtx.getPrefBoolean(PreferKey.webServiceAutoStart)
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
         when (key) {
+
+            PreferKey.adaptSpecialStyle -> adaptSpecialStyle =
+                appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)
+
+            PreferKey.useUnderline -> useUnderline =
+                appCtx.getPrefBoolean(PreferKey.useUnderline, false)
 
             PreferKey.appTheme -> {
                 AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
@@ -973,16 +985,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.sliderVibrator, value)
         }
 
-    val audioPreDownloadNum: Int
-        get() = appCtx.getPrefInt(PreferKey.audioPreDownloadNum, 10)
-
-    val audioCacheCleanTimeOrgin: Int
-        get() = appCtx.getPrefInt(PreferKey.audioCacheCleanTime, 10)
-
-    val audioCacheCleanTime: Long
-        get() {
-            val str = appCtx.getPrefInt(PreferKey.audioCacheCleanTime, 10)
-            return str * 60 * 1000L
-        }
 
 }
+

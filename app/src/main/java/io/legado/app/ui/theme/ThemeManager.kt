@@ -47,7 +47,8 @@ object ThemeManager {
         isAmoled: Boolean,
         isImageBg: Boolean,
         paletteStyle: String?,
-        forceOpaque: Boolean = false
+        forceOpaque: Boolean = false,
+        opacity: Int = 100
     ): ColorScheme {
         val context = LocalContext.current
         val style = resolvePaletteStyle(paletteStyle)
@@ -83,16 +84,27 @@ object ThemeManager {
             )
         }
 
-        return if (!forceOpaque && (isImageBg || actualMode == AppThemeMode.Transparent)) {
-            scheme.copy(
+        if (!forceOpaque && (isImageBg || actualMode == AppThemeMode.Transparent)) {
+            return scheme.copy(
                 surface = Color.Transparent,
                 background = Color.Transparent,
                 surfaceContainerLow = Color.Transparent,
-                surfaceContainer = Color.Transparent
+                surfaceContainer = Color.Transparent,
+            )
+        }
+
+        val alpha = opacity / 100f
+
+        return if (opacity < 100 && !forceOpaque) {
+            scheme.copy(
+                surfaceContainerLowest = scheme.surfaceContainerLowest.copy(alpha = alpha),
+                surfaceContainerLow = scheme.surfaceContainerLow.copy(alpha = alpha),
+                surfaceContainer = scheme.surfaceContainer.copy(alpha = alpha),
+                surfaceContainerHigh = scheme.surfaceContainerHigh.copy(alpha = alpha),
+                surfaceContainerHighest = scheme.surfaceContainerHighest.copy(alpha = alpha),
             )
         } else {
             scheme
         }
     }
-
 }

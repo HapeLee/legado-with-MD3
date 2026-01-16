@@ -13,6 +13,7 @@ object ThemeSyncer {
         syncImageBg()
         syncPaletteStyle()
         syncEnableBlur()
+        syncContainerOpacity()
     }
 
     fun syncThemeMode() {
@@ -36,4 +37,9 @@ object ThemeSyncer {
     fun syncEnableBlur() {
         ThemeState.updateEnableBlur(AppConfig.enableBlur)
     }
+
+    fun syncContainerOpacity() {
+        ThemeState.updateContainerOpacity(AppConfig.containerOpacity)
+    }
+
 }

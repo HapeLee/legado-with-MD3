@@ -96,8 +96,23 @@
             app:entries="@array/paletteStyle"
             app:entryValues="@array/paletteStyle_value" />
 
+        <io.legado.app.lib.prefs.NameListPreference
+            android:defaultValue="material"
+            android:enabled="false"
+            android:key="composeEngine"
+            android:title="@string/compose_engine"
+            app:entries="@array/composeEngine"
+            app:entryValues="@array/composeEngine_value" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="containerOpacity"
+            android:summary="@string/container_opacity_summary"
+            android:title="@string/container_opacity"
+            app:iconSpaceReserved="false" />
+
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
+            android:enabled="false"
             android:key="enableBlur"
             android:title="@string/is_blur_enable"
             app:iconSpaceReserved="false" />
