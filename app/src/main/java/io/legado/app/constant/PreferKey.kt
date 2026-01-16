@@ -69,6 +69,7 @@ object PreferKey {
     const val webDavAccount = "web_dav_account"
     const val webDavPassword = "web_dav_password"
     const val webDavDir = "webDavDir"
+    const val webServiceAutoStart = "webServiceAutoStart"
     const val enableCustomExport = "enableCustomExport"
     const val exportToWebDav = "webDavCacheBackup"
     const val exportNoChapterName = "exportNoChapterName"
@@ -243,4 +244,6 @@ object PreferKey {
 
     const val showTip = "showTip"
     const val sliderVibrator = "sliderVibrator"
+    const val audioCacheCleanTime = "audioCacheCleanTime"
+    const val audioPreDownloadNum = "audioPreDownloadNum"
 }

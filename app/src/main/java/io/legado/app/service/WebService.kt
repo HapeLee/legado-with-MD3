@@ -1,5 +1,6 @@
 package io.legado.app.service
 
+// ——————【新增引用】——————
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -21,6 +22,7 @@ import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.startForegroundServiceCompat
@@ -33,8 +35,6 @@ import splitties.init.appCtx
 import splitties.systemservices.powerManager
 import splitties.systemservices.wifiManager
 import java.io.IOException
-// ——————【新增引用】——————
-import io.legado.app.utils.putPrefBoolean
 
 class WebService : BaseService() {
 
@@ -43,9 +43,6 @@ class WebService : BaseService() {
         var hostAddress = ""
 
         fun start(context: Context) {
-            // ——————【修改开始】记录开启状态——————
-            appCtx.putPrefBoolean("web_service_auto", true)
-            // ——————【修改结束】——————
             context.startService<WebService>()
         }
 
@@ -55,9 +52,6 @@ class WebService : BaseService() {
         }
 
         fun stop(context: Context) {
-            // ——————【修改开始】记录关闭状态——————
-            appCtx.putPrefBoolean("web_service_auto", false)
-            // ——————【修改结束】——————
             context.stopService<WebService>()
         }
 

@@ -19,6 +19,12 @@
         app:entries="@array/default_app_variant"
         app:entryValues="@array/default_app_variant_value" />
 
+    <io.legado.app.lib.prefs.SwitchPreference
+        android:defaultValue="false"
+        android:key="webServiceAutoStart"
+        android:title="@string/web_service_auto_start"
+        app:iconSpaceReserved="false" />
+
     <io.legado.app.lib.prefs.PreferenceCategory
         android:title="@string/main_activity"
         app:allowDividerAbove="false"

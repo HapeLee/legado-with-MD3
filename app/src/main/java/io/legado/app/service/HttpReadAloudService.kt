@@ -65,11 +65,9 @@ import java.io.File
 import java.io.InputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
-import kotlin.coroutines.coroutineContext
 
 /**
  * 在线朗读
- * (完美匹配版：修复文件名MD5不一致 + 修复缓存不可见 + 修复0分钟不彻底清理)
  */
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
@@ -78,7 +76,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         ExoPlayer.Builder(this).build()
     }
 
-    // 【修改点1】改为外部存储，方便你查看文件，确认是否生成
+    // 改为外部存储
     private val ttsFolderPath: String by lazy {
         val baseDir = externalCacheDir ?: cacheDir
         baseDir.absolutePath + File.separator + "httpTTS" + File.separator
@@ -454,13 +452,10 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     /**
-     * 【核心修复点】生成音频文件名
-     * 1. 之前的问题：textChapter.title 可能是 "第一章  内容" (带格式)，而数据库里是 "第一章 内容" (不带格式)。
-     * 2. 现在的做法：强制使用 textChapter.chapter.title (数据库原始标题)。
-     * 3. 结果：前台 (播放) 和后台 (下载) 用的标题来源完全一致，MD5 绝对匹配，不会再重复下载了！
+     * 生成音频文件名
      */
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
-        val titleToUse = textChapter?.chapter?.title ?: "" // 强制取“核芯”标题
+        val titleToUse = textChapter?.chapter?.title ?: ""
         return MD5Utils.md5Encode16(titleToUse) + "_" +
                 MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
     }
@@ -492,7 +487,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     /**
      * 移除缓存文件
-     * 修复逻辑：如果时间设置为0，则不再保护当前章节，退出即全删。
+     * 如果时间设置为0，则不再保护当前章节，退出即全删。
      */
     private fun removeCacheFile() {
         val keepTime = AppConfig.audioCacheCleanTime

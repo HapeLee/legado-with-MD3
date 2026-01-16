@@ -67,22 +67,16 @@
             android:key="sysTtsConfig"
             app:iconSpaceReserved="false" />
 
-        <io.legado.app.lib.prefs.EditTextPreference
+        <io.legado.app.lib.prefs.Preference
             android:key="audioPreDownloadNum"
-            android:title="听书预加载数量(章节)"
-            android:summary="设置听书时预先下载的章节数量"
-            android:defaultValue="10"
-            android:inputType="number"
-            android:persistent="true"
+            android:summary="@string/read_aloud_preload_summary"
+            android:title="@string/read_aloud_preload"
             app:iconSpaceReserved="false" />
 
-        <io.legado.app.lib.prefs.EditTextPreference
+        <io.legado.app.lib.prefs.Preference
             android:key="audioCacheCleanTime"
-            android:title="音频缓存保留时间(分钟)"
-            android:summary="听书缓存文件保留多久后自动删除（单位：分钟）。输入 0 代表退出即刻清理。"
-            android:defaultValue="10"
-            android:inputType="number"
-            android:persistent="true"
+            android:summary="@string/audio_cache_clean_time_summary"
+            android:title="@string/audio_cache_clean_time"
             app:iconSpaceReserved="false" />
         </io.legado.app.lib.prefs.PreferenceCategory>
 
