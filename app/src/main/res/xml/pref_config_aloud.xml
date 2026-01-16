@@ -69,8 +69,8 @@
 
         <io.legado.app.lib.prefs.EditTextPreference
             android:key="audioPreDownloadNum"
-            android:title="听书预加载数量"
-            android:summary="设置听书时预先下载的章节数量（建议 10~50）"
+            android:title="听书预加载数量(章节)"
+            android:summary="设置听书时预先下载的章节数量"
             android:defaultValue="10"
             android:inputType="number"
             android:persistent="true"
@@ -79,7 +79,7 @@
         <io.legado.app.lib.prefs.EditTextPreference
             android:key="audioCacheCleanTime"
             android:title="音频缓存保留时间(分钟)"
-            android:summary="听书缓存文件保留多久后自动删除（单位：分钟）。输入 0 代表退出即清理。"
+            android:summary="听书缓存文件保留多久后自动删除（单位：分钟）。输入 0 代表退出即刻清理。"
             android:defaultValue="10"
             android:inputType="number"
             android:persistent="true"
