@@ -167,7 +167,7 @@ jobs:
           echo "VersionName: $APP_VERSION_NAME"
           echo "VersionCode (Commit Number): $COMMIT_NUMBER"
           chmod +x gradlew
-            ./gradlew assemble${{ env.product }}Release
+          ./gradlew assemble${{ env.product }}Release
         env:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}
@@ -264,7 +264,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. 必须先下载 build 任务上传的 APK
+      # 1. 下载 build 任务上传的 APK
       - name: 下载所有 APK Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -272,7 +272,7 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      # 2. 运行你写好的重命名逻辑（确保文件名符合 Release 要求）
+      # 2. 重命名逻辑
       - name: 整理并重命名 APK 文件
         id: organize_apks
         run: |
@@ -283,12 +283,56 @@ jobs:
           find artifacts -maxdepth 1 -type f -name '*armeabi-v7a.apk' -exec mv {} "artifacts/legado-${VERSIONL}-armeabi-v7a.apk" \;
           ls -l artifacts/
 
-      # 3. 获取日志 (保持你原来的步骤)
+      #
+      # 获取 Commit 记录并格式化为 Release Body
+      #
       - name: 获取 Commit 记录
         id: get_commits
-        # ... (此处省略你原来的脚本内容)
+        run: |
+          # prepare Job 中计算出的日志起点 Tag (LAST_TAG_FOR_LOG)
+          LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
+          
+          # 获取从上一个 Tag 到当前 HEAD 的所有 Commit 消息
+          # --no-merges: 排除合并提交
+          COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
+          
+          if [ -z "$COMMIT_LOG" ]; then
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+          
+          - 没有新的 Commit 记录.
+          EOF
+          )
+          else
+          RELEASE_BODY=$(cat <<EOF
+          ### 更新内容
+          
+          $COMMIT_LOG
+          EOF
+          )
+          fi
+          
+            # 设置 step 输出
+          echo "release_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "生成的 Release Body:"
+          echo "$RELEASE_BODY"
 
-      # 4. 创建 Release 并上传 (自动处理 Tag 和文件)
+      - name: 创建 Tag
+        run: |
+          # 检查 Tag 是否已存在，避免重复创建
+          if ! git tag -l ${{ needs.prepare.outputs.versionL }} | grep -q ${{ needs.prepare.outputs.versionL }}; then
+            git tag ${{ needs.prepare.outputs.versionL }} 
+            git push origin ${{ needs.prepare.outputs.versionL }}
+          else
+            echo "Tag ${{ needs.prepare.outputs.versionL }} 已存在，跳过创建。"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. 创建 Release 并上传
       - name: 创建 GitHub Release 并上传文件
         uses: softprops/action-gh-release@v2
         with:

@@ -1385,9 +1385,4 @@
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">音频缓存保留时间(分钟)</string>
     <string name="audio_cache_clean_time_summary">当前%d, 输入 0 代表退出即刻清理。</string>
-    <string name="web_service_auto_start">启动应用时打开Web服务</string>
-    <string name="read_aloud_preload">听书预加载数量</string>
-    <string name="read_aloud_preload_summary">%d</string>
-    <string name="audio_cache_clean_time">音频缓存保留时间(分钟)</string>
-    <string name="audio_cache_clean_time_summary">当前%d, 输入 0 代表退出即刻清理。</string>
 </resources>
