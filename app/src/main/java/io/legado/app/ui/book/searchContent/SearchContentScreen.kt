@@ -19,12 +19,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,12 +53,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.TextCard
+import io.legado.app.ui.widget.components.button.AnimatedActionButton
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import org.koin.androidx.compose.koinViewModel
 
@@ -70,6 +73,7 @@ fun SearchContentScreen(
     viewModel: SearchContentViewModel = koinViewModel()
 ) {
     val activity = LocalActivity.current
+    val context = LocalContext.current
 
     val uiState by viewModel.uiState.collectAsState()
 
@@ -142,7 +146,46 @@ fun SearchContentScreen(
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    scrollBehavior = scrollBehavior
+                    actions = {
+                        Row(
+                            modifier = Modifier.padding(end = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            AnimatedActionButton(
+                                checked = replaceEnabled,
+                                onCheckedChange = {
+                                    replaceEnabled = it
+                                    if (searchQuery.isNotBlank()) {
+                                        viewModel.startSearch(
+                                            searchQuery,
+                                            replaceEnabled,
+                                            regexReplace
+                                        )
+                                    }
+                                },
+                                icon = Icons.Default.FindReplace,
+                                activeText = "替换开启",
+                                inactiveText = "替换关闭"
+                            )
+
+                            AnimatedActionButton(
+                                checked = regexReplace,
+                                onCheckedChange = {
+                                    regexReplace = it
+                                    if (searchQuery.isNotBlank()) {
+                                        viewModel.startSearch(
+                                            searchQuery,
+                                            replaceEnabled,
+                                            regexReplace
+                                        )
+                                    }
+                                },
+                                icon = Icons.Default.Code,
+                                activeText = "正则开启",
+                                inactiveText = "正则关闭"
+                            )
+                        }
+                    }
                 )
                 SearchBarSection(
                     query = searchQuery,
@@ -151,36 +194,6 @@ fun SearchContentScreen(
                         viewModel.startSearch(searchQuery, replaceEnabled, regexReplace)
                     }
                 )
-                AnimatedVisibility(visible = scrollBehavior.state.heightOffset == 0f) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        FilterChip(
-                            selected = replaceEnabled,
-                            onClick = {
-                                replaceEnabled = !replaceEnabled
-                                if (searchQuery.isNotBlank()) {
-                                    viewModel.startSearch(searchQuery, replaceEnabled, regexReplace)
-                                }
-                            },
-                            label = { Text("启用替换") }
-                        )
-                        FilterChip(
-                            selected = regexReplace,
-                            onClick = {
-                                regexReplace = !regexReplace
-                                if (searchQuery.isNotBlank()) {
-                                    viewModel.startSearch(searchQuery, replaceEnabled, regexReplace)
-                                }
-                            },
-                            label = { Text("正则匹配") }
-                        )
-                    }
-                }
                 AnimatedVisibility(visible = contentState == SearchContentState.Loading) {
                     LinearProgressIndicator(
                         modifier = Modifier.fillMaxWidth()
