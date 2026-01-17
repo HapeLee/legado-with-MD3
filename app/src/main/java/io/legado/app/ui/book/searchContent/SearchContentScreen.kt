@@ -148,7 +148,7 @@ fun SearchContentScreen(
                     },
                     actions = {
                         Row(
-                            modifier = Modifier.padding(end = 16.dp),
+                            modifier = Modifier.padding(end = 12.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             AnimatedActionButton(
@@ -185,7 +185,8 @@ fun SearchContentScreen(
                                 inactiveText = "正则关闭"
                             )
                         }
-                    }
+                    },
+                    scrollBehavior = scrollBehavior
                 )
                 SearchBarSection(
                     query = searchQuery,
