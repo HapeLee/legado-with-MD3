@@ -143,8 +143,10 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:elevation="16dp"
+                android:minWidth="0dp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"
-                android:text="@string/exit"
                 app:icon="@drawable/ic_auto_page_stop"
                 tools:ignore="NestedWeights" />
 
