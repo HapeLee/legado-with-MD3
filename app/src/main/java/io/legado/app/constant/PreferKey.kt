@@ -46,6 +46,7 @@ object PreferKey {
     const val enableReview = "enableReview"
     const val showRss = "showRss"
     const val showStatusBar = "showStatusBar"
+    const val swipeAnimation = "swipeAnimation"
     const val bookshelfLayout = "bookshelfLayout"
     const val bookshelfLayoutModePortrait = "bookshelfLayoutPortrait"
     const val bookshelfLayoutModeLandscape = "bookshelf_layout_landscape"

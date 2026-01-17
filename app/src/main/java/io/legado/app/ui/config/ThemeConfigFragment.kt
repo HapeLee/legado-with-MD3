@@ -181,7 +181,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             }
 
 
-            PreferKey.paletteStyle, PreferKey.pureBlack, PreferKey.enableBlur -> {
+            PreferKey.paletteStyle, PreferKey.pureBlack, PreferKey.enableBlur, PreferKey.swipeAnimation -> {
                 ThemeSyncer.syncAll()
                 Handler(Looper.getMainLooper()).postDelayed({
                     recreateActivities()
@@ -248,25 +248,35 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 .setValue(10)
                 .setCustomButton((R.string.btn_default_s)) {
                     putPrefInt(PreferKey.fontScale, 0)
-                    recreateActivities()
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        recreateActivities()
+                    }, 100)
                 }
                 .show {
                     putPrefInt(PreferKey.fontScale, it)
-                    recreateActivities()
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        recreateActivities()
+                    }, 100)
                 }
 
             PreferKey.containerOpacity -> NumberPickerDialog(requireContext())
                 .setTitle(getString(R.string.container_opacity))
                 .setMaxValue(100)
                 .setMinValue(0)
-                .setValue(100)
+                .setValue(AppConfig.containerOpacity)
                 .setCustomButton((R.string.btn_default_s)) {
-                    putPrefInt(PreferKey.containerOpacity, 100)
-                    ThemeSyncer.syncContainerOpacity()
+                    AppConfig.containerOpacity = 100
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        ThemeSyncer.syncContainerOpacity()
+                        upPreferenceSummary(PreferKey.containerOpacity)
+                    }, 100)
                 }
                 .show {
-                    putPrefInt(PreferKey.containerOpacity, it)
-                    ThemeSyncer.syncContainerOpacity()
+                    AppConfig.containerOpacity = it
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        ThemeSyncer.syncContainerOpacity()
+                        upPreferenceSummary(PreferKey.containerOpacity)
+                    }, 100)
                 }
 
             PreferKey.bgImage -> selectBgAction(false)

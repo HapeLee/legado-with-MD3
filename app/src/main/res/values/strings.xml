@@ -1373,7 +1373,7 @@
     <string name="read_color">颜色样式</string>
     <string name="reverse_volume_key_page">反转音量键翻页方向</string>
     <string name="palette_style">调色板样式</string>
-    <string name="tip_compose_set">这里的选项仅可以控制使用Compose重写的界面。</string>
+    <string name="tip_compose_set">这里的选项仅可以控制使用Compose重写的界面。对于禁用的选项，会在日后实现时开放，现在仅作占位。</string>
     <string name="is_blur_enable">启用控件模糊</string>
     <string name="use_underline">总是使用下划线表示强调文本</string>
     <string name="adapt_special_style">适配特殊样式</string>
@@ -1385,4 +1385,5 @@
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">音频缓存保留时间(分钟)</string>
     <string name="audio_cache_clean_time_summary">当前%d, 输入 0 代表退出即刻清理。</string>
+    <string name="show_swipe_animation">启用滑动时动画</string>
 </resources>

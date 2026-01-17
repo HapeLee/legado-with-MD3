@@ -146,6 +146,12 @@
 
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
+            android:key="swipeAnimation"
+            android:title="@string/show_swipe_animation"
+            app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="true"
             android:key="showBottomView"
             android:summary="@string/be_swiped"
             android:title="@string/show_bottom_nav"

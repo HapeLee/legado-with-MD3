@@ -337,7 +337,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.versionL }}
-          name: ${{ needs.prepare.outputs.is_release == 'true' && format('正式版 {0}', needs.prepare.outputs.versionL) || format('测试版 {0}', needs.prepare.outputs.versionL) }}
+          name: ${{ needs.prepare.outputs.is_release == 'true' && format('Release {0}', needs.prepare.outputs.versionL) || format('Pre-release {0}', needs.prepare.outputs.versionL) }}
           body: ${{ steps.get_commits.outputs.release_body }}
           prerelease: ${{ needs.prepare.outputs.is_release != 'true' }}
           files: |

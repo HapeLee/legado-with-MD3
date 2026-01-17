@@ -96,6 +96,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
     private val fragmentMap = hashMapOf<Int, Fragment>()
     private var bottomMenuCount = 4
     private val realPositions = arrayOf(idBookshelf, idExplore, idRss, idMy)
+    private val swipeAnimation = AppConfig.swipeAnimation
     private val adapter by lazy {
         TabFragmentPageAdapter(this)
     }
@@ -181,7 +182,7 @@ open class MainActivity : VMBaseActivity<ActivityMainBinding, MainViewModel>(),
             R.id.menu_my_config -> realPositions.indexOf(idMy)
             else -> 0
         }
-        binding.viewPagerMain.setCurrentItem(index, true)
+        binding.viewPagerMain.setCurrentItem(index, swipeAnimation)
         return true
     }
 
