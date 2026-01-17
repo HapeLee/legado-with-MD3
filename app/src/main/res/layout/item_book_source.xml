@@ -108,9 +108,9 @@
         android:visibility="gone"
         android:layout_marginStart="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintStart_toEndOf="@id/iv_progressBar"
         app:layout_constraintTop_toBottomOf="@id/cb_book_source"
+        app:layout_constraintEnd_toEndOf="parent"
         tools:text="@string/debug_hint"
         tools:visibility="visible" />
 
