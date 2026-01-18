@@ -3,52 +3,33 @@ package io.legado.app.ui.replace
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,21 +39,16 @@ import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -91,16 +67,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
@@ -118,7 +90,9 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
@@ -127,12 +101,9 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
-import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
@@ -148,7 +119,6 @@ fun ReplaceRuleScreen(
 
     //TODO: 期望换为Navigation
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -585,71 +555,53 @@ fun ReplaceRuleScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(rules, key = { it.id }) { ui ->
-                        val isSelected = selectedRuleIds.contains(ui.id)
-                        ReorderableItem(
+                        ReorderableSelectionItem(
                             state = reorderableState,
-                            key = ui.id
-                        ) { isDragging ->
-
-                            val elevation by animateDpAsState(if (isDragging) 8.dp else 0.dp)
-                            ReplaceRuleItem(
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp)
-                                    .zIndex(if (isDragging) 1f else 0f)
-                                    .shadow(
-                                        elevation = elevation,
-                                        shape = MaterialTheme.shapes.medium,
-                                        clip = false
+                            key = ui.id,
+                            title = ui.name,
+                            isEnabled = ui.isEnabled,
+                            isSelected = selectedRuleIds.contains(ui.id),
+                            inSelectionMode = inSelectionMode,
+                            canReorder = canReorder,
+                            onToggleSelection = {
+                                viewModel.toggleSelection(ui.id)
+                            },
+                            onEnabledChange = { enabled ->
+                                viewModel.update(ui.rule.copy(isEnabled = enabled))
+                            },
+                            onClickEdit = {
+                                context.startActivity(
+                                    ReplaceEditActivity.startIntent(
+                                        context,
+                                        ui.id
                                     )
-                                    .then(
-                                        if (canReorder) {
-                                            Modifier.longPressDraggableHandle(
-                                                onDragStarted = {
-                                                    hapticFeedback.performHapticFeedback(
-                                                        HapticFeedbackType.GestureThresholdActivate
-                                                    )
-                                                },
-                                                onDragStopped = {
-                                                    hapticFeedback.performHapticFeedback(
-                                                        HapticFeedbackType.GestureEnd
-                                                    )
-                                                },
-                                                interactionSource = remember { MutableInteractionSource() }
-                                            )
-                                        } else {
-                                            Modifier
-                                        }
-                                    )
-                                    .animateItem(),
-                                name = ui.name,
-                                isEnabled = ui.isEnabled,
-                                isSelected = isSelected,
-                                inSelectionMode = inSelectionMode,
-                                onEnabledChange = { enabled ->
-                                    viewModel.update(ui.rule.copy(isEnabled = enabled))
-                                },
-                                onDelete = { showDeleteRuleDialog = ui.rule },
-                                onToTop = { viewModel.toTop(ui.rule) },
-                                onToBottom = { viewModel.toBottom(ui.rule) },
-                                onToggleSelection = {
-                                    viewModel.toggleSelection(ui.id)
-                                },
-                                onClickEdit = {
-                                    context.startActivity(
-                                        ReplaceEditActivity.startIntent(context, ui.id)
-                                    )
-                                }
-                            )
-                        }
+                                )
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            dropdownContent = { dismiss ->
+                                DropdownMenuItem(
+                                    text = { Text("移至顶部") },
+                                    onClick = { viewModel.toTop(ui.rule); dismiss() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("移至底部") },
+                                    onClick = { viewModel.toBottom(ui.rule); dismiss() }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("删除") },
+                                    onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
+                                )
+                            }
+                        )
                     }
                 }
                 if (inSelectionMode) {
                     DraggableSelectionHandler(
                         listState = listState,
-                        rules = rules,
-                        selectedRuleIds = selectedRuleIds,
+                        items = rules,
+                        selectedIds = selectedRuleIds,
                         onSelectionChange = viewModel::setSelection,
-                        haptic = haptic,
+                        idProvider = { it.id },
                         modifier = Modifier
                             .fillMaxHeight()
                             .width(60.dp)
@@ -717,305 +669,5 @@ fun ReplaceRuleScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun DraggableSelectionHandler(
-    listState: LazyListState,
-    rules: List<ReplaceRuleItemUi>,
-    selectedRuleIds: Set<Long>,
-    onSelectionChange: (Set<Long>) -> Unit,
-    haptic: HapticFeedback,
-    modifier: Modifier = Modifier
-) {
-    val latestSelectedRuleIds by rememberUpdatedState(selectedRuleIds)
-    var isAddingMode by remember { mutableStateOf(true) }
-    var lastProcessedIndex by remember { mutableIntStateOf(-1) }
-
-    fun findRuleAtOffset(offsetY: Float): Pair<Int, ReplaceRuleItemUi>? {
-        val itemInfo = listState.layoutInfo.visibleItemsInfo
-            .firstOrNull { item ->
-                offsetY >= item.offset && offsetY <= item.offset + item.size
-            }
-
-        return itemInfo?.let { info ->
-            rules.getOrNull(info.index)?.let { rule ->
-                info.index to rule
-            }
-        }
-    }
-
-    fun applySelection(id: Long, add: Boolean) {
-        val current = latestSelectedRuleIds
-        onSelectionChange(
-            if (add) current + id else current - id
-        )
-    }
-
-    Box(
-        modifier = modifier.pointerInput(Unit) {
-            coroutineScope {
-                launch {
-                    detectTapGestures(
-                        onTap = { offset ->
-                            val result = findRuleAtOffset(offset.y)
-                            if (result != null) {
-                                val (_, rule) = result
-                                val id = rule.id
-                                val current = latestSelectedRuleIds
-                                onSelectionChange(
-                                    if (current.contains(id)) current - id
-                                    else current + id
-                                )
-                                haptic.performHapticFeedback(
-                                    HapticFeedbackType.TextHandleMove
-                                )
-                            }
-                        }
-                    )
-                }
-
-                // 拖拽多选
-                launch {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            val result = findRuleAtOffset(offset.y)
-                            if (result != null) {
-                                val (index, rule) = result
-                                lastProcessedIndex = index
-
-                                val id = rule.id
-                                val current = latestSelectedRuleIds
-                                isAddingMode = !current.contains(id)
-                                applySelection(id, isAddingMode)
-
-                                haptic.performHapticFeedback(
-                                    HapticFeedbackType.LongPress
-                                )
-                            }
-                        },
-                        onDrag = { change, _ ->
-                            val result = findRuleAtOffset(change.position.y)
-                            if (result != null) {
-                                val (index, rule) = result
-                                if (index != lastProcessedIndex) {
-                                    lastProcessedIndex = index
-                                    applySelection(rule.id, isAddingMode)
-                                    haptic.performHapticFeedback(
-                                        HapticFeedbackType.TextHandleMove
-                                    )
-                                }
-                            }
-                        },
-                        onDragEnd = {
-                            lastProcessedIndex = -1
-                        },
-                        onDragCancel = {
-                            lastProcessedIndex = -1
-                        }
-                    )
-                }
-            }
-        }
-    )
-}
-
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun GroupManageBottomSheet(
-    groups: List<String>,
-    sheetState: SheetState,
-    onDismissRequest: () -> Unit,
-    viewModel: ReplaceRuleViewModel
-) {
-    var editingGroup by remember { mutableStateOf<String?>(null) }
-    var updatedGroupName by remember { mutableStateOf("") }
-
-    GlobalModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                modifier = Modifier.padding(bottom = 16.dp),
-                text = stringResource(R.string.group_manage),
-                style = MaterialTheme.typography.titleMedium
-            )
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(groups) { group ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        if (editingGroup == group) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                OutlinedTextField(
-                                    value = updatedGroupName,
-                                    onValueChange = { updatedGroupName = it },
-                                    modifier = Modifier.weight(1f)
-                                )
-                                IconButton(onClick = {
-                                    viewModel.upGroup(group, updatedGroupName)
-                                    editingGroup = null
-                                }) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = stringResource(id = R.string.ok)
-                                    )
-                                }
-                            }
-                        } else {
-                            ListItem(
-                                headlineContent = { Text(group) },
-                                trailingContent = {
-                                    Row {
-                                        IconButton(onClick = {
-                                            editingGroup = group
-                                            updatedGroupName = group
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Edit,
-                                                contentDescription = stringResource(id = R.string.edit)
-                                            )
-                                        }
-                                        IconButton(onClick = { viewModel.delGroup(group) }) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = stringResource(id = R.string.delete)
-                                            )
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ReplaceRuleItem(
-    name: String,
-    isEnabled: Boolean,
-    isSelected: Boolean,
-    inSelectionMode: Boolean,
-    onToggleSelection: () -> Unit,
-    onEnabledChange: (Boolean) -> Unit,
-    onDelete: () -> Unit,
-    onToTop: () -> Unit,
-    onToBottom: () -> Unit,
-    onClickEdit: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showRuleMenu by remember { mutableStateOf(false) }
-
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected)
-            MaterialTheme.colorScheme.secondaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceContainerLow,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
-        label = "CardColor"
-    )
-
-    Card(
-        onClick = { onToggleSelection() },
-        modifier = modifier
-            .fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        )
-    ) {
-        ListItem(
-            modifier = Modifier
-                .animateContentSize(),
-            headlineContent = {
-                AnimatedContent(targetState = name, label = "RuleNameAnimation") { targetName ->
-                    Text(
-                        text = targetName,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            },
-            leadingContent = {
-                AnimatedContent(
-                    targetState = inSelectionMode,
-                    label = "LeadingCheckbox"
-                ) { visible ->
-                    if (visible) {
-                        Checkbox(
-                            checked = isSelected,
-                            onCheckedChange = null
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.width(0.dp))
-                    }
-                }
-            },
-            trailingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Switch(
-                        checked = isEnabled,
-                        onCheckedChange = onEnabledChange
-                    )
-                    IconButton(onClick = onClickEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit")
-                    }
-                    Box {
-                        IconButton(onClick = { showRuleMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More Actions")
-                        }
-                        DropdownMenu(
-                            expanded = showRuleMenu,
-                            onDismissRequest = { showRuleMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("移至顶部") },
-                                onClick = {
-                                    onToTop()
-                                    showRuleMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("移至底部") },
-                                onClick = {
-                                    onToBottom()
-                                    showRuleMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("删除") },
-                                onClick = {
-                                    onDelete()
-                                    showRuleMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
     }
 }

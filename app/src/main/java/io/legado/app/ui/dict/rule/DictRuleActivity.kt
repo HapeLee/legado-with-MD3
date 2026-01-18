@@ -1,62 +1,29 @@
 package io.legado.app.ui.dict.rule
 
+//import io.legado.app.lib.theme.primaryColor
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
-import androidx.activity.viewModels
-import androidx.appcompat.widget.PopupMenu
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.compose.runtime.Composable
 import io.legado.app.R
-import io.legado.app.base.VMBaseActivity
-import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
-import io.legado.app.data.entities.DictRule
-import io.legado.app.databinding.ActivityDictRuleBinding
+import io.legado.app.base.BaseComposeActivity
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.alert
-//import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.association.ImportDictRuleDialog
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.ui.qrcode.QrCodeResult
-import io.legado.app.ui.widget.SelectActionBar
-import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
-import io.legado.app.ui.widget.recycler.ItemTouchCallback
-import io.legado.app.ui.widget.recycler.VerticalDivider
+import io.legado.app.ui.theme.AppTheme
 import io.legado.app.utils.ACache
-import io.legado.app.utils.GSON
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.launch
 import io.legado.app.utils.readText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.showHelp
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
 
-class DictRuleActivity : VMBaseActivity<ActivityDictRuleBinding, DictRuleViewModel>(),
-    PopupMenu.OnMenuItemClickListener,
-    SelectActionBar.CallBack,
-    DictRuleAdapter.CallBack {
+class DictRuleActivity : BaseComposeActivity() {
 
-    override val viewModel by viewModels<DictRuleViewModel>()
-    override val binding by viewBinding(ActivityDictRuleBinding::inflate)
     private val importRecordKey = "dictRuleUrls"
-    private val adapter by lazy { DictRuleAdapter(this, this) }
-    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
-        it ?: return@registerForActivityResult
-        showDialogFragment(
-            ImportDictRuleDialog(it)
-        )
-    }
+
     private val importDoc = registerForActivityResult(HandleFileContract()) {
         kotlin.runCatching {
             it.uri?.readText(this)?.let {
@@ -88,132 +55,15 @@ class DictRuleActivity : VMBaseActivity<ActivityDictRuleBinding, DictRuleViewMod
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initRecyclerView()
-        initSelectActionView()
-        observeDictRuleData()
+
+        //observeDictRuleData()
     }
 
-    override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.dict_rule, menu)
-        return super.onCompatCreateOptionsMenu(menu)
-    }
-
-    private fun initRecyclerView() {
-        //binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = LinearLayoutManager(this)
-        binding.recyclerView.adapter = adapter
-        binding.recyclerView.addItemDecoration(VerticalDivider(this))
-        val itemTouchCallback = ItemTouchCallback(adapter)
-        itemTouchCallback.isCanDrag = true
-        val dragSelectTouchHelper: DragSelectTouchHelper =
-            DragSelectTouchHelper(adapter.dragSelectCallback).setSlideArea(16, 50)
-        dragSelectTouchHelper.attachToRecyclerView(binding.recyclerView)
-        // When this page is opened, it is in selection mode
-        dragSelectTouchHelper.activeSlideSelect()
-
-        // Note: need judge selection first, so add ItemTouchHelper after it.
-        ItemTouchHelper(itemTouchCallback).attachToRecyclerView(binding.recyclerView)
-    }
-
-
-    private fun initSelectActionView() {
-        binding.selectActionBar.setMainActionText(R.string.delete)
-        binding.selectActionBar.inflateMenu(R.menu.dict_rule_sel)
-        binding.selectActionBar.setOnMenuItemClickListener(this)
-        binding.selectActionBar.setCallBack(this)
-    }
-
-    private fun observeDictRuleData() {
-        lifecycleScope.launch {
-            appDb.dictRuleDao.flowAll().catch {
-                AppLog.put("字典规则获取数据失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).collect {
-                adapter.setItems(it, adapter.diffItemCallBack)
-            }
+    @Composable
+    override fun Content() {
+        AppTheme {
+            DictRuleScreen(onBackClick = { finish() })
         }
-    }
-
-    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_add -> showDialogFragment<DictRuleEditDialog>()
-            R.id.menu_import_local -> importDoc.launch {
-                mode = HandleFileContract.FILE
-                allowExtensions = arrayOf("txt", "json")
-            }
-
-            R.id.menu_import_onLine -> showImportDialog()
-            R.id.menu_import_qr -> qrCodeResult.launch()
-            R.id.menu_import_default -> viewModel.importDefault()
-            R.id.menu_help -> showHelp("dictRuleHelp")
-        }
-        return super.onCompatOptionsItemSelected(item)
-    }
-
-    override fun onMenuItemClick(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_enable_selection -> {
-                viewModel.enableSelection(*adapter.selection.toTypedArray())
-            }
-
-            R.id.menu_disable_selection -> {
-                viewModel.disableSelection(*adapter.selection.toTypedArray())
-            }
-
-            R.id.menu_export_selection -> exportResult.launch {
-                mode = HandleFileContract.EXPORT
-                fileData = HandleFileContract.FileData(
-                    "exportDictRule.json",
-                    GSON.toJson(adapter.selection).toByteArray(),
-                    "application/json"
-                )
-            }
-        }
-        return true
-    }
-
-    override fun onClickSelectBarMainAction() {
-        viewModel.delete(*adapter.selection.toTypedArray())
-    }
-
-    override fun selectAll(selectAll: Boolean) {
-        if (selectAll) {
-            adapter.selectAll()
-        } else {
-            adapter.revertSelection()
-        }
-    }
-
-    override fun revertSelection() {
-        adapter.revertSelection()
-    }
-
-    override fun update(vararg rule: DictRule) {
-        viewModel.update(*rule)
-    }
-
-    override fun delete(rule: DictRule) {
-        alert(R.string.draw) {
-            setMessage(getString(R.string.sure_del) + "\n" + rule.name)
-            noButton()
-            yesButton {
-                viewModel.delete(rule)
-            }
-        }
-    }
-
-    override fun edit(rule: DictRule) {
-        showDialogFragment(DictRuleEditDialog(rule.name))
-    }
-
-    override fun upOrder() {
-        viewModel.upSortNumber()
-    }
-
-    override fun upCountView() {
-        binding.selectActionBar.upCountView(
-            adapter.selection.size,
-            adapter.itemCount
-        )
     }
 
     @SuppressLint("InflateParams")
