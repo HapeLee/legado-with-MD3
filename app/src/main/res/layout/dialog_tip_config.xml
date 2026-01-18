@@ -126,6 +126,7 @@
                 android:layout_width="108dp"
                 android:layout_height="wrap_content"
                 app:max="20"
+                app:min="-20"
                 app:title="次行缩放" />
 
             <View
