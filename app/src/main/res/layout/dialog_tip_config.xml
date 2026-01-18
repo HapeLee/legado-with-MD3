@@ -152,7 +152,8 @@
                 android:id="@+id/dsb_title_line_spacing_sub"
                 android:layout_width="108dp"
                 android:layout_height="wrap_content"
-                app:max="40"
+                app:max="30"
+                app:min="-30"
                 app:title="次行距离" />
 
             <View
