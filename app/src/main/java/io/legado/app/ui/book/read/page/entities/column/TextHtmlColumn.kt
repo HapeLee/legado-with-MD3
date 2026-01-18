@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.read.page.entities
+package io.legado.app.ui.book.read.page.entities.column
 
 import android.graphics.Canvas
 import android.os.Build
@@ -7,7 +7,7 @@ import androidx.annotation.Keep
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.TextBaseColumn
-import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
+import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 
 /**
@@ -23,7 +23,7 @@ data class TextHtmlColumn(
     val linkUrl: String?
 ) : TextBaseColumn {
 
-    override var textLine: TextLine = emptyTextLine
+    override var textLine: TextLine = TextLine.Companion.emptyTextLine
 
     private val textPaint: TextPaint by lazy {
         TextPaint(ChapterProvider.contentPaint).apply {

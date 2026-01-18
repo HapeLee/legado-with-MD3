@@ -28,11 +28,11 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextHtmlColumn
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.column.ImageColumn
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
+import io.legado.app.ui.book.read.page.entities.column.TextHtmlColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.reviewChar
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceChar
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceCharC
@@ -95,7 +95,10 @@ class TextChapterLayout(
     private val textFullJustify = ReadBookConfig.textFullJustify
     private val adaptSpecialStyle = AppConfig.adaptSpecialStyle
     private val pageAnim = book.getPageAnim()
-
+    private val titleSegType = ReadBookConfig.titleSegType
+    private val titleSegDistance = ReadBookConfig.titleSegDistance
+    private val titleSegFlag = ReadBookConfig.titleSegFlag
+    private val titleSegScaling = ReadBookConfig.titleSegScaling
     private var pendingTextPage = TextPage()
 
     private val bookChapter inline get() = textChapter.chapter
@@ -206,6 +209,44 @@ class TextChapterLayout(
         }
     }
 
+    private fun parseTitleSegments(
+        rawTitle: String,
+        segType: Int,
+        segDistance: Int,
+        segFlag: String
+    ): List<String> {
+        if (rawTitle.isBlank()) return emptyList()
+
+        return when (segType) {
+            0 -> listOf(rawTitle)
+
+            1 -> {
+                if (segDistance <= 0 || segDistance >= rawTitle.length)
+                    listOf(rawTitle)
+                else
+                    listOf(
+                        rawTitle.take(segDistance),
+                        rawTitle.substring(segDistance)
+                    )
+            }
+
+            2 -> {
+                val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                if (flags.isEmpty()) return listOf(rawTitle)
+
+                val pattern = flags.joinToString("|") { Regex.escape(it) }
+                val regex = Regex("(?<=$pattern)")
+                val segments = rawTitle.split(regex)
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+
+                segments.ifEmpty { listOf(rawTitle) }
+            }
+
+            else -> listOf(rawTitle)
+        }
+    }
+
     /**
      * 获取拆分完的章节数据
      */
@@ -221,37 +262,48 @@ class TextChapterLayout(
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
-            //标题非隐藏
-            displayTitle.splitNotBlank("\n").forEach { text ->
-                val srcList = LinkedList<String>()
-                val reviewImg = bookChapter.reviewImg
-                var reviewTxt = ""
-                if (!reviewImg.isNullOrEmpty()) {
-                    srcList.add(reviewImg)
-                    reviewTxt = if (reviewImg.contains("TEXT")) {
-                        reviewChar
-                    } else {
-                        srcReplaceChar
-                    }
-                }
-                setTypeText(
-                    book,
-                    text + reviewTxt,
-                    titlePaint,
-                    titlePaintTextHeight,
-                    titlePaintFontMetrics,
-                    imageStyle,
-                    srcList = srcList.ifEmpty { null },
-                    isTitle = true,
-                    emptyContent = contents.isEmpty(),
-                    isVolumeTitle = bookChapter.isVolume
+            val baseTitles = displayTitle.splitNotBlank("\n")
+            baseTitles.forEach { rawTitle ->
+                val titleSegments = parseTitleSegments(
+                    rawTitle,
+                    titleSegType,
+                    titleSegDistance,
+                    titleSegFlag
                 )
-                pendingTextPage.lines.last().isParagraphEnd = true
-                stringBuilder.append("\n")
+                titleSegments.forEachIndexed { index, segment ->
+                    val srcList = LinkedList<String>()
+                    val reviewImg = bookChapter.reviewImg
+                    var reviewTxt = ""
+                    if (reviewImg != null) {
+                        srcList.add(reviewImg)
+                        reviewTxt = if (reviewImg.contains("TEXT")) {
+                            reviewChar
+                        } else {
+                            srcReplaceChar
+                        }
+                    }
+                    val paint = if (index == 0) titlePaint else {
+                        TextPaint(titlePaint).apply {
+                            textSize = titlePaint.textSize * titleSegScaling
+                        }
+                    }
+                    setTypeText(
+                        book,
+                        segment + reviewTxt,
+                        paint,
+                        titlePaintTextHeight,
+                        titlePaintFontMetrics,
+                        imageStyle,
+                        srcList = srcList.ifEmpty { null },
+                        isTitle = true,
+                        emptyContent = contents.isEmpty(),
+                        isVolumeTitle = bookChapter.isVolume
+                    )
+                    pendingTextPage.lines.last().isParagraphEnd = true
+                    stringBuilder.append("\n")
+                }
             }
             durY += titleBottomSpacing
-
-            // 如果是单图模式且当前页有内容，强制分页
             if (isSingleImageStyle && pendingTextPage.lines.isNotEmpty() && contents.isNotEmpty()) {
                 prepareNextPageIfNeed()
             }
