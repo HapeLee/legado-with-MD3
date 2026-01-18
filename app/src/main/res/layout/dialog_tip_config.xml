@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -37,45 +36,58 @@
 
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/body_title"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/rg_title_mode"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            app:singleLine="true"
-            app:singleSelection="true"
-            app:selectionRequired="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/rb_title_mode1"
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="@string/title_left" />
+                android:text="@string/body_title"
+                android:textSize="16sp"
+                android:textStyle="bold" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/rb_title_mode2"
+            <View
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/rg_title_mode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="@string/title_center" />
+                android:layout_marginVertical="8dp"
+                app:selectionRequired="true"
+                app:singleLine="true"
+                app:singleSelection="true">
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/rb_title_mode3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checkable="true"
-                android:text="@string/title_hide" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/rb_title_mode1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/title_left" />
 
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/rb_title_mode2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/title_center" />
 
-        </com.google.android.material.chip.ChipGroup>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/rb_title_mode3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:text="@string/title_hide" />
+
+            </com.google.android.material.chip.ChipGroup>
+
+        </LinearLayout>
+
 
         <com.google.android.material.button.MaterialButtonGroup
             android:layout_width="match_parent"
@@ -114,7 +126,7 @@
                 android:layout_width="108dp"
                 android:layout_height="wrap_content"
                 app:max="20"
-                app:title="次行缩放(未完成)" />
+                app:title="次行缩放" />
 
             <View
                 android:layout_width="0dp"
@@ -128,10 +140,24 @@
                 app:max="20"
                 app:title="@string/title_font_size" />
 
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <io.legado.app.ui.widget.SimpleCounterView
+                android:id="@+id/dsb_title_line_spacing_sub"
+                android:layout_width="108dp"
+                android:layout_height="wrap_content"
+                app:max="40"
+                app:title="次行距离" />
+
             <View
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1"/>
+                android:layout_weight="1" />
 
             <io.legado.app.ui.widget.SimpleCounterView
                 android:id="@+id/dsb_title_line_spacing_extra"
@@ -181,6 +207,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
+            android:layout_marginVertical="8dp"
             app:singleLine="true"
             app:singleSelection="true"
             app:selectionRequired="true">

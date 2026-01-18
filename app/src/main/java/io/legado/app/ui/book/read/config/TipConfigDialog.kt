@@ -173,6 +173,7 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
 
         binding.dsbTitleSegScaling.progress = ReadBookConfig.titleSegScaling.toInt() * 10
         binding.dsbTitleLineSpacingExtra.progress = ReadBookConfig.titleLineSpacingExtra
+        binding.dsbTitleLineSpacingSub.progress = ReadBookConfig.titleLineSpacingSub
         binding.dsbTitleSize.progress = ReadBookConfig.titleSize
         binding.dsbTitleTop.progress = ReadBookConfig.titleTopSpacing
         binding.dsbTitleBottom.progress = ReadBookConfig.titleBottomSpacing
@@ -191,6 +192,10 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         }
         binding.dsbTitleLineSpacingExtra.onChanged = {
             ReadBookConfig.titleLineSpacingExtra = it
+            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+        }
+        binding.dsbTitleLineSpacingSub.onChanged = {
+            ReadBookConfig.titleLineSpacingSub = it
             postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
         }
         dsbTitleSize.onChanged = {

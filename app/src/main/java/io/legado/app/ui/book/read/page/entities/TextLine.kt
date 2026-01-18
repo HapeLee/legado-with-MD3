@@ -35,6 +35,7 @@ data class TextLine(
     var chapterPosition: Int = 0,
     var pagePosition: Int = 0,
     val isTitle: Boolean = false,
+    var titleTextSize: Float? = null,
     var isParagraphEnd: Boolean = false,
     var isImage: Boolean = false,
     var isHtml: Boolean = false,

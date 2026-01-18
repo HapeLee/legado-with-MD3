@@ -114,7 +114,10 @@ object ChapterProvider {
     var lineSpacingExtra = 0f
         private set
 
-    var titleLineSpacingExtra  = 0f
+    var titleLineSpacingExtra = 0f
+        private set
+
+    var titleLineSpacingSub = 0f
         private set
 
     @JvmStatic
@@ -886,6 +889,7 @@ object ChapterProvider {
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
         titleLineSpacingExtra = ReadBookConfig.titleLineSpacingExtra / 10f
+        titleLineSpacingSub = ReadBookConfig.titleLineSpacingSub / 10f
         paragraphSpacing = ReadBookConfig.paragraphSpacing
         titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx()
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx()

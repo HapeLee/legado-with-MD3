@@ -77,6 +77,8 @@ class TextChapterLayout(
 
     private val titleTopSpacing = ChapterProvider.titleTopSpacing
     private val titleBottomSpacing = ChapterProvider.titleBottomSpacing
+    private val titleLineSpacingExtra = ChapterProvider.titleLineSpacingExtra
+    private val titleLineSpacingSub = ChapterProvider.titleLineSpacingSub
     private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
     private val paragraphSpacing = ChapterProvider.paragraphSpacing
 
@@ -209,44 +211,6 @@ class TextChapterLayout(
         }
     }
 
-    private fun parseTitleSegments(
-        rawTitle: String,
-        segType: Int,
-        segDistance: Int,
-        segFlag: String
-    ): List<String> {
-        if (rawTitle.isBlank()) return emptyList()
-
-        return when (segType) {
-            0 -> listOf(rawTitle)
-
-            1 -> {
-                if (segDistance <= 0 || segDistance >= rawTitle.length)
-                    listOf(rawTitle)
-                else
-                    listOf(
-                        rawTitle.take(segDistance),
-                        rawTitle.substring(segDistance)
-                    )
-            }
-
-            2 -> {
-                val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                if (flags.isEmpty()) return listOf(rawTitle)
-
-                val pattern = flags.joinToString("|") { Regex.escape(it) }
-                val regex = Regex("(?<=$pattern)")
-                val segments = rawTitle.split(regex)
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-
-                segments.ifEmpty { listOf(rawTitle) }
-            }
-
-            else -> listOf(rawTitle)
-        }
-    }
-
     /**
      * 获取拆分完的章节数据
      */
@@ -262,45 +226,66 @@ class TextChapterLayout(
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
         if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
-            val baseTitles = displayTitle.splitNotBlank("\n")
-            baseTitles.forEach { rawTitle ->
-                val titleSegments = parseTitleSegments(
+            val allTitleSegments = displayTitle.splitNotBlank("\n").flatMap { rawTitle ->
+                TitleStyleParser.getSegments(
                     rawTitle,
                     titleSegType,
                     titleSegDistance,
-                    titleSegFlag
+                    titleSegFlag,
+                    titleSegScaling
                 )
-                titleSegments.forEachIndexed { index, segment ->
-                    val srcList = LinkedList<String>()
-                    val reviewImg = bookChapter.reviewImg
-                    var reviewTxt = ""
-                    if (reviewImg != null) {
-                        srcList.add(reviewImg)
-                        reviewTxt = if (reviewImg.contains("TEXT")) {
-                            reviewChar
-                        } else {
-                            srcReplaceChar
-                        }
+            }
+
+            allTitleSegments.forEachIndexed { index, segment ->
+                val currentPaint: TextPaint
+                val currentHeight: Float
+                val currentMetrics: Paint.FontMetrics
+                val lineIndexBefore = pendingTextPage.lines.size
+                if (segment.isMainTitle) {
+                    currentPaint = titlePaint
+                    currentHeight = titlePaintTextHeight
+                    currentMetrics = titlePaintFontMetrics
+                } else {
+                    currentPaint = TextPaint(titlePaint).apply {
+                        textSize = titlePaint.textSize * segment.scale
                     }
-                    val paint = if (index == 0) titlePaint else {
-                        TextPaint(titlePaint).apply {
-                            textSize = titlePaint.textSize * titleSegScaling
-                        }
+                    currentMetrics = currentPaint.fontMetrics
+                    currentHeight = currentMetrics.bottom - currentMetrics.top
+                }
+
+                val srcList = LinkedList<String>()
+                val reviewImg = bookChapter.reviewImg
+                var reviewTxt = ""
+                if (index == allTitleSegments.lastIndex && reviewImg != null) {
+                    srcList.add(reviewImg)
+                    reviewTxt = if (reviewImg.contains("TEXT")) reviewChar else srcReplaceChar
+                }
+
+                setTypeText(
+                    book = book,
+                    text = segment.text + reviewTxt,
+                    textPaint = currentPaint,
+                    textHeight = currentHeight,
+                    fontMetrics = currentMetrics,
+                    imageStyle = imageStyle,
+                    srcList = srcList.ifEmpty { null },
+                    isTitle = true,
+                    emptyContent = contents.isEmpty(),
+                    isVolumeTitle = bookChapter.isVolume
+                )
+
+                if (segment.scale != 1.0f) {
+                    val currentLines = pendingTextPage.lines
+                    for (i in lineIndexBefore until currentLines.size) {
+                        currentLines[i].titleTextSize = currentPaint.textSize
                     }
-                    setTypeText(
-                        book,
-                        segment + reviewTxt,
-                        paint,
-                        titlePaintTextHeight,
-                        titlePaintFontMetrics,
-                        imageStyle,
-                        srcList = srcList.ifEmpty { null },
-                        isTitle = true,
-                        emptyContent = contents.isEmpty(),
-                        isVolumeTitle = bookChapter.isVolume
-                    )
-                    pendingTextPage.lines.last().isParagraphEnd = true
-                    stringBuilder.append("\n")
+                }
+
+                pendingTextPage.lines.last().isParagraphEnd = true
+                stringBuilder.append("\n")
+
+                if (index < allTitleSegments.lastIndex) {
+                    durY += currentHeight * titleLineSpacingSub
                 }
             }
             durY += titleBottomSpacing
@@ -901,7 +886,7 @@ class TextChapterLayout(
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             val textPage = pendingTextPage
             textPage.addLine(textLine)
-            durY += textHeight * lineSpacingExtra
+            durY += textHeight * if (isTitle) titleLineSpacingExtra else lineSpacingExtra
             if (textPage.height < durY) {
                 textPage.height = durY
             }
