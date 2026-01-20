@@ -97,7 +97,7 @@ import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.TextCard
-import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
@@ -181,7 +181,7 @@ fun ExploreShowScreen(
             skipPartiallyExpanded = true
         )
 
-        GlobalModalBottomSheet(
+        GlassModalBottomSheet(
             sheetState = sheetState,
             modifier = Modifier
                 .padding(16.dp),
@@ -242,7 +242,7 @@ fun ExploreShowScreen(
             }
         )
 
-        GlobalModalBottomSheet(
+        GlassModalBottomSheet(
             onDismissRequest = { showKindSheet = false },
             sheetState = sheetState,
             modifier = Modifier

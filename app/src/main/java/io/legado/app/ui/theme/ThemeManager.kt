@@ -47,8 +47,7 @@ object ThemeManager {
         isAmoled: Boolean,
         isImageBg: Boolean,
         paletteStyle: String?,
-        forceOpaque: Boolean = false,
-        opacity: Int = 100
+        forceOpaque: Boolean = false
     ): ColorScheme {
         val context = LocalContext.current
         val style = resolvePaletteStyle(paletteStyle)
@@ -93,18 +92,6 @@ object ThemeManager {
             )
         }
 
-        val alpha = opacity / 100f
-
-        return if (opacity < 100 && !forceOpaque) {
-            scheme.copy(
-                surfaceContainerLowest = scheme.surfaceContainerLowest.copy(alpha = alpha),
-                surfaceContainerLow = scheme.surfaceContainerLow.copy(alpha = alpha),
-                surfaceContainer = scheme.surfaceContainer.copy(alpha = alpha),
-                surfaceContainerHigh = scheme.surfaceContainerHigh.copy(alpha = alpha),
-                surfaceContainerHighest = scheme.surfaceContainerHighest.copy(alpha = alpha),
-            )
-        } else {
-            scheme
-        }
+        return scheme
     }
 }

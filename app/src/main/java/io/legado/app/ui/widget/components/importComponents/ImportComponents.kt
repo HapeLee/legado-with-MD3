@@ -61,7 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AnimatedText
-import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import kotlinx.coroutines.launch
 
 @Composable
@@ -137,7 +137,7 @@ fun <T> BatchImportDialog(
     val selectedCount = importState.items.count { it.isSelected }
     val totalCount = importState.items.size
 
-    GlobalModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = { it.surfaceContainer }

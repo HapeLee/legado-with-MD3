@@ -71,7 +71,7 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.lazylist.Scroller
-import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
@@ -390,7 +390,7 @@ fun BookmarkEditSheet(
     var bookText by remember { mutableStateOf(bookmark.bookText) }
     var content by remember { mutableStateOf(bookmark.content) }
 
-    GlobalModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {

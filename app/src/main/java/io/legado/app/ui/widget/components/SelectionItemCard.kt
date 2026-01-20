@@ -20,8 +20,6 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -73,11 +71,11 @@ fun SelectionItemCard(
         label = "CardColor"
     )
 
-    Card(
+    GlassCard(
         onClick = onToggleSelection,
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        color = containerColor
     ) {
         ListItem(
             modifier = Modifier.animateContentSize(),

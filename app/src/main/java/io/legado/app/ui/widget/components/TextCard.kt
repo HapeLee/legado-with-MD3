@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -47,12 +45,10 @@ fun TextCard(
     textStyle: TextStyle = MaterialTheme.typography.labelSmall,
     bold: Boolean = true,
 ) {
-    Card(
+    GlassCard(
         modifier = modifier,
         shape = RoundedCornerShape(cornerRadius),
-        colors = CardDefaults.cardColors(
-            containerColor = backgroundColor
-        ),
+        color = backgroundColor
     ) {
         Row(
             modifier = Modifier.padding(

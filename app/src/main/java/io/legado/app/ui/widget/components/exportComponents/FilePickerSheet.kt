@@ -29,7 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.modalBottomSheet.GlobalModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 
 enum class FilePickerSheetMode {
     DIR, FILE, EXPORT
@@ -46,7 +46,7 @@ fun FilePickerSheet(
     onUpload: (() -> Unit)? = null,
     allowExtensions: Array<String>? = null,
 ) {
-    GlobalModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         containerColor = { it.surface }
