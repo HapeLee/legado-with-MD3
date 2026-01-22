@@ -33,7 +33,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -64,6 +63,7 @@ import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Calendar
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.utils.StringUtils.formatFriendlyDate
@@ -96,7 +96,7 @@ fun ReadRecordScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                MediumFlexibleTopAppBar(
+                GlassMediumFlexibleTopAppBar(
                     title = {
                         Text(
                             text = "阅读记录"

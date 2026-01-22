@@ -55,7 +55,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -95,6 +94,7 @@ import io.legado.app.model.BookShelfState
 import io.legado.app.ui.widget.components.AnimatedTextButton
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
@@ -435,7 +435,7 @@ fun ExploreTopBar(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    MediumFlexibleTopAppBar(
+    GlassMediumFlexibleTopAppBar(
         modifier = modifier,
         title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {

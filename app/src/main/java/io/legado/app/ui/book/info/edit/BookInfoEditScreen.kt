@@ -32,7 +32,6 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,6 +53,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.Cover
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
@@ -71,7 +71,7 @@ fun BookInfoEditScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            MediumFlexibleTopAppBar(
+            GlassMediumFlexibleTopAppBar(
                 title = { Text(text = stringResource(id = R.string.book_info_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

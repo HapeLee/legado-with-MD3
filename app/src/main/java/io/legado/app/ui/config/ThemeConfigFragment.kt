@@ -266,15 +266,15 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 .setValue(AppConfig.containerOpacity)
                 .setCustomButton((R.string.btn_default_s)) {
                     AppConfig.containerOpacity = 100
+                    ThemeSyncer.syncContainerOpacity()
                     Handler(Looper.getMainLooper()).postDelayed({
-                        ThemeSyncer.syncContainerOpacity()
                         upPreferenceSummary(PreferKey.containerOpacity)
                     }, 100)
                 }
                 .show {
                     AppConfig.containerOpacity = it
+                    ThemeSyncer.syncContainerOpacity()
                     Handler(Looper.getMainLooper()).postDelayed({
-                        ThemeSyncer.syncContainerOpacity()
                         upPreferenceSummary(PreferKey.containerOpacity)
                     }, 100)
                 }

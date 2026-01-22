@@ -111,8 +111,7 @@
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="true"
-            android:enabled="false"
+            android:defaultValue="false"
             android:key="enableBlur"
             android:title="@string/is_blur_enable"
             app:iconSpaceReserved="false" />

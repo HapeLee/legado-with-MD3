@@ -19,7 +19,9 @@ import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
+import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.ui.theme.ThemeSyncer
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
@@ -87,6 +89,9 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                         if (!hasLightBg || !hasDarkBg) {
                             context.toastOnUi(R.string.transparent_theme_alarm)
                             return@setOnClickListener
+                        } else {
+                            AppConfig.containerOpacity = 0
+                            ThemeSyncer.syncContainerOpacity()
                         }
                     }
                     val oldValue = currentValue

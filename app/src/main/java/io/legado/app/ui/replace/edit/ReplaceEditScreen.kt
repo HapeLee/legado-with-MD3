@@ -47,7 +47,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -71,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -95,7 +95,7 @@ fun ReplaceEditScreen(
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
-                MediumFlexibleTopAppBar(
+                GlassMediumFlexibleTopAppBar(
                     title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }

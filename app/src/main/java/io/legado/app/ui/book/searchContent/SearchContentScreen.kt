@@ -32,7 +32,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,6 +57,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.TextCard
 import io.legado.app.ui.widget.components.button.AnimatedActionButton
@@ -130,7 +130,7 @@ fun SearchContentScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                MediumFlexibleTopAppBar(
+                GlassMediumFlexibleTopAppBar(
                     title = {
                         val title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                             "共 ${searchResults.size} 条结果"

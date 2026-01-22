@@ -29,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -52,6 +51,7 @@ import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SettingItem
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 
@@ -71,7 +71,7 @@ fun MyScreen(
         contentWindowInsets = WindowInsets.systemBars
             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
-            MediumFlexibleTopAppBar(
+            GlassMediumFlexibleTopAppBar(
                 title = {
                     Text(
                         text = stringResource(R.string.my)

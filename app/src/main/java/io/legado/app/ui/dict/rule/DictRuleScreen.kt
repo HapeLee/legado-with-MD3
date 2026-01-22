@@ -31,7 +31,6 @@ import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
@@ -65,6 +64,7 @@ import io.legado.app.data.entities.DictRule
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
+import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
@@ -176,7 +176,7 @@ fun DictRuleScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             Column {
-                MediumFlexibleTopAppBar(
+                GlassMediumFlexibleTopAppBar(
                     title = {
                         val titleText = remember(inSelectionMode, selectedIds, uiState.items) {
                             when {
