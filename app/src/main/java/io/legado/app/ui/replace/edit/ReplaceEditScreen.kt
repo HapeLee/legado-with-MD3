@@ -1,6 +1,8 @@
 package io.legado.app.ui.replace.edit
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -82,225 +84,267 @@ fun keyboardAsState(): State<Boolean> {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReplaceEditScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
     onSaveSuccess: () -> Unit,
     onShowHelp: (String) -> Unit,
     viewModel: ReplaceEditViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val sharedKey = remember(state.id) {
+        if (state.id > 0) "rule_${state.id}" else "fab_add"
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var showMenu by remember { mutableStateOf(false) }
     val isKeyboardVisible by keyboardAsState()
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = {
-                GlassMediumFlexibleTopAppBar(
-                    title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
-                    },
-                    actions = {
 
-                        IconButton(onClick = { onShowHelp("regexHelp") }) {
-                            Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = "帮助")
-                        }
-
-                        IconButton(onClick = {
-                            viewModel.save(onSaveSuccess)
-                        }) {
-                            Icon(Icons.Default.Save, contentDescription = "保存")
-                        }
-
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
-                        }
-
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-
-                            DropdownMenuItem(
-                                text = { Text("复制规则") },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.copyRule()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = { Text("粘贴规则") },
-                                onClick = {
-                                    showMenu = false
-                                    viewModel.pasteRule(onSuccess = {})
-                                }
-                            )
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-            }
-        ) { paddingValues ->
-            Column(
+    with(sharedTransitionScope) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
                 modifier = Modifier
-                    .padding(paddingValues)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = viewModel::onNameChange,
-                    label = { Text("规则名称") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Name
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
+                    .sharedBounds(
+                        sharedContentState = rememberSharedContentState(key = sharedKey),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                        //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp))
+                    ),
+                topBar = {
+                    GlassMediumFlexibleTopAppBar(
+                        title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    "Back"
+                                )
+                            }
                         },
-                    singleLine = true
-                )
+                        actions = {
 
-                GroupSelector(
-                    currentGroup = state.group,
-                    allGroups = state.allGroups,
-                    onGroupChange = viewModel::onGroupChange,
-                    onManageClick = { viewModel.toggleGroupDialog(true) }
-                )
+                            IconButton(onClick = { onShowHelp("regexHelp") }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.HelpOutline,
+                                    contentDescription = "帮助"
+                                )
+                            }
 
-                OutlinedTextField(
-                    value = state.pattern,
-                    onValueChange = viewModel::onPatternChange,
-                    label = { Text("匹配规则") },
-                    placeholder = { Text("输入正则表达式或关键字") },
+                            IconButton(onClick = {
+                                viewModel.save(onSaveSuccess)
+                            }) {
+                                Icon(Icons.Default.Save, contentDescription = "保存")
+                            }
+
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
+                            }
+
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+
+                                DropdownMenuItem(
+                                    text = { Text("复制规则") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.copyRule()
+                                    }
+                                )
+
+                                DropdownMenuItem(
+                                    text = { Text("粘贴规则") },
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.pasteRule(onSuccess = {})
+                                    }
+                                )
+                            }
+                        },
+                        scrollBehavior = scrollBehavior
+                    )
+                }
+            ) { paddingValues ->
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Pattern
-                        }
-                )
-
-                OutlinedTextField(
-                    value = state.replacement,
-                    onValueChange = viewModel::onReplacementChange,
-                    label = { Text("替换为") },
-                    placeholder = { Text("输入替换内容或捕获组") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Replacement
-                        }
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                        .padding(paddingValues)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    FilterChip(
-                        selected = state.scopeTitle,
-                        onClick = { viewModel.onScopeTitleChange(!state.scopeTitle) },
-                        label = { Text("标题") },
-                        leadingIcon = if (state.scopeTitle) {
-                            { Icon(Icons.Default.Check, contentDescription = "已选", Modifier.size(FilterChipDefaults.IconSize)) }
-                        } else null
+
+                    OutlinedTextField(
+                        value = state.name,
+                        onValueChange = viewModel::onNameChange,
+                        label = { Text("规则名称") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (it.isFocused) viewModel.activeField =
+                                    ReplaceEditViewModel.ActiveField.Name
+                            },
+                        singleLine = true
                     )
 
-                    Spacer(Modifier.width(8.dp))
-
-                    FilterChip(
-                        selected = state.scopeContent,
-                        onClick = { viewModel.onScopeContentChange(!state.scopeContent) },
-                        label = { Text("内容") },
-                        leadingIcon = if (state.scopeContent) {
-                            { Icon(Icons.Default.Check, contentDescription = "已选", Modifier.size(FilterChipDefaults.IconSize)) }
-                        } else null
+                    GroupSelector(
+                        currentGroup = state.group,
+                        allGroups = state.allGroups,
+                        onGroupChange = viewModel::onGroupChange,
+                        onManageClick = { viewModel.toggleGroupDialog(true) }
                     )
 
-                    Spacer(Modifier.weight(1f))
-
-                    FilterChip(
-                        selected = state.isRegex,
-                        onClick = { viewModel.onRegexChange(!state.isRegex) },
-                        label = { Text("使用正则") },
-                        leadingIcon = if (state.isRegex) {
-                            { Icon(Icons.Default.Check, contentDescription = "正则已启用", Modifier.size(FilterChipDefaults.IconSize)) }
-                        } else null
+                    OutlinedTextField(
+                        value = state.pattern,
+                        onValueChange = viewModel::onPatternChange,
+                        label = { Text("匹配规则") },
+                        placeholder = { Text("输入正则表达式或关键字") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (it.isFocused) viewModel.activeField =
+                                    ReplaceEditViewModel.ActiveField.Pattern
+                            }
                     )
+
+                    OutlinedTextField(
+                        value = state.replacement,
+                        onValueChange = viewModel::onReplacementChange,
+                        label = { Text("替换为") },
+                        placeholder = { Text("输入替换内容或捕获组") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (it.isFocused) viewModel.activeField =
+                                    ReplaceEditViewModel.ActiveField.Replacement
+                            }
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        FilterChip(
+                            selected = state.scopeTitle,
+                            onClick = { viewModel.onScopeTitleChange(!state.scopeTitle) },
+                            label = { Text("标题") },
+                            leadingIcon = if (state.scopeTitle) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "已选",
+                                        Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
+                        )
+
+                        Spacer(Modifier.width(8.dp))
+
+                        FilterChip(
+                            selected = state.scopeContent,
+                            onClick = { viewModel.onScopeContentChange(!state.scopeContent) },
+                            label = { Text("内容") },
+                            leadingIcon = if (state.scopeContent) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "已选",
+                                        Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
+                        )
+
+                        Spacer(Modifier.weight(1f))
+
+                        FilterChip(
+                            selected = state.isRegex,
+                            onClick = { viewModel.onRegexChange(!state.isRegex) },
+                            label = { Text("使用正则") },
+                            leadingIcon = if (state.isRegex) {
+                                {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "正则已启用",
+                                        Modifier.size(FilterChipDefaults.IconSize)
+                                    )
+                                }
+                            } else null
+                        )
+
+                    }
+
+                    OutlinedTextField(
+                        value = state.scope,
+                        onValueChange = viewModel::onScopeChange,
+                        label = { Text("特定范围") },
+                        placeholder = { Text("指定规则适用的范围") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (it.isFocused) viewModel.activeField =
+                                    ReplaceEditViewModel.ActiveField.Scope
+                            }
+                    )
+
+                    OutlinedTextField(
+                        value = state.excludeScope,
+                        onValueChange = viewModel::onExcludeScopeChange,
+                        label = { Text("排除范围") },
+                        placeholder = { Text("指定规则不适用的范围") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (it.isFocused) viewModel.activeField =
+                                    ReplaceEditViewModel.ActiveField.Exclude
+                            }
+                    )
+
+                    OutlinedTextField(
+                        value = state.timeout,
+                        onValueChange = viewModel::onTimeoutChange,
+                        label = { Text("超时 (ms)") },
+                        placeholder = { Text("3000") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(16.dp))
 
                 }
+            }
 
-                OutlinedTextField(
-                    value = state.scope,
-                    onValueChange = viewModel::onScopeChange,
-                    label = { Text("特定范围") },
-                    placeholder = { Text("指定规则适用的范围") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Scope
-                        }
+            AnimatedVisibility(
+                visible = isKeyboardVisible,
+                enter = slideInVertically(
+                    initialOffsetY = { fullHeight -> fullHeight },
+                ),
+                exit = slideOutVertically(
+                    targetOffsetY = { fullHeight -> fullHeight },
+                ),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .imePadding()
+            ) {
+                QuickInputBar(
+                    onInsert = { text -> viewModel.insertTextAtCursor(text) }
                 )
+            }
 
-                OutlinedTextField(
-                    value = state.excludeScope,
-                    onValueChange = viewModel::onExcludeScopeChange,
-                    label = { Text("排除范围") },
-                    placeholder = { Text("指定规则不适用的范围") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged {
-                            if (it.isFocused) viewModel.activeField =
-                                ReplaceEditViewModel.ActiveField.Exclude
-                        }
+
+            if (state.showGroupDialog) {
+                ManageGroupDialog(
+                    groups = state.allGroups.filter { it != "默认" },
+                    onDismiss = { viewModel.toggleGroupDialog(false) },
+                    onDelete = { viewModel.deleteGroups(it) }
                 )
-
-                OutlinedTextField(
-                    value = state.timeout,
-                    onValueChange = viewModel::onTimeoutChange,
-                    label = { Text("超时 (ms)") },
-                    placeholder = { Text("3000") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(Modifier.height(16.dp))
-
             }
         }
-
-        AnimatedVisibility(
-            visible = isKeyboardVisible,
-            enter = slideInVertically(
-                initialOffsetY = { fullHeight -> fullHeight },
-            ),
-            exit = slideOutVertically(
-                targetOffsetY = { fullHeight -> fullHeight },
-            ),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .imePadding()
-        ) {
-            QuickInputBar(
-                onInsert = { text -> viewModel.insertTextAtCursor(text) }
-            )
-        }
-
-
-        if (state.showGroupDialog) {
-            ManageGroupDialog(
-                groups = state.allGroups.filter { it != "默认" },
-                onDismiss = { viewModel.toggleGroupDialog(false) },
-                onDelete = { viewModel.deleteGroups(it) }
-            )
-        }
     }
+
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -6,21 +6,26 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.toRoute
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 
 data class ReplaceEditUiState(
-    val id: Long = System.currentTimeMillis(),
+    val id: Long = 0,
     val name: TextFieldValue = TextFieldValue(""),
     val group: String = "默认",
     val pattern: TextFieldValue = TextFieldValue(""),
@@ -41,6 +46,8 @@ class ReplaceEditViewModel(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
+    private val route = savedStateHandle.toRoute<ReplaceEditRoute>()
+
     private val _uiState = MutableStateFlow(ReplaceEditUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -54,19 +61,22 @@ class ReplaceEditViewModel(
 
     private fun initData() {
         viewModelScope.launch {
-            val id = savedStateHandle.get<Long>("id") ?: -1L
+
+            val id = route.id
+
             if (id > 0) {
                 val rule = replaceRuleDao.findById(id)
                 rule?.let { updateStateFromRule(it) }
             } else {
                 _uiState.update {
                     it.copy(
+                        id = System.currentTimeMillis(),
                         name = TextFieldValue(""),
-                        pattern = TextFieldValue(savedStateHandle["pattern"] ?: ""),
-                        isRegex = savedStateHandle["isRegex"] ?: false,
-                        scope = TextFieldValue(savedStateHandle["scope"] ?: ""),
-                        scopeTitle = savedStateHandle["isScopeTitle"] ?: false,
-                        scopeContent = savedStateHandle["isScopeContent"] ?: false,
+                        pattern = TextFieldValue(route.pattern ?: ""),
+                        isRegex = route.isRegex,
+                        scope = TextFieldValue(route.scope ?: ""),
+                        scopeTitle = route.isScopeTitle,
+                        scopeContent = route.isScopeContent,
                         excludeScope = TextFieldValue(""),
                     )
                 }

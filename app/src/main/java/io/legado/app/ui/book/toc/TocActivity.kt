@@ -14,13 +14,11 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.Menu
 import android.view.MenuItem
-import android.view.MotionEvent
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentPagerAdapter
@@ -29,7 +27,6 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
 import io.legado.app.databinding.ActivityChapterListBinding
 import io.legado.app.databinding.DialogDownloadChoiceBinding
 import io.legado.app.help.book.isLocal
@@ -41,15 +38,11 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.toc.rule.TxtTocRuleDialog
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
-import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
-import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.shouldHideSoftInput
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
@@ -262,14 +255,17 @@ class TocActivity : VMBaseActivity<ActivityChapterListBinding, TocViewModel>(),
                 val scopes = arrayListOf<String>()
                 viewModel.bookData.value?.name?.let { scopes.add(it) }
                 viewModel.bookSource?.bookSourceUrl?.let { scopes.add(it) }
+
+                val editRoute = ReplaceEditRoute(
+                    id = -1,
+                    pattern = "text",
+                    scope = scopes.joinToString(";"),
+                    isScopeTitle = true,
+                    isScopeContent = false
+                )
+
                 replaceActivity.launch(
-                    ReplaceEditActivity.startIntent(
-                        this,
-                        pattern = "text",
-                        scope = scopes.joinToString(";"),
-                        isScopeTitle = true,
-                        isScopeContent = false
-                    )
+                    ReplaceRuleActivity.startIntent(this, editRoute)
                 )
                 return true
             }

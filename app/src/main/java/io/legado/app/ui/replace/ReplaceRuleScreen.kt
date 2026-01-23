@@ -4,6 +4,8 @@ import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -86,7 +88,6 @@ import com.google.gson.Gson
 import io.legado.app.R
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.UploadRepository
-import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
@@ -111,8 +112,11 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 )
 @Composable
 fun ReplaceRuleScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: ReplaceRuleViewModel = koinViewModel(),
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToEdit: (ReplaceEditRoute) -> Unit,
 ) {
 
     val uploadRepository: UploadRepository = koinInject()
@@ -519,16 +523,24 @@ fun ReplaceRuleScreen(
                 tooltip = { PlainTooltip { Text("Localized description") } },
                 state = rememberTooltipState(),
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = !inSelectionMode,
-                        alignment = Alignment.BottomEnd,
-                    ),
-                    onClick = {
-                        context.startActivity(ReplaceEditActivity.startIntent(context))
+                with(sharedTransitionScope) {
+                    FloatingActionButton(
+                        modifier = Modifier
+                            .animateFloatingActionButton(
+                                visible = !inSelectionMode,
+                                alignment = Alignment.BottomEnd,
+                            )
+                            .sharedBounds(
+                                sharedContentState = rememberSharedContentState(key = "fab_add"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                            ),
+                        onClick = {
+                            onNavigateToEdit(ReplaceEditRoute(id = -1))
+                        }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Rule")
                     }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Rule")
                 }
             }
         }
@@ -555,44 +567,53 @@ fun ReplaceRuleScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(rules, key = { it.id }) { ui ->
-                        ReorderableSelectionItem(
-                            state = reorderableState,
-                            key = ui.id,
-                            title = ui.name,
-                            isEnabled = ui.isEnabled,
-                            isSelected = selectedRuleIds.contains(ui.id),
-                            inSelectionMode = inSelectionMode,
-                            canReorder = canReorder,
-                            onToggleSelection = {
-                                viewModel.toggleSelection(ui.id)
-                            },
-                            onEnabledChange = { enabled ->
-                                viewModel.update(ui.rule.copy(isEnabled = enabled))
-                            },
-                            onClickEdit = {
-                                context.startActivity(
-                                    ReplaceEditActivity.startIntent(
-                                        context,
-                                        ui.id
+                        with(sharedTransitionScope) {
+                            ReorderableSelectionItem(
+                                state = reorderableState,
+                                key = ui.id,
+                                title = ui.name,
+                                isEnabled = ui.isEnabled,
+                                isSelected = selectedRuleIds.contains(ui.id),
+                                inSelectionMode = inSelectionMode,
+                                canReorder = canReorder,
+                                onToggleSelection = {
+                                    viewModel.toggleSelection(ui.id)
+                                },
+                                onEnabledChange = { enabled ->
+                                    viewModel.update(ui.rule.copy(isEnabled = enabled))
+                                },
+                                onClickEdit = {
+                                    onNavigateToEdit(
+                                        ReplaceEditRoute(
+                                            id = ui.id,
+                                            pattern = ui.rule.pattern
+                                        )
                                     )
-                                )
-                            },
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            dropdownContent = { dismiss ->
-                                DropdownMenuItem(
-                                    text = { Text("移至顶部") },
-                                    onClick = { viewModel.toTop(ui.rule); dismiss() }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("移至底部") },
-                                    onClick = { viewModel.toBottom(ui.rule); dismiss() }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("删除") },
-                                    onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
-                                )
-                            }
-                        )
+                                },
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp)
+                                    .sharedBounds(
+                                        sharedContentState = rememberSharedContentState(key = "rule_${ui.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                                        //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
+                                    ),
+                                dropdownContent = { dismiss ->
+                                    DropdownMenuItem(
+                                        text = { Text("移至顶部") },
+                                        onClick = { viewModel.toTop(ui.rule); dismiss() }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("移至底部") },
+                                        onClick = { viewModel.toBottom(ui.rule); dismiss() }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("删除") },
+                                        onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
                 if (inSelectionMode) {

@@ -102,8 +102,8 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleDialog
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.dict.DictDialog
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
-import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.PopupAction
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.Debounce
@@ -981,20 +981,23 @@ class ReadBookActivity : BaseReadBookActivity(),
 
             R.id.menu_replace -> {
                 val scopes = arrayListOf<String>()
-                ReadBook.book?.name?.let {
-                    scopes.add(it)
-                }
-                ReadBook.bookSource?.bookSourceUrl?.let {
-                    scopes.add(it)
-                }
+                ReadBook.book?.name?.let { scopes.add(it) }
+                ReadBook.bookSource?.bookSourceUrl?.let { scopes.add(it) }
+
                 val text = selectedText.lineSequence().map { it.trim() }.joinToString("\n")
+
+                val editRoute = ReplaceEditRoute(
+                    id = -1,
+                    pattern = text,
+                    scope = scopes.joinToString(";"),
+                    isScopeTitle = false,
+                    isScopeContent = true
+                )
+
                 replaceActivity.launch(
-                    ReplaceEditActivity.startIntent(
-                        this,
-                        pattern = text,
-                        scope = scopes.joinToString(";"),
-                        isScopeTitle = false,
-                        isScopeContent = true
+                    ReplaceRuleActivity.startIntent(
+                        context = this,
+                        editRoute = editRoute
                     )
                 )
                 return true

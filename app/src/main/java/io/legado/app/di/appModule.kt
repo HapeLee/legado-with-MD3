@@ -13,6 +13,7 @@ import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.main.my.MyViewModel
+import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import org.koin.android.ext.koin.androidApplication
@@ -34,7 +35,13 @@ val appModule = module {
     single { SearchContentRepository() }
 
     viewModel { ReadRecordViewModel(get(), get()) }
-    viewModel { ReplaceEditViewModel(get(), get(), get()) }
+    viewModel { (route: ReplaceEditRoute) ->
+        ReplaceEditViewModel(
+            app = get(),
+            replaceRuleDao = get(),
+            savedStateHandle = get()
+        )
+    }
     viewModel { ReplaceRuleViewModel(androidApplication()) }
     viewModel { ExploreShowViewModel(get()) }
     viewModel { SearchContentViewModel(get(), get()) }
