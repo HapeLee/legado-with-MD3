@@ -1754,7 +1754,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                 chapterIndex = ReadBook.durChapterIndex
                 chapterPos = ReadBook.durChapterPos
                 chapterName = page.title
-                bookText = page.text.trim()
+                bookText = page.text.replace(Regex("[袮꧁]"), "").trim()
             }
             showDialogFragment(BookmarkDialog(bookmark))
         }
