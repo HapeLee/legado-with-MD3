@@ -34,6 +34,15 @@ class DictRuleRepository {
         dao.update(*rule)
     }
 
+    suspend fun findById(id: String): DictRule? = withContext(Dispatchers.IO) {
+        dao.getByName(id)
+    }
+
+    suspend fun getByNames(names: Collection<String>): List<DictRule> =
+        withContext(Dispatchers.IO) {
+            if (names.isEmpty()) emptyList() else dao.getByNames(names.toSet())
+        }
+
     suspend fun enableByIds(names: Set<String>) = withContext(Dispatchers.IO) {
         if (names.isEmpty()) return@withContext
         val rules = dao.getByNames(names)
