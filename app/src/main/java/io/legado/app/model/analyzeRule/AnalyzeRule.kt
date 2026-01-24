@@ -52,7 +52,8 @@ import kotlin.coroutines.EmptyCoroutineContext
 class AnalyzeRule(
     private var ruleData: RuleDataInterface? = null,
     private val source: BaseSource? = null,
-    private val preUpdateJs: Boolean = false
+    private val preUpdateJs: Boolean = false,
+    private var isFromBookInfo: Boolean = false
 ) : JsExtensions {
 
     private val book get() = ruleData as? BaseBook
@@ -79,6 +80,12 @@ class AnalyzeRule(
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext
 
     private var loggedNonStandardJSON = false
+    private var ruleName: String? = null
+    fun setRuleName(name: String) {
+        if (name.isNotBlank()) {
+            ruleName = name
+        }
+    }
 
     @JvmOverloads
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
@@ -782,6 +789,7 @@ class AnalyzeRule(
             bindings["src"] = content
             bindings["nextChapterUrl"] = nextChapterUrl
             bindings["rssArticle"] = rssArticle
+            bindings["fromBookInfo"] = isFromBookInfo
         }
         val topScope = source?.getShareScope(coroutineContext) ?: topScopeRef?.get()
         val scope = if (topScope == null) {
@@ -808,6 +816,10 @@ class AnalyzeRule(
 
     override fun getSource(): BaseSource? {
         return source
+    }
+
+    override fun getTag(): String? {
+        return source?.getTag() ?: ruleName
     }
 
     /**
@@ -841,6 +853,9 @@ class AnalyzeRule(
      */
     fun reGetBook() {
         if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (isFromBookInfo) {
+            log("重新获取book")
+        }
         val bookSource = source as? BookSource
         val book = book as? Book
         if (bookSource == null || book == null) return
@@ -863,6 +878,10 @@ class AnalyzeRule(
      */
     fun refreshTocUrl() {
         if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (isFromBookInfo) {
+            log("已跳过重复加载详情页，请优化代码")
+            return
+        }
         val bookSource = source as? BookSource
         val book = book as? Book
         if (bookSource == null || book == null) return

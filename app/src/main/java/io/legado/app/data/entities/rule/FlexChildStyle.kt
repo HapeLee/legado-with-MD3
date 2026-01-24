@@ -9,6 +9,8 @@ data class FlexChildStyle(
     val layout_alignSelf: String = "auto",
     val layout_flexBasisPercent: Float = -1F,
     val layout_wrapBefore: Boolean = false,
+    /** 自定义的内部水平对齐属性 **/
+    val layout_justifySelf: String = "auto"
 ) {
 
     fun alignSelf(): Int {

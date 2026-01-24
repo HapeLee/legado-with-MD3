@@ -12,7 +12,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.repository.ReplaceRuleRepository
-import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody

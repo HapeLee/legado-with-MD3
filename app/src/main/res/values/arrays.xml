@@ -116,7 +116,14 @@
 		<item>@string/screen_portrait_reversed</item>
 	</string-array>
 
-	<string-array name="double_page_title">
+    <string-array name="click_image_way_title">
+        <item>新包名阅读行为</item>
+        <item>预览图片</item>
+        <item>经典阅读行为</item>
+        <item>不响应</item>
+    </string-array>
+
+    <string-array name="double_page_title">
 		<item>Single page</item>
 		<item>Double page</item>
 		<item>Double page in landscape</item>

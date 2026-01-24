@@ -8,6 +8,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
@@ -18,7 +19,8 @@ import splitties.init.appCtx
 data class ImageColumn(
     override var start: Float,
     override var end: Float,
-    var src: String
+    var src: String,
+    var click: String? = null
 ) : BaseColumn {
 
     override var textLine: TextLine = emptyTextLine
@@ -47,6 +49,10 @@ data class ImageColumn(
         }.onFailure { e ->
             appCtx.toastOnUi(e.localizedMessage)
         }
+    }
+
+    override fun isTouch(x: Float): Boolean {
+        return x > start && x < end + 20.dpToPx()
     }
 
 }

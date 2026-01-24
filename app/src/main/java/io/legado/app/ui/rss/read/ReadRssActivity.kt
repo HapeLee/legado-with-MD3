@@ -1,6 +1,7 @@
 package io.legado.app.ui.rss.read
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.net.Uri
@@ -17,7 +18,6 @@ import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -55,7 +55,6 @@ import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.share
 import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.textArray
 import io.legado.app.utils.toastOnUi
@@ -66,9 +65,7 @@ import kotlinx.coroutines.launch
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import splitties.views.bottomPadding
-import java.io.ByteArrayInputStream
 import java.net.URLDecoder
-import java.util.regex.PatternSyntaxException
 
 /**
  * rss阅读界面
@@ -102,7 +99,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
     private var redirectPolicyMenu: MenuItem? = null
     private var isFullScreen = false
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
-    private val rssJsExtensions by lazy { RssJsExtensions(this) }
+    private val rssJsExtensions by lazy { RssJsExtensions(this, viewModel.rssSource) }
 
     fun getSource(): RssSource? {
         return viewModel.rssSource
@@ -613,6 +610,18 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         ) {
             handler?.proceed()
         }
+    }
+
+    companion object {
+        fun start(context: Context, title: String?, url: String, origin: String) {
+            context.startActivity<ReadRssActivity> {
+                putExtra("title", title ?: "")
+                putExtra("origin", origin)
+                putExtra("openUrl", url)
+            }
+        }
+
+        private val webCookieManager by lazy { android.webkit.CookieManager.getInstance() }
     }
 
 }

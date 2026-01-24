@@ -22,6 +22,7 @@ import android.widget.EdgeEffect
 import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.SeekBar
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
@@ -330,3 +331,9 @@ fun View.setOnApplyWindowInsetsListenerCompat(listener: (View, WindowInsetsCompa
     }
 }
 
+fun Spinner.setSelectionSafely(position: Int) {
+    val count = adapter?.count ?: 0
+    if (count > 0) {
+        setSelection(position.coerceIn(0, count - 1))
+    }
+}

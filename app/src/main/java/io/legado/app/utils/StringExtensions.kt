@@ -7,14 +7,17 @@ import android.icu.text.Collator
 import android.icu.util.ULocale
 import android.net.Uri
 import android.text.Editable
+import androidx.core.net.toUri
 import cn.hutool.core.net.URLEncodeUtil
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.dataUriRegex
 import java.io.File
 import java.lang.Character.codePointCount
 import java.lang.Character.offsetByCodePoints
+import java.net.InetAddress
 import java.util.Locale
 import java.util.regex.Pattern
+
 
 fun String?.safeTrim() = if (this.isNullOrBlank()) null else this.trim()
 
@@ -23,7 +26,7 @@ fun String?.isContentScheme(): Boolean = this?.startsWith("content://") == true
 fun String.toEditable(): Editable = Editable.Factory.getInstance().newEditable(this)
 
 fun String.parseToUri(): Uri {
-    return if (isUri()) Uri.parse(this) else {
+    return if (isUri()) this.toUri() else {
         Uri.fromFile(File(this))
     }
 }
@@ -75,7 +78,7 @@ fun String?.isTrue(nullIsTrue: Boolean = false): Boolean {
     if (this.isNullOrBlank() || this == "null") {
         return nullIsTrue
     }
-    return !this.trim().matches("(?i)^(false|no|not|0)$".toRegex())
+    return !this.trim().matches("(?i)^(?:false|no|not|0|0.0)$".toRegex())
 }
 
 fun String.isHex(): Boolean {
@@ -143,4 +146,42 @@ fun String.encodeURI(): String = URLEncodeUtil.encodeQuery(this)
 
 fun String.normalizeFileName(): String {
     return replace(AppPattern.fileNameRegex2, "_")
+}
+
+/**
+ * 将字符串加上转义,方便传递字符串到浏览器
+ */
+fun String.escapeForJs(): String {
+    return this.replace("\\", "\\\\")
+        .replace("\"", "\\\"").replace("'", "\\'")
+        .replace("\n", "\\n").replace("\r", "\\r")
+        .replace("\t", "\\t")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+}
+
+/**
+ * 将ip字符串转为InetAddress
+ */
+fun String.parseIpsFromString(): List<InetAddress>? =
+    split(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .mapNotNull { it.runCatching { InetAddress.getByName(this) }.getOrNull() }
+        .takeIf { it.isNotEmpty() }
+
+
+fun String.quoteReplacementJs(): String {
+    if (!this.contains('\\')) {
+        return this
+    }
+    val sb = StringBuilder()
+    for (c in this) {
+        if (c == '\\') {
+            sb.append("\\\\")
+        } else {
+            sb.append(c)
+        }
+    }
+    return sb.toString()
 }

@@ -196,10 +196,13 @@
             android:title="@string/no_anim_scroll_page"
             app:isBottomBackground="true" />
 
-        <io.legado.app.lib.prefs.SwitchPreference
-            android:defaultValue="false"
-            android:key="previewImageByClick"
-            android:title="@string/preview_image_by_click"
+        <io.legado.app.lib.prefs.NameListPreference
+            android:defaultValue="2"
+            android:entries="@array/click_image_way_title"
+            android:entryValues="@array/click_image_way_value"
+            android:key="clickImgWay"
+            android:title="@string/click_image_way"
+            app:iconSpaceReserved="false"
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.SwitchPreference

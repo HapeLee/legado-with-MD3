@@ -24,6 +24,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
+import com.script.rhino.runScriptWithContext
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppLog
@@ -63,6 +64,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
+import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
 import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.MobiFile
 import io.legado.app.receiver.NetworkChangedListener
@@ -102,6 +104,7 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleDialog
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.dict.DictDialog
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.widget.PopupAction
@@ -121,7 +124,6 @@ import io.legado.app.utils.hexString
 import io.legado.app.utils.iconItemOnLongClick
 import io.legado.app.utils.invisible
 import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.navigationBarGravity
 import io.legado.app.utils.observeEvent
@@ -1521,45 +1523,75 @@ class ReadBookActivity : BaseReadBookActivity(),
         showHelp("readMenuHelp")
     }
 
-    override fun clickImg(clickjs: String) {
-        val braceIndex = clickjs.indexOf(",{")
-        val braceIndex2 = if (braceIndex == -1) clickjs.indexOf(", {") else -1
-        if (braceIndex != -1 || braceIndex2 != -1) {
-            val book = ReadBook.book ?: return
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-            if (chapter == null) {
-                toastOnUi("章节不存在")
-                return
-            }
-            val (result, urlOptionStr) = when {
-                braceIndex != -1 -> {
-                    clickjs.take(braceIndex) to clickjs.substring(braceIndex + 1)
-                }
-                else -> {
-                    clickjs.take(braceIndex2) to clickjs.substring(braceIndex2 + 2)
-                }
-            }
-            if (urlOptionStr.isJsonObject()) {
-                val urlOptionMap = GSON.fromJsonObject<Map<String, String>>(urlOptionStr).getOrThrow()
-                val jsStr = urlOptionMap["js"]
-                jsStr?.let {
-                    Coroutine.async(lifecycleScope) {
-                        val source = ReadBook.bookSource ?: throw Exception("书源不存在")
-                        AnalyzeRule(book, source).apply {
-                            setCoroutineContext(coroutineContext)
-                            setBaseUrl(chapter.url)
-                            setChapter(chapter)
-                            evalJS(jsStr, result).toString()
+    /**
+     * 点击图片
+     */
+    override fun oldClickImg(src: String): Boolean {
+        val urlMatcher = paramPattern.matcher(src)
+        if (urlMatcher.find()) {
+            val urlOptionStr = src.substring(urlMatcher.end())
+            val urlOptionMap = GSON.fromJsonObject<Map<String, String>>(urlOptionStr).getOrNull()
+            val click = urlOptionMap?.get("click")
+            if (click != null) {
+                Coroutine.async(lifecycleScope, IO) {
+                    val source = ReadBook.bookSource ?: return@async
+                    val java = SourceLoginJsExtensions(this@ReadBookActivity, source, BookType.text)
+                    val book = ReadBook.book ?: return@async
+                    val chapter =
+                        appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+                            ?: throw Exception("no find chapter")
+                    runScriptWithContext {
+                        source.evalJS(click) {
+                            put("java", java)
+                            put("book", book)
+                            put("chapter", chapter)
+                            put("result", src)
                         }
-                    }.onError {
-                        AppLog.put("图片点击执行出错\n${it.localizedMessage}", it, true)
                     }
+                }.onError {
+                    AppLog.put("执行图片链接click键值出错\n${it.localizedMessage}", it, true)
+                }
+                return true
+            }
+            val jsStr = urlOptionMap?.get("js") ?: return false
+            Coroutine.async(lifecycleScope, IO) {
+                val source = ReadBook.bookSource ?: return@async
+                val book = ReadBook.book ?: return@async
+                val chapter =
+                    appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+                        ?: throw Exception("no find chapter")
+                val urlNoOption = src.take(urlMatcher.start())
+                AnalyzeRule(book, source).apply {
+                    setCoroutineContext(coroutineContext)
+                    setBaseUrl(chapter.url)
+                    setChapter(chapter)
+                    evalJS(jsStr, urlNoOption)
+                }
+            }.onError {
+                AppLog.put("执行图片链接js键值出错\n${it.localizedMessage}", it, true)
+            }
+            return true
+        }
+        return false
+    }
+
+    override fun clickImg(click: String, src: String) {
+        Coroutine.async(lifecycleScope, IO) {
+            val source = ReadBook.bookSource ?: return@async
+            val java = SourceLoginJsExtensions(this@ReadBookActivity, source, BookType.text)
+            val book = ReadBook.book ?: return@async
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+                ?: throw Exception("no find chapter")
+            runScriptWithContext {
+                source.evalJS(click) {
+                    put("java", java)
+                    put("book", book)
+                    put("chapter", chapter)
+                    put("result", src)
                 }
             }
-            else {
-                toastOnUi("链接格式错误")
-                return
-            }
+        }.onError {
+            AppLog.put("执行图片链接click键值出错\n${it.localizedMessage}", it, true)
         }
     }
 

@@ -566,6 +566,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.previewImageByClick, value)
         }
 
+    val clickImgWay: String?
+        get() = appCtx.getPrefString(PreferKey.clickImgWay)
     var preDownloadNum
         get() = appCtx.getPrefInt(PreferKey.preDownloadNum, 10)
         set(value) {

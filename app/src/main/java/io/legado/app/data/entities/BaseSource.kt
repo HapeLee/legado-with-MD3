@@ -1,5 +1,6 @@
 package io.legado.app.data.entities
 
+import android.webkit.JavascriptInterface
 import cn.hutool.crypto.symmetric.AES
 import com.script.ScriptBindings
 import com.script.buildScriptBindings
@@ -56,12 +57,38 @@ interface BaseSource : JsExtensions {
      */
     var jsLib: String?
 
-    fun getTag(): String
+    override fun getTag(): String
 
     fun getKey(): String
 
     override fun getSource(): BaseSource? {
         return this
+    }
+
+    fun getLoginJs(): String? {
+        val loginJs = loginUrl
+        return when {
+            loginJs == null -> null
+            loginJs.startsWith("@js:") -> loginJs.substring(4)
+            loginJs.startsWith("<js>") -> loginJs.substring(4, loginJs.lastIndexOf("<"))
+            else -> loginJs
+        }
+    }
+
+    @JavascriptInterface
+    fun login() {
+        val loginJs = getLoginJs()
+        if (!loginJs.isNullOrBlank()) {
+            @Language("js")
+            val js = """$loginJs
+                if(typeof login=='function'){
+                    login.apply(this);
+                } else {
+                    throw('Function login not implements!!!')
+                }
+            """.trimIndent()
+            evalJS(js)
+        }
     }
 
     fun loginUi(): List<RowUi>? {
@@ -86,34 +113,6 @@ interface BaseSource : JsExtensions {
         return GSON.fromJsonArray<RowUi>(json).onFailure {
             it.printOnDebug()
         }.getOrNull()
-    }
-
-    fun getLoginJs(): String? {
-        val loginJs = loginUrl
-        return when {
-            loginJs == null -> null
-            loginJs.startsWith("@js:") -> loginJs.substring(4)
-            loginJs.startsWith("<js>") -> loginJs.substring(4, loginJs.lastIndexOf("<"))
-            else -> loginJs
-        }
-    }
-
-    /**
-     * 调用login函数 实现登录请求
-     */
-    fun login() {
-        val loginJs = getLoginJs()
-        if (!loginJs.isNullOrBlank()) {
-            @Language("js")
-            val js = """$loginJs
-                if(typeof login=='function'){
-                    login.apply(this);
-                } else {
-                    throw('Function login not implements!!!')
-                }
-            """.trimIndent()
-            evalJS(js)
-        }
     }
 
     /**
@@ -194,9 +193,40 @@ interface BaseSource : JsExtensions {
         }
     }
 
-    fun getLoginInfoMap(): Map<String, String> {
-        val json = getLoginInfo() ?: return emptyMap()
-        return GSON.fromJsonObject<Map<String, String>>(json).getOrNull() ?: emptyMap()
+    private fun configureScriptBindings(): ScriptBindings.() -> Unit = {
+        put("result", mutableMapOf<String, String>())
+        put("book", null)
+        put("chapter", null)
+    }
+
+    fun getLoginInfoMap(): MutableMap<String, String> {
+        val json = getLoginInfo() ?: if (loginUi.isNullOrBlank()) {
+            return mutableMapOf()
+        } else {
+            val loginUiJson = loginUi?.let {
+                when {
+                    it.startsWith("@js:") -> evalJS(
+                        "${getLoginJs() ?: ""}\n${it.substring(4)}",
+                        configureScriptBindings()
+                    ).toString()
+
+                    it.startsWith("<js>") -> evalJS(
+                        "${getLoginJs() ?: ""}\n${it.substring(4, it.lastIndexOf("<"))}",
+                        configureScriptBindings()
+                    ).toString()
+
+                    else -> it
+                }
+            }
+            val longinInfo = GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
+                ?.filter { it.type != "button" }
+                ?.associate { it.name to (it.default ?: "") }
+                ?.takeIf { it.isNotEmpty() }?.also {
+                    putLoginInfo(GSON.toJson(it))
+                }
+            return longinInfo?.toMutableMap() ?: mutableMapOf()
+        }
+        return GSON.fromJsonObject<MutableMap<String, String>>(json).getOrNull() ?: mutableMapOf()
     }
 
     /**

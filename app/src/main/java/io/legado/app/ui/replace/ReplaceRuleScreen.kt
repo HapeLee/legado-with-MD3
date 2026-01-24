@@ -121,7 +121,6 @@ fun ReplaceRuleScreen(
 
     val uploadRepository: UploadRepository = koinInject()
 
-    //TODO: 期望换为Navigation
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()

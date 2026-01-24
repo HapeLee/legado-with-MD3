@@ -12,6 +12,7 @@ import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
+import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleViewModel
@@ -43,6 +44,7 @@ val appModule = module {
         )
     }
     viewModel { ReplaceRuleViewModel(androidApplication()) }
+    viewModel { DictRuleViewModel(androidApplication()) }
     viewModel { ExploreShowViewModel(get()) }
     viewModel { SearchContentViewModel(get(), get()) }
     viewModel { MyViewModel(get()) }
