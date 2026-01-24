@@ -70,7 +70,7 @@ class ReplaceEditViewModel(
             } else {
                 _uiState.update {
                     it.copy(
-                        id = System.currentTimeMillis(),
+                        id = id,
                         name = TextFieldValue(""),
                         pattern = TextFieldValue(route.pattern ?: ""),
                         isRegex = route.isRegex,
@@ -229,7 +229,7 @@ class ReplaceEditViewModel(
             val state = _uiState.value
 
             val rule = ReplaceRule().apply {
-                id = state.id
+                id = if (state.id <= 0) System.currentTimeMillis() else state.id
                 name = state.name.text
                 group = if (state.group == "默认" || state.group.isBlank()) null else state.group
                 pattern = state.pattern.text
@@ -242,7 +242,7 @@ class ReplaceEditViewModel(
                 timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
             }
 
-            if (rule.id <= 0) {
+            if (state.id <= 0) {
                 rule.order = replaceRuleDao.maxOrder + 1
             }
 
