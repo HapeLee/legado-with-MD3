@@ -76,7 +76,6 @@ import java.util.zip.ZipInputStream
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
-
 /**
  * js扩展类, 在js中通过java变量调用
  * 添加方法，请更新文档/legado/app/src/main/assets/help/JsHelp.md
@@ -128,7 +127,6 @@ interface JsExtensions : JsEncodeUtils {
     fun ajaxAll(urlList: Array<String>): Array<StrResponse> {
         return ajaxAll(urlList, false)
     }
-
     fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean): Array<StrResponse> {
         return runBlocking(context) {
             urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
@@ -148,7 +146,6 @@ interface JsExtensions : JsEncodeUtils {
     fun ajaxTestAll(urlList: Array<String>, timeout: Int): Array<StrResponse> {
         return ajaxTestAll(urlList, timeout, false)
     }
-
     fun ajaxTestAll(
         urlList: Array<String>,
         timeout: Int,
@@ -238,7 +235,17 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun webViewGetSource(html: String?, url: String?, js: String?, sourceRegex: String): String? {
-        return webViewGetSource(html, url, js, sourceRegex, false)
+        return webViewGetSource(html, url, js, sourceRegex, false, 0)
+    }
+
+    fun webViewGetSource(
+        html: String?,
+        url: String?,
+        js: String?,
+        sourceRegex: String,
+        cacheFirst: Boolean
+    ): String? {
+        return webViewGetSource(html, url, js, sourceRegex, cacheFirst, 0)
     }
 
     /**
@@ -249,7 +256,8 @@ interface JsExtensions : JsEncodeUtils {
         url: String?,
         js: String?,
         sourceRegex: String,
-        cacheFirst: Boolean
+        cacheFirst: Boolean,
+        delayTime: Long
     ): String? {
         if (isMainThread) {
             error("webViewGetSource must be called on a background thread")
@@ -261,7 +269,8 @@ interface JsExtensions : JsEncodeUtils {
                 javaScript = js,
                 headerMap = getSource()?.getHeaderMap(true),
                 tag = getSource()?.getKey(),
-                sourceRegex = sourceRegex
+                sourceRegex = sourceRegex,
+                delayTime = delayTime
             ).getStrResponse().body
         }
     }
@@ -272,7 +281,17 @@ interface JsExtensions : JsEncodeUtils {
         js: String?,
         overrideUrlRegex: String
     ): String? {
-        return webViewGetOverrideUrl(html, url, js, overrideUrlRegex, false)
+        return webViewGetOverrideUrl(html, url, js, overrideUrlRegex, false, 0)
+    }
+
+    fun webViewGetOverrideUrl(
+        html: String?,
+        url: String?,
+        js: String?,
+        overrideUrlRegex: String,
+        cacheFirst: Boolean
+    ): String? {
+        return webViewGetOverrideUrl(html, url, js, overrideUrlRegex, cacheFirst, 0)
     }
 
     /**
@@ -283,7 +302,8 @@ interface JsExtensions : JsEncodeUtils {
         url: String?,
         js: String?,
         overrideUrlRegex: String,
-        cacheFirst: Boolean
+        cacheFirst: Boolean,
+        delayTime: Long
     ): String? {
         if (isMainThread) {
             error("webViewGetOverrideUrl must be called on a background thread")
@@ -295,9 +315,21 @@ interface JsExtensions : JsEncodeUtils {
                 javaScript = js,
                 headerMap = getSource()?.getHeaderMap(true),
                 tag = getSource()?.getKey(),
-                overrideUrlRegex = overrideUrlRegex
+                overrideUrlRegex = overrideUrlRegex,
+                delayTime = delayTime
             ).getStrResponse().body
         }
+    }
+
+    /**
+     * 打开内置视频播放器
+     * @param url 视频播放链接
+     * @param title 视频的标题
+     * @param float 是否悬浮窗打开
+     */
+    @JavascriptInterface
+    fun openVideoPlayer(url: String, title: String, float: Boolean) {
+        //SourceHelp.openVideoPlayer(getSource(), url, title, float)
     }
 
     /**
@@ -1164,9 +1196,9 @@ interface JsExtensions : JsEncodeUtils {
         return GSON.toJson(ReadBookConfig.durConfig)
     }
 
-    /* fun getReadBookConfigMap(): Map<String, Any> {
-        return ReadBookConfig.durConfig.toMap()
-    } */
+    //fun getReadBookConfigMap(): Map<String, Any> {
+    //    return ReadBookConfig.durConfig.toMap()
+    //}
 
     /**
      * 获取主题模式
@@ -1179,14 +1211,14 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * 获取主题配置
      */
-    //@JavascriptInterface
-    /*fun getThemeConfig(): String {
-        val themeConfig = ThemeConfig.getDurConfig(appCtx)
-        return GSON.toJson(themeConfig)
-    }*/
+    // @JavascriptInterface
+    //fun getThemeConfig(): String {
+    //    val themeConfig = ThemeConfig.getDurConfig(appCtx)
+    //    return GSON.toJson(themeConfig)
+    //}
 
-    /* fun getThemeConfigMap(): Map<String, Any?> {
-        return ThemeConfig.getDurConfig(appCtx).toMap()
-    } */
+    //fun getThemeConfigMap(): Map<String, Any?> {
+    //    return ThemeConfig.getDurConfig(appCtx).toMap()
+    //}
 
 }

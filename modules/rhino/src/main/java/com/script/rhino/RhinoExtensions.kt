@@ -1,6 +1,7 @@
 package com.script.rhino
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
 import org.mozilla.javascript.Context
@@ -9,7 +10,6 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
 
 val rhinoContext: RhinoContext
     get() = Context.getCurrentContext() as RhinoContext
@@ -55,7 +55,7 @@ inline fun <T> runScriptWithContext(context: CoroutineContext, block: () -> T): 
 suspend inline fun <T> runScriptWithContext(block: () -> T): T {
     val rhinoContext = Context.enter() as RhinoContext
     val previousCoroutineContext = rhinoContext.coroutineContext
-    rhinoContext.coroutineContext = coroutineContext.minusKey(ContinuationInterceptor)
+    rhinoContext.coroutineContext = currentCoroutineContext().minusKey(ContinuationInterceptor)
     try {
         return block()
     } finally {

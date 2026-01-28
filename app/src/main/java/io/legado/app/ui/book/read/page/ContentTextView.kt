@@ -64,6 +64,8 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     private var autoPager: AutoPager? = null
     private var isScroll = false
     private val renderRunnable by lazy { Runnable { preRenderPage() } }
+    private var lastClickTime = 0L
+    private var doubleClick = false
 
     //绘制图片的paint
     val imagePaint by lazy {
@@ -226,6 +228,11 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                     column.selected = true
                     select(textPos)
                 }
+                is TextHtmlColumn -> {
+                    if (!selectAble) return@touch
+                    column.selected = true
+                    select(textPos)
+                }
             }
         }
     }
@@ -236,6 +243,14 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
      */
     @Suppress("UNUSED_ANONYMOUS_PARAMETER")
     fun click(x: Float, y: Float): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val debounceClick = currentTime - lastClickTime < 300L //300毫秒防抖和双击
+        lastClickTime = currentTime
+        doubleClick = if (debounceClick) {
+            !doubleClick
+        } else {
+            false
+        }
         var handled = false
         touch(x, y) { _, textPos, textPage, textLine, column ->
             when (column) {
@@ -254,45 +269,51 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                         activity?.showDialogFragment(PhotoDialog(column.src))
                         handled = true
                     }
-
                     "2" -> { //兼容处理
-                        if (ReadBook.book?.isOnLineTxt == true) {
-                            val click = column.click
-                            val src = column.src
-                            if (!click.isNullOrBlank()) {
-                                callBack.clickImg(click, src)
-                                handled = true
-                            } else {
-                                handled = callBack.oldClickImg(src)
+                        if (!debounceClick) {
+                            if (ReadBook.book?.isOnLineTxt == true) {
+                                val click = column.click
+                                val src = column.src
+                                if (!click.isNullOrBlank()) {
+                                    callBack.clickImg(click, src)
+                                    handled = true
+                                } else {
+                                    handled = callBack.oldClickImg(src)
+                                }
                             }
                         }
                     }
-
                     "3" -> { //关闭
                         handled = false
                     }
-
-                    else -> { //默认点击
-                        val click = column.click
-                        if (!click.isNullOrBlank()) {
-                            callBack.clickImg(click, column.src)
+                    "4" -> { //双击
+                        if (doubleClick) {
+                            val click = column.click
+                            if (!click.isNullOrBlank()) {
+                                callBack.clickImg(click, column.src)
+                                handled = true
+                            }
+                        } else {
                             handled = true
                         }
                     }
+                    else -> { //默认点击
+                        if (!debounceClick) {
+                            val click = column.click
+                            if (!click.isNullOrBlank()) {
+                                callBack.clickImg(click, column.src)
+                                handled = true
+                            }
+                        }
+                    }
                 }
-
                 is TextHtmlColumn -> {
                     column.linkUrl?.let {
                         activity?.startActivity<OpenUrlConfirmActivity> {
                             putExtra("uri", it)
-//                            putExtra("mimeType", mimeType)
-//                            putExtra("sourceOrigin", source.getKey())
-//                            putExtra("sourceName", source.getTag())
-//                            putExtra("sourceType", source.getSourceType())
                         }
                         handled = true
                     }
-
                 }
             }
         }
@@ -308,7 +329,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         select: (textPos: TextPos) -> Unit,
     ) {
         touchRough(x, y) { _, textPos, _, _, column ->
-            if (column is TextColumn) {
+            if (column is TextBaseColumn) {
                 column.selected = true
                 select(textPos)
             }
@@ -582,7 +603,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                 textPos.lineIndex = lineIndex
                 for ((charIndex, column) in textLine.columns.withIndex()) {
                     textPos.columnIndex = charIndex
-                    if (column is TextColumn) {
+                    if (column is TextBaseColumn) {
                         val compareStart = textPos.compare(selectStart)
                         val compareEnd = textPos.compare(selectEnd)
                         column.selected = compareStart >= 0 && compareEnd <= 0
@@ -600,13 +621,13 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
 
     private fun upSelectedStart(x: Float, y: Float, top: Float) {
         callBack.run {
-            upSelectedStart(x, y + headerHeight, top + headerHeight)
+            upSelectedStart(x + imgBgPaddingStart, y + headerHeight, top + headerHeight)
         }
     }
 
     private fun upSelectedEnd(x: Float, y: Float) {
         callBack.run {
-            upSelectedEnd(x, y + headerHeight)
+            upSelectedEnd(x + imgBgPaddingStart, y + headerHeight)
         }
     }
 
@@ -621,7 +642,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             val textPage = relativePage(relativePos)
             textPage.lines.forEach { textLine ->
                 textLine.columns.forEach {
-                    if (it is TextColumn) {
+                    if (it is TextBaseColumn) {
                         it.selected = false
                         if (clearSearchResult) {
                             it.isSearchResult = false
@@ -649,7 +670,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                     textPos.columnIndex = charIndex
                     val compareStart = textPos.compare(selectStart)
                     val compareEnd = textPos.compare(selectEnd)
-                    if (column is TextColumn) {
+                    if (column is TextBaseColumn) {
                         when {
                             compareStart == -1 -> if (
                                 selectStart.columnIndex == textLine.columns.size
@@ -750,6 +771,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
 
     interface CallBack {
         val headerHeight: Int
+        val imgBgPaddingStart: Int
         val pageFactory: TextPageFactory
         val pageDelegate: PageDelegate?
         val isScroll: Boolean

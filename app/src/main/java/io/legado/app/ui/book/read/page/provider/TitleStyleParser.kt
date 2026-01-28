@@ -20,13 +20,21 @@ object TitleStyleParser {
                     listOf(rawTitle.take(segDistance), rawTitle.substring(segDistance))
             }
 
-            2 -> {
-                val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                if (flags.isEmpty()) listOf(rawTitle)
-                else {
-                    val pattern = flags.joinToString("|") { Regex.escape(it) }
-                    val regex = Regex("(?<=$pattern)")
-                    rawTitle.split(regex).map { it.trim() }.filter { it.isNotEmpty() }
+            2, 3 -> {
+                if (segFlag.isEmpty()) {
+                    listOf(rawTitle)
+                } else {
+                    val regex = if (segType == 3) {
+                        Regex("(?<=$segFlag)")
+                    } else {
+                        val flags = segFlag.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        val pattern = flags.joinToString("|") { Regex.escape(it) }
+                        Regex("(?<=$pattern)")
+                    }
+
+                    rawTitle.split(regex)
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
                 }
             }
 

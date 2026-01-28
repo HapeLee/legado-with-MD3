@@ -11,7 +11,6 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
-import androidx.core.view.isInvisible
 import io.legado.app.R
 import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.data.entities.Bookmark
@@ -70,6 +69,11 @@ class PageView(context: Context) : FrameLayout(context) {
             val h1 = if (binding.vwStatusBar.isGone) 0 else binding.vwStatusBar.height
             val h2 = if (binding.llHeader.isGone) 0 else binding.llHeader.height
             return h1 + h2 + binding.vwRoot.paddingTop
+        }
+
+    val imgBgPaddingStart: Int
+        get() {
+            return binding.vwRoot.paddingStart
         }
 
     init {
@@ -132,7 +136,7 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     fun upStatusBar() = with(binding.vwStatusBar) {
         setPadding(paddingLeft, context.statusBarHeight, paddingRight, paddingBottom)
-        isGone = ReadBookConfig.hideStatusBar
+        isGone = ReadBookConfig.hideStatusBar || readBookActivity?.isInMultiWindow == true
     }
 
     fun upNavigationBar() {

@@ -12,6 +12,7 @@ import io.legado.app.help.PaintPool
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
+import io.legado.app.ui.book.read.page.TextBaseColumn
 import io.legado.app.ui.book.read.page.entities.TextChapter.Companion.emptyTextChapter
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
@@ -49,9 +50,8 @@ data class TextPage(
     val lines: List<TextLine> get() = textLines
     val lineSize: Int get() = textLines.size
     val charSize: Int get() = text.length.coerceAtLeast(1)
-    val chapterPosition: Int
-        get() = textLines.firstOrNull()?.chapterPosition ?: 0
-    val searchResult = hashSetOf<TextColumn>()
+    val chapterPosition: Int get() = textLines.first().chapterPosition
+    val searchResult = hashSetOf<TextBaseColumn>()
     var isMsgPage: Boolean = false
     var canvasRecorder = CanvasRecorderFactory.create(true)
     var doublePage = false
@@ -271,7 +271,7 @@ data class TextPage(
         val columns = textLines[maxIndex].columns
         for (index in 0 until columnIndex) {
             val column = columns[index]
-            if (column is TextColumn) {
+            if (column is TextBaseColumn) {
                 length += column.charData.length
             }
         }
@@ -292,10 +292,10 @@ data class TextPage(
      * @return
      */
     fun containPos(chapterPos: Int): Boolean {
-        val line = lines.firstOrNull() ?: return false // lines 为空时直接返回 false
+        val line = lines.first()
         val startPos = line.chapterPosition
         val endPos = startPos + charSize
-        return chapterPos in startPos until endPos
+        return chapterPos in startPos..<endPos
     }
 
     fun draw(view: ContentTextView, canvas: Canvas, relativeOffset: Float) {
@@ -337,7 +337,10 @@ data class TextPage(
 
     fun render(view: ContentTextView): Boolean {
         if (!isCompleted) return false
-        return canvasRecorder.recordIfNeeded(view.width, renderHeight) {
+        return canvasRecorder.recordIfNeeded(
+            view.width,
+            renderHeight + 10.dpToPx()
+        ) { //高度留余，避免图片过高时被截断 下划线最远10dp
             drawPage(view, this)
         }
     }
@@ -365,15 +368,10 @@ data class TextPage(
     }
 
     fun upRenderHeight() {
-        if (lines.isEmpty()) {
-            renderHeight = 0
-            return
-        }
         renderHeight = ceil(lines.last().lineBottom).toInt()
-        if (leftLineSize > 0 && leftLineSize <= lines.size) {
+        if (leftLineSize > 0 && leftLineSize != lines.size) {
             val leftHeight = ceil(lines[leftLineSize - 1].lineBottom).toInt()
             renderHeight = max(renderHeight, leftHeight)
         }
     }
-
 }

@@ -59,8 +59,9 @@ class BottomWebViewDialog() :
         sourceKey: String,
         bookType: Int,
         url: String,
-        html: String,
-        preloadJs: String? = null
+        html: String? = null,
+        preloadJs: String? = null,
+        config: String? = null
     ) : this() {
         arguments = Bundle().apply {
             putString("sourceKey", sourceKey)
@@ -68,6 +69,7 @@ class BottomWebViewDialog() :
             putString("url", url)
             putString("html", html)
             putString("preloadJs", preloadJs)
+            putString("config", config)
         }
     }
 

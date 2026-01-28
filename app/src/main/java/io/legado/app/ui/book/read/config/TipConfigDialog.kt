@@ -165,6 +165,36 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                     }.requestInputMethod()
                 }
 
+                3 -> { // 正则表达式分段
+                    alert(title = "设置正则分段规则") {
+                        val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
+                            editView.inputType = InputType.TYPE_CLASS_TEXT
+                            editView.setText(ReadBookConfig.titleSegFlag)
+                            editLayout.hint = "例如: [章回篇] 或 (第.{1,3}章)"
+                            editView.isSingleLine = true
+                        }
+
+                        customView { alertBinding.root }
+
+                        okButton {
+                            val value = alertBinding.editView.text?.toString()?.trim()
+                            if (!value.isNullOrEmpty()) {
+                                try {
+                                    Regex(value)
+                                    ReadBookConfig.titleSegFlag = value
+                                    toastOnUi("正则规则已保存")
+                                    postEvent(EventBus.UP_CONFIG, arrayListOf(5))
+                                } catch (e: Exception) {
+                                    toastOnUi("正则表达式格式错误")
+                                }
+                            } else {
+                                toastOnUi("规则不能为空")
+                            }
+                        }
+                        cancelButton()
+                    }.requestInputMethod()
+                }
+
                 else -> {
                     toastOnUi("当前分段模式无需配置参数")
                 }
