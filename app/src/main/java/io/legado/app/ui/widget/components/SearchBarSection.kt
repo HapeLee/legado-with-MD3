@@ -45,6 +45,7 @@ fun SearchBarSection(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String = "搜索书名",
+    leadingIcon: @Composable (() -> Unit)? = { Icon(Icons.Default.Search, null) },
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     scrollState: LazyListState? = null,
     scope: CoroutineScope = rememberCoroutineScope(),
@@ -73,7 +74,7 @@ fun SearchBarSection(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
             placeholder = { Text(placeholder) },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
+            leadingIcon = leadingIcon,
             trailingIcon = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

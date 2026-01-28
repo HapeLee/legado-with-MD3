@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.card.GlassCard
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -83,9 +84,11 @@ fun Calendar(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Column(modifier = Modifier
-            .padding(vertical = 12.dp)
-            .animateContentSize()) {
+        Column(
+            modifier = Modifier
+                .padding(vertical = 12.dp)
+                .animateContentSize()
+        ) {
             MonthNavigation(
                 currentMonth = currentMonth,
                 selectedDate = selectedDate,

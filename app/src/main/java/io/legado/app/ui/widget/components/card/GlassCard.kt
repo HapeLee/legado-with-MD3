@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.card.GlassCard
 
 @Preview(showBackground = true)
 @Composable
@@ -127,6 +128,7 @@ fun SettingItem(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
                     imageVector != null -> Icon(
                         imageVector = imageVector,
                         contentDescription = null,

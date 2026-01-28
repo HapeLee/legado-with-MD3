@@ -1,4 +1,4 @@
-package io.legado.app.ui.dict.rule
+package io.legado.app.ui.book.toc.rule
 
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.data.entities.DictRule
+import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -64,8 +64,8 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun DictRuleScreen(
-    viewModel: DictRuleViewModel = koinViewModel(),
+fun TxtRuleScreen(
+    viewModel: TxtTocRuleViewModel = koinViewModel(),
     onBackClick: () -> Unit
 ) {
 
@@ -80,8 +80,8 @@ fun DictRuleScreen(
     val hapticFeedback = LocalHapticFeedback.current
 
     var showEditSheet by remember { mutableStateOf(false) }
-    var editingRule by remember { mutableStateOf<DictRule?>(null) }
-    var showDeleteRuleDialog by remember { mutableStateOf<DictRule?>(null) }
+    var editingRule by remember { mutableStateOf<TxtTocRule?>(null) }
+    var showDeleteRuleDialog by remember { mutableStateOf<TxtTocRule?>(null) }
     var showUrlInput by remember { mutableStateOf(false) }
     var showFilePickerSheet by remember { mutableStateOf(false) }
     var filePickerMode by remember { mutableStateOf(FilePickerSheetMode.EXPORT) }
@@ -168,7 +168,7 @@ fun DictRuleScreen(
         )
     }
 
-    (importState as? BaseImportUiState.Success<DictRule>)?.let { state ->
+    (importState as? BaseImportUiState.Success<TxtTocRule>)?.let { state ->
         BatchImportDialog(
             title = "导入词典规则",
             importState = state,
@@ -179,7 +179,7 @@ fun DictRuleScreen(
             itemContent = { rule, _ ->
                 Column {
                     Text(rule.name, style = MaterialTheme.typography.titleMedium)
-                    Text(rule.urlRule, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    Text(rule.rule, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                 }
             }
         )
@@ -231,19 +231,19 @@ fun DictRuleScreen(
             toFields = { r ->
                 RuleEditFields(
                     name = r?.name ?: "",
-                    rule1 = r?.urlRule ?: "",
-                    extra = r?.showRule ?: ""
+                    rule1 = r?.rule ?: "",
+                    rule2 = r?.example ?: ""
                 )
             },
             fromFields = { fields, old ->
                 old?.copy(
                     name = fields.name,
-                    urlRule = fields.rule1,
-                    showRule = fields.extra
-                ) ?: DictRule(
+                    rule = fields.rule1,
+                    example = fields.rule2
+                ) ?: TxtTocRule(
                     name = fields.name,
-                    urlRule = fields.rule1,
-                    showRule = fields.extra
+                    rule = fields.rule1,
+                    example = fields.rule2
                 )
             }
         )
@@ -279,7 +279,7 @@ fun DictRuleScreen(
         ),
         onDeleteSelected = { ids ->
             @Suppress("UNCHECKED_CAST")
-            viewModel.delSelectionByIds(ids as Set<String>)
+            viewModel.delSelectionByIds(ids as Set<Long>)
             viewModel.setSelection(emptySet())
         },
         onAddClick = {
@@ -316,12 +316,13 @@ fun DictRuleScreen(
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
-                        title = item.id,
+                        title = item.name,
+                        subtitle = item.example,
                         isEnabled = item.isEnabled,
                         isSelected = selectedIds.contains(item.id),
                         inSelectionMode = inSelectionMode,
                         onToggleSelection = { viewModel.toggleSelection(item.id) },
-                        onEnabledChange = { enabled -> viewModel.update(item.rule.copy(enabled = enabled)) },
+                        onEnabledChange = { enabled -> viewModel.update(item.rule.copy(enable = enabled)) },
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {
                             SmallIconButton(

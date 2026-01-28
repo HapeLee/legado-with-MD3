@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.card.GlassCard
 
 /**
  * Settings Group Container by https://github.com/wxxsfxyzm/InstallerX-Revived

@@ -22,16 +22,22 @@ class DictRuleRepository {
         return dao.all
     }
 
-    fun insert(vararg rule: DictRule) {
-        dao.insert(*rule)
+    suspend fun insert(vararg rule: DictRule) {
+        withContext(Dispatchers.IO) {
+            dao.insert(*rule)
+        }
     }
 
-    fun delete(vararg rule: DictRule) {
-        dao.delete(*rule)
+    suspend fun delete(vararg rule: DictRule) {
+        withContext(Dispatchers.IO) {
+            dao.delete(*rule)
+        }
     }
 
-    fun update(vararg rule: DictRule) {
-        dao.update(*rule)
+    suspend fun update(vararg rule: DictRule) {
+        withContext(Dispatchers.IO) {
+            dao.update(*rule)
+        }
     }
 
     suspend fun findById(id: String): DictRule? = withContext(Dispatchers.IO) {

@@ -3,13 +3,11 @@ package io.legado.app.data.repository
 import android.text.TextUtils
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.ui.replace.ReplaceRuleItemUi
 import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import kotlin.collections.map
 
 class ReplaceRuleRepository {
 
@@ -36,6 +34,12 @@ class ReplaceRuleRepository {
     suspend fun update(vararg rule: ReplaceRule) {
         withContext(Dispatchers.IO) {
             appDb.replaceRuleDao.update(*rule)
+        }
+    }
+
+    suspend fun insert(vararg rule: ReplaceRule) {
+        withContext(Dispatchers.IO) {
+            appDb.replaceRuleDao.insert(*rule)
         }
     }
 
@@ -77,24 +81,6 @@ class ReplaceRuleRepository {
                 }
             }
             appDb.replaceRuleDao.update(*rules.toTypedArray())
-        }
-    }
-
-    suspend fun enableSelection(rules: List<ReplaceRule>) {
-        withContext(Dispatchers.IO) {
-            val array = Array(rules.size) {
-                rules[it].copy(isEnabled = true)
-            }
-            appDb.replaceRuleDao.update(*array)
-        }
-    }
-
-    suspend fun disableSelection(rules: List<ReplaceRule>) {
-        withContext(Dispatchers.IO) {
-            val array = Array(rules.size) {
-                rules[it].copy(isEnabled = false)
-            }
-            appDb.replaceRuleDao.update(*array)
         }
     }
 
@@ -205,14 +191,13 @@ class ReplaceRuleRepository {
             }
         }
 
-    suspend fun moveOrder(currentRules: List<ReplaceRuleItemUi>, isDesc: Boolean = false) {
+    suspend fun moveOrder(currentRules: List<ReplaceRule>, isDesc: Boolean = false) {
         withContext(Dispatchers.IO) {
             val size = currentRules.size
-            val updatedRules = currentRules.mapIndexed { index, itemUi ->
+            val updatedRules = currentRules.mapIndexed { index, rule ->
                 val order = if (isDesc) size - index else index + 1
-                itemUi.rule.copy(order = order)
+                rule.copy(order = order)
             }
-
             appDb.replaceRuleDao.update(*updatedRules.toTypedArray())
         }
     }

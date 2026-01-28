@@ -149,14 +149,13 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
             }
             R.id.menu_import_onLine -> showImportDialog()
             R.id.menu_import_qr -> qrCodeResult.launch()
-            R.id.menu_import_default -> viewModel.importDefault()
             R.id.menu_help -> showHelp("txtTocRuleHelp")
         }
         return false
     }
 
     override fun saveTxtTocRule(txtTocRule: TxtTocRule) {
-        viewModel.save(txtTocRule)
+        viewModel.update(txtTocRule)
     }
 
     @SuppressLint("InflateParams")
@@ -294,7 +293,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
                             setMessage(getString(R.string.sure_del) + "\n" + item.name)
                             noButton()
                             yesButton {
-                                viewModel.del(item)
+                                viewModel.delete(item)
                             }
                         }
                     }

@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.card
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -11,19 +11,19 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.legado.app.ui.widget.components.button.SmallIconButton
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 
@@ -73,78 +75,97 @@ fun SelectionItemCard(
 
     GlassCard(
         onClick = onToggleSelection,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         color = containerColor
     ) {
-        ListItem(
-            modifier = Modifier.animateContentSize(),
-            headlineContent = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+                .animateContentSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AnimatedVisibility(
+                visible = inSelectionMode,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally()
+            ) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = null,
+                    modifier = Modifier.padding(start = 12.dp)
                 )
-            },
-            supportingContent = subtitle?.let {
-                {
+            }
+
+            ListItem(
+                modifier = Modifier.weight(1f),
+                headlineContent = {
                     Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
-            },
-            leadingContent = {
-                AnimatedVisibility(
-                    visible = inSelectionMode,
-                    enter = fadeIn() + expandHorizontally(),
-                    exit = fadeOut() + shrinkHorizontally()
-                ) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = null
-                    )
-                }
-            },
-            trailingContent = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    onEnabledChange?.let {
-                        Switch(
-                            checked = isEnabled,
-                            onCheckedChange = it
+                },
+                supportingContent = if (!subtitle.isNullOrBlank()) {
+                    {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+                } else null,
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
 
-                    if (onClickEdit != null) {
-                        IconButton(onClick = onClickEdit) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-                    }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .padding(end = 8.dp)
+            ) {
+                onEnabledChange?.let {
+                    Switch(
+                        modifier = Modifier.scale(0.8f),
+                        checked = isEnabled,
+                        onCheckedChange = it
+                    )
+                }
 
-                    if (trailingAction != null) {
-                        trailingAction()
-                    }
+                if (onClickEdit != null) {
+                    SmallIconButton(
+                        onClick = onClickEdit,
+                        icon = Icons.Default.Edit,
+                        contentDescription = "Edit"
+                    )
+                }
 
-                    if (dropdownContent != null) {
-                        Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "More")
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-                                dropdownContent { showMenu = false }
-                            }
+                if (trailingAction != null) {
+                    trailingAction()
+                }
+
+                if (dropdownContent != null) {
+                    Box {
+                        SmallIconButton(
+                            onClick = { showMenu = true },
+                            icon = Icons.Default.MoreVert,
+                            contentDescription = "More"
+                        )
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            dropdownContent { showMenu = false }
                         }
                     }
                 }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-        )
+            }
+        }
     }
 }
 

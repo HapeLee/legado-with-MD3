@@ -16,7 +16,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
@@ -28,10 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,6 +50,8 @@ import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopBarButtonVariant
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
@@ -74,22 +72,16 @@ fun BookInfoEditScreen(
             GlassMediumFlexibleTopAppBar(
                 title = { Text(text = stringResource(id = R.string.book_info_edit)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null
-                        )
-                    }
+                    SmallTopBarButton(
+                        onClick = onBack,
+                        style = TopBarButtonVariant.Outlined
+                    )
                 },
                 actions = {
-                    FilledTonalIconButton(
+                    SmallTopBarButton(
                         onClick = { viewModel.save(onSave) },
-                        shapes = IconButtonDefaults.shapes()) {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = stringResource(id = R.string.action_save)
-                        )
-                    }
+                        imageVector = Icons.Default.Save
+                    )
                 },
                 scrollBehavior = scrollBehavior
             )
@@ -213,8 +205,7 @@ fun BookInfoEditContent(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
             label = { Text("简介") },
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 5
+            modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(

@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.button
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize

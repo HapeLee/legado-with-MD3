@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.GlassCard
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
