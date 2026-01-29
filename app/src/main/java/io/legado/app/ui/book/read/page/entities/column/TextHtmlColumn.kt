@@ -6,8 +6,8 @@ import android.text.TextPaint
 import androidx.annotation.Keep
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
-import io.legado.app.ui.book.read.page.TextBaseColumn
 import io.legado.app.ui.book.read.page.entities.TextLine
+import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 
 /**
@@ -19,11 +19,11 @@ data class TextHtmlColumn(
     override var end: Float,
     override val charData: String,
     val mTextSize: Float,
-    val mTextColor: Int,
+    val mTextColor: Int?,
     val linkUrl: String?
 ) : TextBaseColumn {
 
-    override var textLine: TextLine = TextLine.Companion.emptyTextLine
+    override var textLine: TextLine = emptyTextLine
 
     private val textPaint: TextPaint by lazy {
         TextPaint(ChapterProvider.contentPaint).apply {
@@ -66,7 +66,7 @@ data class TextHtmlColumn(
             color = if (textLine.isReadAloud || isSearchResult) {
                 ReadBookConfig.textAccentColor
             } else {
-                mTextColor
+                mTextColor ?: ReadBookConfig.textColor
             }
             isUnderlineText = false
         }

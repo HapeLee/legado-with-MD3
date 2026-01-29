@@ -102,7 +102,7 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         }
 
         binding.btnTitleSegType.setOnClickListener {
-            val types = arrayOf("不分段", "按字符数分段", "按标志字符串分段")
+            val types = arrayOf("不分段", "按字符数分段", "按标志字符串分段", "正则表达式分段")
             val current = ReadBookConfig.titleSegType
 
             alert(title = "选择标题分段模式") {

@@ -16,19 +16,19 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 data class TextColumn(
     override var start: Float,
     override var end: Float,
-    val charData: String,
-) : BaseColumn {
+    override val charData: String,
+) : TextBaseColumn {
 
     override var textLine: TextLine = emptyTextLine
 
-    var selected: Boolean = false
+    override var selected: Boolean = false
         set(value) {
             if (field != value) {
                 textLine.invalidate()
             }
             field = value
         }
-    var isSearchResult: Boolean = false
+    override var isSearchResult: Boolean = false
         set(value) {
             if (field != value) {
                 textLine.invalidate()
@@ -47,14 +47,10 @@ data class TextColumn(
         } else {
             ChapterProvider.contentPaint
         }
-        val textColor = if (!textLine.useUnderline && (textLine.isReadAloud || isSearchResult)) {
+        val textColor = if (textLine.isReadAloud || isSearchResult) {
             ReadBookConfig.textAccentColor
         } else {
             ReadBookConfig.textColor
-        }
-        val originalSize = textPaint.textSize
-        textLine.titleTextSize?.let {
-            textPaint.textSize = it
         }
         if (textPaint.color != textColor) {
             textPaint.color = textColor
@@ -70,7 +66,6 @@ data class TextColumn(
         if (selected) {
             canvas.drawRect(start, 0f, end, textLine.height, view.selectedPaint)
         }
-        textPaint.textSize = originalSize
     }
 
 }

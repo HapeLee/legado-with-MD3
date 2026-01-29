@@ -3,6 +3,9 @@ package io.legado.app.utils
 import androidx.core.os.postDelayed
 import com.script.ScriptBindings
 import com.script.rhino.RhinoScriptEngine
+import io.legado.app.data.appDb
+import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.coroutine.Coroutine
@@ -10,7 +13,6 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import splitties.init.appCtx
-import java.util.regex.Matcher
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -19,10 +21,23 @@ private val handler by lazy { buildMainHandler() }
 /**
  * 带有超时检测的正则替换
  */
-fun CharSequence.replace(regex: Regex, replacement: String, timeout: Long): String {
+fun CharSequence.replace(
+    regex: Regex,
+    replacement: String,
+    timeout: Long,
+    chapter: BookChapter? = null,
+    book: SearchBook? = null
+): String {
     val charSequence = this@replace
     val isJs = replacement.startsWith("@js:")
     val replacement1 = if (isJs) replacement.substring(4) else replacement
+    val book = if (isJs) {
+        book ?: chapter?.bookUrl?.let {
+            appDb.searchBookDao.getSearchBook(it) ?: appDb.bookDao.getBook(it)?.toSearchBook()
+        }
+    } else {
+        null
+    }
     return runBlocking {
         suspendCancellableCoroutine { block ->
             val coroutine = Coroutine.async(executeContext = IO) {
@@ -35,9 +50,11 @@ fun CharSequence.replace(regex: Regex, replacement: String, timeout: Long): Stri
                             val jsResult = RhinoScriptEngine.run {
                                 val bindings = ScriptBindings()
                                 bindings["result"] = matcher.group()
+                                bindings["chapter"] = chapter
+                                bindings["book"] = book
                                 eval(replacement1, bindings)
                             }.toString()
-                            val quotedResult = Matcher.quoteReplacement(jsResult)
+                            val quotedResult = jsResult.quoteReplacementJs()
                             matcher.appendReplacement(stringBuffer, quotedResult)
                         } else {
                             matcher.appendReplacement(stringBuffer, replacement1)
@@ -67,4 +84,3 @@ fun CharSequence.replace(regex: Regex, replacement: String, timeout: Long): Stri
         }
     }
 }
-

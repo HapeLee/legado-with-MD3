@@ -140,7 +140,7 @@ class ContentProcessor private constructor(
                         1 -> mContent = ChineseUtils.t2s(mContent)
                         2 -> mContent = ChineseUtils.s2t(mContent)
                     }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     appCtx.toastOnUi("简繁转换出错")
                 }
             }
@@ -153,6 +153,7 @@ class ContentProcessor private constructor(
                 }
             }
             if (useReplace && book.getUseReplaceRule()) {
+                val replaceBook = book.toSearchBook()
                 //替换
                 effectiveReplaceRules = arrayListOf()
                 mContent = mContent.lines().joinToString("\n") { it.trim() }
@@ -165,7 +166,9 @@ class ContentProcessor private constructor(
                             mContent.replace(
                                 item.regex,
                                 item.replacement,
-                                item.getValidTimeoutMillisecond()
+                                item.getValidTimeoutMillisecond(),
+                                chapter,
+                                replaceBook
                             )
                         } else {
                             mContent.replace(item.pattern, item.replacement)
@@ -184,6 +187,9 @@ class ContentProcessor private constructor(
                         appCtx.toastOnUi("替换净化: 规则 ${item.name}替换出错")
                     }
                 }
+            }
+            useHtmlMap.forEach { (placeholder, originalContent) ->
+                mContent = mContent.replace(placeholder, originalContent)
             }
         }
         if (includeTitle) {

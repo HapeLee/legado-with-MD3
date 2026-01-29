@@ -190,6 +190,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                 viewModel.replaceRuleChanged()
             }
         }
+
     private val searchContentActivity =
         registerForActivityResult(StartActivityContract(SearchContentActivity::class.java)) {
             val data = it.data ?: return@registerForActivityResult
@@ -1409,8 +1410,7 @@ class ReadBookActivity : BaseReadBookActivity(),
     override fun showLogin() {
         ReadBook.bookSource?.let {
             startActivity<SourceLoginActivity> {
-                putExtra("type", "bookSource")
-                putExtra("key", it.bookSourceUrl)
+                putExtra("bookType", BookType.text)
             }
         }
     }
