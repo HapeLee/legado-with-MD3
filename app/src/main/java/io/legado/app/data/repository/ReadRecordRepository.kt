@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import androidx.room.Transaction
 import cn.hutool.core.date.DatePattern
 import cn.hutool.core.date.DateUtil
 import io.legado.app.data.dao.ReadRecordDao
@@ -114,9 +115,59 @@ class ReadRecordRepository(
 
     suspend fun deleteDetail(detail: ReadRecordDetail) {
         dao.deleteDetail(detail)
+        dao.deleteSessionsByBookAndDate(detail.deviceId, detail.bookName, detail.date)
+        updateReadRecordTotal(detail.deviceId, detail.bookName)
     }
 
-    suspend fun clearAll() {
-        dao.clear()
+    @Transaction
+    suspend fun deleteSession(session: ReadRecordSession) {
+        dao.deleteSession(session)
+
+        val dateString = DateUtil.format(Date(session.startTime), "yyyy-MM-dd")
+        val remainingSessions =
+            dao.getSessionsByBookAndDate(session.deviceId, session.bookName, dateString)
+
+        if (remainingSessions.isEmpty()) {
+            val detail = dao.getDetail(session.deviceId, session.bookName, dateString)
+            detail?.let { dao.deleteDetail(it) }
+        } else {
+            val totalTime = remainingSessions.sumOf { it.endTime - it.startTime }
+            val totalWords = remainingSessions.sumOf { it.words }
+            val firstRead = remainingSessions.minOf { it.startTime }
+            val lastRead = remainingSessions.maxOf { it.endTime }
+
+            val existingDetail = dao.getDetail(session.deviceId, session.bookName, dateString)
+            existingDetail?.copy(
+                readTime = totalTime,
+                readWords = totalWords,
+                firstReadTime = firstRead,
+                lastReadTime = lastRead
+            )?.let { dao.insertDetail(it) }
+        }
+
+        updateReadRecordTotal(session.deviceId, session.bookName)
     }
+
+    private suspend fun updateReadRecordTotal(deviceId: String, bookName: String) {
+        val allRemainingSessions = dao.getSessionsByBook(deviceId, bookName)
+
+        if (allRemainingSessions.isEmpty()) {
+            dao.getReadRecord(deviceId, bookName)?.let { dao.deleteReadRecord(it) }
+        } else {
+            val totalTime = allRemainingSessions.sumOf { it.endTime - it.startTime }
+            val lastRead = allRemainingSessions.maxOf { it.endTime }
+
+            dao.getReadRecord(deviceId, bookName)?.copy(
+                readTime = totalTime,
+                lastRead = lastRead
+            )?.let { dao.update(it) }
+        }
+    }
+
+    suspend fun deleteReadRecord(record: ReadRecord) {
+        dao.deleteReadRecord(record)
+        dao.deleteDetailsByBook(record.deviceId, record.bookName)
+        dao.deleteSessionsByBook(record.deviceId, record.bookName)
+    }
+
 }

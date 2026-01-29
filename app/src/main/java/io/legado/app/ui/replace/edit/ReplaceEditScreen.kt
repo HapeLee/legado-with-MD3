@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,7 +47,6 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -73,6 +70,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -114,12 +113,7 @@ fun ReplaceEditScreen(
                     GlassMediumFlexibleTopAppBar(
                         title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
                         navigationIcon = {
-                            IconButton(onClick = onBack) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    "Back"
-                                )
-                            }
+                            SmallTopBarButton(onClick = onBack)
                         },
                         actions = {
 
@@ -437,18 +431,13 @@ fun ManageGroupDialog(
             }
         },
         confirmButton = {
-            OutlinedButton(
+            AlertButton(
                 onClick = {
                     val toDelete = selected.filter { it.value }.keys.toList()
                     onDelete(toDelete)
                 },
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error,
-                    containerColor = Color.Transparent,
-                ),
-            ) {
-                Text("删除选中")
-            }
+                text = "删除选中"
+            )
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("关闭") } }
     )

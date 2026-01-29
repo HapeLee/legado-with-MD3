@@ -250,7 +250,7 @@ fun TxtRuleScreen(
     }
 
     RuleListScaffold(
-        title = "字典规则",
+        title = "目录规则",
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->

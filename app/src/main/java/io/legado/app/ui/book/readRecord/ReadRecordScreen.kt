@@ -2,6 +2,7 @@ package io.legado.app.ui.book.readRecord
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,12 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -36,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -66,6 +71,9 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
+import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.swipe.SwipeAction
+import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
@@ -85,6 +93,16 @@ fun ReadRecordScreen(
     var showCalendar by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
+    var skipDeleteConfirm by remember { mutableStateOf(false) }
+    var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val onConfirmDelete: (() -> Unit) -> Unit = { action ->
+        if (skipDeleteConfirm) {
+            action()
+        } else {
+            pendingDeleteAction = action
+        }
+    }
 
     LaunchedEffect(state.searchKey) {
         if (state.searchKey.isNullOrBlank()) {
@@ -205,13 +223,70 @@ fun ReadRecordScreen(
                             item(key = "summary_card") {
                                 SummarySection(state, viewModel)
                             }
-
-                            renderListByMode(displayMode, state, viewModel, onBookClick)
+                            renderListByMode(
+                                displayMode = displayMode,
+                                state = state,
+                                viewModel = viewModel,
+                                onBookClick = onBookClick,
+                                onConfirmDelete = onConfirmDelete
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    if (pendingDeleteAction != null) {
+        var skipDeleteConfirmTemp by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = {
+                pendingDeleteAction = null
+            },
+            title = { Text("确认删除") },
+            text = {
+                Column {
+                    Text("确定要删除这条记录吗？")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .background(
+                                color = if (skipDeleteConfirmTemp) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+                                shape = MaterialTheme.shapes.small
+                            )
+                            .clickable { skipDeleteConfirmTemp = !skipDeleteConfirmTemp }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(checked = skipDeleteConfirmTemp, onCheckedChange = null)
+                        Text(
+                            text = "不再提示",
+                            modifier = Modifier.padding(start = 8.dp),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                AlertButton(
+                    onClick = {
+                        pendingDeleteAction?.invoke()
+                        pendingDeleteAction = null
+                        skipDeleteConfirm = skipDeleteConfirmTemp
+                    },
+                    text = "删除"
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    pendingDeleteAction = null
+                }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
 
@@ -260,7 +335,8 @@ fun LazyListScope.renderListByMode(
     displayMode: DisplayMode,
     state: ReadRecordUiState,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String) -> Unit
+    onBookClick: (String) -> Unit,
+    onConfirmDelete: (() -> Unit) -> Unit
 ) {
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
@@ -268,37 +344,68 @@ fun LazyListScope.renderListByMode(
                 stickyHeader(key = "header_$date") {
                     DateHeader(date, details.sumOf { it.readTime })
                 }
-                items(items = details, key = { "${it.bookName}_${it.readTime}_$date" }) { detail ->
-                    ReadRecordItem(
-                        detail = detail,
-                        viewModel = viewModel,
-                        onClick = { onBookClick(detail.bookName) },
-                        onDelete = { viewModel.deleteDetail(detail) },
-                        modifier = Modifier.animateItem()
-                    )
+                items(items = details, key = { "${it.bookName}_${it.date}" }) { detail ->
+                    SwipeActionContainer(
+                        modifier = Modifier.animateItem(),
+                        startAction = SwipeAction(
+                            icon = Icons.Default.Delete,
+                            background = MaterialTheme.colorScheme.errorContainer,
+                            onSwipe = {
+                                onConfirmDelete { viewModel.deleteDetail(detail) }
+                            }
+                        )
+                    ) {
+                        ReadRecordItem(
+                            detail,
+                            viewModel,
+                            onClick = { onBookClick(detail.bookName) })
+                    }
                 }
             }
         }
+
         DisplayMode.TIMELINE -> {
             state.timelineRecords.forEach { (date, sessions) ->
                 stickyHeader(key = "timeline_header_$date") { DateHeader(date) }
                 items(items = sessions, key = { it.id }) { session ->
-                    TimelineSessionItem(
-                        item = TimelineItem(session, true),
-                        onBookClick = onBookClick,
-                        viewModel = viewModel
-                    )
+                    SwipeActionContainer(
+                        modifier = Modifier.animateItem(),
+                        startAction = SwipeAction(
+                            icon = Icons.Default.Delete,
+                            background = MaterialTheme.colorScheme.onErrorContainer,
+                            onSwipe = {
+                                onConfirmDelete { viewModel.deleteSession(session) }
+                            }
+                        )
+                    ) {
+                        TimelineSessionItem(
+                            item = TimelineItem(session, true),
+                            onBookClick = onBookClick,
+                            viewModel = viewModel
+                        )
+                    }
                 }
             }
         }
+
         DisplayMode.LATEST -> {
             items(items = state.latestRecords, key = { it.bookName }) { record ->
-                LatestReadItem(
-                    record = record,
-                    viewModel = viewModel,
-                    onClick = { onBookClick(record.bookName) },
-                    modifier = Modifier.animateItem()
-                )
+                SwipeActionContainer(
+                    modifier = Modifier.animateItem(),
+                    startAction = SwipeAction(
+                        icon = Icons.Default.Delete,
+                        background = MaterialTheme.colorScheme.error,
+                        onSwipe = {
+                            onConfirmDelete { viewModel.deleteReadRecord(record) }
+                        }
+                    )
+                ) {
+                    LatestReadItem(
+                        record = record,
+                        viewModel = viewModel,
+                        onClick = { onBookClick(record.bookName) }
+                    )
+                }
             }
         }
     }
@@ -445,7 +552,6 @@ fun ReadRecordItem(
     detail: ReadRecordDetail,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
@@ -477,10 +583,6 @@ fun ReadRecordItem(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
-        }
-
-        IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Close, "Delete", tint = Color.LightGray)
         }
     }
 }

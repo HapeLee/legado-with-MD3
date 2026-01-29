@@ -18,7 +18,6 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.DictRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
-import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
@@ -26,6 +25,9 @@ import io.legado.app.data.entities.RuleSub
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.data.entities.readRecord.ReadRecord
+import io.legado.app.data.entities.readRecord.ReadRecordDetail
+import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
@@ -180,6 +182,16 @@ object Restore {
                         appDb.readRecordDao.insert(readRecord)
                     }
                 }
+            }
+        }
+        fileToListT<ReadRecordDetail>(path, "readRecordDetail.json")?.let {
+            it.forEach { detail ->
+                appDb.readRecordDao.insertDetail(detail)
+            }
+        }
+        fileToListT<ReadRecordSession>(path, "readRecordSession.json")?.let {
+            it.forEach { session ->
+                appDb.readRecordDao.insertSession(session)
             }
         }
         File(path, "servers.json").takeIf {

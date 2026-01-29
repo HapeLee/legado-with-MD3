@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -67,7 +66,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : RuleAct
     private val itemsFlow: Flow<List<T>> by lazy {
         combine(
             rawDataFlow,
-            _searchKey.debounce(300L),
+            _searchKey,
             _localItems
         ) { data, key, local ->
             if (local != null && key.isEmpty()) {

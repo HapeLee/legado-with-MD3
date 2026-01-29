@@ -18,6 +18,12 @@ interface ReadRecordDao {
     @get:Query("select * from readRecord")
     val all: List<ReadRecord>
 
+    @get:Query("select * from readRecordDetail")
+    val allDetail: List<ReadRecordDetail>
+
+    @get:Query("select * from readRecordSession")
+    val allSession: List<ReadRecordSession>
+
     @get:Query(
         """
         select bookName, sum(readTime) as readTime, max(lastRead) as lastRead 
@@ -127,7 +133,7 @@ interface ReadRecordDao {
         SELECT * FROM readRecordSession 
         WHERE deviceId = :deviceId 
         AND bookName = :bookName 
-        AND STRFTIME('%Y-%m-%d', datetime(startTime/1000, 'unixepoch')) = :date 
+        AND STRFTIME('%Y-%m-%d', datetime(startTime/1000, 'unixepoch', 'localtime')) = :date 
         ORDER BY startTime ASC
     """)
     suspend fun getSessionsByBookAndDate(deviceId: String, bookName: String, date: String): List<ReadRecordSession>
@@ -159,6 +165,31 @@ interface ReadRecordDao {
     @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId ORDER BY startTime ASC")
     fun getAllSessions(deviceId: String): Flow<List<ReadRecordSession>>
 
+    @Query("SELECT * FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName")
+    suspend fun getSessionsByBook(deviceId: String, bookName: String): List<ReadRecordSession>
+
     @Delete
     suspend fun deleteDetail(detail: ReadRecordDetail)
+
+    @Query(
+        """
+        DELETE FROM readRecordSession 
+        WHERE deviceId = :deviceId 
+        AND bookName = :bookName 
+        AND STRFTIME('%Y-%m-%d', datetime(startTime/1000, 'unixepoch', 'localtime')) = :date
+    """
+    )
+    suspend fun deleteSessionsByBookAndDate(deviceId: String, bookName: String, date: String)
+
+    @Delete
+    suspend fun deleteSession(session: ReadRecordSession)
+
+    @Delete
+    suspend fun deleteReadRecord(record: ReadRecord)
+
+    @Query("DELETE FROM readRecordDetail WHERE deviceId = :deviceId AND bookName = :bookName")
+    suspend fun deleteDetailsByBook(deviceId: String, bookName: String)
+
+    @Query("DELETE FROM readRecordSession WHERE deviceId = :deviceId AND bookName = :bookName")
+    suspend fun deleteSessionsByBook(deviceId: String, bookName: String)
 }

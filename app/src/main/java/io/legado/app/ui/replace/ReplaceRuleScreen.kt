@@ -95,7 +95,7 @@ fun ReplaceRuleScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val rules = uiState.items
-    val groups = uiState.groups
+    val groups by viewModel.allGroups.collectAsStateWithLifecycle()
     val selectedIds = uiState.selectedIds
     val inSelectionMode = selectedIds.isNotEmpty()
 
@@ -116,10 +116,10 @@ fun ReplaceRuleScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = remember(groups) { listOf("全部") + groups }
     val filteredRules = remember(uiState.items, selectedTabIndex, tabItems) {
-        if (selectedTabIndex == 0) {
+        val targetGroup = tabItems.getOrNull(selectedTabIndex)
+        if (targetGroup == null || selectedTabIndex == 0) {
             uiState.items
         } else {
-            val targetGroup = tabItems[selectedTabIndex]
             uiState.items.filter { it.group == targetGroup }
         }
     }
@@ -221,8 +221,10 @@ fun ReplaceRuleScreen(
     }
 
     LaunchedEffect(groups) {
-        if (selectedTabIndex > groups.size) {
+        val maxIndex = groups.size
+        if (selectedTabIndex > maxIndex) {
             selectedTabIndex = 0
+            viewModel.setGroup("全部")
         }
     }
 
@@ -339,7 +341,10 @@ fun ReplaceRuleScreen(
                     tabItems.forEachIndexed { index, title ->
                         Tab(
                             selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index },
+                            onClick = {
+                                selectedTabIndex = index
+                                viewModel.setGroup(title)
+                            },
                             text = {
                                 Text(
                                     text = title,

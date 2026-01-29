@@ -31,7 +31,7 @@ data class ReadRecordUiState(
     //最后阅读列表
     val latestRecords: List<ReadRecord> = emptyList(),
     val selectedDate: LocalDate? = null,
-    val searchKey: String? = null,
+    val searchKey: String? = null
 )
 
 enum class DisplayMode {
@@ -48,11 +48,9 @@ class ReadRecordViewModel(
 
     private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)
     val displayMode = _displayMode.asStateFlow()
-
     private val _searchKey = MutableStateFlow("")
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
 
-    // 数据源：直接从 Repository 获取 Flow
     @OptIn(ExperimentalCoroutinesApi::class)
     private val loadedDataFlow = _searchKey
         .flatMapLatest { query ->
@@ -71,11 +69,11 @@ class ReadRecordViewModel(
         _selectedDate,
         _searchKey
     ) { data, selectedDate, searchKey ->
-
         val dateStr = selectedDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val filteredDetails = if (dateStr != null) {
-            data.details.filter { it.date == dateStr }
-        } else data.details
+
+        val filteredDetails = data.details.filter { detail ->
+            dateStr == null || detail.date == dateStr
+        }
 
         val timelineMap = data.sessions
             .asSequence()
@@ -121,6 +119,14 @@ class ReadRecordViewModel(
 
     fun deleteDetail(detail: ReadRecordDetail) {
         viewModelScope.launch { repository.deleteDetail(detail) }
+    }
+
+    fun deleteSession(session: ReadRecordSession) {
+        viewModelScope.launch { repository.deleteSession(session) }
+    }
+
+    fun deleteReadRecord(record: ReadRecord) {
+        viewModelScope.launch { repository.deleteReadRecord(record) }
     }
 
     private fun mergeContinuousSessions(sessions: List<ReadRecordSession>): List<ReadRecordSession> {

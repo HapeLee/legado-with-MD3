@@ -3,6 +3,7 @@ package io.legado.app.ui.replace
 import android.app.Application
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.PreferKey
@@ -25,10 +26,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,6 +70,21 @@ class ReplaceRuleViewModel(
     private val _sortMode = MutableStateFlow(context.getPrefString(PreferKey.replaceSortMode, "desc") ?: "desc")
     private val _group = MutableStateFlow<String?>(null)
     val group = _group.asStateFlow()
+
+    val allGroups: StateFlow<List<String>> = repository.flowGroups()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun setGroup(groupName: String?) {
+        _group.value = if (groupName == "全部" || groupName.isNullOrBlank()) {
+            null
+        } else {
+            groupName
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override val rawDataFlow: Flow<List<ReplaceRule>> =
@@ -156,9 +175,14 @@ class ReplaceRuleViewModel(
                     }
                     rule
                 }
-            repository.update(*rulesToSave.toTypedArray())
-            withContext(Dispatchers.Main) {
-                _importState.value = BaseImportUiState.Idle
+            if (rulesToSave.isNotEmpty()) {
+                rulesToSave.forEach { rule ->
+                    repository.insert(rule)
+                }
+                withContext(Dispatchers.Main) {
+                    _importState.value = BaseImportUiState.Idle
+                    _eventChannel.send(BaseRuleEvent.ShowSnackbar("成功导入 ${rulesToSave.size} 条规则"))
+                }
             }
         }
     }

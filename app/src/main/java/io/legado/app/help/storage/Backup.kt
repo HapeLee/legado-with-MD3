@@ -2,6 +2,8 @@ package io.legado.app.help.storage
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
@@ -15,8 +17,20 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.BookCover
-import io.legado.app.utils.*
+import io.legado.app.utils.FileUtils
+import io.legado.app.utils.GSON
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.compress.ZipUtils
+import io.legado.app.utils.createFolderIfNotExist
+import io.legado.app.utils.defaultSharedPreferences
+import io.legado.app.utils.externalFiles
+import io.legado.app.utils.getFile
+import io.legado.app.utils.getSharedPreferences
+import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.normalizeFileName
+import io.legado.app.utils.openOutputStream
+import io.legado.app.utils.outputStream
+import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -28,11 +42,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.coroutineContext
-import androidx.core.content.edit
-import androidx.core.net.toUri
 
 /**
  * 备份
@@ -58,6 +70,8 @@ object Backup {
             "rssStar.json",
             "replaceRule.json",
             "readRecord.json",
+            "readRecordDetail.json",
+            "readRecordSession.json",
             "searchHistory.json",
             "sourceSub.json",
             "txtTocRule.json",
@@ -130,6 +144,8 @@ object Backup {
         writeListToJson(appDb.rssStarDao.all, "rssStar.json", backupPath)
         writeListToJson(appDb.replaceRuleDao.all, "replaceRule.json", backupPath)
         writeListToJson(appDb.readRecordDao.all, "readRecord.json", backupPath)
+        writeListToJson(appDb.readRecordDao.allDetail, "readRecordDetail.json", backupPath)
+        writeListToJson(appDb.readRecordDao.allSession, "readRecordSession.json", backupPath)
         writeListToJson(appDb.searchKeywordDao.all, "searchHistory.json", backupPath)
         writeListToJson(appDb.ruleSubDao.all, "sourceSub.json", backupPath)
         writeListToJson(appDb.txtTocRuleDao.all, "txtTocRule.json", backupPath)
