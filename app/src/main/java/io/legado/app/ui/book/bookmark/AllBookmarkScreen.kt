@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -69,6 +68,7 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.lazylist.Scroller
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
@@ -126,9 +126,7 @@ fun AllBookmarkScreen(
                     },
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
+                        SmallTopBarButton(onClick = onBack)
                     },
                     actions = {
                         if (bookmarksGrouped.isNotEmpty()) {

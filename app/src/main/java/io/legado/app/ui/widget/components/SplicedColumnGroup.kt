@@ -42,7 +42,7 @@ fun SplicedColumnGroup(
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 content()
             }

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Stop
@@ -29,7 +28,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
@@ -60,6 +58,7 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedActionButton
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import org.koin.androidx.compose.koinViewModel
@@ -142,9 +141,7 @@ fun SearchContentScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
+                        SmallTopBarButton(onClick = onBack)
                     },
                     actions = {
                         Row(

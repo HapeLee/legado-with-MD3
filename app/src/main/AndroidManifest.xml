@@ -245,6 +245,7 @@
         <activity
             android:name=".ui.replace.ReplaceRuleActivity"
             android:enableOnBackInvokedCallback="true"
+            android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop" />
         <!-- 书籍管理 -->
         <activity

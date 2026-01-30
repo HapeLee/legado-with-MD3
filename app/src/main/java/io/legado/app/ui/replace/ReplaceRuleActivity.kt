@@ -83,8 +83,7 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                             onSaveSuccess = {
                                 if (navController.previousBackStackEntry == null) finish()
                                 else navController.popBackStack()
-                            },
-                            onShowHelp = { /* ... */ }
+                            }
                         )
                     }
                 }

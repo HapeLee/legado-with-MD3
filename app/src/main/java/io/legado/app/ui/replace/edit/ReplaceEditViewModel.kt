@@ -71,7 +71,7 @@ class ReplaceEditViewModel(
                 _uiState.update {
                     it.copy(
                         id = id,
-                        name = TextFieldValue(""),
+                        name = TextFieldValue(route.pattern ?: ""),
                         pattern = TextFieldValue(route.pattern ?: ""),
                         isRegex = route.isRegex,
                         scope = TextFieldValue(route.scope ?: ""),

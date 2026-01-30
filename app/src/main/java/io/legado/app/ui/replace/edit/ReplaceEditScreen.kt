@@ -3,6 +3,8 @@ package io.legado.app.ui.replace.edit
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -20,13 +22,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
@@ -44,14 +46,21 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.animateFloatingActionButton
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -69,6 +78,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.SmallTopBarButton
@@ -87,7 +97,6 @@ fun ReplaceEditScreen(
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
     onSaveSuccess: () -> Unit,
-    onShowHelp: (String) -> Unit,
     viewModel: ReplaceEditViewModel = koinViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -99,74 +108,106 @@ fun ReplaceEditScreen(
     val isKeyboardVisible by keyboardAsState()
 
     with(sharedTransitionScope) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Scaffold(
-                modifier = Modifier
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .sharedBounds(
-                        sharedContentState = rememberSharedContentState(key = sharedKey),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                        //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp))
-                    ),
-                topBar = {
-                    GlassMediumFlexibleTopAppBar(
-                        title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
-                        navigationIcon = {
-                            SmallTopBarButton(onClick = onBack)
-                        },
-                        actions = {
-
-                            IconButton(onClick = { onShowHelp("regexHelp") }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.HelpOutline,
-                                    contentDescription = "帮助"
-                                )
-                            }
-
+        Scaffold(
+            modifier = Modifier
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(key = sharedKey),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                )
+                .imePadding(),
+            topBar = {
+                GlassMediumFlexibleTopAppBar(
+                    title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
+                    navigationIcon = {
+                        SmallTopBarButton(onClick = onBack)
+                    },
+                    actions = {
+                        AnimatedVisibility(
+                            visible = isKeyboardVisible,
+                            enter = fadeIn(),
+                            exit = fadeOut()
+                        ) {
                             IconButton(onClick = {
                                 viewModel.save(onSaveSuccess)
                             }) {
                                 Icon(Icons.Default.Save, contentDescription = "保存")
                             }
-
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
-                            }
-
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false }
-                            ) {
-
-                                DropdownMenuItem(
-                                    text = { Text("复制规则") },
-                                    onClick = {
-                                        showMenu = false
-                                        viewModel.copyRule()
-                                    }
-                                )
-
-                                DropdownMenuItem(
-                                    text = { Text("粘贴规则") },
-                                    onClick = {
-                                        showMenu = false
-                                        viewModel.pasteRule(onSuccess = {})
-                                    }
-                                )
-                            }
-                        },
-                        scrollBehavior = scrollBehavior
+                        }
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("复制规则") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.copyRule()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("粘贴规则") },
+                                onClick = {
+                                    showMenu = false
+                                    viewModel.pasteRule(onSuccess = {})
+                                }
+                            )
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            floatingActionButton = {
+                TooltipBox(
+                    modifier = Modifier.navigationBarsPadding(),
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above
+                    ),
+                    tooltip = { PlainTooltip { Text("添加") } },
+                    state = rememberTooltipState(),
+                ) {
+                    FloatingActionButton(
+                        modifier = Modifier.animateFloatingActionButton(
+                            visible = !isKeyboardVisible,
+                            alignment = Alignment.BottomEnd,
+                        ),
+                        onClick = { viewModel.save(onSaveSuccess) }
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = "保存")
+                    }
+                }
+            }, contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { innerPadding ->
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                AnimatedVisibility(
+                    visible = isKeyboardVisible,
+                    enter = slideInVertically(
+                        initialOffsetY = { fullHeight -> fullHeight },
+                    ),
+                    exit = slideOutVertically(
+                        targetOffsetY = { fullHeight -> fullHeight },
+                    ),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .zIndex(1f)
+                ) {
+                    QuickInputBar(
+                        onInsert = { text -> viewModel.insertTextAtCursor(text) }
                     )
                 }
-            ) { paddingValues ->
                 Column(
                     modifier = Modifier
-                        .padding(paddingValues)
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .imePadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
@@ -306,28 +347,10 @@ fun ReplaceEditScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(120.dp))
 
                 }
             }
-
-            AnimatedVisibility(
-                visible = isKeyboardVisible,
-                enter = slideInVertically(
-                    initialOffsetY = { fullHeight -> fullHeight },
-                ),
-                exit = slideOutVertically(
-                    targetOffsetY = { fullHeight -> fullHeight },
-                ),
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .imePadding()
-            ) {
-                QuickInputBar(
-                    onInsert = { text -> viewModel.insertTextAtCursor(text) }
-                )
-            }
-
 
             if (state.showGroupDialog) {
                 ManageGroupDialog(
@@ -338,8 +361,8 @@ fun ReplaceEditScreen(
             }
         }
     }
-
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

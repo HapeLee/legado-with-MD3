@@ -39,7 +39,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
@@ -96,6 +95,7 @@ import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedTextButton
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import kotlinx.coroutines.delay
@@ -439,9 +439,7 @@ fun ExploreTopBar(
         modifier = modifier,
         title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-            }
+            SmallTopBarButton(onClick = onBack)
         },
         actions = {
             Row(

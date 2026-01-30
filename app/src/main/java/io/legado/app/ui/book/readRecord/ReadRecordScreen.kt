@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
@@ -72,6 +71,7 @@ import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
@@ -131,9 +131,7 @@ fun ReadRecordScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onBackClick) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        }
+                        SmallTopBarButton(onClick = onBackClick)
                     },
                     actions = {
                         IconButton(onClick = {
