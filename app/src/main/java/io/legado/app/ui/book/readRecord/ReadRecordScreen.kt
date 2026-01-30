@@ -349,7 +349,7 @@ fun LazyListScope.renderListByMode(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.errorContainer,
+                            background = MaterialTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteDetail(detail) }
                             }
@@ -372,7 +372,7 @@ fun LazyListScope.renderListByMode(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.onErrorContainer,
+                            background = MaterialTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteSession(session) }
                             }

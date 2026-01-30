@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ListItem
@@ -37,11 +38,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -56,6 +57,7 @@ fun SelectionItemCard(
     isEnabled: Boolean = true,
     isSelected: Boolean = false,
     inSelectionMode: Boolean = false,
+    elevation: Dp = 0.dp,
     onToggleSelection: () -> Unit = {},
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
@@ -79,7 +81,8 @@ fun SelectionItemCard(
             .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = containerColor
+        color = containerColor,
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
             modifier = Modifier
@@ -201,6 +204,7 @@ fun LazyItemScope.ReorderableSelectionItem(
             isEnabled = isEnabled,
             isSelected = isSelected,
             inSelectionMode = inSelectionMode,
+            elevation = elevation,
             onToggleSelection = onToggleSelection,
             onEnabledChange = onEnabledChange,
             onClickEdit = onClickEdit,
@@ -208,7 +212,6 @@ fun LazyItemScope.ReorderableSelectionItem(
             dropdownContent = dropdownContent,
             modifier = modifier
                 .zIndex(if (isDragging) 1f else 0f)
-                .shadow(elevation, MaterialTheme.shapes.medium)
                 .then(
                     if (canReorder && !inSelectionMode) {
                         Modifier.longPressDraggableHandle(
