@@ -220,7 +220,11 @@ fun DictRuleScreen(
                 editingRule = null
             },
             onSave = { updatedRule ->
-                viewModel.update(updatedRule)
+                if (editingRule == null) {
+                    viewModel.insert(updatedRule)
+                } else {
+                    viewModel.update(updatedRule)
+                }
                 showEditSheet = false
                 editingRule = null
             },

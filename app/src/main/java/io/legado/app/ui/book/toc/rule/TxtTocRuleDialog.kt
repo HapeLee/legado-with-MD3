@@ -155,7 +155,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
     }
 
     override fun saveTxtTocRule(txtTocRule: TxtTocRule) {
-        viewModel.update(txtTocRule)
+        //viewModel.update(txtTocRule)
     }
 
     @SuppressLint("InflateParams")
@@ -280,7 +280,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
                     if (buttonView.isPressed) {
                         getItem(holder.layoutPosition)?.let {
                             it.enable = isChecked
-                            viewModel.update(it)
+                            //viewModel.update(it)
                         }
                     }
                 }
@@ -293,7 +293,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
                             setMessage(getString(R.string.sure_del) + "\n" + item.name)
                             noButton()
                             yesButton {
-                                viewModel.delete(item)
+                                //viewModel.delete(item)
                             }
                         }
                     }
@@ -315,7 +315,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
                 for ((index, item) in getItems().withIndex()) {
                     item.serialNumber = index + 1
                 }
-                viewModel.update(*getItems().toTypedArray())
+                //viewModel.update(*getItems().toTypedArray())
             }
             isMoved = false
         }

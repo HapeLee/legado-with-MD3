@@ -90,10 +90,19 @@ class TxtTocRuleViewModel(
         }
     }
 
+    fun save(rule: TxtTocRule) {
+        viewModelScope.launch {
+            if (rule.id == 0L) {
+                repository.insert(rule)
+            } else {
+                repository.update(rule)
+            }
+        }
+    }
+
     fun update(vararg rules: TxtTocRule) = viewModelScope.launch { repository.update(*rules) }
     fun insert(vararg rules: TxtTocRule) = viewModelScope.launch { repository.insert(*rules) }
     fun delete(vararg rules: TxtTocRule) = viewModelScope.launch { repository.delete(*rules) }
-
     fun enableSelectionByIds(ids: Set<Long>) =
         viewModelScope.launch { repository.enableByIds(ids, true) }
 

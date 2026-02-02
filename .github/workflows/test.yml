@@ -289,36 +289,30 @@ jobs:
       - name: 获取 Commit 记录
         id: get_commits
         run: |
-          # prepare Job 中计算出的日志起点 Tag (LAST_TAG_FOR_LOG)
           LAST_TAG="${{ needs.prepare.outputs.latest_tag }}"
+          IS_RELEASE="${{ needs.prepare.outputs.is_release }}"
           
-          # 获取从上一个 Tag 到当前 HEAD 的所有 Commit 消息
-          # --no-merges: 排除合并提交
           COMMIT_LOG=$(git log "$LAST_TAG"..HEAD --pretty=format:"* %s" --no-merges)
           
           if [ -z "$COMMIT_LOG" ]; then
-          RELEASE_BODY=$(cat <<EOF
-          ### 更新内容
-          
-          - 没有新的 Commit 记录.
-          EOF
-          )
+              CONTENT="- 没有新的 Commit 记录."
           else
-          RELEASE_BODY=$(cat <<EOF
-          ### 更新内容
-          
-          $COMMIT_LOG
-          EOF
-          )
+              CONTENT="$COMMIT_LOG"
           fi
           
-            # 设置 step 输出
-          echo "release_body<<EOF" >> $GITHUB_OUTPUT
-          echo "$RELEASE_BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "生成的 Release Body:"
-          echo "$RELEASE_BODY"
+          {
+            echo "release_body<<EOF"
+            if [[ "$IS_RELEASE" != "true" ]]; then
+                echo "**此版本为测试版，会存在不稳定问题。**"
+                echo ""
+            fi
+            echo "### 更新内容"
+            echo ""
+            echo "$CONTENT"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          echo "Release Body 已生成。"
 
       - name: 创建 Tag
         run: |

@@ -212,15 +212,20 @@ fun TxtRuleScreen(
     if (showEditSheet) {
         RuleEditSheet(
             rule = editingRule,
-            title = stringResource(R.string.dict_rule),
-            label1 = stringResource(R.string.url_rule),
-            label2 = stringResource(R.string.show_rule),
+            title = stringResource(R.string.txt_toc_rule),
+            label1 = stringResource(R.string.regex),
+            label2 = stringResource(R.string.example),
             onDismissRequest = {
                 showEditSheet = false
                 editingRule = null
             },
             onSave = { updatedRule ->
-                viewModel.update(updatedRule)
+                //TODO：我很想把他改为自增主键，但为了兼容性日后再说
+                if (editingRule == null) {
+                    viewModel.insert(updatedRule)
+                } else {
+                    viewModel.update(updatedRule)
+                }
                 showEditSheet = false
                 editingRule = null
             },
