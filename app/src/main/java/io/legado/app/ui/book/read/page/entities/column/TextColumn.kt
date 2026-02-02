@@ -47,10 +47,14 @@ data class TextColumn(
         } else {
             ChapterProvider.contentPaint
         }
-        val textColor = if (textLine.isReadAloud || isSearchResult) {
+        val textColor = if (!textLine.useUnderline && (textLine.isReadAloud || isSearchResult)) {
             ReadBookConfig.textAccentColor
         } else {
             ReadBookConfig.textColor
+        }
+        val originalSize = textPaint.textSize
+        textLine.titleTextSize?.let {
+            textPaint.textSize = it
         }
         if (textPaint.color != textColor) {
             textPaint.color = textColor
@@ -66,6 +70,7 @@ data class TextColumn(
         if (selected) {
             canvas.drawRect(start, 0f, end, textLine.height, view.selectedPaint)
         }
+        textPaint.textSize = originalSize
     }
 
 }
