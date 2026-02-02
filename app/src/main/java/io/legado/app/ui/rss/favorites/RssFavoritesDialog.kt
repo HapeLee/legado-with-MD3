@@ -1,17 +1,15 @@
 package io.legado.app.ui.rss.favorites
 
+//import io.legado.app.lib.theme.primaryColor
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import io.legado.app.R
-import io.legado.app.base.BaseDialogFragment
+import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.databinding.DialogRssFavoriteConfigBinding
-//import io.legado.app.lib.theme.primaryColor
-import io.legado.app.utils.setLayout
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
-class RssFavoritesDialog() : BaseDialogFragment(R.layout.dialog_rss_favorite_config, true) {
+class RssFavoritesDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_rss_favorite_config) {
 
     constructor(rssArticle: RssArticle) : this() {
         arguments = Bundle().apply {
@@ -21,11 +19,6 @@ class RssFavoritesDialog() : BaseDialogFragment(R.layout.dialog_rss_favorite_con
     }
 
     private val binding by viewBinding(DialogRssFavoriteConfigBinding::bind)
-
-    override fun onStart() {
-        super.onStart()
-        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-    }
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         //binding.toolBar.setBackgroundColor(primaryColor)
