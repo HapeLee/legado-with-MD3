@@ -52,8 +52,8 @@ import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.SettingItem
 import io.legado.app.ui.widget.components.SplicedColumnGroup
+import io.legado.app.ui.widget.components.settingItem.SettingItem
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)

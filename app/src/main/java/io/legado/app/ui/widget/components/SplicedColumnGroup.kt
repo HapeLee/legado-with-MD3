@@ -26,13 +26,13 @@ fun SplicedColumnGroup(
     title: String = "",
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier = modifier.padding(vertical = 8.dp)) {
+    Column(modifier = modifier.padding(top = 4.dp, bottom = 12.dp)) {
         if (title.isNotEmpty()) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 12.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 8.dp)
             )
         }
 

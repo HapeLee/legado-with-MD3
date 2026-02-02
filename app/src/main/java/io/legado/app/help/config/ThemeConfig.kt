@@ -190,48 +190,12 @@ object ThemeConfig {
     }
 
     fun saveDayTheme(context: Context, name: String) {
-        val primary =
-            context.getPrefInt(PreferKey.cPrimary, context.getCompatColor(R.color.md_brown_500))
-        val accent =
-            context.getPrefInt(PreferKey.cAccent, context.getCompatColor(R.color.md_red_600))
-        val background =
-            context.getPrefInt(PreferKey.cBackground, context.getCompatColor(R.color.md_grey_100))
-        val bBackground =
-            context.getPrefInt(PreferKey.cBBackground, context.getCompatColor(R.color.md_grey_200))
-        val config = Config(
-            themeName = name,
-            isNightTheme = false,
-            primaryColor = "#${primary.hexString}",
-            accentColor = "#${accent.hexString}",
-            backgroundColor = "#${background.hexString}",
-            bottomBackground = "#${bBackground.hexString}"
-        )
+        val config = getDayTheme(context, name)
         addConfig(config)
     }
 
     fun saveNightTheme(context: Context, name: String) {
-        val primary =
-            context.getPrefInt(
-                PreferKey.cNPrimary,
-                context.getCompatColor(R.color.md_blue_grey_600)
-            )
-        val accent =
-            context.getPrefInt(
-                PreferKey.cNAccent,
-                context.getCompatColor(R.color.md_deep_orange_800)
-            )
-        val background =
-            context.getPrefInt(PreferKey.cNBackground, context.getCompatColor(R.color.md_grey_900))
-        val bBackground =
-            context.getPrefInt(PreferKey.cNBBackground, context.getCompatColor(R.color.md_grey_850))
-        val config = Config(
-            themeName = name,
-            isNightTheme = true,
-            primaryColor = "#${primary.hexString}",
-            accentColor = "#${accent.hexString}",
-            backgroundColor = "#${background.hexString}",
-            bottomBackground = "#${bBackground.hexString}"
-        )
+        val config = getNightTheme(context, name)
         addConfig(config)
     }
 
@@ -253,6 +217,77 @@ object ThemeConfig {
         }
     }
 
+    fun getDurConfig(context: Context): Config {
+        val isNight = AppConfig.isNightTheme
+        val name = if (isNight) {
+            "MD3-Night"
+        } else {
+            "MD3-Day"
+        }
+        return if (isNight) {
+            getNightTheme(context, name)
+        } else {
+            getDayTheme(context, name)
+        }
+    }
+
+    private fun getDayTheme(context: Context, name: String): Config {
+        val primary =
+            context.getPrefInt(PreferKey.cPrimary, context.getCompatColor(R.color.md_brown_500))
+        val accent =
+            context.getPrefInt(PreferKey.cAccent, context.getCompatColor(R.color.md_red_600))
+        val background =
+            context.getPrefInt(PreferKey.cBackground, context.getCompatColor(R.color.md_grey_100))
+        val bBackground =
+            context.getPrefInt(PreferKey.cBBackground, context.getCompatColor(R.color.md_grey_200))
+        val bgImgPath =
+            context.getPrefString(PreferKey.bgImage)
+        val bgImgBlur =
+            context.getPrefInt(PreferKey.bgImageBlurring, 0)
+
+        return Config(
+            themeName = name,
+            isNightTheme = false,
+            primaryColor = "#${primary.hexString}",
+            accentColor = "#${accent.hexString}",
+            backgroundColor = "#${background.hexString}",
+            bottomBackground = "#${bBackground.hexString}",
+            backgroundImgPath = bgImgPath,
+            backgroundImgBlur = bgImgBlur
+        )
+    }
+
+    private fun getNightTheme(context: Context, name: String): Config {
+        val primary =
+            context.getPrefInt(
+                PreferKey.cNPrimary,
+                context.getCompatColor(R.color.md_blue_grey_600)
+            )
+        val accent =
+            context.getPrefInt(
+                PreferKey.cNAccent,
+                context.getCompatColor(R.color.md_deep_orange_800)
+            )
+        val background =
+            context.getPrefInt(PreferKey.cNBackground, context.getCompatColor(R.color.md_grey_900))
+        val bBackground =
+            context.getPrefInt(PreferKey.cNBBackground, context.getCompatColor(R.color.md_grey_850))
+        val bgImgPath =
+            context.getPrefString(PreferKey.bgImageN)
+        val bgImgBlur =
+            context.getPrefInt(PreferKey.bgImageNBlurring, 0)
+        return Config(
+            themeName = name,
+            isNightTheme = true,
+            primaryColor = "#${primary.hexString}",
+            accentColor = "#${accent.hexString}",
+            backgroundColor = "#${background.hexString}",
+            bottomBackground = "#${bBackground.hexString}",
+            backgroundImgPath = bgImgPath,
+            backgroundImgBlur = bgImgBlur
+        )
+    }
+
     @Keep
     data class Config(
         var themeName: String,
@@ -260,7 +295,9 @@ object ThemeConfig {
         var primaryColor: String,
         var accentColor: String,
         var backgroundColor: String,
-        var bottomBackground: String
+        var bottomBackground: String,
+        var backgroundImgPath: String?,
+        var backgroundImgBlur: Int
     ) {
 
         override fun hashCode(): Int {
@@ -276,9 +313,22 @@ object ThemeConfig {
                         && other.accentColor == accentColor
                         && other.backgroundColor == backgroundColor
                         && other.bottomBackground == bottomBackground
+                        && other.backgroundImgPath == backgroundImgPath
+                        && other.backgroundImgBlur == backgroundImgBlur
             }
             return false
         }
+
+        fun toMap() = mapOf(
+            "themeName" to themeName,
+            "isNightTheme" to isNightTheme,
+            "primaryColor" to primaryColor,
+            "accentColor" to accentColor,
+            "backgroundColor" to backgroundColor,
+            "bottomBackground" to bottomBackground,
+            "backgroundImgPath" to backgroundImgPath,
+            "backgroundImgBlur" to backgroundImgBlur
+        )
 
     }
 

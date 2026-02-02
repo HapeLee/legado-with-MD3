@@ -2,6 +2,11 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <io.legado.app.lib.prefs.Preference
+        android:key="TEST"
+        android:summary="这里存放由 Compose 重写的设置页"
+        android:title="测试" />
+
     <io.legado.app.lib.prefs.NameListPreference
         android:defaultValue="auto"
         android:key="language"

@@ -3,7 +3,7 @@ package io.legado.app.ui.widget.components.exportComponents
 import android.webkit.MimeTypeMap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,9 +40,10 @@ enum class FilePickerSheetMode {
 fun FilePickerSheet(
     sheetState: SheetState,
     onDismissRequest: () -> Unit,
-    mode: FilePickerSheetMode,
-    onSelectSysDir: () -> Unit,
-    onSelectSysFile: (Array<String>) -> Unit,
+    title: String = stringResource(R.string.select_operation),
+    onSelectSysDir: (() -> Unit)? = null,
+    onSelectSysFile: ((Array<String>) -> Unit)? = null,
+    onManualInput: (() -> Unit)? = null,
     onUpload: (() -> Unit)? = null,
     allowExtensions: Array<String>? = null,
 ) {
@@ -54,53 +55,55 @@ fun FilePickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Text(
-                modifier = Modifier.padding(bottom = 16.dp),
-                text = stringResource(R.string.select_operation),
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 20.dp)
             )
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                maxItemsInEachRow = 2
             ) {
-                when (mode) {
-                    FilePickerSheetMode.DIR -> {
-                        FilePickerOptionCard(
-                            icon = Icons.Default.FolderOpen,
-                            text = stringResource(R.string.sys_folder_picker),
-                            onClick = onSelectSysDir
-                        )
-                    }
-                    FilePickerSheetMode.FILE -> {
-                        FilePickerOptionCard(
-                            icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                            text = stringResource(R.string.sys_file_picker),
-                            onClick = { onSelectSysFile(typesOfExtensions(allowExtensions)) }
-                        )
-                    }
-                    FilePickerSheetMode.EXPORT -> {
-                        FilePickerOptionCard(
-                            icon = Icons.Default.SaveAlt,
-                            text = stringResource(R.string.save_to_local),
-                            onClick = onSelectSysDir
-                        )
 
-                        if (onUpload != null) {
-                            FilePickerOptionCard(
-                                icon = Icons.Default.CloudUpload,
-                                text = stringResource(R.string.upload_url),
-                                onClick = onUpload
-                            )
-                        }
-                    }
+                onSelectSysDir?.let {
+                    FilePickerOptionCard(
+                        icon = Icons.Default.FolderOpen,
+                        text = stringResource(R.string.sys_folder_picker),
+                        onClick = it
+                    )
+                }
+
+                onSelectSysFile?.let {
+                    FilePickerOptionCard(
+                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                        text = stringResource(R.string.sys_file_picker),
+                        onClick = { it(typesOfExtensions(allowExtensions)) }
+                    )
+                }
+
+                onManualInput?.let {
+                    FilePickerOptionCard(
+                        icon = Icons.Default.EditNote,
+                        text = stringResource(R.string.manual_input),
+                        onClick = it
+                    )
+                }
+
+                onUpload?.let {
+                    FilePickerOptionCard(
+                        icon = Icons.Default.CloudUpload,
+                        text = stringResource(R.string.upload_url),
+                        onClick = it
+                    )
                 }
             }
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

@@ -154,12 +154,10 @@ fun TxtRuleScreen(
         FilePickerSheet(
             sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
-            mode = filePickerMode,
             onSelectSysDir = {
                 showFilePickerSheet = false
                 exportDoc.launch("exportDictRule.json")
             },
-            onSelectSysFile = {},
             onUpload = {
                 showFilePickerSheet = false
                 viewModel.uploadSelectedRules(selectedIds, rules)

@@ -216,6 +216,10 @@
             android:name=".ui.config.ConfigActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.TestConfigActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard" />
         <!-- 搜索界面 -->
         <activity
             android:name=".ui.book.search.SearchActivity"

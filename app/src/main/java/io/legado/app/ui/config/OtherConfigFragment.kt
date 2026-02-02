@@ -42,6 +42,7 @@ import io.legado.app.utils.putPrefString
 import io.legado.app.utils.removePref
 import io.legado.app.utils.restart
 import io.legado.app.utils.showDialogFragment
+import io.legado.app.utils.startActivity
 import splitties.init.appCtx
 
 /**
@@ -168,7 +169,7 @@ class OtherConfigFragment : PreferenceFragment(),
             PreferKey.clearWebViewData -> clearWebViewData()
             "localPassword" -> alertLocalPassword()
             PreferKey.shrinkDatabase -> shrinkDatabase()
-
+            "TEST" -> startActivity<TestConfigActivity>()
             PreferKey.notificationsPost -> checkPermission(1)
             PreferKey.ignoreBatteryPermission -> checkPermission(2)
         }

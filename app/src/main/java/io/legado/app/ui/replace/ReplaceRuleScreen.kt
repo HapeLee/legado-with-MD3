@@ -167,12 +167,10 @@ fun ReplaceRuleScreen(
         FilePickerSheet(
             sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
-            mode = filePickerMode,
             onSelectSysDir = {
                 showFilePickerSheet = false
                 exportDoc.launch("exportReplaceRule.json")
             },
-            onSelectSysFile = {},
             onUpload = {
                 showFilePickerSheet = false
                 viewModel.uploadSelectedRules(selectedIds, rules)

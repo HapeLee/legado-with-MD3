@@ -13,6 +13,7 @@ import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
+import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -43,6 +44,7 @@ val appModule = module {
     viewModelOf(::ReplaceRuleViewModel)
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
+    viewModelOf(::OtherConfigViewModel)
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(

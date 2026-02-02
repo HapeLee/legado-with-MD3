@@ -225,7 +225,7 @@
     <string name="no_download">暂无任务</string>
     <string name="download_count">%1$d/%2$d</string>
     <string name="import_select_book">导入选择书籍</string>
-    <string name="threads_num_title">更新和搜索线程数（太多会卡顿）</string>
+    <string name="threads_num_title">更新和搜索线程数</string>
     <string name="change_icon">切换图标</string>
     <string name="remove_from_bookshelf">已在书架</string>
     <string name="start_read">开始阅读</string>
@@ -890,7 +890,7 @@
     <string name="anti_alias">抗锯齿</string>
     <string name="pref_anti_alias_summary">绘制图片时抗锯齿</string>
     <string name="upload_url">上传 URL</string>
-    <string name="download_url_rule">下载URL规则(downloadUrls)</string>
+    <string name="download_url_rule">下载 URL 规则</string>
     <string name="sort_by_respondTime">响应时间排序</string>
     <string name="respondTime">响应时间：%1$d ms</string>
     <string name="export_success">导出成功</string>
@@ -1080,7 +1080,7 @@
     <string name="tip_divider_color">分隔线颜色</string>
     <string name="same_title_removed">移除重复标题</string>
     <string name="update_book_fail">更新失败</string>
-    <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度，拒绝后将不再弹出。如有需要可至高级设置中再次申请。</string>
+    <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度。</string>
     <string name="webdav_after_local_restore_confirm">WebDav 书源比本地新,是否恢复</string>
     <string name="c_whitelist">白名单(contentWhitelist)</string>
     <string name="c_blacklist">黑名单(contentBlacklist)</string>
@@ -1383,4 +1383,5 @@
     <string name="audio_cache_clean_time_summary">当前%d, 输入 0 代表退出即刻清理。</string>
     <string name="show_swipe_animation">启用滑动时动画</string>
     <string name="click_image_way">点击图片行为</string>
+    <string name="show_web_log">输出日志</string>
 </resources>
