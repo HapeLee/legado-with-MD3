@@ -9,17 +9,21 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.rule.RowUi
 import io.legado.app.help.CacheManager
+import io.legado.app.help.ConcurrentRateLimiter.Companion.updateConcurrentRate
 import io.legado.app.help.JsExtensions
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.crypto.SymmetricCryptoAndroid
 import io.legado.app.help.http.CookieStore
+import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.getShareScope
+import io.legado.app.model.SharedJsScope.remove
 import io.legado.app.utils.GSON
 import io.legado.app.utils.GSONStrict
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.has
-import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.isMainThread
+import kotlinx.coroutines.runBlocking
 import org.intellij.lang.annotations.Language
 
 /**
@@ -75,6 +79,9 @@ interface BaseSource : JsExtensions {
         }
     }
 
+    /**
+     * 调用login函数 实现登录请求
+     */
     @JavascriptInterface
     fun login() {
         val loginJs = getLoginJs()
@@ -89,30 +96,6 @@ interface BaseSource : JsExtensions {
             """.trimIndent()
             evalJS(js)
         }
-    }
-
-    fun loginUi(): List<RowUi>? {
-        val json = loginUi?.let {
-            val loginJS = getLoginJs() ?: ""
-            try {
-                when {
-                    it.startsWith("@js:") -> evalJS(loginJS + it.substring(4)){
-                        put("result", getLoginInfoMap())
-                    }.toString()
-                    it.startsWith("<js>") -> evalJS(loginJS + it.substring(4,it.lastIndexOf("<"))){
-                        put("result", getLoginInfoMap())
-                    }.toString()
-                    else -> it
-                }
-            } catch (e: Throwable) {
-                log(e)
-                e.printOnDebug()
-                null
-            }
-        }
-        return GSON.fromJsonArray<RowUi>(json).onFailure {
-            it.printOnDebug()
-        }.getOrNull()
     }
 
     /**
@@ -152,6 +135,7 @@ interface BaseSource : JsExtensions {
     /**
      * 获取用于登录的头部信息
      */
+    @JavascriptInterface
     fun getLoginHeader(): String? {
         return CacheManager.get("loginHeader_${getKey()}")
     }
@@ -182,6 +166,7 @@ interface BaseSource : JsExtensions {
      * 获取用户信息,可以用来登录
      * 用户信息采用aes加密存储
      */
+    @JavascriptInterface
     fun getLoginInfo(): String? {
         try {
             val key = AppConst.androidId.encodeToByteArray(0, 16)
@@ -232,6 +217,7 @@ interface BaseSource : JsExtensions {
     /**
      * 保存用户信息,aes加密
      */
+    @JavascriptInterface
     fun putLoginInfo(info: String): Boolean {
         return try {
             val key = (AppConst.androidId).encodeToByteArray(0, 16)
@@ -244,6 +230,7 @@ interface BaseSource : JsExtensions {
         }
     }
 
+    @JavascriptInterface
     fun removeLoginInfo() {
         CacheManager.delete("userInfo_${getKey()}")
     }
@@ -261,8 +248,22 @@ interface BaseSource : JsExtensions {
     }
 
     /**
+     * 设置自定义变量
+     * 新,统一为put名称存变量
+     */
+    @JavascriptInterface
+    fun putVariable(variable: String?) {
+        if (variable != null) {
+            CacheManager.put("sourceVariable_${getKey()}", variable)
+        } else {
+            CacheManager.delete("sourceVariable_${getKey()}")
+        }
+    }
+
+    /**
      * 获取自定义变量
      */
+    @JavascriptInterface
     fun getVariable(): String {
         return CacheManager.get("sourceVariable_${getKey()}") ?: ""
     }
@@ -270,6 +271,7 @@ interface BaseSource : JsExtensions {
     /**
      * 保存数据
      */
+    @JavascriptInterface
     fun put(key: String, value: String): String {
         CacheManager.put("v_${getKey()}_${key}", value)
         return value
@@ -278,8 +280,42 @@ interface BaseSource : JsExtensions {
     /**
      * 获取保存的数据
      */
+    @JavascriptInterface
     fun get(key: String): String {
         return CacheManager.get("v_${getKey()}_${key}") ?: ""
+    }
+
+    /**
+     * 刷新发现
+     */
+    fun refreshExplore() {
+        if (isMainThread) {
+            error("refreshExplore must be called on a background thread")
+        }
+        runBlocking {
+            if (this@BaseSource is BookSource) {
+                this@BaseSource.clearExploreKindsCache()
+            }
+        }
+    }
+
+    /**
+     * 刷新JSLib
+     */
+    fun refreshJSLib() {
+        if (isMainThread) {
+            error("refreshJSLib must be called on a background thread")
+        }
+        runBlocking {
+            remove(jsLib)
+        }
+    }
+
+    /**
+     * 设置并发率
+     */
+    fun putConcurrent(value: String) {
+        updateConcurrentRate(getKey(), value)
     }
 
     /**

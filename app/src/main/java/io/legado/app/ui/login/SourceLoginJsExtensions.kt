@@ -47,6 +47,10 @@ class SourceLoginJsExtensions(
         postEvent(EventBus.REFRESH_BOOK_INFO, true)
     }
 
+    fun refreshContent() {
+        postEvent(EventBus.REFRESH_BOOK_CONTENT, true)
+    }
+
     fun copyText(text: String) {
         activityRef.get()?.sendToClip(text)
     }

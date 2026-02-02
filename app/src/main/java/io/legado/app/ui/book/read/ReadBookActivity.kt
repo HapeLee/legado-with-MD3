@@ -1918,6 +1918,13 @@ class ReadBookActivity : BaseReadBookActivity(),
         observeEvent<Boolean>(EventBus.UP_SEEK_BAR) {
             readMenu.upSeekBar()
         }
+        observeEvent<Boolean>(EventBus.REFRESH_BOOK_CONTENT) {
+            ReadBook.book?.let {
+                ReadBook.curTextChapter = null
+                binding.readView.upContent()
+                viewModel.refreshContentDur(it)
+            }
+        }
     }
 
     private fun upScreenTimeOut() {

@@ -28,10 +28,11 @@ import java.io.ByteArrayOutputStream
  */
 class PhotoDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_photo_view) {
 
-    constructor(src: String, sourceOrigin: String? = null) : this() {
+    constructor(src: String, sourceOrigin: String? = null, isBook: Boolean = false) : this() {
         arguments = Bundle().apply {
             putString("src", src)
             putString("sourceOrigin", sourceOrigin)
+            putBoolean("isBook", isBook)
         }
     }
 

@@ -31,6 +31,7 @@ import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -47,7 +48,6 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
-import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -234,7 +234,7 @@ object BookHelp {
                 return
             }
             val analyzeUrl = AnalyzeUrl(
-                src, source = bookSource, coroutineContext = coroutineContext
+                src, source = bookSource, coroutineContext = currentCoroutineContext()
             )
             val bytes = analyzeUrl.getByteArrayAwait()
             //某些图片被加密，需要进一步解密
@@ -252,7 +252,7 @@ object BookHelp {
                 writeImage(book, src, it)
             }
         } catch (e: Exception) {
-            coroutineContext.ensureActive()
+            currentCoroutineContext().ensureActive()
             val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
             AppLog.put(msg, e)
         } finally {

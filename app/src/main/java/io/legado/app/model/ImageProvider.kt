@@ -41,7 +41,7 @@ object ImageProvider {
     private const val M = 1024 * 1024
     val cacheSize: Int
         get() {
-            if (AppConfig.bitmapCacheSize <= 0 || AppConfig.bitmapCacheSize >= 2048) {
+            if (AppConfig.bitmapCacheSize !in 1..<2048) {
                 AppConfig.bitmapCacheSize = 50
             }
             return AppConfig.bitmapCacheSize * M

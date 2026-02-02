@@ -118,7 +118,7 @@ object PreferKey {
     const val enableMangaEInk = "enableMangaEInk"
     const val mangaEInkThreshold = "mangaEInkThreshold"
     const val enableMangaGray = "enableMangaGray"
-
+    const val mediaButtonOnExit = "mediaButtonOnExit"
     const val autoRefresh = "auto_refresh"
     const val defaultToRead = "defaultToRead"
     const val exportCharset = "exportCharset"

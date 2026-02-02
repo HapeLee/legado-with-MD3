@@ -218,7 +218,6 @@ class WebJsExtensions(
             val letters = "abcdefghijklmnopqrstuvwxyz"
             return letters.random()
         }
-
         val uuid by lazy {
             UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
         }

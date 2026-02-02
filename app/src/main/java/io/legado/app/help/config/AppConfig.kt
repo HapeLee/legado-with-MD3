@@ -578,7 +578,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val syncBookProgressPlus get() = appCtx.getPrefBoolean(PreferKey.syncBookProgressPlus, false)
 
-    val mediaButtonOnExit get() = appCtx.getPrefBoolean("mediaButtonOnExit", true)
+    val mediaButtonOnExit get() = appCtx.getPrefBoolean(PreferKey.mediaButtonOnExit, true)
 
     val readAloudByMediaButton
         get() = appCtx.getPrefBoolean(PreferKey.readAloudByMediaButton, false)

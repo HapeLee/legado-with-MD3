@@ -7,12 +7,10 @@ import android.graphics.Paint.FontMetrics
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Build
-import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import androidx.core.net.toUri
 import androidx.core.os.postDelayed
-import io.legado.app.constant.AppPattern
 import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -21,28 +19,18 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedBase
 import io.legado.app.help.config.ReadBookConfig.dottedRatio
-import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextLine
-import io.legado.app.ui.book.read.page.entities.TextPage
-import io.legado.app.ui.book.read.page.entities.column.ImageColumn
-import io.legado.app.ui.book.read.page.entities.column.ReviewColumn
-import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
-import io.legado.app.utils.fastSum
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isPad
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.spToPx
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.textHeight
 import kotlinx.coroutines.CoroutineScope
 import splitties.init.appCtx
 import java.io.File
-import java.util.LinkedList
-import java.util.Locale
 
 /**
  * 解析内容生成章节和页面
@@ -180,6 +168,7 @@ object ChapterProvider {
         upStyle()
     }
 
+    /*
     /**
      * 获取拆分完的章节数据
      */
@@ -337,6 +326,7 @@ object ChapterProvider {
             bookContent.effectiveReplaceRules
         )
     }
+    */
 
     fun getTextChapterAsync(
         scope: CoroutineScope,
@@ -362,6 +352,7 @@ object ChapterProvider {
         return textChapter
     }
 
+    /*
     /**
      * 排版图片
      */
@@ -869,6 +860,7 @@ object ChapterProvider {
         }
         return stringList to widths
     }
+    */
 
     /**
      * 更新样式

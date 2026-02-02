@@ -16,6 +16,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
@@ -319,17 +320,6 @@ interface JsExtensions : JsEncodeUtils {
                 delayTime = delayTime
             ).getStrResponse().body
         }
-    }
-
-    /**
-     * 打开内置视频播放器
-     * @param url 视频播放链接
-     * @param title 视频的标题
-     * @param float 是否悬浮窗打开
-     */
-    @JavascriptInterface
-    fun openVideoPlayer(url: String, title: String, float: Boolean) {
-        //SourceHelp.openVideoPlayer(getSource(), url, title, float)
     }
 
     /**
@@ -1196,9 +1186,9 @@ interface JsExtensions : JsEncodeUtils {
         return GSON.toJson(ReadBookConfig.durConfig)
     }
 
-    //fun getReadBookConfigMap(): Map<String, Any> {
-    //    return ReadBookConfig.durConfig.toMap()
-    //}
+    fun getReadBookConfigMap(): Map<String, Any> {
+        return ReadBookConfig.durConfig.toMap()
+    }
 
     /**
      * 获取主题模式
@@ -1211,14 +1201,14 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * 获取主题配置
      */
-    // @JavascriptInterface
-    //fun getThemeConfig(): String {
-    //    val themeConfig = ThemeConfig.getDurConfig(appCtx)
-    //    return GSON.toJson(themeConfig)
-    //}
+    @JavascriptInterface
+    fun getThemeConfig(): String {
+        val themeConfig = ThemeConfig.getDurConfig(appCtx)
+        return GSON.toJson(themeConfig)
+    }
 
-    //fun getThemeConfigMap(): Map<String, Any?> {
-    //    return ThemeConfig.getDurConfig(appCtx).toMap()
-    //}
+    fun getThemeConfigMap(): Map<String, Any?> {
+        return ThemeConfig.getDurConfig(appCtx).toMap()
+    }
 
 }

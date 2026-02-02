@@ -97,7 +97,6 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         if (!isMainView) return
         ChapterProvider.upViewSize(w, h)
         textPage.format()
-        //TODO: 有关测量相关问题
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -267,7 +266,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
 
                 is ImageColumn -> when (AppConfig.clickImgWay) {
                     "1" -> { //预览图片
-                        activity?.showDialogFragment(PhotoDialog(column.src))
+                        activity?.showDialogFragment(PhotoDialog(column.src, isBook = true))
                         handled = true
                     }
                     "2" -> { //兼容处理

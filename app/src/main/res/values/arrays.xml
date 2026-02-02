@@ -117,10 +117,11 @@
 	</string-array>
 
     <string-array name="click_image_way_title">
-        <item>新包名阅读行为</item>
+        <item>新包名行为</item>
         <item>预览图片</item>
-        <item>经典阅读行为</item>
-        <item>不响应</item>
+        <item>经典行为</item>
+        <item>关闭点击</item>
+        <item>双击生效</item>
     </string-array>
 
     <string-array name="double_page_title">

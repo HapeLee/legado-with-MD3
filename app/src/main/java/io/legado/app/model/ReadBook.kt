@@ -183,6 +183,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         } else {
             appDb.bookSourceDao.getBookSource(book.origin)?.let {
                 bookSource = it
+                SourceCallBack.callBackBook(
+                    SourceCallBack.START_READ,
+                    it,
+                    book,
+                    curTextChapter?.chapter
+                )
                 if (book.getImageStyle().isNullOrBlank()) {
                     var imageStyle = it.getContentRule().imageStyle
                     if (imageStyle.isNullOrBlank() && (book.isImage || book.isPdf)) {
@@ -978,9 +984,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun saveRead(pageChanged: Boolean = false) {
+        val book = book ?: return
         executor.execute {
             kotlin.runCatching {
-                val book = book ?: return@execute
                 book.lastCheckCount = 0
                 book.durChapterTime = System.currentTimeMillis()
                 val chapterChanged = book.durChapterIndex != durChapterIndex
@@ -992,9 +998,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
                             book.getUseReplaceRule()
                         )
+                        SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
                     }
                 }
-                appDb.bookDao.update(book)
+                book.update()
             }.onFailure {
                 AppLog.put("保存书籍阅读进度信息出错\n$it", it)
             }
@@ -1034,17 +1041,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    private fun clearExpiredChapterLoadingJob(clearAll: Boolean = false) {
-        val iterator = chapterLoadingJobs.iterator()
-        while (iterator.hasNext()) {
-            val (index, job) = iterator.next()
-            if (clearAll || index !in durChapterIndex - 1..durChapterIndex + 1) {
-                job.cancel()
-                iterator.remove()
-            }
-        }
-    }
-
     fun cancelPreDownloadTask() {
         if (contentLoadFinish) {
             preDownloadTask?.cancel()
@@ -1064,6 +1060,17 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 clearTextChapter()
             } else {
                 loadContent(true)
+            }
+        }
+    }
+
+    private fun clearExpiredChapterLoadingJob(clearAll: Boolean = false) {
+        val iterator = chapterLoadingJobs.iterator()
+        while (iterator.hasNext()) {
+            val (index, job) = iterator.next()
+            if (clearAll || index !in durChapterIndex - 1..durChapterIndex + 1) {
+                job.cancel()
+                iterator.remove()
             }
         }
     }
