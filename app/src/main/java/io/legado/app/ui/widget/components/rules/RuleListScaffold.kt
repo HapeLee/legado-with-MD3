@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -14,21 +13,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
@@ -57,11 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.R
 import io.legado.app.ui.widget.components.ActionItem
-import io.legado.app.ui.widget.components.AnimatedText
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SelectionBottomBar
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -76,7 +67,7 @@ fun <T> RuleListScaffold(
     searchTrailingIcon: @Composable (() -> Unit)? = null,
     searchDropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
-    stickySubContent: @Composable (ColumnScope.() -> Unit)? = null,
+    bottomContent: @Composable (ColumnScope.() -> Unit)? = null,
     dropDownMenuContent: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},
     onClearSelection: () -> Unit,
     onSelectAll: () -> Unit,
@@ -142,67 +133,19 @@ fun <T> RuleListScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Column {
-                GlassMediumFlexibleTopAppBar(
-                    title = {
-                        val titleText = when {
-                            state.isUploading -> "请稍后..."
-                            state.selectedIds.isNotEmpty() -> "已选择 ${state.selectedIds.size}/${state.items.size}"
-                            else -> title
-                        }
-                        AnimatedText(text = titleText)
-                    },
-                    navigationIcon = {
-                        SmallTopBarButton(
-                            onClick = {
-                                if (state.selectedIds.isNotEmpty()) onClearSelection() else onBackClick()
-                            },
-                            imageVector = if (state.selectedIds.isNotEmpty()) {
-                                Icons.Default.Close
-                            } else {
-                                Icons.AutoMirrored.Filled.ArrowBack
-                            },
-                            contentDescription = if (state.selectedIds.isNotEmpty()) "取消选择" else "返回"
-                        )
-                    },
-                    actions = {
-                        if (!state.selectedIds.isNotEmpty()) {
-                            IconButton(onClick = { onSearchToggle(!state.isSearch) }) {
-                                Icon(Icons.Default.Search, null)
-                            }
-                            topBarActions()
-                            Box {
-                                IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, null)
-                                }
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false }) {
-                                    dropDownMenuContent { showMenu = false }
-                                }
-                            }
-                        }
-                    },
-                    scrollBehavior = scrollBehavior
-                )
-
-                AnimatedVisibility(visible = state.isSearch && !state.selectedIds.isNotEmpty()) {
-                    SearchBarSection(
-                        query = state.searchKey,
-                        onQueryChange = onSearchQueryChange,
-                        placeholder = searchPlaceholder,
-                        leadingIcon = { Icon(searchLeadingIcon, null) },
-                        trailingIcon = searchTrailingIcon,
-                        dropdownMenu = searchDropdownMenu
-                    )
-                }
-
-                AnimatedVisibility(
-                    visible = stickySubContent != null
-                ) {
-                    stickySubContent?.let { it() }
-                }
-            }
+            DynamicTopAppBar(
+                title = title,
+                state = state,
+                scrollBehavior = scrollBehavior,
+                onBackClick = onBackClick,
+                onSearchToggle = onSearchToggle,
+                onSearchQueryChange = onSearchQueryChange,
+                searchPlaceholder = searchPlaceholder,
+                onClearSelection = onClearSelection,
+                topBarActions = topBarActions,
+                dropDownMenuContent = dropDownMenuContent,
+                bottomContent = bottomContent
+            )
         },
         floatingActionButton = floatingActionButton,
         content = { paddingValues ->

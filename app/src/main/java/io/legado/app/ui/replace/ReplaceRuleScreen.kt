@@ -328,7 +328,7 @@ fun ReplaceRuleScreen(
             viewModel.delSelectionByIds(ids as Set<Long>)
             viewModel.setSelection(emptySet())
         },
-        stickySubContent = {
+        bottomContent = {
             if (tabItems.size > 1) {
                 PrimaryScrollableTabRow(
                     selectedTabIndex = selectedTabIndex.coerceAtMost(tabItems.size - 1)

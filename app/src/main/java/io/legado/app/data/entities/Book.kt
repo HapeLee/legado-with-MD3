@@ -121,17 +121,6 @@ data class Book(
     var syncTime: Long = 0L
 ) : Parcelable, BaseBook {
 
-    override fun equals(other: Any?): Boolean {
-        if (other is Book) {
-            return other.bookUrl == bookUrl
-        }
-        return false
-    }
-
-    override fun hashCode(): Int {
-        return bookUrl.hashCode()
-    }
-
     @delegate:Transient
     @delegate:Ignore
     @IgnoredOnParcel

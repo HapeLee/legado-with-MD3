@@ -66,6 +66,8 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 @Composable
 fun TxtRuleScreen(
     viewModel: TxtTocRuleViewModel = koinViewModel(),
+    initialRule: String? = null,
+    onPickRule: ((String) -> Unit)? = null,
     onBackClick: () -> Unit
 ) {
 
@@ -74,7 +76,8 @@ fun TxtRuleScreen(
 
     val rules = uiState.items
     val selectedIds = uiState.selectedIds
-    val inSelectionMode = selectedIds.isNotEmpty()
+    val isPickMode = onPickRule != null
+    val inSelectionMode = if (isPickMode) false else selectedIds.isNotEmpty()
 
     val listState = rememberLazyListState()
     val hapticFeedback = LocalHapticFeedback.current
@@ -253,7 +256,7 @@ fun TxtRuleScreen(
     }
 
     RuleListScaffold(
-        title = "目录规则",
+        title = if (isPickMode) "选择目录规则" else "目录规则",
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->
@@ -316,15 +319,29 @@ fun TxtRuleScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(rules, key = { it.id }) { item ->
+
+                    val isItemHighLighted = if (isPickMode) {
+                        item.rule.rule == initialRule
+                    } else {
+                        selectedIds.contains(item.id)
+                    }
+
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
                         title = item.name,
                         subtitle = item.example,
                         isEnabled = item.isEnabled,
-                        isSelected = selectedIds.contains(item.id),
+                        isSelected = isItemHighLighted,
                         inSelectionMode = inSelectionMode,
-                        onToggleSelection = { viewModel.toggleSelection(item.id) },
+                        onToggleSelection = {
+                            if (isPickMode) {
+                                onPickRule.invoke(item.rule.rule)
+                                onBackClick()
+                            } else {
+                                viewModel.toggleSelection(item.id)
+                            }
+                        },
                         onEnabledChange = { enabled -> viewModel.update(item.rule.copy(enable = enabled)) },
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {

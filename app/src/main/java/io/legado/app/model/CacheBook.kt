@@ -26,7 +26,10 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
@@ -40,6 +43,27 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.CoroutineContext
 
 object CacheBook {
+
+    private val _cacheSuccessFlow = MutableSharedFlow<BookChapter>(extraBufferCapacity = 64)
+    val cacheSuccessFlow = _cacheSuccessFlow.asSharedFlow()
+
+    private val _downloadSummaryFlow = MutableStateFlow("")
+
+    val downloadSummaryFlow = _downloadSummaryFlow.asStateFlow()
+
+    private val _downloadingIndicesFlow =
+        MutableSharedFlow<Pair<String, Set<Int>>>(extraBufferCapacity = 64)
+
+    val downloadingIndicesFlow = _downloadingIndicesFlow.asSharedFlow()
+
+    private val _downloadErrorFlow =
+        MutableSharedFlow<Pair<String, Set<Int>>>(extraBufferCapacity = 64)
+
+    val downloadErrorFlow = _downloadErrorFlow.asSharedFlow()
+
+    private fun updateSummary() {
+        _downloadSummaryFlow.value = downloadSummary
+    }
 
     val cacheBookMap = ConcurrentHashMap<String, CacheBookModel>()
     private val workingState = MutableStateFlow(true)
@@ -155,12 +179,14 @@ object CacheBook {
             }
         }.onStart {
             postEvent(EventBus.UP_DOWNLOAD_STATE, "")
+            updateSummary()
         }.onEachParallel(AppConfig.threadCount) {
             coroutineScope {
                 it.download(this, context)
             }
         }.onCompletion {
             postEvent(EventBus.UP_DOWNLOAD_STATE, "")
+            updateSummary()
         }.collect()
     }
 
@@ -201,6 +227,22 @@ object CacheBook {
     val errorDownloadMap = hashMapOf<String, Int>()
 
     class CacheBookModel(var bookSource: BookSource, var book: Book) {
+
+        private fun notifyDownloadSetChanged() {
+            _downloadingIndicesFlow.tryEmit(book.bookUrl to onDownloadSet.toSet())
+        }
+
+        private fun notifyErrorChanged() {
+            val errorIndices = errorDownloadMap
+                .filterKeys { it.startsWith(book.bookUrl) }
+                .mapNotNull {
+                    val chapterIndex = it.key.substringAfterLast("_").toIntOrNull()
+                    chapterIndex
+                }
+                .toSet()
+
+            _downloadErrorFlow.tryEmit(book.bookUrl to errorIndices)
+        }
 
         private val waitDownloadSet = linkedSetOf<Int>()
         private val onDownloadSet = linkedSetOf<Int>()
@@ -267,6 +309,8 @@ object CacheBook {
             onDownloadSet.remove(chapter.index)
             successDownloadSet.add(chapter.primaryStr())
             errorDownloadMap.remove(chapter.primaryStr())
+            notifyDownloadSetChanged()
+            _cacheSuccessFlow.tryEmit(chapter)
         }
 
         @Synchronized
@@ -297,12 +341,15 @@ object CacheBook {
         private fun onError(chapter: BookChapter, error: Throwable) {
             onPreError(chapter, error)
             onPostError(chapter, error)
+            notifyDownloadSetChanged()
+            notifyErrorChanged()
         }
 
         @Synchronized
         private fun onCancel(index: Int) {
             onDownloadSet.remove(index)
             if (!isStopped) waitDownloadSet.add(index)
+            notifyDownloadSetChanged()
         }
 
         @Synchronized
@@ -311,6 +358,8 @@ object CacheBook {
                 cacheBookMap.remove(book.bookUrl)
             }
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+            notifyDownloadSetChanged()
+            updateSummary()
         }
 
         /**
@@ -336,6 +385,7 @@ object CacheBook {
             if (chapter.isVolume) {
                 /** 修正下载计数 */
                 postEvent(EventBus.SAVE_CONTENT, Pair(book, chapter))
+                _cacheSuccessFlow.tryEmit(chapter)
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
@@ -345,6 +395,7 @@ object CacheBook {
             }
             waitDownloadSet.remove(chapterIndex)
             onDownloadSet.add(chapterIndex)
+            notifyDownloadSetChanged()
             if (BookHelp.hasContent(book, chapter)) {
                 Coroutine.async(scope, context, executeContext = context) {
                     BookHelp.getContent(book, chapter)?.let {

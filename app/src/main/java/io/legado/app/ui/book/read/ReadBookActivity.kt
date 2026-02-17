@@ -100,7 +100,7 @@ import io.legado.app.ui.book.searchContent.SearchContentActivity
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.book.toc.rule.TxtTocRuleDialog
+import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.dict.DictDialog
 import io.legado.app.ui.login.SourceLoginActivity
@@ -164,7 +164,6 @@ class ReadBookActivity : BaseReadBookActivity(),
     ReadBook.CallBack,
     AutoReadDialog.CallBack,
     ToolButtonConfigDialog.CallBack,
-    TxtTocRuleDialog.CallBack,
     ColorPickerDialogListener,
     FontConfigDialog.CallBack,
     FontSelectDialog.CallBack,
@@ -188,6 +187,18 @@ class ReadBookActivity : BaseReadBookActivity(),
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode == RESULT_OK) {
                 viewModel.replaceRuleChanged()
+            }
+        }
+
+    private val txtTocRuleLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                result.data?.getStringExtra("tocRegex")?.let { rule ->
+                    ReadBook.book?.let {
+                        it.tocUrl = rule
+                        loadChapterList(it)
+                    }
+                }
             }
         }
 
@@ -670,9 +681,11 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
 
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
-            R.id.menu_toc_regex -> showDialogFragment(
-                TxtTocRuleDialog(ReadBook.book?.tocUrl)
-            )
+            R.id.menu_toc_regex -> {
+                val intent = Intent(this, TxtTocRuleActivity::class.java)
+                intent.putExtra("tocRegex", ReadBook.book?.tocUrl)
+                txtTocRuleLauncher.launch(intent)
+            }
 
             R.id.menu_reverse_content -> ReadBook.book?.let {
                 viewModel.reverseContent(it)
@@ -1698,13 +1711,6 @@ class ReadBookActivity : BaseReadBookActivity(),
      * colorSelectDialog
      */
     override fun onDialogDismissed(dialogId: Int) = Unit
-
-    override fun onTocRegexDialogResult(tocRegex: String) {
-        ReadBook.book?.let {
-            it.tocUrl = tocRegex
-            loadChapterList(it)
-        }
-    }
 
     private fun sureSyncProgress(progress: BookProgress) {
         alert(R.string.get_book_progress) {

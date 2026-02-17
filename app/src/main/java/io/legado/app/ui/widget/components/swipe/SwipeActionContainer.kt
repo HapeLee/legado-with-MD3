@@ -36,7 +36,7 @@ fun SwipeActionContainer(
     val haptic = LocalHapticFeedback.current
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { totalDistance ->
-            totalDistance * 0.7f
+            totalDistance * 0.6f
         }
     )
     val isThresholdReached =
