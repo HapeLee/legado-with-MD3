@@ -780,6 +780,21 @@ class ReadBookActivity : BaseReadBookActivity(),
                 return true
             }
         }
+        // 手柄摇杆控制翻页
+        if (0 != (event.source and InputDevice.SOURCE_CLASS_JOYSTICK)) {
+            if (event.action == MotionEvent.ACTION_MOVE) {
+                // 左摇杆上下移动控制翻页
+                val yAxis = event.getAxisValue(MotionEvent.AXIS_Y)
+                if (Math.abs(yAxis) > 0.5f) { // 死区设置
+                    if (yAxis > 0) { // 摇杆向下
+                        handleKeyPage(PageDirection.NEXT, false)
+                    } else { // 摇杆向上
+                        handleKeyPage(PageDirection.PREV, false)
+                    }
+                    return true
+                }
+            }
+        }
         return super.onGenericMotionEvent(event)
     }
 
@@ -822,6 +837,16 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
 
             KeyEvent.KEYCODE_SPACE -> {
+                handleKeyPage(PageDirection.NEXT, longPress)
+                return true
+            }
+             // 手柄方向键控制翻页
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT -> {
+                handleKeyPage(PageDirection.PREV, longPress)
+                return true
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 handleKeyPage(PageDirection.NEXT, longPress)
                 return true
             }
