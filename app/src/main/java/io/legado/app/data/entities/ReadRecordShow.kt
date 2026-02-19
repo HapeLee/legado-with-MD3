@@ -2,6 +2,7 @@ package io.legado.app.data.entities
 
 data class ReadRecordShow(
     var bookName: String,
+    var bookAuthor: String,
     var readTime: Long,
     var lastRead: Long
 )

@@ -25,10 +25,10 @@ class ReadRecordActivity : BaseComposeActivity() {
         AppTheme {
             ReadRecordScreen(
                 onBackClick = { finish() },
-                onBookClick = { bookName ->
+                onBookClick = { bookName, bookAuthor ->
                     lifecycleScope.launch {
                         val book = withContext(Dispatchers.IO) {
-                            appDb.bookDao.findByName(bookName).firstOrNull()
+                            appDb.bookDao.getBook(bookName, bookAuthor)
                         }
                         if (book != null) startActivityForBook(book)
                     }

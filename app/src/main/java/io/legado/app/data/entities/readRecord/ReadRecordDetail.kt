@@ -5,11 +5,13 @@ import androidx.room.Entity
 
 @Entity(
     tableName = "readRecordDetail",
-    primaryKeys = ["deviceId", "bookName", "date"]
+    primaryKeys = ["deviceId", "bookName", "bookAuthor", "date"]
 )
 data class ReadRecordDetail(
     val deviceId: String = "",
     val bookName: String = "",
+    @ColumnInfo(defaultValue = "")
+    val bookAuthor: String = "",
     val date: String = "",
 
     // 当天阅读总时长

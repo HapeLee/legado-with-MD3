@@ -80,10 +80,9 @@ class ReadRecordViewModel(
             .filter { session ->
                 val sDate = DateUtil.format(Date(session.startTime), "yyyy-MM-dd")
                 (dateStr == null || sDate == dateStr) &&
-                        (searchKey.isEmpty() || session.bookName.contains(
-                            searchKey,
-                            ignoreCase = true
-                        ))
+                        (searchKey.isEmpty() ||
+                                session.bookName.contains(searchKey, ignoreCase = true) ||
+                                session.bookAuthor.contains(searchKey, ignoreCase = true))
             }
             .groupBy { DateUtil.format(Date(it.startTime), "yyyy-MM-dd") }
             .mapValues { (_, sessions) ->
@@ -139,7 +138,10 @@ class ReadRecordViewModel(
         for (i in 1 until sessions.size) {
             val current = sessions[i]
             val last = mergedList.last()
-            if (current.bookName == last.bookName && (current.startTime - last.endTime) <= gapLimit) {
+            if (current.bookName == last.bookName &&
+                current.bookAuthor == last.bookAuthor &&
+                (current.startTime - last.endTime) <= gapLimit
+            ) {
                 mergedList[mergedList.lastIndex] = last.copy(endTime = current.endTime)
             } else {
                 mergedList.add(current.copy())
@@ -148,12 +150,23 @@ class ReadRecordViewModel(
         return mergedList
     }
 
-    suspend fun getChapterTitle(bookName: String, chapterIndexLong: Long): String? {
-        return bookRepository.getChapterTitle(bookName, chapterIndexLong.toInt())
+    suspend fun getChapterTitle(bookName: String, bookAuthor: String, chapterIndexLong: Long): String? {
+        return bookRepository.getChapterTitle(bookName, bookAuthor, chapterIndexLong.toInt())
     }
 
-    suspend fun getBookCover(bookName: String): String? {
-        return bookRepository.getBookCoverByName(bookName)
+    suspend fun getBookCover(bookName: String, bookAuthor: String): String? {
+        return bookRepository.getBookCoverByNameAndAuthor(bookName, bookAuthor)
+    }
+
+    suspend fun getMergeCandidates(targetRecord: ReadRecord): List<ReadRecord> {
+        return repository.getMergeCandidates(targetRecord)
+    }
+
+    fun mergeReadRecords(targetRecord: ReadRecord, sourceRecords: List<ReadRecord>) {
+        if (sourceRecords.isEmpty()) return
+        viewModelScope.launch {
+            repository.mergeReadRecordInto(targetRecord, sourceRecords)
+        }
     }
 
     private data class LoadedData(

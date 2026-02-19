@@ -85,7 +85,7 @@ import java.util.Date
 fun ReadRecordScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
     onBackClick: () -> Unit,
-    onBookClick: (String) -> Unit
+    onBookClick: (String, String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val displayMode by viewModel.displayMode.collectAsState()
@@ -96,6 +96,7 @@ fun ReadRecordScreen(
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var mergeTargetRecord by remember { mutableStateOf<ReadRecord?>(null) }
     val onConfirmDelete: (() -> Unit) -> Unit = { action ->
         if (skipDeleteConfirm) {
             action()
@@ -226,7 +227,8 @@ fun ReadRecordScreen(
                                 state = state,
                                 viewModel = viewModel,
                                 onBookClick = onBookClick,
-                                onConfirmDelete = onConfirmDelete
+                                onConfirmDelete = onConfirmDelete,
+                                onMergeClick = { mergeTargetRecord = it }
                             )
                         }
                     }
@@ -286,6 +288,76 @@ fun ReadRecordScreen(
             }
         )
     }
+
+    mergeTargetRecord?.let { targetRecord ->
+        val candidates by produceState(
+            initialValue = emptyList<ReadRecord>(),
+            key1 = targetRecord.bookName,
+            key2 = targetRecord.bookAuthor
+        ) {
+            value = viewModel.getMergeCandidates(targetRecord)
+        }
+        var selectedAuthors by remember(targetRecord.bookName, targetRecord.bookAuthor, candidates) {
+            mutableStateOf(candidates.map { it.bookAuthor }.toSet())
+        }
+
+        AlertDialog(
+            onDismissRequest = { mergeTargetRecord = null },
+            title = { Text("合并阅读记录") },
+            text = {
+                if (candidates.isEmpty()) {
+                    Text("没有可合并的同名记录")
+                } else {
+                    Column {
+                        Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        candidates.forEach { candidate ->
+                            val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                            val isChecked = selectedAuthors.contains(candidate.bookAuthor)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedAuthors =
+                                            if (isChecked) selectedAuthors - candidate.bookAuthor
+                                            else selectedAuthors + candidate.bookAuthor
+                                    }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(checked = isChecked, onCheckedChange = null)
+                                Text(
+                                    text = "$author（${formatDuring(candidate.readTime)}）",
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (candidates.isNotEmpty()) {
+                            viewModel.mergeReadRecords(
+                                targetRecord,
+                                candidates.filter { selectedAuthors.contains(it.bookAuthor) }
+                            )
+                        }
+                        mergeTargetRecord = null
+                    }
+                ) {
+                    Text("合并")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mergeTargetRecord = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -300,7 +372,7 @@ fun SummarySection(
         val dailyDetails = state.groupedRecords[dateKey] ?: emptyList()
 
         if (dailyDetails.isNotEmpty()) {
-            val distinctBooks = dailyDetails.map { it.bookName }.distinct()
+            val distinctBooks = dailyDetails.map { it.bookName to it.bookAuthor }.distinct()
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
@@ -321,7 +393,7 @@ fun SummarySection(
                 title = "累计阅读成就",
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
-                bookNamesForCover = state.latestRecords.take(5).map { it.bookName },
+                bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
                 viewModel = viewModel,
                 onClick = {  }
             )
@@ -333,8 +405,9 @@ fun LazyListScope.renderListByMode(
     displayMode: DisplayMode,
     state: ReadRecordUiState,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String) -> Unit,
-    onConfirmDelete: (() -> Unit) -> Unit
+    onBookClick: (String, String) -> Unit,
+    onConfirmDelete: (() -> Unit) -> Unit,
+    onMergeClick: (ReadRecord) -> Unit
 ) {
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
@@ -342,7 +415,7 @@ fun LazyListScope.renderListByMode(
                 stickyHeader(key = "header_$date") {
                     DateHeader(date, details.sumOf { it.readTime })
                 }
-                items(items = details, key = { "${it.bookName}_${it.date}" }) { detail ->
+                items(items = details, key = { "${it.bookName}_${it.bookAuthor}_${it.date}" }) { detail ->
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -356,7 +429,7 @@ fun LazyListScope.renderListByMode(
                         ReadRecordItem(
                             detail,
                             viewModel,
-                            onClick = { onBookClick(detail.bookName) })
+                            onClick = { onBookClick(detail.bookName, detail.bookAuthor) })
                     }
                 }
             }
@@ -387,7 +460,7 @@ fun LazyListScope.renderListByMode(
         }
 
         DisplayMode.LATEST -> {
-            items(items = state.latestRecords, key = { it.bookName }) { record ->
+            items(items = state.latestRecords, key = { "${it.bookName}_${it.bookAuthor}" }) { record ->
                 SwipeActionContainer(
                     modifier = Modifier.animateItem(),
                     startAction = SwipeAction(
@@ -398,14 +471,15 @@ fun LazyListScope.renderListByMode(
                         }
                     )
                 ) {
-                    LatestReadItem(
-                        record = record,
-                        viewModel = viewModel,
-                        onClick = { onBookClick(record.bookName) }
-                    )
+                        LatestReadItem(
+                            record = record,
+                            viewModel = viewModel,
+                            onClick = { onBookClick(record.bookName, record.bookAuthor) },
+                            onMergeClick = { onMergeClick(record) }
+                        )
+                    }
                 }
             }
-        }
     }
 }
 
@@ -414,12 +488,13 @@ fun LatestReadItem(
     record: ReadRecord,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit,
+    onMergeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(record.bookName) {
-        coverPath = viewModel.getBookCover(record.bookName)
+    LaunchedEffect(record.bookName, record.bookAuthor) {
+        coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
     }
 
     Row(
@@ -439,6 +514,13 @@ fun LatestReadItem(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 2
             )
+            Text(
+                text = record.bookAuthor.ifBlank { "未知作者" },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "总时长: ${formatDuring(record.readTime)}",
@@ -451,6 +533,9 @@ fun LatestReadItem(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+        TextButton(onClick = onMergeClick) {
+            Text("合并")
+        }
     }
 }
 
@@ -458,15 +543,15 @@ fun LatestReadItem(
 fun TimelineSessionItem(
     item: TimelineItem,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String) -> Unit
+    onBookClick: (String, String) -> Unit
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
     var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
 
-    LaunchedEffect(session.bookName) {
-        coverPath = viewModel.getBookCover(session.bookName)
-        val title = viewModel.getChapterTitle(session.bookName, session.words)
+    LaunchedEffect(session.bookName, session.bookAuthor) {
+        coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
+        val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
         chapterTitle = title ?: "第 ${session.words} 章"
     }
 
@@ -483,7 +568,7 @@ fun TimelineSessionItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onBookClick(session.bookName) }
+            .clickable { onBookClick(session.bookName, session.bookAuthor) }
             .drawBehind {
                 val x = timelineX.toPx()
                 val h = size.height
@@ -533,6 +618,13 @@ fun TimelineSessionItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
+                        text = session.bookAuthor.ifBlank { "未知作者" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
                         text = chapterTitle.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
@@ -554,8 +646,8 @@ fun ReadRecordItem(
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(detail.bookName) {
-        coverPath = viewModel.getBookCover(detail.bookName)
+    LaunchedEffect(detail.bookName, detail.bookAuthor) {
+        coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
     }
 
     Row(
@@ -574,6 +666,11 @@ fun ReadRecordItem(
                 text = detail.bookName,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 2
+            )
+            Text(
+                text = detail.bookAuthor.ifBlank { "未知作者" },
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -636,14 +733,14 @@ fun ReadingSummaryCard(
     title: String,
     bookCount: Int,
     totalTimeMillis: Long,
-    bookNamesForCover: List<String>,
+    bookNamesForCover: List<Pair<String, String>>,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit
 ) {
 
     val coverPaths by produceState(initialValue = emptyList(), key1 = bookNamesForCover) {
-        value = bookNamesForCover.map { name ->
-            viewModel.getBookCover(name)
+        value = bookNamesForCover.map { (name, author) ->
+            viewModel.getBookCover(name, author)
         }
     }
 
