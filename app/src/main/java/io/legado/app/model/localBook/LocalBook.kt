@@ -23,6 +23,8 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.archiveName
+import io.legado.app.help.book.cacheLocalUri
+import io.legado.app.help.book.canSafelyRebindTo
 import io.legado.app.help.book.getArchiveUri
 import io.legado.app.help.book.getLocalUri
 import io.legado.app.help.book.getRemoteUrl
@@ -37,6 +39,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -501,9 +504,21 @@ object LocalBook {
                     localBook.bookUrl = newBook.bookUrl
                 } else {
                     // txt epub pdf umd
+                    val oldBook = localBook.copy()
                     val fileUri = saveBookFile(it, localBook.originName)
-                    localBook.bookUrl = FileDoc.fromUri(fileUri, false).toString()
-                    localBook.save()
+                    val newBookUrl = FileDoc.fromUri(fileUri, false).toString()
+                    if (!oldBook.canSafelyRebindTo(newBookUrl)) {
+                        localBook.cacheLocalUri(fileUri)
+                        return true
+                    }
+                    localBook.bookUrl = newBookUrl
+                    localBook.origin = BookType.webDavTag + CustomUrl(webDavUrl).toString()
+                    if (oldBook.bookUrl == localBook.bookUrl) {
+                        localBook.save()
+                    } else {
+                        appDb.bookDao.replace(oldBook, localBook)
+                        BookHelp.updateCacheFolder(oldBook, localBook)
+                    }
                 }
             }
             return true
