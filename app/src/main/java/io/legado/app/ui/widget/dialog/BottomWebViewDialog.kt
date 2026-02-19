@@ -262,7 +262,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
             config.isNestedScrollingEnabled?.let { enabled ->
                 webView.isNestedScrollingEnabled = enabled
             } ?: run {
-                webView.isNestedScrollingEnabled = true
+                webView.isNestedScrollingEnabled = false
             }
         }
 
