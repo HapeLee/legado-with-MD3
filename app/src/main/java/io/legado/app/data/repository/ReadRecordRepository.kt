@@ -212,6 +212,7 @@ class ReadRecordRepository(
         }
     }
 
+    @Transaction
     private suspend fun mergeSingleReadRecordInto(targetRecord: ReadRecord, sourceRecord: ReadRecord) {
         if (targetRecord == sourceRecord) return
         if (targetRecord.deviceId != sourceRecord.deviceId) return

@@ -3,6 +3,7 @@ package io.legado.app.ui.book.readRecord
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Merge
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
@@ -36,6 +38,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +61,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
@@ -75,6 +83,7 @@ import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -87,6 +96,9 @@ fun ReadRecordScreen(
     onBackClick: () -> Unit,
     onBookClick: (String, String) -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     val state by viewModel.uiState.collectAsState()
     val displayMode by viewModel.displayMode.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
@@ -96,7 +108,7 @@ fun ReadRecordScreen(
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var mergeTargetRecord by remember { mutableStateOf<ReadRecord?>(null) }
+    var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
     val onConfirmDelete: (() -> Unit) -> Unit = { action ->
         if (skipDeleteConfirm) {
             action()
@@ -113,6 +125,7 @@ fun ReadRecordScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
@@ -228,7 +241,16 @@ fun ReadRecordScreen(
                                 viewModel = viewModel,
                                 onBookClick = onBookClick,
                                 onConfirmDelete = onConfirmDelete,
-                                onMergeClick = { mergeTargetRecord = it }
+                                onMergeClick = { record ->
+                                    scope.launch {
+                                        val candidates = viewModel.getMergeCandidates(record)
+                                        if (candidates.isEmpty()) {
+                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                        } else {
+                                            mergeDialogData = record to candidates
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
@@ -289,49 +311,40 @@ fun ReadRecordScreen(
         )
     }
 
-    mergeTargetRecord?.let { targetRecord ->
-        val candidates by produceState(
-            initialValue = emptyList<ReadRecord>(),
-            key1 = targetRecord.bookName,
-            key2 = targetRecord.bookAuthor
-        ) {
-            value = viewModel.getMergeCandidates(targetRecord)
-        }
-        var selectedAuthors by remember(targetRecord.bookName, targetRecord.bookAuthor, candidates) {
+    mergeDialogData?.let { (targetRecord, candidates) ->
+
+        var selectedAuthors by remember(targetRecord, candidates) {
             mutableStateOf(candidates.map { it.bookAuthor }.toSet())
         }
 
         AlertDialog(
-            onDismissRequest = { mergeTargetRecord = null },
+            onDismissRequest = { mergeDialogData = null },
             title = { Text("合并阅读记录") },
             text = {
-                if (candidates.isEmpty()) {
-                    Text("没有可合并的同名记录")
-                } else {
-                    Column {
-                        Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
-                        Spacer(modifier = Modifier.height(8.dp))
-                        candidates.forEach { candidate ->
-                            val author = candidate.bookAuthor.ifBlank { "未知作者" }
-                            val isChecked = selectedAuthors.contains(candidate.bookAuthor)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        selectedAuthors =
-                                            if (isChecked) selectedAuthors - candidate.bookAuthor
-                                            else selectedAuthors + candidate.bookAuthor
-                                    }
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(checked = isChecked, onCheckedChange = null)
-                                Text(
-                                    text = "$author（${formatDuring(candidate.readTime)}）",
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                Column {
+                    Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    candidates.forEach { candidate ->
+                        val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                        val isChecked = selectedAuthors.contains(candidate.bookAuthor)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedAuthors =
+                                        if (isChecked) selectedAuthors - candidate.bookAuthor
+                                        else selectedAuthors + candidate.bookAuthor
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(checked = isChecked, onCheckedChange = null)
+                            Text(
+                                text = "$author（${formatDuring(candidate.readTime)}）",
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
                 }
@@ -339,20 +352,18 @@ fun ReadRecordScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (candidates.isNotEmpty()) {
-                            viewModel.mergeReadRecords(
-                                targetRecord,
-                                candidates.filter { selectedAuthors.contains(it.bookAuthor) }
-                            )
-                        }
-                        mergeTargetRecord = null
+                        viewModel.mergeReadRecords(
+                            targetRecord,
+                            candidates.filter { selectedAuthors.contains(it.bookAuthor) }
+                        )
+                        mergeDialogData = null
                     }
                 ) {
                     Text("合并")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { mergeTargetRecord = null }) {
+                TextButton(onClick = { mergeDialogData = null }) {
                     Text("取消")
                 }
             }
@@ -409,6 +420,7 @@ fun LazyListScope.renderListByMode(
     onConfirmDelete: (() -> Unit) -> Unit,
     onMergeClick: (ReadRecord) -> Unit
 ) {
+
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
             state.groupedRecords.forEach { (date, details) ->
@@ -469,13 +481,19 @@ fun LazyListScope.renderListByMode(
                         onSwipe = {
                             onConfirmDelete { viewModel.deleteReadRecord(record) }
                         }
+                    ),
+                    endAction = SwipeAction(
+                        icon = Icons.Default.Merge,
+                        background = MaterialTheme.colorScheme.primary,
+                        onSwipe = {
+                            onMergeClick(record)
+                        }
                     )
                 ) {
                         LatestReadItem(
                             record = record,
                             viewModel = viewModel,
-                            onClick = { onBookClick(record.bookName, record.bookAuthor) },
-                            onMergeClick = { onMergeClick(record) }
+                            onClick = { onBookClick(record.bookName, record.bookAuthor) }
                         )
                     }
                 }
@@ -488,7 +506,6 @@ fun LatestReadItem(
     record: ReadRecord,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit,
-    onMergeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
@@ -512,29 +529,37 @@ fun LatestReadItem(
             Text(
                 text = record.bookName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = record.bookAuthor.ifBlank { "未知作者" },
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "总时长: ${formatDuring(record.readTime)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                modifier = Modifier
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        repeatDelayMillis = 2000,
+                        initialDelayMillis = 1000
+                    ),
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.outline)) {
+                        append(formatDuring(record.readTime))
+                        append(" • ")
+                    }
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                        append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Text(
-                text = "最后阅读: ${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        TextButton(onClick = onMergeClick) {
-            Text("合并")
         }
     }
 }
@@ -613,21 +638,21 @@ fun TimelineSessionItem(
                     Text(
                         text = session.bookName,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        minLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = session.bookAuthor.ifBlank { "未知作者" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = chapterTitle.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -665,18 +690,18 @@ fun ReadRecordItem(
             Text(
                 text = detail.bookName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+                maxLines = 1
             )
             Text(
                 text = detail.bookAuthor.ifBlank { "未知作者" },
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.outline,
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "阅读时长: ${formatDuring(detail.readTime)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
