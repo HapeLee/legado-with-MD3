@@ -113,6 +113,7 @@ import API from '@api'
 import { useLoading } from '@/hooks/loading'
 import { useThrottleFn } from '@vueuse/shared'
 import { isNullOrBlank } from '@/utils/utils'
+import '@/utils/xboxGamepad'
 
 const content = ref()
 // loading spinner
