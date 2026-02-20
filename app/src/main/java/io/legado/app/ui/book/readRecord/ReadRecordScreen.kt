@@ -2,6 +2,8 @@ package io.legado.app.ui.book.readRecord
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +46,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -52,9 +56,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,7 +73,6 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.Calendar
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
@@ -72,6 +80,16 @@ import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
+import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
+import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
+import io.legado.app.ui.widget.components.heatmap.HeatmapMode
+import io.legado.app.ui.widget.components.heatmap.HeatmapWeekColumn
+import io.legado.app.ui.widget.components.heatmap.NoEarlierDataIndicator
+import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
+import io.legado.app.ui.widget.components.heatmap.rememberDateRange
+import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
+import io.legado.app.ui.widget.components.heatmap.rememberWeeks
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
@@ -164,19 +182,6 @@ fun ReadRecordScreen(
                     SearchBarSection(
                         query = state.searchKey ?: "",
                         onQueryChange = { viewModel.setSearchKey(it) }
-                    )
-                }
-                AnimatedVisibility(visible = showCalendar) {
-                    CalendarSection(
-                        selectedDate = state.selectedDate,
-                        onDateSelected = { date ->
-                            viewModel.setSelectedDate(date)
-                            showCalendar = false
-                        },
-                        onClearDate = {
-                            viewModel.setSelectedDate(null)
-                            showCalendar = false
-                        }
                     )
                 }
             }
@@ -286,6 +291,30 @@ fun ReadRecordScreen(
             }
         )
     }
+
+    if (showCalendar) {
+        val sheetState =
+            androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { showCalendar = false },
+            sheetState = sheetState
+        ) {
+            HeatmapCalendarSection(
+                dailyReadCounts = state.dailyReadCounts,
+                dailyReadTimes = state.dailyReadTimes,
+                selectedDate = state.selectedDate,
+                onDateSelected = { date ->
+                    viewModel.setSelectedDate(date)
+                    showCalendar = false
+                },
+                onClearDate = {
+                    viewModel.setSelectedDate(null)
+                    showCalendar = false
+                }
+            )
+        }
+    }
+
 }
 
 @Composable
@@ -326,6 +355,139 @@ fun SummarySection(
                 onClick = {  }
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun HeatmapCalendarSection(
+    modifier: Modifier = Modifier,
+    dailyReadCounts: Map<LocalDate, Int>,
+    dailyReadTimes: Map<LocalDate, Long>,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+    onClearDate: () -> Unit,
+    config: HeatmapConfig = HeatmapConfig()
+) {
+    var currentMode by remember { mutableStateOf(HeatmapMode.COUNT) }
+
+    val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
+    val days = rememberDaysInRange(startDate, endDate)
+    val weeks = rememberWeeks(days, startDate)
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(weeks) {
+        if (weeks.isNotEmpty()) {
+            listState.scrollToItem(weeks.size - 1)
+        }
+    }
+
+    val showLeftGradient by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+        }
+    }
+    val showRightGradient by remember {
+        derivedStateOf {
+            listState.canScrollForward
+        }
+    }
+
+    val leftAlpha by animateFloatAsState(
+        targetValue = if (showLeftGradient) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "LeftGradientAlpha"
+    )
+
+    val rightAlpha by animateFloatAsState(
+        targetValue = if (showRightGradient) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "RightGradientAlpha"
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        HeatmapCalendarTopBar(
+            currentMode = currentMode,
+            onModeChanged = { currentMode = it },
+            onClearDate = onClearDate
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            WeekdayLabelsColumn(
+                cellSize = config.cellSize,
+                cellSpacing = config.cellSpacing
+            )
+
+            LazyRow(
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(config.cellSpacing),
+                modifier = Modifier
+                    .weight(1f)
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithContent {
+                        drawContent()
+
+                        val width = size.width
+                        val gradientWidthPx = config.gradientWidth.toPx()
+                        val leftStop = gradientWidthPx / width
+                        val rightStop = 1f - (gradientWidthPx / width)
+
+                        val colorStops = arrayOf(
+                            0f to Color.Black.copy(alpha = 1f - leftAlpha),
+                            leftStop to Color.Black,
+                            rightStop to Color.Black,
+                            1f to Color.Black.copy(alpha = 1f - rightAlpha)
+                        )
+
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colorStops = colorStops,
+                                startX = 0f,
+                                endX = width
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+            ) {
+                val firstReadDate = listOfNotNull(
+                    dailyReadCounts.filterValues { it > 0 }.keys.minOrNull(),
+                    dailyReadTimes.filterValues { it > 0L }.keys.minOrNull()
+                ).minOrNull()
+
+                if (firstReadDate != null) {
+                    item {
+                        NoEarlierDataIndicator(cellSize = config.cellSize)
+                    }
+                }
+
+                items(weeks.size) { weekIndex ->
+                    HeatmapWeekColumn(
+                        week = weeks[weekIndex],
+                        mode = currentMode,
+                        dailyReadCounts = dailyReadCounts,
+                        dailyReadTimes = dailyReadTimes,
+                        selectedDate = selectedDate,
+                        config = config,
+                        onDateSelected = onDateSelected
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        HeatmapLegend(
+            mode = currentMode,
+            config = config
+        )
     }
 }
 
@@ -612,22 +774,6 @@ fun DateHeader(
         },
         detailContent = null,
         horizontalArrangement = Arrangement.Start
-    )
-}
-
-@Composable
-fun CalendarSection(
-    selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
-    onClearDate: () -> Unit
-) {
-    val effectiveInitialDate = selectedDate ?: LocalDate.now()
-    Calendar(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        initialDate = effectiveInitialDate,
-        selectedDate = selectedDate,
-        onDateSelected = onDateSelected,
-        onClearDate = onClearDate
     )
 }
 

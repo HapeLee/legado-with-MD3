@@ -55,23 +55,6 @@ data class BookmarkUiState(
     val collapsedGroups: Set<String> = emptySet()
 )
 
-sealed interface BookmarkListItem {
-    val key: String
-
-    data class Header(
-        val header: BookmarkGroupHeader,
-        val collapsed: Boolean
-    ) : BookmarkListItem {
-        override val key = "header:${header.bookName}|${header.bookAuthor}"
-    }
-
-    data class Item(
-        val data: BookmarkItemUi
-    ) : BookmarkListItem {
-        override val key = "item:${data.id}"
-    }
-}
-
 
 class AllBookmarkViewModel(
     application: Application,
