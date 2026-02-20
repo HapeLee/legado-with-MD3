@@ -177,7 +177,7 @@ object Restore {
                     appDb.readRecordDao.insert(readRecord)
                 } else {
                     val time = appDb.readRecordDao
-                        .getReadTime(readRecord.deviceId, readRecord.bookName)
+                        .getReadTime(readRecord.deviceId, readRecord.bookName, readRecord.bookAuthor)
                     if (time == null || time < readRecord.readTime) {
                         appDb.readRecordDao.insert(readRecord)
                     }

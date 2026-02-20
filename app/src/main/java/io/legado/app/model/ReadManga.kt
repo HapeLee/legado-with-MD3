@@ -90,7 +90,8 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     fun resetData(book: Book) {
         ReadManga.book = book
         readRecord.bookName = book.name
-        readRecord.readTime = appDb.readRecordDao.getReadTime(book.name) ?: 0
+        readRecord.bookAuthor = book.author
+        readRecord.readTime = appDb.readRecordDao.getReadTime("", book.name, book.author) ?: 0
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
@@ -147,7 +148,10 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
 
     fun initReadTime() {
         val currentBookName = book?.name ?: return
-        if (currentActiveSession != null && currentActiveSession!!.bookName != currentBookName) {
+        val currentBookAuthor = book?.author ?: ""
+        if (currentActiveSession != null &&
+            (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
+        ) {
             commitReadSession()
         }
 
@@ -156,6 +160,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
             currentActiveSession = ReadRecordSession(
                 deviceId = "",
                 bookName = currentBookName,
+                bookAuthor = currentBookAuthor,
                 startTime = readStartTime,
                 endTime = readStartTime,
                 words = durChapterIndex.toLong()
@@ -166,9 +171,13 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     fun upReadTime() {
         val currentLength = currentReadLength
         val currentBookName = book?.name ?: return
+        val currentBookAuthor = book?.author ?: ""
         val endTime = System.currentTimeMillis()
 
-        if (currentActiveSession == null || currentActiveSession!!.bookName != currentBookName) {
+        if (currentActiveSession == null ||
+            currentActiveSession!!.bookName != currentBookName ||
+            currentActiveSession!!.bookAuthor != currentBookAuthor
+        ) {
             initReadTime()
             return
         }
