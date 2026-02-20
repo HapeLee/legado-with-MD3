@@ -23,6 +23,8 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.archiveName
+import io.legado.app.help.book.cacheLocalUri
+import io.legado.app.help.book.canSafelyRebindTo
 import io.legado.app.help.book.getArchiveUri
 import io.legado.app.help.book.getLocalUri
 import io.legado.app.help.book.getRemoteUrl
@@ -37,6 +39,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -50,6 +53,7 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.printOnDebug
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.text.StringEscapeUtils
 import splitties.init.appCtx
@@ -60,7 +64,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.regex.Pattern
-import kotlin.coroutines.coroutineContext
 
 /**
  * 书籍文件导入 目录正文解析
@@ -403,7 +406,7 @@ object LocalBook {
         val inputStream = when {
             str.isAbsUrl() -> AnalyzeUrl(
                 str, source = source, callTimeout = 0,
-                coroutineContext = coroutineContext
+                coroutineContext = currentCoroutineContext()
             ).getInputStreamAwait()
 
             str.isDataUrl() -> ByteArrayInputStream(
@@ -458,7 +461,7 @@ object LocalBook {
     fun isOnBookShelf(
         fileName: String
     ): Boolean {
-        return appDb.bookDao.hasFile(fileName) == true
+        return appDb.bookDao.hasFile(fileName)
     }
 
     //文件类书源 合并在线书籍信息 在线 > 本地
@@ -501,9 +504,31 @@ object LocalBook {
                     localBook.bookUrl = newBook.bookUrl
                 } else {
                     // txt epub pdf umd
+                    val oldBook = localBook.copy()
                     val fileUri = saveBookFile(it, localBook.originName)
-                    localBook.bookUrl = FileDoc.fromUri(fileUri, false).toString()
-                    localBook.save()
+                    val newBookUrl = FileDoc.fromUri(fileUri, false).toString()
+                    if (!oldBook.canSafelyRebindTo(newBookUrl)) {
+                        localBook.cacheLocalUri(fileUri)
+                        return true
+                    }
+
+                    appDb.runInTransaction {
+                        if (oldBook.bookUrl == newBookUrl) {
+                            localBook.origin =
+                                BookType.webDavTag + CustomUrl(webDavUrl).toString()
+
+                            localBook.save()
+                        } else {
+                            val newBook = oldBook.copy(
+                                bookUrl = newBookUrl,
+                                origin = BookType.webDavTag + CustomUrl(webDavUrl).toString()
+                            )
+                            appDb.bookDao.replace(oldBook, newBook)
+                            BookHelp.updateCacheFolder(oldBook, newBook)
+                            localBook.bookUrl = newBookUrl
+                            localBook.origin = newBook.origin
+                        }
+                    }
                 }
             }
             return true

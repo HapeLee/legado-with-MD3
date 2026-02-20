@@ -121,6 +121,29 @@ fun Book.contains(word: String?): Boolean {
             || intro?.contains(word) == true
 }
 
+/**
+ * 仅在目标bookUrl未被其他书占用，或判定为同一本书时，允许迁移主键。
+ */
+fun Book.canSafelyRebindTo(newBookUrl: String): Boolean {
+    if (newBookUrl == bookUrl) return true
+    val targetBook = appDb.bookDao.getBook(newBookUrl) ?: return true
+
+    val sameOriginName = originName.isNotBlank() && originName == targetBook.originName
+    val sameNameAuthor = name.isNotBlank() && author.isNotBlank()
+            && name == targetBook.name && author == targetBook.author
+    val sameOrigin = origin.isNotBlank() && origin == targetBook.origin
+    val canMerge = sameOriginName && (sameNameAuthor || sameOrigin)
+    if (!canMerge) {
+        AppLog.put(
+            "书籍重定位冲突，已跳过迁移\n" +
+                    "old=$bookUrl\nnew=$newBookUrl\n" +
+                    "oldName=$name oldAuthor=$author oldOriginName=$originName\n" +
+                    "targetName=${targetBook.name} targetAuthor=${targetBook.author} targetOriginName=${targetBook.originName}"
+        )
+    }
+    return canMerge
+}
+
 private val localUriCache by lazy {
     ConcurrentHashMap<String, Uri>()
 }
@@ -150,17 +173,31 @@ fun Book.getLocalUri(): Uri {
 
     // 查找书籍保存目录
     if (!defaultBookDir.isNullOrBlank()) {
-        val treeUri = Uri.parse(defaultBookDir)
+        val treeUri = defaultBookDir.toUri()
         val treeFileDoc = FileDoc.fromUri(treeUri, true)
+
         if (!treeFileDoc.exists()) {
             appCtx.toastOnUi("书籍保存目录失效，请重新设置！")
         } else {
             val fileDoc = treeFileDoc.find(originName, 5, 100)
             if (fileDoc != null) {
-                localUriCache[bookUrl] = fileDoc.uri
-                //更新bookUrl 重启不用再找一遍
-                bookUrl = fileDoc.toString()
-                save()
+                val newBookUrl = fileDoc.toString()
+                val oldBook = copy()
+                if (!oldBook.canSafelyRebindTo(newBookUrl)) {
+                    return fileDoc.uri
+                }
+                appDb.runInTransaction {
+
+                    if (oldBook.bookUrl == newBookUrl) {
+                        save()
+                    } else {
+                        val newBook = oldBook.copy(bookUrl = newBookUrl)
+                        appDb.bookDao.replace(oldBook, newBook)
+                        BookHelp.updateCacheFolder(oldBook, newBook)
+                        this.bookUrl = newBookUrl
+                    }
+                }
+                localUriCache[newBookUrl] = fileDoc.uri
                 return fileDoc.uri
             }
         }
@@ -176,9 +213,23 @@ fun Book.getLocalUri(): Uri {
         val treeFileDoc = FileDoc.fromUri(treeUri, true)
         val fileDoc = treeFileDoc.find(originName, 5, 100)
         if (fileDoc != null) {
-            localUriCache[bookUrl] = fileDoc.uri
-            bookUrl = fileDoc.toString()
-            save()
+            val newBookUrl = fileDoc.toString()
+            val oldBook = copy()
+            if (!oldBook.canSafelyRebindTo(newBookUrl)) {
+                return fileDoc.uri
+            }
+
+            appDb.runInTransaction {
+                if (oldBook.bookUrl == newBookUrl) {
+                    save()
+                } else {
+                    val newBook = oldBook.copy(bookUrl = newBookUrl)
+                    appDb.bookDao.replace(oldBook, newBook)
+                    BookHelp.updateCacheFolder(oldBook, newBook)
+                    this.bookUrl = newBookUrl
+                }
+            }
+            localUriCache[newBookUrl] = fileDoc.uri
             return fileDoc.uri
         }
     }

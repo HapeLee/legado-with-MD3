@@ -11,15 +11,15 @@ class BookRepository(
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao
 ) {
-    suspend fun getBookCoverByName(bookName: String): String? {
+    suspend fun getBookCoverByNameAndAuthor(bookName: String, bookAuthor: String): String? {
         return withContext(Dispatchers.IO) {
-            bookDao.findByName(bookName).firstOrNull()?.getDisplayCover()
+            bookDao.getBook(bookName, bookAuthor)?.getDisplayCover()
         }
     }
 
-    suspend fun getChapterTitle(bookName: String, chapterIndex: Int): String? {
+    suspend fun getChapterTitle(bookName: String, bookAuthor: String, chapterIndex: Int): String? {
         return withContext(Dispatchers.IO) {
-            val book = bookDao.findByName(bookName).firstOrNull()
+            val book = bookDao.getBook(bookName, bookAuthor)
             val bookUrl = book?.bookUrl
             if (bookUrl.isNullOrEmpty()) return@withContext null
 
