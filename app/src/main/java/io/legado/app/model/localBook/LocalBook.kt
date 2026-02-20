@@ -53,6 +53,7 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.printOnDebug
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.text.StringEscapeUtils
 import splitties.init.appCtx
@@ -63,7 +64,6 @@ import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.regex.Pattern
-import kotlin.coroutines.coroutineContext
 
 /**
  * 书籍文件导入 目录正文解析
@@ -406,7 +406,7 @@ object LocalBook {
         val inputStream = when {
             str.isAbsUrl() -> AnalyzeUrl(
                 str, source = source, callTimeout = 0,
-                coroutineContext = coroutineContext
+                coroutineContext = currentCoroutineContext()
             ).getInputStreamAwait()
 
             str.isDataUrl() -> ByteArrayInputStream(
@@ -461,7 +461,7 @@ object LocalBook {
     fun isOnBookShelf(
         fileName: String
     ): Boolean {
-        return appDb.bookDao.hasFile(fileName) == true
+        return appDb.bookDao.hasFile(fileName)
     }
 
     //文件类书源 合并在线书籍信息 在线 > 本地
@@ -511,13 +511,23 @@ object LocalBook {
                         localBook.cacheLocalUri(fileUri)
                         return true
                     }
-                    localBook.bookUrl = newBookUrl
-                    localBook.origin = BookType.webDavTag + CustomUrl(webDavUrl).toString()
-                    if (oldBook.bookUrl == localBook.bookUrl) {
-                        localBook.save()
-                    } else {
-                        appDb.bookDao.replace(oldBook, localBook)
-                        BookHelp.updateCacheFolder(oldBook, localBook)
+
+                    appDb.runInTransaction {
+                        if (oldBook.bookUrl == newBookUrl) {
+                            localBook.origin =
+                                BookType.webDavTag + CustomUrl(webDavUrl).toString()
+
+                            localBook.save()
+                        } else {
+                            val newBook = oldBook.copy(
+                                bookUrl = newBookUrl,
+                                origin = BookType.webDavTag + CustomUrl(webDavUrl).toString()
+                            )
+                            appDb.bookDao.replace(oldBook, newBook)
+                            BookHelp.updateCacheFolder(oldBook, newBook)
+                            localBook.bookUrl = newBookUrl
+                            localBook.origin = newBook.origin
+                        }
                     }
                 }
             }
