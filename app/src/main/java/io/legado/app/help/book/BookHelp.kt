@@ -189,7 +189,7 @@ object BookHelp {
         if (book.isOnLineTxt && AppConfig.tocCountWords) {
             val wordCount = StringUtils.wordCountFormat(content.length)
             bookChapter.wordCount = wordCount
-            appDb.bookChapterDao.upWordCount(bookChapter.bookUrl, bookChapter.url, wordCount)
+            appDb.bookChapterDao.update(bookChapter)
         }
     }
 

@@ -52,14 +52,14 @@ object CacheBook {
     val downloadSummaryFlow = _downloadSummaryFlow.asStateFlow()
 
     private val _downloadingIndicesFlow =
-        MutableSharedFlow<Pair<String, Set<Int>>>(extraBufferCapacity = 64)
+        MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
 
-    val downloadingIndicesFlow = _downloadingIndicesFlow.asSharedFlow()
+    val downloadingIndicesFlow = _downloadingIndicesFlow.asStateFlow()
 
     private val _downloadErrorFlow =
-        MutableSharedFlow<Pair<String, Set<Int>>>(extraBufferCapacity = 64)
+        MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
 
-    val downloadErrorFlow = _downloadErrorFlow.asSharedFlow()
+    val downloadErrorFlow = _downloadErrorFlow.asStateFlow()
 
     private fun updateSummary() {
         _downloadSummaryFlow.value = downloadSummary

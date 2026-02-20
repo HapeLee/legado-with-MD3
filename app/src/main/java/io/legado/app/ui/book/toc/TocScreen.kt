@@ -17,6 +17,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -48,17 +49,15 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
+import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
@@ -82,6 +81,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -90,15 +90,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -106,7 +107,7 @@ import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
-import io.legado.app.ui.widget.components.lazylist.Scroller
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import kotlinx.coroutines.launch
@@ -119,12 +120,12 @@ import java.util.Locale
 @Composable
 fun TocScreen(
     viewModel: TocViewModel = koinViewModel(),
-    bookUrl: String?,
     onBackClick: () -> Unit,
     onChapterClick: (Int) -> Unit,
     onOpenReplaceRule: (ReplaceEditRoute?) -> Unit,
     onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
 ) {
+
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val book by viewModel.bookState.collectAsStateWithLifecycle()
@@ -132,11 +133,17 @@ fun TocScreen(
 
     val pagerState = rememberPagerState { 2 }
     val scope = rememberCoroutineScope()
+
     val listState = rememberLazyListState()
+    val offset by remember {
+        derivedStateOf {
+            listState.layoutInfo.viewportEndOffset / 4
+        }
+    }
 
     val isSelectionMode = state.selectedIds.isNotEmpty()
 
-    val hasVolumes = remember(state.items) { state.items.any { it.chapter.isVolume } }
+    val hasVolumes = remember(state.items) { state.items.any { it.isVolume } }
     var showVolumeMenu by remember { mutableStateOf(false) }
 
     var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
@@ -156,59 +163,31 @@ fun TocScreen(
     }
 
     val isOnTocPage = pagerState.currentPage == 0
-    var isFabVisible by rememberSaveable { mutableStateOf(true) }
 
-    LaunchedEffect(listState, isOnTocPage, isSelectionMode) {
-
-        if (!isOnTocPage || isSelectionMode) {
-            isFabVisible = false
-            return@LaunchedEffect
-        }
-
-        var previousIndex = listState.firstVisibleItemIndex
-        var previousOffset = listState.firstVisibleItemScrollOffset
-
-        snapshotFlow {
-            listState.firstVisibleItemIndex to
-                    listState.firstVisibleItemScrollOffset
-        }
-            .collect { (index, offset) ->
-
-                val scrollingDown =
-                    index > previousIndex ||
-                            (index == previousIndex && offset > previousOffset)
-
-                val scrollingUp =
-                    index < previousIndex ||
-                            (index == previousIndex && offset < previousOffset)
-
-                when {
-                    scrollingDown -> isFabVisible = false
-                    scrollingUp -> isFabVisible = true
+    val fabItems = remember(state.items) {
+        listOf(
+            FabAction(Icons.Default.LocationOn, "定位至当前阅读") {
+                scope.launch {
+                    val target = state.items.indexOfFirst { it.isDur }
+                    if (target != -1) {
+                        listState.animateScrollToItem(
+                            index = target,
+                            scrollOffset = -offset
+                        )
+                    }
                 }
-
-                previousIndex = index
-                previousOffset = offset
+            },
+            FabAction(Icons.Default.VerticalAlignTop, "移至顶部") {
+                scope.launch { listState.animateScrollToItem(0) }
+            },
+            FabAction(Icons.Default.VerticalAlignBottom, "移至底部") {
+                scope.launch { listState.animateScrollToItem(state.items.size) }
+            },
+            FabAction(Icons.Default.DownloadForOffline, "下载全部") {
+                viewModel.downloadAll()
             }
+        )
     }
-
-    val fabItems = listOf(
-        Triple(Icons.Default.LocationOn, "定位至当前阅读") {
-            scope.launch {
-                val target = state.items.indexOfFirst { it.chapter.index == book?.durChapterIndex }
-                if (target != -1) listState.animateScrollToItem(target)
-            }
-        },
-        Triple(Icons.Default.VerticalAlignTop, "移至顶部") {
-            scope.launch { listState.animateScrollToItem(0) }
-        },
-        Triple(Icons.Default.VerticalAlignBottom, "移至底部") {
-            scope.launch { listState.animateScrollToItem(state.items.size) }
-        },
-        Triple(Icons.Default.DownloadForOffline, "下载全部") {
-            viewModel.downloadAll()
-        }
-    )
 
     val selectionSecondaryActions = remember(state.selectedIds) {
         listOf(
@@ -248,14 +227,50 @@ fun TocScreen(
         }
     }
 
-    LaunchedEffect(isFabVisible) {
-        if (!isFabVisible && fabMenuExpanded) {
-            fabMenuExpanded = false
+    var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(state.items) {
+        if (!hasAutoScrolled && state.items.isNotEmpty()) {
+            val targetIndex = state.items.indexOfFirst { it.isDur }
+            if (targetIndex != -1) {
+                listState.scrollToItem(
+                    index = targetIndex,
+                    scrollOffset = -offset
+                )
+                hasAutoScrolled = true
+            }
         }
     }
 
-    LaunchedEffect(bookUrl) {
-        bookUrl?.let { viewModel.initBook(it) }
+    var isFabVisible by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(listState) {
+        var previousIndex = listState.firstVisibleItemIndex
+        var previousOffset = listState.firstVisibleItemScrollOffset
+
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                val scrollingDown =
+                    index > previousIndex || (index == previousIndex && offset > previousOffset)
+                val scrollingUp =
+                    index < previousIndex || (index == previousIndex && offset < previousOffset)
+
+                when {
+                    scrollingDown -> isFabVisible = false
+                    scrollingUp -> isFabVisible = true
+                }
+
+                previousIndex = index
+                previousOffset = offset
+            }
+    }
+
+    val shouldShowFab = isOnTocPage && !isSelectionMode && isFabVisible
+
+    LaunchedEffect(shouldShowFab) {
+        if (!shouldShowFab) {
+            fabMenuExpanded = false
+        }
     }
 
     BackHandler(enabled = isSelectionMode) {
@@ -425,51 +440,37 @@ fun TocScreen(
                                     icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                                     contentDescription = "卷管理"
                                 )
-                                DropdownMenu(
+                                RoundDropdownMenu(
                                     expanded = showVolumeMenu,
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
-                                    DropdownMenuItem(
-                                        text = { Text("展开所有卷") },
+                                    RoundDropdownMenuItem(
+                                        text = "展开所有卷",
                                         onClick = {
                                             viewModel.expandAllVolumes(); showVolumeMenu = false
                                         }
                                     )
-                                    DropdownMenuItem(
-                                        text = { Text("收起所有卷") },
+                                    RoundDropdownMenuItem(
+                                        text = "收起所有卷",
                                         onClick = {
                                             viewModel.collapseAllVolumes(); showVolumeMenu = false
                                         }
                                     )
-                                    HorizontalDivider()
-                                    val volumeItems = state.items.filter { it.chapter.isVolume }
+
+                                    val volumeItems =
+                                        remember(state.items) { state.items.filter { it.isVolume } }
                                     if (volumeItems.isNotEmpty()) {
-                                        Text(
-                                            "快速跳转",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(
-                                                horizontal = 12.dp,
-                                                vertical = 8.dp
-                                            ),
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
+                                        PillHeaderDivider(title = "快速跳转")
                                         volumeItems.forEach { uiItem ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        uiItem.displayTitle,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                },
+                                            RoundDropdownMenuItem(
+                                                text = uiItem.title,
                                                 onClick = {
                                                     scope.launch {
                                                         val targetIndex =
-                                                            state.items.indexOfFirst { it.chapter.index == uiItem.chapter.index }
-
+                                                            state.items.indexOf(uiItem)
                                                         if (targetIndex != -1) {
                                                             listState.animateScrollToItem(
-                                                                targetIndex
+                                                                index = targetIndex
                                                             )
                                                         }
                                                     }
@@ -494,7 +495,7 @@ fun TocScreen(
                     ToggleFloatingActionButton(
                         modifier = Modifier
                             .animateFloatingActionButton(
-                                visible = isFabVisible,
+                                visible = shouldShowFab,
                                 alignment = Alignment.BottomEnd,
                             )
                             .focusRequester(focusRequester),
@@ -562,8 +563,8 @@ fun TocScreen(
 
                         1 -> BookmarkListContent(
                             viewModel = viewModel,
-                            onBookmarkClick = onBookmarkClick,
-                            onBookmarkLongClick = { bookmark ->
+                            onBookmarkLongClick = onBookmarkClick,
+                            onBookmarkClick = { bookmark ->
                                 editingBookmark = bookmark
                             },
                             contentPadding = PaddingValues(bottom = if (isSelectionMode) 80.dp else 0.dp)
@@ -599,7 +600,6 @@ fun ChapterListContent(
     contentPadding: PaddingValues
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val book by viewModel.bookState.collectAsStateWithLifecycle()
     val collapsedVolumes by viewModel.collapsedVolumes.collectAsStateWithLifecycle()
 
     FastScrollLazyColumn(
@@ -607,124 +607,78 @@ fun ChapterListContent(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding
     ) {
-        state.items.forEach { uiItem ->
-            val chapter = uiItem.chapter
 
-            if (chapter.isVolume) {
-                stickyHeader(key = "${Scroller.STICKY_HEADER_KEY_PREFIX}${chapter.index}") {
+        state.items.forEach { uiItem ->
+
+            if (uiItem.isVolume) {
+
+                stickyHeader(key = "volume-${uiItem.id}") {
                     CollapsibleHeader(
                         modifier = Modifier.animateItem(),
-                        title = uiItem.displayTitle,
-                        isCollapsed = collapsedVolumes.contains(chapter.title),
-                        onToggle = { viewModel.toggleVolume(chapter.title) }
+                        title = uiItem.title,
+                        isCollapsed = collapsedVolumes.contains(uiItem.id),
+                        onToggle = { viewModel.toggleVolume(uiItem.id) }
                     )
                 }
+
             } else {
-                item(key = chapter.index) {
 
-                    val isSelected = state.selectedIds.contains(chapter.index)
-
-                    val downloadState = when {
-                        chapter.index in state.downloadingIndices -> DownloadState.DOWNLOADING
-                        chapter.index in state.errorIndices -> DownloadState.ERROR
-                        chapter.getFileName() in state.cachedFiles -> DownloadState.SUCCESS
-                        else -> DownloadState.NONE
-                    }
-
+                item(key = uiItem.id) {
                     ChapterItem(
                         modifier = Modifier
                             .animateItem()
                             .fillMaxWidth(),
-                        title = uiItem.displayTitle,
-                        chapter = chapter,
-                        isDur = book?.durChapterIndex == chapter.index,
-                        isSelected = isSelected,
-                        downloadState = downloadState,
+                        item = uiItem,
                         showWordCount = viewModel.showWordCount,
                         onClick = {
                             if (state.selectedIds.isNotEmpty())
-                                viewModel.toggleSelection(chapter.index)
+                                viewModel.toggleSelection(uiItem.id)
                             else
-                                onChapterClick(chapter.index)
+                                onChapterClick(uiItem.id)
                         },
                         onLongClick = {
-                            viewModel.toggleSelection(chapter.index)
+                            viewModel.toggleSelection(uiItem.id)
+                        },
+                        onDownloadClick = {
+                            viewModel.downloadChapter(uiItem.id)
                         }
                     )
-
-                    /*SwipeActionContainer(
-                        modifier = Modifier
-                            .animateItem()
-                            .fillMaxWidth(),
-                        startAction = SwipeAction(
-                            icon = Icons.Default.Download,
-                            background = MaterialTheme.colorScheme.secondary,
-                            hapticFeedback = true,
-                            onSwipe = {
-                                viewModel.downloadChapter(chapter.index)
-                            }
-                        )
-                    ) {
-                        ChapterItem(
-                            modifier = Modifier
-                                .animateItem()
-                                .fillMaxWidth(),
-                            title = uiItem.displayTitle,
-                            chapter = chapter,
-                            isDur = book?.durChapterIndex == chapter.index,
-                            isSelected = isSelected,
-                            downloadState = downloadState,
-                            showWordCount = viewModel.showWordCount,
-                            onClick = {
-                                if (state.selectedIds.isNotEmpty())
-                                    viewModel.toggleSelection(chapter.index)
-                                else
-                                    onChapterClick(chapter.index)
-                            },
-                            onLongClick = {
-                                viewModel.toggleSelection(chapter.index)
-                            }
-                        )
-                    }*/
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ChapterItem(
     modifier: Modifier = Modifier,
-    title: String,
-    chapter: BookChapter,
-    isDur: Boolean,
-    isSelected: Boolean,
-    downloadState: DownloadState,
+    item: TocItemUi,
     showWordCount: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onDownloadClick: () -> Unit
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-            isDur -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            item.isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            item.isDur -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
             else -> Color.Transparent
         }, label = "BgColor"
     )
 
     val textColor by animateColorAsState(
         targetValue = when {
-            isSelected -> MaterialTheme.colorScheme.onSurface
-            isDur -> MaterialTheme.colorScheme.primary
+            item.isSelected -> MaterialTheme.colorScheme.onSurface
+            item.isDur -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.onSurface
         }, label = "BgColor"
     )
 
     val detailColor by animateColorAsState(
         targetValue = when {
-            isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
-            isDur -> MaterialTheme.colorScheme.primary
+            item.isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
+            item.isDur -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.onSurfaceVariant
         }, label = "BgColor"
     )
@@ -740,12 +694,12 @@ fun ChapterItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (chapter.isVip && !chapter.isPay) {
+                    if (item.isVip && !item.isPay) {
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
@@ -757,7 +711,7 @@ fun ChapterItem(
                     }
 
                     Text(
-                        text = title,
+                        text = item.title,
                         style = MaterialTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
                         maxLines = 1,
@@ -765,28 +719,40 @@ fun ChapterItem(
                     )
                 }
 
-                if (!chapter.tag.isNullOrEmpty()) {
+                if (!item.tag.isNullOrEmpty()) {
                     Text(
-                        text = chapter.tag!!,
+                        text = item.tag,
                         style = MaterialTheme.typography.labelSmallEmphasized,
                         color = detailColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
 
-                if (showWordCount && !chapter.wordCount.isNullOrEmpty()) {
-                    Text(
-                        text = "字数：${chapter.wordCount}",
-                        style = MaterialTheme.typography.labelSmallEmphasized,
-                        color = detailColor.copy(alpha = 0.6f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+            if (item.downloadState != DownloadState.LOCAL) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .wrapContentSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .combinedClickable(
+                            onClick = {
+                                if (item.downloadState == DownloadState.NONE) {
+                                    onDownloadClick()
+                                }
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    StatusIcon(
+                        isDur = item.isDur,
+                        downloadState = item.downloadState,
+                        wordCount = item.wordCount,
+                        showWordCount = showWordCount
                     )
                 }
             }
-
-            StatusIcon(isDur = isDur, downloadState = downloadState)
         }
     }
 }
@@ -795,11 +761,11 @@ fun ChapterItem(
 @Composable
 fun BookmarkListContent(
     viewModel: TocViewModel,
-    onBookmarkClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
-    onBookmarkLongClick: (Bookmark) -> Unit,
+    onBookmarkLongClick: (chapterIndex: Int, chapterPos: Int) -> Unit,
+    onBookmarkClick: (Bookmark) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val bookmarks by viewModel.bookmarks.collectAsStateWithLifecycle()
+    val bookmarks by viewModel.bookmarkUiList.collectAsStateWithLifecycle()
     val book by viewModel.bookState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
@@ -820,30 +786,31 @@ fun BookmarkListContent(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "暂无书签",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge
+            EmptyMessageView(
+                message = "暂无书签"
             )
         }
     } else {
-        LazyColumn(
+        FastScrollLazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding
         ) {
             items(
                 items = bookmarks,
-                key = { it.time }
+                key = { it.id }
             ) { bookmark ->
                 BookmarkItem(
-                    bookmark = bookmark,
+                    bookmark = bookmark.raw,
+                    modifier = Modifier
+                        .animateItem()
+                        .fillMaxWidth(),
                     isDur = book?.durChapterIndex == bookmark.chapterIndex,
                     onClick = {
-                        onBookmarkClick(bookmark.chapterIndex, bookmark.chapterPos)
+                        onBookmarkClick(bookmark.raw)
                     },
                     onLongClick = {
-                        onBookmarkLongClick(bookmark)
+                        onBookmarkLongClick(bookmark.chapterIndex, bookmark.chapterPos)
                     }
                 )
             }
@@ -854,12 +821,16 @@ fun BookmarkListContent(
 @Composable
 private fun StatusIcon(
     isDur: Boolean,
-    downloadState: DownloadState
+    downloadState: DownloadState,
+    wordCount: String?,
+    showWordCount: Boolean
 ) {
+
     val targetState = when {
         isDur -> "DUR"
         downloadState == DownloadState.DOWNLOADING -> "LOADING"
-        downloadState == DownloadState.SUCCESS -> "SUCCESS"
+        downloadState == DownloadState.SUCCESS && showWordCount && !wordCount.isNullOrEmpty() -> "SUCCESS_WORD_COUNT"
+        downloadState == DownloadState.SUCCESS -> "SUCCESS_ICON"
         downloadState == DownloadState.ERROR -> "ERROR"
         else -> "NONE"
     }
@@ -892,7 +863,28 @@ private fun StatusIcon(
                 )
             }
 
-            "SUCCESS" -> {
+            "SUCCESS_WORD_COUNT" -> {
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    color = Color.Transparent
+                ) {
+                    if (wordCount != null) {
+                        Text(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            text = wordCount,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            "SUCCESS_ICON" -> {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
@@ -911,7 +903,12 @@ private fun StatusIcon(
             }
 
             else -> {
-
+                Icon(
+                    imageVector = Icons.Outlined.DownloadForOffline,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
             }
         }
     }

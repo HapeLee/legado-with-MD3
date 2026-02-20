@@ -4,5 +4,6 @@ enum class DownloadState {
     NONE,
     DOWNLOADING,
     SUCCESS,
-    ERROR
+    ERROR,
+    LOCAL
 }
