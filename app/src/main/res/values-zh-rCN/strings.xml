@@ -1248,6 +1248,8 @@
     <string name="clear_all">清除所有</string>
     <string name="welcome_title">欢迎！</string>
     <string name="first_read">请先阅读应用的服务条款与用户协议。</string>
+    <string name="welcome_book_folder_tip">设置本地书籍保存目录，后续也可在设置中修改。</string>
+    <string name="welcome_book_folder_not_selected">未选择文件夹</string>
     <string name="config_btn">配置底部按钮</string>
     <string name="compact_grid">紧凑网格</string>
     <string name="cover_grid">封面网格</string>

@@ -1251,6 +1251,8 @@
     <string name="clear_all">Clear All</string>
     <string name="welcome_title">Welcome!</string>
     <string name="first_read">Please read the Terms of Service and User Agreement first.</string>
+    <string name="welcome_book_folder_tip">Set where local books are stored. You can change it later in Settings.</string>
+    <string name="welcome_book_folder_not_selected">No folder selected</string>
     <string name="config_btn">Configure Bottom Buttons</string>
     <string name="compact_grid">Compact Grid</string>
     <string name="cover_grid">Cover Grid</string>
