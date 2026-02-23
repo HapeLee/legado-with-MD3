@@ -69,7 +69,6 @@ import API from '@api'
 import { CircleCheckFilled, Edit } from '@element-plus/icons-vue'
 import hotkeys from 'hotkeys-js'
 import { getSourceName, isInvaildSource, normalizeSource } from '../utils/souce'
-import { getSourceName, isInvaildSource } from '../utils/souce'
 
 const store = useSourceStore()
 const pull = () => {
