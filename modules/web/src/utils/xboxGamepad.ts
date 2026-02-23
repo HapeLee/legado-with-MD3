@@ -32,7 +32,7 @@ interface GlobalState {
 // =====================================================
 
 const CONFIG: GamepadConfig = {
-  DEBUG: true,              // 日志总开关
+  DEBUG: false,              // 日志总开关
   AXIS_THRESHOLD: 0.7,      // 摇杆触发阈值
   AXIS_COOLDOWN: 200,       // 摇杆触发冷却时间 (ms)
   DPAD_INDEX: {             // Xbox 标准映射
