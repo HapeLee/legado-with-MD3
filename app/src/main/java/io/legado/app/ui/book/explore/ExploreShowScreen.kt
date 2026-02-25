@@ -42,17 +42,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Grid4x4
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FilterAlt
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -61,7 +57,9 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -82,28 +80,34 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
+import io.legado.app.ui.theme.responsiveHazeEffect
+import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedTextButton
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopBarActionButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun ExploreShowScreen(
     title: String,
@@ -133,6 +137,10 @@ fun ExploreShowScreen(
     val isGridMode = layoutState == 1
     var showGridCountSheet by remember { mutableStateOf(false) }
     val gridColumnCount by viewModel.gridCount.collectAsState()
+
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
+
     val hazeState = remember { HazeState() }
     val shouldLoadMoreList = remember {
         derivedStateOf {
@@ -149,6 +157,7 @@ fun ExploreShowScreen(
             total > 0 && last >= total - 1
         }
     }
+    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(shouldLoadMoreList.value, isGridMode) {
         if (!isGridMode && shouldLoadMoreList.value) viewModel.loadMore()
@@ -298,30 +307,130 @@ fun ExploreShowScreen(
 
     Scaffold(
         modifier = Modifier
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-            .hazeSource(hazeState),
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            ExploreTopBar(
-                modifier = Modifier.hazeEffect(hazeState) {
-                    progressive =
-                        HazeProgressive.verticalGradient(startIntensity = 1f, endIntensity = 0f)
+            GlassMediumFlexibleTopAppBar(
+                modifier = Modifier.responsiveHazeEffect(
+                    state = hazeState
+                ),
+                title = {
+                    AnimatedTextLine(
+                        selectedTitle ?: title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 },
-                title = selectedTitle ?: title,
-                filterState = filterState,
-                onBack = onBack,
-                onFilterSelect = viewModel::setFilterState,
-                onSelectKindClick = { showKindSheet = true },
-                onToggleGridMode = { viewModel.setLayout() },
-                isGridMode = isGridMode,
-                onGridCountClick = { showGridCountSheet = true },
+                colors = GlassTopAppBarDefaults.glassColors(),
+                navigationIcon = {
+                    TopbarNavigationButton(onClick = onBack)
+                },
+                actions = {
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.animateContentSize(tween(300))
+                    ) {
+                        TopBarActionButton(
+                            onClick = { showMenu = true },
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter"
+                        )
+
+                        TopBarActionButton(
+                            onClick = { showKindSheet = true },
+                            imageVector = Icons.Outlined.FilterAlt,
+                            contentDescription = "分类"
+                        )
+
+                        AnimatedVisibility(
+                            visible = isGridMode,
+                            enter = fadeIn(tween(300)),
+                            exit = fadeOut(tween(300))
+                        ) {
+                            TopBarActionButton(
+                                onClick = { showGridCountSheet = true },
+                                imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                                contentDescription = "列数设置"
+                            )
+                        }
+                    }
+
+                    TopBarActionButton(
+                        onClick = { viewModel.setLayout() },
+                        imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
+                        contentDescription = "切换布局"
+                    )
+
+                    RoundDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        RoundDropdownMenuItem(
+                            text = { Text("全部显示") },
+                            onClick = {
+                                viewModel.setFilterState(BookFilterState.SHOW_ALL)
+                                showMenu = false
+                            },
+                            trailingIcon = {
+                                if (filterState == BookFilterState.SHOW_ALL)
+                                    Icon(Icons.Default.Check, null)
+                            }
+                        )
+
+                        RoundDropdownMenuItem(
+                            text = { Text("隐藏已在书架的同源书籍") },
+                            onClick = {
+                                viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
+                                showMenu = false
+                            },
+                            trailingIcon = {
+                                if (filterState == BookFilterState.HIDE_IN_SHELF)
+                                    Icon(Icons.Default.Check, null)
+                            }
+                        )
+
+                        RoundDropdownMenuItem(
+                            text = { Text("隐藏已在书架的非同源书籍") },
+                            onClick = {
+                                viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
+                                showMenu = false
+                            },
+                            trailingIcon = {
+                                if (filterState == BookFilterState.HIDE_SAME_NAME_AUTHOR)
+                                    Icon(Icons.Default.Check, null)
+                            }
+                        )
+
+                        RoundDropdownMenuItem(
+                            text = { Text("只显示不在书架的书籍") },
+                            onClick = {
+                                viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
+                                showMenu = false
+                            },
+                            trailingIcon = {
+                                if (filterState == BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
+                                    Icon(Icons.Default.Check, null)
+                            }
+                        )
+                    }
+                },
                 scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+        PullToRefreshBox(
+            modifier = Modifier.fillMaxSize(),
+            isRefreshing = isRefreshing,
+            state = pullToRefreshState,
+            onRefresh = { viewModel.loadMore(isRefresh = true) },
+            indicator = {
+                PullToRefreshDefaults.LoadingIndicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isRefreshing,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = paddingValues.calculateTopPadding())
+                )
+            }
         ) {
             Crossfade(
                 targetState = isGridMode,
@@ -331,9 +440,16 @@ fun ExploreShowScreen(
                 if (isGrid) {
                     LazyVerticalGrid(
                         state = gridState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .responsiveHazeSource(hazeState),
                         columns = GridCells.Fixed(gridColumnCount),
-                        contentPadding = PaddingValues(12.dp),
+                        contentPadding = PaddingValues(
+                            top = paddingValues.calculateTopPadding() + 12.dp,
+                            bottom = paddingValues.calculateBottomPadding() + 12.dp,
+                            start = 12.dp,
+                            end = 12.dp
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
@@ -360,8 +476,14 @@ fun ExploreShowScreen(
                     }
                 } else {
                     LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .responsiveHazeSource(hazeState),
                         state = listState,
-                        contentPadding = PaddingValues(bottom = 16.dp)
+                        contentPadding = PaddingValues(
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = paddingValues.calculateBottomPadding() + 16.dp
+                        )
                     ) {
                         items(
                             items = books,
@@ -416,97 +538,6 @@ fun KindGridItem(
             )
         },
         modifier = modifier.fillMaxWidth()
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun ExploreTopBar(
-    modifier: Modifier = Modifier,
-    title: String,
-    filterState: BookFilterState,
-    onBack: () -> Unit,
-    onFilterSelect: (BookFilterState) -> Unit,
-    onSelectKindClick: () -> Unit,
-    onToggleGridMode: () -> Unit,
-    isGridMode: Boolean,
-    onGridCountClick: () -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior? = null
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    GlassMediumFlexibleTopAppBar(
-        modifier = modifier,
-        title = { AnimatedTextLine(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = {
-            SmallTopBarButton(onClick = onBack)
-        },
-        actions = {
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.animateContentSize(tween(300))
-            ) {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.FilterList, contentDescription = "Filter")
-                }
-                IconButton(onClick = { onSelectKindClick() }) {
-                    Icon(Icons.Outlined.FilterAlt, contentDescription = "分类")
-                }
-                AnimatedVisibility(
-                    visible = isGridMode,
-                    enter = fadeIn(tween(300)),
-                    exit = fadeOut(tween(300))
-                ) {
-                    IconButton(onClick = onGridCountClick) {
-                        Icon(Icons.Default.Grid4x4, contentDescription = "列数设置")
-                    }
-                }
-            }
-            IconButton(onClick = { onToggleGridMode() }) {
-                Icon(
-                    imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                    contentDescription = "切换布局"
-                )
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("全部显示") },
-                    onClick = {
-                        onFilterSelect(BookFilterState.SHOW_ALL)
-                        showMenu = false
-                    },
-                    trailingIcon = { if(filterState == BookFilterState.SHOW_ALL) Icon(Icons.Default.Check, null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("隐藏已在书架的同源书籍") },
-                    onClick = {
-                        onFilterSelect(BookFilterState.HIDE_IN_SHELF)
-                        showMenu = false
-                    },
-                    trailingIcon = { if(filterState == BookFilterState.HIDE_IN_SHELF) Icon(Icons.Default.Check, null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("隐藏已在书架的非同源书籍") },
-                    onClick = {
-                        onFilterSelect(BookFilterState.HIDE_SAME_NAME_AUTHOR)
-                        showMenu = false
-                    },
-                    trailingIcon = { if(filterState == BookFilterState.HIDE_SAME_NAME_AUTHOR) Icon(Icons.Default.Check, null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("只显示不在书架的书籍") },
-                    onClick = {
-                        onFilterSelect(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
-                        showMenu = false
-                    },
-                    trailingIcon = { if(filterState == BookFilterState.SHOW_NOT_IN_SHELF_ONLY) Icon(Icons.Default.Check, null) }
-                )
-            }
-        },
-        scrollBehavior = scrollBehavior
     )
 }
 
