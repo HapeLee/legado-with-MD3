@@ -19,12 +19,12 @@
   "dependencies": {
     "@element-plus/icons-svg": "^2.3.1",
     "@element-plus/icons-vue": "^2.3.1",
-    "@vueuse/core": "^13.8.0",
+    "@vueuse/core": "^11.1.0",
     "@vueuse/shared": "^11.1.0",
     "axios": "^1.7.7",
-    "element-plus": "^2.8.5",
+    "element-plus": "2.8.5",
     "hotkeys-js": "^3.13.7",
-    "pinia": "^3.0.3",
+    "pinia": "^2.2.4",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5",
     "vue3-virtual-scroll-list": "^0.2.1"
@@ -32,11 +32,11 @@
   "devDependencies": {
     "sass-embedded": "^1.83.1",
     "@tsconfig/node20": "^20.1.4",
-    "@types/node": "^24.3.0",
+    "@types/node": "^20.16.11",
     "@vitejs/plugin-vue": "^5.1.4",
     "@vue/eslint-config-prettier": "^10.0.0",
     "@vue/eslint-config-typescript": "^14.0.1",
-    "@vue/tsconfig": "^0.8.1",
+    "@vue/tsconfig": "^0.5.1",
     "eslint": "^9.12.0",
     "eslint-plugin-vue": "^9.29.0",
     "npm-run-all2": "^6.2.3",
@@ -46,6 +46,6 @@
     "unplugin-icons": "^0.19.3",
     "unplugin-vue-components": "^0.27.4",
     "vite": "^5.4.8",
-    "vue-tsc": "^3.0.6"
+    "vue-tsc": "^2.1.6"
   }
 }

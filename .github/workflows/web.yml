@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  UPSTREAM_REPOSITORY: gedoor/legado
+  UPSTREAM_REPOSITORY: HapeLee/legado-with-MD3
 
 jobs:
   build:
