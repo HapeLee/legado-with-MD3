@@ -1216,4 +1216,6 @@
     <string name="sure_cache_book">是否确认开始缓存？</string>
     <string name="auto_check_new_backup_t">自动检查新备份</string>
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
+    <string name="welcome_book_folder_tip">设置本地书籍保存目录，后续也可在设置中修改。</string>
+    <string name="welcome_book_folder_not_selected">未选择文件夹</string>
 </resources>
