@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -79,8 +80,8 @@ fun SwipeActionContainer(
                 SwipeToDismissBoxValue.StartToEnd -> {
                     startAction?.let { action ->
                         SwipeBackground(
+                            dismissState = dismissState,
                             action = action,
-                            progress = progress,
                             alignStart = true
                         )
                     }
@@ -89,8 +90,8 @@ fun SwipeActionContainer(
                 SwipeToDismissBoxValue.EndToStart -> {
                     endAction?.let { action ->
                         SwipeBackground(
+                            dismissState = dismissState,
                             action = action,
-                            progress = progress,
                             alignStart = false
                         )
                     }
@@ -114,10 +115,13 @@ fun SwipeActionContainer(
 @Composable
 private fun SwipeBackground(
     action: SwipeAction,
-    progress: Float,
+    dismissState: SwipeToDismissBoxState,
     alignStart: Boolean
 ) {
-    val isThresholdReached = progress > 0.6f
+    val isThresholdReached = dismissState.targetValue == if (alignStart)
+        SwipeToDismissBoxValue.StartToEnd
+    else
+        SwipeToDismissBoxValue.EndToStart
 
     val backgroundColor by animateColorAsState(
         targetValue = if (isThresholdReached)
@@ -128,8 +132,8 @@ private fun SwipeBackground(
     )
 
     val iconScale by animateFloatAsState(
-        targetValue = if (isThresholdReached) 1.3f
-        else progress.coerceIn(0.5f, 1f),
+        targetValue = if (isThresholdReached) 1.2f
+        else 1f,
         label = "iconScale"
     )
 

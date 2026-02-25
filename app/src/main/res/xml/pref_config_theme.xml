@@ -116,6 +116,12 @@
             android:title="@string/is_blur_enable"
             app:iconSpaceReserved="false" />
 
+        <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="enableProgressiveBlur"
+            android:title="@string/is_blur_progressive_enable"
+            app:iconSpaceReserved="false" />
+
     </io.legado.app.lib.prefs.PreferenceCategory>
 
     <io.legado.app.lib.prefs.PreferenceCategory

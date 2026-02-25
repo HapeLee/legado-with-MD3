@@ -15,8 +15,8 @@ import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogReadBookStyleBinding
 import io.legado.app.databinding.ItemReadStyleBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ReadBookActivity
@@ -121,7 +121,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
         }
         tvDayNight.setOnClickListener {
             AppConfig.isNightTheme = !AppConfig.isNightTheme
-            ThemeConfig.applyDayNight(requireContext())
+            OldThemeConfig.applyDayNight(requireContext())
         }
 //        rgPageAnim.setOnCheckedChangeListener { _, checkedId ->
 //            ReadBook.book?.setPageAnim(-1)

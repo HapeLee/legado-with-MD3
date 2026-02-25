@@ -53,6 +53,7 @@ class ExploreShowViewModel(
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
     private val _filterState = MutableStateFlow(BookFilterState.fromId(AppConfig.exploreFilterState))
     private val _isLoading = MutableStateFlow(false)
+    private val _isRefreshing = MutableStateFlow(false)
     private val _errorMsg = MutableStateFlow<String?>(null)
     private var bookSource: BookSource? = null
     private var exploreUrl: String? = null
@@ -68,10 +69,14 @@ class ExploreShowViewModel(
     private val _gridCount = MutableStateFlow(appCtx.exploreLayoutGrid)
     val gridCount = _gridCount.asStateFlow()
     val isEnd: StateFlow<Boolean> = _isEndStateFlow.asStateFlow()
+
+    val isRefreshing = _isRefreshing.asStateFlow()
+
     fun saveGridCount(value: Int) {
         appCtx.exploreLayoutGrid = value
         _gridCount.value = value
     }
+
     val uiBooks = combine(
         _rawBooks,
         _filterState,

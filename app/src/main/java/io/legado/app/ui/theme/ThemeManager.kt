@@ -1,13 +1,11 @@
 package io.legado.app.ui.theme
 
+import android.content.Context
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.ThemeResolver.resolvePaletteStyle
 import io.legado.app.ui.theme.colorScheme.AugustColorScheme
@@ -40,16 +38,17 @@ object ThemeManager {
         AppThemeMode.Transparent to TransparentColorScheme,
     )
 
-    @Composable
+
     fun getColorScheme(
+        context: Context,
         mode: AppThemeMode,
-        darkTheme: Boolean = isSystemInDarkTheme(),
+        darkTheme: Boolean,
         isAmoled: Boolean,
         isImageBg: Boolean,
         paletteStyle: String?,
         forceOpaque: Boolean = false
     ): ColorScheme {
-        val context = LocalContext.current
+
         val style = resolvePaletteStyle(paletteStyle)
         val actualMode = if (forceOpaque && mode == AppThemeMode.Transparent) {
             AppThemeMode.WH

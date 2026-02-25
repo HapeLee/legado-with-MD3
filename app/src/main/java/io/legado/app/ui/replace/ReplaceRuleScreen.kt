@@ -73,6 +73,7 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -387,35 +388,35 @@ fun ReplaceRuleScreen(
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("在线导入") },
                 onClick = {
                     dismiss()
                     showUrlInput = true // 触发输入框
                 }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("本地导入") },
                 onClick = { importDoc.launch(arrayOf("text/plain", "application/json")); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("分组管理") },
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("帮助") },
                 onClick = { /*TODO*/ dismiss() }
             )
             HorizontalDivider()
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("旧的在前") },
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("新的在前") },
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("名称升序") },
                 onClick = {
                     viewModel.setSortMode("name_asc")
@@ -425,7 +426,7 @@ fun ReplaceRuleScreen(
                     }
                 }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("名称降序") },
                 onClick = {
                     viewModel.setSortMode("name_desc")

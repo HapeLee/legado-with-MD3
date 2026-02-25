@@ -17,31 +17,26 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.theme.ThemeState
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 
 enum class TopBarButtonVariant {
     Filled, Outlined, Icon
 }
 
 @Composable
-fun SmallTopBarButton(
+fun TopBarButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     imageVector: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
     contentDescription: String? = null,
     style: TopBarButtonVariant = TopBarButtonVariant.Filled
 ) {
-    val themeOpacity by ThemeState.containerOpacity.collectAsState()
-    val baseColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val glassColor = baseColor.copy(alpha = (themeOpacity / 100f).coerceAtLeast(0.6f))
 
     val commonModifier = modifier
-        .padding(horizontal = 12.dp)
         .size(36.dp)
 
     when (style) {
@@ -50,7 +45,7 @@ fun SmallTopBarButton(
                 onClick = onClick,
                 modifier = commonModifier,
                 colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = glassColor,
+                    containerColor = GlassTopAppBarDefaults.controlContainerColor(),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             ) {
@@ -75,6 +70,50 @@ fun SmallTopBarButton(
             ) {
                 SmallIcon(imageVector, contentDescription)
             }
+        }
+    }
+}
+
+@Composable
+fun TopbarNavigationButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    imageVector: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
+    contentDescription: String? = "返回",
+    style: TopBarButtonVariant = TopBarButtonVariant.Filled
+) {
+    TopBarButton(
+        onClick = onClick,
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        modifier = modifier.padding(start = 12.dp, end = 4.dp),
+        style = style
+    )
+}
+
+@Composable
+fun TopBarActionButton(
+    onClick: () -> Unit,
+    imageVector: ImageVector,
+    contentDescription: String?,
+    modifier: Modifier = Modifier
+) {
+    val enableProgressive = ThemeConfig.enableProgressiveBlur
+
+    if (enableProgressive) {
+        TopBarButton(
+            onClick = onClick,
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier.padding(end = 12.dp),
+            style = TopBarButtonVariant.Filled
+        )
+    } else {
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = contentDescription
+            )
         }
     }
 }

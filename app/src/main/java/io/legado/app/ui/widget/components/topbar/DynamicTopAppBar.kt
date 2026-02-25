@@ -29,7 +29,7 @@ import io.legado.app.ui.widget.components.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.rules.RuleActionState
 
@@ -75,7 +75,7 @@ fun <T> DynamicTopAppBar(
                 { AnimatedTextLine(text = it) }
             },
             navigationIcon = {
-                SmallTopBarButton(
+                TopbarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick() },
                     imageVector = if (isSelecting) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = if (isSelecting) "取消选择" else "返回"

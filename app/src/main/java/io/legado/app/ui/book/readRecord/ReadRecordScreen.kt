@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -87,7 +88,7 @@ import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
 import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
@@ -98,6 +99,7 @@ import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
@@ -163,7 +165,7 @@ fun ReadRecordScreen(
                         )
                     },
                     navigationIcon = {
-                        SmallTopBarButton(onClick = onBackClick)
+                        TopbarNavigationButton(onClick = onBackClick)
                     },
                     actions = {
                         IconButton(onClick = {
@@ -318,8 +320,8 @@ fun ReadRecordScreen(
 
     if (showCalendar) {
         val sheetState =
-            androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        androidx.compose.material3.ModalBottomSheet(
+            rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        GlassModalBottomSheet(
             onDismissRequest = { showCalendar = false },
             sheetState = sheetState
         ) {

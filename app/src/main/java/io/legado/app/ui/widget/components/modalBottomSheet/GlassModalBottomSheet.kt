@@ -15,12 +15,9 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Typography
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import io.legado.app.ui.theme.ThemeManager
-import io.legado.app.ui.theme.ThemeState
+import io.legado.app.ui.theme.rememberOpaqueColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -31,18 +28,7 @@ fun GlassModalBottomSheet(
     containerColor: (ColorScheme) -> Color = { it.surfaceContainerLow },
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val themeMode by ThemeState.themeMode.collectAsState()
-    val isPureBlack by ThemeState.isPureBlack.collectAsState()
-    val hasImageBg by ThemeState.hasImageBg.collectAsState()
-    val paletteStyle by ThemeState.paletteStyle.collectAsState()
-
-    val colorScheme = ThemeManager.getColorScheme(
-        mode = themeMode,
-        isAmoled = isPureBlack,
-        isImageBg = hasImageBg,
-        forceOpaque = true,
-        paletteStyle = paletteStyle
-    )
+    val colorScheme = rememberOpaqueColorScheme()
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,

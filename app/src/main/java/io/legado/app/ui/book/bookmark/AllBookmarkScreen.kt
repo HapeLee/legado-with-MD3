@@ -22,8 +22,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UnfoldLess
 import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -48,9 +46,11 @@ import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.lazylist.Scroller
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
@@ -105,7 +105,7 @@ fun AllBookmarkScreen(
                     },
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
-                        SmallTopBarButton(onClick = onBack)
+                        TopbarNavigationButton(onClick = onBack)
                     },
                     actions = {
                         if (bookmarksGrouped.isNotEmpty()) {
@@ -127,11 +127,11 @@ fun AllBookmarkScreen(
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                         }
-                        DropdownMenu(
+                        RoundDropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
-                            DropdownMenuItem(
+                            RoundDropdownMenuItem(
                                 text = { Text("导出 JSON") },
                                 onClick = {
                                     showMenu = false
@@ -139,7 +139,7 @@ fun AllBookmarkScreen(
                                     exportLauncher.launch(null)
                                 }
                             )
-                            DropdownMenuItem(
+                            RoundDropdownMenuItem(
                                 text = { Text("导出 Markdown") },
                                 onClick = {
                                     showMenu = false

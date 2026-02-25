@@ -181,6 +181,7 @@ object PreferKey {
     const val composeEngine = "composeEngine"
     const val containerOpacity = "containerOpacity"
     const val enableBlur = "enableBlur"
+    const val enableProgressiveBlur = "enableProgressiveBlur"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val bgImage = "backgroundImage"

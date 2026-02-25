@@ -22,7 +22,7 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.databinding.DialogImageBlurringBinding
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.prefs.ColorPreference
@@ -32,7 +32,7 @@ import io.legado.app.lib.prefs.ThemeCardPreference
 import io.legado.app.lib.prefs.ThemeModePreference
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.theme.ThemeSyncer
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ColorUtils
@@ -181,11 +181,18 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
             }
 
 
-            PreferKey.paletteStyle, PreferKey.pureBlack, PreferKey.enableBlur, PreferKey.swipeAnimation -> {
-                ThemeSyncer.syncAll()
+            PreferKey.paletteStyle, PreferKey.pureBlack, PreferKey.swipeAnimation -> {
                 Handler(Looper.getMainLooper()).postDelayed({
                     recreateActivities()
                 }, 100)
+            }
+
+            PreferKey.enableBlur -> {
+                ThemeConfig.enableBlur = PreferKey.enableBlur.toBoolean()
+            }
+
+            PreferKey.enableProgressiveBlur -> {
+                ThemeConfig.enableProgressiveBlur = PreferKey.enableProgressiveBlur.toBoolean()
             }
 
             PreferKey.customMode -> handleRestartRequired()
@@ -263,17 +270,15 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 .setTitle(getString(R.string.container_opacity))
                 .setMaxValue(100)
                 .setMinValue(0)
-                .setValue(AppConfig.containerOpacity)
+                .setValue(ThemeConfig.containerOpacity)
                 .setCustomButton((R.string.btn_default_s)) {
-                    AppConfig.containerOpacity = 100
-                    ThemeSyncer.syncContainerOpacity()
+                    ThemeConfig.containerOpacity = 100
                     Handler(Looper.getMainLooper()).postDelayed({
                         upPreferenceSummary(PreferKey.containerOpacity)
                     }, 100)
                 }
                 .show {
-                    AppConfig.containerOpacity = it
-                    ThemeSyncer.syncContainerOpacity()
+                    ThemeConfig.containerOpacity = it
                     Handler(Looper.getMainLooper()).postDelayed({
                         upPreferenceSummary(PreferKey.containerOpacity)
                     }, 100)
@@ -305,11 +310,11 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 alertBinding.editView.text?.toString()?.let { themeName ->
                     when (key) {
                         "saveDayTheme" -> {
-                            ThemeConfig.saveDayTheme(requireContext(), themeName)
+                            OldThemeConfig.saveDayTheme(requireContext(), themeName)
                         }
 
                         "saveNightTheme" -> {
-                            ThemeConfig.saveNightTheme(requireContext(), themeName)
+                            OldThemeConfig.saveNightTheme(requireContext(), themeName)
                         }
                     }
                 }

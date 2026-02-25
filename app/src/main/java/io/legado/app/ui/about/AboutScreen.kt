@@ -35,7 +35,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 
@@ -61,7 +61,7 @@ fun AboutScreen(
             GlassMediumFlexibleTopAppBar(
                 title = { Text(stringResource(R.string.about)) },
                 navigationIcon = {
-                    SmallTopBarButton(onClick = onBack)
+                    TopbarNavigationButton(onClick = onBack)
                 },
                 scrollBehavior = scrollBehavior
             )

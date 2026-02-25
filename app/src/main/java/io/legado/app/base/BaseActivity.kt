@@ -27,9 +27,8 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.theme.ThemeSyncer
 import io.legado.app.utils.applyOpenTint
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.disableAutoFill
@@ -232,7 +231,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun upBackgroundImage() {
         if (imageBg) {
             try {
-                ThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
+                OldThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
                     window.decorView.background = it.toDrawable(resources)
                 }
             } catch (e: OutOfMemoryError) {
@@ -245,7 +244,6 @@ abstract class BaseActivity<VB : ViewBinding>(
 
     open fun observeLiveBus() {
         observeEvent<String>(EventBus.RECREATE) {
-            ThemeSyncer.syncAll()
             recreate()
         }
     }

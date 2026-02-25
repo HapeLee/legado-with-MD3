@@ -5,14 +5,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import io.legado.app.ui.theme.ThemeState
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -22,30 +21,9 @@ fun GlassMediumFlexibleTopAppBar(
     subtitle: (@Composable () -> Unit)? = null,
     scrollBehavior: TopAppBarScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
+    colors: TopAppBarColors = GlassTopAppBarDefaults.glassColors()
 ) {
-    val opacityValue by ThemeState.containerOpacity.collectAsState()
-    val enableBlur by ThemeState.enableBlur.collectAsState()
-
-    val alpha = opacityValue / 100f
-
-    val containerColor = if (enableBlur) {
-        Color.Transparent
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = alpha)
-    }
-
-    val scrolledContainerColor = if (enableBlur) {
-        Color.Transparent
-    } else {
-        MaterialTheme.colorScheme.surfaceContainer.copy(alpha = alpha)
-    }
-
-    val appBarColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = containerColor,
-        scrolledContainerColor = scrolledContainerColor
-    )
-
     MediumFlexibleTopAppBar(
         modifier = modifier,
         title = title,
@@ -53,7 +31,46 @@ fun GlassMediumFlexibleTopAppBar(
         navigationIcon = navigationIcon,
         actions = actions,
         scrollBehavior = scrollBehavior,
-        colors = appBarColors
+        colors = colors
     )
+}
+
+object GlassTopAppBarDefaults {
+
+    @Composable
+    fun glassColors(): TopAppBarColors {
+        val alpha = ThemeConfig.containerOpacity / 100f
+        val enableBlur = ThemeConfig.enableBlur
+
+        val containerColor = if (enableBlur) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            MaterialTheme.colorScheme.surface.copy(alpha = alpha)
+        }
+
+        val scrolledContainerColor = if (enableBlur) {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        }
+
+        return TopAppBarDefaults.topAppBarColors(
+            containerColor = containerColor,
+            scrolledContainerColor = scrolledContainerColor
+        )
+    }
+
+    @Composable
+    fun controlContainerColor(): Color {
+        val enableBlur = ThemeConfig.enableBlur
+        val baseColor = MaterialTheme.colorScheme.surfaceContainerHigh
+
+        return if (enableBlur) {
+            val alpha = 0.6f
+            baseColor.copy(alpha = alpha)
+        } else {
+            baseColor.copy(alpha = ThemeConfig.containerOpacity / 100f)
+        }
+    }
 
 }

@@ -81,7 +81,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.button.AlertButton
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -121,7 +121,7 @@ fun ReplaceEditScreen(
                 GlassMediumFlexibleTopAppBar(
                     title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
                     navigationIcon = {
-                        SmallTopBarButton(onClick = onBack)
+                        TopbarNavigationButton(onClick = onBack)
                     },
                     actions = {
                         AnimatedVisibility(

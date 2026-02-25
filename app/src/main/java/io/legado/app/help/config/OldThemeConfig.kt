@@ -32,7 +32,7 @@ import splitties.init.appCtx
 import java.io.File
 
 @Keep
-object ThemeConfig {
+object OldThemeConfig {
     const val configFileName = "themeConfig.json"
     val configFilePath = FileUtils.getPath(appCtx.filesDir, configFileName)
 

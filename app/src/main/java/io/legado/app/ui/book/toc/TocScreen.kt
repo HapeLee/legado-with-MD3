@@ -294,33 +294,33 @@ fun TocScreen(
                     when (pagerState.currentPage) {
                         0 -> {
                             RoundDropdownMenuItem(
-                                text = "使用替换规则",
+                                text = { Text("使用替换规则") },
                                 trailingIcon = {
                                     Checkbox(checked = useReplace, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleUseReplace() }
                             )
                             RoundDropdownMenuItem(
-                                text = "显示字数",
+                                text = { Text("显示字数") },
                                 trailingIcon = {
                                     Checkbox(checked = showWordCount, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleShowWordCount() }
                             )
                             RoundDropdownMenuItem(
-                                text = "反转目录",
+                                text = { Text("反转目录") },
                                 onClick = { viewModel.reverseToc() }
                             )
                             PillDivider()
                             RoundDropdownMenuItem(
-                                text = "替换规则",
+                                text = { Text("替换规则") },
                                 onClick = {
                                     onOpenReplaceRule(null)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "新建替换规则",
+                                text = { Text("新建替换规则") },
                                 onClick = {
                                     val scopes = mutableListOf<String>()
                                     book?.name?.let { scopes.add(it) }
@@ -340,7 +340,7 @@ fun TocScreen(
                             if (book?.isLocal == true) {
                                 PillHeaderDivider(title = "本地书籍选项")
                                 RoundDropdownMenuItem(
-                                    text = "本地书籍目录规则",
+                                    text = { Text("本地书籍目录规则") },
                                     onClick = {
                                         val intent =
                                             Intent(context, TxtTocRuleActivity::class.java).apply {
@@ -351,7 +351,7 @@ fun TocScreen(
                                     }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = "拆分超长章节",
+                                    text = { Text("拆分超长章节") },
                                     trailingIcon = {
                                         Checkbox(
                                             checked = viewModel.isSplitLongChapter,
@@ -368,7 +368,7 @@ fun TocScreen(
 
                         else -> {
                             RoundDropdownMenuItem(
-                                text = "导出书签为JSON",
+                                text = { Text("导出书签为JSON") },
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -380,7 +380,7 @@ fun TocScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "导出书签为MarkDown",
+                                text = { Text("导出书签为MarkDown") },
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -445,13 +445,13 @@ fun TocScreen(
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
                                     RoundDropdownMenuItem(
-                                        text = "展开所有卷",
+                                        text = { Text("展开所有卷") },
                                         onClick = {
                                             viewModel.expandAllVolumes(); showVolumeMenu = false
                                         }
                                     )
                                     RoundDropdownMenuItem(
-                                        text = "收起所有卷",
+                                        text = { Text("收起所有卷") },
                                         onClick = {
                                             viewModel.collapseAllVolumes(); showVolumeMenu = false
                                         }
@@ -463,7 +463,7 @@ fun TocScreen(
                                         PillHeaderDivider(title = "快速跳转")
                                         volumeItems.forEach { uiItem ->
                                             RoundDropdownMenuItem(
-                                                text = uiItem.title,
+                                                text = { Text(uiItem.title) },
                                                 onClick = {
                                                     scope.launch {
                                                         val targetIndex =

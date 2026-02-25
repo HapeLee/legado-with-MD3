@@ -58,7 +58,7 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedActionButton
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import org.koin.androidx.compose.koinViewModel
@@ -141,7 +141,7 @@ fun SearchContentScreen(
                         )
                     },
                     navigationIcon = {
-                        SmallTopBarButton(onClick = onBack)
+                        TopbarNavigationButton(onClick = onBack)
                     },
                     actions = {
                         Row(

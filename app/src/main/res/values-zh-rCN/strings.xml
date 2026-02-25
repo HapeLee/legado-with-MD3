@@ -1386,4 +1386,5 @@
     <string name="show_swipe_animation">启用滑动时动画</string>
     <string name="click_image_way">点击图片行为</string>
     <string name="show_web_log">输出日志</string>
+    <string name="is_blur_progressive_enable">启用渐变模糊</string>
 </resources>

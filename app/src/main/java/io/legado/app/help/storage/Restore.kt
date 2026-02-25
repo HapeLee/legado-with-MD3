@@ -33,8 +33,8 @@ import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.ACache
@@ -216,12 +216,12 @@ object Restore {
             AppLog.put("恢复直链上传出错\n${it.localizedMessage}", it)
         }
         //恢复主题配置
-        File(path, ThemeConfig.configFileName).takeIf {
+        File(path, OldThemeConfig.configFileName).takeIf {
             it.exists()
         }?.runCatching {
-            FileUtils.delete(ThemeConfig.configFilePath)
-            copyTo(File(ThemeConfig.configFilePath))
-            ThemeConfig.upConfig()
+            FileUtils.delete(OldThemeConfig.configFilePath)
+            copyTo(File(OldThemeConfig.configFilePath))
+            OldThemeConfig.upConfig()
         }?.onFailure {
             AppLog.put("恢复主题出错\n${it.localizedMessage}", it)
         }
@@ -301,7 +301,7 @@ object Restore {
             if (!BuildConfig.DEBUG) {
                 LauncherIconHelp.changeIcon(appCtx.getPrefString(PreferKey.launcherIcon))
             }
-            ThemeConfig.applyDayNight(appCtx)
+            OldThemeConfig.applyDayNight(appCtx)
         }
     }
 

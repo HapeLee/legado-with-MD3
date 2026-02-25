@@ -2,7 +2,6 @@ package io.legado.app.ui.config
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -15,11 +14,10 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemThemeConfigBinding
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
 //import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
@@ -54,14 +52,14 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
     }
 
     fun initData() {
-        adapter.setItems(ThemeConfig.configList)
+        adapter.setItems(OldThemeConfig.configList)
     }
 
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
             R.id.menu_import -> {
                 requireContext().getClipText()?.let {
-                    if (ThemeConfig.addConfig(it)) {
+                    if (OldThemeConfig.addConfig(it)) {
                         initData()
                     } else {
                         toastOnUi("格式不对,添加失败")
@@ -75,7 +73,7 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
     fun delete(index: Int) {
         alert(R.string.delete, R.string.sure_del) {
             yesButton {
-                ThemeConfig.delConfig(index)
+                OldThemeConfig.delConfig(index)
                 initData()
             }
             noButton()
@@ -83,12 +81,12 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
     }
 
     fun share(index: Int) {
-        val json = GSON.toJson(ThemeConfig.configList[index])
+        val json = GSON.toJson(OldThemeConfig.configList[index])
         requireContext().share(json, "主题分享")
     }
 
     inner class Adapter(context: Context) :
-        RecyclerAdapter<ThemeConfig.Config, ItemThemeConfigBinding>(context) {
+        RecyclerAdapter<OldThemeConfig.Config, ItemThemeConfigBinding>(context) {
 
         override fun getViewBinding(parent: ViewGroup): ItemThemeConfigBinding {
             return ItemThemeConfigBinding.inflate(inflater, parent, false)
@@ -97,7 +95,7 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
         override fun convert(
             holder: ItemViewHolder,
             binding: ItemThemeConfigBinding,
-            item: ThemeConfig.Config,
+            item: OldThemeConfig.Config,
             payloads: MutableList<Any>
         ) {
             binding.apply {
@@ -113,7 +111,10 @@ class ThemeListDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler_v
         override fun registerListener(holder: ItemViewHolder, binding: ItemThemeConfigBinding) {
             binding.apply {
                 root.setOnClickListener {
-                    ThemeConfig.applyConfig(context, ThemeConfig.configList[holder.layoutPosition])
+                    OldThemeConfig.applyConfig(
+                        context,
+                        OldThemeConfig.configList[holder.layoutPosition]
+                    )
                 }
                 ivShare.setOnClickListener {
                     share(holder.layoutPosition)

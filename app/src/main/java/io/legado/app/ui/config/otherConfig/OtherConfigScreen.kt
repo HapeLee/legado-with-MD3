@@ -34,7 +34,7 @@ import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -89,7 +89,7 @@ fun OtherConfigScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    SmallTopBarButton(onClick = onBackClick)
+                    TopbarNavigationButton(onClick = onBackClick)
                 }
             )
         }
