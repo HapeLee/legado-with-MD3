@@ -17,7 +17,7 @@ internal object TransparentColorScheme : BaseColorScheme() {
         secondaryContainer = Color(0xB0FFFFFF),
         onSecondaryContainer = Color(0xFF000000),
         tertiary = Color(0xFF000000),
-        onTertiary = Color(0xFF000000),
+        onTertiary = Color(0xFFFFFFFF),
         tertiaryContainer = Color(0xB0FFFFFF),
         onTertiaryContainer = Color(0xFF000000),
         error = Color(0xFFBA1A1A),
