@@ -229,22 +229,27 @@ fun TocScreen(
         }
     }
 
+    var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        // 等待列表数据加载完成后自动定位到当前阅读章节
-        // 使用 animateScrollToItem 以便用户看到滚动动画，避免误操作
-        val items = snapshotFlow { state.items }
-            .filter { it.isNotEmpty() }
-            .first()
-        val targetIndex = items.indexOfFirst { it.isDur }
-        if (targetIndex != -1) {
-            // 等待视口尺寸测量完成，确保 offset 计算正确
-            snapshotFlow { listState.layoutInfo.viewportEndOffset }
-                .filter { it > 0 }
+        if (!hasAutoScrolled) {
+            // 等待列表包含当前阅读章节后自动定位，避免在无 isDur 项时提前退出
+            // 使用 animateScrollToItem 以便用户看到滚动动画，避免误操作
+            val items = snapshotFlow { state.items }
+                .filter { list -> list.any { it.isDur } }
                 .first()
-            listState.animateScrollToItem(
-                index = targetIndex,
-                scrollOffset = -(listState.layoutInfo.viewportEndOffset / 4)
-            )
+            val targetIndex = items.indexOfFirst { it.isDur }
+            if (targetIndex != -1) {
+                // 等待视口尺寸测量完成，确保 offset 计算正确
+                snapshotFlow { listState.layoutInfo.viewportEndOffset }
+                    .filter { it > 0 }
+                    .first()
+                listState.animateScrollToItem(
+                    index = targetIndex,
+                    scrollOffset = -(listState.layoutInfo.viewportEndOffset / 4)
+                )
+                hasAutoScrolled = true
+            }
         }
     }
 

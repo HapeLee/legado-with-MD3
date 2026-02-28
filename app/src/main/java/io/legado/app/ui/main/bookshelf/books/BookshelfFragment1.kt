@@ -13,6 +13,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
+import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import io.legado.app.R
@@ -51,6 +52,7 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
     override val groupId: Long get() = selectedGroup?.groupId ?: 0
 
     private lateinit var adapter: TabFragmentPageAdapter
+    private var tabFadeListener: AppBarLayout.OnOffsetChangedListener? = null
 
     override val books: List<Book>
         get() {
@@ -89,7 +91,8 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
     }
 
     private fun updateTabFadeEffect() {
-        binding.titleBar.addOnOffsetChangedListener({ appBarLayout, verticalOffset ->
+        tabFadeListener?.let { binding.titleBar.removeOnOffsetChangedListener(it) }
+        val listener = AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
             val drawable = binding.tabRightFade.background as? GradientDrawable
             val opacity = if (ThemeConfig.enableBlur) ThemeConfig.containerOpacity / 100f else 1f
             val baseColor = if (-verticalOffset >= appBarLayout.totalScrollRange) {
@@ -99,7 +102,9 @@ class BookshelfFragment1() : BaseBookshelfFragment(R.layout.fragment_bookshelf1)
             }
             val newAlpha = (Color.alpha(baseColor) * opacity).toInt()
             drawable?.colors = intArrayOf(Color.TRANSPARENT, ColorUtils.setAlphaComponent(baseColor, newAlpha))
-        })
+        }
+        tabFadeListener = listener
+        binding.titleBar.addOnOffsetChangedListener(listener)
     }
 
     private fun showTabSelectionMenu() {
