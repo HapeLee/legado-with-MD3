@@ -71,6 +71,7 @@ class BooksAdapterGridCompact(context: Context, callBack: CallBack) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun onBind(item: Book) = binding.run {
+            cvContent.transitionName = "book_${item.bookUrl}"
             tvName.text = item.name
             ivCover.load(item.getDisplayCover(), item.name, item.author, false, item.origin)
             upRefresh(this, item)
