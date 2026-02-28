@@ -607,7 +607,10 @@
         <item name="colorSurfaceBright">@color/transparent_theme_surfaceBright</item>
         <item name="colorSurfaceContainerLowest">@color/transparent_theme_surfaceContainerLowest
         </item>
+        <item name="colorSurfaceContainerLow">@color/transparent_theme_surfaceContainerLow</item>
         <item name="colorSurfaceContainer">@color/transparent_theme_surfaceContainer</item>
+        <item name="colorSurfaceContainerHigh">@color/transparent_theme_surfaceContainerHigh</item>
+        <item name="colorSurfaceContainerHighest">@color/transparent_theme_surfaceContainerHighest</item>
     </style>
 
     <style name="Theme.Base.Elink" parent="Base.AppTheme">

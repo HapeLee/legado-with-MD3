@@ -51,7 +51,7 @@ internal object TransparentColorScheme : BaseColorScheme() {
         surfaceDim = Color(0x1AFFFFFF),
         surfaceBright = Color(0x33FFFFFF),
         surfaceContainerLowest = Color(0x0DFFFFFF),
-        surfaceContainerLow = Color(0x8FFFFFFF),
+        surfaceContainerLow = Color(0x1AFFFFFF),
         surfaceContainer = Color(0x33FFFFFF),
         surfaceContainerHigh = Color(0x4DFFFFFF),
         surfaceContainerHighest = Color(0x66FFFFFF),
