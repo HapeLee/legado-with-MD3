@@ -660,7 +660,7 @@ class BookInfoActivity :
             duration = 400L
             addUpdateListener { animation ->
                 val color = animation.animatedValue as Int
-                binding.btnRead.setBackgroundColor(color)
+                binding.btnRead.backgroundTintList = ColorStateList.valueOf(color)
             }
         }
 
