@@ -13,13 +13,13 @@ import android.graphics.drawable.TransitionDrawable
 import android.icu.text.SimpleDateFormat
 import android.os.Build
 import android.os.Bundle
-import android.view.HapticFeedbackConstants
 import android.view.Menu
 import android.view.MenuItem
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.scale
+import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
@@ -43,7 +43,6 @@ import io.legado.app.databinding.ActivityAudioPlayBinding
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
-import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
 import io.legado.app.service.AudioPlayService
@@ -332,7 +331,7 @@ class AudioPlayActivity :
 
                 addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
                     override fun onStartTrackingTouch(slider: Slider) {
-                        slider.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        slider.performHapticFeedback(HapticFeedbackConstantsCompat.VIRTUAL_KEY)
                     }
 
                     override fun onStopTrackingTouch(slider: Slider) {}
@@ -358,7 +357,7 @@ class AudioPlayActivity :
 
                 addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
                     override fun onStartTrackingTouch(slider: Slider) {
-                        slider.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                        slider.performHapticFeedback(HapticFeedbackConstantsCompat.VIRTUAL_KEY)
                     }
 
                     override fun onStopTrackingTouch(slider: Slider) {}

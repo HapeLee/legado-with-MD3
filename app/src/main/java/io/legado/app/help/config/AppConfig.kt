@@ -990,6 +990,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.sliderVibrator, value)
         }
 
+    var selectVibrator: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.selectVibrator, false)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.selectVibrator, value)
+        }
+
     val audioPreDownloadNum: Int
         get() = appCtx.getPrefInt(PreferKey.audioPreDownloadNum, 10)
 

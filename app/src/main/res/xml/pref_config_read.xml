@@ -179,6 +179,12 @@
             app:isBottomBackground="true" />
 
         <io.legado.app.lib.prefs.SwitchPreference
+            android:defaultValue="false"
+            android:key="selectVibrator"
+            android:title="@string/enable_select_vibrator"
+            app:isBottomBackground="true" />
+
+        <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="autoChangeSource"
             android:title="@string/auto_change_source"

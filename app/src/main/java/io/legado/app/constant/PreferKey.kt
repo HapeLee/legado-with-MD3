@@ -251,6 +251,7 @@ object PreferKey {
 
     const val showTip = "showTip"
     const val sliderVibrator = "sliderVibrator"
+    const val selectVibrator = "selectVibrator"
     const val audioCacheCleanTime = "audioCacheCleanTime"
     const val audioPreDownloadNum = "audioPreDownloadNum"
 }

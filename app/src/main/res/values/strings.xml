@@ -1391,4 +1391,7 @@
     <string name="click_image_way">点击图片行为</string>
     <string name="show_web_log">输出日志</string>
     <string name="is_blur_progressive_enable">启用渐变模糊</string>
+    <string name="enable_select_vibrator">选择文本时震动</string>
+    <string name="re_sync_webdav">重新同步远程书籍</string>
+    <string name="underline_padding">离字间距</string>
 </resources>

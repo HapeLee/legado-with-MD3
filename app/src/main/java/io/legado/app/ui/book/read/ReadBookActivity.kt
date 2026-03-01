@@ -18,6 +18,7 @@ import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.get
 import androidx.core.view.size
 import androidx.lifecycle.lifecycleScope
@@ -939,7 +940,8 @@ class ReadBookActivity : BaseReadBookActivity(),
         textMenuPosition.x = x
         textMenuPosition.y = top
 
-        root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        if (AppConfig.selectVibrator)
+            root.performHapticFeedback(HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE)
     }
 
     /**
@@ -949,8 +951,8 @@ class ReadBookActivity : BaseReadBookActivity(),
         cursorRight.x = x
         cursorRight.y = y
         cursorRight.visible(true)
-
-        root.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        if (AppConfig.selectVibrator)
+            root.performHapticFeedback(HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE)
     }
 
     /**
