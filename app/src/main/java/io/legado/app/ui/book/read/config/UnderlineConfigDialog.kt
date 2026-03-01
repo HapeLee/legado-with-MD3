@@ -2,12 +2,12 @@ package io.legado.app.ui.book.read.config
 
 import android.os.Bundle
 import android.view.View
-import io.legado.app.help.config.ReadBookConfig
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogUnderlineConfigBinding
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedLine
 import io.legado.app.help.config.ReadBookConfig.underline
 import io.legado.app.utils.observeEvent
@@ -84,6 +84,14 @@ class UnderlineConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_unde
             progress = ReadBookConfig.underlineHeight
             onChanged = {
                 ReadBookConfig.underlineHeight = it
+                postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+            }
+        }
+
+        binding.btnUnderlinePadding.apply {
+            progress = ReadBookConfig.underlinePadding
+            onChanged = {
+                ReadBookConfig.underlinePadding = it
                 postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
             }
         }
