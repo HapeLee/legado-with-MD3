@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 82,
-    "identityHash": "285a81996bc58258f99a2f67fb5cf84e",
+    "version": 85,
+    "identityHash": "12c08f88be6a2747b2396e98856b0022",
     "entities": [
       {
         "tableName": "books",
@@ -2030,6 +2030,61 @@
             "id"
           ]
         }
+      },
+      {
+        "tableName": "search_content_history",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bookName` TEXT DEFAULT '', `bookAuthor` TEXT DEFAULT '', `query` TEXT NOT NULL, `time` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookName",
+            "columnName": "bookName",
+            "affinity": "TEXT",
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "bookAuthor",
+            "columnName": "bookAuthor",
+            "affinity": "TEXT",
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "query",
+            "columnName": "query",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_search_content_history_bookName_bookAuthor_query",
+            "unique": true,
+            "columnNames": [
+              "bookName",
+              "bookAuthor",
+              "query"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_search_content_history_bookName_bookAuthor_query` ON `${TABLE_NAME}` (`bookName`, `bookAuthor`, `query`)"
+          }
+        ]
       }
     ],
     "views": [
@@ -2040,7 +2095,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '285a81996bc58258f99a2f67fb5cf84e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '12c08f88be6a2747b2396e98856b0022')"
     ]
   }
 }
