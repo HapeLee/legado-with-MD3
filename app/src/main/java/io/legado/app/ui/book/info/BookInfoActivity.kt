@@ -284,6 +284,10 @@ class BookInfoActivity :
                 refreshBook()
             }
 
+            R.id.menu_sync_remote -> {
+                viewModel.syncFromRemote()
+            }
+
             R.id.menu_login -> viewModel.bookSource?.let {
                 startActivity<SourceLoginActivity> {
                     putExtra("type", "bookSource")

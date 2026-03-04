@@ -20,6 +20,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_sync_remote"
+        android:title="@string/re_sync_webdav"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_refresh"
         android:title="@string/refresh"
         app:showAsAction="never" />
