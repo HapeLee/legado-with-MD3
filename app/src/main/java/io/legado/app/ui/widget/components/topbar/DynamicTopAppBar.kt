@@ -31,7 +31,7 @@ import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.rules.RuleActionState
+import io.legado.app.ui.widget.components.rules.ListUiState
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +39,7 @@ import io.legado.app.ui.widget.components.rules.RuleActionState
 fun <T> DynamicTopAppBar(
     title: String,
     subtitle: String? = null,
-    state: RuleActionState<T>,
+    state: ListUiState<T>,
     scrollBehavior: TopAppBarScrollBehavior,
     onBackClick: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
@@ -60,13 +60,13 @@ fun <T> DynamicTopAppBar(
         GlassMediumFlexibleTopAppBar(
             title = {
                 val titleText = when {
-                    state.isUploading -> "请稍后..."
+                    state.isLoading -> "请稍后..."
                     isSelecting -> "已选择 ${state.selectedIds.size}/${state.items.size}"
                     else -> title
                 }
                 AdaptiveAnimatedText(
                     text = titleText,
-                    useCharMode = isSelecting || state.isUploading,
+                    useCharMode = isSelecting || state.isLoading,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

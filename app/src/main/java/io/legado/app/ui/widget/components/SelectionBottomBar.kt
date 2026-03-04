@@ -1,10 +1,8 @@
 package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
@@ -29,6 +27,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+
+data class SelectionActions(
+    val primaryAction: ActionItem,
+    val secondaryActions: List<ActionItem> = emptyList(),
+    val onSelectAll: () -> Unit,
+    val onSelectInvert: () -> Unit,
+)
 
 data class ActionItem(
     val text: String,

@@ -21,7 +21,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.rules.RuleActionState
+import io.legado.app.ui.widget.components.rules.ListUiState
 import io.legado.app.ui.widget.components.rules.SelectableItem
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -74,9 +74,9 @@ data class TocActionState(
     override val selectedIds: Set<Int> = emptySet(),
     override val searchKey: String = "",
     override val isSearch: Boolean = false,
-    override val isUploading: Boolean = false,
+    override val isLoading: Boolean = false,
     val downloadSummary: String = ""
-) : RuleActionState<TocItemUi>
+) : ListUiState<TocItemUi>
 
 data class TocDomainItem(
     val chapter: BookChapter,
@@ -305,7 +305,7 @@ class TocViewModel(
             selectedIds = selectedIds,
             searchKey = _searchKey.value,
             isSearch = isSearch,
-            isUploading = isUploading,
+            isLoading = isUploading,
             downloadSummary = downloadSummary.value
         )
     }

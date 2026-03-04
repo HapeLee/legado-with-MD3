@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,7 +37,6 @@ enum class FilePickerSheetMode {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilePickerSheet(
-    sheetState: SheetState,
     onDismissRequest: () -> Unit,
     title: String = stringResource(R.string.select_operation),
     onSelectSysDir: (() -> Unit)? = null,
@@ -49,7 +47,6 @@ fun FilePickerSheet(
 ) {
     GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
         containerColor = { it.surface }
     ) {
         Column(

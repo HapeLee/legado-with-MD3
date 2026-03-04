@@ -24,7 +24,9 @@ import io.legado.app.ui.theme.rememberOpaqueColorScheme
 fun GlassModalBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    sheetState: SheetState = rememberModalBottomSheetState(),
+    sheetState: SheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    ),
     containerColor: (ColorScheme) -> Color = { it.surfaceContainerLow },
     content: @Composable ColumnScope.() -> Unit
 ) {

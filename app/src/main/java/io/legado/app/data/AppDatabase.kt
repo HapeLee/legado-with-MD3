@@ -25,6 +25,7 @@ import io.legado.app.data.dao.RssSourceDao
 import io.legado.app.data.dao.RssStarDao
 import io.legado.app.data.dao.RuleSubDao
 import io.legado.app.data.dao.SearchBookDao
+import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.data.dao.SearchKeywordDao
 import io.legado.app.data.dao.ServerDao
 import io.legado.app.data.dao.TxtTocRuleDao
@@ -46,6 +47,7 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
 import io.legado.app.data.entities.RuleSub
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
 import io.legado.app.data.entities.TxtTocRule
@@ -67,14 +69,15 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 83,
+    version = 85,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
         RssSource::class, Bookmark::class, RssArticle::class,
         RssReadRecord::class, ReadRecordDetail::class, ReadRecordSession::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
-        RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class],
+        RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
+        SearchContentHistory::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -115,7 +118,10 @@ val appDb by lazy {
         AutoMigration(from = 78, to = 79),
         AutoMigration(from = 79, to = 80),
         AutoMigration(from = 80, to = 81),
-        AutoMigration(from = 81, to = 82)
+        AutoMigration(from = 81, to = 82),
+        AutoMigration(from = 82, to = 83),
+        AutoMigration(from = 83, to = 84),
+        AutoMigration(from = 84, to = 85)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -141,6 +147,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val dictRuleDao: DictRuleDao
     abstract val keyboardAssistsDao: KeyboardAssistsDao
     abstract val serverDao: ServerDao
+    abstract val searchContentHistoryDao: SearchContentHistoryDao
 
     companion object {
 

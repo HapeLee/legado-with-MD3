@@ -1,6 +1,7 @@
 package io.legado.app.data.entities
 
 import android.os.Parcelable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -15,6 +16,7 @@ data class Bookmark(
     @PrimaryKey
     val time: Long = System.currentTimeMillis(),
     val bookName: String = "",
+    @ColumnInfo(defaultValue = "")
     val bookAuthor: String = "",
     var chapterIndex: Int = 0,
     var chapterPos: Int = 0,

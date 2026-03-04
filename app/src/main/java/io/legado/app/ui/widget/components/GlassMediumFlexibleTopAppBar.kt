@@ -63,13 +63,12 @@ object GlassTopAppBarDefaults {
     @Composable
     fun controlContainerColor(): Color {
         val enableBlur = ThemeConfig.enableBlur
-        val baseColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        val baseColor = MaterialTheme.colorScheme.surfaceContainerHighest
 
         return if (enableBlur) {
-            val alpha = 0.6f
-            baseColor.copy(alpha = alpha)
+            baseColor.copy(alpha = 0.72f)
         } else {
-            baseColor.copy(alpha = ThemeConfig.containerOpacity / 100f)
+            baseColor
         }
     }
 

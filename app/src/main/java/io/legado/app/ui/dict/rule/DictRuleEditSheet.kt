@@ -24,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +50,6 @@ fun DictRuleEditSheet(
     onPaste: () -> DictRule?
 ) {
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var name by remember(rule) { mutableStateOf(rule?.name ?: "") }
     var urlRule by remember(rule) { mutableStateOf(rule?.urlRule ?: "") }
@@ -59,8 +57,7 @@ fun DictRuleEditSheet(
     var showMenu by remember { mutableStateOf(false) }
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
+        onDismissRequest = onDismissRequest
     ) {
         Box(
             modifier = Modifier

@@ -13,7 +13,7 @@ import io.legado.app.help.http.text
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
-import io.legado.app.ui.widget.components.rules.RuleActionState
+import io.legado.app.ui.widget.components.rules.ListUiState
 import io.legado.app.ui.widget.components.rules.SelectableItem
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isUri
@@ -42,7 +42,7 @@ sealed interface BaseRuleEvent {
     ) : BaseRuleEvent
 }
 
-abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : RuleActionState<T>>(
+abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiState<T>>(
     application: Application,
     initialState: S,
     private val uploadRepository: UploadRepository? = null // 设为可空，提高灵活性

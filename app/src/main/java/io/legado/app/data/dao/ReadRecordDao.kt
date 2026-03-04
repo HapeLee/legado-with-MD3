@@ -6,7 +6,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import io.legado.app.data.entities.ReadRecordShow
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -23,28 +22,8 @@ interface ReadRecordDao {
 
     @get:Query("select * from readRecordSession")
     val allSession: List<ReadRecordSession>
-
-    @get:Query(
-        """
-        select bookName, bookAuthor, sum(readTime) as readTime, max(lastRead) as lastRead 
-        from readRecord 
-        group by bookName, bookAuthor 
-        order by bookName collate localized, bookAuthor collate localized"""
-    )
-    val allShow: List<ReadRecordShow>
-
     @Query("SELECT sum(readTime) FROM readRecord")
     fun getTotalReadTime(): Flow<Long?>
-
-    @Query(
-        """
-        select bookName, bookAuthor, sum(readTime) as readTime, max(lastRead) as lastRead 
-        from readRecord 
-        where bookName like '%' || :searchKey || '%' or bookAuthor like '%' || :searchKey || '%'
-        group by bookName, bookAuthor 
-        order by bookName collate localized, bookAuthor collate localized"""
-    )
-    fun search(searchKey: String): List<ReadRecordShow>
 
     @Query("select sum(readTime) from readRecord where bookName = :bookName")
     fun getReadTime(bookName: String): Long?

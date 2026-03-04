@@ -27,7 +27,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,7 +56,6 @@ fun DirectLinkUploadBottomSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showMenu by remember { mutableStateOf(false) }
     var showTestResult by remember { mutableStateOf<String?>(null) }
 
@@ -66,8 +64,7 @@ fun DirectLinkUploadBottomSheet(
     }
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+        onDismissRequest = onDismiss
     ) {
         Column(
             modifier = Modifier

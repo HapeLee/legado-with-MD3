@@ -39,7 +39,6 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,7 +111,6 @@ fun ReplaceRuleScreen(
     var showGroupManageSheet by remember { mutableStateOf(false) }
 
     val importState by viewModel.importState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = remember(groups) { listOf("全部") + groups }
@@ -166,7 +164,6 @@ fun ReplaceRuleScreen(
 
     if (showFilePickerSheet) {
         FilePickerSheet(
-            sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
             onSelectSysDir = {
                 showFilePickerSheet = false
@@ -255,7 +252,6 @@ fun ReplaceRuleScreen(
         GroupManageBottomSheet(
             groups = groups,
             onDismissRequest = { showGroupManageSheet = false },
-            sheetState = sheetState,
             viewModel = viewModel
         )
     }

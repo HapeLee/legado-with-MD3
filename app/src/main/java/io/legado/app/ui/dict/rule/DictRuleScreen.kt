@@ -152,7 +152,6 @@ fun DictRuleScreen(
 
     if (showFilePickerSheet) {
         FilePickerSheet(
-            sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
             onSelectSysDir = {
                 showFilePickerSheet = false
