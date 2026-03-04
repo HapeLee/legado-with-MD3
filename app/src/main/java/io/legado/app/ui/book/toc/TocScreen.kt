@@ -110,6 +110,8 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -229,13 +231,22 @@ fun TocScreen(
 
     var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(state.items) {
-        if (!hasAutoScrolled && state.items.isNotEmpty()) {
-            val targetIndex = state.items.indexOfFirst { it.isDur }
+    LaunchedEffect(Unit) {
+        if (!hasAutoScrolled) {
+            // 等待列表包含当前阅读章节后自动定位，避免在无 isDur 项时提前退出
+            // 使用 animateScrollToItem 以便用户看到滚动动画，避免误操作
+            val items = snapshotFlow { state.items }
+                .filter { list -> list.any { it.isDur } }
+                .first()
+            val targetIndex = items.indexOfFirst { it.isDur }
             if (targetIndex != -1) {
-                listState.scrollToItem(
+                // 等待视口尺寸测量完成，确保 offset 计算正确
+                snapshotFlow { listState.layoutInfo.viewportEndOffset }
+                    .filter { it > 0 }
+                    .first()
+                listState.animateScrollToItem(
                     index = targetIndex,
-                    scrollOffset = -offset
+                    scrollOffset = -(listState.layoutInfo.viewportEndOffset / 4)
                 )
                 hasAutoScrolled = true
             }
