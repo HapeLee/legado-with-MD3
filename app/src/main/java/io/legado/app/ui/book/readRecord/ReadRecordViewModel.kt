@@ -99,6 +99,7 @@ class ReadRecordViewModel(
             .mapValues { (_, sessions) ->
                 mergeContinuousSessions(sessions).reversed()
             }
+            .toSortedMap(compareByDescending { it })
 
         ReadRecordUiState(
             isLoading = false,
