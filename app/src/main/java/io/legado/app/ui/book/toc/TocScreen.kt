@@ -110,6 +110,7 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
@@ -229,10 +230,12 @@ fun TocScreen(
 
     var hasAutoScrolled by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(state.items) {
-        if (!hasAutoScrolled && state.items.isNotEmpty()) {
-            val targetIndex = state.items.indexOfFirst { it.isDur }
+    LaunchedEffect(state.items, book) {
+        if (!hasAutoScrolled && state.items.isNotEmpty() && book != null) {
+            val durIndex = book?.durChapterIndex ?: -1
+            val targetIndex = state.items.indexOfFirst { it.id == durIndex || it.isDur }
             if (targetIndex != -1) {
+                delay(100) 
                 listState.scrollToItem(
                     index = targetIndex,
                     scrollOffset = -offset
