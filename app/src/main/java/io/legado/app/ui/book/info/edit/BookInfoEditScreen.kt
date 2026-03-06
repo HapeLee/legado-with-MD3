@@ -50,8 +50,8 @@ import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
 import io.legado.app.ui.widget.components.button.TopBarButtonVariant
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
@@ -72,13 +72,13 @@ fun BookInfoEditScreen(
             GlassMediumFlexibleTopAppBar(
                 title = { Text(text = stringResource(id = R.string.book_info_edit)) },
                 navigationIcon = {
-                    SmallTopBarButton(
+                    TopbarNavigationButton(
                         onClick = onBack,
                         style = TopBarButtonVariant.Outlined
                     )
                 },
                 actions = {
-                    SmallTopBarButton(
+                    TopbarNavigationButton(
                         onClick = { viewModel.save(onSave) },
                         imageVector = Icons.Default.Save
                     )

@@ -14,7 +14,7 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemSourceImportBinding
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 //import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.widget.dialog.CodeDialog
 import io.legado.app.ui.widget.dialog.WaitDialog
@@ -126,7 +126,7 @@ class ImportThemeDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
     }
 
     inner class SourcesAdapter(context: Context) :
-        RecyclerAdapter<ThemeConfig.Config, ItemSourceImportBinding>(context) {
+        RecyclerAdapter<OldThemeConfig.Config, ItemSourceImportBinding>(context) {
 
         override fun getViewBinding(parent: ViewGroup): ItemSourceImportBinding {
             return ItemSourceImportBinding.inflate(inflater, parent, false)
@@ -135,7 +135,7 @@ class ImportThemeDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
         override fun convert(
             holder: ItemViewHolder,
             binding: ItemSourceImportBinding,
-            item: ThemeConfig.Config,
+            item: OldThemeConfig.Config,
             payloads: MutableList<Any>
         ) {
             binding.apply {

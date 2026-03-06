@@ -47,6 +47,9 @@ interface BookChapterDao {
     @Query("update chapters set wordCount = :wordCount where bookUrl = :bookUrl and url = :url")
     fun upWordCount(bookUrl: String, url: String, wordCount: String)
 
+    @Query("update chapters set start = start + :diff, end = end + :diff where bookUrl = :bookUrl and `index` > :index")
+    fun updateOffsets(bookUrl: String, index: Int, diff: Long)
+
     /**
      * 根据书籍的唯一标识 bookUrl 和章节索引 index 查找章节标题。
      */

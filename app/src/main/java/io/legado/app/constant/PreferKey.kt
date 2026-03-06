@@ -181,6 +181,7 @@ object PreferKey {
     const val composeEngine = "composeEngine"
     const val containerOpacity = "containerOpacity"
     const val enableBlur = "enableBlur"
+    const val enableProgressiveBlur = "enableProgressiveBlur"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val bgImage = "backgroundImage"
@@ -250,6 +251,7 @@ object PreferKey {
 
     const val showTip = "showTip"
     const val sliderVibrator = "sliderVibrator"
+    const val selectVibrator = "selectVibrator"
     const val audioCacheCleanTime = "audioCacheCleanTime"
     const val audioPreDownloadNum = "audioPreDownloadNum"
 }

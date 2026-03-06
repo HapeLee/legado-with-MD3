@@ -106,7 +106,7 @@ object ReadBookConfig {
         shareConfig = c ?: configList.getOrNull(5) ?: Config()
     }
 
-    fun upBg(width: Int, height: Int) {
+    fun upBg(width: Int, height: Int): Drawable? {
         val drawable = durConfig.curBgDrawable(width, height)
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
             bgMeanColor = drawable.bitmap.getMeanColor()
@@ -115,7 +115,9 @@ object ReadBookConfig {
         }
         val tmp = bg
         bg = drawable
-        (tmp as? BitmapDrawable)?.bitmap?.recycle()
+        // 返回旧 Drawable，由调用方在视图更新完成后再 recycle，
+        // 避免视图仍引用旧 BitmapDrawable 时 bitmap 已被 recycle 导致崩溃
+        return tmp
     }
 
     fun save() {
@@ -413,6 +415,12 @@ object ReadBookConfig {
             config.underlineHeight = value
         }
 
+    var underlinePadding: Int
+        get() = config.underlinePadding
+        set(value) {
+            config.underlinePadding = value
+        }
+
     var dottedLine: Boolean
         get() = config.dottedLine
         set(value) {
@@ -591,6 +599,7 @@ object ReadBookConfig {
             exportConfig.paragraphIndent = shareConfig.paragraphIndent
             exportConfig.underline = shareConfig.underline
             exportConfig.underlineHeight = shareConfig.underlineHeight
+            exportConfig.underlinePadding = shareConfig.underlinePadding
             exportConfig.dottedLine = shareConfig.dottedLine
             exportConfig.dottedBase = shareConfig.dottedBase
             exportConfig.dottedRatio = shareConfig.dottedRatio
@@ -708,6 +717,7 @@ object ReadBookConfig {
         var titleSegFlag: String = "",//分段判断，碰到指定值时分段
         var paragraphIndent: String = "　　",//段落缩进
         var underline: Boolean = false, //下划线
+        var underlinePadding: Int = 10,
         var underlineHeight: Int = 1,
         var underlineColor: String = "#3E3D3B",
         var underlineColorNight: String = "#ADADAD",

@@ -155,6 +155,42 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         }.start()
     }
 
+    fun syncFromRemote() {
+        val book = bookData.value ?: return
+        if (!book.isLocal) return
+
+        val remoteUrl = book.getRemoteUrl() ?: return
+
+        execute {
+            waitDialogData.postValue(true)
+            val bookWebDav = AppWebDav.defaultBookWebDav
+                ?: throw NoStackTraceException("webDav没有配置")
+
+            val remoteBook = bookWebDav.getRemoteBook(remoteUrl)
+                ?: throw NoStackTraceException("远程文件不存在")
+
+            val downloadBookUri = bookWebDav.downloadRemoteBook(remoteBook)
+
+            val importedBooks = LocalBook.importFiles(downloadBookUri)
+            val newBook = importedBooks.firstOrNull() ?: throw NoStackTraceException("导入失败")
+
+            newBook.durChapterIndex = book.durChapterIndex
+            newBook.durChapterPos = book.durChapterPos
+            newBook.order = book.order
+            newBook.group = book.group
+
+            appDb.bookDao.delete(book)
+            appDb.bookDao.insert(newBook)
+
+            loadChapter(newBook)
+
+            bookData.postValue(newBook)
+            context.toastOnUi("同步完成")
+        }.onFinally {
+            waitDialogData.postValue(false)
+        }
+    }
+
     fun loadBookInfo(
         book: Book,
         canReName: Boolean = true,

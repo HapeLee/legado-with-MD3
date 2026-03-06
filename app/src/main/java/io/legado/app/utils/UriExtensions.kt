@@ -30,6 +30,43 @@ fun Uri.isContentScheme() = this.scheme == "content"
 fun Uri.isFileScheme() = this.scheme == "file"
 
 /**
+ * Some vendors return non-persistable content Uris even in system picker flows.
+ * Try to persist read/write grants separately and never throw.
+ */
+fun Uri.takePersistablePermissionSafely(
+    context: Context,
+    modeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+): Boolean {
+    if (!isContentScheme()) return false
+    var granted = false
+    if (modeFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0) {
+        kotlin.runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                this,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }.onSuccess {
+            granted = true
+        }.onFailure {
+            AppLog.put("持久化读取权限失败: $this", it)
+        }
+    }
+    if (modeFlags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION != 0) {
+        kotlin.runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                this,
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }.onSuccess {
+            granted = true
+        }.onFailure {
+            AppLog.put("持久化写入权限失败: $this", it)
+        }
+    }
+    return granted
+}
+
+/**
  * 读取URI
  */
 fun AppCompatActivity.readUri(

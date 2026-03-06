@@ -1,17 +1,18 @@
 package io.legado.app.ui.book.readRecord
 
 import android.os.Bundle
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.lifecycle.lifecycleScope
-import io.legado.app.ui.theme.AppTheme
+import io.legado.app.base.BaseComposeActivity
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.ui.book.search.SearchActivity
+import io.legado.app.ui.theme.AppTheme
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import io.legado.app.base.BaseComposeActivity
-import io.legado.app.data.entities.readRecord.ReadRecordSession
-import org.koin.androidx.compose.koinViewModel
 
 data class TimelineItem(
     val session: ReadRecordSession,
@@ -25,12 +26,17 @@ class ReadRecordActivity : BaseComposeActivity() {
         AppTheme {
             ReadRecordScreen(
                 onBackClick = { finish() },
-                onBookClick = { bookName ->
+                onBookClick = { bookName, bookAuthor ->
                     lifecycleScope.launch {
                         val book = withContext(Dispatchers.IO) {
-                            appDb.bookDao.findByName(bookName).firstOrNull()
+                            appDb.bookDao.getBook(bookName, bookAuthor)
                         }
                         if (book != null) startActivityForBook(book)
+                        else {
+                            startActivity<SearchActivity> {
+                                putExtra("key", bookName)
+                            }
+                        }
                     }
                 }
             )

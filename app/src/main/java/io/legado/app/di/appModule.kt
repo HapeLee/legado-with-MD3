@@ -6,10 +6,12 @@ import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
+import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
@@ -34,6 +36,7 @@ val appModule = module {
     singleOf(::ReadRecordRepository)
     singleOf(::BookRepository)
     singleOf(::SearchContentRepository)
+    singleOf(::RemoteBookRepository)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
@@ -47,6 +50,7 @@ val appModule = module {
     viewModelOf(::TxtTocRuleViewModel)
     viewModelOf(::OtherConfigViewModel)
     viewModelOf(::TocViewModel)
+    viewModelOf(::RemoteBookViewModel)
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(

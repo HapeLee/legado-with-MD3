@@ -139,7 +139,6 @@ fun <T> BatchImportDialog(
 
     GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
         containerColor = { it.surfaceContainer }
     ) {
         Scaffold(

@@ -10,7 +10,6 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.graphics.scale
-import coil.ImageLoader
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
@@ -44,9 +43,9 @@ import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.OldThemeConfig.applyDayNightInit
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
-import io.legado.app.help.config.ThemeConfig.applyDayNightInit
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.Cronet
 import io.legado.app.help.http.ObsoleteUrlFactory
@@ -155,7 +154,7 @@ class App : Application() {
             BookHelp.clearInvalidCache()
             Backup.clearCache()
             ReadBookConfig.clearBgAndCache()
-            ThemeConfig.clearBg()
+            OldThemeConfig.clearBg()
             //初始化简繁转换引擎
             when (AppConfig.chineseConverterType) {
                 1 -> {

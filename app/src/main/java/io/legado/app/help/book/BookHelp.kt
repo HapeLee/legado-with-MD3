@@ -2,6 +2,7 @@ package io.legado.app.help.book
 
 import android.graphics.BitmapFactory
 import android.os.ParcelFileDescriptor
+import android.system.Os
 import androidx.documentfile.provider.DocumentFile
 import com.script.rhino.runScriptWithContext
 import io.legado.app.constant.AppLog
@@ -14,6 +15,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.model.localBook.TextFile
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.ImageUtils
@@ -176,10 +178,19 @@ object BookHelp {
     fun saveText(
         book: Book,
         bookChapter: BookChapter,
-        content: String
+        content: String,
+        saveToSource: Boolean = false
     ) {
         if (content.isEmpty()) return
-        //保存文本
+        if (book.isLocalTxt && saveToSource) {
+            try {
+                saveToLocalTxt(book, bookChapter, content)
+                TextFile.clear()
+            } catch (e: Exception) {
+                AppLog.put("修改本地TXT失败: ${e.localizedMessage}", e)
+            }
+        }
+        // 保存阅读缓存文本(.nb)
         FileUtils.createFileIfNotExist(
             downloadDir,
             cacheFolderName,
@@ -189,7 +200,61 @@ object BookHelp {
         if (book.isOnLineTxt && AppConfig.tocCountWords) {
             val wordCount = StringUtils.wordCountFormat(content.length)
             bookChapter.wordCount = wordCount
-            appDb.bookChapterDao.upWordCount(bookChapter.bookUrl, bookChapter.url, wordCount)
+            appDb.bookChapterDao.update(bookChapter)
+        }
+    }
+
+    private fun saveToLocalTxt(book: Book, bookChapter: BookChapter, content: String) {
+        val start = bookChapter.start ?: return
+        val end = bookChapter.end ?: return
+        val uri = book.getLocalUri()
+        val charset = book.fileCharset()
+        val oldTitle = bookChapter.title
+        val newContent = oldTitle + "\n" + content
+        val newBytes = newContent.toByteArray(charset)
+        val oldLength = end - start
+        val diff = newBytes.size - oldLength
+
+        val pfd = if (uri.isContentScheme()) {
+            appCtx.contentResolver.openFileDescriptor(uri, "rw")
+        } else {
+            ParcelFileDescriptor.open(File(uri.path!!), ParcelFileDescriptor.MODE_READ_WRITE)
+        }
+
+        pfd?.use {
+            val fd = it.fileDescriptor
+            try {
+                val totalLength = Os.fstat(fd).st_size
+
+                if (diff != 0L) {
+                    val remaining = totalLength - end
+                    if (remaining > 0) {
+                        val buffer = ByteArray(1024 * 1024)
+                        var pos = totalLength
+                        while (pos > end) {
+                            val readSize =
+                                if (pos - end > buffer.size) buffer.size else (pos - end).toInt()
+                            Os.pread(fd, buffer, 0, readSize, pos - readSize)
+                            Os.pwrite(fd, buffer, 0, readSize, pos - readSize + diff)
+                            pos -= readSize
+                        }
+                    }
+                    if (diff < 0) {
+                        Os.ftruncate(fd, totalLength + diff)
+                    }
+                }
+
+                Os.pwrite(fd, newBytes, 0, newBytes.size, start)
+
+                // 更新数据库中的偏移量
+                if (diff != 0L) {
+                    appDb.bookChapterDao.updateOffsets(book.bookUrl, bookChapter.index, diff)
+                }
+                bookChapter.end = start + newBytes.size
+                appDb.bookChapterDao.update(bookChapter)
+            } catch (e: Exception) {
+                throw e
+            }
         }
     }
 
@@ -597,7 +662,7 @@ object BookHelp {
 
     private val regexC by lazy {
         //前后附加内容，整个章节名都在括号中时只剔除首尾括号，避免将章节名替换为空字串
-        return@lazy "(?!^)(?:[〖【《〔\\[{(][^〖【《〔\\[{()〕》】〗\\]}]+)?[)〕》】〗\\]}]$|^[〖【《〔\\[{(](?:[^〖【《〔\\[{()〕》】〗\\]}]+[〕》】〗\\]})])?(?!$)".toRegex()
+        return@lazy "(?!^)(?:[〖【《〔\\[{(][^〖【《〔\\[{()〕》》】〗\\]}]+)?[)〕》》】〗\\]}]$|^[〖【《〔\\[{(](?:[^〖【《〔\\[{()〕》》】〗\\]}]+[〕》》】〗\\]})])?(?!$)".toRegex()
     }
 
     private fun getPureChapterName(chapterName: String?): String {

@@ -15,8 +15,8 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
@@ -1203,12 +1203,12 @@ interface JsExtensions : JsEncodeUtils {
      */
     @JavascriptInterface
     fun getThemeConfig(): String {
-        val themeConfig = ThemeConfig.getDurConfig(appCtx)
+        val themeConfig = OldThemeConfig.getDurConfig(appCtx)
         return GSON.toJson(themeConfig)
     }
 
     fun getThemeConfigMap(): Map<String, Any?> {
-        return ThemeConfig.getDurConfig(appCtx).toMap()
+        return OldThemeConfig.getDurConfig(appCtx).toMap()
     }
 
 }

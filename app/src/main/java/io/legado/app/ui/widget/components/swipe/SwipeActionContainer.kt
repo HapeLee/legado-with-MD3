@@ -12,6 +12,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.dp
 fun SwipeActionContainer(
     modifier: Modifier = Modifier,
     startAction: SwipeAction? = null,
+    endAction: SwipeAction? = null,
     content: @Composable () -> Unit
 ) {
     val haptic = LocalHapticFeedback.current
@@ -39,8 +41,6 @@ fun SwipeActionContainer(
             totalDistance * 0.6f
         }
     )
-    val isThresholdReached =
-        dismissState.progress > 0.5f && dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd
 
     LaunchedEffect(dismissState.targetValue) {
         if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) {
@@ -51,9 +51,18 @@ fun SwipeActionContainer(
     }
 
     LaunchedEffect(dismissState.settledValue) {
-        if (dismissState.settledValue == SwipeToDismissBoxValue.StartToEnd) {
-            startAction?.onSwipe?.invoke()
-            dismissState.reset()
+        when (dismissState.settledValue) {
+            SwipeToDismissBoxValue.StartToEnd -> {
+                startAction?.onSwipe?.invoke()
+                dismissState.reset()
+            }
+
+            SwipeToDismissBoxValue.EndToStart -> {
+                endAction?.onSwipe?.invoke()
+                dismissState.reset()
+            }
+
+            else -> {}
         }
     }
 
@@ -61,44 +70,34 @@ fun SwipeActionContainer(
         state = dismissState,
         modifier = modifier,
         enableDismissFromStartToEnd = startAction != null,
-        enableDismissFromEndToStart = false,
+        enableDismissFromEndToStart = endAction != null,
         backgroundContent = {
             val direction = dismissState.dismissDirection
             val progress = dismissState.progress
 
-            if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                val backgroundColor by animateColorAsState(
-                    targetValue = if (isThresholdReached) startAction!!.background
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                    label = "bgColor"
-                )
+            when (direction) {
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(backgroundColor)
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    val iconScale by animateFloatAsState(
-                        targetValue = if (isThresholdReached) 1.3f else progress.coerceIn(0.5f, 1f),
-                        label = "iconScale"
-                    )
-
-                    Icon(
-                        imageVector = startAction!!.icon,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer {
-                                scaleX = iconScale
-                                scaleY = iconScale
-                            },
-                        tint = if (isThresholdReached)
-                            contentColorFor(startAction.background)
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    startAction?.let { action ->
+                        SwipeBackground(
+                            dismissState = dismissState,
+                            action = action,
+                            alignStart = true
+                        )
+                    }
                 }
+
+                SwipeToDismissBoxValue.EndToStart -> {
+                    endAction?.let { action ->
+                        SwipeBackground(
+                            dismissState = dismissState,
+                            action = action,
+                            alignStart = false
+                        )
+                    }
+                }
+
+                else -> {}
             }
         },
         content = {
@@ -111,4 +110,56 @@ fun SwipeActionContainer(
             }
         }
     )
+}
+
+@Composable
+private fun SwipeBackground(
+    action: SwipeAction,
+    dismissState: SwipeToDismissBoxState,
+    alignStart: Boolean
+) {
+    val isThresholdReached = dismissState.targetValue == if (alignStart)
+        SwipeToDismissBoxValue.StartToEnd
+    else
+        SwipeToDismissBoxValue.EndToStart
+
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isThresholdReached)
+            action.background
+        else
+            MaterialTheme.colorScheme.surfaceVariant,
+        label = "bgColor"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (isThresholdReached) 1.2f
+        else 1f,
+        label = "iconScale"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .padding(horizontal = 24.dp),
+        contentAlignment = if (alignStart)
+            Alignment.CenterStart
+        else
+            Alignment.CenterEnd
+    ) {
+        Icon(
+            imageVector = action.icon,
+            contentDescription = null,
+            modifier = Modifier
+                .size(24.dp)
+                .graphicsLayer {
+                    scaleX = iconScale
+                    scaleY = iconScale
+                },
+            tint = if (isThresholdReached)
+                contentColorFor(action.background)
+            else
+                MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }

@@ -9,7 +9,7 @@ import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.rules.InteractionState
-import io.legado.app.ui.widget.components.rules.RuleActionState
+import io.legado.app.ui.widget.components.rules.ListUiState
 import io.legado.app.ui.widget.components.rules.SelectableItem
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -36,9 +36,9 @@ data class TxtTocRuleUiState(
     override val selectedIds: Set<Long> = emptySet(),
     override val searchKey: String = "",
     val interaction: InteractionState = InteractionState()
-) : RuleActionState<TxtTocRuleItemUi> {
+) : ListUiState<TxtTocRuleItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
-    override val isUploading: Boolean get() = interaction.isUploading
+    override val isLoading: Boolean get() = interaction.isUploading
 }
 
 

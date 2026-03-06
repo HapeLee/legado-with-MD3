@@ -39,7 +39,6 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +72,7 @@ import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -111,7 +111,6 @@ fun ReplaceRuleScreen(
     var showGroupManageSheet by remember { mutableStateOf(false) }
 
     val importState by viewModel.importState.collectAsStateWithLifecycle()
-    val sheetState = rememberModalBottomSheetState()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabItems = remember(groups) { listOf("全部") + groups }
@@ -165,7 +164,6 @@ fun ReplaceRuleScreen(
 
     if (showFilePickerSheet) {
         FilePickerSheet(
-            sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
             onSelectSysDir = {
                 showFilePickerSheet = false
@@ -254,7 +252,6 @@ fun ReplaceRuleScreen(
         GroupManageBottomSheet(
             groups = groups,
             onDismissRequest = { showGroupManageSheet = false },
-            sheetState = sheetState,
             viewModel = viewModel
         )
     }
@@ -387,35 +384,35 @@ fun ReplaceRuleScreen(
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("在线导入") },
                 onClick = {
                     dismiss()
                     showUrlInput = true // 触发输入框
                 }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("本地导入") },
                 onClick = { importDoc.launch(arrayOf("text/plain", "application/json")); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("分组管理") },
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("帮助") },
                 onClick = { /*TODO*/ dismiss() }
             )
             HorizontalDivider()
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("旧的在前") },
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("新的在前") },
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("名称升序") },
                 onClick = {
                     viewModel.setSortMode("name_asc")
@@ -425,7 +422,7 @@ fun ReplaceRuleScreen(
                     }
                 }
             )
-            DropdownMenuItem(
+            RoundDropdownMenuItem(
                 text = { Text("名称降序") },
                 onClick = {
                     viewModel.setSortMode("name_desc")

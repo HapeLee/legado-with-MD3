@@ -8,12 +8,19 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
-import io.legado.app.utils.*
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.isJsonObject
+import io.legado.app.utils.isUri
+import io.legado.app.utils.readText
 import splitties.init.appCtx
 
 class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
@@ -21,8 +28,8 @@ class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
     val errorLiveData = MutableLiveData<String>()
     val successLiveData = MutableLiveData<Int>()
 
-    val allSources = arrayListOf<ThemeConfig.Config>()
-    val checkSources = arrayListOf<ThemeConfig.Config?>()
+    val allSources = arrayListOf<OldThemeConfig.Config>()
+    val checkSources = arrayListOf<OldThemeConfig.Config?>()
     val selectStatus = arrayListOf<Boolean>()
 
     val isSelectAll: Boolean
@@ -50,7 +57,7 @@ class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
         execute {
             selectStatus.forEachIndexed { index, b ->
                 if (b) {
-                    ThemeConfig.addConfig(allSources[index])
+                    OldThemeConfig.addConfig(allSources[index])
                 }
             }
         }.onFinally {
@@ -72,11 +79,12 @@ class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
     private suspend fun importSourceAwait(text: String) {
         when {
             text.isJsonObject() -> {
-                GSON.fromJsonObject<ThemeConfig.Config>(text).getOrThrow().let {
+                GSON.fromJsonObject<OldThemeConfig.Config>(text).getOrThrow().let {
                     allSources.add(it)
                 }
             }
-            text.isJsonArray() -> GSON.fromJsonArray<ThemeConfig.Config>(text).getOrThrow()
+
+            text.isJsonArray() -> GSON.fromJsonArray<OldThemeConfig.Config>(text).getOrThrow()
                 .let { items ->
                     allSources.addAll(items)
                 }
@@ -106,7 +114,7 @@ class ImportThemeViewModel(app: Application) : BaseViewModel(app) {
     private fun comparisonSource() {
         execute {
             allSources.forEach { config ->
-                val source = ThemeConfig.configList.find {
+                val source = OldThemeConfig.configList.find {
                     it.themeName == config.themeName
                 }
                 checkSources.add(source)

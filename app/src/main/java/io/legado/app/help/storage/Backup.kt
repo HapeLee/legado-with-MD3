@@ -13,8 +13,8 @@ import io.legado.app.help.AppWebDav
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.BookCover
 import io.legado.app.utils.FileUtils
@@ -82,7 +82,7 @@ object Backup {
             DirectLinkUpload.ruleFileName,
             ReadBookConfig.configFileName,
             ReadBookConfig.shareConfigFileName,
-            ThemeConfig.configFileName,
+            OldThemeConfig.configFileName,
             BookCover.configFileName,
             "config.xml"
         )
@@ -169,8 +169,8 @@ object Backup {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.shareConfigFileName)
                 .writeText(it)
         }
-        GSON.toJson(ThemeConfig.configList).let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + ThemeConfig.configFileName)
+        GSON.toJson(OldThemeConfig.configList).let {
+            FileUtils.createFileIfNotExist(backupPath + File.separator + OldThemeConfig.configFileName)
                 .writeText(it)
         }
         DirectLinkUpload.getConfig()?.let {

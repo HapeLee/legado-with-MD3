@@ -13,17 +13,12 @@ import io.legado.app.ui.replace.ReplaceRuleActivity
  */
 class TocActivity : BaseComposeActivity() {
 
-    private val bookUrl: String? by lazy {
-        intent.getStringExtra("bookUrl")
-    }
-
     @Composable
     override fun Content() {
         val context = LocalContext.current
 
         TocScreen(
             onBackClick = { finish() },
-            bookUrl = bookUrl,
             onChapterClick = { index ->
                 val data = Intent().apply {
                     putExtra("index", index)
@@ -35,7 +30,14 @@ class TocActivity : BaseComposeActivity() {
                 val intent = ReplaceRuleActivity.startIntent(context, editRoute)
                 context.startActivity(intent)
             },
-            onBookmarkClick = { _, _ -> /* 书签点击 */ },
+            onBookmarkClick = { index, pos ->
+                val data = Intent().apply {
+                    putExtra("index", index)
+                    putExtra("chapterPos", pos)
+                }
+                setResult(RESULT_OK, data)
+                finish()
+            }
         )
     }
 }

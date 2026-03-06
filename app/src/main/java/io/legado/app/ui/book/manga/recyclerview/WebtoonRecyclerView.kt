@@ -5,11 +5,11 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.AttributeSet
-import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.animation.DecelerateInterpolator
 import androidx.core.animation.doOnEnd
+import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.utils.findCenterViewPosition
@@ -255,7 +255,7 @@ class WebtoonRecyclerView @JvmOverloads constructor(
 
         override fun onLongTapConfirmed(ev: MotionEvent) {
             if (longTapListener?.invoke(ev) == true) {
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                performHapticFeedback(HapticFeedbackConstantsCompat.LONG_PRESS)
             }
         }
     }
