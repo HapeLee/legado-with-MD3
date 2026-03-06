@@ -8,8 +8,8 @@ import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.BookCover
 import io.legado.app.utils.GSON
@@ -70,12 +70,12 @@ object DefaultData {
         GSON.fromJsonArray<TxtTocRule>(json).getOrNull() ?: emptyList()
     }
 
-    val themeConfigs: List<ThemeConfig.Config> by lazy {
+    val themeConfigs: List<OldThemeConfig.Config> by lazy {
         val json = String(
-            appCtx.assets.open("defaultData${File.separator}${ThemeConfig.configFileName}")
+            appCtx.assets.open("defaultData${File.separator}${OldThemeConfig.configFileName}")
                 .readBytes()
         )
-        GSON.fromJsonArray<ThemeConfig.Config>(json).getOrNull() ?: emptyList()
+        GSON.fromJsonArray<OldThemeConfig.Config>(json).getOrNull() ?: emptyList()
     }
 
     val rssSources: List<RssSource> by lazy {

@@ -2,7 +2,10 @@ package io.legado.app.ui.book.readRecord
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Merge
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
@@ -36,6 +41,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,38 +50,59 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.Calendar
 import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
+import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
+import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
+import io.legado.app.ui.widget.components.heatmap.HeatmapMode
+import io.legado.app.ui.widget.components.heatmap.HeatmapWeekColumn
+import io.legado.app.ui.widget.components.heatmap.NoEarlierDataIndicator
+import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
+import io.legado.app.ui.widget.components.heatmap.rememberDateRange
+import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
+import io.legado.app.ui.widget.components.heatmap.rememberWeeks
+import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.utils.StringUtils.formatFriendlyDate
+import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -85,8 +113,11 @@ import java.util.Date
 fun ReadRecordScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
     onBackClick: () -> Unit,
-    onBookClick: (String) -> Unit
+    onBookClick: (String, String) -> Unit
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     val state by viewModel.uiState.collectAsState()
     val displayMode by viewModel.displayMode.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
@@ -96,6 +127,7 @@ fun ReadRecordScreen(
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var mergeDialogData by remember { mutableStateOf<Pair<ReadRecord, List<ReadRecord>>?>(null) }
     val onConfirmDelete: (() -> Unit) -> Unit = { action ->
         if (skipDeleteConfirm) {
             action()
@@ -112,6 +144,7 @@ fun ReadRecordScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
@@ -131,7 +164,7 @@ fun ReadRecordScreen(
                         )
                     },
                     navigationIcon = {
-                        SmallTopBarButton(onClick = onBackClick)
+                        TopbarNavigationButton(onClick = onBackClick)
                     },
                     actions = {
                         IconButton(onClick = {
@@ -164,19 +197,6 @@ fun ReadRecordScreen(
                     SearchBarSection(
                         query = state.searchKey ?: "",
                         onQueryChange = { viewModel.setSearchKey(it) }
-                    )
-                }
-                AnimatedVisibility(visible = showCalendar) {
-                    CalendarSection(
-                        selectedDate = state.selectedDate,
-                        onDateSelected = { date ->
-                            viewModel.setSelectedDate(date)
-                            showCalendar = false
-                        },
-                        onClearDate = {
-                            viewModel.setSelectedDate(null)
-                            showCalendar = false
-                        }
                     )
                 }
             }
@@ -226,7 +246,17 @@ fun ReadRecordScreen(
                                 state = state,
                                 viewModel = viewModel,
                                 onBookClick = onBookClick,
-                                onConfirmDelete = onConfirmDelete
+                                onConfirmDelete = onConfirmDelete,
+                                onMergeClick = { record ->
+                                    scope.launch {
+                                        val candidates = viewModel.getMergeCandidates(record)
+                                        if (candidates.isEmpty()) {
+                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                        } else {
+                                            mergeDialogData = record to candidates
+                                        }
+                                    }
+                                }
                             )
                         }
                     }
@@ -286,6 +316,86 @@ fun ReadRecordScreen(
             }
         )
     }
+
+    if (showCalendar) {
+        GlassModalBottomSheet(
+            onDismissRequest = { showCalendar = false }
+        ) {
+            HeatmapCalendarSection(
+                dailyReadCounts = state.dailyReadCounts,
+                dailyReadTimes = state.dailyReadTimes,
+                selectedDate = state.selectedDate,
+                onDateSelected = { date ->
+                    viewModel.setSelectedDate(date)
+                    showCalendar = false
+                },
+                onClearDate = {
+                    viewModel.setSelectedDate(null)
+                    showCalendar = false
+                }
+            )
+        }
+    }
+
+
+    mergeDialogData?.let { (targetRecord, candidates) ->
+
+        var selectedAuthors by remember(targetRecord, candidates) {
+            mutableStateOf(candidates.map { it.bookAuthor }.toSet())
+        }
+
+        AlertDialog(
+            onDismissRequest = { mergeDialogData = null },
+            title = { Text("合并阅读记录") },
+            text = {
+                Column {
+                    Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    candidates.forEach { candidate ->
+                        val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                        val isChecked = selectedAuthors.contains(candidate.bookAuthor)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedAuthors =
+                                        if (isChecked) selectedAuthors - candidate.bookAuthor
+                                        else selectedAuthors + candidate.bookAuthor
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(checked = isChecked, onCheckedChange = null)
+                            Text(
+                                text = "$author（${formatDuring(candidate.readTime)}）",
+                                modifier = Modifier.padding(start = 8.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.mergeReadRecords(
+                            targetRecord,
+                            candidates.filter { selectedAuthors.contains(it.bookAuthor) }
+                        )
+                        mergeDialogData = null
+                    }
+                ) {
+                    Text("合并")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mergeDialogData = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -300,7 +410,7 @@ fun SummarySection(
         val dailyDetails = state.groupedRecords[dateKey] ?: emptyList()
 
         if (dailyDetails.isNotEmpty()) {
-            val distinctBooks = dailyDetails.map { it.bookName }.distinct()
+            val distinctBooks = dailyDetails.map { it.bookName to it.bookAuthor }.distinct()
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
@@ -321,7 +431,7 @@ fun SummarySection(
                 title = "累计阅读成就",
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
-                bookNamesForCover = state.latestRecords.take(5).map { it.bookName },
+                bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
                 viewModel = viewModel,
                 onClick = {  }
             )
@@ -329,20 +439,155 @@ fun SummarySection(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun HeatmapCalendarSection(
+    modifier: Modifier = Modifier,
+    dailyReadCounts: Map<LocalDate, Int>,
+    dailyReadTimes: Map<LocalDate, Long>,
+    selectedDate: LocalDate?,
+    onDateSelected: (LocalDate) -> Unit,
+    onClearDate: () -> Unit,
+    config: HeatmapConfig = HeatmapConfig()
+) {
+    var currentMode by remember { mutableStateOf(HeatmapMode.COUNT) }
+
+    val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
+    val days = rememberDaysInRange(startDate, endDate)
+    val weeks = rememberWeeks(days, startDate)
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(weeks) {
+        if (weeks.isNotEmpty()) {
+            listState.scrollToItem(weeks.size - 1)
+        }
+    }
+
+    val showLeftGradient by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+        }
+    }
+    val showRightGradient by remember {
+        derivedStateOf {
+            listState.canScrollForward
+        }
+    }
+
+    val leftAlpha by animateFloatAsState(
+        targetValue = if (showLeftGradient) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "LeftGradientAlpha"
+    )
+
+    val rightAlpha by animateFloatAsState(
+        targetValue = if (showRightGradient) 1f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "RightGradientAlpha"
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(bottom = 32.dp)
+    ) {
+        HeatmapCalendarTopBar(
+            currentMode = currentMode,
+            onModeChanged = { currentMode = it },
+            onClearDate = onClearDate
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            WeekdayLabelsColumn(
+                cellSize = config.cellSize,
+                cellSpacing = config.cellSpacing
+            )
+
+            LazyRow(
+                state = listState,
+                horizontalArrangement = Arrangement.spacedBy(config.cellSpacing),
+                modifier = Modifier
+                    .weight(1f)
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithContent {
+                        drawContent()
+
+                        val width = size.width
+                        val gradientWidthPx = config.gradientWidth.toPx()
+                        val leftStop = gradientWidthPx / width
+                        val rightStop = 1f - (gradientWidthPx / width)
+
+                        val colorStops = arrayOf(
+                            0f to Color.Black.copy(alpha = 1f - leftAlpha),
+                            leftStop to Color.Black,
+                            rightStop to Color.Black,
+                            1f to Color.Black.copy(alpha = 1f - rightAlpha)
+                        )
+
+                        drawRect(
+                            brush = Brush.horizontalGradient(
+                                colorStops = colorStops,
+                                startX = 0f,
+                                endX = width
+                            ),
+                            blendMode = BlendMode.DstIn
+                        )
+                    }
+            ) {
+                val firstReadDate = listOfNotNull(
+                    dailyReadCounts.filterValues { it > 0 }.keys.minOrNull(),
+                    dailyReadTimes.filterValues { it > 0L }.keys.minOrNull()
+                ).minOrNull()
+
+                if (firstReadDate != null) {
+                    item {
+                        NoEarlierDataIndicator(cellSize = config.cellSize)
+                    }
+                }
+
+                items(weeks.size) { weekIndex ->
+                    HeatmapWeekColumn(
+                        week = weeks[weekIndex],
+                        mode = currentMode,
+                        dailyReadCounts = dailyReadCounts,
+                        dailyReadTimes = dailyReadTimes,
+                        selectedDate = selectedDate,
+                        config = config,
+                        onDateSelected = onDateSelected
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        HeatmapLegend(
+            mode = currentMode,
+            config = config
+        )
+    }
+}
+
 fun LazyListScope.renderListByMode(
     displayMode: DisplayMode,
     state: ReadRecordUiState,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String) -> Unit,
-    onConfirmDelete: (() -> Unit) -> Unit
+    onBookClick: (String, String) -> Unit,
+    onConfirmDelete: (() -> Unit) -> Unit,
+    onMergeClick: (ReadRecord) -> Unit
 ) {
+
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
             state.groupedRecords.forEach { (date, details) ->
                 stickyHeader(key = "header_$date") {
                     DateHeader(date, details.sumOf { it.readTime })
                 }
-                items(items = details, key = { "${it.bookName}_${it.date}" }) { detail ->
+                items(items = details, key = { "${it.bookName}_${it.bookAuthor}_${it.date}" }) { detail ->
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -356,7 +601,7 @@ fun LazyListScope.renderListByMode(
                         ReadRecordItem(
                             detail,
                             viewModel,
-                            onClick = { onBookClick(detail.bookName) })
+                            onClick = { onBookClick(detail.bookName, detail.bookAuthor) })
                     }
                 }
             }
@@ -387,7 +632,7 @@ fun LazyListScope.renderListByMode(
         }
 
         DisplayMode.LATEST -> {
-            items(items = state.latestRecords, key = { it.bookName }) { record ->
+            items(items = state.latestRecords, key = { "${it.bookName}_${it.bookAuthor}" }) { record ->
                 SwipeActionContainer(
                     modifier = Modifier.animateItem(),
                     startAction = SwipeAction(
@@ -396,16 +641,23 @@ fun LazyListScope.renderListByMode(
                         onSwipe = {
                             onConfirmDelete { viewModel.deleteReadRecord(record) }
                         }
+                    ),
+                    endAction = SwipeAction(
+                        icon = Icons.Default.Merge,
+                        background = MaterialTheme.colorScheme.primary,
+                        onSwipe = {
+                            onMergeClick(record)
+                        }
                     )
                 ) {
-                    LatestReadItem(
-                        record = record,
-                        viewModel = viewModel,
-                        onClick = { onBookClick(record.bookName) }
-                    )
+                        LatestReadItem(
+                            record = record,
+                            viewModel = viewModel,
+                            onClick = { onBookClick(record.bookName, record.bookAuthor) }
+                        )
+                    }
                 }
             }
-        }
     }
 }
 
@@ -418,8 +670,8 @@ fun LatestReadItem(
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(record.bookName) {
-        coverPath = viewModel.getBookCover(record.bookName)
+    LaunchedEffect(record.bookName, record.bookAuthor) {
+        coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
     }
 
     Row(
@@ -437,18 +689,36 @@ fun LatestReadItem(
             Text(
                 text = record.bookName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "总时长: ${formatDuring(record.readTime)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "最后阅读: ${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}",
+                text = record.bookAuthor.ifBlank { "未知作者" },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.outline,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                modifier = Modifier
+                    .basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        repeatDelayMillis = 2000,
+                        initialDelayMillis = 1000
+                    ),
+                text = buildAnnotatedString {
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.outline)) {
+                        append(formatDuring(record.readTime))
+                        append(" • ")
+                    }
+                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                        append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
+                    }
+                },
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -458,15 +728,15 @@ fun LatestReadItem(
 fun TimelineSessionItem(
     item: TimelineItem,
     viewModel: ReadRecordViewModel,
-    onBookClick: (String) -> Unit
+    onBookClick: (String, String) -> Unit
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
     var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
 
-    LaunchedEffect(session.bookName) {
-        coverPath = viewModel.getBookCover(session.bookName)
-        val title = viewModel.getChapterTitle(session.bookName, session.words)
+    LaunchedEffect(session.bookName, session.bookAuthor) {
+        coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
+        val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
         chapterTitle = title ?: "第 ${session.words} 章"
     }
 
@@ -483,7 +753,7 @@ fun TimelineSessionItem(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onBookClick(session.bookName) }
+            .clickable { onBookClick(session.bookName, session.bookAuthor) }
             .drawBehind {
                 val x = timelineX.toPx()
                 val h = size.height
@@ -528,14 +798,21 @@ fun TimelineSessionItem(
                     Text(
                         text = session.bookName,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        minLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = chapterTitle.orEmpty(),
+                        text = session.bookAuthor.ifBlank { "未知作者" },
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = chapterTitle.orEmpty(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -554,8 +831,8 @@ fun ReadRecordItem(
 ) {
     var coverPath by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(detail.bookName) {
-        coverPath = viewModel.getBookCover(detail.bookName)
+    LaunchedEffect(detail.bookName, detail.bookAuthor) {
+        coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
     }
 
     Row(
@@ -573,13 +850,18 @@ fun ReadRecordItem(
             Text(
                 text = detail.bookName,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2
+                maxLines = 1
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = detail.bookAuthor.ifBlank { "未知作者" },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "阅读时长: ${formatDuring(detail.readTime)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.labelSmall
             )
         }
     }
@@ -616,34 +898,18 @@ fun DateHeader(
 }
 
 @Composable
-fun CalendarSection(
-    selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
-    onClearDate: () -> Unit
-) {
-    val effectiveInitialDate = selectedDate ?: LocalDate.now()
-    Calendar(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        initialDate = effectiveInitialDate,
-        selectedDate = selectedDate,
-        onDateSelected = onDateSelected,
-        onClearDate = onClearDate
-    )
-}
-
-@Composable
 fun ReadingSummaryCard(
     title: String,
     bookCount: Int,
     totalTimeMillis: Long,
-    bookNamesForCover: List<String>,
+    bookNamesForCover: List<Pair<String, String>>,
     viewModel: ReadRecordViewModel,
     onClick: () -> Unit
 ) {
 
     val coverPaths by produceState(initialValue = emptyList(), key1 = bookNamesForCover) {
-        value = bookNamesForCover.map { name ->
-            viewModel.getBookCover(name)
+        value = bookNamesForCover.map { (name, author) ->
+            viewModel.getBookCover(name, author)
         }
     }
 

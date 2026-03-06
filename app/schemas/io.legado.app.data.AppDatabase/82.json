@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 82,
-    "identityHash": "b11be214ae8a55304244694a180932c9",
+    "identityHash": "285a81996bc58258f99a2f67fb5cf84e",
     "entities": [
       {
         "tableName": "books",
@@ -1176,7 +1176,7 @@
       },
       {
         "tableName": "bookmarks",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`time` INTEGER NOT NULL, `bookName` TEXT NOT NULL, `bookAuthor` TEXT NOT NULL, `chapterIndex` INTEGER NOT NULL, `chapterPos` INTEGER NOT NULL, `chapterName` TEXT NOT NULL, `bookText` TEXT NOT NULL, `content` TEXT NOT NULL, PRIMARY KEY(`time`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`time` INTEGER NOT NULL, `bookName` TEXT NOT NULL, `bookAuthor` TEXT NOT NULL DEFAULT '', `chapterIndex` INTEGER NOT NULL, `chapterPos` INTEGER NOT NULL, `chapterName` TEXT NOT NULL, `bookText` TEXT NOT NULL, `content` TEXT NOT NULL, PRIMARY KEY(`time`))",
         "fields": [
           {
             "fieldPath": "time",
@@ -1194,7 +1194,8 @@
             "fieldPath": "bookAuthor",
             "columnName": "bookAuthor",
             "affinity": "TEXT",
-            "notNull": true
+            "notNull": true,
+            "defaultValue": "''"
           },
           {
             "fieldPath": "chapterIndex",
@@ -1427,7 +1428,7 @@
       },
       {
         "tableName": "readRecordDetail",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `date` TEXT NOT NULL, `readTime` INTEGER NOT NULL DEFAULT 0, `readWords` INTEGER NOT NULL DEFAULT 0, `firstReadTime` INTEGER NOT NULL DEFAULT 0, `lastReadTime` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`deviceId`, `bookName`, `date`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `bookAuthor` TEXT NOT NULL DEFAULT '', `date` TEXT NOT NULL, `readTime` INTEGER NOT NULL DEFAULT 0, `readWords` INTEGER NOT NULL DEFAULT 0, `firstReadTime` INTEGER NOT NULL DEFAULT 0, `lastReadTime` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`deviceId`, `bookName`, `bookAuthor`, `date`))",
         "fields": [
           {
             "fieldPath": "deviceId",
@@ -1440,6 +1441,13 @@
             "columnName": "bookName",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "bookAuthor",
+            "columnName": "bookAuthor",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
           },
           {
             "fieldPath": "date",
@@ -1481,13 +1489,14 @@
           "columnNames": [
             "deviceId",
             "bookName",
+            "bookAuthor",
             "date"
           ]
         }
       },
       {
         "tableName": "readRecordSession",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `words` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `bookAuthor` TEXT NOT NULL DEFAULT '', `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `words` INTEGER NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -1506,6 +1515,13 @@
             "columnName": "bookName",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "bookAuthor",
+            "columnName": "bookAuthor",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
           },
           {
             "fieldPath": "startTime",
@@ -1671,7 +1687,7 @@
       },
       {
         "tableName": "readRecord",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `readTime` INTEGER NOT NULL DEFAULT 0, `lastRead` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`deviceId`, `bookName`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceId` TEXT NOT NULL, `bookName` TEXT NOT NULL, `bookAuthor` TEXT NOT NULL DEFAULT '', `readTime` INTEGER NOT NULL DEFAULT 0, `lastRead` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`deviceId`, `bookName`, `bookAuthor`))",
         "fields": [
           {
             "fieldPath": "deviceId",
@@ -1684,6 +1700,13 @@
             "columnName": "bookName",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "bookAuthor",
+            "columnName": "bookAuthor",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
           },
           {
             "fieldPath": "readTime",
@@ -1704,7 +1727,8 @@
           "autoGenerate": false,
           "columnNames": [
             "deviceId",
-            "bookName"
+            "bookName",
+            "bookAuthor"
           ]
         }
       },
@@ -2016,7 +2040,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b11be214ae8a55304244694a180932c9')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '285a81996bc58258f99a2f67fb5cf84e')"
     ]
   }
 }

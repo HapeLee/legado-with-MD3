@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.button
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,12 +28,15 @@ import kotlinx.coroutines.delay
 fun AnimatedActionButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector,
+    iconChecked: ImageVector,
+    iconUnchecked: ImageVector,
     activeText: String,
     inactiveText: String
 ) {
 
     var showText by remember { mutableStateOf(false) }
+    var lastCheckedState by remember { mutableStateOf(checked) }
+
     LaunchedEffect(showText) {
         if (showText) {
             delay(1000)
@@ -44,6 +48,7 @@ fun AnimatedActionButton(
         contentPadding = PaddingValues(4.dp),
         checked = checked,
         onCheckedChange = {
+            lastCheckedState = it
             onCheckedChange(it)
             showText = true
         }
@@ -51,18 +56,25 @@ fun AnimatedActionButton(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier
+                .padding(horizontal = 4.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null
-            )
+
+            AnimatedContent(
+                targetState = checked,
+                label = "IconAnimation"
+            ) { targetChecked ->
+                Icon(
+                    imageVector = if (targetChecked) iconChecked else iconUnchecked,
+                    contentDescription = null
+                )
+            }
 
             AnimatedVisibility(
                 visible = showText
             ) {
                 Text(
-                    text = if (checked) activeText else inactiveText,
+                    text = if (lastCheckedState) activeText else inactiveText,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(start = 8.dp),
                     maxLines = 1,

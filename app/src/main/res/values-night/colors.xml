@@ -491,7 +491,7 @@
     <color name="transparent_theme_onSecondaryContainer">#FF000000</color>
     <color name="transparent_theme_tertiary">#80FFFFFF</color>
     <color name="transparent_theme_onTertiary">#FF000000</color>
-    <color name="transparent_theme_tertiaryContainer">#40FFFFFF</color>
+    <color name="transparent_theme_tertiaryContainer">#A0FFFFFF</color>
     <color name="transparent_theme_onTertiaryContainer">#FF000000</color>
     <color name="transparent_theme_error">#CF6679</color>
     <color name="transparent_theme_onError">#000000</color>

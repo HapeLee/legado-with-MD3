@@ -17,7 +17,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,15 +36,13 @@ fun BookmarkEditSheet(
     onSave: (Bookmark) -> Unit,
     onDelete: (Bookmark) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var bookText by remember { mutableStateOf(bookmark.bookText) }
     var content by remember { mutableStateOf(bookmark.content) }
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
+        onDismissRequest = onDismiss
     ) {
         Column(
             modifier = Modifier

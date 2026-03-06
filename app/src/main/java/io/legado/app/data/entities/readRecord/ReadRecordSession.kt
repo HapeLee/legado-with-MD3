@@ -1,5 +1,6 @@
 package io.legado.app.data.entities.readRecord
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -10,6 +11,8 @@ data class ReadRecordSession(
 
     val deviceId: String = "",
     val bookName: String = "",
+    @ColumnInfo(defaultValue = "")
+    val bookAuthor: String = "",
 
     // 一次阅读的开始/结束
     val startTime: Long = 0,

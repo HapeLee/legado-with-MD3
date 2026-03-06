@@ -23,6 +23,7 @@ import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getJsonArray
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
+import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import splitties.init.appCtx
@@ -40,9 +41,7 @@ class HandleFileActivity :
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             uri?.let {
                 if (uri.isContentScheme()) {
-                    val modeFlags =
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    contentResolver.takePersistableUriPermission(uri, modeFlags)
+                    uri.takePersistablePermissionSafely(this)
                 }
                 onResult(Intent().setData(uri))
             } ?: finish()
@@ -51,9 +50,7 @@ class HandleFileActivity :
     private val selectDoc = registerForActivityResult(ActivityResultContracts.OpenDocument()) {
         it?.let {
             if (it.isContentScheme()) {
-                val modeFlags =
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                contentResolver.takePersistableUriPermission(it, modeFlags)
+                it.takePersistablePermissionSafely(this)
             }
             onResult(Intent().setData(it))
         } ?: finish()

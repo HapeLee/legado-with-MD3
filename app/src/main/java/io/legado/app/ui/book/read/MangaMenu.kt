@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.animation.Animation
 import android.widget.FrameLayout
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.google.android.material.slider.Slider
@@ -20,7 +21,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.utils.ConstraintModify
-import io.legado.app.utils.VibrationUtils
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.gone
@@ -242,16 +242,16 @@ class MangaMenu @JvmOverloads constructor(
             ReadManga.moveToPrevChapter(true)
         }
 
-        seekReadPage.addOnChangeListener { slider, value, fromUser ->
+        seekReadPage.addOnChangeListener { _, value, fromUser ->
             if (fromUser) {
-                VibrationUtils.vibrate(context, 12)
+                HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE
                 callBack.skipToPage(value.toInt() - 1)
             }
         }
 
         seekReadPage.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {
-                VibrationUtils.vibrate(context, 16)
+                HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE
                 vwMenuBg.setOnClickListener(null)
             }
 

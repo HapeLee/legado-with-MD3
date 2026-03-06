@@ -14,7 +14,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.rules.InteractionState
-import io.legado.app.ui.widget.components.rules.RuleActionState
+import io.legado.app.ui.widget.components.rules.ListUiState
 import io.legado.app.ui.widget.components.rules.SelectableItem
 import io.legado.app.utils.GSON
 import io.legado.app.utils.getPrefString
@@ -53,9 +53,9 @@ data class ReplaceRuleUiState(
     val sortMode: String = "desc",
     val groups: List<String> = emptyList(),
     val interaction: InteractionState = InteractionState()
-) : RuleActionState<ReplaceRuleItemUi> {
+) : ListUiState<ReplaceRuleItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
-    override val isUploading: Boolean get() = interaction.isUploading
+    override val isLoading: Boolean get() = interaction.isUploading
 }
 
 class ReplaceRuleViewModel(

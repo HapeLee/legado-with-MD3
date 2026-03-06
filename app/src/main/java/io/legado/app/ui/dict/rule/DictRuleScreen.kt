@@ -152,7 +152,6 @@ fun DictRuleScreen(
 
     if (showFilePickerSheet) {
         FilePickerSheet(
-            sheetState = sheetState,
             onDismissRequest = { showFilePickerSheet = false },
             onSelectSysDir = {
                 showFilePickerSheet = false
@@ -234,18 +233,18 @@ fun DictRuleScreen(
                 RuleEditFields(
                     name = r?.name ?: "",
                     rule1 = r?.urlRule ?: "",
-                    extra = r?.showRule ?: ""
+                    rule2 = r?.showRule ?: ""
                 )
             },
             fromFields = { fields, old ->
                 old?.copy(
                     name = fields.name,
                     urlRule = fields.rule1,
-                    showRule = fields.extra
+                    showRule = fields.rule2
                 ) ?: DictRule(
                     name = fields.name,
                     urlRule = fields.rule1,
-                    showRule = fields.extra
+                    showRule = fields.rule2
                 )
             }
         )

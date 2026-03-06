@@ -60,6 +60,7 @@ class BooksAdapterList(context: Context, callBack: CallBack) :
         RecyclerView.ViewHolder(binding.root) {
 
         fun onBind(item: Book) = binding.run {
+            cdCover.transitionName = "book_${item.bookUrl}"
             tvName.text = item.name
             tvAuthor.text = item.author
             tvRead.text = item.durChapterTitle

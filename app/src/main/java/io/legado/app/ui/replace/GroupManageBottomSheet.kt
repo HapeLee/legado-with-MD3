@@ -17,7 +17,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +35,6 @@ import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 @Composable
 fun GroupManageBottomSheet(
     groups: List<String>,
-    sheetState: SheetState,
     onDismissRequest: () -> Unit,
     viewModel: ReplaceRuleViewModel
 ) {
@@ -44,8 +42,7 @@ fun GroupManageBottomSheet(
     var updatedGroupName by remember { mutableStateOf("") }
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier

@@ -220,7 +220,7 @@ data class TextLine(
      * 绘制下划线
      */
     private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
-        val paint = ChapterProvider.linePaint
+        val paint = ChapterProvider.contentPaint
         paint.color = ReadBookConfig.durConfig.curUnderlineColor()
         paint.strokeWidth = ReadBookConfig.underlineHeight.toFloat()
         paint.pathEffect = if (dottedLine && !AppConfig.isEInkMode)
@@ -228,7 +228,7 @@ data class TextLine(
         else
             null
 
-        val lineY = height - 1.dpToPx()
+        val lineY = height + (ReadBookConfig.durConfig.underlinePadding - 10).dpToPx()
         canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, paint)
     }
 

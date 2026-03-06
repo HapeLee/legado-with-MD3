@@ -17,6 +17,7 @@ import androidx.annotation.OptIn
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.toColorInt
+import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.doOnAttach
 import androidx.core.view.forEach
 import androidx.core.view.isGone
@@ -33,8 +34,8 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ViewReadMenuBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
 import io.legado.app.lib.dialogs.alert
@@ -42,7 +43,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.ConstraintModify
-import io.legado.app.utils.VibrationUtils
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
@@ -470,7 +470,7 @@ class ReadMenu @JvmOverloads constructor(
                 if (AppConfig.progressBarBehavior == "page")
                     ReadBook.skipToPage(value.toInt() - 1)
                 if (AppConfig.sliderVibrator)
-                    VibrationUtils.vibrate(context, 10)
+                    HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE
             }
         }
 
@@ -693,7 +693,7 @@ class ReadMenu @JvmOverloads constructor(
                 description = context.getString(R.string.day_night_switch),
                 onClick = {
                     AppConfig.isNightTheme = !AppConfig.isNightTheme
-                    ThemeConfig.applyDayNight(context)
+                    OldThemeConfig.applyDayNight(context)
                     buttonMap["theme"]?.setIconResource(
                         if (AppConfig.isNightTheme) R.drawable.ic_daytime else R.drawable.ic_brightness
                     )

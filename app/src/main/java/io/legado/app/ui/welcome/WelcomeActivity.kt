@@ -19,6 +19,7 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
     private val pages = listOf(
         PrivacyFragment(),
         WebDavFragment(),
+        BookFolderFragment(),
         ThemeFragment()
     )
 
@@ -54,11 +55,13 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
                 binding.tvTitle.text = when (position) {
                     0 -> "欢迎！" // PrivacyFragment
                     1 -> "备份与恢复"
+                    2 -> "书籍文件夹"
                     else -> "主题样式"
                 }
                 binding.tvSummary.text = when (position) {
                     0 -> "请先阅读应用的服务条款与用户协议。"
                     1 -> "此处可设置云同步与恢复应用备份。"
+                    2 -> "请选择保存本地书籍的文件夹。"
                     else -> "在这里设置您喜爱的样式。"
                 }
                 updateProgress(position)

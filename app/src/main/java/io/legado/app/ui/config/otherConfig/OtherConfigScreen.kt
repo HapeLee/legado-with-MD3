@@ -1,7 +1,6 @@
 package io.legado.app.ui.config.otherConfig
 
 import android.Manifest
-import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,7 +33,7 @@ import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.SmallTopBarButton
+import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -43,6 +41,7 @@ import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.restart
+import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,9 +74,7 @@ fun OtherConfigScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val modeFlags =
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            context.contentResolver.takePersistableUriPermission(it, modeFlags)
+            it.takePersistablePermissionSafely(context)
             viewModel.updateLocalBookDir(it.toString())
         }
     }
@@ -91,7 +88,7 @@ fun OtherConfigScreen(
                 },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    SmallTopBarButton(onClick = onBackClick)
+                    TopbarNavigationButton(onClick = onBackClick)
                 }
             )
         }
@@ -396,7 +393,6 @@ fun OtherConfigScreen(
 
         if (showFilePicker) {
             FilePickerSheet(
-                sheetState = rememberModalBottomSheetState(),
                 onDismissRequest = { showFilePicker = false },
                 onSelectSysDir = {
                     showFilePicker = false

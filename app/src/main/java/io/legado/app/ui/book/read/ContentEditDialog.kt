@@ -3,9 +3,6 @@ package io.legado.app.ui.book.read
 import android.app.Application
 import android.content.DialogInterface
 import android.os.Bundle
-import android.text.Spannable
-import android.text.Spanned
-import android.text.style.BackgroundColorSpan
 import android.view.View
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.MutableLiveData
@@ -20,13 +17,13 @@ import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.gone
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.themeColor
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
@@ -47,12 +44,16 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         binding.toolBar.title = ReadBook.curTextChapter?.title
+        val book = ReadBook.book
+        if (book?.isLocalTxt == true) {
+            binding.cbSaveToSource.visible()
+        }
         initMenu()
         binding.toolBar.setOnClickListener {
             lifecycleScope.launch {
-                val book = ReadBook.book ?: return@launch
+                val book1 = ReadBook.book ?: return@launch
                 val chapter = withContext(IO) {
-                    appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+                    appDb.bookChapterDao.getChapter(book1.bookUrl, ReadBook.durChapterIndex)
                 } ?: return@launch
                 editTitle(chapter)
             }
@@ -119,37 +120,6 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
         }
     }
 
-    private fun highlightSelectedTextTwice() {
-        val editText = binding.contentView
-        val content = editText.text ?: return
-
-        val start = arguments?.getInt("start_position", -1) ?: -1
-        val selectedText = arguments?.getString("selected_text") ?: ""
-
-        if (start == -1 || selectedText.isEmpty()) return
-
-        val end = (start + selectedText.length).coerceAtMost(content.length)
-
-        val spannable = editText.text as Spannable
-        val span =
-            BackgroundColorSpan(requireContext().themeColor(com.google.android.material.R.attr.colorSecondaryContainer))
-
-
-        fun flash(times: Int) {
-            if (times <= 0) return
-            spannable.setSpan(span, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            editText.postDelayed({
-                spannable.removeSpan(span)
-                editText.postDelayed({
-                    flash(times - 1)
-                }, 200)
-            }, 300)
-        }
-
-        flash(3)
-    }
-
-
     override fun onCancel(dialog: DialogInterface) {
         super.onCancel(dialog)
         save()
@@ -157,12 +127,13 @@ class ContentEditDialog : BaseBottomSheetDialogFragment(R.layout.dialog_content_
 
     private fun save() {
         val content = binding.contentView.text?.toString() ?: return
+        val saveToSource = binding.cbSaveToSource.isChecked
         Coroutine.async {
             val book = ReadBook.book ?: return@async
             val chapter = appDb.bookChapterDao
                 .getChapter(book.bookUrl, ReadBook.durChapterIndex)
                 ?: return@async
-            BookHelp.saveText(book, chapter, content)
+            BookHelp.saveText(book, chapter, content, saveToSource)
             ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
         }
     }

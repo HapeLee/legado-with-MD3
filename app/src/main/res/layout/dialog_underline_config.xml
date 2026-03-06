@@ -66,12 +66,29 @@
 
     </com.google.android.material.button.MaterialButtonGroup>
 
-    <io.legado.app.ui.widget.SimpleSliderView
-        android:id="@+id/btn_underline_height"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:title="@string/underline_height"
-        app:max="20" />
+        android:gravity="bottom">
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/btn_underline_height"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="32dp"
+            android:layout_weight="1"
+            app:max="20"
+            app:title="@string/underline_height" />
+
+        <io.legado.app.ui.widget.SimpleSliderView
+            android:id="@+id/btn_underline_padding"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:max="20"
+            app:title="@string/underline_padding" />
+    </LinearLayout>
+
 
     <TextView
         android:layout_width="wrap_content"

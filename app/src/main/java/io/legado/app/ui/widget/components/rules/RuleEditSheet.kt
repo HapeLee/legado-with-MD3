@@ -24,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,7 +64,6 @@ fun <T> RuleEditSheet(
     fromFields: (RuleEditFields, T?) -> T
 ) {
     val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val initialFields = remember(rule) { toFields(rule) }
     var name by remember(initialFields) { mutableStateOf(initialFields.name) }
@@ -77,8 +75,7 @@ fun <T> RuleEditSheet(
     fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
 
     GlassModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
+        onDismissRequest = onDismissRequest
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(

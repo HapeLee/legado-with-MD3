@@ -7,12 +7,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import io.legado.app.ui.theme.ThemeState
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 @Composable
 fun GlassCard(
@@ -24,7 +22,7 @@ fun GlassCard(
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val opacity by ThemeState.containerOpacity.collectAsState()
+    val opacity = ThemeConfig.containerOpacity
     val cardColors = CardDefaults.cardColors(
         containerColor = color.copy(alpha = opacity / 100f)
     )

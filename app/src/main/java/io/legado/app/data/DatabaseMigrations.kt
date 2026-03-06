@@ -20,6 +20,7 @@ object DatabaseMigrations {
             migration_31_32, migration_32_33, migration_33_34, migration_34_35,
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
+            migration_82_83,
         )
     }
 
@@ -321,6 +322,132 @@ object DatabaseMigrations {
     private val migration_42_43 = object : Migration(42, 43) {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL("ALTER TABLE `chapters` ADD `isVolume` INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
+    private val migration_82_83 = object : Migration(82, 83) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("ALTER TABLE readRecord RENAME TO readRecord_old")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `readRecord` (
+                    `deviceId` TEXT NOT NULL,
+                    `bookName` TEXT NOT NULL,
+                    `bookAuthor` TEXT NOT NULL DEFAULT '',
+                    `readTime` INTEGER NOT NULL DEFAULT 0,
+                    `lastRead` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`deviceId`, `bookName`, `bookAuthor`)
+                )
+                """
+            )
+            database.execSQL(
+                """
+                INSERT INTO readRecord(deviceId, bookName, bookAuthor, readTime, lastRead)
+                SELECT
+                    rr.deviceId,
+                    rr.bookName,
+                    IFNULL(
+                        (
+                            SELECT CASE
+                                WHEN COUNT(DISTINCT b.author) = 1 THEN MAX(b.author)
+                                ELSE ''
+                            END
+                            FROM books b
+                            WHERE b.name = rr.bookName
+                        ),
+                        ''
+                    ) AS bookAuthor,
+                    rr.readTime,
+                    rr.lastRead
+                FROM readRecord_old rr
+                """
+            )
+            database.execSQL("DROP TABLE readRecord_old")
+
+            database.execSQL("ALTER TABLE readRecordDetail RENAME TO readRecordDetail_old")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `readRecordDetail` (
+                    `deviceId` TEXT NOT NULL,
+                    `bookName` TEXT NOT NULL,
+                    `bookAuthor` TEXT NOT NULL DEFAULT '',
+                    `date` TEXT NOT NULL,
+                    `readTime` INTEGER NOT NULL DEFAULT 0,
+                    `readWords` INTEGER NOT NULL DEFAULT 0,
+                    `firstReadTime` INTEGER NOT NULL DEFAULT 0,
+                    `lastReadTime` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`deviceId`, `bookName`, `bookAuthor`, `date`)
+                )
+                """
+            )
+            database.execSQL(
+                """
+                INSERT INTO readRecordDetail(
+                    deviceId, bookName, bookAuthor, date, readTime, readWords, firstReadTime, lastReadTime
+                )
+                SELECT
+                    rd.deviceId,
+                    rd.bookName,
+                    IFNULL(
+                        (
+                            SELECT CASE
+                                WHEN COUNT(DISTINCT b.author) = 1 THEN MAX(b.author)
+                                ELSE ''
+                            END
+                            FROM books b
+                            WHERE b.name = rd.bookName
+                        ),
+                        ''
+                    ) AS bookAuthor,
+                    rd.date,
+                    rd.readTime,
+                    rd.readWords,
+                    rd.firstReadTime,
+                    rd.lastReadTime
+                FROM readRecordDetail_old rd
+                """
+            )
+            database.execSQL("DROP TABLE readRecordDetail_old")
+
+            database.execSQL("ALTER TABLE readRecordSession RENAME TO readRecordSession_old")
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS `readRecordSession` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    `deviceId` TEXT NOT NULL,
+                    `bookName` TEXT NOT NULL,
+                    `bookAuthor` TEXT NOT NULL DEFAULT '',
+                    `startTime` INTEGER NOT NULL,
+                    `endTime` INTEGER NOT NULL,
+                    `words` INTEGER NOT NULL
+                )
+                """
+            )
+            database.execSQL(
+                """
+                INSERT INTO readRecordSession(id, deviceId, bookName, bookAuthor, startTime, endTime, words)
+                SELECT
+                    rs.id,
+                    rs.deviceId,
+                    rs.bookName,
+                    IFNULL(
+                        (
+                            SELECT CASE
+                                WHEN COUNT(DISTINCT b.author) = 1 THEN MAX(b.author)
+                                ELSE ''
+                            END
+                            FROM books b
+                            WHERE b.name = rs.bookName
+                        ),
+                        ''
+                    ) AS bookAuthor,
+                    rs.startTime,
+                    rs.endTime,
+                    rs.words
+                FROM readRecordSession_old rs
+                """
+            )
+            database.execSQL("DROP TABLE readRecordSession_old")
         }
     }
 

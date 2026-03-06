@@ -21,7 +21,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.theme.ThemeSyncer
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
@@ -91,13 +91,13 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                             return@setOnClickListener
                         } else {
                             AppConfig.containerOpacity = 0
-                            ThemeSyncer.syncContainerOpacity()
                         }
                     }
                     val oldValue = currentValue
                     currentValue = value
                     persistString(value)
                     callChangeListener(value)
+                    ThemeConfig.appTheme = value
                     notifyDataSetChanged()
                     val isDynamicSwitch = (oldValue == "12" || value == "12")
                     Handler(Looper.getMainLooper()).postDelayed({

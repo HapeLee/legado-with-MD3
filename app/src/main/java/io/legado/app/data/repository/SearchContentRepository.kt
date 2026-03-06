@@ -18,6 +18,14 @@ import kotlinx.coroutines.flow.flowOn
 
 class SearchContentRepository {
 
+    private var lastSearchResults: List<SearchResult>? = null
+    private var lastQueryKey: String? = null
+
+    fun getCache(bookUrl: String, query: String): List<SearchResult>? {
+        val key = "$bookUrl-$query"
+        return if (lastQueryKey == key) lastSearchResults else null
+    }
+
     fun search(book: Book, query: String, replaceEnabled: Boolean, regexReplace: Boolean): Flow<List<SearchResult>> = flow {
         val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
         val totalChapters = chapters.size
@@ -25,7 +33,6 @@ class SearchContentRepository {
         val cacheChapterNames = BookHelp.getChapterFiles(book).toHashSet()
 
         val allResults = mutableListOf<SearchResult>()
-        var lastEmitTime = System.currentTimeMillis()
 
         for (bookChapter in chapters) {
 
@@ -49,15 +56,12 @@ class SearchContentRepository {
 
                 if (chapterResults.isNotEmpty()) {
                     allResults.addAll(chapterResults)
-
-                    val now = System.currentTimeMillis()
-                    if (now - lastEmitTime > 350L) {
-                        emit(ArrayList(allResults))
-                        lastEmitTime = now
-                    }
+                    emit(ArrayList(allResults))
                 }
             }
         }
+        lastSearchResults = allResults
+        lastQueryKey = "${book.bookUrl}-$query"
         emit(ArrayList(allResults))
     }.flowOn(Dispatchers.Default)
 

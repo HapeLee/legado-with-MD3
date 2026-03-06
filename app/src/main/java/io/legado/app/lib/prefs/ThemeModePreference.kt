@@ -7,7 +7,7 @@ import android.util.AttributeSet
 import androidx.preference.PreferenceViewHolder
 import com.google.android.material.button.MaterialButtonToggleGroup
 import io.legado.app.R
-import io.legado.app.help.config.ThemeConfig
+import io.legado.app.help.config.OldThemeConfig
 
 
 class ThemeModePreference(context: Context, attrs: AttributeSet) : Preference(context, attrs) {
@@ -59,7 +59,7 @@ class ThemeModePreference(context: Context, attrs: AttributeSet) : Preference(co
                     persistString(newValue)
                     callChangeListener(newValue)
                     Handler(Looper.getMainLooper()).postDelayed({
-                        ThemeConfig.applyDayNight(context)
+                        OldThemeConfig.applyDayNight(context)
                     }, 300)
                 }
             }

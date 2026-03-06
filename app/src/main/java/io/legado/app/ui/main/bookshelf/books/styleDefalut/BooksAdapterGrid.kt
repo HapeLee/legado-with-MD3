@@ -27,6 +27,7 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
         payloads: MutableList<Any>
     ) = binding.run {
         if (payloads.isEmpty()) {
+            cdCover.transitionName = "book_${item.bookUrl}"
             tvName.text = item.name
             ivCover.load(item.getDisplayCover(), item.name, item.author, false, item.origin)
             upRefresh(binding, item)

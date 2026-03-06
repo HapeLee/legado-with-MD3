@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,14 +56,11 @@ import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 @Composable
 fun <T> RuleListScaffold(
     title: String,
-    state: RuleActionState<T>,
+    state: ListUiState<T>,
     onBackClick: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    searchPlaceholder: String,
-    searchLeadingIcon: ImageVector = Icons.Default.Search,
-    searchTrailingIcon: @Composable (() -> Unit)? = null,
-    searchDropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
+    searchPlaceholder: String = "搜索...",
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.() -> Unit)? = null,
     dropDownMenuContent: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},

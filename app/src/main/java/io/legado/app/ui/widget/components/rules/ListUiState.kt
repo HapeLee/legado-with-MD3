@@ -1,11 +1,11 @@
 package io.legado.app.ui.widget.components.rules
 
-interface RuleActionState<T> {
+interface ListUiState<T> {
     val items: List<T>
     val selectedIds: Set<Any>
     val searchKey: String
     val isSearch: Boolean
-    val isUploading: Boolean
+    val isLoading: Boolean
 }
 
 data class InteractionState(

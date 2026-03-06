@@ -102,6 +102,7 @@ object AudioPlay : CoroutineScope by MainScope() {
         durPlayUrl = ""
         durAudioSize = 0
         upDurChapter()
+        SourceCallBack.callBackBook(SourceCallBack.START_READ, bookSource, book, durChapter)
         postEvent(EventBus.AUDIO_BUFFER_PROGRESS, 0)
     }
 
@@ -360,6 +361,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                         ContentProcessor.get(book.name, book.origin).getTitleReplaceRules(),
                         book.getUseReplaceRule()
                     )
+                    SourceCallBack.callBackBook(SourceCallBack.SAVE_READ, bookSource, book, it)
                 }
             }
             book.update()

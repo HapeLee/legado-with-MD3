@@ -23,6 +23,7 @@ import io.legado.app.help.book.sync
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.CacheBookService
 import io.legado.app.utils.onEachParallel
@@ -53,6 +54,7 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
     val onUpBooksLiveData = MutableLiveData<Int>()
     private var upTocJob: Job? = null
     private var cacheBookJob: Job? = null
+    private val eventListenerSource = ConcurrentHashMap<BookSource, Boolean>()
     val booksListRecycledViewPool = RecycledViewPool().apply {
         setMaxRecycledViews(0, 30)
     }
@@ -156,6 +158,17 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
             }
             return
         }
+        if (source.eventListener) {
+            // 使用 putIfAbsent 确保只添加一次
+            if (eventListenerSource.putIfAbsent(source, true) == null) {
+                // 通知监听事件的书源，书架刷新开始
+                SourceCallBack.callBackSource(
+                    viewModelScope,
+                    SourceCallBack.START_SHELF_REFRESH,
+                    source
+                )
+            }
+        }
         kotlin.runCatching {
             val oldBook = book.copy()
             if (book.tocUrl.isBlank()) {
@@ -210,13 +223,24 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
      * 缓存书籍
      */
     private fun cacheBook() {
+        //开始缓存前，通知监听事件的书源，书架刷新已完成
+        eventListenerSource.toList().forEach {
+            SourceCallBack.callBackSource(
+                viewModelScope,
+                SourceCallBack.END_SHELF_REFRESH,
+                it.first
+            )
+        }
+        eventListenerSource.clear()
         if (AppConfig.preDownloadNum == 0) return
         cacheBookJob?.cancel()
         cacheBookJob = viewModelScope.launch(upTocPool) {
             launch {
                 while (isActive && CacheBook.isRun) {
+                    val isOnUpTocBooksEmpty =
+                        onUpTocBooks.isEmpty()
                     //有目录更新是不缓存,优先更新目录,现在更多网站限制并发
-                    CacheBook.setWorkingState(waitUpTocBooks.isEmpty() && onUpTocBooks.isEmpty())
+                    CacheBook.setWorkingState(waitUpTocBooks.isEmpty() && isOnUpTocBooksEmpty)
                     delay(1000)
                 }
             }

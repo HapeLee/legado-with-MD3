@@ -1248,6 +1248,8 @@
     <string name="clear_all">清除所有</string>
     <string name="welcome_title">欢迎！</string>
     <string name="first_read">请先阅读应用的服务条款与用户协议。</string>
+    <string name="welcome_book_folder_tip">设置本地书籍保存目录，后续也可在设置中修改。</string>
+    <string name="welcome_book_folder_not_selected">未选择文件夹</string>
     <string name="config_btn">配置底部按钮</string>
     <string name="compact_grid">紧凑网格</string>
     <string name="cover_grid">封面网格</string>
@@ -1384,4 +1386,8 @@
     <string name="show_swipe_animation">启用滑动时动画</string>
     <string name="click_image_way">点击图片行为</string>
     <string name="show_web_log">输出日志</string>
+    <string name="is_blur_progressive_enable">启用渐变模糊</string>
+    <string name="enable_select_vibrator">选择文本时震动</string>
+    <string name="re_sync_webdav">重新同步远程书籍</string>
+    <string name="underline_padding">离字间距</string>
 </resources>

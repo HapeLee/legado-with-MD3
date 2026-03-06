@@ -56,7 +56,7 @@ object SourceCallBack {
         }
         activity.lifecycleScope.launch(IO) {
             val java = SourceLoginJsExtensions(activity, source)
-            runCatching {
+            kotlin.runCatching {
                 val result = runScriptWithContext {
                     source.evalJS(jsStr) {
                         put("event", event)
@@ -114,7 +114,7 @@ object SourceCallBack {
         val jsStr = source.getContentRule().callBackJs
         if (jsStr.isNullOrEmpty()) return
         scope.launch(IO) {
-            runCatching {
+            kotlin.runCatching {
                 withTimeout(30000L) {
                     runScriptWithContext {
                         source.evalJS(jsStr) {
