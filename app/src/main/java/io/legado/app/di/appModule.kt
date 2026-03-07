@@ -12,6 +12,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.import.remote.RemoteBookViewModel
+import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
@@ -51,6 +52,7 @@ val appModule = module {
     viewModelOf(::OtherConfigViewModel)
     viewModelOf(::TocViewModel)
     viewModelOf(::RemoteBookViewModel)
+    viewModelOf(::BookInfoViewModel)
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(
