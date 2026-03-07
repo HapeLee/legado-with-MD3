@@ -15,13 +15,13 @@ class TxtTocRuleActivity : BaseComposeActivity() {
         AppTheme {
             TxtRuleScreen(
                 initialRule = initialRule,
-                onPickRule = { rule ->
+                onPickRule = if (initialRule != null) { rule ->
                     val data = Intent().apply {
                         putExtra("tocRegex", rule)
                     }
                     setResult(RESULT_OK, data)
                     finish()
-                },
+                } else null,
                 onBackClick = { finish() }
             )
         }
