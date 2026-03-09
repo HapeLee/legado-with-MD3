@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.RectF
-import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.util.AttributeSet
 import android.view.MotionEvent
@@ -617,13 +616,10 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 更新背景
      */
     fun upBg() {
-        val oldBg = ReadBookConfig.upBg(width, height)
+        ReadBookConfig.upBg(width, height)
         curPage.upBg()
         prevPage.upBg()
         nextPage.upBg()
-        // 所有视图背景更新完成后再 recycle 旧 bitmap，
-        // 防止视图仍持有旧 BitmapDrawable 引用时 bitmap 已被 recycle 导致崩溃
-        (oldBg as? BitmapDrawable)?.bitmap?.recycle()
     }
 
     /**

@@ -70,12 +70,9 @@ object ImageProvider {
                     removeCount++
                 }
             }
-            //错误图片不能释放,占位用,防止一直重复获取图片
-            if (oldValue != errorBitmap) {
-                oldValue.recycle()
-                //putDebug("ImageProvider: trigger bitmap recycle. URI: $filePath")
-                //putDebug("ImageProvider : cacheUsage ${size()}bytes / ${maxSize()}bytes")
-            }
+            // 移除 oldValue.recycle()。
+            // 在 Android 8.0+ 像素内存由 GC 自动管理，手动回收容易导致 Canvas 绘制时崩溃。
+            // 特别是在阅读页返回书架时，DisplayList 可能仍持有 Bitmap 引用。
         }
 
     }
@@ -86,7 +83,12 @@ object ImageProvider {
     }
 
     fun get(key: String): Bitmap? {
-        return bitmapLruCache[key]
+        val bitmap = bitmapLruCache[key] ?: return null
+        if (bitmap.isRecycled) {
+            bitmapLruCache.remove(key)
+            return null
+        }
+        return bitmap
     }
 
     fun remove(key: String): Bitmap? {

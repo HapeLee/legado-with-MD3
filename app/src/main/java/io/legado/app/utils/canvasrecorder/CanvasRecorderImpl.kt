@@ -51,15 +51,17 @@ class CanvasRecorderImpl : BaseCanvasRecorder() {
     }
 
     override fun draw(canvas: Canvas) {
-        if (bitmap == null) return
-        canvas.drawBitmap(bitmap!!, 0f, 0f, null)
+        val b = bitmap ?: return
+        if (!b.isRecycled) {
+            canvas.drawBitmap(b, 0f, 0f, null)
+        }
     }
 
     override fun recycle() {
         super.recycle()
-        val bitmap = bitmap ?: return
-        bitmapPool.put(bitmap)
-        this.bitmap = null
+        val b = bitmap ?: return
+        bitmap = null
+        bitmapPool.put(b)
     }
 
     companion object {

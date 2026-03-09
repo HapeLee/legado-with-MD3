@@ -25,6 +25,7 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
     }
 
     private fun setBitmap() {
+        if (!readView.isAttachedToWindow) return
         when (mDirection) {
             PageDirection.PREV -> {
                 prevPage.screenshot(prevRecorder)
@@ -60,7 +61,6 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
                 if (!isMoved || mDirection == PageDirection.NONE) return
                 // 超过阈值自动翻页，否则回弹
                 val shouldFlip = fadeProgress >= flipThreshold
-                if (shouldFlip) 1f else 0f
                 isCancel = !shouldFlip
                 onAnimStart(readView.defaultAnimationSpeed)
             }
@@ -97,12 +97,14 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        curRecorder.draw(canvas)
+        if (!readView.isAttachedToWindow) return
+        
         if (mDirection == PageDirection.NONE) {
-            // 直接绘制 curPage，不使用 curRecorder
             curPage.draw(canvas)
             return
         }
+
+        curRecorder.draw(canvas)
 
         val alpha = (fadeProgress * 255).toInt().coerceIn(0, 255)
         val paint = Paint().apply { this.alpha = alpha }
@@ -143,11 +145,12 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
             readView.fillPage(mDirection)
             // 延迟更新 curRecorder，确保 curPage 已经刷新
             readView.post {
-                try {
-                    curPage.screenshot(curRecorder)
-                    readView.invalidate()
-                } catch (_: Exception) {
-                    // 捕获可能的异常，避免闪退
+                if (readView.isAttachedToWindow) {
+                    try {
+                        curPage.screenshot(curRecorder)
+                        readView.invalidate()
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -168,12 +171,17 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
         isMoved = false
         isRunning = false
         if (!scroller.isFinished) {
+            readView.isAbortAnim = true
             scroller.abortAnimation()
             if (!isCancel) {
                 readView.fillPage(mDirection)
-                curPage.screenshot(curRecorder) // 同步 curRecorder
+                if (readView.isAttachedToWindow) {
+                    curPage.screenshot(curRecorder)
+                }
                 readView.invalidate()
             }
+        } else {
+            readView.isAbortAnim = false
         }
     }
 
