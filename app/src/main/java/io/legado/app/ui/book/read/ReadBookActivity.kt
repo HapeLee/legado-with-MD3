@@ -62,6 +62,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -1862,6 +1863,22 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
             noButton()
         }
+    }
+
+    override fun finish() {
+        if (ReadBook.inBookshelf) {
+            callBackBookEnd()
+            return super.finish()
+        }
+    }
+
+    private fun callBackBookEnd() {
+        SourceCallBack.callBackBook(
+            SourceCallBack.END_READ,
+            ReadBook.bookSource,
+            ReadBook.book,
+            ReadBook.curTextChapter?.chapter
+        )
     }
 
     override fun onDestroy() {

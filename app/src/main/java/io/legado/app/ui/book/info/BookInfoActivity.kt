@@ -84,7 +84,6 @@ import io.legado.app.utils.gone
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.openFileUri
 import io.legado.app.utils.sendToClip
-import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
@@ -270,9 +269,21 @@ class BookInfoActivity :
 
             R.id.menu_share_it -> {
                 viewModel.getBook()?.let {
-                    val bookJson = GSON.toJson(it)
-                    val shareStr = "${it.bookUrl}#$bookJson"
-                    shareWithQr(shareStr, it.name)
+                    SourceCallBack.callBackBtn(
+                        this,
+                        SourceCallBack.CLICK_SHARE_BOOK,
+                        viewModel.bookSource,
+                        it,
+                        null
+                    ) {
+                        val bookJson = GSON.toJson(it)
+                        val shareStr = "${it.bookUrl}#$bookJson"
+                        val intent = Intent(Intent.ACTION_SEND)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent.putExtra(Intent.EXTRA_TEXT, shareStr)
+                        intent.type = "text/plain"
+                        startActivity(Intent.createChooser(intent, it.name))
+                    }
                 }
             }
 
@@ -294,12 +305,28 @@ class BookInfoActivity :
             R.id.menu_top -> viewModel.topBook()
             R.id.menu_set_source_variable -> setSourceVariable()
             R.id.menu_set_book_variable -> setBookVariable()
-            R.id.menu_copy_book_url -> viewModel.getBook()?.bookUrl?.let {
-                sendToClip(it)
+            R.id.menu_copy_book_url -> viewModel.getBook()?.let {
+                SourceCallBack.callBackBtn(
+                    this,
+                    SourceCallBack.CLICK_COPY_BOOK_URL,
+                    viewModel.bookSource,
+                    it,
+                    null
+                ) {
+                    sendToClip(it.bookUrl)
+                }
             }
 
-            R.id.menu_copy_toc_url -> viewModel.getBook()?.tocUrl?.let {
-                sendToClip(it)
+            R.id.menu_copy_toc_url -> viewModel.getBook()?.let {
+                SourceCallBack.callBackBtn(
+                    this,
+                    SourceCallBack.CLICK_COPY_TOC_URL,
+                    viewModel.bookSource,
+                    it,
+                    null
+                ) {
+                    sendToClip(it.tocUrl)
+                }
             }
 
             R.id.menu_can_update -> {
@@ -314,7 +341,18 @@ class BookInfoActivity :
                 }
             }
 
-            R.id.menu_clear_cache -> viewModel.clearCache()
+            R.id.menu_clear_cache -> viewModel.getBook()?.let {
+                SourceCallBack.callBackBtn(
+                    this,
+                    SourceCallBack.CLICK_CLEAR_CACHE,
+                    viewModel.bookSource,
+                    it,
+                    null
+                ) {
+                    viewModel.clearCache(it)
+                }
+            }
+
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_split_long_chapter -> {
                 upLoading(true)

@@ -32,6 +32,7 @@ import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
 import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
@@ -446,7 +447,7 @@ class BookInfoViewModel(
         }
     }
 
-    fun addToBookshelf(success: (() -> Unit)?) {
+    fun addToBookshelf(success: (() -> Unit)?) { //点击书架按钮或在加分组时触发
         execute {
             bookData.value?.let { book ->
                 book.removeType(BookType.notShelf)
@@ -464,6 +465,7 @@ class BookInfoViewModel(
                     AudioPlay.book = book
                 }
                 book.save()
+                SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, bookSource, book)
             }
             chapterListData.value?.let {
                 appDb.bookChapterDao.insert(*it.toTypedArray())
@@ -496,13 +498,13 @@ class BookInfoViewModel(
         }
     }
 
-    fun clearCache() {
+    fun clearCache(book: Book) {
         execute {
-            BookHelp.clearCache(bookData.value!!)
-            if (ReadBook.book?.bookUrl == bookData.value!!.bookUrl) {
+            BookHelp.clearCache(book)
+            if (ReadBook.book?.bookUrl == book.bookUrl) {
                 ReadBook.clearTextChapter()
             }
-            if (ReadManga.book?.bookUrl == bookData.value!!.bookUrl) {
+            if (ReadManga.book?.bookUrl == book.bookUrl) {
                 ReadManga.clearMangaChapter()
             }
         }.onSuccess {
@@ -511,7 +513,6 @@ class BookInfoViewModel(
             context.toastOnUi("清理缓存出错\n${it.localizedMessage}")
         }
     }
-
 
     fun addToBookshelf(book: Book, toc: List<BookChapter>, success: (() -> Unit)? = null) {
         execute {

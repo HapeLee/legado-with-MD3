@@ -184,12 +184,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         } else {
             appDb.bookSourceDao.getBookSource(book.origin)?.let {
                 bookSource = it
-                SourceCallBack.callBackBook(
-                    SourceCallBack.START_READ,
-                    it,
-                    book,
-                    curTextChapter?.chapter
-                )
                 if (book.getImageStyle().isNullOrBlank()) {
                     var imageStyle = it.getContentRule().imageStyle
                     if (imageStyle.isNullOrBlank() && (book.isImage || book.isPdf)) {
@@ -639,9 +633,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
     }
 
-    fun loadOrUpContent() {
+    fun loadOrUpContent(success: (() -> Unit)? = null) {
         if (curTextChapter == null) {
-            loadContent(durChapterIndex)
+            loadContent(durChapterIndex) {
+                success?.invoke()
+            }
         } else {
             callBack?.upContent()
         }
