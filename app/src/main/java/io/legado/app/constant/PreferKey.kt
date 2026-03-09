@@ -236,6 +236,8 @@ object PreferKey {
     const val isPredictiveBackEnabled = "isPredictiveBackEnabled"
     const val replaceSortMode = "desc"
     const val readBarStyle = "readBarStyle"
+    const val disableReturnKey = "disableReturnKey"
+    const val selectText = "selectText"
     //我在干什么
 
     const val disableMangaScrollAnimation = "disableMangaScrollAnimation"
