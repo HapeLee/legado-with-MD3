@@ -30,9 +30,15 @@ fun Modifier.responsiveHazeEffect(
 
     if (!enableBlur) return this
 
+    val style = if (enableProgressiveBlur) {
+        HazeMaterials.ultraThin()
+    } else {
+        HazeMaterials.regular()
+    }
+
     return this.hazeEffect(
         state = state,
-        style = HazeMaterials.ultraThin()
+        style = style
     ) {
         if (enableProgressiveBlur) {
             progressive = HazeProgressive.verticalGradient(

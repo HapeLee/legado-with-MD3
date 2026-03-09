@@ -27,6 +27,7 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -36,6 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import dev.chrisbanes.haze.HazeState
+import io.legado.app.ui.theme.responsiveHazeEffect
+import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.rules.ListUiState
@@ -46,13 +50,14 @@ import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 fun <T> ListScaffold(
     title: String,
     state: ListUiState<T>,
-    onBackClick: () -> Unit,
+    subtitle: String? = null,
+    onBackClick: (() -> Unit)? = null,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String = "搜索...",
     topBarActions: @Composable RowScope.() -> Unit = {},
-    bottomContent: @Composable (ColumnScope.() -> Unit)? = null,
-    dropDownMenuContent: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},
+    bottomContent: @Composable (ColumnScope.(TopAppBarScrollBehavior) -> Unit)? = null,
+    dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     selectionActions: SelectionActions? = null,
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
@@ -80,28 +85,36 @@ fun <T> ListScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val hazeState = remember { HazeState() }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            DynamicTopAppBar(
-                title = title,
-                state = state,
-                scrollBehavior = scrollBehavior,
-                onBackClick = onBackClick,
-                onSearchToggle = onSearchToggle,
-                onSearchQueryChange = onSearchQueryChange,
-                searchPlaceholder = searchPlaceholder,
-                onClearSelection = { selectionActions?.onSelectInvert?.invoke() }, // 或其他逻辑
-                topBarActions = topBarActions,
-                dropDownMenuContent = dropDownMenuContent,
-                bottomContent = bottomContent
-            )
+            Box(modifier = Modifier.responsiveHazeEffect(state = hazeState)) {
+                DynamicTopAppBar(
+                    title = title,
+                    subtitle = subtitle,
+                    state = state,
+                    scrollBehavior = scrollBehavior,
+                    onBackClick = onBackClick,
+                    onSearchToggle = onSearchToggle,
+                    onSearchQueryChange = onSearchQueryChange,
+                    searchPlaceholder = searchPlaceholder,
+                    onClearSelection = { selectionActions?.onSelectInvert?.invoke() },
+                    topBarActions = topBarActions,
+                    dropDownMenuContent = dropDownMenuContent,
+                    bottomContent = bottomContent
+                )
+            }
         },
         floatingActionButton = floatingActionButton
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .responsiveHazeSource(hazeState)
+        ) {
             content(paddingValues)
 
             AnimatedVisibility(

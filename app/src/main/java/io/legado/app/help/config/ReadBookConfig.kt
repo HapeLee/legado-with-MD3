@@ -106,18 +106,14 @@ object ReadBookConfig {
         shareConfig = c ?: configList.getOrNull(5) ?: Config()
     }
 
-    fun upBg(width: Int, height: Int): Drawable? {
+    fun upBg(width: Int, height: Int) {
         val drawable = durConfig.curBgDrawable(width, height)
         if (drawable is BitmapDrawable && drawable.bitmap != null) {
             bgMeanColor = drawable.bitmap.getMeanColor()
         } else if (drawable is ColorDrawable) {
             bgMeanColor = drawable.color
         }
-        val tmp = bg
         bg = drawable
-        // 返回旧 Drawable，由调用方在视图更新完成后再 recycle，
-        // 避免视图仍引用旧 BitmapDrawable 时 bitmap 已被 recycle 导致崩溃
-        return tmp
     }
 
     fun save() {

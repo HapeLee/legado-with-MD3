@@ -3,13 +3,13 @@ package io.legado.app.ui.widget.components.settingItem
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 
 @Composable
 fun DropdownListSettingItem(
@@ -31,7 +31,7 @@ fun DropdownListSettingItem(
         onClick = { },
         dropdownMenu = { onDismiss ->
             displayEntries.forEachIndexed { index, display ->
-                DropdownMenuItem(
+                RoundDropdownMenuItem(
                     text = { Text(display) },
                     onClick = {
                         onValueChange(entryValues[index])

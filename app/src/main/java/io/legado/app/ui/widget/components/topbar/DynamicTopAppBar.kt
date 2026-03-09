@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +28,7 @@ import io.legado.app.ui.widget.components.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.rules.ListUiState
@@ -41,7 +41,7 @@ fun <T> DynamicTopAppBar(
     subtitle: String? = null,
     state: ListUiState<T>,
     scrollBehavior: TopAppBarScrollBehavior,
-    onBackClick: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String,
@@ -51,7 +51,7 @@ fun <T> DynamicTopAppBar(
     onClearSelection: () -> Unit,
     topBarActions: @Composable RowScope.() -> Unit = {},
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
-    bottomContent: @Composable (ColumnScope.() -> Unit)? = null
+    bottomContent: @Composable (ColumnScope.(TopAppBarScrollBehavior) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val isSelecting = state.selectedIds.isNotEmpty()
@@ -75,25 +75,31 @@ fun <T> DynamicTopAppBar(
                 { AnimatedTextLine(text = it) }
             },
             navigationIcon = {
-                TopbarNavigationButton(
-                    onClick = { if (isSelecting) onClearSelection() else onBackClick() },
-                    imageVector = if (isSelecting) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = if (isSelecting) "取消选择" else "返回"
-                )
+                if (isSelecting || onBackClick != null) {
+                    TopbarNavigationButton(
+                        onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
+                        imageVector = if (isSelecting) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = if (isSelecting) "取消选择" else "返回"
+                    )
+                }
             },
             actions = {
                 if (!isSelecting) {
-                    IconButton(onClick = { onSearchToggle(!state.isSearch) }) {
-                        Icon(Icons.Default.Search, null)
-                    }
+                    TopBarActionButton(
+                        onClick = { onSearchToggle(!state.isSearch) },
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "搜索"
+                    )
 
                     topBarActions()
 
                     dropDownMenuContent?.let { content ->
                         Box {
-                            IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Default.MoreVert, null)
-                            }
+                            TopBarActionButton(
+                                onClick = { showMenu = true },
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "更多"
+                            )
                             RoundDropdownMenu(
                                 expanded = showMenu,
                                 onDismissRequest = { showMenu = false }
@@ -122,6 +128,6 @@ fun <T> DynamicTopAppBar(
             )
         }
 
-        bottomContent?.invoke(this)
+        bottomContent?.invoke(this, scrollBehavior)
     }
 }

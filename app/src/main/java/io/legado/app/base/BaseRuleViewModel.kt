@@ -44,11 +44,12 @@ sealed interface BaseRuleEvent {
 
 abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiState<T>>(
     application: Application,
-    initialState: S,
+    protected val initialState: S,
     private val uploadRepository: UploadRepository? = null // 设为可空，提高灵活性
 ) : BaseViewModel(application) {
 
     protected val _searchKey = MutableStateFlow("")
+    protected val _groupFilter = MutableStateFlow("")
     protected val _selectedIds = MutableStateFlow<Set<ID>>(emptySet())
     protected val _isSearchMode = MutableStateFlow(false)
     protected val _isUploading = MutableStateFlow(false)
@@ -60,24 +61,34 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
 
     abstract val rawDataFlow: Flow<List<Entity>>
 
+    @Deprecated(
+        "Use filterData with groupFilter instead",
+        ReplaceWith("filterData(data, searchKey, \"\")")
+    )
     open fun filterData(data: List<Entity>, key: String): List<Entity> = data
+
+    open fun filterData(data: List<Entity>, searchKey: String, groupFilter: String): List<Entity> {
+        @Suppress("DEPRECATION")
+        return filterData(data, if (groupFilter.isNotEmpty()) groupFilter else searchKey)
+    }
 
     @OptIn(FlowPreview::class)
     private val itemsFlow: Flow<List<T>> by lazy {
         combine(
             rawDataFlow,
             _searchKey,
+            _groupFilter,
             _localItems
-        ) { data, key, local ->
-            if (local != null && key.isEmpty()) {
+        ) { data, searchKey, groupFilter, local ->
+            if (local != null && searchKey.isEmpty() && groupFilter.isEmpty()) {
                 local
             } else {
-                filterData(data, key).map { it.toUiItem() }
+                filterData(data, searchKey, groupFilter).map { it.toUiItem() }
             }
         }
     }
 
-    val uiState: StateFlow<S> by lazy {
+    open val uiState: StateFlow<S> by lazy {
         combine(
             itemsFlow,
             _selectedIds,
@@ -130,6 +141,11 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
     fun setSearchKey(key: String?) {
         _localItems.value = null
         _searchKey.value = key ?: ""
+    }
+
+    open fun setGroupFilter(filter: String?) {
+        _localItems.value = null
+        _groupFilter.value = filter ?: ""
     }
 
     fun setSearchMode(active: Boolean) {

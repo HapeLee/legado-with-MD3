@@ -23,7 +23,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -65,7 +64,10 @@ import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
+import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheet
 import io.legado.app.ui.widget.components.exportComponents.FilePickerSheetMode
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -252,7 +254,8 @@ fun ReplaceRuleScreen(
         GroupManageBottomSheet(
             groups = groups,
             onDismissRequest = { showGroupManageSheet = false },
-            viewModel = viewModel
+            onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
+            onDeleteGroup = { viewModel.delGroup(it) }
         )
     }
 
@@ -332,6 +335,7 @@ fun ReplaceRuleScreen(
                         .coerceAtLeast(0),
                     edgePadding = 0.dp,
                     divider = {},
+                    containerColor = GlassTopAppBarDefaults.containerColor(),
                 ) {
                     tabItems.forEachIndexed { index, title ->
                         Tab(
@@ -403,7 +407,7 @@ fun ReplaceRuleScreen(
                 text = { Text("帮助") },
                 onClick = { /*TODO*/ dismiss() }
             )
-            HorizontalDivider()
+            PillDivider()
             RoundDropdownMenuItem(
                 text = { Text("旧的在前") },
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
@@ -436,7 +440,6 @@ fun ReplaceRuleScreen(
     ) { padding ->
         Box(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
         ) {
             FastScrollLazyColumn(
@@ -444,8 +447,8 @@ fun ReplaceRuleScreen(
                 modifier = Modifier
                     .fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = 120.dp
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

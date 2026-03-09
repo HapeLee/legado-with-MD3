@@ -43,7 +43,7 @@ object GlassTopAppBarDefaults {
         val enableBlur = ThemeConfig.enableBlur
 
         val containerColor = if (enableBlur) {
-            MaterialTheme.colorScheme.surface
+            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
         } else {
             MaterialTheme.colorScheme.surface.copy(alpha = alpha)
         }
@@ -58,6 +58,19 @@ object GlassTopAppBarDefaults {
             containerColor = containerColor,
             scrolledContainerColor = scrolledContainerColor
         )
+    }
+
+    @Composable
+    fun containerColor(): Color {
+        val enableBlur = ThemeConfig.enableBlur
+
+        val containerColor = if (enableBlur) {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+
+        return containerColor
     }
 
     @Composable
