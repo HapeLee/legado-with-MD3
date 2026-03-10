@@ -81,7 +81,7 @@ community.
 * **Community Channels:**
   [Telegram](https://t.me/legado_channels) ｜ [Discord](https://discord.gg/VtUfRyzRXn) ｜ [Yuque Wiki](https://www.yuque.com/legado/wiki/community)
 * **Related Documents:**
-  [Disclaimer](https://gedoor.github.io/Disclaimer) ｜ [Changelog](https://www.google.com/search?q=/app/src/main/assets/updateLog.md)
+  [Disclaimer](https://gedoor.github.io/Disclaimer) 
 
 ---
 
