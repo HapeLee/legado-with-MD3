@@ -171,7 +171,7 @@ fun RssSourceGridItem(
             SourceIcon(
                 path = source.sourceIcon.ifEmpty { R.drawable.image_rss },
                 sourceOrigin = source.sourceUrl,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(48.dp)
             )
             RoundDropdownMenu(
                 expanded = showMenu,

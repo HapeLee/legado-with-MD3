@@ -1,5 +1,10 @@
 package io.legado.app.di
 
+import android.os.Build
+import coil.ImageLoader
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.decode.SvgDecoder
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.DirectLinkUploadRepository
@@ -9,6 +14,10 @@ import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.help.coil.CoverFetcher
+import io.legado.app.help.coil.CoverInterceptor
+import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.import.remote.RemoteBookViewModel
@@ -43,6 +52,22 @@ val appModule = module {
 
     single<UploadRepository> { DirectLinkUploadRepository() }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
+
+    single<ImageLoader> {
+        ImageLoader.Builder(get())
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+                add(SvgDecoder.Factory())
+                add(CoverInterceptor())
+                add(CoverFetcher.Factory(okHttpClient, okHttpClientManga))
+            }
+            .crossfade(true)
+            .build()
+    }
 
     viewModelOf(::DictRuleViewModel)
     viewModelOf(::RssSourceViewModel)

@@ -10,12 +10,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.legado.app.model.BookCover.coverImageLoader
+import org.koin.compose.koinInject
 
 /**
  * 专门用于显示源图标的组件
@@ -29,6 +31,7 @@ fun SourceIcon(
     modifier: Modifier = Modifier.size(32.dp),
     sourceOrigin: String? = null,
     loadOnlyWifi: Boolean = false,
+    imageLoader: ImageLoader = koinInject(),
     placeholderIcon: @Composable () -> Unit = {
         Icon(
             Icons.Default.RssFeed,
@@ -41,7 +44,7 @@ fun SourceIcon(
     val context = LocalContext.current
 
     Box(
-        modifier = modifier,
+        modifier = modifier.clip(MaterialTheme.shapes.medium),
         contentAlignment = Alignment.Center
     ) {
         if (path == null || (path is String && path.isEmpty())) {
@@ -54,7 +57,7 @@ fun SourceIcon(
                     .setParameter("sourceOrigin", sourceOrigin)
                     .setParameter("loadOnlyWifi", loadOnlyWifi)
                     .build(),
-                imageLoader = coverImageLoader,
+                imageLoader = imageLoader,
                 contentDescription = null,
                 contentScale = ContentScale.Fit, // 不裁切
                 modifier = Modifier.fillMaxSize()

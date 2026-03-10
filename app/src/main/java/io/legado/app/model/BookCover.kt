@@ -25,14 +25,10 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.help.CacheManager
 import io.legado.app.help.DefaultData
-import io.legado.app.help.coil.CoverFetcher
-import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.BlurTransformation
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.help.glide.OkHttpModelLoader
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
@@ -71,14 +67,6 @@ object BookCover {
         private set
     lateinit var defaultDrawable: Drawable
         private set
-
-    val coverImageLoader = coil.ImageLoader.Builder(appCtx)
-        .components {
-            add(CoverInterceptor())
-            add(CoverFetcher.Factory(okHttpClient, okHttpClientManga))
-        }
-        .crossfade(true)
-        .build()
 
     init {
         upDefaultCover()
