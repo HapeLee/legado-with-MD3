@@ -158,17 +158,11 @@ class AudioPlayActivity :
         initView()
         onBackPressedDispatcher.addCallback(this){
             if (savedInstanceState != null || !AudioPlay.inBookshelf) {
-                finish()
+                supportFinishAfterTransition()
             } else {
+                callBackBookEnd()
                 supportFinishAfterTransition()
             }
-        }
-    }
-
-    override fun finish() {
-        if (AudioPlay.inBookshelf) {
-            callBackBookEnd()
-            return super.finish()
         }
     }
 
