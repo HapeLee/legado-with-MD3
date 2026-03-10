@@ -31,6 +31,7 @@ fun SourceIcon(
     modifier: Modifier = Modifier.size(32.dp),
     sourceOrigin: String? = null,
     loadOnlyWifi: Boolean = false,
+    contentScale: ContentScale = ContentScale.Fit,
     imageLoader: ImageLoader = koinInject(),
     placeholderIcon: @Composable () -> Unit = {
         Icon(
@@ -59,7 +60,7 @@ fun SourceIcon(
                     .build(),
                 imageLoader = imageLoader,
                 contentDescription = null,
-                contentScale = ContentScale.Fit, // 不裁切
+                contentScale = contentScale, // 不裁切
                 modifier = Modifier.fillMaxSize()
             )
         }

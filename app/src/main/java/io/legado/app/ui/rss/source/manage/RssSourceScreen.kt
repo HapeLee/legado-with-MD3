@@ -242,7 +242,7 @@ fun RssSourceScreen(
 
     RuleListScaffold(
         title = stringResource(R.string.rss_source),
-        subtitle = uiState.groupFilterName,
+        subtitle = uiState.groupFilterName ?: stringResource(R.string.all),
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { active -> viewModel.setSearchMode(active) },

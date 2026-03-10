@@ -1,15 +1,12 @@
 package io.legado.app.ui.widget.components.card
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +21,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +42,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 
@@ -59,6 +56,7 @@ fun SelectionItemCard(
     inSelectionMode: Boolean = false,
     elevation: Dp = 0.dp,
     onToggleSelection: () -> Unit = {},
+    leadingContent: @Composable (() -> Unit)? = null,
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
@@ -87,20 +85,30 @@ fun SelectionItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp)
                 .animateContentSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedVisibility(
-                visible = inSelectionMode,
-                enter = fadeIn() + expandHorizontally(),
-                exit = fadeOut() + shrinkHorizontally()
+                visible = inSelectionMode || leadingContent != null
             ) {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = null,
-                    modifier = Modifier.padding(start = 12.dp)
-                )
+                Box(
+                    modifier = Modifier.padding(start = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = inSelectionMode,
+                        label = "LeadingContent"
+                    ) { selectionMode ->
+                        if (selectionMode) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = null
+                            )
+                        } else {
+                            leadingContent?.invoke()
+                        }
+                    }
+                }
             }
 
             ListItem(
@@ -159,7 +167,7 @@ fun SelectionItemCard(
                             icon = Icons.Default.MoreVert,
                             contentDescription = "More"
                         )
-                        DropdownMenu(
+                        RoundDropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false }
                         ) {
@@ -185,6 +193,7 @@ fun LazyItemScope.ReorderableSelectionItem(
     inSelectionMode: Boolean = false,
     canReorder: Boolean = true,
     onToggleSelection: () -> Unit = {},
+    leadingContent: @Composable (() -> Unit)? = null,
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
@@ -206,6 +215,7 @@ fun LazyItemScope.ReorderableSelectionItem(
             inSelectionMode = inSelectionMode,
             elevation = elevation,
             onToggleSelection = onToggleSelection,
+            leadingContent = leadingContent,
             onEnabledChange = onEnabledChange,
             onClickEdit = onClickEdit,
             trailingAction = trailingAction,
