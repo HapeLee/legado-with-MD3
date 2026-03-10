@@ -53,10 +53,8 @@ Design 3 风格重构版本。
 以下为原项目的社区，本项目由于开发者比较忙，暂时没有独立社区。
 
 * **官方 Wiki:** [书源规则教程](https://mgz0227.github.io/The-tutorial-of-Legado/)
-* **交流社区:
-  ** [Telegram 频道](https://t.me/legado_channels) | [Discord](https://discord.gg/VtUfRyzRXn) | [语雀 Wiki](https://www.yuque.com/legado/wiki/community)
-* **相关文档:
-  ** [免责声明](https://gedoor.github.io/Disclaimer)
+* **交流社区:** [Telegram 频道](https://t.me/legado_channels) | [Discord](https://discord.gg/VtUfRyzRXn) | [语雀 Wiki](https://www.yuque.com/legado/wiki/community)
+* **相关文档:** [免责声明](https://gedoor.github.io/Disclaimer)
 
 ---
 
