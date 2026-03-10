@@ -56,7 +56,7 @@ Design 3 风格重构版本。
 * **交流社区:
   ** [Telegram 频道](https://t.me/legado_channels) | [Discord](https://discord.gg/VtUfRyzRXn) | [语雀 Wiki](https://www.yuque.com/legado/wiki/community)
 * **相关文档:
-  ** [免责声明](https://gedoor.github.io/Disclaimer) | [更新日志](https://www.google.com/search?q=/app/src/main/assets/updateLog.md)
+  ** [免责声明](https://gedoor.github.io/Disclaimer)
 
 ---
 
