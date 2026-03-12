@@ -29,7 +29,9 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.ui.main.explore.ExploreViewModel
 import io.legado.app.ui.main.my.MyViewModel
+import io.legado.app.ui.main.rss.RssViewModel
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
@@ -82,6 +84,8 @@ val appModule = module {
     viewModelOf(::TocViewModel)
     viewModelOf(::RemoteBookViewModel)
     viewModelOf(::BookInfoViewModel)
+    viewModelOf(::ExploreViewModel)
+    viewModelOf(::RssViewModel)
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(

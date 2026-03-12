@@ -79,7 +79,7 @@ fun SelectionItemCard(
             .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        color = containerColor,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(

@@ -1,0 +1,522 @@
+package io.legado.app.ui.main.explore
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.VerticalAlignTop
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import io.legado.app.R
+import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.ui.book.explore.ExploreShowActivity
+import io.legado.app.ui.book.search.SearchActivity
+import io.legado.app.ui.book.search.SearchScope
+import io.legado.app.ui.book.source.edit.BookSourceEditActivity
+import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.list.ListScaffold
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.utils.startActivity
+import kotlinx.coroutines.launch
+import org.koin.androidx.compose.koinViewModel
+import kotlin.math.roundToInt
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun ExploreScreen(
+    viewModel: ExploreViewModel = koinViewModel()
+) {
+    val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+    var sourceToDelete by remember { mutableStateOf<BookSourcePart?>(null) }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    // 自动滚动置顶
+    LaunchedEffect(uiState.expandedId) {
+        uiState.expandedId?.let { id ->
+            var realIndex = 0
+            for (item in uiState.items) {
+                if (item.bookSourceUrl == id) break
+                realIndex++
+            }
+            if (realIndex >= 0) {
+                listState.animateScrollToItem(realIndex)
+            }
+        }
+    }
+
+    val stickyHeaderSource by remember {
+        derivedStateOf {
+            val expandedId = uiState.expandedId ?: return@derivedStateOf null
+            val expandedSource =
+                uiState.items.find { it.bookSourceUrl == expandedId } ?: return@derivedStateOf null
+
+            var headerIndex = 0
+            var contentRowCount = 0
+            for (item in uiState.items) {
+                if (item.bookSourceUrl == expandedId) {
+                    contentRowCount = calculateRows(uiState.exploreKinds, 6).size
+                    break
+                }
+                headerIndex++
+            }
+
+            val lastContentIndex = headerIndex + contentRowCount
+            val firstVisible = listState.firstVisibleItemIndex
+
+            if (firstVisible in (headerIndex + 1)..lastContentIndex) {
+                expandedSource
+            } else {
+                null
+            }
+        }
+    }
+
+    ListScaffold(
+        title = stringResource(R.string.screen_find),
+        state = uiState,
+        subtitle = uiState.selectedGroup.ifEmpty { stringResource(R.string.all) },
+        onSearchQueryChange = { viewModel.search(it) },
+        onSearchToggle = { viewModel.toggleSearchVisible(it) },
+        searchPlaceholder = stringResource(R.string.search),
+        dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.Default.Group) },
+                text = { Text(stringResource(R.string.all)) },
+                onClick = { viewModel.setGroup(""); dismiss() }
+            )
+            uiState.groups.forEach { group ->
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
+                    text = { Text(group) },
+                    onClick = { viewModel.setGroup(group); dismiss() }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            FastScrollLazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 16.dp
+                )
+            ) {
+                uiState.items.forEach { item ->
+                    val isExpanded = uiState.expandedId == item.bookSourceUrl
+
+                    item(key = item.bookSourceUrl) {
+                        ExploreSourceHeader(
+                            modifier = Modifier.animateItem(),
+                            item = item,
+                            isExpanded = isExpanded,
+                            loadingKinds = if (isExpanded) uiState.loadingKinds else false,
+                            onClick = { viewModel.toggleExpand(item) },
+                            onTop = { viewModel.topSource(item) },
+                            onEdit = {
+                                context.startActivity<BookSourceEditActivity> {
+                                    putExtra("sourceUrl", item.bookSourceUrl)
+                                }
+                            },
+                            onSearch = {
+                                context.startActivity<SearchActivity> {
+                                    putExtra("searchScope", SearchScope(item).toString())
+                                }
+                            },
+                            onLogin = {
+                                context.startActivity<SourceLoginActivity> {
+                                    putExtra("type", "bookSource")
+                                    putExtra("key", item.bookSourceUrl)
+                                }
+                            },
+                            onRefresh = { viewModel.refreshExploreKinds(item) },
+                            onDelete = { sourceToDelete = item }
+                        )
+                    }
+
+                    if (isExpanded) {
+                        val rows = calculateRows(uiState.exploreKinds, 6)
+                        itemsIndexed(
+                            items = rows,
+                            key = { index, _ -> "${item.bookSourceUrl}_$index" }
+                        ) { _, rowItems ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowItems.forEach { (kind, span) ->
+                                    val isClickable = !kind.url.isNullOrBlank()
+                                    ExploreKindItem(
+                                        kind = kind,
+                                        isClickable = isClickable,
+                                        modifier = Modifier.weight(span.toFloat()),
+                                        onClick = {
+                                            if (isClickable) {
+                                                context.startActivity<ExploreShowActivity> {
+                                                    putExtra("exploreName", kind.title)
+                                                    putExtra("sourceUrl", item.bookSourceUrl)
+                                                    putExtra("exploreUrl", kind.url)
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
+
+                                val totalSpan = rowItems.sumOf { it.second }
+                                if (totalSpan < 6) {
+                                    Spacer(
+                                        modifier = Modifier.weight((6 - totalSpan).toFloat())
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = stickyHeaderSource != null,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = paddingValues.calculateTopPadding() + 4.dp, start = 8.dp),
+                enter = fadeIn() + slideInVertically { -it },
+                exit = fadeOut() + slideOutVertically { -it }
+            ) {
+                var lastSource by remember { mutableStateOf<BookSourcePart?>(null) }
+                stickyHeaderSource?.let { lastSource = it }
+
+                lastSource?.let { item ->
+                    ExploreStickyCard(
+                        item = item,
+                        onClick = {
+                            scope.launch {
+                                val index =
+                                    uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
+                                if (index >= 0) listState.animateScrollToItem(index)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    sourceToDelete?.let { source ->
+        AlertDialog(
+            onDismissRequest = { sourceToDelete = null },
+            title = { Text(stringResource(R.string.draw)) },
+            text = { Text(stringResource(R.string.sure_del) + "\n" + source.bookSourceName) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.deleteSource(source)
+                    sourceToDelete = null
+                }) {
+                    Text(stringResource(R.string.yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { sourceToDelete = null }) {
+                    Text(stringResource(R.string.no))
+                }
+            }
+        )
+    }
+}
+
+private fun calculateRows(
+    kinds: List<ExploreKind>,
+    maxSpan: Int
+): List<List<Pair<ExploreKind, Int>>> {
+    val rows = mutableListOf<MutableList<Pair<ExploreKind, Int>>>()
+    var currentRow = mutableListOf<Pair<ExploreKind, Int>>()
+    var currentSpan = 0
+    kinds.forEach { kind ->
+        val style = kind.style()
+        val span = when {
+            style.layout_wrapBefore || style.layout_flexBasisPercent >= 1.0f -> maxSpan
+            style.layout_flexBasisPercent > 0 -> (maxSpan * style.layout_flexBasisPercent).roundToInt()
+                .coerceIn(1, maxSpan)
+
+            style.layout_flexGrow > 0f -> 3
+            else -> 2
+        }
+        if ((style.layout_wrapBefore && currentRow.isNotEmpty()) || (currentSpan + span > maxSpan)) {
+            rows.add(currentRow)
+            currentRow = mutableListOf()
+            currentSpan = 0
+        }
+        currentRow.add(kind to span)
+        currentSpan += span
+        if (currentSpan >= maxSpan) {
+            rows.add(currentRow)
+            currentRow = mutableListOf()
+            currentSpan = 0
+        }
+    }
+    if (currentRow.isNotEmpty()) rows.add(currentRow)
+    return rows
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ExploreSourceHeader(
+    modifier: Modifier = Modifier,
+    item: BookSourcePart,
+    isExpanded: Boolean,
+    loadingKinds: Boolean,
+    onClick: () -> Unit,
+    onTop: () -> Unit,
+    onEdit: () -> Unit,
+    onSearch: () -> Unit,
+    onLogin: () -> Unit,
+    onRefresh: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val rotation by animateFloatAsState(if (isExpanded) 90f else 0f, label = "rotation")
+    val containerColor by animateColorAsState(
+        targetValue = if (isExpanded)
+            MaterialTheme.colorScheme.secondaryContainer
+        else
+            MaterialTheme.colorScheme.surfaceContainerLow,
+        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+        label = "CardColor"
+    )
+
+    GlassCard(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+    ) {
+        ListItem(
+            modifier = Modifier
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
+                )
+                .fillMaxWidth(),
+            colors = ListItemDefaults.colors(
+                containerColor = Color.Transparent
+            ),
+            headlineContent = {
+                Text(
+                    text = item.bookSourceName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (isExpanded) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            },
+            trailingContent = {
+                if (loadingKinds) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .rotate(rotation)
+                            .size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        )
+    }
+
+    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+        PillHeaderDivider(title = item.bookSourceName)
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+            text = { Text(stringResource(R.string.to_top)) },
+            onClick = { onTop(); showMenu = false }
+        )
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+            text = { Text(stringResource(R.string.edit)) },
+            onClick = { onEdit(); showMenu = false }
+        )
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Search) },
+            text = { Text(stringResource(R.string.search)) },
+            onClick = { onSearch(); showMenu = false }
+        )
+        if (item.hasLoginUrl) {
+            RoundDropdownMenuItem(
+                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                text = { Text(stringResource(R.string.login)) },
+                onClick = { onLogin(); showMenu = false }
+            )
+        }
+        RoundDropdownMenuItem(
+            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
+            text = { Text(stringResource(R.string.refresh)) },
+            onClick = { onRefresh(); showMenu = false }
+        )
+        RoundDropdownMenuItem(
+            leadingIcon = {
+                MenuItemIcon(
+                    Icons.Default.Delete,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.delete),
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            onClick = { onDelete(); showMenu = false }
+        )
+    }
+
+}
+
+@Composable
+fun ExploreStickyCard(
+    item: BookSourcePart,
+    onClick: () -> Unit
+) {
+    TextCard(
+        text = item.bookSourceName,
+        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        textStyle = MaterialTheme.typography.labelLarge,
+        horizontalPadding = 8.dp,
+        verticalPadding = 6.dp,
+        onClick = onClick
+    )
+}
+
+@Composable
+fun ExploreKindItem(
+    kind: ExploreKind,
+    isClickable: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(
+        LocalMinimumInteractiveComponentSize provides Dp.Unspecified
+    ) {
+
+        val shape = MaterialTheme.shapes.medium
+
+        if (isClickable) {
+            GlassCard(
+                onClick = onClick,
+                shape = shape,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                ),
+                modifier = modifier
+            ) {
+                KindText(kind)
+            }
+        } else {
+            OutlinedCard(
+                shape = shape,
+                colors = CardDefaults.outlinedCardColors(
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                ),
+                modifier = modifier
+            ) {
+                KindText(kind)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun KindText(
+    kind: ExploreKind
+) {
+    Text(
+        text = kind.title,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        style = MaterialTheme.typography.labelMediumEmphasized,
+        textAlign = TextAlign.Center,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1
+    )
+}

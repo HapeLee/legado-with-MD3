@@ -28,4 +28,11 @@ object ThemeConfig {
             !bgImageLight.isNullOrEmpty()
         }
     }
+
+    /*
+    fun hasImageBg(isDark: Boolean): Boolean {
+        return if (isDark) bgImageDark.isNullOrBlank() else bgImageLight.isNullOrBlank()
+    }
+     */
+
 }

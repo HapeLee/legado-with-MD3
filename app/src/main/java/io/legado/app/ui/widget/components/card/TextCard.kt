@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -19,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.widget.components.AnimatedTextLine
 
 @Preview(showBackground = true)
 @Composable
@@ -36,6 +37,7 @@ fun TextCard(
     modifier: Modifier = Modifier,
     text: String,
     icon: ImageVector? = null,
+    onClick: (() -> Unit)? = null,
     backgroundColor: Color = colorScheme.primaryContainer,
     contentColor: Color = colorScheme.onPrimaryContainer,
     cornerRadius: Dp = 8.dp,
@@ -49,7 +51,8 @@ fun TextCard(
     GlassCard(
         modifier = modifier,
         shape = RoundedCornerShape(cornerRadius),
-        color = backgroundColor
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(
@@ -69,7 +72,7 @@ fun TextCard(
                 Spacer(modifier = Modifier.width(spacing))
             }
 
-            AnimatedText(
+            AnimatedTextLine(
                 text = text,
                 style = textStyle,
                 color = contentColor,
