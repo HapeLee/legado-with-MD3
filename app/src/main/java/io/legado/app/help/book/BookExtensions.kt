@@ -339,6 +339,9 @@ fun Book.updateTo(newBook: Book): Book {
     newBook.customIntro = customIntro
     newBook.customTag = customTag
     newBook.canUpdate = canUpdate
+    if (config.fixedType) {
+        newBook.type = type
+    }
     newBook.readConfig = readConfig
     val variableMap = variableMap.toMutableMap()
     variableMap.keys.removeIf {

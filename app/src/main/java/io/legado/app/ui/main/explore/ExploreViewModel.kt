@@ -9,7 +9,7 @@ import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
-import io.legado.app.ui.widget.components.rules.ListUiState
+import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
@@ -38,6 +39,9 @@ class TestConfigActivity : BaseComposeActivity() {
     @Serializable
     object ReadConfigRoute
 
+    @Serializable
+    object CoverConfigRoute
+
     @Composable
     override fun Content() {
         val navController = rememberNavController()
@@ -50,7 +54,8 @@ class TestConfigActivity : BaseComposeActivity() {
                 ConfigNavScreen(
                     onBackClick = { finish() },
                     onNavigateToOther = { navController.navigate(OtherConfigRoute) },
-                    onNavigateToRead = { navController.navigate(ReadConfigRoute) }
+                    onNavigateToRead = { navController.navigate(ReadConfigRoute) },
+                    onNavigateToCover = { navController.navigate(CoverConfigRoute) }
                 )
             }
 
@@ -61,6 +66,10 @@ class TestConfigActivity : BaseComposeActivity() {
             composable<ReadConfigRoute> {
                 ReadConfigScreen(onBackClick = { navController.popBackStack() })
             }
+
+            composable<CoverConfigRoute> {
+                CoverConfigScreen(onBackClick = { navController.popBackStack() })
+            }
         }
     }
 
@@ -69,7 +78,8 @@ class TestConfigActivity : BaseComposeActivity() {
     fun ConfigNavScreen(
         onBackClick: () -> Unit,
         onNavigateToOther: () -> Unit,
-        onNavigateToRead: () -> Unit
+        onNavigateToRead: () -> Unit,
+        onNavigateToCover: () -> Unit
     ) {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -100,6 +110,10 @@ class TestConfigActivity : BaseComposeActivity() {
                     ClickableSettingItem(
                         title = stringResource(R.string.read_config),
                         onClick = onNavigateToRead
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.cover_config),
+                        onClick = onNavigateToCover
                     )
                 }
             }

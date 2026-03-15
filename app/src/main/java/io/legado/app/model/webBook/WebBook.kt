@@ -162,8 +162,10 @@ object WebBook {
         book: Book,
         canReName: Boolean = true,
     ): Book {
-        book.removeAllBookType()
-        book.addType(bookSource.getBookType())
+        if (!book.config.fixedType) {
+            book.removeAllBookType()
+            book.addType(bookSource.getBookType())
+        }
         if (!book.infoHtml.isNullOrEmpty()) {
             BookInfo.analyzeBookInfo(
                 bookSource = bookSource,
@@ -235,8 +237,10 @@ object WebBook {
         book: Book,
         runPerJs: Boolean = false
     ): Result<List<BookChapter>> {
-        book.removeAllBookType()
-        book.addType(bookSource.getBookType())
+        if (!book.config.fixedType) {
+            book.removeAllBookType()
+            book.addType(bookSource.getBookType())
+        }
         return kotlin.runCatching {
             if (runPerJs) {
                 runPreUpdateJs(bookSource, book).getOrThrow()

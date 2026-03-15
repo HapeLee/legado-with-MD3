@@ -9,9 +9,8 @@
 
     <string-array name="group_style">
         <item>標籤</item>
-        <item>資料夾</item>
         <item>隐藏標籤</item>
-        <item>材料標籤</item>
+        <item>資料夾</item>
     </string-array>
 
     <string-array name="text_suffix">

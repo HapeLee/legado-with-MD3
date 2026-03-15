@@ -228,6 +228,7 @@ dependencies {
     implementation(libs.nanohttpd.websocket)
     implementation(libs.zxing.lite)
     implementation(libs.colorpicker)
+    implementation(libs.colorpicker.compose)
     implementation(libs.libarchive)
     implementation(libs.commons.text)
     implementation(libs.markwon.core)
@@ -236,6 +237,7 @@ dependencies {
     implementation(libs.markwon.html)
     implementation(libs.quick.chinese.transfer.core)
     implementation(libs.hutool.crypto)
+    //noinspection GradleDependency
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.perf)

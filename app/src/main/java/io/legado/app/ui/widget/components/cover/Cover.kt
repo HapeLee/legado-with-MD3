@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.cover
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

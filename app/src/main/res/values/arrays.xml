@@ -14,9 +14,8 @@
 
 	<string-array name="group_style">
 		<item>Tab</item>
-		<item>Folder</item>
 		<item>Hide Tab</item>
-		<item>Material Tab</item>
+		<item>Folder</item>
 	</string-array>
 
 	<string-array name="book_sort">
@@ -277,6 +276,14 @@
 		<item>@string/bookshelf_px_3</item>
 		<item>@string/bookshelf_px_4</item>
 		<item>@string/bookshelf_px_5</item>
+	</string-array>
+
+	<string-array name="bookshelf_layout">
+		<item>@string/list</item>
+		<item>@string/compact_list</item>
+		<item>@string/grid</item>
+		<item>@string/compact_grid</item>
+		<item>@string/cover_grid</item>
 	</string-array>
 
     <string-array name="label_vis_mode" >

@@ -1,42 +1,416 @@
 package io.legado.app.ui.main.bookshelf
 
 import android.app.Application
-import androidx.lifecycle.MutableLiveData
+import android.content.res.Configuration
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.viewModelScope
 import com.google.gson.stream.JsonWriter
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.constant.BookType
+import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.book.BookHelp
+import io.legado.app.help.book.addType
+import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isUpError
+import io.legado.app.help.book.removeType
+import io.legado.app.help.book.sync
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
+import io.legado.app.model.CacheBook
+import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.service.CacheBookService
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
+import io.legado.app.utils.cnCompare
+import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.onEachParallel
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
+import java.util.LinkedList
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import kotlin.math.max
+import kotlin.math.min
 
 class BookshelfViewModel(application: Application) : BaseViewModel(application) {
-    val addBookProgressLiveData = MutableLiveData(-1)
     var addBookJob: Coroutine<*>? = null
+
+    private val groupIdFlow = MutableStateFlow(BookGroup.IdAll)
+    private val searchKeyFlow = MutableStateFlow("")
+    private val refreshTrigger = MutableStateFlow(0)
+    private val loadingTextFlow = MutableStateFlow<String?>(null)
+
+    // 更新相关
+    private var threadCount = AppConfig.threadCount
+    private var poolSize = min(threadCount, AppConst.MAX_THREAD)
+    private var upTocPool = Executors.newFixedThreadPool(poolSize).asCoroutineDispatcher()
+    private val waitUpTocBooks = LinkedList<String>()
+    private val onUpTocBooks = ConcurrentHashMap.newKeySet<String>()
+    private val updatingBooksFlow = MutableStateFlow<Set<String>>(emptySet())
+    private var upTocJob: Job? = null
+    private var cacheBookJob: Job? = null
+    private val eventListenerSource = ConcurrentHashMap<BookSource, Boolean>()
+
+    val scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    val groupsFlow = appDb.bookGroupDao.show.asFlow()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
+        .flatMapLatest { groupId ->
+            appDb.bookDao.flowByGroup(groupId).map { list ->
+                sortBooks(list, groupId)
+            }
+        }.flowOn(Dispatchers.Default)
+
+    private val internalStateFlow = combine(
+        groupIdFlow,
+        searchKeyFlow,
+        loadingTextFlow,
+        updatingBooksFlow
+    ) { groupId, searchKey, loadingText, updatingBooks ->
+        InternalState(groupId, searchKey, loadingText, updatingBooks)
+    }
+
+    data class InternalState(
+        val groupId: Long,
+        val searchKey: String,
+        val loadingText: String?,
+        val updatingBooks: Set<String>
+    )
+
+    val uiState: StateFlow<BookshelfUiState> = combine(
+        booksFlow,
+        groupsFlow,
+        internalStateFlow
+    ) { books, groups, internal ->
+        val filteredBooks = if (internal.searchKey.isEmpty()) {
+            books
+        } else {
+            books.filter {
+                it.name.contains(
+                    internal.searchKey,
+                    true
+                ) || it.author.contains(internal.searchKey, true)
+            }
+        }
+        val currentGroups = groups ?: emptyList()
+        val isLandscape =
+            context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+        // 计算分组预览图
+        val previews = mutableMapOf<Long, List<Book>>()
+        if (BookshelfConfig.bookGroupStyle in 2..3) {
+            currentGroups.forEach { group ->
+                val groupBooks = if (group.groupId == BookGroup.IdAll) {
+                    books.take(4)
+                } else {
+                    books.filter { (it.group and group.groupId) != 0L }.take(4)
+                }
+                previews[group.groupId] = groupBooks
+            }
+        }
+
+        BookshelfUiState(
+            items = filteredBooks,
+            groups = currentGroups,
+            groupPreviews = previews,
+            selectedGroupIndex = currentGroups.indexOfFirst { it.groupId == internal.groupId }
+                .coerceAtLeast(0),
+            searchKey = internal.searchKey,
+            isSearch = internal.searchKey.isNotEmpty(),
+            isLoading = internal.loadingText != null,
+            loadingText = internal.loadingText,
+            bookshelfLayoutMode = if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait,
+            bookshelfLayoutGrid = if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait,
+            bookshelfLayoutCompact = BookshelfConfig.bookshelfLayoutCompact,
+            titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
+            titleCenter = BookshelfConfig.bookshelfTitleCenter,
+            titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
+            coverShadow = BookshelfConfig.bookshelfCoverShadow,
+            updatingBooks = internal.updatingBooks
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BookshelfUiState())
+
+    init {
+        viewModelScope.launch {
+            FlowEventBus.with<Unit>(EventBus.UP_ALL_BOOK_TOC).collect {
+                upAllBookToc()
+            }
+        }
+        viewModelScope.launch {
+            FlowEventBus.with<Unit>(EventBus.BOOKSHELF_REFRESH).collect {
+                refresh()
+            }
+        }
+
+        if (BookshelfConfig.autoRefreshBook) {
+            upAllBookToc()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        upTocPool.close()
+    }
+
+    private fun sortBooks(list: List<Book>, groupId: Long): List<Book> {
+        val group = appDb.bookGroupDao.getByID(groupId)
+        val bookSort = group?.getRealBookSort() ?: AppConfig.bookshelfSort
+        val isDescending = AppConfig.bookshelfSortOrder == 1
+
+        return when (bookSort) {
+            1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
+            else list.sortedBy { it.latestChapterTime }
+
+            2 -> if (isDescending)
+                list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
+            else
+                list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
+
+            3 -> if (isDescending) list.sortedByDescending { it.order }
+            else list.sortedBy { it.order }
+
+            4 -> if (isDescending) list.sortedByDescending {
+                max(
+                    it.latestChapterTime,
+                    it.durChapterTime
+                )
+            }
+            else list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
+
+            5 -> if (isDescending)
+                list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
+            else
+                list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
+
+            else -> if (isDescending) list.sortedByDescending { it.durChapterTime }
+            else list.sortedBy { it.durChapterTime }
+        }
+    }
+
+    fun changeGroup(groupId: Long) {
+        groupIdFlow.value = groupId
+    }
+
+    fun setSearchKey(key: String) {
+        searchKeyFlow.value = key
+    }
+
+    fun refresh() {
+        refreshTrigger.value++
+    }
+
+    fun gotoTop() {
+        scrollTrigger.tryEmit(Unit)
+    }
+
+    // 更新逻辑移入
+    fun upAllBookToc() {
+        execute {
+            addToWaitUp(appDb.bookDao.hasUpdateBooks)
+        }
+    }
+
+    fun upToc(books: List<Book>) {
+        execute(context = upTocPool) {
+            books.filter {
+                !it.isLocal && it.canUpdate
+            }.let {
+                addToWaitUp(it)
+            }
+        }
+    }
+
+    @Synchronized
+    private fun addToWaitUp(books: List<Book>) {
+        books.forEach { book ->
+            if (!waitUpTocBooks.contains(book.bookUrl) && !onUpTocBooks.contains(book.bookUrl)) {
+                waitUpTocBooks.add(book.bookUrl)
+            }
+        }
+        if (upTocJob == null) {
+            startUpTocJob()
+        }
+    }
+
+    private fun startUpTocJob() {
+        upPool()
+        postUpBooksCount()
+        upTocJob = viewModelScope.launch(upTocPool) {
+            flow {
+                while (true) {
+                    emit(waitUpTocBooks.poll() ?: break)
+                }
+            }.onEachParallel(threadCount) {
+                onUpTocBooks.add(it)
+                updatingBooksFlow.value = onUpTocBooks.toSet()
+                postEvent(EventBus.UP_BOOKSHELF, it)
+                updateToc(it)
+            }.onEach {
+                onUpTocBooks.remove(it)
+                updatingBooksFlow.value = onUpTocBooks.toSet()
+                postEvent(EventBus.UP_BOOKSHELF, it)
+                postUpBooksCount()
+            }.onCompletion {
+                upTocJob = null
+                if (waitUpTocBooks.isNotEmpty()) {
+                    startUpTocJob()
+                }
+                if (it == null && cacheBookJob == null && !CacheBookService.isRun) {
+                    cacheBook()
+                }
+            }.catch {
+                AppLog.put("更新目录出错\n${it.localizedMessage}", it)
+            }.collect()
+        }
+    }
+
+    private fun upPool() {
+        threadCount = AppConfig.threadCount
+        val newPoolSize = min(threadCount, AppConst.MAX_THREAD)
+        if (poolSize == newPoolSize) return
+        poolSize = newPoolSize
+        upTocPool.close()
+        upTocPool = Executors.newFixedThreadPool(poolSize).asCoroutineDispatcher()
+    }
+
+    private suspend fun updateToc(bookUrl: String) {
+        val book = appDb.bookDao.getBook(bookUrl) ?: return
+        val source = appDb.bookSourceDao.getBookSource(book.origin)
+        if (source == null) {
+            if (!book.isUpError) {
+                book.addType(BookType.updateError)
+                appDb.bookDao.update(book)
+            }
+            return
+        }
+        if (source.eventListener) {
+            if (eventListenerSource.putIfAbsent(source, true) == null) {
+                SourceCallBack.callBackSource(
+                    viewModelScope,
+                    SourceCallBack.START_SHELF_REFRESH,
+                    source
+                )
+            }
+        }
+        kotlin.runCatching {
+            val oldBook = book.copy()
+            if (book.tocUrl.isBlank()) {
+                WebBook.getBookInfoAwait(source, book)
+            } else {
+                WebBook.runPreUpdateJs(source, book)
+            }
+            val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
+            book.sync(oldBook)
+            book.removeType(BookType.updateError)
+            if (book.bookUrl == bookUrl) {
+                appDb.bookDao.update(book)
+            } else {
+                appDb.bookDao.replace(oldBook, book)
+                BookHelp.updateCacheFolder(oldBook, book)
+            }
+            appDb.bookChapterDao.delByBook(bookUrl)
+            appDb.bookChapterDao.insert(*toc.toTypedArray())
+            ReadBook.onChapterListUpdated(book)
+            addDownload(source, book)
+        }.onFailure {
+            currentCoroutineContext().ensureActive()
+            AppLog.put("${book.name} 更新目录失败\n${it.localizedMessage}", it)
+            appDb.bookDao.getBook(book.bookUrl)?.let { book ->
+                book.addType(BookType.updateError)
+                appDb.bookDao.update(book)
+            }
+        }
+    }
+
+    private fun postUpBooksCount() {
+        val count = if (AppConfig.showWaitUpCount) waitUpTocBooks.size + onUpTocBooks.size else 0
+        FlowEventBus.post(EventBus.UP_BOOKSHELF_COUNT, count)
+    }
+
+    private fun addDownload(source: BookSource, book: Book) {
+        if (AppConfig.preDownloadNum == 0) return
+        val endIndex =
+            min(book.totalChapterNum - 1, book.durChapterIndex + AppConfig.preDownloadNum)
+        val cacheBook = CacheBook.getOrCreate(source, book)
+        cacheBook.addDownload(book.durChapterIndex, endIndex)
+    }
+
+    private fun cacheBook() {
+        eventListenerSource.toList().forEach {
+            SourceCallBack.callBackSource(
+                viewModelScope,
+                SourceCallBack.END_SHELF_REFRESH,
+                it.first
+            )
+        }
+        eventListenerSource.clear()
+        if (AppConfig.preDownloadNum == 0) return
+        cacheBookJob?.cancel()
+        cacheBookJob = viewModelScope.launch(upTocPool) {
+            launch {
+                while (isActive && CacheBook.isRun) {
+                    CacheBook.setWorkingState(waitUpTocBooks.isEmpty() && onUpTocBooks.isEmpty())
+                    delay(1000)
+                }
+            }
+            CacheBook.startProcessJob(upTocPool)
+        }
+    }
 
     fun addBookByUrl(bookUrls: String) {
         var successCount = 0
+        loadingTextFlow.value = "添加中..."
         addBookJob = execute {
             val hasBookUrlPattern: List<BookSourcePart> by lazy {
                 appDb.bookSourceDao.hasBookUrlPattern
@@ -83,7 +457,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                         it.save()
                     }
                     successCount++
-                    addBookProgressLiveData.postValue(successCount)
+                    loadingTextFlow.value = "添加中... ($successCount)"
                 }
             }
         }.onSuccess {
@@ -95,7 +469,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
         }.onError {
             AppLog.put("添加网址出错\n${it.localizedMessage}", it, true)
         }.onFinally {
-            addBookProgressLiveData.postValue(-1)
+            loadingTextFlow.value = null
         }
     }
 
@@ -154,6 +528,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
     }
 
     private fun importBookshelfByJson(json: String, groupId: Long) {
+        loadingTextFlow.value = "导入中..."
         execute {
             val bookSourceParts = appDb.bookSourceDao.allEnabledPart
             val semaphore = Semaphore(AppConfig.threadCount)
@@ -181,6 +556,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
         }.onError {
             it.printOnDebug()
         }.onFinally {
+            loadingTextFlow.value = null
             context.toastOnUi(R.string.success)
         }
     }

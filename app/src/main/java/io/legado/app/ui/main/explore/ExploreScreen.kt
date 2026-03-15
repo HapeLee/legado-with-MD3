@@ -397,56 +397,54 @@ fun ExploreSourceHeader(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    PillHeaderDivider(title = item.bookSourceName)
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                        text = { Text(stringResource(R.string.to_top)) },
+                        onClick = { onTop(); showMenu = false }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                        text = { Text(stringResource(R.string.edit)) },
+                        onClick = { onEdit(); showMenu = false }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Search) },
+                        text = { Text(stringResource(R.string.search)) },
+                        onClick = { onSearch(); showMenu = false }
+                    )
+                    if (item.hasLoginUrl) {
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                            text = { Text(stringResource(R.string.login)) },
+                            onClick = { onLogin(); showMenu = false }
+                        )
+                    }
+                    RoundDropdownMenuItem(
+                        leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
+                        text = { Text(stringResource(R.string.refresh)) },
+                        onClick = { onRefresh(); showMenu = false }
+                    )
+                    RoundDropdownMenuItem(
+                        leadingIcon = {
+                            MenuItemIcon(
+                                Icons.Default.Delete,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        text = {
+                            Text(
+                                stringResource(R.string.delete),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = { onDelete(); showMenu = false }
+                    )
+                }
             }
         )
     }
-
-    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-        PillHeaderDivider(title = item.bookSourceName)
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-            text = { Text(stringResource(R.string.to_top)) },
-            onClick = { onTop(); showMenu = false }
-        )
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-            text = { Text(stringResource(R.string.edit)) },
-            onClick = { onEdit(); showMenu = false }
-        )
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.Search) },
-            text = { Text(stringResource(R.string.search)) },
-            onClick = { onSearch(); showMenu = false }
-        )
-        if (item.hasLoginUrl) {
-            RoundDropdownMenuItem(
-                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                text = { Text(stringResource(R.string.login)) },
-                onClick = { onLogin(); showMenu = false }
-            )
-        }
-        RoundDropdownMenuItem(
-            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-            text = { Text(stringResource(R.string.refresh)) },
-            onClick = { onRefresh(); showMenu = false }
-        )
-        RoundDropdownMenuItem(
-            leadingIcon = {
-                MenuItemIcon(
-                    Icons.Default.Delete,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            text = {
-                Text(
-                    stringResource(R.string.delete),
-                    color = MaterialTheme.colorScheme.error
-                )
-            },
-            onClick = { onDelete(); showMenu = false }
-        )
-    }
-
 }
 
 @Composable
@@ -493,8 +491,7 @@ fun ExploreKindItem(
             OutlinedCard(
                 shape = shape,
                 colors = CardDefaults.outlinedCardColors(
-                    containerColor = Color.Transparent,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    contentColor = MaterialTheme.colorScheme.primary
                 ),
                 modifier = modifier
             ) {

@@ -20,15 +20,19 @@ import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
+import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
+import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.ui.main.MainViewModel
+import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
@@ -76,11 +80,15 @@ val appModule = module {
     viewModelOf(::ReadRecordViewModel)
     viewModelOf(::ExploreShowViewModel)
     viewModelOf(::MyViewModel)
+    viewModelOf(::BookshelfViewModel)
+    viewModelOf(::MainViewModel)
+    viewModelOf(::GroupViewModel)
     viewModelOf(::ReplaceRuleViewModel)
     viewModelOf(::AllBookmarkViewModel)
     viewModelOf(::TxtTocRuleViewModel)
     viewModelOf(::OtherConfigViewModel)
     viewModelOf(::ReadConfigViewModel)
+    viewModelOf(::CoverConfigViewModel)
     viewModelOf(::TocViewModel)
     viewModelOf(::RemoteBookViewModel)
     viewModelOf(::BookInfoViewModel)
