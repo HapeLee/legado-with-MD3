@@ -52,6 +52,7 @@ import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.button.TopBarButtonVariant
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.cover.Cover
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
@@ -180,6 +181,13 @@ fun BookInfoEditContent(
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+        SwitchSettingItem(
+            title = "固定书籍类型",
+            description = "书籍更新后不覆盖书籍类型",
+            checked = uiState.fixedType,
+            onCheckedChange = { viewModel.onFixedTypeChange(it) }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
@@ -271,4 +279,3 @@ fun BookTypeDropdown(
         }
     }
 }
-

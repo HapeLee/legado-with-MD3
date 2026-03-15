@@ -33,6 +33,7 @@ data class BookInfoEditUiState(
     val remark: String? = null,
     val selectedType: String = "文本",
     val bookTypes: List<String> = listOf("文本", "音频", "图片"),
+    val fixedType: Boolean = false,
     val book: Book? = null,
 )
 
@@ -57,6 +58,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     intro = it.getDisplayIntro(),
                     remark = it.remark,
                     selectedType = _uiState.value.bookTypes[selectedTypeIndex],
+                    fixedType = it.config.fixedType,
                     book = it
                 )
             }
@@ -87,6 +89,10 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         _uiState.value = _uiState.value.copy(selectedType = bookType)
     }
 
+    fun onFixedTypeChange(fixed: Boolean) {
+        _uiState.value = _uiState.value.copy(fixedType = fixed)
+    }
+
     fun resetCover() {
         _uiState.value = _uiState.value.copy(coverUrl = book?.coverUrl ?: "")
     }
@@ -107,6 +113,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 }
                 book.removeType(BookType.local, BookType.image, BookType.audio, BookType.text)
                 book.addType(bookType)
+                book.config.fixedType = currentState.fixedType
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
                 BookHelp.updateCacheFolder(oldBook, book)
