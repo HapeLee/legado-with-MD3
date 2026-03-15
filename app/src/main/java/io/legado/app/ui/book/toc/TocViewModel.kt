@@ -21,8 +21,8 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.rules.ListUiState
-import io.legado.app.ui.widget.components.rules.SelectableItem
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

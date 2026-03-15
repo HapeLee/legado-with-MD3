@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -45,8 +44,7 @@ fun TextCard(
     verticalPadding: Dp = 2.dp,
     iconSize: Dp = 14.dp,
     spacing: Dp = 4.dp,
-    textStyle: TextStyle = MaterialTheme.typography.labelSmall,
-    bold: Boolean = true,
+    textStyle: TextStyle = MaterialTheme.typography.labelSmall
 ) {
     GlassCard(
         modifier = modifier,
@@ -75,8 +73,7 @@ fun TextCard(
             AnimatedTextLine(
                 text = text,
                 style = textStyle,
-                color = contentColor,
-                fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal
+                color = contentColor
             )
         }
     }

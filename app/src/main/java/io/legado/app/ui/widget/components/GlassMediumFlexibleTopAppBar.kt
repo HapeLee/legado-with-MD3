@@ -39,17 +39,15 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun glassColors(): TopAppBarColors {
-        val alpha = ThemeConfig.containerOpacity / 100f
-        val enableBlur = ThemeConfig.enableBlur
+        val opacity = ThemeConfig.containerOpacity / 100f
 
-        val containerColor = if (enableBlur) {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
-        } else {
-            MaterialTheme.colorScheme.surface.copy(alpha = alpha)
-        }
+        val containerColor = GlassDefaults.glassColor(
+            noBlurColor = MaterialTheme.colorScheme.surface.copy(alpha = opacity),
+            blurAlpha = GlassDefaults.TransparentAlpha
+        )
 
-        val scrolledContainerColor = if (enableBlur) {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+        val scrolledContainerColor = if (ThemeConfig.enableBlur) {
+            MaterialTheme.colorScheme.surface.copy(alpha = GlassDefaults.TransparentAlpha)
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }
@@ -62,27 +60,18 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun containerColor(): Color {
-        val enableBlur = ThemeConfig.enableBlur
-
-        val containerColor = if (enableBlur) {
-            MaterialTheme.colorScheme.surface.copy(alpha = 0f)
-        } else {
-            MaterialTheme.colorScheme.surface
-        }
-
-        return containerColor
+        val opacity = ThemeConfig.containerOpacity / 100f
+        return GlassDefaults.glassColor(
+            noBlurColor = MaterialTheme.colorScheme.surface.copy(alpha = opacity),
+            blurAlpha = GlassDefaults.TransparentAlpha
+        )
     }
 
     @Composable
     fun controlContainerColor(): Color {
-        val enableBlur = ThemeConfig.enableBlur
-        val baseColor = MaterialTheme.colorScheme.surfaceContainerHighest
-
-        return if (enableBlur) {
-            baseColor.copy(alpha = 0.72f)
-        } else {
-            baseColor
-        }
+        return GlassDefaults.glassColor(
+            noBlurColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            blurAlpha = GlassDefaults.DefaultBlurAlpha
+        )
     }
-
 }

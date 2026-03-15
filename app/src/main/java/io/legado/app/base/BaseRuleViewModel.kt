@@ -13,8 +13,8 @@ import io.legado.app.help.http.text
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.ImportItemWrapper
 import io.legado.app.ui.widget.components.importComponents.ImportStatus
-import io.legado.app.ui.widget.components.rules.ListUiState
-import io.legado.app.ui.widget.components.rules.SelectableItem
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isUri
 import io.legado.app.utils.readText

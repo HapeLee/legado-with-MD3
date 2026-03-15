@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
@@ -10,17 +11,21 @@ fun SwitchSettingItem(
     description: String? = null,
     checked: Boolean,
     imageVector: ImageVector? = null,
+    color: Color? = null,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
 ) {
     SettingItem(
         title = title,
         description = description,
         imageVector = imageVector,
-        onClick = { onCheckedChange(!checked) },
+        color = color,
+        onClick = { if (enabled) onCheckedChange(!checked) },
         trailingContent = {
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
             )
         }
     )

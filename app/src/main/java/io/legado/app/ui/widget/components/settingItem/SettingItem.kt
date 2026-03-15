@@ -113,7 +113,7 @@ fun SettingItem(
                                 Text(
                                     it,
                                     style = MaterialTheme.typography.bodySmallEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
                             option?.let {

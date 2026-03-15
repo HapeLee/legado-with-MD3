@@ -1,7 +1,7 @@
 package io.legado.app.ui.main.rss
 
 import io.legado.app.data.entities.RssSource
-import io.legado.app.ui.widget.components.rules.ListUiState
+import io.legado.app.ui.widget.components.list.ListUiState
 
 data class RssUiState(
     override val items: List<RssSource> = emptyList(),
