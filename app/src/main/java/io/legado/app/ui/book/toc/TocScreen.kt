@@ -155,9 +155,24 @@ fun TocScreen(
     val useReplace = viewModel.useReplace
     val showWordCount = viewModel.showWordCount
 
-    val subtitle = remember(pagerState.currentPage, book?.durChapterTitle) {
+    val subtitle = remember(
+        pagerState.currentPage,
+        book?.durChapterTitle,
+        book?.durChapterIndex,
+        book?.totalChapterNum
+    ) {
         when (pagerState.currentPage) {
-            0 -> book?.durChapterTitle
+            0 -> {
+                val durTitle = book?.durChapterTitle ?: ""
+                val durIndex = (book?.durChapterIndex ?: 0) + 1
+                val totalNum = book?.totalChapterNum ?: 0
+                if (totalNum > 0) {
+                    "$durTitle · $durIndex / $totalNum 章"
+                } else {
+                    durTitle
+                }
+            }
+
             1 -> "书签管理"
             else -> null
         }
@@ -733,13 +748,23 @@ fun ChapterItem(
                 }
             }
 
-            if (item.downloadState != DownloadState.LOCAL) {
+            val showStatusIcon =
+                remember(item.isDur, item.downloadState, item.wordCount, showWordCount) {
+                    if (item.downloadState == DownloadState.LOCAL) {
+                        showWordCount && !item.wordCount.isNullOrEmpty()
+                    } else {
+                        true
+                    }
+                }
+
+            if (showStatusIcon) {
                 Box(
                     modifier = Modifier
                         .padding(start = 8.dp)
                         .wrapContentSize()
                         .clip(MaterialTheme.shapes.medium)
                         .combinedClickable(
+                            enabled = item.downloadState != DownloadState.LOCAL,
                             onClick = {
                                 if (item.downloadState == DownloadState.NONE) {
                                     onDownloadClick()
@@ -830,6 +855,10 @@ private fun StatusIcon(
 ) {
 
     val targetState = when {
+        downloadState == DownloadState.LOCAL -> {
+            if (showWordCount && !wordCount.isNullOrEmpty()) "SUCCESS_WORD_COUNT" else "EMPTY"
+        }
+
         isDur -> "DUR"
         downloadState == DownloadState.DOWNLOADING -> "LOADING"
         downloadState == DownloadState.SUCCESS && showWordCount && !wordCount.isNullOrEmpty() -> "SUCCESS_WORD_COUNT"
@@ -848,6 +877,10 @@ private fun StatusIcon(
     ) { state ->
 
         when (state) {
+
+            "EMPTY" -> {
+                Box(modifier = Modifier.size(24.dp))
+            }
 
             "DUR" -> {
                 Icon(
