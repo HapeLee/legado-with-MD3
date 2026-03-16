@@ -2,6 +2,7 @@ package io.legado.app.ui.config.bookshelfConfig
 
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.postEvent
 
@@ -116,5 +117,10 @@ object BookshelfConfig {
      * 启动时自动刷新书架
      */
     var autoRefreshBook by prefDelegate(PreferKey.autoRefresh, false)
+
+    /**
+     * 保存上次停留的分组Id
+     */
+    var saveTabPosition by prefDelegate(PreferKey.saveTabPosition, BookGroup.IdAll)
 
 }

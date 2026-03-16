@@ -276,12 +276,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefInt(PreferKey.bookshelfLayoutGridLandscape, value)
         }
 
-    var saveTabPosition: Int
-        get() = appCtx.getPrefInt(PreferKey.saveTabPosition, 0)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.saveTabPosition, value)
-        }
-
     var bookExportFileName: String?
         get() = appCtx.getPrefString(PreferKey.bookExportFileName)
         set(value) {

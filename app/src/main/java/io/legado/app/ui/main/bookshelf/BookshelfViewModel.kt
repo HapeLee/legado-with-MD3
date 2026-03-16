@@ -54,6 +54,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,6 +62,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -84,7 +86,7 @@ import kotlin.math.min
 class BookshelfViewModel(application: Application) : BaseViewModel(application) {
     var addBookJob: Coroutine<*>? = null
 
-    private val groupIdFlow = MutableStateFlow(BookGroup.IdAll)
+    private val groupIdFlow = MutableStateFlow(BookshelfConfig.saveTabPosition)
     private val searchKeyFlow = MutableStateFlow("")
     private val refreshTrigger = MutableStateFlow(0)
     private val loadingTextFlow = MutableStateFlow<String?>(null)
@@ -102,15 +104,34 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
 
     val scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    val groupsFlow = appDb.bookGroupDao.show.asFlow()
+    val groupsFlow: StateFlow<List<BookGroup>> = appDb.bookGroupDao.show.asFlow()
+        .map { it ?: emptyList() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val allBooksFlow = appDb.bookDao.flowAll().flowOn(Dispatchers.Default)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
         .flatMapLatest { groupId ->
             appDb.bookDao.flowByGroup(groupId).map { list ->
-                sortBooks(list, groupId)
+                sortBooks(list, groupsFlow.value.find { it.groupId == groupId })
             }
         }.flowOn(Dispatchers.Default)
+
+    private val groupPreviewsFlow = combine(groupsFlow, allBooksFlow) { groups, allBooks ->
+        if (BookshelfConfig.bookGroupStyle in 2..3) {
+            groups.associate { group ->
+                val groupBooks = if (group.groupId == BookGroup.IdAll) {
+                    allBooks.take(4)
+                } else {
+                    allBooks.filter { (it.group and group.groupId) != 0L }.take(4)
+                }
+                group.groupId to groupBooks
+            }
+        } else {
+            emptyMap()
+        }
+    }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
     private val internalStateFlow = combine(
         groupIdFlow,
@@ -131,8 +152,9 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
     val uiState: StateFlow<BookshelfUiState> = combine(
         booksFlow,
         groupsFlow,
+        groupPreviewsFlow,
         internalStateFlow
-    ) { books, groups, internal ->
+    ) { books, groups, previews, internal ->
         val filteredBooks = if (internal.searchKey.isEmpty()) {
             books
         } else {
@@ -143,28 +165,14 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                 ) || it.author.contains(internal.searchKey, true)
             }
         }
-        val currentGroups = groups ?: emptyList()
         val isLandscape =
             context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        // 计算分组预览图
-        val previews = mutableMapOf<Long, List<Book>>()
-        if (BookshelfConfig.bookGroupStyle in 2..3) {
-            currentGroups.forEach { group ->
-                val groupBooks = if (group.groupId == BookGroup.IdAll) {
-                    books.take(4)
-                } else {
-                    books.filter { (it.group and group.groupId) != 0L }.take(4)
-                }
-                previews[group.groupId] = groupBooks
-            }
-        }
-
         BookshelfUiState(
             items = filteredBooks,
-            groups = currentGroups,
+            groups = groups,
             groupPreviews = previews,
-            selectedGroupIndex = currentGroups.indexOfFirst { it.groupId == internal.groupId }
+            selectedGroupIndex = groups.indexOfFirst { it.groupId == internal.groupId }
                 .coerceAtLeast(0),
             searchKey = internal.searchKey,
             isSearch = internal.searchKey.isNotEmpty(),
@@ -203,8 +211,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
         upTocPool.close()
     }
 
-    private fun sortBooks(list: List<Book>, groupId: Long): List<Book> {
-        val group = appDb.bookGroupDao.getByID(groupId)
+    private fun sortBooks(list: List<Book>, group: BookGroup?): List<Book> {
         val bookSort = group?.getRealBookSort() ?: AppConfig.bookshelfSort
         val isDescending = AppConfig.bookshelfSortOrder == 1
 
@@ -238,8 +245,31 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun getBooksFlow(groupId: Long): Flow<List<Book>> {
+        return combine(
+            appDb.bookDao.flowByGroup(groupId),
+            searchKeyFlow,
+            groupsFlow,
+            refreshTrigger
+        ) { books, searchKey, groups, _ ->
+            val group = groups.find { it.groupId == groupId }
+            val filtered = if (searchKey.isEmpty()) {
+                books
+            } else {
+                books.filter {
+                    it.name.contains(searchKey, true) || it.author.contains(searchKey, true)
+                }
+            }
+            sortBooks(filtered, group)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
+    }
+
     fun changeGroup(groupId: Long) {
-        groupIdFlow.value = groupId
+        if (groupIdFlow.value != groupId) {
+            groupIdFlow.value = groupId
+            BookshelfConfig.saveTabPosition = groupId
+        }
     }
 
     fun setSearchKey(key: String) {

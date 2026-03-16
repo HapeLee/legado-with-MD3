@@ -32,7 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryScrollableTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -50,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +65,7 @@ import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.cover.BookCoverWithProgress
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -131,11 +131,19 @@ fun BookshelfScreen(
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
     // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图
     var isInFolderRoot by remember(bookGroupStyle) { mutableStateOf(bookGroupStyle == 2) }
-    val title = if (bookGroupStyle == 2 && uiState.groups.isNotEmpty()) {
-        if (isInFolderRoot) "书架"
-        else uiState.groups.getOrNull(pagerState.currentPage)?.groupName ?: "书架"
-    } else {
-        "书架"
+    val title = when {
+        bookGroupStyle == 1 -> {
+            uiState.groups.getOrNull(pagerState.currentPage)?.groupName
+                ?: stringResource(R.string.bookshelf)
+        }
+
+        bookGroupStyle == 2 && uiState.groups.isNotEmpty() -> {
+            if (isInFolderRoot) stringResource(R.string.bookshelf)
+            else uiState.groups.getOrNull(pagerState.currentPage)?.groupName
+                ?: stringResource(R.string.bookshelf)
+        }
+
+        else -> stringResource(R.string.bookshelf)
     }
 
     if (bookGroupStyle == 2 && !isInFolderRoot) {
@@ -228,11 +236,12 @@ fun BookshelfScreen(
         bottomContent = if (bookGroupStyle == 0) {
             {
                 if (uiState.groups.isNotEmpty()) {
-                    SecondaryScrollableTabRow(
+                    PrimaryScrollableTabRow(
                         selectedTabIndex = pagerState.currentPage,
-                        edgePadding = 16.dp,
-                        containerColor = Color.Transparent,
-                        divider = {}
+                        edgePadding = 0.dp,
+                        divider = { },
+                        containerColor = GlassTopAppBarDefaults.containerColor(),
+                        minTabWidth = 0.dp
                     ) {
                         uiState.groups.forEachIndexed { index, group ->
                             Tab(
@@ -240,7 +249,15 @@ fun BookshelfScreen(
                                 onClick = {
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 },
-                                text = { Text(group.groupName) }
+                                text = {
+                                    Text(
+                                        text = group.groupName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             )
                         }
                     }
@@ -340,16 +357,22 @@ fun BookshelfScreen(
             } else {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    beyondViewportPageCount = 1
-                ) {
-                    BookshelfPage(
-                        paddingValues = paddingValues,
-                        uiState = uiState,
-                        onBookClick = onBookClick,
-                        onBookLongClick = onBookLongClick
-                    )
+                    modifier = Modifier.fillMaxSize(),
+                    beyondViewportPageCount = 1,
+                    key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
+                ) { pageIndex ->
+                    val group = uiState.groups.getOrNull(pageIndex)
+                    if (group != null) {
+                        val books by viewModel.getBooksFlow(group.groupId)
+                            .collectAsState(emptyList())
+                        BookshelfPage(
+                            paddingValues = paddingValues,
+                            books = books,
+                            uiState = uiState,
+                            onBookClick = onBookClick,
+                            onBookLongClick = onBookLongClick
+                        )
+                    }
                 }
             }
         }
@@ -419,6 +442,7 @@ fun BookshelfScreen(
 @Composable
 fun BookshelfPage(
     paddingValues: PaddingValues,
+    books: List<Book>,
     uiState: BookshelfUiState,
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit
@@ -431,7 +455,7 @@ fun BookshelfPage(
                 bottom = 56.dp
             )
         ) {
-            items(uiState.items, key = { it.bookUrl }) { book ->
+            items(books, key = { it.bookUrl }) { book ->
                 BookItem(
                     book = book,
                     layoutMode = uiState.bookshelfLayoutMode,
@@ -455,7 +479,7 @@ fun BookshelfPage(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(uiState.items, key = { it.bookUrl }) { book ->
+            items(books, key = { it.bookUrl }) { book ->
                 BookItem(
                     book = book,
                     layoutMode = uiState.bookshelfLayoutMode,
