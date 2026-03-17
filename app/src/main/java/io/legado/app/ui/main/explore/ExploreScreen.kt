@@ -166,7 +166,7 @@ fun ExploreScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding() + 16.dp
+                    bottom = 120.dp
                 )
             ) {
                 uiState.items.forEach { item ->

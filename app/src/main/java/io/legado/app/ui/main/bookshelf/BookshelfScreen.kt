@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -254,7 +252,7 @@ fun BookshelfScreen(
                                         text = group.groupName,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 4.dp),
+                                        modifier = Modifier.padding(horizontal = 8.dp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
@@ -291,16 +289,20 @@ fun BookshelfScreen(
             }
         ) {
             if (bookGroupStyle == 2 && isInFolderRoot) {
-
-                if (uiState.bookshelfLayoutMode == 0) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = 56.dp
-                        )
-                    ) {
-                        items(uiState.groups) { group ->
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(uiState.bookshelfLayoutGrid.coerceAtLeast(1)),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = 120.dp,
+                        start = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp,
+                        end = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp),
+                    horizontalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp)
+                ) {
+                    items(uiState.groups) { group ->
+                        if (uiState.bookshelfLayoutMode == 0) {
                             BookGroupItemList(
                                 group = group,
                                 previewBooks = uiState.groupPreviews[group.groupId] ?: emptyList(),
@@ -317,23 +319,7 @@ fun BookshelfScreen(
                                 },
                                 onLongClick = { showGroupManageSheet = true }
                             )
-                        }
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(uiState.bookshelfLayoutGrid),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = paddingValues.calculateBottomPadding() + 16.dp,
-                            start = 12.dp,
-                            end = 12.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.groups) { group ->
-
+                        } else {
                             BookGroupItemGrid(
                                 group = group,
                                 previewBooks = uiState.groupPreviews[group.groupId] ?: emptyList(),
@@ -358,7 +344,7 @@ fun BookshelfScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    beyondViewportPageCount = 1,
+                    beyondViewportPageCount = 3,
                     key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
                 ) { pageIndex ->
                     val group = uiState.groups.getOrNull(pageIndex)
@@ -447,52 +433,31 @@ fun BookshelfPage(
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit
 ) {
-    if (uiState.bookshelfLayoutMode == 0) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding(),
-                bottom = 56.dp
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(uiState.bookshelfLayoutGrid.coerceAtLeast(1)),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            top = paddingValues.calculateTopPadding(),
+            bottom = 120.dp,
+            start = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp,
+            end = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp)
+    ) {
+        items(books, key = { it.bookUrl }) { book ->
+            BookItem(
+                book = book,
+                layoutMode = uiState.bookshelfLayoutMode,
+                isCompact = uiState.bookshelfLayoutCompact,
+                isUpdating = uiState.updatingBooks.contains(book.bookUrl),
+                titleSmallFont = uiState.titleSmallFont,
+                titleCenter = uiState.titleCenter,
+                titleMaxLines = uiState.titleMaxLines,
+                coverShadow = uiState.coverShadow,
+                onClick = { onBookClick(book) },
+                onLongClick = { onBookLongClick(book) }
             )
-        ) {
-            items(books, key = { it.bookUrl }) { book ->
-                BookItem(
-                    book = book,
-                    layoutMode = uiState.bookshelfLayoutMode,
-                    isCompact = uiState.bookshelfLayoutCompact,
-                    isUpdating = uiState.updatingBooks.contains(book.bookUrl),
-                    onClick = { onBookClick(book) },
-                    onLongClick = { onBookLongClick(book) }
-                )
-            }
-        }
-    } else {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(uiState.bookshelfLayoutGrid),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = paddingValues.calculateTopPadding(),
-                bottom = paddingValues.calculateBottomPadding() + 16.dp,
-                start = 12.dp,
-                end = 12.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(books, key = { it.bookUrl }) { book ->
-                BookItem(
-                    book = book,
-                    layoutMode = uiState.bookshelfLayoutMode,
-                    isCompact = uiState.bookshelfLayoutCompact,
-                    isUpdating = uiState.updatingBooks.contains(book.bookUrl),
-                    titleSmallFont = uiState.titleSmallFont,
-                    titleCenter = uiState.titleCenter,
-                    titleMaxLines = uiState.titleMaxLines,
-                    coverShadow = uiState.coverShadow,
-                    onClick = { onBookClick(book) },
-                    onLongClick = { onBookLongClick(book) }
-                )
-            }
         }
     }
 }

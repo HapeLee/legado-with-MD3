@@ -22,7 +22,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,6 +67,8 @@ fun BookCover(
         BookCover.getRandomDefaultDrawable(seed = name ?: author ?: path ?: "")
     }
 
+    var isOnlineCoverLoaded by remember(path) { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .aspectRatio(5f / 7f)
@@ -98,16 +103,26 @@ fun BookCover(
             imageLoader = koinInject(),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize(),
-            onSuccess = { onLoadFinish?.invoke() },
-            onError = { onLoadFinish?.invoke() }
+            onSuccess = {
+                if (finalPath != null) {
+                    isOnlineCoverLoaded = true
+                }
+                onLoadFinish?.invoke()
+            },
+            onError = {
+                isOnlineCoverLoaded = false
+                onLoadFinish?.invoke()
+            }
         )
 
-        // 2. 文字叠加层（始终尝试渲染，由 CoverConfig 内部控制具体显示逻辑）
-        CoverTextOverlay(
-            name = name,
-            author = author,
-            isNight = isNight
-        )
+        // 2. 文字叠加层（当没有在线封面或者加载失败时显示）
+        if (!isOnlineCoverLoaded) {
+            CoverTextOverlay(
+                name = name,
+                author = author,
+                isNight = isNight
+            )
+        }
 
         // 3. 角标 (Badge)
         if (badgeContent != null) {

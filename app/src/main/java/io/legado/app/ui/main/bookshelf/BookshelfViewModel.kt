@@ -105,7 +105,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
     val scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     val groupsFlow: StateFlow<List<BookGroup>> = appDb.bookGroupDao.show.asFlow()
-        .map { it ?: emptyList() }
+        .map { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val allBooksFlow = appDb.bookDao.flowAll().flowOn(Dispatchers.Default)

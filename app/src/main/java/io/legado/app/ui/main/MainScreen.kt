@@ -1,9 +1,13 @@
 package io.legado.app.ui.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -22,23 +26,26 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailItem
+import androidx.compose.material3.WideNavigationRailValue
+import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.ui.book.info.BookInfoActivity
-import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
@@ -48,6 +55,7 @@ import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -78,27 +86,60 @@ fun MainScreen(
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
 
+    val navState = rememberWideNavigationRailState(
+        initialValue = if (MainConfig.navExtended)
+            WideNavigationRailValue.Expanded
+        else
+            WideNavigationRailValue.Collapsed
+    )
+
+    LaunchedEffect(navState.currentValue) {
+        MainConfig.navExtended =
+            navState.currentValue == WideNavigationRailValue.Expanded
+    }
+
     Row(modifier = Modifier.fillMaxSize()) {
         if (useRail && MainConfig.showBottomView) {
-            NavigationRail(
+            WideNavigationRail(
+                state = navState,
                 header = {
-                    IconButton(onClick = { MainConfig.navExtended = !MainConfig.navExtended }) {
-                        Icon(
-                            if (MainConfig.navExtended) Icons.AutoMirrored.Filled.MenuOpen else Icons.Default.Menu,
-                            contentDescription = null
+                    val expanded = navState.targetValue == WideNavigationRailValue.Expanded
+
+                    Column {
+                        IconButton(
+                            modifier = Modifier.padding(start = 24.dp),
+                            onClick = {
+                                coroutineScope.launch {
+                                    if (expanded) navState.collapse()
+                                    else navState.expand()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                if (expanded)
+                                    Icons.AutoMirrored.Filled.MenuOpen
+                                else
+                                    Icons.Default.Menu,
+                                contentDescription = null
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        ExtendedFloatingActionButton(
+                            modifier = Modifier.padding(start = 20.dp),
+                            onClick = { context.startActivity<SearchActivity>() },
+                            expanded = expanded,
+                            icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            text = { Text(stringResource(R.string.search)) }
                         )
                     }
-                    ExtendedFloatingActionButton(
-                        onClick = { context.startActivity<SearchActivity>() },
-                        expanded = MainConfig.navExtended,
-                        icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                        text = { Text(text = stringResource(R.string.search)) }
-                    )
                 }
             ) {
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.currentPage == index
-                    NavigationRailItem(
+                    WideNavigationRailItem(
+                        railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
                         onClick = {
                             coroutineScope.launch {
@@ -157,14 +198,12 @@ fun MainScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = true,
-                    beyondViewportPageCount = 1
+                    beyondViewportPageCount = 3
                 ) { page ->
                     when (destinations[page]) {
                         MainDestination.Bookshelf -> BookshelfScreen(
                             onBookClick = { book ->
-                                context.startActivity<ReadBookActivity> {
-                                    putExtra("bookUrl", book.bookUrl)
-                                }
+                                context.startActivityForBook(book)
                             },
                             onBookLongClick = { book ->
                                 context.startActivity<BookInfoActivity> {

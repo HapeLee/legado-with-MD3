@@ -71,12 +71,14 @@ fun BookshelfItem(
                 val coverModifier = if (coverShadow) {
                     Modifier
                         .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(4.dp))
+                        .shadow(4.dp, MaterialTheme.shapes.extraSmall)
                 } else {
                     Modifier.fillMaxWidth()
                 }
 
-                Box {
+                Box(
+                    modifier = Modifier.clip(MaterialTheme.shapes.extraSmall)
+                ) {
                     cover(coverModifier)
                     if (isCompact) {
                         Text(
@@ -135,7 +137,7 @@ fun BookshelfItem(
             ) {
                 cover(
                     Modifier
-                        .width(if (!isCompact) 70.dp else 55.dp)
+                        .width(if (!isCompact) 80.dp else 56.dp)
                         .padding(end = 12.dp)
                 )
                 Column(

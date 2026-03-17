@@ -1,8 +1,10 @@
 package io.legado.app.ui.main.my
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
@@ -90,9 +92,13 @@ fun MyScreen(
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .padding(
+                    top = padding.calculateTopPadding()
+                )
+                .verticalScroll(rememberScrollState()),
+            //TODO:暂时这样解决，改天加模糊
         ) {
+
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = ""
@@ -271,6 +277,8 @@ fun MyScreen(
                     }
                 )
             }
+
+            Spacer(Modifier.height(120.dp))
         }
     }
 }

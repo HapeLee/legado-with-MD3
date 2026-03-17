@@ -165,7 +165,7 @@ fun RssScreen(
                 start = 12.dp,
                 end = 12.dp,
                 top = paddingValues.calculateTopPadding() + 8.dp,
-                bottom = paddingValues.calculateBottomPadding() + 12.dp
+                bottom = 120.dp
             ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
