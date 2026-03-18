@@ -610,7 +610,7 @@
     <string name="rss_source">RSS source</string>
     <string name="rss_source_edit">Edit RSS source</string>
     <string name="screen">Filter</string>
-    <string name="screen_find">Search Discovery sources</string>
+    <string name="screen_find">Discover</string>
     <string name="dur_pos">Current location：</string>
     <string name="precision_search">Precise search</string>
     <string name="service_starting">Starting service</string>
