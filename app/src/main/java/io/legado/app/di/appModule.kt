@@ -6,6 +6,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
@@ -50,9 +51,11 @@ val appModule = module {
     single { get<AppDatabase>().readRecordDao }
     single { get<AppDatabase>().bookDao }
     single { get<AppDatabase>().bookChapterDao }
+    single { get<AppDatabase>().bookGroupDao }
 
     singleOf(::ReadRecordRepository)
     singleOf(::BookRepository)
+    singleOf(::BookGroupRepository)
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
 

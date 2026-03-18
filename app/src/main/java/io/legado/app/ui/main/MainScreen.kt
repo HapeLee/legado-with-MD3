@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -20,10 +21,10 @@ import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FlexibleBottomAppBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -159,8 +160,10 @@ fun MainScreen(
             modifier = Modifier.weight(1f),
             bottomBar = {
                 if (!useRail && MainConfig.showBottomView) {
-                    FlexibleBottomAppBar(
-                        modifier = Modifier.regularHazeEffect(state = hazeState),
+                    NavigationBar(
+                        modifier = Modifier
+                            .regularHazeEffect(state = hazeState)
+                            .heightIn(max = 84.dp),
                         containerColor = GlassDefaults.glassColor(
                             noBlurColor = BottomAppBarDefaults.containerColor,
                             blurAlpha = GlassDefaults.DefaultBlurAlpha
@@ -180,7 +183,7 @@ fun MainScreen(
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = GlassDefaults.glassColor(
-                                        noBlurColor = MaterialTheme.colorScheme.primaryContainer,
+                                        noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
                                         blurAlpha = GlassDefaults.ThickBlurAlpha
                                     ),
                                 ),

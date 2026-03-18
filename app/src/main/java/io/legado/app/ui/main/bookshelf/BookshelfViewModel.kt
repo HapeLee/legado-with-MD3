@@ -1,8 +1,7 @@
 package io.legado.app.ui.main.bookshelf
 
 import android.app.Application
-import android.content.res.Configuration
-import androidx.lifecycle.asFlow
+import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
 import com.google.gson.stream.JsonWriter
 import io.legado.app.R
@@ -16,6 +15,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
@@ -83,7 +83,10 @@ import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.min
 
-class BookshelfViewModel(application: Application) : BaseViewModel(application) {
+class BookshelfViewModel(
+    application: Application,
+    private val bookGroupRepository: BookGroupRepository
+) : BaseViewModel(application) {
     var addBookJob: Coroutine<*>? = null
 
     private val groupIdFlow = MutableStateFlow(BookshelfConfig.saveTabPosition)
@@ -104,8 +107,10 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
 
     val scrollTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    val groupsFlow: StateFlow<List<BookGroup>> = appDb.bookGroupDao.show.asFlow()
-        .map { it }
+    val groupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowShow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allGroupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val allBooksFlow = appDb.bookDao.flowAll().flowOn(Dispatchers.Default)
@@ -118,7 +123,8 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
             }
         }.flowOn(Dispatchers.Default)
 
-    private val groupPreviewsFlow = combine(groupsFlow, allBooksFlow) { groups, allBooks ->
+    private val groupPreviewsFlow =
+        combine(groupsFlow, allBooksFlow, refreshTrigger) { groups, allBooks, _ ->
         if (BookshelfConfig.bookGroupStyle in 2..3) {
             groups.associate { group ->
                 val groupBooks = if (group.groupId == BookGroup.IdAll) {
@@ -165,8 +171,6 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                 ) || it.author.contains(internal.searchKey, true)
             }
         }
-        val isLandscape =
-            context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
         BookshelfUiState(
             items = filteredBooks,
@@ -178,13 +182,6 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
             isSearch = internal.searchKey.isNotEmpty(),
             isLoading = internal.loadingText != null,
             loadingText = internal.loadingText,
-            bookshelfLayoutMode = if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait,
-            bookshelfLayoutGrid = if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait,
-            bookshelfLayoutCompact = BookshelfConfig.bookshelfLayoutCompact,
-            titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
-            titleCenter = BookshelfConfig.bookshelfTitleCenter,
-            titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
-            coverShadow = BookshelfConfig.bookshelfCoverShadow,
             updatingBooks = internal.updatingBooks
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BookshelfUiState())
@@ -201,6 +198,17 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
             }
         }
 
+        // 监听排序配置变化，触发刷新
+        viewModelScope.launch {
+            snapshotFlow { BookshelfConfig.bookshelfSort }.collect { refresh() }
+        }
+        viewModelScope.launch {
+            snapshotFlow { BookshelfConfig.bookshelfSortOrder }.collect { refresh() }
+        }
+        viewModelScope.launch {
+            snapshotFlow { BookshelfConfig.bookGroupStyle }.collect { refresh() }
+        }
+
         if (BookshelfConfig.autoRefreshBook) {
             upAllBookToc()
         }
@@ -212,8 +220,8 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
     }
 
     private fun sortBooks(list: List<Book>, group: BookGroup?): List<Book> {
-        val bookSort = group?.getRealBookSort() ?: AppConfig.bookshelfSort
-        val isDescending = AppConfig.bookshelfSortOrder == 1
+        val bookSort = group?.getRealBookSort() ?: BookshelfConfig.bookshelfSort
+        val isDescending = BookshelfConfig.bookshelfSortOrder == 1
 
         return when (bookSort) {
             1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
@@ -404,7 +412,8 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
     }
 
     private fun postUpBooksCount() {
-        val count = if (AppConfig.showWaitUpCount) waitUpTocBooks.size + onUpTocBooks.size else 0
+        val count =
+            if (BookshelfConfig.showWaitUpCount) waitUpTocBooks.size + onUpTocBooks.size else 0
         FlowEventBus.post(EventBus.UP_BOOKSHELF_COUNT, count)
     }
 

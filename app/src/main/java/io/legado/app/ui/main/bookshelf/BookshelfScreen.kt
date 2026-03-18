@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.bookshelf
 
+import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -48,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -149,6 +151,13 @@ fun BookshelfScreen(
             isInFolderRoot = true
         }
     }
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val bookshelfLayoutMode =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait
+    val bookshelfLayoutGrid =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
 
     ListScaffold(
         title = title,
@@ -271,7 +280,7 @@ fun BookshelfScreen(
             onRefresh = {
                 scope.launch {
                     isRefreshing = true
-                    viewModel.upAllBookToc()
+                    viewModel.upToc(uiState.items)
                     delay(1000)
                     isRefreshing = false
                 }
@@ -290,26 +299,26 @@ fun BookshelfScreen(
         ) {
             if (bookGroupStyle == 2 && isInFolderRoot) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(uiState.bookshelfLayoutGrid.coerceAtLeast(1)),
+                    columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         top = paddingValues.calculateTopPadding(),
                         bottom = 120.dp,
-                        start = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp,
-                        end = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp
+                        start = if (bookshelfLayoutMode != 0) 12.dp else 0.dp,
+                        end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp),
-                    horizontalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp)
+                    verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+                    horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp)
                 ) {
                     items(uiState.groups) { group ->
-                        if (uiState.bookshelfLayoutMode == 0) {
+                        if (bookshelfLayoutMode == 0) {
                             BookGroupItemList(
                                 group = group,
                                 previewBooks = uiState.groupPreviews[group.groupId] ?: emptyList(),
-                                isCompact = uiState.bookshelfLayoutCompact,
-                                titleSmallFont = uiState.titleSmallFont,
-                                titleCenter = uiState.titleCenter,
-                                titleMaxLines = uiState.titleMaxLines,
+                                isCompact = BookshelfConfig.bookshelfLayoutCompact,
+                                titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
+                                titleCenter = BookshelfConfig.bookshelfTitleCenter,
+                                titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
                                 onClick = {
                                     val index = uiState.groups.indexOf(group)
                                     if (index != -1) {
@@ -323,11 +332,11 @@ fun BookshelfScreen(
                             BookGroupItemGrid(
                                 group = group,
                                 previewBooks = uiState.groupPreviews[group.groupId] ?: emptyList(),
-                                isCompact = uiState.bookshelfLayoutCompact,
-                                titleSmallFont = uiState.titleSmallFont,
-                                titleCenter = uiState.titleCenter,
-                                titleMaxLines = uiState.titleMaxLines,
-                                coverShadow = uiState.coverShadow,
+                                isCompact = BookshelfConfig.bookshelfLayoutCompact,
+                                titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
+                                titleCenter = BookshelfConfig.bookshelfTitleCenter,
+                                titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
+                                coverShadow = BookshelfConfig.bookshelfCoverShadow,
                                 onClick = {
                                     val index = uiState.groups.indexOf(group)
                                     if (index != -1) {
@@ -355,6 +364,8 @@ fun BookshelfScreen(
                             paddingValues = paddingValues,
                             books = books,
                             uiState = uiState,
+                            bookshelfLayoutMode = bookshelfLayoutMode,
+                            bookshelfLayoutGrid = bookshelfLayoutGrid,
                             onBookClick = onBookClick,
                             onBookLongClick = onBookLongClick
                         )
@@ -430,31 +441,33 @@ fun BookshelfPage(
     paddingValues: PaddingValues,
     books: List<Book>,
     uiState: BookshelfUiState,
+    bookshelfLayoutMode: Int,
+    bookshelfLayoutGrid: Int,
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Fixed(uiState.bookshelfLayoutGrid.coerceAtLeast(1)),
+        columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             top = paddingValues.calculateTopPadding(),
             bottom = 120.dp,
-            start = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp,
-            end = if (uiState.bookshelfLayoutMode != 0) 12.dp else 0.dp
+            start = if (bookshelfLayoutMode != 0) 12.dp else 0.dp,
+            end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (uiState.bookshelfLayoutMode != 0) 8.dp else 0.dp)
+        verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp)
     ) {
         items(books, key = { it.bookUrl }) { book ->
             BookItem(
                 book = book,
-                layoutMode = uiState.bookshelfLayoutMode,
-                isCompact = uiState.bookshelfLayoutCompact,
+                layoutMode = bookshelfLayoutMode,
+                isCompact = BookshelfConfig.bookshelfLayoutCompact,
                 isUpdating = uiState.updatingBooks.contains(book.bookUrl),
-                titleSmallFont = uiState.titleSmallFont,
-                titleCenter = uiState.titleCenter,
-                titleMaxLines = uiState.titleMaxLines,
-                coverShadow = uiState.coverShadow,
+                titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
+                titleCenter = BookshelfConfig.bookshelfTitleCenter,
+                titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
+                coverShadow = BookshelfConfig.bookshelfCoverShadow,
                 onClick = { onBookClick(book) },
                 onLongClick = { onBookLongClick(book) }
             )
@@ -475,7 +488,7 @@ fun BookItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    val unreadCount = (book.totalChapterNum - book.durChapterIndex).coerceAtLeast(0)
+    val unreadCount = book.getUnreadChapterNum()
 
     BookshelfItem(
         isGrid = layoutMode != 0,
@@ -486,7 +499,9 @@ fun BookItem(
                 author = book.author,
                 path = book.getDisplayCover(),
                 isUpdating = isUpdating,
-                modifier = modifier
+                modifier = modifier,
+                badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
+                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0 && book.lastCheckCount > 0
             )
         },
         title = book.name,

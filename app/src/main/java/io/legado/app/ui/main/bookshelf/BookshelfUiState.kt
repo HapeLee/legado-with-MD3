@@ -2,7 +2,6 @@ package io.legado.app.ui.main.bookshelf
 
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.list.ListUiState
 
 data class BookshelfUiState(
@@ -15,12 +14,5 @@ data class BookshelfUiState(
     val groupPreviews: Map<Long, List<Book>> = emptyMap(),
     val selectedGroupIndex: Int = 0,
     val loadingText: String? = null,
-    val bookshelfLayoutMode: Int = 1,
-    val bookshelfLayoutGrid: Int = 3,
-    val bookshelfLayoutCompact: Boolean = BookshelfConfig.bookshelfLayoutCompact,
-    val titleSmallFont: Boolean = BookshelfConfig.bookshelfTitleSmallFont,
-    val titleCenter: Boolean = BookshelfConfig.bookshelfTitleCenter,
-    val titleMaxLines: Int = BookshelfConfig.bookshelfTitleMaxLines,
-    val coverShadow: Boolean = BookshelfConfig.bookshelfCoverShadow,
     val updatingBooks: Set<String> = emptySet()
 ) : ListUiState<Book>

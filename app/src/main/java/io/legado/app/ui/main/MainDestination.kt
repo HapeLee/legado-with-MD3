@@ -28,7 +28,7 @@ sealed class MainDestination(
 
     object Explore : MainDestination(
         "explore",
-        R.string.screen_find,
+        R.string.discovery,
         Icons.Outlined.Explore,
         Icons.Default.Explore
     )

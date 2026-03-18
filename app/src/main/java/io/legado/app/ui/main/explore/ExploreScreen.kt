@@ -139,7 +139,7 @@ fun ExploreScreen(
     }
 
     ListScaffold(
-        title = stringResource(R.string.screen_find),
+        title = stringResource(R.string.discovery),
         state = uiState,
         subtitle = uiState.selectedGroup.ifEmpty { stringResource(R.string.all) },
         onSearchQueryChange = { viewModel.search(it) },

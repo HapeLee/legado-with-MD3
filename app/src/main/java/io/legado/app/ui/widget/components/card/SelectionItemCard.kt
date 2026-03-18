@@ -60,15 +60,17 @@ fun SelectionItemCard(
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
-    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
+    containerColor: Color? = null,
+    selectedContainerColor: Color? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
-    val containerColor by animateColorAsState(
+    val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
-            MaterialTheme.colorScheme.secondaryContainer
+            selectedContainerColor ?: MaterialTheme.colorScheme.secondaryContainer
         else
-            MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor ?: MaterialTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -79,7 +81,7 @@ fun SelectionItemCard(
             .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        colors = CardDefaults.cardColors(containerColor = animatedContainerColor),
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
@@ -197,7 +199,9 @@ fun LazyItemScope.ReorderableSelectionItem(
     onEnabledChange: ((Boolean) -> Unit)? = null,
     onClickEdit: (() -> Unit)? = null,
     trailingAction: @Composable (RowScope.() -> Unit)? = null,
-    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null,
+    containerColor: Color? = null,
+    selectedContainerColor: Color? = null
 ) {
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -220,6 +224,8 @@ fun LazyItemScope.ReorderableSelectionItem(
             onClickEdit = onClickEdit,
             trailingAction = trailingAction,
             dropdownContent = dropdownContent,
+            containerColor = containerColor,
+            selectedContainerColor = selectedContainerColor,
             modifier = modifier
                 .zIndex(if (isDragging) 1f else 0f)
                 .then(
