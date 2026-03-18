@@ -10,17 +10,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +41,7 @@ import coil.request.ImageRequest
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookCover
 import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.widget.components.card.TextCard
 import org.koin.compose.koinInject
 
 @Composable
@@ -51,7 +50,8 @@ fun BookCover(
     author: String?,
     path: String?,
     modifier: Modifier = Modifier.width(64.dp),
-    badgeContent: (@Composable RowScope.() -> Unit)? = null,
+    badgeText: String? = null,
+    showBadgeDot: Boolean = false,
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null
 ) {
@@ -125,22 +125,19 @@ fun BookCover(
         }
 
         // 3. 角标 (Badge)
-        if (badgeContent != null) {
-            Surface(
+        if (!badgeText.isNullOrEmpty()) {
+            TextCard(
+                text = badgeText,
+                icon = if (showBadgeDot) Icons.Default.Update else null,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),
-                shape = RoundedCornerShape(2.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                    content = badgeContent
-                )
-            }
+                cornerRadius = 4.dp,
+                horizontalPadding = 4.dp,
+                verticalPadding = 0.dp
+            )
         }
     }
 }

@@ -1,7 +1,6 @@
 package io.legado.app.ui.widget.components.cover
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,7 +19,8 @@ fun BookCoverWithProgress(
     path: String?,
     modifier: Modifier = Modifier,
     isUpdating: Boolean = false,
-    badgeContent: (@Composable RowScope.() -> Unit)? = null,
+    badgeText: String? = null,
+    showBadgeDot: Boolean = false,
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null
 ) {
@@ -30,7 +30,8 @@ fun BookCoverWithProgress(
             author = author,
             path = path,
             modifier = Modifier.fillMaxWidth(),
-            badgeContent = badgeContent,
+            badgeText = badgeText,
+            showBadgeDot = showBadgeDot,
             sourceOrigin = sourceOrigin,
             onLoadFinish = onLoadFinish
         )
