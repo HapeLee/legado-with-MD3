@@ -15,6 +15,8 @@ fun ClickableSettingItem(
     description: String? = null,
     option: String? = null,
     imageVector: ImageVector? = null,
+    onLongClick: (() -> Unit)? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
     SettingItem(
@@ -23,13 +25,14 @@ fun ClickableSettingItem(
         description = description,
         option = option,
         imageVector = imageVector,
-        trailingContent = {
+        trailingContent = trailingContent ?: {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
-        onClick = onClick
+        onClick = onClick,
+        onLongClick = onLongClick
     )
 }

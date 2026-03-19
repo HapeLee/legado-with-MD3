@@ -6,7 +6,7 @@ import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RuleSub
-import io.legado.app.ui.widget.components.rules.ListUiState
+import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

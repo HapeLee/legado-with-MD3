@@ -48,3 +48,17 @@ fun Modifier.responsiveHazeEffect(
         }
     }
 }
+
+/**
+ * 仅判断 enableBlur 的简单 HazeEffect
+ */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun Modifier.regularHazeEffect(state: HazeState): Modifier {
+    if (!ThemeConfig.enableBlur) return this
+
+    return this.hazeEffect(
+        state = state,
+        style = HazeMaterials.ultraThin()
+    )
+}

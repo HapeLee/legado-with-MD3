@@ -1,0 +1,18 @@
+package io.legado.app.ui.main.bookshelf
+
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookGroup
+import io.legado.app.ui.widget.components.list.ListUiState
+
+data class BookshelfUiState(
+    override val items: List<Book> = emptyList(),
+    override val selectedIds: Set<Any> = emptySet(),
+    override val searchKey: String = "",
+    override val isSearch: Boolean = false,
+    override val isLoading: Boolean = false,
+    val groups: List<BookGroup> = emptyList(),
+    val groupPreviews: Map<Long, List<Book>> = emptyMap(),
+    val selectedGroupIndex: Int = 0,
+    val loadingText: String? = null,
+    val updatingBooks: Set<String> = emptySet()
+) : ListUiState<Book>

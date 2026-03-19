@@ -25,14 +25,10 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.help.CacheManager
 import io.legado.app.help.DefaultData
-import io.legado.app.help.coil.CoverFetcher
-import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.BlurTransformation
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.help.glide.OkHttpModelLoader
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
@@ -45,6 +41,7 @@ import io.legado.app.utils.getPrefString
 import kotlinx.coroutines.currentCoroutineContext
 import splitties.init.appCtx
 import java.io.File
+import kotlin.random.Random
 
 @Keep
 object BookCover {
@@ -71,14 +68,6 @@ object BookCover {
         private set
     lateinit var defaultDrawable: Drawable
         private set
-
-    val coverImageLoader = coil.ImageLoader.Builder(appCtx)
-        .components {
-            add(CoverInterceptor())
-            add(CoverFetcher.Factory(okHttpClient, okHttpClientManga))
-        }
-        .crossfade(true)
-        .build()
 
     init {
         upDefaultCover()
@@ -113,16 +102,32 @@ object BookCover {
             appCtx.getPrefInt(PreferKey.coverShadowColorN, Color.BLACK)
 
         val key = if (isNightTheme) PreferKey.defaultCoverDark else PreferKey.defaultCover
-        val path = appCtx.getPrefString(key)
-        if (path.isNullOrBlank()) {
+        val paths = appCtx.getPrefString(key)?.split(",")?.filter { it.isNotBlank() }
+
+        if (paths.isNullOrEmpty()) {
             defaultDrawable = appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
             return
         }
+
+        val randomPath = paths[Random.nextInt(paths.size)]
         defaultDrawable = kotlin.runCatching {
-            BitmapUtils.decodeBitmap(path, 600, 900)!!.toDrawable(appCtx.resources)
+            BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
         }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
     }
 
+    fun getRandomDefaultDrawable(seed: Any? = null): Drawable {
+        val isNightTheme = AppConfig.isNightTheme
+        val key = if (isNightTheme) PreferKey.defaultCoverDark else PreferKey.defaultCover
+        val paths = appCtx.getPrefString(key)?.split(",")?.filter { it.isNotBlank() }
+        if (paths.isNullOrEmpty()) {
+            return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
+        }
+        val random = if (seed != null) Random(seed.hashCode()) else Random
+        val randomPath = paths[random.nextInt(paths.size)]
+        return kotlin.runCatching {
+            BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
+        }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
+    }
 
     /**
      * 加载封面
@@ -134,8 +139,9 @@ object BookCover {
         sourceOrigin: String? = null,
         onLoadFinish: (() -> Unit)? = null,
     ): RequestBuilder<Drawable> {
+        val currentDefault = getRandomDefaultDrawable()
         if (AppConfig.useDefaultCover) {
-            return ImageLoader.load(context, defaultDrawable)
+            return ImageLoader.load(context, currentDefault)
                 .centerCrop()
         }
         var options = RequestOptions().set(OkHttpModelLoader.loadOnlyWifiOption, loadOnlyWifi)
@@ -168,8 +174,8 @@ object BookCover {
                 }
             })
         }
-        return builder.placeholder(defaultDrawable)
-            .error(defaultDrawable)
+        return builder.placeholder(currentDefault)
+            .error(currentDefault)
             .centerCrop()
     }
 
@@ -234,7 +240,8 @@ object BookCover {
         loadOnlyWifi: Boolean = false,
         sourceOrigin: String? = null,
     ): RequestBuilder<Drawable> {
-        val loadBlur = ImageLoader.load(context, defaultDrawable)
+        val currentDefault = getRandomDefaultDrawable()
+        val loadBlur = ImageLoader.load(context, currentDefault)
             .transform(BlurTransformation(25), CenterCrop())
         if (AppConfig.useDefaultCover) {
             return loadBlur

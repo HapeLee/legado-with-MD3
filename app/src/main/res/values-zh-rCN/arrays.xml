@@ -9,9 +9,8 @@
 
     <string-array name="group_style">
         <item>标签</item>
-        <item>文件夹</item>
         <item>隐藏标签</item>
-        <item>材料标签</item>
+        <item>文件夹</item>
     </string-array>
 
     <string-array name="text_suffix">
@@ -130,6 +129,14 @@
         <item>@string/bookshelf_px_3</item>
         <item>@string/bookshelf_px_4</item>
         <item>@string/bookshelf_px_5</item>
+    </string-array>
+
+    <string-array name="bookshelf_layout">
+        <item>@string/list</item>
+        <item>@string/compact_list</item>
+        <item>@string/grid</item>
+        <item>@string/compact_grid</item>
+        <item>@string/cover_grid</item>
     </string-array>
 
     <string-array name="themes_item">

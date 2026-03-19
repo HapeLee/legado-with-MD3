@@ -4,12 +4,16 @@ import android.app.Application
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.repository.BookGroupRepository
 
-class GroupViewModel(application: Application) : BaseViewModel(application) {
+class GroupViewModel(
+    application: Application,
+    private val bookGroupRepository: BookGroupRepository
+) : BaseViewModel(application) {
 
     fun upGroup(vararg bookGroup: BookGroup, finally: (() -> Unit)? = null) {
         execute {
-            appDb.bookGroupDao.update(*bookGroup)
+            bookGroupRepository.update(*bookGroup)
         }.onFinally {
             finally?.invoke()
         }
@@ -23,17 +27,17 @@ class GroupViewModel(application: Application) : BaseViewModel(application) {
         finally: () -> Unit
     ) {
         execute {
-            val groupId = appDb.bookGroupDao.getUnusedId()
+            val groupId = bookGroupRepository.getUnusedId()
             val bookGroup = BookGroup(
                 groupId = groupId,
                 groupName = groupName,
                 cover = cover,
                 bookSort = bookSort,
                 enableRefresh = enableRefresh,
-                order = appDb.bookGroupDao.maxOrder.plus(1)
+                order = bookGroupRepository.getMaxOrder().plus(1)
             )
-            appDb.bookGroupDao.getByID(groupId) ?: appDb.bookDao.removeGroup(groupId)
-            appDb.bookGroupDao.insert(bookGroup)
+            bookGroupRepository.getByID(groupId) ?: appDb.bookDao.removeGroup(groupId)
+            bookGroupRepository.insert(bookGroup)
         }.onFinally {
             finally()
         }
@@ -41,7 +45,7 @@ class GroupViewModel(application: Application) : BaseViewModel(application) {
 
     fun delGroup(bookGroup: BookGroup, finally: () -> Unit) {
         execute {
-            appDb.bookGroupDao.delete(bookGroup)
+            bookGroupRepository.delete(bookGroup)
             appDb.bookDao.removeGroup(bookGroup.groupId)
         }.onFinally {
             finally()
@@ -50,7 +54,7 @@ class GroupViewModel(application: Application) : BaseViewModel(application) {
 
     fun clearCover(bookGroup: BookGroup, finally: () -> Unit) {
         execute {
-            appDb.bookGroupDao.clearCover(bookGroup.groupId)
+            bookGroupRepository.clearCover(bookGroup.groupId)
         }.onFinally {
             finally()
         }

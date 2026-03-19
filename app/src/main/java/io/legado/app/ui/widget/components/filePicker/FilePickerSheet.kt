@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.exportComponents
+package io.legado.app.ui.widget.components.filePicker
 
 import android.webkit.MimeTypeMap
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +41,7 @@ fun FilePickerSheet(
     title: String = stringResource(R.string.select_operation),
     onSelectSysDir: (() -> Unit)? = null,
     onSelectSysFile: ((Array<String>) -> Unit)? = null,
+    onSelectSysFiles: ((Array<String>) -> Unit)? = null,
     onManualInput: (() -> Unit)? = null,
     onUpload: (() -> Unit)? = null,
     allowExtensions: Array<String>? = null,
@@ -80,6 +81,14 @@ fun FilePickerSheet(
                     FilePickerOptionCard(
                         icon = Icons.AutoMirrored.Filled.InsertDriveFile,
                         text = stringResource(R.string.sys_file_picker),
+                        onClick = { it(typesOfExtensions(allowExtensions)) }
+                    )
+                }
+
+                onSelectSysFiles?.let {
+                    FilePickerOptionCard(
+                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                        text = "系统多选",
                         onClick = { it(typesOfExtensions(allowExtensions)) }
                     )
                 }

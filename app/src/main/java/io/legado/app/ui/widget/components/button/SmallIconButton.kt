@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -15,6 +16,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonShapes
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.Text
@@ -60,6 +62,35 @@ fun SmallIconButton(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
+fun SmallOutlinedIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    contentDescription: String? = null
+) {
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        OutlinedIconButton(
+            onClick = onClick,
+            modifier = Modifier.size(
+                IconButtonDefaults.extraSmallContainerSize(
+                    IconButtonDefaults.IconButtonWidthOption.Uniform
+                )
+            ),
+            shapes = IconButtonDefaults.shapes(),
+            border = ButtonDefaults.outlinedButtonBorder()
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(
+                    IconButtonDefaults.extraSmallIconSize
+                )
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
 fun SmallTonalIconButton(
     onClick: () -> Unit,
     icon: ImageVector,
@@ -73,7 +104,7 @@ fun SmallTonalIconButton(
                     IconButtonDefaults.IconButtonWidthOption.Uniform
                 )
             ),
-            shape = IconButtonDefaults.extraSmallRoundShape,
+            shapes = IconButtonDefaults.shapes(),
             colors = IconButtonDefaults.filledTonalIconButtonColors()
         ) {
             Icon(

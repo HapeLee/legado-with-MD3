@@ -354,9 +354,10 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
             if (savedInstanceState != null || !ReadBook.inBookshelf) {
                 ReadBook.commitReadSession()
-                finish()
+                supportFinishAfterTransition()
             } else {
                 ReadBook.commitReadSession()
+                callBackBookEnd()
                 supportFinishAfterTransition()
             }
             //TODO: 有关测量相关问题
@@ -1862,13 +1863,6 @@ class ReadBookActivity : BaseReadBookActivity(),
                 ReadBook.setProgress(progress)
             }
             noButton()
-        }
-    }
-
-    override fun finish() {
-        if (ReadBook.inBookshelf) {
-            callBackBookEnd()
-            return super.finish()
         }
     }
 

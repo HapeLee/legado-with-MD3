@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssStar
-import io.legado.app.ui.widget.components.rules.ListUiState
+import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,8 +37,6 @@ class RssFavoritesViewModel(application: Application) : BaseViewModel(applicatio
         _selectedIds,
         _currentGroup.flatMapLatest { group ->
             if (group.isEmpty()) {
-                // If group is empty, we might want to wait for the first group from 'groups' flow
-                // Or just show nothing/default. The Activity/Screen should set the first group.
                 appDb.rssStarDao.liveAll()
             } else {
                 appDb.rssStarDao.flowByGroup(group)
@@ -73,6 +71,10 @@ class RssFavoritesViewModel(application: Application) : BaseViewModel(applicatio
         _selectedIds.value = emptySet()
     }
 
+    fun setSelection(ids: Set<String>) {
+        _selectedIds.value = ids
+    }
+
     fun toggleSelection(rssStar: RssStar) {
         val id = "${rssStar.origin}|${rssStar.link}"
         _selectedIds.update {
@@ -105,6 +107,44 @@ class RssFavoritesViewModel(application: Application) : BaseViewModel(applicatio
                 }
             }
             clearSelection()
+        }
+    }
+
+    fun selectionAddToGroups(selectedIds: Set<String>, groupName: String) {
+        viewModelScope.launch(IO) {
+            state.value.items.forEach {
+                val id = "${it.origin}|${it.link}"
+                if (selectedIds.contains(id)) {
+                    val groups = it.group.split(",").toMutableList()
+                    if (!groups.contains(groupName)) {
+                        groups.add(groupName)
+                        appDb.rssStarDao.update(it.copy(group = groups.filter { g -> g.isNotBlank() }
+                            .joinToString(",")))
+                    }
+                }
+            }
+        }
+    }
+
+    fun selectionRemoveFromGroups(selectedIds: Set<String>, groupName: String) {
+        viewModelScope.launch(IO) {
+            state.value.items.forEach {
+                val id = "${it.origin}|${it.link}"
+                if (selectedIds.contains(id)) {
+                    val groups = it.group.split(",").toMutableList()
+                    if (groups.contains(groupName)) {
+                        groups.remove(groupName)
+                        appDb.rssStarDao.update(it.copy(group = groups.filter { g -> g.isNotBlank() }
+                            .joinToString(",")))
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateGroup(rssStar: RssStar, group: String) {
+        viewModelScope.launch(IO) {
+            appDb.rssStarDao.update(rssStar.copy(group = group))
         }
     }
 

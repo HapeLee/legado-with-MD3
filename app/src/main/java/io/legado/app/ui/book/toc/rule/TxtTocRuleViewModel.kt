@@ -8,9 +8,9 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.repository.TxtTocRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.rules.InteractionState
-import io.legado.app.ui.widget.components.rules.ListUiState
-import io.legado.app.ui.widget.components.rules.SelectableItem
+import io.legado.app.ui.widget.components.list.InteractionState
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject

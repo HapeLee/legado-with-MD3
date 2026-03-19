@@ -23,6 +23,7 @@ object PreferKey {
     const val coverDefaultColor = "coverDefaultColor"
     const val coverShowNameN = "coverShowNameN"
     const val coverShowAuthorN = "coverShowAuthorN"
+    const val coverInfoOrientation = "coverInfoOrientation"
     const val remoteServerId = "remoteServerId"
     const val hideStatusBar = "hideStatusBar"
     const val clickActionTL = "clickActionTopLeft"
@@ -50,6 +51,7 @@ object PreferKey {
     const val bookshelfLayout = "bookshelfLayout"
     const val bookshelfLayoutModePortrait = "bookshelfLayoutPortrait"
     const val bookshelfLayoutModeLandscape = "bookshelf_layout_landscape"
+    const val bookshelfLayoutCompact = "bookshelfLayoutCompact"
     const val bookshelfSort = "bookshelfSort"
     const val bookExportFileName = "bookExportFileName"
     const val bookImportFileName = "bookImportFileName"
@@ -222,6 +224,10 @@ object PreferKey {
     const val sharedElementEnterTransitionEnable = "sharedElementEnterTransitionEnable"
     const val bookshelfLayoutGridLandscape = "bookshelfLayoutGridLandscape"
     const val bookshelfLayoutGridPortrait = "bookshelfLayoutGridPortrait"
+    const val bookshelfTitleSmallFont = "bookshelfTitleSmallFont"
+    const val bookshelfTitleCenter = "bookshelfTitleCenter"
+    const val bookshelfTitleMaxLines = "bookshelfTitleMaxLines"
+    const val bookshelfCoverShadow = "bookshelfCoverShadow"
 
     const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
 

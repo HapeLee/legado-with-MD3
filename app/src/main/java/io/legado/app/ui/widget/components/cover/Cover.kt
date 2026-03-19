@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.cover
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,10 +23,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.Coil.imageLoader
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.legado.app.model.BookCover.coverImageLoader
+import org.koin.compose.koinInject
 
 @Composable
 fun Cover(
@@ -36,6 +35,7 @@ fun Cover(
     badgeContent: (@Composable RowScope.() -> Unit)? = null,
     loadOnlyWifi: Boolean = false,
     sourceOrigin: String? = null,
+    imageLoader: ImageLoader = koinInject(),
     onLoadFinish: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -51,7 +51,9 @@ fun Cover(
                 Icons.Default.Book,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.size(24.dp).align(Alignment.Center)
+                modifier = Modifier
+                    .size(24.dp)
+                    .align(Alignment.Center)
             )
         } else {
             AsyncImage(
@@ -65,7 +67,7 @@ fun Cover(
                         onError = { _, _ -> onLoadFinish?.invoke() }
                     )
                     .build(),
-                imageLoader = coverImageLoader,
+                imageLoader = imageLoader,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()

@@ -8,12 +8,16 @@ import io.legado.app.help.glide.progress.ProgressResponseBody
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.model.ReadManga
 import io.legado.app.utils.NetworkUtils
+import okhttp3.Cache
 import okhttp3.ConnectionSpec
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.Credentials
 import okhttp3.HttpUrl
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import splitties.init.appCtx
+import java.io.File
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.concurrent.ConcurrentHashMap
@@ -47,6 +51,26 @@ val cookieJar by lazy {
     }
 }
 
+/**
+ * 强制缓存拦截器，对于图片资源，如果没有缓存头，则强制缓存30天
+ */
+private val cacheControlInterceptor = Interceptor { chain ->
+    val request = chain.request()
+    val response = chain.proceed(request)
+    val url = request.url.toString()
+    if (url.contains("image", true) || url.endsWith(".jpg") || url.endsWith(".png") || url.endsWith(
+            ".webp"
+        ) || url.endsWith(".jpeg")
+    ) {
+        response.newBuilder()
+            .header("Cache-Control", "public, max-age=2592000")
+            .removeHeader("Pragma")
+            .build()
+    } else {
+        response
+    }
+}
+
 val okHttpClient: OkHttpClient by lazy {
     val specs = arrayListOf(
         ConnectionSpec.MODERN_TLS,
@@ -54,7 +78,11 @@ val okHttpClient: OkHttpClient by lazy {
         ConnectionSpec.CLEARTEXT
     )
 
+    //TODO：自定义缓存大小
+    val cache = Cache(File(appCtx.cacheDir, "http_cache"), 100L * 1024L * 1024L)
+
     val builder = OkHttpClient.Builder()
+        .cache(cache)
         .connectTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
@@ -77,9 +105,9 @@ val okHttpClient: OkHttpClient by lazy {
             }
             builder.addHeader("Keep-Alive", "300")
             builder.addHeader("Connection", "Keep-Alive")
-            builder.addHeader("Cache-Control", "no-cache")
             chain.proceed(builder.build())
         }
+        .addNetworkInterceptor(cacheControlInterceptor) // 添加强制缓存拦截器
         .addNetworkInterceptor { chain ->
             var request = chain.request()
             val enableCookieJar = request.header(cookieJarHeader) != null

@@ -86,7 +86,6 @@ import io.legado.app.model.BookShelfState
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.Cover
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
@@ -94,6 +93,7 @@ import io.legado.app.ui.widget.components.button.AnimatedTextButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
@@ -599,20 +599,21 @@ fun ExploreBookItem(
                 if (!latestChapter.isNullOrEmpty()) {
                     Text(
                         text = " • ",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         maxLines = 1
                     )
 
                     Text(
                         text = "最新: $latestChapter",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
             if (intro.isNotEmpty()) {

@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.rules
+package io.legado.app.ui.widget.components.list
 
 interface ListUiState<T> {
     val items: List<T>

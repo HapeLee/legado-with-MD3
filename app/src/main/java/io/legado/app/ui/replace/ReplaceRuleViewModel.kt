@@ -13,9 +13,9 @@ import io.legado.app.data.repository.ReplaceRuleRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.help.ReplaceAnalyzer
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
-import io.legado.app.ui.widget.components.rules.InteractionState
-import io.legado.app.ui.widget.components.rules.ListUiState
-import io.legado.app.ui.widget.components.rules.SelectableItem
+import io.legado.app.ui.widget.components.list.InteractionState
+import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.GSON
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJsonArray

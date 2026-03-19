@@ -348,6 +348,9 @@ data class Book(
         newBook.customIntro = customIntro
         newBook.customTag = customTag
         newBook.canUpdate = canUpdate
+        if (config.fixedType) {
+            newBook.type = type
+        }
         newBook.readConfig = readConfig
         return newBook
     }
@@ -402,7 +405,9 @@ data class Book(
         val mangaColorFilter: String? = null,
         var mangaScrollMode: Int? = null,
         var webtoonSidePaddingDp: Int? = null,
-        var mangaBackground: String? = null
+        var mangaBackground: String? = null,
+
+        var fixedType: Boolean = false // 固定书籍类型,不随书源更新
 
     ) : Parcelable
 
