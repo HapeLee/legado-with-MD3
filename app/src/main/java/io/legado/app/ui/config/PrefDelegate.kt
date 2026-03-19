@@ -3,6 +3,8 @@ package io.legado.app.ui.config
 import android.content.SharedPreferences
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
@@ -16,16 +18,37 @@ import splitties.init.appCtx
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
+interface PrefDelegate<T> : ReadWriteProperty<Any?, T> {
+    fun dispose()
+}
+
 fun <T> prefDelegate(
     key: String,
     defaultValue: T,
+    lifecycleOwner: LifecycleOwner? = null,
     onValueChange: ((T) -> Unit)? = null
-): ReadWriteProperty<Any?, T> {
-    return object : ReadWriteProperty<Any?, T>, SharedPreferences.OnSharedPreferenceChangeListener {
+): PrefDelegate<T> {
+    return object : PrefDelegate<T>, SharedPreferences.OnSharedPreferenceChangeListener, DefaultLifecycleObserver {
         private var _value: MutableState<T> = mutableStateOf(readInitialValue())
 
         init {
+            if (lifecycleOwner != null) {
+                lifecycleOwner.lifecycle.addObserver(this)
+            } else {
+                appCtx.defaultSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+            }
+        }
+
+        override fun onCreate(owner: LifecycleOwner) {
             appCtx.defaultSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+        }
+
+        override fun onDestroy(owner: LifecycleOwner) {
+            dispose()
+        }
+
+        override fun dispose() {
+            appCtx.defaultSharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
         }
 
         @Suppress("UNCHECKED_CAST")
