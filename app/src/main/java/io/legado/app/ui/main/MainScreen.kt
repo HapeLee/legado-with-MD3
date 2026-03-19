@@ -167,7 +167,7 @@ fun MainScreen(
                         )
                     ) {
                         destinations.forEachIndexed { index, destination ->
-                            val selected = pagerState.currentPage == index
+                            val selected = pagerState.targetPage == index
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = {
