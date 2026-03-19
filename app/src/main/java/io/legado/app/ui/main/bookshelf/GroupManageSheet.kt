@@ -1,5 +1,10 @@
 package io.legado.app.ui.main.bookshelf
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -73,63 +78,71 @@ fun GroupManageSheet(
     }
 
     GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
-        if (isEditing) {
-            GroupEditContent(
-                group = editingGroup,
-                onDismissRequest = { isEditing = false },
-                viewModel = viewModel
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp)
-            ) {
-                Row(
+        AnimatedContent(
+            targetState = isEditing,
+            transitionSpec = {
+                fadeIn() togetherWith fadeOut() using SizeTransform(clip = false)
+            },
+            label = "GroupManageState"
+        ) { editing ->
+            if (editing) {
+                GroupEditContent(
+                    group = editingGroup,
+                    onDismissRequest = { isEditing = false },
+                    viewModel = viewModel
+                )
+            } else {
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(bottom = 32.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.group_manage),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    IconButton(onClick = {
-                        editingGroup = null
-                        isEditing = true
-                    }) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = stringResource(R.string.add)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.group_manage),
+                            style = MaterialTheme.typography.titleLarge
                         )
+                        IconButton(onClick = {
+                            editingGroup = null
+                            isEditing = true
+                        }) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = stringResource(R.string.add)
+                            )
+                        }
                     }
-                }
 
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(listData, key = { it.groupId }) { group ->
-                        val manageNameInfo = remember(group) { group.getManageName(context) }
-                        ReorderableSelectionItem(
-                            state = reorderableState,
-                            key = group.groupId,
-                            title = group.groupName.ifBlank { manageNameInfo.suffix.orEmpty() },
-                            subtitle = if (group.groupName.isNotBlank()) manageNameInfo.suffix else null,
-                            isEnabled = group.show,
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            onEnabledChange = { isChecked ->
-                                viewModel.upGroup(group.copy(show = isChecked))
-                            },
-                            onClickEdit = {
-                                editingGroup = group
-                                isEditing = true
-                            }
-                        )
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(listData, key = { it.groupId }) { group ->
+                            val manageNameInfo = remember(group) { group.getManageName(context) }
+                            ReorderableSelectionItem(
+                                state = reorderableState,
+                                key = group.groupId,
+                                title = group.groupName.ifBlank { manageNameInfo.suffix.orEmpty() },
+                                subtitle = if (group.groupName.isNotBlank()) manageNameInfo.suffix else null,
+                                isEnabled = group.show,
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                onEnabledChange = { isChecked ->
+                                    viewModel.upGroup(group.copy(show = isChecked))
+                                },
+                                onClickEdit = {
+                                    editingGroup = group
+                                    isEditing = true
+                                }
+                            )
+                        }
                     }
                 }
             }

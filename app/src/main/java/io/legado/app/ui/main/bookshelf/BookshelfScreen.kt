@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
 import io.legado.app.data.entities.Book
-import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.cache.CacheActivity
 import io.legado.app.ui.book.import.local.ImportBookActivity
 import io.legado.app.ui.book.import.remote.RemoteBookActivity
@@ -66,14 +65,12 @@ import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.cover.BookCoverWithProgress
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.utils.readText
 import io.legado.app.utils.startActivity
-import io.legado.app.utils.toTimeAgo
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -332,7 +329,7 @@ fun BookshelfScreen(
                             BookGroupItemGrid(
                                 group = group,
                                 previewBooks = uiState.groupPreviews[group.groupId] ?: emptyList(),
-                                isCompact = BookshelfConfig.bookshelfLayoutCompact,
+                                gridStyle = BookshelfConfig.bookshelfGridLayout,
                                 titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
                                 titleCenter = BookshelfConfig.bookshelfTitleCenter,
                                 titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
@@ -462,6 +459,7 @@ fun BookshelfPage(
             BookItem(
                 book = book,
                 layoutMode = bookshelfLayoutMode,
+                gridStyle = BookshelfConfig.bookshelfGridLayout,
                 isCompact = BookshelfConfig.bookshelfLayoutCompact,
                 isUpdating = uiState.updatingBooks.contains(book.bookUrl),
                 titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
@@ -473,66 +471,4 @@ fun BookshelfPage(
             )
         }
     }
-}
-
-@Composable
-fun BookItem(
-    book: Book,
-    layoutMode: Int,
-    isCompact: Boolean = false,
-    isUpdating: Boolean = false,
-    titleSmallFont: Boolean = false,
-    titleCenter: Boolean = true,
-    titleMaxLines: Int = 2,
-    coverShadow: Boolean = false,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    val unreadCount = book.getUnreadChapterNum()
-
-    BookshelfItem(
-        isGrid = layoutMode != 0,
-        isCompact = isCompact,
-        cover = { modifier ->
-            BookCoverWithProgress(
-                name = book.name,
-                author = book.author,
-                path = book.getDisplayCover(),
-                isUpdating = isUpdating,
-                modifier = modifier,
-                badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
-                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0 && book.lastCheckCount > 0
-            )
-        },
-        title = book.name,
-        subTitle = if (isCompact && layoutMode == 0) {
-            stringResource(R.string.author_read, book.author, unreadCount)
-        } else {
-            book.author
-        },
-        desc = stringResource(R.string.read_dur_progress, book.durChapterTitle ?: ""),
-        extra = {
-            if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
-                Text(
-                    text = book.latestChapterTime.toTimeAgo(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (!isCompact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(end = 4.dp)
-                )
-            }
-            Text(
-                text = book.latestChapterTitle ?: "",
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-        },
-        titleSmallFont = titleSmallFont,
-        titleCenter = titleCenter,
-        titleMaxLines = titleMaxLines,
-        coverShadow = coverShadow,
-        onClick = onClick,
-        onLongClick = onLongClick
-    )
 }

@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.modalBottomSheet
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -47,7 +46,6 @@ fun GlassModalBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .animateContentSize()
                     .then(modifier),
                 content = content
             )

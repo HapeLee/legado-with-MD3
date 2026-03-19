@@ -8,7 +8,6 @@ import android.text.TextPaint
 import android.text.TextUtils
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -79,15 +78,17 @@ fun BookCover(
             )
             .clip(RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .then(
-                if (CoverConfig.coverShowStroke) {
-                    Modifier.border(
-                        0.5.dp,
-                        MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(4.dp)
-                    )
-                } else Modifier
-            )
+        /*
+        .then(
+            if (CoverConfig.coverShowStroke) {
+                Modifier.border(
+                    0.5.dp,
+                    MaterialTheme.colorScheme.outlineVariant,
+                    RoundedCornerShape(4.dp)
+                )
+            } else Modifier
+        )
+         */
     ) {
         // 1. 封面底图
         AsyncImage(

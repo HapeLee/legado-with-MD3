@@ -33,7 +33,7 @@ import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSliderSettingItem
-import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,13 +107,24 @@ fun BookshelfConfigSheet(
                 }
             )
 
-            SwitchSettingItem(
-                title = "紧凑模式",
-                checked = BookshelfConfig.bookshelfLayoutCompact,
-                imageVector = Icons.Default.ViewCompact,
-                color = MaterialTheme.colorScheme.surface,
-                onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
-            )
+            if (layoutMode == 1) {
+                CompactDropdownSettingItem(
+                    title = "网格样式",
+                    selectedValue = BookshelfConfig.bookshelfGridLayout.toString(),
+                    displayEntries = stringArrayResource(R.array.bookshelf_grid_layout),
+                    entryValues = Array(stringArrayResource(R.array.bookshelf_grid_layout).size) { it.toString() },
+                    imageVector = Icons.Default.ViewCompact,
+                    onValueChange = { BookshelfConfig.bookshelfGridLayout = it.toInt() }
+                )
+            } else {
+                CompactSwitchSettingItem(
+                    title = "紧凑模式",
+                    checked = BookshelfConfig.bookshelfLayoutCompact,
+                    imageVector = Icons.Default.ViewCompact,
+                    color = MaterialTheme.colorScheme.surface,
+                    onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
+                )
+            }
 
             // Grid Count
             val gridCount =
@@ -129,7 +140,7 @@ fun BookshelfConfigSheet(
                 }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = "标题小字体",
                 checked = BookshelfConfig.bookshelfTitleSmallFont,
                 imageVector = Icons.Default.TextFormat,
@@ -137,7 +148,7 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = "标题居中",
                 checked = BookshelfConfig.bookshelfTitleCenter,
                 color = MaterialTheme.colorScheme.surface,
@@ -152,7 +163,7 @@ fun BookshelfConfigSheet(
                 onValueChange = { BookshelfConfig.bookshelfTitleMaxLines = it.toInt() }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = "封面阴影",
                 checked = BookshelfConfig.bookshelfCoverShadow,
                 imageVector = Icons.Default.BlurOn,
@@ -161,7 +172,7 @@ fun BookshelfConfigSheet(
             )
 
             // Switches
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_unread),
                 checked = BookshelfConfig.showUnread,
                 imageVector = Icons.Default.Notifications,
@@ -169,14 +180,14 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { BookshelfConfig.showUnread = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_unread_new),
                 checked = BookshelfConfig.showUnreadNew,
                 color = MaterialTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.showUnreadNew = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_tip),
                 checked = BookshelfConfig.showTip,
                 imageVector = Icons.Default.Info,
@@ -184,7 +195,7 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { BookshelfConfig.showTip = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_last_update_time),
                 checked = BookshelfConfig.showLastUpdateTime,
                 imageVector = Icons.Default.History,
@@ -192,21 +203,21 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { BookshelfConfig.showLastUpdateTime = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_wait_up_count),
                 checked = BookshelfConfig.showWaitUpCount,
                 color = MaterialTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.showWaitUpCount = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_bookshelf_fast_scroller),
                 checked = BookshelfConfig.showBookshelfFastScroller,
                 color = MaterialTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.showBookshelfFastScroller = it }
             )
 
-            SwitchSettingItem(
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_bookshelf_tab_menu),
                 checked = BookshelfConfig.shouldShowExpandButton,
                 imageVector = Icons.Default.Menu,
