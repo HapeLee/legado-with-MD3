@@ -137,9 +137,9 @@ fun MainScreen(
                     }
                 }
             ) {
+                val labelVisibilityMode = MainConfig.labelVisibilityMode
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.currentPage == index
-                    val labelVisibilityMode = MainConfig.labelVisibilityMode
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
@@ -172,15 +172,15 @@ fun MainScreen(
                             blurAlpha = GlassDefaults.DefaultBlurAlpha
                         )
                     ) {
+                        val labelVisibilityMode = MainConfig.labelVisibilityMode
+                        val alwaysShowLabel = when (labelVisibilityMode) {
+                            "labeled" -> true
+                            "selected" -> false
+                            "unlabeled" -> false
+                            else -> false
+                        }
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.currentPage == index
-                            val labelVisibilityMode = MainConfig.labelVisibilityMode
-                            val alwaysShowLabel = when (labelVisibilityMode) {
-                                "labeled" -> true
-                                "selected" -> false
-                                "unlabeled" -> false
-                                else -> false
-                            }
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = {
