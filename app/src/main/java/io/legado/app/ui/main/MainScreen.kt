@@ -137,7 +137,7 @@ fun MainScreen(
                 }
             ) {
                 destinations.forEachIndexed { index, destination ->
-                    val selected = pagerState.currentPage == index
+                    val selected = pagerState.targetPage == index
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
