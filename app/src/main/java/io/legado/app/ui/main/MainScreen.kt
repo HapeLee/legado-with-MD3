@@ -140,12 +140,6 @@ fun MainScreen(
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.currentPage == index
                     val labelVisibilityMode = MainConfig.labelVisibilityMode
-                    val alwaysShowLabel = when (labelVisibilityMode) {
-                        "labeled" -> true
-                        "selected" -> false
-                        "unlabeled" -> false
-                        else -> false
-                    }
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
