@@ -139,7 +139,7 @@ fun MainScreen(
             ) {
                 val labelVisibilityMode = MainConfig.labelVisibilityMode
                 destinations.forEachIndexed { index, destination ->
-                    val selected = pagerState.currentPage == index
+                    val selected = pagerState.targetPage == index
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
@@ -180,7 +180,7 @@ fun MainScreen(
                             else -> false
                         }
                         destinations.forEachIndexed { index, destination ->
-                            val selected = pagerState.currentPage == index
+                            val selected = pagerState.targetPage == index
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = {
