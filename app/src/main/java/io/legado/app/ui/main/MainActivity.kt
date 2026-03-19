@@ -23,6 +23,7 @@ import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.getPrefBoolean
@@ -73,7 +74,7 @@ open class MainActivity : BaseComposeActivity() {
     override fun Content() {
         val orientation = resources.configuration.orientation
         val smallestWidthDp = resources.configuration.smallestScreenWidthDp
-        val tabletInterface = AppConfig.tabletInterface
+        val tabletInterface = MainConfig.tabletInterface
 
         val useRail = when (tabletInterface) {
             "always" -> true
