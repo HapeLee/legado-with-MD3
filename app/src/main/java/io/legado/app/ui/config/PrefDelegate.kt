@@ -1,7 +1,9 @@
 package io.legado.app.ui.config
 
+import android.content.SharedPreferences
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefLong
@@ -19,8 +21,12 @@ fun <T> prefDelegate(
     defaultValue: T,
     onValueChange: ((T) -> Unit)? = null
 ): ReadWriteProperty<Any?, T> {
-    return object : ReadWriteProperty<Any?, T> {
+    return object : ReadWriteProperty<Any?, T>, SharedPreferences.OnSharedPreferenceChangeListener {
         private var _value: MutableState<T> = mutableStateOf(readInitialValue())
+
+        init {
+            appCtx.defaultSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+        }
 
         @Suppress("UNCHECKED_CAST")
         private fun readInitialValue(): T {
@@ -47,6 +53,16 @@ fun <T> prefDelegate(
                 }
                 _value.value = value
                 onValueChange?.invoke(value)
+            }
+        }
+
+        override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, changedKey: String?) {
+            if (changedKey == key) {
+                val newValue = readInitialValue()
+                if (_value.value != newValue) {
+                    _value.value = newValue
+                    onValueChange?.invoke(newValue)
+                }
             }
         }
     }
