@@ -139,6 +139,13 @@ fun MainScreen(
             ) {
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.currentPage == index
+                    val labelVisibilityMode = MainConfig.labelVisibilityMode
+                    val alwaysShowLabel = when (labelVisibilityMode) {
+                        "labeled" -> true
+                        "selected" -> false
+                        "unlabeled" -> false
+                        else -> false
+                    }
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
@@ -150,7 +157,9 @@ fun MainScreen(
                         icon = {
                             NavigationIcon(destination, selected, uiState.upBooksCount)
                         },
-                        label = { Text(stringResource(destination.labelId)) }
+                        label = if (labelVisibilityMode != "unlabeled") {
+                            { Text(stringResource(destination.labelId)) }
+                        } else null
                     )
                 }
             }
@@ -171,6 +180,13 @@ fun MainScreen(
                     ) {
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.currentPage == index
+                            val labelVisibilityMode = MainConfig.labelVisibilityMode
+                            val alwaysShowLabel = when (labelVisibilityMode) {
+                                "labeled" -> true
+                                "selected" -> false
+                                "unlabeled" -> false
+                                else -> false
+                            }
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = {
@@ -187,8 +203,10 @@ fun MainScreen(
                                         blurAlpha = GlassDefaults.ThickBlurAlpha
                                     ),
                                 ),
-                                label = { Text(stringResource(destination.labelId)) },
-                                alwaysShowLabel = false
+                                label = if (labelVisibilityMode != "unlabeled") {
+                                    { Text(stringResource(destination.labelId)) }
+                                } else null,
+                                alwaysShowLabel = alwaysShowLabel
                             )
                         }
                     }
