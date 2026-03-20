@@ -58,7 +58,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -80,6 +79,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import org.koin.androidx.compose.koinViewModel
@@ -103,7 +103,7 @@ fun ReplaceEditScreen(
     val sharedKey = remember(state.id) {
         if (state.id > 0) "rule_${state.id}" else "fab_add"
     }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showMenu by remember { mutableStateOf(false) }
     val isKeyboardVisible by keyboardAsState()
 

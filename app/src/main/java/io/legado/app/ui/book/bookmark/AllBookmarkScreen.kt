@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,6 +42,7 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -82,7 +82,7 @@ fun AllBookmarkScreen(
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
     var showBottomSheet by remember { mutableStateOf(false) }
     var pendingExportIsMd by remember { mutableStateOf(false) }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()

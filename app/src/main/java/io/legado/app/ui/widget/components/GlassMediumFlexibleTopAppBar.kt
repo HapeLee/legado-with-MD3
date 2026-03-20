@@ -5,6 +5,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -24,18 +25,39 @@ fun GlassMediumFlexibleTopAppBar(
     actions: @Composable RowScope.() -> Unit = {},
     colors: TopAppBarColors = GlassTopAppBarDefaults.glassColors()
 ) {
-    MediumFlexibleTopAppBar(
-        modifier = modifier,
-        title = title,
-        subtitle = subtitle,
-        navigationIcon = navigationIcon,
-        actions = actions,
-        scrollBehavior = scrollBehavior,
-        colors = colors
-    )
+    if (ThemeConfig.useFlexibleTopAppBar) {
+        MediumFlexibleTopAppBar(
+            modifier = modifier,
+            title = title,
+            subtitle = subtitle,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            scrollBehavior = scrollBehavior,
+            colors = colors
+        )
+    } else {
+        TopAppBar(
+            modifier = modifier,
+            title = title,
+            navigationIcon = navigationIcon,
+            actions = actions,
+            scrollBehavior = scrollBehavior,
+            colors = colors
+        )
+    }
 }
 
 object GlassTopAppBarDefaults {
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun defaultScrollBehavior(): TopAppBarScrollBehavior {
+        return if (ThemeConfig.useFlexibleTopAppBar) {
+            TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+        } else {
+            TopAppBarDefaults.pinnedScrollBehavior()
+        }
+    }
 
     @Composable
     fun glassColors(): TopAppBarColors {

@@ -11,6 +11,8 @@ object ThemeConfig {
 
     var enableProgressiveBlur by prefDelegate(PreferKey.enableProgressiveBlur, true)
 
+    var useFlexibleTopAppBar by prefDelegate(PreferKey.useFlexibleTopAppBar, true)
+
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
     var appTheme by prefDelegate(PreferKey.appTheme, "0")

@@ -49,7 +49,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -69,6 +68,7 @@ import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -99,7 +99,7 @@ fun SearchContentScreen(
     val durChapterIndex = uiState.durChapterIndex
     val error = uiState.error
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 

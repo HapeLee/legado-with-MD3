@@ -185,6 +185,7 @@ object PreferKey {
     const val containerOpacity = "containerOpacity"
     const val enableBlur = "enableBlur"
     const val enableProgressiveBlur = "enableProgressiveBlur"
+    const val useFlexibleTopAppBar = "useFlexibleTopAppBar"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"
     const val bgImage = "backgroundImage"

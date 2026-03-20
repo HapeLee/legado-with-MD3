@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -55,7 +54,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -72,7 +70,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -129,7 +126,7 @@ fun ExploreShowScreen(
     val selectedTitle by viewModel.selectedKindTitle.collectAsState()
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showKindSheet by remember { mutableStateOf(false) }
     val layoutState by viewModel.layoutState.collectAsState()
     val isGridMode = layoutState == 1
@@ -239,9 +236,7 @@ fun ExploreShowScreen(
 
     if (showKindSheet) {
         GlassModalBottomSheet(
-            onDismissRequest = { showKindSheet = false },
-            modifier = Modifier
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.72f)
+            onDismissRequest = { showKindSheet = false }
         ) {
 
             var kindQuery by remember { mutableStateOf("") }

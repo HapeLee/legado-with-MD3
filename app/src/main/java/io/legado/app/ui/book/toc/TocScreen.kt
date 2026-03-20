@@ -67,7 +67,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +99,7 @@ import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -128,7 +128,7 @@ fun TocScreen(
 ) {
 
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val book by viewModel.bookState.collectAsStateWithLifecycle()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 

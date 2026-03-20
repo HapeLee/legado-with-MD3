@@ -46,7 +46,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -83,6 +82,7 @@ import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
@@ -123,7 +123,7 @@ fun ReadRecordScreen(
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
     var skipDeleteConfirm by remember { mutableStateOf(false) }
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }

@@ -14,7 +14,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -43,7 +43,7 @@ fun CoverConfigScreen(
     onBackClick: () -> Unit,
     viewModel: CoverConfigViewModel = koinViewModel()
 ) {
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showCoverRuleSheet by remember { mutableStateOf(false) }
     var manageKey by remember { mutableStateOf<String?>(null) }
     var showColorPickerByField by remember { mutableStateOf<String?>(null) }
