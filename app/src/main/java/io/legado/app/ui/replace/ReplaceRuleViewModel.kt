@@ -102,9 +102,20 @@ class ReplaceRuleViewModel(
             }
         }
 
-    override fun filterData(data: List<ReplaceRule>, key: String): List<ReplaceRule> =
-        if (key.isEmpty()) data
-        else data.filter { it.name.contains(key, ignoreCase = true) }
+    override fun filterData(
+        data: List<ReplaceRule>,
+        searchKey: String,
+        groupFilter: String
+    ): List<ReplaceRule> {
+        return if (searchKey.isEmpty() && groupFilter.isEmpty()) data
+        else data.filter {
+            val key = searchKey.ifEmpty { groupFilter }
+            it.name.contains(key, ignoreCase = true)
+                    || it.pattern.contains(key, ignoreCase = true)
+                    || it.replacement.contains(key, ignoreCase = true)
+                    || it.scope?.contains(key, ignoreCase = true) == true
+        }
+    }
 
 
     override fun composeUiState(

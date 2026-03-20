@@ -69,7 +69,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
 
     open fun filterData(data: List<Entity>, searchKey: String, groupFilter: String): List<Entity> {
         @Suppress("DEPRECATION")
-        return filterData(data, if (groupFilter.isNotEmpty()) groupFilter else searchKey)
+        return filterData(data, groupFilter.ifEmpty { searchKey })
     }
 
     @OptIn(FlowPreview::class)
