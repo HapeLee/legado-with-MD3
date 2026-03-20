@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,8 +40,8 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
-import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
-import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.SelectImageContract
@@ -128,7 +127,7 @@ fun GroupEditContent(
             Cover(
                 path = coverPath,
                 modifier = Modifier
-                    .size(width = 90.dp, height = 130.dp)
+                    .width(96.dp)
                     .clickable { selectImage.launch() }
             )
 
@@ -144,7 +143,7 @@ fun GroupEditContent(
                     singleLine = true
                 )
 
-                DropdownListSettingItem(
+                CompactDropdownSettingItem(
                     title = stringResource(R.string.sort),
                     selectedValue = selectedSortIndex.toString(),
                     displayEntries = sortOptions,
@@ -158,15 +157,10 @@ fun GroupEditContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        SettingItem(
+        CompactSwitchSettingItem(
             title = stringResource(R.string.allow_drop_down_refresh),
-            trailingContent = {
-                Switch(
-                    checked = enableRefresh,
-                    onCheckedChange = { enableRefresh = it }
-                )
-            },
-            onClick = { enableRefresh = !enableRefresh }
+            checked = enableRefresh,
+            onCheckedChange = { enableRefresh = it }
         )
 
         Spacer(modifier = Modifier.height(16.dp))

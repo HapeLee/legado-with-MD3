@@ -95,7 +95,6 @@ fun GroupManageSheet(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 32.dp)
                 ) {
                     Row(
                         modifier = Modifier

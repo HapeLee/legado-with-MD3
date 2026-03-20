@@ -5,12 +5,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -35,8 +35,8 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
 import io.legado.app.data.entities.Book
+import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.cache.CacheActivity
 import io.legado.app.ui.book.import.local.ImportBookActivity
 import io.legado.app.ui.book.import.remote.RemoteBookActivity
@@ -67,6 +68,7 @@ import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
+import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.utils.readText
@@ -94,6 +96,7 @@ fun BookshelfScreen(
     var showImportSheet by remember { mutableStateOf(false) }
     var showConfigSheet by remember { mutableStateOf(false) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
+    var showLogSheet by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(HandleFileContract()) {
         runCatching {
@@ -232,6 +235,7 @@ fun BookshelfScreen(
             RoundDropdownMenuItem(
                 text = { Text(stringResource(R.string.log)) },
                 onClick = {
+                    showLogSheet = true
                     dismiss()
                 },
                 leadingIcon = { Icon(Icons.Default.History, null) }
@@ -240,8 +244,11 @@ fun BookshelfScreen(
         bottomContent = if (bookGroupStyle == 0) {
             {
                 if (uiState.groups.isNotEmpty()) {
+                    val selectedTabIndex = remember(pagerState.currentPage, uiState.groups.size) {
+                        pagerState.currentPage.coerceIn(0, uiState.groups.size - 1)
+                    }
                     PrimaryScrollableTabRow(
-                        selectedTabIndex = pagerState.currentPage,
+                        selectedTabIndex = selectedTabIndex,
                         edgePadding = 0.dp,
                         divider = { },
                         containerColor = GlassTopAppBarDefaults.containerColor(),
@@ -249,7 +256,7 @@ fun BookshelfScreen(
                     ) {
                         uiState.groups.forEachIndexed { index, group ->
                             Tab(
-                                selected = pagerState.currentPage == index,
+                                selected = selectedTabIndex == index,
                                 onClick = {
                                     scope.launch { pagerState.animateScrollToPage(index) }
                                 },
@@ -271,31 +278,28 @@ fun BookshelfScreen(
     ) { paddingValues ->
         var isRefreshing by remember { mutableStateOf(false) }
         val pullToRefreshState = rememberPullToRefreshState()
+        val currentGroup = uiState.groups.getOrNull(pagerState.currentPage)
+        val pullToRefreshEnabled = currentGroup?.enableRefresh ?: true
 
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = {
-                scope.launch {
-                    isRefreshing = true
-                    viewModel.upToc(uiState.items)
-                    delay(1000)
-                    isRefreshing = false
-                }
-            },
-            state = pullToRefreshState,
-            modifier = Modifier.fillMaxSize(),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pullToRefresh(
                     state = pullToRefreshState,
                     isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = paddingValues.calculateTopPadding())
+                    onRefresh = {
+                        scope.launch {
+                            isRefreshing = true
+                            viewModel.upToc(uiState.items)
+                            delay(1000)
+                            isRefreshing = false
+                        }
+                    },
+                    enabled = pullToRefreshEnabled
                 )
-            }
         ) {
             if (bookGroupStyle == 2 && isInFolderRoot) {
-                LazyVerticalGrid(
+                FastScrollLazyVerticalGrid(
                     columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
@@ -305,7 +309,8 @@ fun BookshelfScreen(
                         end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
-                    horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+                    showFastScroll = BookshelfConfig.showBookshelfFastScroller
                 ) {
                     items(uiState.groups) { group ->
                         if (bookshelfLayoutMode == 0) {
@@ -369,6 +374,14 @@ fun BookshelfScreen(
                     }
                 }
             }
+
+            PullToRefreshDefaults.LoadingIndicator(
+                state = pullToRefreshState,
+                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = paddingValues.calculateTopPadding())
+            )
         }
     }
 
@@ -409,6 +422,10 @@ fun BookshelfScreen(
         )
     }
 
+    if (showLogSheet) {
+        AppLogSheet(onDismissRequest = { showLogSheet = false })
+    }
+
     if (uiState.isLoading) {
         Dialog(onDismissRequest = {}) {
             Surface(
@@ -443,7 +460,7 @@ fun BookshelfPage(
     onBookClick: (Book) -> Unit,
     onBookLongClick: (Book) -> Unit
 ) {
-    LazyVerticalGrid(
+    FastScrollLazyVerticalGrid(
         columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
@@ -453,7 +470,8 @@ fun BookshelfPage(
             end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
         ),
         verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+        showFastScroll = BookshelfConfig.showBookshelfFastScroller
     ) {
         items(books, key = { it.bookUrl }) { book ->
             BookItem(

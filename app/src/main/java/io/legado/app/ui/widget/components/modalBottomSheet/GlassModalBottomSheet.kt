@@ -1,8 +1,10 @@
 package io.legado.app.ui.widget.components.modalBottomSheet
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -16,6 +18,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -30,6 +34,10 @@ fun GlassModalBottomSheet(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = rememberOpaqueColorScheme()
+    val density = LocalDensity.current
+    val maxHeight = with(density) {
+        LocalWindowInfo.current.containerSize.height.toDp() * 0.8f
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -46,6 +54,8 @@ fun GlassModalBottomSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = maxHeight)
+                    .animateContentSize()
                     .then(modifier),
                 content = content
             )

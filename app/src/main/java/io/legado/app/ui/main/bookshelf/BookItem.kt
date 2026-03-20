@@ -74,18 +74,18 @@ fun BookshelfItem(
                 .padding(4.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val coverModifier = if (coverShadow) {
-                    Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, MaterialTheme.shapes.extraSmall)
-                } else {
-                    Modifier.fillMaxWidth()
-                }
 
                 Box(
-                    modifier = Modifier.clip(MaterialTheme.shapes.extraSmall)
+                    modifier = Modifier
+                        .then(
+                            if (coverShadow) Modifier.shadow(
+                                4.dp,
+                                MaterialTheme.shapes.extraSmall
+                            ) else Modifier
+                        )
+                        .clip(MaterialTheme.shapes.extraSmall) // 先阴影后裁剪
                 ) {
-                    cover(coverModifier)
+                    cover(Modifier.fillMaxWidth())
                     if (gridStyle == 1) {
                         Text(
                             text = title,
@@ -96,6 +96,7 @@ fun BookshelfItem(
                                     blurRadius = 4f
                                 )
                             ),
+                            textAlign = if (titleCenter) TextAlign.Center else TextAlign.Start,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier

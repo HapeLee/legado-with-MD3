@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookCover
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.widget.components.card.TextCard
@@ -57,7 +56,7 @@ fun BookCover(
     val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
 
-    val useDefault = AppConfig.useDefaultCover
+    val useDefault = CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
 
     // 为每个 BookCover 组件实例基于其书名或路径生成一个随机封面

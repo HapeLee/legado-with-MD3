@@ -1,9 +1,9 @@
 package io.legado.app.ui.widget.components.settingItem
 
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import io.legado.app.ui.widget.components.IconSwitch
 
 @Composable
 fun SwitchSettingItem(
@@ -22,7 +22,7 @@ fun SwitchSettingItem(
         color = color,
         onClick = { if (enabled) onCheckedChange(!checked) },
         trailingContent = {
-            Switch(
+            IconSwitch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 enabled = enabled

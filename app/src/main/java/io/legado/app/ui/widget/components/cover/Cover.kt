@@ -43,7 +43,7 @@ fun Cover(
     val boxModifier = modifier
         .aspectRatio(3f / 4f)
         .clip(RoundedCornerShape(4.dp))
-        .background(MaterialTheme.colorScheme.surfaceContainerLow)
+        .background(MaterialTheme.colorScheme.surfaceContainer)
 
     Box(modifier = boxModifier) {
         if (path == null) {
