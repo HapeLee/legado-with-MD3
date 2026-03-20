@@ -51,6 +51,7 @@ Design 3 风格重构版本。
 ## 🤝 社区与支持
 
 由于本项目的开发者比较忙，暂时没有独立社区。
+
 以下为原项目的社区：
 
 * **官方 Wiki:** [书源规则教程](https://mgz0227.github.io/The-tutorial-of-Legado/)
