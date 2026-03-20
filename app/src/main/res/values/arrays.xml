@@ -286,7 +286,13 @@
 		<item>@string/cover_grid</item>
 	</string-array>
 
-    <string-array name="label_vis_mode" >
+	<string-array name="bookshelf_grid_layout">
+		<item>Standard</item>
+		<item>Compact</item>
+		<item>Cover Only</item>
+	</string-array>
+
+	<string-array name="label_vis_mode" >
 		<item>Auto</item>
 		<item>Selected</item>
 		<item>Labeled</item>

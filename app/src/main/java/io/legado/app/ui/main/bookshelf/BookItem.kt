@@ -26,23 +26,30 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.help.book.isLocal
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.cover.BookCover
+import io.legado.app.ui.widget.components.cover.BookCoverWithProgress
+import io.legado.app.utils.toTimeAgo
 
 /**
  * 通用的书架条目布局组件
- * 支持 列表/网格 模式及 紧凑/常规 样式
+ * 支持 列表/网格 模式及 标准/紧凑/仅封面 样式
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookshelfItem(
     isGrid: Boolean,
-    isCompact: Boolean,
+    gridStyle: Int, // 0: Standard, 1: Compact, 2: Cover Only
+    isCompact: Boolean, // For List Mode
     cover: @Composable (Modifier) -> Unit,
     title: String,
     modifier: Modifier = Modifier,
@@ -57,7 +64,6 @@ fun BookshelfItem(
     onLongClick: () -> Unit
 ) {
     if (isGrid) {
-
         Box(
             modifier = modifier
                 .clip(MaterialTheme.shapes.small)
@@ -80,7 +86,7 @@ fun BookshelfItem(
                     modifier = Modifier.clip(MaterialTheme.shapes.extraSmall)
                 ) {
                     cover(coverModifier)
-                    if (isCompact) {
+                    if (gridStyle == 1) {
                         Text(
                             text = title,
                             style = (if (titleSmallFont) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium).copy(
@@ -108,7 +114,7 @@ fun BookshelfItem(
                     }
                 }
 
-                if (!isCompact) {
+                if (gridStyle == 0) {
                     Text(
                         text = title,
                         style = if (titleSmallFont) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
@@ -272,7 +278,7 @@ fun BookGroupCover(
 fun BookGroupItemGrid(
     group: BookGroup,
     previewBooks: List<Book>,
-    isCompact: Boolean = false,
+    gridStyle: Int = 0,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
     titleMaxLines: Int = 2,
@@ -283,7 +289,8 @@ fun BookGroupItemGrid(
 ) {
     BookshelfItem(
         isGrid = true,
-        isCompact = isCompact,
+        gridStyle = gridStyle,
+        isCompact = false,
         cover = { BookGroupCover(books = previewBooks, modifier = it) },
         title = group.groupName,
         modifier = modifier,
@@ -311,6 +318,7 @@ fun BookGroupItemList(
 ) {
     BookshelfItem(
         isGrid = false,
+        gridStyle = 0,
         isCompact = isCompact,
         cover = { BookGroupCover(books = previewBooks, modifier = it) },
         title = group.groupName,
@@ -321,6 +329,70 @@ fun BookGroupItemList(
         modifier = modifier,
         subTitle = "${previewBooks.size} 本书籍",
         desc = "点击打开文件夹",
+        onClick = onClick,
+        onLongClick = onLongClick
+    )
+}
+
+@Composable
+fun BookItem(
+    book: Book,
+    layoutMode: Int,
+    gridStyle: Int = 0,
+    isCompact: Boolean = false,
+    isUpdating: Boolean = false,
+    titleSmallFont: Boolean = false,
+    titleCenter: Boolean = true,
+    titleMaxLines: Int = 2,
+    coverShadow: Boolean = false,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val unreadCount = book.getUnreadChapterNum()
+
+    BookshelfItem(
+        isGrid = layoutMode != 0,
+        gridStyle = gridStyle,
+        isCompact = isCompact,
+        cover = { modifier ->
+            BookCoverWithProgress(
+                name = book.name,
+                author = book.author,
+                path = book.getDisplayCover(),
+                isUpdating = isUpdating,
+                modifier = modifier,
+                badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
+                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0 && book.lastCheckCount > 0
+            )
+        },
+        title = book.name,
+        subTitle = if (layoutMode == 0 && isCompact) {
+            stringResource(R.string.author_read, book.author, unreadCount)
+        } else {
+            book.author
+        },
+        desc = stringResource(R.string.read_dur_progress, book.durChapterTitle ?: ""),
+        extra = {
+            if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
+                Text(
+                    text = book.latestChapterTime.toTimeAgo(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (layoutMode != 0 || !isCompact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+            }
+            Text(
+                text = book.latestChapterTitle ?: "",
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        },
+        titleSmallFont = titleSmallFont,
+        titleCenter = titleCenter,
+        titleMaxLines = titleMaxLines,
+        coverShadow = coverShadow,
         onClick = onClick,
         onLongClick = onLongClick
     )

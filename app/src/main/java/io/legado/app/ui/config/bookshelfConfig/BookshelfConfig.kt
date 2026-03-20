@@ -89,6 +89,11 @@ object BookshelfConfig {
     var bookshelfLayoutGridLandscape by prefDelegate(PreferKey.bookshelfLayoutGridLandscape, 7)
 
     /**
+     * 网格模式布局样式: 0:标准, 1:紧凑, 2:仅封面
+     */
+    var bookshelfGridLayout by prefDelegate(PreferKey.bookshelfGridLayout, 0)
+
+    /**
      * 紧凑模式
      */
     var bookshelfLayoutCompact by prefDelegate(PreferKey.bookshelfLayoutCompact, false)

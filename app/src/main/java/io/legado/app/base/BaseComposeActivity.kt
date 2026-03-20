@@ -11,11 +11,13 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.ui.theme.AppTheme
+import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
+import io.legado.app.utils.toggleSystemBar
 import io.legado.app.utils.windowSize
 
 abstract class BaseComposeActivity(
@@ -61,6 +63,8 @@ abstract class BaseComposeActivity(
             true,
             fullScreen
         )
+
+        toggleSystemBar(AppConfig.showStatusBar)
     }
 
     open fun upBackgroundImage() {
@@ -74,6 +78,9 @@ abstract class BaseComposeActivity(
     open fun observeLiveBus() {
         observeEvent<String>(EventBus.RECREATE) {
             recreate()
+        }
+        observeEvent<Boolean>(EventBus.NOTIFY_MAIN) {
+            setupSystemBar()
         }
     }
 

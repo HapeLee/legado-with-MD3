@@ -208,5 +208,11 @@
         <item>不显示</item>
     </string-array>
 
+    <string-array name="bookshelf_grid_layout">
+        <item>标准</item>
+        <item>紧凑</item>
+        <item>仅封面</item>
+    </string-array>
+
     <string name="all_version">所有版本</string>
 </resources>
