@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
@@ -12,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
@@ -29,13 +31,24 @@ fun GlassCard(
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     )
 
-    Card(
-        onClick = onClick ?: {},
-        modifier = modifier,
-        shape = shape,
-        colors = finalColors,
-        elevation = elevation,
-        border = border,
-        content = content
-    )
+    if (onClick != null) {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            shape = shape,
+            colors = finalColors,
+            elevation = elevation,
+            border = border,
+            content = content
+        )
+    } else {
+        Card(
+            modifier = modifier,
+            shape = shape,
+            colors = finalColors,
+            elevation = elevation,
+            border = border,
+            content = content
+        )
+    }
 }
