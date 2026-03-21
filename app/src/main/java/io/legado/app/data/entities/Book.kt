@@ -374,6 +374,7 @@ data class Book(
         if (ReadBook.book?.bookUrl == bookUrl) {
             ReadBook.book = null
         }
+        appDb.bookChapterDao.delByBook(bookUrl)
         appDb.bookDao.delete(this)
     }
 

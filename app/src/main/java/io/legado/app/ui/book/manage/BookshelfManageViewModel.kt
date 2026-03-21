@@ -54,7 +54,6 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
 
     fun deleteBook(books: List<Book>, deleteOriginal: Boolean = false) {
         execute {
-            appDb.bookDao.delete(*books.toTypedArray())
             books.forEach {
                 if (it.isLocal) {
                     LocalBook.deleteBook(it, deleteOriginal)
@@ -62,7 +61,9 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
                     val source = appDb.bookSourceDao.getBookSource(it.origin)
                     SourceCallBack.callBackBook(SourceCallBack.DEL_BOOK_SHELF, source, it)
                 }
+                appDb.bookChapterDao.delByBook(it.bookUrl)
             }
+            appDb.bookDao.delete(*books.toTypedArray())
         }
     }
 

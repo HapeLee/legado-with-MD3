@@ -487,11 +487,11 @@ class BookInfoViewModel(
     fun delBook(deleteOriginal: Boolean = false, success: (() -> Unit)? = null) {
         execute {
             bookData.value?.let {
-                it.delete()
                 inBookshelf = false
                 if (it.isLocal) {
                     LocalBook.deleteBook(it, deleteOriginal)
                 }
+                it.delete()
             }
         }.onSuccess {
             success?.invoke()
