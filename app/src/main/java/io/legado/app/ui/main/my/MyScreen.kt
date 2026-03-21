@@ -24,14 +24,12 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +50,7 @@ import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -68,7 +67,7 @@ fun MyScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
-    Scaffold(
+    AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.systemBars
             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
@@ -230,7 +229,7 @@ fun MyScreen(
                 )
                 SettingItem(
                     title = stringResource(R.string.dict_rule),
-                    imageVector = Icons.Default.Translate,
+                    imageVector = Icons.AutoMirrored.Filled.Rule,
                     onClick = {
                         onNavigate(
                             PrefClickEvent.StartActivity(DictRuleActivity::class.java)

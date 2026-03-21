@@ -44,7 +44,6 @@ object ThemeManager {
         mode: AppThemeMode,
         darkTheme: Boolean,
         isAmoled: Boolean,
-        isImageBg: Boolean,
         paletteStyle: String?,
         forceOpaque: Boolean = false
     ): ColorScheme {
@@ -82,7 +81,7 @@ object ThemeManager {
             )
         }
 
-        if (!forceOpaque && (isImageBg || actualMode == AppThemeMode.Transparent)) {
+        if (!forceOpaque && actualMode == AppThemeMode.Transparent) {
             return scheme.copy(
                 surface = Color.Transparent,
                 background = Color.Transparent,

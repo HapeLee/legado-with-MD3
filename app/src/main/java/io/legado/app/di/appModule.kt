@@ -31,6 +31,7 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
+import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -92,6 +93,7 @@ val appModule = module {
     viewModelOf(::OtherConfigViewModel)
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)
+    viewModelOf(::ThemeConfigViewModel)
     viewModelOf(::TocViewModel)
     viewModelOf(::RemoteBookViewModel)
     viewModelOf(::BookInfoViewModel)

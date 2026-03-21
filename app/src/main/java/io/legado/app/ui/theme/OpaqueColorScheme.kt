@@ -23,7 +23,6 @@ fun rememberOpaqueColorScheme(): ColorScheme {
             mode = appThemeMode,
             darkTheme = isDark,
             isAmoled = isPureBlack,
-            isImageBg = hasImageBg,
             paletteStyle = paletteStyle,
             forceOpaque = true
         )

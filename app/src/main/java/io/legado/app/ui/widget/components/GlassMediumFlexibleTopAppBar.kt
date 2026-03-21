@@ -61,10 +61,9 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun glassColors(): TopAppBarColors {
-        val opacity = ThemeConfig.containerOpacity / 100f
 
         val containerColor = GlassDefaults.glassColor(
-            noBlurColor = MaterialTheme.colorScheme.surface.copy(alpha = opacity),
+            noBlurColor = MaterialTheme.colorScheme.surface,
             blurAlpha = GlassDefaults.TransparentAlpha
         )
 
@@ -76,15 +75,17 @@ object GlassTopAppBarDefaults {
 
         return TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
-            scrolledContainerColor = scrolledContainerColor
+            scrolledContainerColor = scrolledContainerColor,
+            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+            titleContentColor = MaterialTheme.colorScheme.onSurface,
+            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
     @Composable
     fun containerColor(): Color {
-        val opacity = ThemeConfig.containerOpacity / 100f
         return GlassDefaults.glassColor(
-            noBlurColor = MaterialTheme.colorScheme.surface.copy(alpha = opacity),
+            noBlurColor = MaterialTheme.colorScheme.surface,
             blurAlpha = GlassDefaults.TransparentAlpha
         )
     }

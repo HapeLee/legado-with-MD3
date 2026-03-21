@@ -15,6 +15,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -101,6 +102,7 @@ fun CompactSliderSettingItem(
     var expanded by remember { mutableStateOf(false) }
 
     var sliderValue by remember(value) { mutableFloatStateOf(value) }
+    var displayValue by remember(value) { mutableFloatStateOf(value) }
 
     SettingItem(
         title = title,
@@ -126,7 +128,7 @@ fun CompactSliderSettingItem(
                     cornerRadius = 8.dp,
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
-                    text = value.toInt().toString(),
+                    text = displayValue.toInt().toString(),
                     backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
@@ -144,7 +146,10 @@ fun CompactSliderSettingItem(
                 value = sliderValue,
                 onValueChange = {
                     sliderValue = it
-                    onValueChange(it)
+                    displayValue = it
+                },
+                onValueChangeFinished = {
+                    onValueChange(sliderValue)
                 },
                 valueRange = valueRange,
                 steps = steps,
@@ -152,6 +157,13 @@ fun CompactSliderSettingItem(
             )
         }
     )
+
+    LaunchedEffect(value) {
+        if (!expanded) {
+            sliderValue = value
+            displayValue = value
+        }
+    }
 }
 
 @Composable

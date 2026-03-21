@@ -20,17 +20,15 @@ fun AppTheme(
     val context = LocalContext.current
     val appThemeMode = ThemeResolver.resolveThemeMode(ThemeConfig.appTheme)
     val isPureBlack = ThemeConfig.isPureBlack
-    val hasImageBg = ThemeConfig.hasImageBg(darkTheme)
     val paletteStyle = ThemeConfig.paletteStyle
 
     val colorScheme =
-        remember(context, appThemeMode, darkTheme, isPureBlack, hasImageBg, paletteStyle) {
+        remember(context, appThemeMode, darkTheme, isPureBlack, paletteStyle) {
             ThemeManager.getColorScheme(
                 context = context,
                 mode = appThemeMode,
                 darkTheme = darkTheme,
                 isAmoled = isPureBlack,
-                isImageBg = hasImageBg,
                 paletteStyle = paletteStyle
             )
         }
@@ -39,7 +37,10 @@ fun AppTheme(
         colorScheme = colorScheme,
         typography = Typography(),
         motionScheme = MotionScheme.expressive(),
-        shapes = Shapes(),
-        content = content
-    )
+        shapes = Shapes()
+    ) {
+        AppBackground(darkTheme = darkTheme) {
+            content()
+        }
+    }
 }

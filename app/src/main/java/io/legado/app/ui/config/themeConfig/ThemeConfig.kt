@@ -1,7 +1,10 @@
 package io.legado.app.ui.config.themeConfig
 
+import android.util.Log
+import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
+import io.legado.app.utils.postEvent
 
 object ThemeConfig {
 
@@ -19,16 +22,34 @@ object ThemeConfig {
 
     var isPureBlack by prefDelegate(PreferKey.pureBlack, false)
 
-    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null)
+    var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
 
-    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null)
+    var bgImageDark by prefDelegate<String?>(PreferKey.bgImageN, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
+
+    var bgImageBlurring by prefDelegate(PreferKey.bgImageBlurring, 0)
+
+    var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
     fun hasImageBg(isDark: Boolean): Boolean {
-        return if (isDark) {
-            !bgImageDark.isNullOrEmpty()
+        val result = if (isDark) {
+            !bgImageDark.isNullOrBlank()
         } else {
-            !bgImageLight.isNullOrEmpty()
+            !bgImageLight.isNullOrBlank()
         }
+
+        Log.d(
+            "MainConfig",
+            "hasImageBg -> isDark=$isDark, " +
+                    "bgImageDark=$bgImageDark, " +
+                    "bgImageLight=$bgImageLight, " +
+                    "result=$result"
+        )
+
+        return result
     }
 
     /*

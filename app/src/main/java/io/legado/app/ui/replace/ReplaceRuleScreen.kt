@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,7 +70,6 @@ import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.filePicker.FilePickerSheetMode
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -107,8 +107,9 @@ fun ReplaceRuleScreen(
     val hapticFeedback = LocalHapticFeedback.current
 
     var showUrlInput by remember { mutableStateOf(false) }
-    var showFilePickerSheet by remember { mutableStateOf(false) }
-    var filePickerMode by remember { mutableStateOf(FilePickerSheetMode.EXPORT) }
+    var showImportSheet by remember { mutableStateOf(false) }
+    var showExportSheet by remember { mutableStateOf(false) }
+
     var showDeleteRuleDialog by remember { mutableStateOf<ReplaceRule?>(null) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
 
@@ -164,15 +165,31 @@ fun ReplaceRuleScreen(
         )
     }
 
-    if (showFilePickerSheet) {
+    if (showImportSheet) {
         FilePickerSheet(
-            onDismissRequest = { showFilePickerSheet = false },
+            onDismissRequest = { showImportSheet = false },
+            title = stringResource(R.string.import_replace_rule),
+            onSelectSysFile = { types ->
+                importDoc.launch(types)
+                showImportSheet = false
+            },
+            onManualInput = {
+                showUrlInput = true
+                showImportSheet = false
+            },
+            allowExtensions = arrayOf("json", "txt")
+        )
+    }
+
+    if (showExportSheet) {
+        FilePickerSheet(
+            onDismissRequest = { showExportSheet = false },
             onSelectSysDir = {
-                showFilePickerSheet = false
+                showExportSheet = false
                 exportDoc.launch("exportReplaceRule.json")
             },
             onUpload = {
-                showFilePickerSheet = false
+                showExportSheet = false
                 viewModel.uploadSelectedRules(selectedIds, rules)
             },
             allowExtensions = arrayOf("json")
@@ -320,7 +337,7 @@ fun ReplaceRuleScreen(
             ),
             ActionItem(
                 text = stringResource(R.string.export),
-                onClick = { showFilePickerSheet = true }
+                onClick = { showExportSheet = true }
             )
         ),
         onDeleteSelected = { ids ->
@@ -389,15 +406,9 @@ fun ReplaceRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text("在线导入") },
-                onClick = {
-                    dismiss()
-                    showUrlInput = true // 触发输入框
-                }
-            )
-            RoundDropdownMenuItem(
-                text = { Text("本地导入") },
-                onClick = { importDoc.launch(arrayOf("text/plain", "application/json")); dismiss() }
+                text = { Text(stringResource(R.string.import_str)) },
+                onClick = { showImportSheet = true; dismiss() },
+                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )
             RoundDropdownMenuItem(
                 text = { Text("分组管理") },

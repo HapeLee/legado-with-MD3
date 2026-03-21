@@ -14,10 +14,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -50,11 +51,11 @@ import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.filePicker.FilePickerSheetMode
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
@@ -84,9 +85,10 @@ fun TxtRuleScreen(
     var showEditSheet by remember { mutableStateOf(false) }
     var editingRule by remember { mutableStateOf<TxtTocRule?>(null) }
     var showDeleteRuleDialog by remember { mutableStateOf<TxtTocRule?>(null) }
+
     var showUrlInput by remember { mutableStateOf(false) }
-    var showFilePickerSheet by remember { mutableStateOf(false) }
-    var filePickerMode by remember { mutableStateOf(FilePickerSheetMode.EXPORT) }
+    var showImportSheet by remember { mutableStateOf(false) }
+    var showExportSheet by remember { mutableStateOf(false) }
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         viewModel.moveItemInList(from.index, to.index)
@@ -152,18 +154,35 @@ fun TxtRuleScreen(
         )
     }
 
-    if (showFilePickerSheet) {
+    if (showExportSheet) {
         FilePickerSheet(
-            onDismissRequest = { showFilePickerSheet = false },
+            onDismissRequest = { showExportSheet = false },
+            title = stringResource(R.string.export),
             onSelectSysDir = {
-                showFilePickerSheet = false
+                showExportSheet = false
                 exportDoc.launch("exportDictRule.json")
             },
             onUpload = {
-                showFilePickerSheet = false
+                showExportSheet = false
                 viewModel.uploadSelectedRules(selectedIds, rules)
             },
             allowExtensions = arrayOf("json")
+        )
+    }
+
+    if (showImportSheet) {
+        FilePickerSheet(
+            onDismissRequest = { showImportSheet = false },
+            title = stringResource(R.string.import_txt_toc_rule),
+            onSelectSysFile = { types ->
+                importDoc.launch(types)
+                showImportSheet = false
+            },
+            onManualInput = {
+                showUrlInput = true
+                showImportSheet = false
+            },
+            allowExtensions = arrayOf("json", "txt")
         )
     }
 
@@ -279,7 +298,7 @@ fun TxtRuleScreen(
             }),
             ActionItem(
                 text = stringResource(R.string.export),
-                onClick = { showFilePickerSheet = true })
+                onClick = { showExportSheet = true })
         ),
         onDeleteSelected = { ids ->
             @Suppress("UNCHECKED_CAST")
@@ -292,19 +311,11 @@ fun TxtRuleScreen(
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
-            DropdownMenuItem(
-                text = { Text("在线导入") },
-                onClick = { dismiss(); showUrlInput = true })
-            DropdownMenuItem(
-                text = { Text("本地导入") },
-                onClick = {
-                    dismiss(); importDoc.launch(
-                    arrayOf(
-                        "text/plain",
-                        "application/json"
-                    )
-                )
-                })
+            RoundDropdownMenuItem(
+                text = { Text(stringResource(R.string.import_str)) },
+                onClick = { showImportSheet = true; dismiss() },
+                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
+            )
         }
     ) { paddingValues ->
         Box(

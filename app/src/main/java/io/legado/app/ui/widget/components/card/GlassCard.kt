@@ -17,32 +17,25 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     shape: Shape = CardDefaults.shape,
-    colors: CardColors = CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = ThemeConfig.containerOpacity / 100f),
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-    ),
+    colors: CardColors? = null,
     elevation: CardElevation = CardDefaults.cardElevation(),
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    if (onClick != null) {
-        Card(
-            onClick = onClick,
-            modifier = modifier,
-            shape = shape,
-            colors = colors,
-            elevation = elevation,
-            border = border,
-            content = content
-        )
-    } else {
-        Card(
-            modifier = modifier,
-            shape = shape,
-            colors = colors,
-            elevation = elevation,
-            border = border,
-            content = content
-        )
-    }
+    val containerAlpha = ThemeConfig.containerOpacity / 100f
+
+    val finalColors = colors ?: CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = containerAlpha),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    )
+
+    Card(
+        onClick = onClick ?: {},
+        modifier = modifier,
+        shape = shape,
+        colors = finalColors,
+        elevation = elevation,
+        border = border,
+        content = content
+    )
 }

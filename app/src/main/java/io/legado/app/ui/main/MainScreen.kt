@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -27,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
@@ -54,6 +52,7 @@ import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.regularHazeEffect
+import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
@@ -159,20 +158,21 @@ fun MainScreen(
             }
         }
 
-        Scaffold(
+        AppScaffold(
             modifier = Modifier.weight(1f),
             bottomBar = {
                 if (!useRail && MainConfig.showBottomView) {
+                    val labelVisibilityMode = MainConfig.labelVisibilityMode
+                    val isUnlabeled = labelVisibilityMode == "unlabeled"
                     NavigationBar(
                         modifier = Modifier
                             .regularHazeEffect(state = hazeState)
-                            .heightIn(max = 84.dp),
+                            .height(if (isUnlabeled) 64.dp else 80.dp),
                         containerColor = GlassDefaults.glassColor(
                             noBlurColor = BottomAppBarDefaults.containerColor,
                             blurAlpha = GlassDefaults.DefaultBlurAlpha
                         )
                     ) {
-                        val labelVisibilityMode = MainConfig.labelVisibilityMode
                         val alwaysShowLabel = when (labelVisibilityMode) {
                             "labeled" -> true
                             "selected" -> false

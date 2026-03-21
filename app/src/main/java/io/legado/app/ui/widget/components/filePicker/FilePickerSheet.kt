@@ -88,7 +88,7 @@ fun FilePickerSheet(
                 onSelectSysFiles?.let {
                     FilePickerOptionCard(
                         icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                        text = "系统多选",
+                        text = "多选项目",
                         onClick = { it(typesOfExtensions(allowExtensions)) }
                     )
                 }

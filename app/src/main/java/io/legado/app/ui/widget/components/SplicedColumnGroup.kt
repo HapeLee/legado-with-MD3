@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -11,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.card.GlassCard
 
@@ -39,10 +41,12 @@ fun SplicedColumnGroup(
 
         GlassCard(
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
+                modifier = Modifier
+                    .animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 content()

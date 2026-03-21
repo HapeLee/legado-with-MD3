@@ -3,15 +3,14 @@ package io.legado.app.base
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.ui.theme.AppTheme
-import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
 import io.legado.app.utils.observeEvent
@@ -40,9 +39,7 @@ abstract class BaseComposeActivity(
         // Compose 入口
         setContent {
             AppTheme {
-                Surface() {
-                    Content()
-                }
+                Content()
             }
         }
 
