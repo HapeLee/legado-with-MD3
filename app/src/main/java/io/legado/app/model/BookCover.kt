@@ -115,15 +115,18 @@ object BookCover {
         }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
     }
 
-    fun getRandomDefaultDrawable(seed: Any? = null): Drawable {
+    fun getRandomDefaultPath(seed: Any? = null): String? {
         val isNightTheme = AppConfig.isNightTheme
         val key = if (isNightTheme) PreferKey.defaultCoverDark else PreferKey.defaultCover
         val paths = appCtx.getPrefString(key)?.split(",")?.filter { it.isNotBlank() }
-        if (paths.isNullOrEmpty()) {
-            return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
-        }
+        if (paths.isNullOrEmpty()) return null
         val random = if (seed != null) Random(seed.hashCode()) else Random
-        val randomPath = paths[random.nextInt(paths.size)]
+        return paths[random.nextInt(paths.size)]
+    }
+
+    fun getRandomDefaultDrawable(seed: Any? = null): Drawable {
+        val randomPath = getRandomDefaultPath(seed)
+            ?: return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
         return kotlin.runCatching {
             BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
         }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
