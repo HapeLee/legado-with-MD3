@@ -145,7 +145,6 @@ fun <T> BatchImportDialog(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f),
-            containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {

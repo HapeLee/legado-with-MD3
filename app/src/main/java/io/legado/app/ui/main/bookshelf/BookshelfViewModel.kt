@@ -138,11 +138,18 @@ class BookshelfViewModel(
         if (BookshelfConfig.bookGroupStyle in 2..3) {
             groups.associate { group ->
                 val groupBooks = if (group.groupId == BookGroup.IdAll) {
-                    allBooks.take(4)
+                    allBooks
                 } else {
-                    allBooks.filter { (it.group and group.groupId) != 0L }.take(4)
+                    allBooks.filter { (it.group and group.groupId) != 0L }
                 }
-                group.groupId to groupBooks
+                val sortedBooks = sortBooks(groupBooks, group)
+                val booksWithCover = sortedBooks.filter { it.getDisplayCover() != null }
+                val result = if (booksWithCover.size >= 4) {
+                    booksWithCover.take(4)
+                } else {
+                    (booksWithCover + sortedBooks.filter { it.getDisplayCover() == null }).take(4)
+                }
+                group.groupId to result
             }
         } else {
             emptyMap()

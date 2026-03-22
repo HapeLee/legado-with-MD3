@@ -1,6 +1,5 @@
 package io.legado.app.ui.config.themeConfig
 
-import android.util.Log
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
@@ -20,6 +19,8 @@ object ThemeConfig {
 
     var appTheme by prefDelegate(PreferKey.appTheme, "0")
 
+    var themeMode by prefDelegate(PreferKey.themeMode, "0")
+
     var isPureBlack by prefDelegate(PreferKey.pureBlack, false)
 
     var bgImageLight by prefDelegate<String?>(PreferKey.bgImage, null) {
@@ -34,28 +35,37 @@ object ThemeConfig {
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)
 
-    fun hasImageBg(isDark: Boolean): Boolean {
-        val result = if (isDark) {
-            !bgImageDark.isNullOrBlank()
-        } else {
-            !bgImageLight.isNullOrBlank()
-        }
+    var isPredictiveBackEnabled by prefDelegate(PreferKey.isPredictiveBackEnabled, true)
 
-        Log.d(
-            "MainConfig",
-            "hasImageBg -> isDark=$isDark, " +
-                    "bgImageDark=$bgImageDark, " +
-                    "bgImageLight=$bgImageLight, " +
-                    "result=$result"
-        )
+    var customMode by prefDelegate<String?>(PreferKey.customMode, "tonalSpot")
 
-        return result
+    var fontScale by prefDelegate(PreferKey.fontScale, 10) {
+        postEvent(EventBus.RECREATE, "")
     }
 
-    /*
-    fun hasImageBg(isDark: Boolean): Boolean {
-        return if (isDark) bgImageDark.isNullOrBlank() else bgImageLight.isNullOrBlank()
+    var cPrimary by prefDelegate(PreferKey.cPrimary, 0) {
+        postEvent(EventBus.RECREATE, "")
     }
-     */
+
+    var launcherIcon by prefDelegate(PreferKey.launcherIcon, "ic_launcher")
+
+    var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
+
+    var showRss by prefDelegate(PreferKey.showRss, true)
+
+    var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
+
+    var swipeAnimation by prefDelegate(PreferKey.swipeAnimation, true)
+
+    var showBottomView by prefDelegate(PreferKey.showBottomView, true)
+
+    var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
+
+    var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")
+
+    var defaultHomePage by prefDelegate(PreferKey.defaultHomePage, "bookshelf")
+
+    fun hasImageBg(isDark: Boolean): Boolean =
+        !(if (isDark) bgImageDark else bgImageLight).isNullOrBlank()
 
 }

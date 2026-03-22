@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
+import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
@@ -46,6 +47,9 @@ class TestConfigActivity : BaseComposeActivity() {
     @Serializable
     object ThemeConfigRoute
 
+    @Serializable
+    object BackupConfigRoute
+
     @Composable
     override fun Content() {
         val navController = rememberNavController()
@@ -60,7 +64,8 @@ class TestConfigActivity : BaseComposeActivity() {
                     onNavigateToOther = { navController.navigate(OtherConfigRoute) },
                     onNavigateToRead = { navController.navigate(ReadConfigRoute) },
                     onNavigateToCover = { navController.navigate(CoverConfigRoute) },
-                    onNavigateToTheme = { navController.navigate(ThemeConfigRoute) }
+                    onNavigateToTheme = { navController.navigate(ThemeConfigRoute) },
+                    onNavigateToBackup = { navController.navigate(BackupConfigRoute) }
                 )
             }
 
@@ -77,7 +82,13 @@ class TestConfigActivity : BaseComposeActivity() {
             }
 
             composable<ThemeConfigRoute> {
-                ThemeConfigScreen(onBackClick = { navController.popBackStack() })
+                ThemeConfigScreen(
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable<BackupConfigRoute> {
+                BackupConfigScreen(onBackClick = { navController.popBackStack() })
             }
         }
     }
@@ -89,7 +100,8 @@ class TestConfigActivity : BaseComposeActivity() {
         onNavigateToOther: () -> Unit,
         onNavigateToRead: () -> Unit,
         onNavigateToCover: () -> Unit,
-        onNavigateToTheme: () -> Unit
+        onNavigateToTheme: () -> Unit,
+        onNavigateToBackup: () -> Unit
     ) {
         val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -128,6 +140,10 @@ class TestConfigActivity : BaseComposeActivity() {
                     ClickableSettingItem(
                         title = stringResource(R.string.cover_config),
                         onClick = onNavigateToCover
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.backup_restore),
+                        onClick = onNavigateToBackup
                     )
                 }
             }

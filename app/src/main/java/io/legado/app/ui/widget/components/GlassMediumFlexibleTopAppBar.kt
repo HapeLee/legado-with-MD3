@@ -75,10 +75,7 @@ object GlassTopAppBarDefaults {
 
         return TopAppBarDefaults.topAppBarColors(
             containerColor = containerColor,
-            scrolledContainerColor = scrolledContainerColor,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            scrolledContainerColor = scrolledContainerColor
         )
     }
 

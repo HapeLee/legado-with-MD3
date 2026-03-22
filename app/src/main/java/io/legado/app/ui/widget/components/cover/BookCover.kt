@@ -54,17 +54,25 @@ fun BookCover(
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
     sourceOrigin: String? = null,
-    onLoadFinish: (() -> Unit)? = null
+    onLoadFinish: (() -> Unit)? = null,
+    ignoreUseDefaultCover: Boolean = false
 ) {
     val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
 
-    val useDefault = CoverConfig.useDefaultCover
+    val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
 
-    // 获取随机封面路径（字符串），而非直接获取 Drawable，避免主线程解码大图
-    val randomPath = remember(name, author, path, isNight) {
-        BookCover.getRandomDefaultPath(seed = name ?: author ?: path ?: "")
+    // 获取随机封面路径（字符串），增加配置项作为 Key，确保设置更改后立即刷新
+    val randomPath = remember(
+        name, author, path, isNight,
+        CoverConfig.defaultCover,
+        CoverConfig.defaultCoverDark
+    ) {
+        BookCover.getRandomDefaultPath(
+            seed = name ?: author ?: path ?: "",
+            isNight = isNight
+        )
     }
 
     // 检查是否有自定义随机封面设置

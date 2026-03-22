@@ -198,76 +198,87 @@ fun BookshelfItem(
 @Composable
 fun BookGroupCover(
     books: List<Book>,
+    coverPath: String? = null,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .aspectRatio(5f / 7f)
             .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(0)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+        if (coverPath != null) {
+            BookCover(
+                name = "",
+                author = "",
+                path = coverPath,
+                modifier = Modifier.fillMaxSize(),
+                ignoreUseDefaultCover = true
+            )
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(0)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(1)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(1)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(2)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
-                }
-            }
-            Row(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(2)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(3)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(3)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -292,7 +303,7 @@ fun BookGroupItemGrid(
         isGrid = true,
         gridStyle = gridStyle,
         isCompact = false,
-        cover = { BookGroupCover(books = previewBooks, modifier = it) },
+        cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
         title = group.groupName,
         modifier = modifier,
         titleSmallFont = titleSmallFont,
@@ -321,7 +332,7 @@ fun BookGroupItemList(
         isGrid = false,
         gridStyle = 0,
         isCompact = isCompact,
-        cover = { BookGroupCover(books = previewBooks, modifier = it) },
+        cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
         title = group.groupName,
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,

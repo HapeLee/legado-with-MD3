@@ -28,6 +28,7 @@ import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
+import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
@@ -94,6 +95,7 @@ val appModule = module {
     viewModelOf(::ReadConfigViewModel)
     viewModelOf(::CoverConfigViewModel)
     viewModelOf(::ThemeConfigViewModel)
+    viewModelOf(::BackupConfigViewModel)
     viewModelOf(::TocViewModel)
     viewModelOf(::RemoteBookViewModel)
     viewModelOf(::BookInfoViewModel)

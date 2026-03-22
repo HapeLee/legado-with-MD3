@@ -21,7 +21,7 @@ class ThemeConfigViewModel : ViewModel() {
      */
     suspend fun setBackgroundFromUri(
         uri: Uri,
-        preferenceKey: String
+        isDarkTheme: Boolean
     ) = withContext(Dispatchers.IO) {
         kotlin.runCatching {
             val fileDoc = FileDoc.fromUri(uri, false)
@@ -33,6 +33,7 @@ class ThemeConfigViewModel : ViewModel() {
             }
             val fileName = "$md5.$suffix"
 
+            val preferenceKey = if (isDarkTheme) PreferKey.bgImageN else PreferKey.bgImage
             val folder = File(appCtx.externalFiles, preferenceKey)
             val file = File(folder, fileName)
 
@@ -45,24 +46,24 @@ class ThemeConfigViewModel : ViewModel() {
                 }
             }
 
-            updateBackgroundPath(preferenceKey, file.absolutePath)
+            updateBackgroundPath(isDarkTheme, file.absolutePath)
         }.onFailure {
             it.printStackTrace()
         }
     }
 
-    fun removeBackground(preferenceKey: String) {
-        updateBackgroundPath(preferenceKey, null)
+    fun removeBackground(isDarkTheme: Boolean) {
+        updateBackgroundPath(isDarkTheme, null)
     }
 
     /**
      * 更新背景路径并清理旧文件
      */
-    private fun updateBackgroundPath(preferenceKey: String, newPath: String?) {
-        val oldPath = when (preferenceKey) {
-            PreferKey.bgImage -> ThemeConfig.bgImageLight
-            PreferKey.bgImageN -> ThemeConfig.bgImageDark
-            else -> null
+    private fun updateBackgroundPath(isDarkTheme: Boolean, newPath: String?) {
+        val oldPath = if (isDarkTheme) {
+            ThemeConfig.bgImageDark
+        } else {
+            ThemeConfig.bgImageLight
         }
 
         if (oldPath != newPath && oldPath != null) {
@@ -72,9 +73,10 @@ class ThemeConfigViewModel : ViewModel() {
             }
         }
 
-        when (preferenceKey) {
-            PreferKey.bgImage -> ThemeConfig.bgImageLight = newPath
-            PreferKey.bgImageN -> ThemeConfig.bgImageDark = newPath
+        if (isDarkTheme) {
+            ThemeConfig.bgImageDark = newPath
+        } else {
+            ThemeConfig.bgImageLight = newPath
         }
     }
 }

@@ -39,7 +39,6 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundImageManageSheet(
-    preferenceKey: String,
     isDarkTheme: Boolean,
     onDismissRequest: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel()
@@ -53,7 +52,7 @@ fun BackgroundImageManageSheet(
                 scope.launch {
                     viewModel.setBackgroundFromUri(
                         uri = it,
-                        preferenceKey = preferenceKey
+                        isDarkTheme = isDarkTheme
                     )
                 }
             }
@@ -118,7 +117,7 @@ fun BackgroundImageManageSheet(
                         )
                     }
                     IconButton(
-                        onClick = { viewModel.removeBackground(preferenceKey) },
+                        onClick = { viewModel.removeBackground(isDarkTheme) },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)

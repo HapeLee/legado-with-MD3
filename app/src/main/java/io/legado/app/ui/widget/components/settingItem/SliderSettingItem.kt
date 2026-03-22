@@ -50,9 +50,8 @@ fun SliderSettingItem(
 
     SettingItem(
         title = title,
-        description = description,
         color = color ?: MaterialTheme.colorScheme.surfaceContainerLow,
-        option = value.toInt().toString(),
+        option = description,
         expanded = expanded,
         onExpandChange = { expanded = it },
         expandContent = {

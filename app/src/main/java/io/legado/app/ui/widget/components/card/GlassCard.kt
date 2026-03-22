@@ -26,9 +26,16 @@ fun GlassCard(
 ) {
     val containerAlpha = ThemeConfig.containerOpacity / 100f
 
-    val finalColors = colors ?: CardDefaults.cardColors(
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = containerAlpha),
+    val baseColors = colors ?: CardDefaults.cardColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    )
+
+    val finalColors = CardDefaults.cardColors(
+        containerColor = baseColors.containerColor.copy(alpha = containerAlpha),
+        contentColor = baseColors.contentColor,
+        disabledContainerColor = baseColors.disabledContainerColor.copy(alpha = containerAlpha),
+        disabledContentColor = baseColors.disabledContentColor
     )
 
     if (onClick != null) {

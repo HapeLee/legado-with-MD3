@@ -74,7 +74,7 @@ fun <T> prefDelegate(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (_value.value != value) {
                 when (value) {
-                    is String -> appCtx.putPrefString(key, value)
+                    is String? -> appCtx.putPrefString(key, value)
                     is Int -> appCtx.putPrefInt(key, value)
                     is Boolean -> appCtx.putPrefBoolean(key, value)
                     is Long -> appCtx.putPrefLong(key, value)
