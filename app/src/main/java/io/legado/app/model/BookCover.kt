@@ -77,8 +77,11 @@ object BookCover {
         return paths[random.nextInt(paths.size)]
     }
 
-    fun getRandomDefaultDrawable(seed: Any? = null): Drawable {
-        val randomPath = getRandomDefaultPath(seed)
+    fun getRandomDefaultDrawable(
+        seed: Any? = null,
+        isNight: Boolean = AppConfig.isNightTheme
+    ): Drawable {
+        val randomPath = getRandomDefaultPath(seed, isNight)
             ?: return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
         return kotlin.runCatching {
             BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)

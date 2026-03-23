@@ -137,10 +137,43 @@ class BookshelfViewModel(
         combine(groupsFlow, allBooksFlow, refreshTrigger) { groups, allBooks, _ ->
         if (BookshelfConfig.bookGroupStyle in 2..3) {
             groups.associate { group ->
-                val groupBooks = if (group.groupId == BookGroup.IdAll) {
-                    allBooks
-                } else {
-                    allBooks.filter { (it.group and group.groupId) != 0L }
+                val groupBooks = when (group.groupId) {
+                    BookGroup.IdRoot -> {
+                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                        allBooks.filter { book ->
+                            (book.type and BookType.text) > 0 &&
+                                    (book.type and BookType.local) == 0 &&
+                                    (sumUserGroupIds and book.group) == 0L
+                        }
+                    }
+
+                    BookGroup.IdAll -> allBooks
+                    BookGroup.IdLocal -> allBooks.filter { (it.type and BookType.local) > 0 }
+                    BookGroup.IdAudio -> allBooks.filter { (it.type and BookType.audio) > 0 }
+                    BookGroup.IdNetNone -> {
+                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                        allBooks.filter { book ->
+                            (book.type and BookType.audio) == 0 &&
+                                    (book.type and BookType.local) == 0 &&
+                                    (sumUserGroupIds and book.group) == 0L
+                        }
+                    }
+
+                    BookGroup.IdLocalNone -> {
+                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                        allBooks.filter { book ->
+                            (book.type and BookType.local) > 0 &&
+                                    (sumUserGroupIds and book.group) == 0L
+                        }
+                    }
+
+                    BookGroup.IdManga -> allBooks.filter { (it.type and BookType.image) > 0 }
+                    BookGroup.IdText -> allBooks.filter { (it.type and BookType.text) > 0 }
+                    BookGroup.IdError -> allBooks.filter { (it.type and BookType.updateError) > 0 }
+                    BookGroup.IdUnread -> allBooks.filter { it.durChapterIndex == 0 && it.durChapterPos == 0 }
+                    BookGroup.IdReading -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex > 0 && it.durChapterIndex < it.totalChapterNum - 1 }
+                    BookGroup.IdReadFinished -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex >= it.totalChapterNum - 1 }
+                    else -> allBooks.filter { (it.group and group.groupId) != 0L }
                 }
                 val sortedBooks = sortBooks(groupBooks, group)
                 val booksWithCover = sortedBooks.filter { it.getDisplayCover() != null }

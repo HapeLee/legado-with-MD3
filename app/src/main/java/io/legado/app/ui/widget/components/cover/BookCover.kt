@@ -13,13 +13,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Update
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -75,6 +72,18 @@ fun BookCover(
         )
     }
 
+    // 获取随机封面 Drawable，用于占位图
+    val randomDrawable = remember(
+        name, author, path, isNight,
+        CoverConfig.defaultCover,
+        CoverConfig.defaultCoverDark
+    ) {
+        BookCover.getRandomDefaultDrawable(
+            seed = name ?: author ?: path ?: "",
+            isNight = isNight
+        )
+    }
+
     // 检查是否有自定义随机封面设置
     val hasCustomDefault = !randomPath.isNullOrBlank()
 
@@ -89,9 +98,15 @@ fun BookCover(
                 } else Modifier
             )
             .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .then(
+                if (!hasCustomDefault) {
+                    Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                } else Modifier
+            )
     ) {
         // 如果没有自定义随机封面，显示书本图标作为底图
+        // TODO:暂时先用猫猫头
+        /*
         if (!hasCustomDefault) {
             Icon(
                 Icons.Default.Book,
@@ -102,12 +117,15 @@ fun BookCover(
                     .align(Alignment.Center)
             )
         }
+         */
+
 
         // 1. 封面图层
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(finalPath ?: randomPath)
-                // 限制解码分辨率
+                .placeholder(randomDrawable)
+                .error(randomDrawable)
                 .size(400, 560)
                 .crossfade(true)
                 .setParameter("sourceOrigin", sourceOrigin)
