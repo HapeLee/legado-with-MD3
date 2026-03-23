@@ -125,7 +125,8 @@ jobs:
     strategy:
       matrix:
         product: [ app ]
-        type: [ release ]
+        # 如果是正式版，只构建 release；如果是测试版，构建 release 和 noR8
+        type: ${{ (needs.prepare.outputs.is_release == 'true') && fromJSON('["release"]') || fromJSON('["release", "noR8"]') }}
       fail-fast: false
     runs-on: ubuntu-latest
     env:
@@ -167,12 +168,15 @@ jobs:
           echo "VersionName: $APP_VERSION_NAME"
           echo "VersionCode (Commit Number): $COMMIT_NUMBER"
           chmod +x gradlew
-          ./gradlew assemble${{ env.product }}Release
+          # 将 type 首字母大写以匹配 Gradle Task
+          TYPE_CAP=$(echo ${{ env.type }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
+          ./gradlew assemble${{ env.product }}${TYPE_CAP}
         env:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}
 
       - name: Move Missing Rules Files
+        if: matrix.type == 'release'
         run: |
           echo "移动missing_rules.txt文件"
           MAPPING_DIR="${{ github.workspace }}/mapping"
@@ -181,6 +185,7 @@ jobs:
           find ${{ github.workspace }}/app/build/outputs/mapping/ -name "missing_rules.txt" -exec mv {} "$MAPPING_DIR/missing_rules.txt" \;
 
       - name: Upload Missing Rules File To Artifact
+        if: matrix.type == 'release'
         uses: actions/upload-artifact@v4
         with:
           name: legado.${{ env.product }}.${{ env.type }}.mapping.missing_rules
@@ -190,7 +195,7 @@ jobs:
       - name: Check Build production
         run: |
           echo "检查 APK 输出目录"
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk"
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/${{ env.product }}/${{ env.type }}"
           # 检查是否有任何 APK 文件生成
           if [ -z "$(find "$APK_PATH" -name "*.apk" -print -quit)" ]; then
             echo "Build production not found! Check gradle logs."
@@ -200,22 +205,23 @@ jobs:
       - name: Upload universal APK
         uses: actions/upload-artifact@v4
         with:
-          name: universal-apk
-          path: app/build/outputs/apk/app/release/legado_app_*[0-9].apk
+          name: universal-apk-${{ env.type }}
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/legado_${{ env.product }}_*[0-9]*.apk
 
       - name: Upload arm64-v8a APK
         uses: actions/upload-artifact@v4
         with:
-          name: arm64-v8a-apk
-          path: app/build/outputs/apk/app/release/*arm64-v8a.apk
+          name: arm64-v8a-apk-${{ env.type }}
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*arm64-v8a.apk
 
       - name: Upload armeabi-v7a APK
         uses: actions/upload-artifact@v4
         with:
-          name: armeabi-v7a-apk
-          path: app/build/outputs/apk/app/release/*armeabi-v7a.apk
+          name: armeabi-v7a-apk-${{ env.type }}
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*armeabi-v7a.apk
 
       - name: Upload Mapping File To Artifact
+        if: matrix.type == 'release'
         uses: actions/upload-artifact@v4
         with:
           name: legado.${{ env.product }}.${{ env.type }}.mapping
@@ -231,7 +237,9 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
+          pattern: '*-apk-release'
           path: apk/
+          merge-multiple: true
       - working-directory: apk/
         run: |
           # 使用 find 安全地移动文件
@@ -264,11 +272,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. 下载 build 任务上传的 APK
+      # 1. 下载 build 任务上传的所有 APK
       - name: 下载所有 APK Artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: '*-apk'
+          pattern: '*-apk-*'
           path: artifacts
           merge-multiple: true
 
@@ -278,10 +286,18 @@ jobs:
         run: |
           VERSIONL="${{ needs.prepare.outputs.versionL }}"
           echo "正在整理 APK 文件..."
-          find artifacts -maxdepth 1 -type f -name '*app_*.apk' ! -name '*arm64-v8a.apk' ! -name '*armeabi-v7a.apk' -exec mv {} "artifacts/legado-${VERSIONL}.apk" \;
-          find artifacts -maxdepth 1 -type f -name '*arm64-v8a.apk' -exec mv {} "artifacts/legado-${VERSIONL}-arm64-v8a.apk" \;
-          find artifacts -maxdepth 1 -type f -name '*armeabi-v7a.apk' -exec mv {} "artifacts/legado-${VERSIONL}-armeabi-v7a.apk" \;
-          ls -l artifacts/
+          cd artifacts
+          # 重命名 release 版本
+          for f in *app_${VERSIONL}.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}.apk"; done
+          for f in *app_${VERSIONL}-arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-arm64-v8a.apk"; done
+          for f in *app_${VERSIONL}-armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-armeabi-v7a.apk"; done
+          
+          # 重命名 noR8 版本 (如果存在)
+          for f in *app_${VERSIONL}-noR8.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8.apk"; done
+          for f in *app_${VERSIONL}-noR8-arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-arm64-v8a.apk"; done
+          for f in *app_${VERSIONL}-noR8-armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-armeabi-v7a.apk"; done
+          
+          ls -l
 
       #
       # 获取 Commit 记录并格式化为 Release Body
@@ -304,6 +320,7 @@ jobs:
             echo "release_body<<EOF"
             if [[ "$IS_RELEASE" != "true" ]]; then
                 echo "**此版本为测试版，会存在不稳定问题。**"
+                echo "**noR8 变体关闭了代码混淆与压缩，若有崩溃问题请使用它并收集和发送 Log，以便开发者定位问题代码。**"
                 echo ""
             fi
             echo "### 更新内容"
@@ -335,8 +352,6 @@ jobs:
           body: ${{ steps.get_commits.outputs.release_body }}
           prerelease: ${{ needs.prepare.outputs.is_release != 'true' }}
           files: |
-            artifacts/legado-${{ needs.prepare.outputs.versionL }}.apk
-            artifacts/legado-${{ needs.prepare.outputs.versionL }}-arm64-v8a.apk
-            artifacts/legado-${{ needs.prepare.outputs.versionL }}-armeabi-v7a.apk
+            artifacts/legado-${{ needs.prepare.outputs.versionL }}*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

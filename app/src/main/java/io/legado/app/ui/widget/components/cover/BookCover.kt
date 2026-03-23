@@ -126,7 +126,6 @@ fun BookCover(
                 .data(finalPath ?: randomPath)
                 .placeholder(randomDrawable)
                 .error(randomDrawable)
-                .size(400, 560)
                 .crossfade(true)
                 .setParameter("sourceOrigin", sourceOrigin)
                 .setParameter("loadOnlyWifi", CoverConfig.loadCoverOnlyWifi)

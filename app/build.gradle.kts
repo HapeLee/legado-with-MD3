@@ -100,6 +100,13 @@ android {
                 "cronet-proguard-rules.pro"
             )
         }
+        create("noR8") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            matchingFallbacks += listOf("release")
+            versionNameSuffix = "-noR8"
+        }
         getByName("debug") {
             applicationIdSuffix = ".debug"
             if (project.hasProperty("RELEASE_STORE_FILE")) {
