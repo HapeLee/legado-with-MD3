@@ -29,7 +29,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     var isEInkMode = appCtx.getPrefString("app_theme", "0") == "4"
     var isTransparent = appCtx.getPrefString("app_theme", "0") == "13"
-    var customMode = appCtx.getPrefString(PreferKey.customMode)
+    var customMode = appCtx.getPrefString(PreferKey.customMode, "global")
     var clickActionTL = appCtx.getPrefInt(PreferKey.clickActionTL, 2)
     var clickActionTC = appCtx.getPrefInt(PreferKey.clickActionTC, 2)
     var clickActionTR = appCtx.getPrefInt(PreferKey.clickActionTR, 1)
@@ -85,7 +85,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             }
 
             PreferKey.customMode -> {
-                customMode = appCtx.getPrefString(PreferKey.customMode)
+                customMode = appCtx.getPrefString(PreferKey.customMode, "global")
             }
 
             PreferKey.clickActionTL -> clickActionTL =
