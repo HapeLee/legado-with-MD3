@@ -235,7 +235,7 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 upPreferenceSummary(key, getString(R.string.click_to_delete))
             }
 
-            PreferKey.colorImage -> handleRestartRequired()
+            PreferKey.colorImage -> recreateActivities()
 
             PreferKey.showDiscovery, PreferKey.showRss,
             PreferKey.showStatusBar, PreferKey.showBottomView, PreferKey.tabletInterface,
