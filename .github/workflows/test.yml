@@ -151,6 +151,8 @@ jobs:
           echo "清空18PlusList.txt"
           echo "">$GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
       - name: Release Apk Sign
+        # 仅在所有者的 PR 或 push 时进行签名
+        if: ${{ github.actor == 'HapeLee' }}
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 -d > $GITHUB_WORKSPACE/app/my-release-key.jks
           echo "RELEASE_STORE_FILE=my-release-key.jks" >> $GITHUB_WORKSPACE/gradle.properties
@@ -232,6 +234,7 @@ jobs:
   test_Branch:
     needs: [ prepare, build ]
     runs-on: ubuntu-latest
+    # 仅在所有者的非 PR 事件时执行（即所有者 push 到 main 分支时）
     if: ${{ github.event_name != 'pull_request' && github.actor == 'HapeLee' }}
     steps:
       - uses: actions/checkout@v5
@@ -261,9 +264,11 @@ jobs:
 
   create_release:
     needs: [ prepare, build ]
+    # 仅在所有者的 push 到 main 分支时执行发布
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
+      github.actor == 'HapeLee' &&
       (needs.prepare.outputs.build_number > 0 || needs.prepare.outputs.is_release == 'true') &&
       success()
     runs-on: ubuntu-latest
@@ -289,13 +294,13 @@ jobs:
           cd artifacts
           # 重命名 release 版本
           for f in *app_${VERSIONL}.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}.apk"; done
-          for f in *app_${VERSIONL}-arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-arm64-v8a.apk"; done
-          for f in *app_${VERSIONL}-armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-armeabi-v7a.apk"; done
+          for f in *app_${VERSIONL}_arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-arm64-v8a.apk"; done
+          for f in *app_${VERSIONL}_armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-armeabi-v7a.apk"; done
           
           # 重命名 noR8 版本 (如果存在)
           for f in *app_${VERSIONL}-noR8.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8.apk"; done
-          for f in *app_${VERSIONL}-noR8-arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-arm64-v8a.apk"; done
-          for f in *app_${VERSIONL}-noR8-armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-armeabi-v7a.apk"; done
+          for f in *app_${VERSIONL}-noR8_arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-arm64-v8a.apk"; done
+          for f in *app_${VERSIONL}-noR8_armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-armeabi-v7a.apk"; done
           
           ls -l
 
