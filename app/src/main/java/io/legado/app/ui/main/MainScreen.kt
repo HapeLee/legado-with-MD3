@@ -1,5 +1,7 @@
 package io.legado.app.ui.main
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,10 +10,12 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
@@ -33,11 +37,16 @@ import androidx.compose.material3.WideNavigationRailValue
 import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -48,18 +57,24 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
+import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
@@ -68,6 +83,9 @@ fun MainScreen(
     val context = LocalContext.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+
+    val bookshelfViewModel: BookshelfViewModel = koinViewModel()
+    val bookshelfUiState by bookshelfViewModel.uiState.collectAsState()
 
     val hazeState = remember { HazeState() }
     val destinations = remember(MainConfig.showDiscovery, MainConfig.showRSS) {
@@ -139,6 +157,9 @@ fun MainScreen(
                 val labelVisibilityMode = MainConfig.labelVisibilityMode
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.targetPage == index
+                    var showGroupMenu by remember { mutableStateOf(false) }
+                    val haptic = LocalHapticFeedback.current
+
                     WideNavigationRailItem(
                         railExpanded = navState.targetValue == WideNavigationRailValue.Expanded,
                         selected = selected,
@@ -148,7 +169,57 @@ fun MainScreen(
                             }
                         },
                         icon = {
-                            NavigationIcon(destination, selected, uiState.upBooksCount)
+                            Box {
+                                NavigationIcon(
+                                    destination = destination,
+                                    selected = selected,
+                                    upBooksCount = uiState.upBooksCount,
+                                    modifier = if (destination == MainDestination.Bookshelf) {
+                                        Modifier.combinedClickable(
+                                            onClick = {
+                                                coroutineScope.launch {
+                                                    pagerState.animateScrollToPage(index)
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                showGroupMenu = true
+                                            }
+                                        )
+                                    } else Modifier
+                                )
+
+                                if (destination == MainDestination.Bookshelf && showGroupMenu) {
+                                    RoundDropdownMenu(
+                                        expanded = showGroupMenu,
+                                        onDismissRequest = { showGroupMenu = false }
+                                    ) { dismiss ->
+                                        bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
+                                            RoundDropdownMenuItem(
+                                                text = { Text(group.groupName) },
+                                                onClick = {
+                                                    coroutineScope.launch {
+                                                        if (pagerState.currentPage != index) {
+                                                            pagerState.scrollToPage(index)
+                                                        }
+                                                        bookshelfViewModel.changeGroup(group.groupId)
+                                                        dismiss()
+                                                    }
+                                                },
+                                                trailingIcon = {
+                                                    if (bookshelfUiState.selectedGroupIndex == groupIndex) {
+                                                        Icon(
+                                                            Icons.Default.Check,
+                                                            null,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         },
                         label = if (labelVisibilityMode != "unlabeled") {
                             { Text(stringResource(destination.labelId)) }
@@ -181,6 +252,9 @@ fun MainScreen(
                         }
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
+                            var showGroupMenu by remember { mutableStateOf(false) }
+                            val haptic = LocalHapticFeedback.current
+
                             NavigationBarItem(
                                 selected = selected,
                                 onClick = {
@@ -189,7 +263,61 @@ fun MainScreen(
                                     }
                                 },
                                 icon = {
-                                    NavigationIcon(destination, selected, uiState.upBooksCount)
+                                    Box {
+                                        NavigationIcon(
+                                            destination = destination,
+                                            selected = selected,
+                                            upBooksCount = uiState.upBooksCount,
+                                            modifier = if (destination == MainDestination.Bookshelf) {
+                                                Modifier.combinedClickable(
+                                                    onClick = {
+                                                        coroutineScope.launch {
+                                                            pagerState.animateScrollToPage(index)
+                                                        }
+                                                    },
+                                                    onLongClick = {
+                                                        haptic.performHapticFeedback(
+                                                            HapticFeedbackType.LongPress
+                                                        )
+                                                        showGroupMenu = true
+                                                    }
+                                                )
+                                            } else Modifier
+                                        )
+
+                                        if (destination == MainDestination.Bookshelf && showGroupMenu) {
+                                            RoundDropdownMenu(
+                                                expanded = showGroupMenu,
+                                                onDismissRequest = { showGroupMenu = false }
+                                            ) { dismiss ->
+                                                bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
+                                                    RoundDropdownMenuItem(
+                                                        text = { Text(group.groupName) },
+                                                        onClick = {
+                                                            coroutineScope.launch {
+                                                                if (pagerState.currentPage != index) {
+                                                                    pagerState.scrollToPage(index)
+                                                                }
+                                                                bookshelfViewModel.changeGroup(
+                                                                    group.groupId
+                                                                )
+                                                                dismiss()
+                                                            }
+                                                        },
+                                                        trailingIcon = {
+                                                            if (bookshelfUiState.selectedGroupIndex == groupIndex) {
+                                                                Icon(
+                                                                    Icons.Default.Check,
+                                                                    null,
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 },
                                 colors = NavigationBarItemDefaults.colors(
                                     indicatorColor = GlassDefaults.glassColor(
@@ -215,7 +343,8 @@ fun MainScreen(
                     userScrollEnabled = true,
                     beyondViewportPageCount = 3
                 ) { page ->
-                    when (destinations[page]) {
+                    val destination = destinations.getOrNull(page) ?: return@HorizontalPager
+                    when (destination) {
                         MainDestination.Bookshelf -> BookshelfScreen(
                             onBookClick = { book ->
                                 context.startActivityForBook(book)
@@ -248,14 +377,17 @@ fun MainScreen(
 private fun NavigationIcon(
     destination: MainDestination,
     selected: Boolean,
-    upBooksCount: Int
+    upBooksCount: Int,
+    modifier: Modifier = Modifier
 ) {
     val icon = if (selected) destination.selectedIcon else destination.icon
-    if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
-        BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
+    Box(modifier = modifier) {
+        if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
+            BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
+                Icon(icon, contentDescription = null)
+            }
+        } else {
             Icon(icon, contentDescription = null)
         }
-    } else {
-        Icon(icon, contentDescription = null)
     }
 }
