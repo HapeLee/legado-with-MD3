@@ -182,6 +182,7 @@ object PreferKey {
     const val cAccent = "colorAccent"
     const val customMode = "customMode"
     const val paletteStyle = "paletteStyle"
+    const val materialVersion = "materialVersion"
     const val composeEngine = "composeEngine"
     const val containerOpacity = "containerOpacity"
     const val enableBlur = "enableBlur"

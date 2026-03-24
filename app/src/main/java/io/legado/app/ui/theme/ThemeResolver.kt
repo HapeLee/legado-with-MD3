@@ -2,6 +2,7 @@ package io.legado.app.ui.theme
 
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 object ThemeResolver {
@@ -44,6 +45,21 @@ object ThemeResolver {
             Contrast.valueOf(ThemeConfig.customContrast).value
         } catch (e: Exception) {
             Contrast.Default.value
+        }
+    }
+
+    fun resolveThemeColorSpec(value: String?): ThemeColorSpec {
+        return when (value) {
+            "material3" -> ThemeColorSpec.SPEC_2021
+            "material3Expressive" -> ThemeColorSpec.SPEC_2025
+            else -> ThemeColorSpec.SPEC_2021
+        }
+    }
+
+    fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {
+        return when (colorSpec) {
+            ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
+            ThemeColorSpec.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
         }
     }
 

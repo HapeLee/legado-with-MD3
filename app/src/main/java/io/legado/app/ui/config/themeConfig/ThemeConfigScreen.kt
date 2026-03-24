@@ -278,6 +278,13 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.customContrast_value),
                         onValueChange = { ThemeConfig.customContrast = it }
                     )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.material_version),
+                        selectedValue = ThemeConfig.materialVersion,
+                        displayEntries = stringArrayResource(R.array.materialVersion),
+                        entryValues = stringArrayResource(R.array.materialVersion_value),
+                        onValueChange = { ThemeConfig.materialVersion = it }
+                    )
                 }
             }
 
@@ -476,7 +483,6 @@ fun ThemeConfigScreen(
             }
         )
     }
-
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -759,7 +765,8 @@ private fun getThemeColorPalette(
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
-    paletteStyle: String?
+    paletteStyle: String?,
+    materialVersion: String? = null
 ): ThemeColorPalette {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
     val colorScheme = ThemeManager.getColorScheme(
@@ -767,7 +774,8 @@ private fun getThemeColorPalette(
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,
-        paletteStyle = paletteStyle
+        paletteStyle = paletteStyle,
+        materialVersion = materialVersion
     )
 
     return ThemeColorPalette(
@@ -784,7 +792,8 @@ private fun getThemeColors(
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
-    paletteStyle: String?
+    paletteStyle: String?,
+    materialVersion: String? = null
 ): ThemeColors {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
     val colorScheme = ThemeManager.getColorScheme(
@@ -792,7 +801,8 @@ private fun getThemeColors(
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,
-        paletteStyle = paletteStyle
+        paletteStyle = paletteStyle,
+        materialVersion = materialVersion
     )
 
     return ThemeColors(

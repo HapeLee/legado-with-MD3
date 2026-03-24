@@ -212,7 +212,12 @@
         <item>Content</item>
     </string-array>
 
-    <string-array name="composeEngine">
+	<string-array name="materialVersion">
+		<item>Material 3 (2021)</item>
+		<item>Material 3 Expressive (2025)</item>
+	</string-array>
+
+	<string-array name="composeEngine">
         <item>Material Design</item>
         <item>SaltUI</item>
         <item>Miuix</item>

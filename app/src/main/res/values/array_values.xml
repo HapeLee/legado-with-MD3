@@ -98,6 +98,11 @@
         <item>content</item>
     </string-array>
 
+    <string-array name="materialVersion_value">
+        <item>material3</item>
+        <item>material3Expressive</item>
+    </string-array>
+
     <string-array name="composeEngine_value">
         <item>material</item>
         <item>salt</item>

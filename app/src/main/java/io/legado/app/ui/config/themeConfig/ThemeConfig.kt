@@ -17,6 +17,8 @@ object ThemeConfig {
 
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
+    var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
+
     var appTheme by prefDelegate(PreferKey.appTheme, "0")
 
     var themeMode by prefDelegate(PreferKey.themeMode, "0")

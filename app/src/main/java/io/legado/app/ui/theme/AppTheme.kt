@@ -21,15 +21,17 @@ fun AppTheme(
     val appThemeMode = ThemeResolver.resolveThemeMode(ThemeConfig.appTheme)
     val isPureBlack = ThemeConfig.isPureBlack
     val paletteStyle = ThemeConfig.paletteStyle
+    val materialVersion = ThemeConfig.materialVersion
 
     val colorScheme =
-        remember(context, appThemeMode, darkTheme, isPureBlack, paletteStyle) {
+        remember(context, appThemeMode, darkTheme, isPureBlack, paletteStyle, materialVersion) {
             ThemeManager.getColorScheme(
                 context = context,
                 mode = appThemeMode,
                 darkTheme = darkTheme,
                 isAmoled = isPureBlack,
-                paletteStyle = paletteStyle
+                paletteStyle = paletteStyle,
+                materialVersion = materialVersion
             )
         }
 
