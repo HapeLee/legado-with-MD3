@@ -299,5 +299,11 @@
 		<item>Unlabeled</item>
 	</string-array>
 
+	<string-array name="customContrast">
+		<item>Default</item>
+		<item>High</item>
+		<item>Maximum</item>
+	</string-array>
+
 	<string name="all_version">所有版本</string>
 </resources>

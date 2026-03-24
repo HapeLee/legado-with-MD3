@@ -213,12 +213,12 @@ fun ThemeConfigScreen(
                     onClick = { showLauncherIconPicker = true }
                 )
                 SwitchSettingItem(
-                    title = "预见性返回手势",
-                    description = "启用系统预见性返回手势",
+                    title = stringResource(R.string.predictive_back),
+                    description = stringResource(R.string.predictive_back_summary),
                     checked = ThemeConfig.isPredictiveBackEnabled,
                     onCheckedChange = {
                         ThemeConfig.isPredictiveBackEnabled = it
-                        context.toastOnUi("重启以应用")
+                        context.toastOnUi(R.string.restart_to_apply)
                     }
                 )
                 SliderSettingItem(
@@ -239,14 +239,14 @@ fun ThemeConfigScreen(
             }
 
             if (selectedTheme == "12") {
-                SplicedColumnGroup(title = "自定义主题") {
+                SplicedColumnGroup(title = stringResource(R.string.custom_theme)) {
                     ClickableSettingItem(
                         title = stringResource(R.string.seed_color),
                         option = if (primaryColorValue.intValue != 0) "#${
                             Integer.toHexString(
                                 primaryColorValue.intValue
                             ).uppercase()
-                        }" else "点击选择",
+                        }" else stringResource(R.string.click_to_select),
                         onClick = { showColorPicker = true },
                         trailingContent = {
                             if (primaryColorValue.intValue != 0) {
@@ -270,6 +270,13 @@ fun ThemeConfigScreen(
                         displayEntries = stringArrayResource(R.array.paletteStyle),
                         entryValues = stringArrayResource(R.array.paletteStyle_value),
                         onValueChange = { ThemeConfig.paletteStyle = it }
+                    )
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.preferred_contrast),
+                        selectedValue = ThemeConfig.customContrast,
+                        displayEntries = stringArrayResource(R.array.customContrast),
+                        entryValues = stringArrayResource(R.array.customContrast_value),
+                        onValueChange = { ThemeConfig.customContrast = it }
                     )
                 }
             }
@@ -325,9 +332,9 @@ fun ThemeConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = "Compose 相关") {
+            SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
                 SwitchSettingItem(
-                    title = "使用折叠应用栏",
+                    title = stringResource(R.string.use_flexible_top_bar),
                     checked = ThemeConfig.useFlexibleTopAppBar,
                     onCheckedChange = { ThemeConfig.useFlexibleTopAppBar = it }
                 )
@@ -469,6 +476,7 @@ fun ThemeConfigScreen(
             }
         )
     }
+
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

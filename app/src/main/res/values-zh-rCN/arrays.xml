@@ -214,5 +214,11 @@
         <item>仅封面</item>
     </string-array>
 
+    <string-array name="customContrast">
+        <item>默认</item>
+        <item>较强</item>
+        <item>最强</item>
+    </string-array>
+
     <string name="all_version">所有版本</string>
 </resources>

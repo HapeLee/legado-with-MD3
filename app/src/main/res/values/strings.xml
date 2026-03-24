@@ -26,6 +26,24 @@
     <string name="tip_cannot_jump_setting_page">Cannot jump to Settings.</string>
 
     <string name="manual_input">Manual Input</string>
+    <string name="preferred_contrast">Preferred contrast</string>
+    <string name="contrast_source_system_summary">Source: System contrast</string>
+    <string name="contrast_source_manual_summary">Source: Manual input</string>
+    <string name="current_effective_contrast">Current effective value: %1$s</string>
+    <string name="system_contrast_value">System contrast: %1$s</string>
+    <string name="system_contrast">System contrast</string>
+    <string name="manual_contrast_value_label">Manual value [-1, 1]</string>
+    <string name="manual_contrast_invalid">Enter a valid number between -1 and 1</string>
+    <string name="predictive_back">Predictive Back Gestures</string>
+    <string name="predictive_back_summary">Enable system predictive back gestures</string>
+    <string name="restart_to_apply">Restart to apply</string>
+    <string name="custom_theme">Custom Theme</string>
+    <string name="click_to_select">Click to select</string>
+    <string name="compose_related">Compose Related</string>
+    <string name="use_flexible_top_bar">Use flexible top app bar</string>
+    <string name="slider">Slider</string>
+    <string name="input">Input</string>
+    <string name="manual_contrast_value_template">Manual value: %1$s</string>
     <string name="enter_directory_path">Enter directory path</string>
     <string name="invalid_directory">Invalid directory path</string>
     <string name="empty_directory_input">Directory path cannot be empty</string>
