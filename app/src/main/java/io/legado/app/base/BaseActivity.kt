@@ -189,7 +189,8 @@ abstract class BaseActivity<VB : ViewBinding>(
             "10" -> setTheme(R.style.Theme_Base_Phoebe)
             "11" -> setTheme(R.style.Theme_Base_Mujika)
             "12" -> {
-                if (AppConfig.customMode == "accent")
+                val customMode = getPrefString(PreferKey.customMode, "global")
+                if (customMode == "accent")
                     setTheme(R.style.ThemeOverlay_WhiteBackground)
 
                 val colorImagePath = getPrefString(PreferKey.colorImage)

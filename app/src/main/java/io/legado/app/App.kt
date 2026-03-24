@@ -83,7 +83,8 @@ class App : Application() {
             modules(appDatabaseModule, appModule)
         }
         if (getPrefString("app_theme", "0") == "12") {
-            if (AppConfig.customMode == "accent")
+            val customMode = getPrefString(PreferKey.customMode, "global")
+            if (customMode == "accent")
                 setTheme(R.style.ThemeOverlay_WhiteBackground)
 
             val colorImagePath = getPrefString(PreferKey.colorImage)

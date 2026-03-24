@@ -195,7 +195,11 @@ class ThemeConfigFragment : PreferenceFragmentCompat(),
                 ThemeConfig.enableProgressiveBlur = PreferKey.enableProgressiveBlur.toBoolean()
             }
 
-            PreferKey.customMode -> handleRestartRequired()
+            PreferKey.customMode -> {
+                Handler(Looper.getMainLooper()).postDelayed({
+                    recreateActivities()
+                }, 100)
+            }
 
             PreferKey.isPredictiveBackEnabled -> {
                 toastOnUi("重启以应用")
