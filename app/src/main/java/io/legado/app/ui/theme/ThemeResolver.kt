@@ -48,14 +48,6 @@ object ThemeResolver {
         }
     }
 
-    fun resolveThemeColorSpec(value: String?): ThemeColorSpec {
-        return when (value) {
-            "material3" -> ThemeColorSpec.SPEC_2021
-            "material3Expressive" -> ThemeColorSpec.SPEC_2025
-            else -> ThemeColorSpec.SPEC_2021
-        }
-    }
-
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {
         return when (colorSpec) {
             ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
