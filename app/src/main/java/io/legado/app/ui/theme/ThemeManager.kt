@@ -65,7 +65,7 @@ object ThemeManager {
             }
 
             AppThemeMode.CUSTOM -> {
-                CustomColorScheme(context, context.primaryColor, style)
+                CustomColorScheme(context.primaryColor, style)
                     .getColorScheme(darkTheme)
             }
 

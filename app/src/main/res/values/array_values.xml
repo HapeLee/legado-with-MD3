@@ -131,4 +131,10 @@
         <item>3</item>
     </string-array>
 
+    <string-array name="customContrast_value">
+        <item>Default</item>
+        <item>Medium</item>
+        <item>High</item>
+    </string-array>
+
 </resources>

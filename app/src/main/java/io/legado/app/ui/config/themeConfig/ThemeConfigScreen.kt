@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -23,8 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -36,8 +33,6 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
@@ -47,8 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -71,8 +64,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.google.android.material.color.DynamicColors
@@ -87,24 +78,20 @@ import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.theme.CustomColorScheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
-import io.legado.app.ui.widget.components.settingItem.SettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -124,24 +111,6 @@ fun ThemeConfigScreen(
 
     val fontScaleValue = remember { mutableFloatStateOf(ThemeConfig.fontScale.toFloat()) }
     val primaryColorValue = remember { mutableIntStateOf(ThemeConfig.cPrimary) }
-    val systemContrast = remember(
-        context,
-        selectedThemeMode,
-        selectedTheme,
-        ThemeConfig.customContrastSource,
-        ThemeConfig.customContrastManual
-    ) {
-        CustomColorScheme.systemContrastLevel(context)
-    }
-    val effectiveContrast = remember(
-        context,
-        selectedThemeMode,
-        selectedTheme,
-        ThemeConfig.customContrastSource,
-        ThemeConfig.customContrastManual
-    ) {
-        CustomColorScheme.resolveContrastLevel(context)
-    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -302,9 +271,12 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.paletteStyle_value),
                         onValueChange = { ThemeConfig.paletteStyle = it }
                     )
-                    ContrastSettingItem(
-                        systemContrast = systemContrast,
-                        effectiveContrast = effectiveContrast
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.preferred_contrast),
+                        selectedValue = ThemeConfig.customContrast,
+                        displayEntries = stringArrayResource(R.array.customContrast),
+                        entryValues = stringArrayResource(R.array.customContrast_value),
+                        onValueChange = { ThemeConfig.customContrast = it }
                     )
                 }
             }
@@ -506,150 +478,6 @@ fun ThemeConfigScreen(
     }
 
 }
-
-@Composable
-private fun ContrastSettingItem(
-    systemContrast: Double?,
-    effectiveContrast: Double
-) {
-    var expanded by remember { mutableStateOf(false) }
-    var manualValue by remember { mutableStateOf(ThemeConfig.customContrastManual) }
-    var isInputMode by remember { mutableStateOf(false) }
-
-    val selectedSource = ThemeConfig.customContrastSource
-    val parsedManualValue = manualValue.toDoubleOrNull()
-    val isManualInputInvalid = selectedSource == CustomColorScheme.SOURCE_MANUAL &&
-            manualValue.isNotBlank() &&
-            (parsedManualValue == null || parsedManualValue !in -1.0..1.0)
-
-    val description = buildString {
-        append(
-            stringResource(
-                if (selectedSource == CustomColorScheme.SOURCE_SYSTEM) {
-                    R.string.contrast_source_system_summary
-                } else {
-                    R.string.contrast_source_manual_summary
-                }
-            )
-        )
-        append("  ")
-        append(
-            stringResource(
-                R.string.current_effective_contrast,
-                formatContrastValue(effectiveContrast)
-            )
-        )
-        append("  ")
-        append(
-            stringResource(
-                R.string.system_contrast_value,
-                systemContrast?.let(::formatContrastValue) ?: stringResource(R.string.not_available)
-            )
-        )
-    }
-
-    SettingItem(
-        title = stringResource(R.string.preferred_contrast),
-        description = description,
-        option = formatContrastValue(effectiveContrast),
-        expanded = expanded,
-        onExpandChange = { expanded = it },
-        expandContent = {
-            Column {
-                Text(
-                    text = if (selectedSource == CustomColorScheme.SOURCE_SYSTEM) {
-                        stringResource(
-                            R.string.system_contrast_value,
-                            systemContrast?.let(::formatContrastValue)
-                                ?: stringResource(R.string.not_available)
-                        )
-                    } else {
-                        stringResource(R.string.manual_contrast_value_template, manualValue)
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                AnimatedContent(
-                    targetState = isInputMode,
-                    label = "contrast_input_switch",
-                    modifier = Modifier.fillMaxWidth()
-                ) { inputMode ->
-                    if (inputMode) {
-                        OutlinedTextField(
-                            value = manualValue,
-                            onValueChange = {
-                                manualValue = it
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text(stringResource(R.string.manual_contrast_value_label)) },
-                            singleLine = true,
-                            isError = isManualInputInvalid,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Decimal,
-                                imeAction = ImeAction.Done
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onDone = {
-                                    val value = manualValue.toDoubleOrNull()
-                                    if (value != null && value in -1.0..1.0) {
-                                        ThemeConfig.customContrastManual = manualValue
-                                        ThemeConfig.customContrastSource =
-                                            CustomColorScheme.SOURCE_MANUAL
-                                    }
-                                }
-                            ),
-                            supportingText = {
-                                if (isManualInputInvalid) {
-                                    Text(stringResource(R.string.manual_contrast_invalid))
-                                }
-                            }
-                        )
-                    } else {
-                        val sliderValue = parsedManualValue?.toFloat() ?: 0f
-                        Slider(
-                            value = sliderValue.coerceIn(-1.0f..1.0f),
-                            onValueChange = {
-                                manualValue = formatContrastValue(it.toDouble())
-                            },
-                            onValueChangeFinished = {
-                                ThemeConfig.customContrastManual = manualValue
-                                ThemeConfig.customContrastSource = CustomColorScheme.SOURCE_MANUAL
-                            },
-                            valueRange = -1.0f..1.0f,
-                            steps = 19,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SmallTextButton(
-                        text = if (isInputMode) stringResource(R.string.slider) else stringResource(R.string.input),
-                        icon = if (isInputMode) Icons.Default.LinearScale else Icons.Default.Edit,
-                        onClick = { isInputMode = !isInputMode }
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    SmallTextButton(
-                        text = stringResource(R.string.system_contrast),
-                        icon = Icons.Default.BrightnessMedium,
-                        onClick = {
-                            ThemeConfig.customContrastSource = CustomColorScheme.SOURCE_SYSTEM
-                        }
-                    )
-                }
-            }
-        }
-    )
-}
-
-private fun formatContrastValue(value: Double): String = String.format(Locale.US, "%.2f", value)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

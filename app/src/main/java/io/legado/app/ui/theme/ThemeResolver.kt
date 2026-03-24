@@ -1,6 +1,8 @@
 package io.legado.app.ui.theme
 
+import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 object ThemeResolver {
 
@@ -34,6 +36,14 @@ object ThemeResolver {
             "fidelity" -> PaletteStyle.Fidelity
             "content" -> PaletteStyle.Content
             else -> PaletteStyle.TonalSpot
+        }
+    }
+
+    fun resolveContrastLevel(): Double {
+        return try {
+            Contrast.valueOf(ThemeConfig.customContrast).value
+        } catch (e: Exception) {
+            Contrast.Default.value
         }
     }
 
