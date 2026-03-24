@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -64,6 +65,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.google.android.material.color.DynamicColors
@@ -78,6 +80,7 @@ import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.CustomColorScheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
@@ -92,6 +95,8 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+import java.util.Locale
+import androidx.compose.foundation.text.KeyboardOptions
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -108,9 +113,28 @@ fun ThemeConfigScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
+    var showContrastDialog by remember { mutableStateOf(false) }
 
     val fontScaleValue = remember { mutableFloatStateOf(ThemeConfig.fontScale.toFloat()) }
     val primaryColorValue = remember { mutableIntStateOf(ThemeConfig.cPrimary) }
+    val systemContrast = remember(
+        context,
+        selectedThemeMode,
+        selectedTheme,
+        ThemeConfig.customContrastSource,
+        ThemeConfig.customContrastManual
+    ) {
+        CustomColorScheme.systemContrastLevel(context)
+    }
+    val effectiveContrast = remember(
+        context,
+        selectedThemeMode,
+        selectedTheme,
+        ThemeConfig.customContrastSource,
+        ThemeConfig.customContrastManual
+    ) {
+        CustomColorScheme.resolveContrastLevel(context)
+    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -270,6 +294,37 @@ fun ThemeConfigScreen(
                         displayEntries = stringArrayResource(R.array.paletteStyle),
                         entryValues = stringArrayResource(R.array.paletteStyle_value),
                         onValueChange = { ThemeConfig.paletteStyle = it }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.preferred_contrast),
+                        description = buildString {
+                            append(
+                                stringResource(
+                                    if (ThemeConfig.customContrastSource == CustomColorScheme.SOURCE_SYSTEM) {
+                                        R.string.contrast_source_system_summary
+                                    } else {
+                                        R.string.contrast_source_manual_summary
+                                    }
+                                )
+                            )
+                            append("  ")
+                            append(
+                                stringResource(
+                                    R.string.current_effective_contrast,
+                                    formatContrastValue(effectiveContrast)
+                                )
+                            )
+                            append("  ")
+                            append(
+                                stringResource(
+                                    R.string.system_contrast_value,
+                                    systemContrast?.let(::formatContrastValue)
+                                        ?: stringResource(R.string.not_available)
+                                )
+                            )
+                        },
+                        option = formatContrastValue(effectiveContrast),
+                        onClick = { showContrastDialog = true }
                     )
                 }
             }
@@ -469,7 +524,108 @@ fun ThemeConfigScreen(
             }
         )
     }
+
+    if (showContrastDialog) {
+        ContrastLevelDialog(
+            systemContrast = systemContrast,
+            onDismissRequest = { showContrastDialog = false }
+        )
+    }
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ContrastLevelDialog(
+    systemContrast: Double?,
+    onDismissRequest: () -> Unit
+) {
+    var selectedSource by remember { mutableStateOf(ThemeConfig.customContrastSource) }
+    var manualValue by remember { mutableStateOf(ThemeConfig.customContrastManual) }
+    val parsedManualValue = manualValue.toDoubleOrNull()
+    val isManualInputInvalid = selectedSource == CustomColorScheme.SOURCE_MANUAL &&
+        manualValue.isNotBlank() &&
+        (parsedManualValue == null || parsedManualValue !in -1.0..1.0)
+    val effectiveContrast = remember(selectedSource, manualValue, systemContrast) {
+        when (selectedSource) {
+            CustomColorScheme.SOURCE_MANUAL -> {
+                parsedManualValue?.coerceIn(-1.0, 1.0) ?: 0.0
+            }
+
+            else -> systemContrast ?: 0.0
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.preferred_contrast)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.system_contrast_value,
+                        systemContrast?.let(::formatContrastValue)
+                            ?: stringResource(R.string.not_available)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ToggleButton(
+                        checked = selectedSource == CustomColorScheme.SOURCE_SYSTEM,
+                        onCheckedChange = { selectedSource = CustomColorScheme.SOURCE_SYSTEM }
+                    ) {
+                        Text(stringResource(R.string.system_contrast))
+                    }
+                    ToggleButton(
+                        checked = selectedSource == CustomColorScheme.SOURCE_MANUAL,
+                        onCheckedChange = { selectedSource = CustomColorScheme.SOURCE_MANUAL }
+                    ) {
+                        Text(stringResource(R.string.manual_input))
+                    }
+                }
+                OutlinedTextField(
+                    value = manualValue,
+                    onValueChange = { manualValue = it },
+                    enabled = selectedSource == CustomColorScheme.SOURCE_MANUAL,
+                    label = { Text(stringResource(R.string.manual_contrast_value_label)) },
+                    singleLine = true,
+                    isError = isManualInputInvalid,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    supportingText = {
+                        if (isManualInputInvalid) {
+                            Text(stringResource(R.string.manual_contrast_invalid))
+                        }
+                    }
+                )
+                Text(
+                    text = stringResource(
+                        R.string.current_effective_contrast,
+                        formatContrastValue(effectiveContrast)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    ThemeConfig.customContrastSource = selectedSource
+                    ThemeConfig.customContrastManual = manualValue
+                    onDismissRequest()
+                },
+                enabled = !isManualInputInvalid
+            ) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+private fun formatContrastValue(value: Double): String = String.format(Locale.US, "%.2f", value)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

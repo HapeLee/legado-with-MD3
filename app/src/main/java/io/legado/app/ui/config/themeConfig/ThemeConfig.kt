@@ -3,6 +3,7 @@ package io.legado.app.ui.config.themeConfig
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
+import io.legado.app.ui.theme.CustomColorScheme
 import io.legado.app.utils.postEvent
 
 object ThemeConfig {
@@ -44,6 +45,17 @@ object ThemeConfig {
     }
 
     var cPrimary by prefDelegate(PreferKey.cPrimary, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
+
+    var customContrastSource by prefDelegate(
+        PreferKey.customContrastSource,
+        CustomColorScheme.SOURCE_SYSTEM
+    ) {
+        postEvent(EventBus.RECREATE, "")
+    }
+
+    var customContrastManual by prefDelegate(PreferKey.customContrastManual, "") {
         postEvent(EventBus.RECREATE, "")
     }
 

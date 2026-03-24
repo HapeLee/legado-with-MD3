@@ -178,6 +178,8 @@ object PreferKey {
     const val disableMangaScale = "disableMangaScale"
     const val firebaseEnable = "firebaseEnable"
     const val cPrimary = "colorPrimary"
+    const val customContrastSource = "customContrastSource"
+    const val customContrastManual = "customContrastManual"
     const val cAccent = "colorAccent"
     const val customMode = "customMode"
     const val paletteStyle = "paletteStyle"

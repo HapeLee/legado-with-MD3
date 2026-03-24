@@ -9,6 +9,7 @@ import androidx.core.content.getSystemService
 import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 
 class CustomColorScheme(
     context: Context,
@@ -16,15 +17,7 @@ class CustomColorScheme(
     style: PaletteStyle,
 ) : BaseColorScheme() {
 
-    private val contrastLevel: Double =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            context.getSystemService<UiModeManager>()
-                ?.contrast
-                ?.toDouble()
-                ?: Contrast.Default.value
-        } else {
-            Contrast.Default.value
-        }
+    private val contrastLevel: Double = resolveContrastLevel(context)
 
     override val lightScheme: ColorScheme = dynamicColorScheme(
         seedColor = Color(seed),
@@ -41,4 +34,32 @@ class CustomColorScheme(
         style = style,
         contrastLevel = contrastLevel
     )
+
+    companion object {
+        const val SOURCE_SYSTEM = "system"
+        const val SOURCE_MANUAL = "manual"
+
+        fun systemContrastLevel(context: Context): Double? {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                return null
+            }
+            return context.getSystemService<UiModeManager>()
+                ?.contrast
+                ?.toDouble()
+                ?.coerceIn(Contrast.Reduced.value, Contrast.High.value)
+        }
+
+        fun resolveContrastLevel(context: Context): Double {
+            return when (ThemeConfig.customContrastSource) {
+                SOURCE_MANUAL -> {
+                    ThemeConfig.customContrastManual
+                        .toDoubleOrNull()
+                        ?.coerceIn(Contrast.Reduced.value, Contrast.High.value)
+                        ?: Contrast.Default.value
+                }
+
+                else -> systemContrastLevel(context) ?: Contrast.Default.value
+            }
+        }
+    }
 }
