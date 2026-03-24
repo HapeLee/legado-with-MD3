@@ -2,8 +2,6 @@ package io.legado.app.ui.config.themeConfig
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -33,7 +31,6 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -41,9 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
@@ -89,7 +84,6 @@ import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 
@@ -105,7 +99,6 @@ fun ThemeConfigScreen(
 
     var selectedThemeMode by remember { mutableStateOf(ThemeConfig.themeMode) }
     var selectedTheme by remember { mutableStateOf(ThemeConfig.appTheme) }
-    var showRestartDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
 
@@ -188,15 +181,9 @@ fun ThemeConfigScreen(
                                 AppConfig.containerOpacity = 0
                             }
                         }
-                        val oldTheme = selectedTheme
                         selectedTheme = theme
                         ThemeConfig.appTheme = theme
-                        val isDynamicSwitch = (oldTheme == "12" || theme == "12")
-                        if (isDynamicSwitch) {
-                            showRestartDialog = true
-                        } else {
-                            postEvent(EventBus.RECREATE, "")
-                        }
+                        postEvent(EventBus.RECREATE, "")
                     }
                 )
             }
@@ -405,31 +392,6 @@ fun ThemeConfigScreen(
                 }
             }
         }
-    }
-
-    if (showRestartDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestartDialog = false },
-            title = { Text(stringResource(R.string.restart_required_message)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    showRestartDialog = false
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        context.restart()
-                    }, 100)
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showRestartDialog = false
-                    context.toastOnUi(R.string.restart_later_message)
-                }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
-        )
     }
 
     manageKey?.let { isDark ->
