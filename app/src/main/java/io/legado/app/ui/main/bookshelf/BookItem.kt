@@ -32,9 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.help.book.isLocal
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.cover.BookCoverWithProgress
@@ -197,7 +195,7 @@ fun BookshelfItem(
 
 @Composable
 fun BookGroupCover(
-    books: List<Book>,
+    books: List<BookShelfItem>,
     coverPath: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -289,7 +287,7 @@ fun BookGroupCover(
 @Composable
 fun BookGroupItemGrid(
     group: BookGroup,
-    previewBooks: List<Book>,
+    previewBooks: List<BookShelfItem>,
     gridStyle: Int = 0,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
@@ -318,7 +316,7 @@ fun BookGroupItemGrid(
 @Composable
 fun BookGroupItemList(
     group: BookGroup,
-    previewBooks: List<Book>,
+    previewBooks: List<BookShelfItem>,
     isCompact: Boolean = false,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
@@ -348,7 +346,7 @@ fun BookGroupItemList(
 
 @Composable
 fun BookItem(
-    book: Book,
+    book: BookShelfItem,
     layoutMode: Int,
     gridStyle: Int = 0,
     isCompact: Boolean = false,
@@ -374,7 +372,7 @@ fun BookItem(
                 isUpdating = isUpdating,
                 modifier = modifier,
                 badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
-                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0 && book.lastCheckCount > 0
+                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0
             )
         },
         title = book.name,

@@ -50,6 +50,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.main.bookshelf.BookShelfItem
 import splitties.systemservices.clipboardManager
 import splitties.systemservices.connectivityManager
 import splitties.systemservices.uiModeManager
@@ -66,6 +67,22 @@ inline fun <reified A : Activity> Context.startActivity(configIntent: Intent.() 
 
 fun Context.startActivityForBook(
     book: Book,
+    configIntent: Intent.() -> Unit = {},
+) {
+    val cls = when {
+        book.isAudio -> AudioPlayActivity::class.java
+        !book.isLocal && book.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
+        else -> ReadBookActivity::class.java
+    }
+    val intent = Intent(this, cls)
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    intent.putExtra("bookUrl", book.bookUrl)
+    intent.apply(configIntent)
+    startActivity(intent)
+}
+
+fun Context.startActivityForBook(
+    book: BookShelfItem,
     configIntent: Intent.() -> Unit = {},
 ) {
     val cls = when {
@@ -464,4 +481,3 @@ fun Context.themeColor(attr: Int): Int {
         typedValue.data
     }
 }
-

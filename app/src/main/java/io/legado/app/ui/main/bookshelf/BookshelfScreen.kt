@@ -11,14 +11,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileOpen
@@ -65,7 +70,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.data.entities.Book
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.cache.CacheActivity
 import io.legado.app.ui.book.import.local.ImportBookActivity
@@ -74,10 +78,12 @@ import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.ListScaffold
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.utils.readText
 import io.legado.app.utils.startActivity
@@ -94,8 +100,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
-    onBookClick: (Book) -> Unit,
-    onBookLongClick: (Book) -> Unit
+    onBookClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (BookShelfItem) -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -107,6 +113,7 @@ fun BookshelfScreen(
     var showConfigSheet by remember { mutableStateOf(false) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
     var showLogSheet by remember { mutableStateOf(false) }
+    var showGroupMenu by remember { mutableStateOf(false) }
 
     val clipboardManager = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -309,29 +316,69 @@ fun BookshelfScreen(
                 if (uiState.groups.isNotEmpty()) {
                     val selectedTabIndex =
                         pagerState.currentPage.coerceIn(0, uiState.groups.size - 1)
-                    PrimaryScrollableTabRow(
-                        selectedTabIndex = selectedTabIndex,
-                        edgePadding = 0.dp,
-                        divider = { },
-                        containerColor = GlassTopAppBarDefaults.containerColor(),
-                        minTabWidth = 0.dp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        uiState.groups.forEachIndexed { index, group ->
-                            Tab(
-                                selected = selectedTabIndex == index,
-                                onClick = {
-                                    scope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                text = {
-                                    Text(
-                                        text = group.groupName,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 8.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                        PrimaryScrollableTabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            edgePadding = 0.dp,
+                            divider = { },
+                            containerColor = GlassTopAppBarDefaults.containerColor(),
+                            minTabWidth = 0.dp,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            uiState.groups.forEachIndexed { index, group ->
+                                Tab(
+                                    selected = selectedTabIndex == index,
+                                    onClick = {
+                                        scope.launch { pagerState.animateScrollToPage(index) }
+                                    },
+                                    text = {
+                                        Text(
+                                            text = group.groupName,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        if (BookshelfConfig.shouldShowExpandButton) {
+                            Box(modifier = Modifier.padding(end = 16.dp)) {
+                                SmallOutlinedIconToggleButton(
+                                    checked = showGroupMenu,
+                                    onCheckedChange = { showGroupMenu = it },
+                                    icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    contentDescription = stringResource(R.string.group_manage)
+                                )
+                                RoundDropdownMenu(
+                                    expanded = showGroupMenu,
+                                    onDismissRequest = { showGroupMenu = false }
+                                ) { dismiss ->
+                                    uiState.groups.forEachIndexed { index, group ->
+                                        RoundDropdownMenuItem(
+                                            text = { Text(group.groupName) },
+                                            onClick = {
+                                                scope.launch { pagerState.animateScrollToPage(index) }
+                                                dismiss()
+                                            },
+                                            trailingIcon = {
+                                                if (selectedTabIndex == index) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -533,12 +580,12 @@ fun BookshelfScreen(
 @Composable
 fun BookshelfPage(
     paddingValues: PaddingValues,
-    books: List<Book>,
+    books: List<BookShelfItem>,
     uiState: BookshelfUiState,
     bookshelfLayoutMode: Int,
     bookshelfLayoutGrid: Int,
-    onBookClick: (Book) -> Unit,
-    onBookLongClick: (Book) -> Unit
+    onBookClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (BookShelfItem) -> Unit
 ) {
     FastScrollLazyVerticalGrid(
         columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),

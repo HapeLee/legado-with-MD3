@@ -22,7 +22,6 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
-import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isUpError
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.sync
@@ -123,13 +122,15 @@ class BookshelfViewModel(
     val allGroupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val allBooksFlow = appDb.bookDao.flowAll().flowOn(Dispatchers.Default)
+    private val allBooksFlow = appDb.bookDao.flowBookShelf().flowOn(Dispatchers.Default)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
         .flatMapLatest { groupId ->
             appDb.bookDao.flowByGroup(groupId).map { list ->
-                sortBooks(list, groupsFlow.value.find { it.groupId == groupId })
+                sortBooks(
+                    list.map { it.toBookShelfItem() },
+                    groupsFlow.value.find { it.groupId == groupId })
             }
         }.flowOn(Dispatchers.Default)
 
@@ -269,7 +270,7 @@ class BookshelfViewModel(
         upTocPool.close()
     }
 
-    private fun sortBooks(list: List<Book>, group: BookGroup?): List<Book> {
+    private fun sortBooks(list: List<BookShelfItem>, group: BookGroup?): List<BookShelfItem> {
         val bookSort = group?.getRealBookSort() ?: BookshelfConfig.bookshelfSort
         val isDescending = BookshelfConfig.bookshelfSortOrder == 1
 
@@ -304,7 +305,7 @@ class BookshelfViewModel(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun getBooksFlow(groupId: Long): Flow<List<Book>> {
+    fun getBooksFlow(groupId: Long): Flow<List<BookShelfItem>> {
         return combine(
             appDb.bookDao.flowByGroup(groupId),
             searchKeyFlow,
@@ -312,10 +313,11 @@ class BookshelfViewModel(
             refreshTrigger
         ) { books, searchKey, groups, _ ->
             val group = groups.find { it.groupId == groupId }
+            val bookshelfItems = books.map { it.toBookShelfItem() }
             val filtered = if (searchKey.isEmpty()) {
-                books
+                bookshelfItems
             } else {
-                books.filter {
+                bookshelfItems.filter {
                     it.name.contains(searchKey, true) || it.author.contains(searchKey, true)
                 }
             }
@@ -349,13 +351,11 @@ class BookshelfViewModel(
         }
     }
 
-    fun upToc(books: List<Book>) {
+    fun upToc(books: List<BookShelfItem>) {
         execute(context = upTocPool) {
-            books.filter {
-                !it.isLocal && it.canUpdate
-            }.let {
-                addToWaitUp(it)
-            }
+            val bookUrls = books.filter { !it.isLocal && it.canUpdate }.map { it.bookUrl }
+            val fullBooks = bookUrls.mapNotNull { appDb.bookDao.getBook(it) }
+            addToWaitUp(fullBooks)
         }
     }
 
@@ -562,17 +562,20 @@ class BookshelfViewModel(
         }
     }
 
-    fun exportToUri(uri: Uri, books: List<Book>) {
+    fun exportToUri(uri: Uri, items: List<BookShelfItem>) {
         execute {
             context.contentResolver.openOutputStream(uri)?.use { out ->
                 val writer = JsonWriter(OutputStreamWriter(out, "UTF-8"))
                 writer.setIndent("  ")
                 writer.beginArray()
-                books.forEach {
+                items.forEach {
                     val bookMap = hashMapOf<String, String?>()
                     bookMap["name"] = it.name
                     bookMap["author"] = it.author
-                    bookMap["intro"] = it.getDisplayIntro()
+                    // intro is not in BookShelfItem, fetch from DB if needed or skip
+                    // For now, let's keep it simple and skip intro or fetch it
+                    val fullBook = appDb.bookDao.getBook(it.bookUrl)
+                    bookMap["intro"] = fullBook?.getDisplayIntro()
                     GSON.toJson(bookMap, bookMap::class.java, writer)
                 }
                 writer.endArray()
@@ -585,14 +588,15 @@ class BookshelfViewModel(
         }
     }
 
-    fun uploadBookshelf(books: List<Book>) {
+    fun uploadBookshelf(items: List<BookShelfItem>) {
         execute {
             val json = withContext(Dispatchers.Default) {
-                val list = books.map {
+                val list = items.map {
                     val bookMap = hashMapOf<String, String?>()
                     bookMap["name"] = it.name
                     bookMap["author"] = it.author
-                    bookMap["intro"] = it.getDisplayIntro()
+                    val fullBook = appDb.bookDao.getBook(it.bookUrl)
+                    bookMap["intro"] = fullBook?.getDisplayIntro()
                     bookMap
                 }
                 GSON.toJson(list)
@@ -619,9 +623,9 @@ class BookshelfViewModel(
         }
     }
 
-    fun exportBookshelf(books: List<Book>?, success: (file: File) -> Unit) {
+    fun exportBookshelf(items: List<BookShelfItem>?, success: (file: File) -> Unit) {
         execute {
-            books?.let {
+            items?.let {
                 val path = "${context.filesDir}/books.json"
                 FileUtils.delete(path)
                 val file = FileUtils.createFileWithReplace(path)
@@ -629,11 +633,12 @@ class BookshelfViewModel(
                     val writer = JsonWriter(OutputStreamWriter(out, "UTF-8"))
                     writer.setIndent("  ")
                     writer.beginArray()
-                    books.forEach {
+                    items.forEach {
                         val bookMap = hashMapOf<String, String?>()
                         bookMap["name"] = it.name
                         bookMap["author"] = it.author
-                        bookMap["intro"] = it.getDisplayIntro()
+                        val fullBook = appDb.bookDao.getBook(it.bookUrl)
+                        bookMap["intro"] = fullBook?.getDisplayIntro()
                         GSON.toJson(bookMap, bookMap::class.java, writer)
                     }
                     writer.endArray()
