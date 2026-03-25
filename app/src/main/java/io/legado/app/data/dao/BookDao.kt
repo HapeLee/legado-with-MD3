@@ -13,7 +13,6 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.ui.main.bookshelf.BookShelfItem
-import io.legado.app.ui.main.bookshelf.toBookShelfItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -41,8 +40,22 @@ interface BookDao {
     }
 
     fun flowBookShelfByGroup(groupId: Long): Flow<List<BookShelfItem>> {
-        return flowByGroup(groupId).map { list ->
-            list.map { it.toBookShelfItem() }
+        return when (groupId) {
+            BookGroup.IdRoot -> flowBookShelfRoot()
+            BookGroup.IdAll -> flowBookShelf()
+            BookGroup.IdLocal -> flowBookShelfLocal()
+            BookGroup.IdAudio -> flowBookShelfAudio()
+            BookGroup.IdNetNone -> flowBookShelfNetNoGroup()
+            BookGroup.IdLocalNone -> flowBookShelfLocalNoGroup()
+            BookGroup.IdManga -> flowBookShelfManga()
+            BookGroup.IdText -> flowBookShelfText()
+            BookGroup.IdError -> flowBookShelfUpdateError()
+            BookGroup.IdUnread -> flowBookShelfUnread()
+            BookGroup.IdReading -> flowBookShelfReading()
+            BookGroup.IdReadFinished -> flowBookShelfReadFinished()
+            else -> flowBookShelfByUserGroup(groupId)
+        }.map { list ->
+            list.filterNot { it.isNotShelf }
         }
     }
 
@@ -55,6 +68,34 @@ interface BookDao {
         """
     )
     fun flowRoot(): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        where type & ${BookType.text} > 0
+        and type & ${BookType.local} = 0
+        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        and (select show from book_groups where groupId = ${BookGroup.IdNetNone}) != 1
+        """
+    )
+    fun flowBookShelfRoot(): Flow<List<BookShelfItem>>
 
     @Query("SELECT * FROM books order by durChapterTime desc")
     fun flowAll(): Flow<List<Book>>
@@ -87,8 +128,58 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE type & ${BookType.audio} > 0")
     fun flowAudio(): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE type & ${BookType.audio} > 0
+        """
+    )
+    fun flowBookShelfAudio(): Flow<List<BookShelfItem>>
+
     @Query("SELECT * FROM books WHERE type & ${BookType.local} > 0")
     fun flowLocal(): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE type & ${BookType.local} > 0
+        """
+    )
+    fun flowBookShelfLocal(): Flow<List<BookShelfItem>>
 
     @Query(
         """
@@ -100,35 +191,288 @@ interface BookDao {
 
     @Query(
         """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0
+        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        """
+    )
+    fun flowBookShelfNetNoGroup(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
         select * from books where type & ${BookType.local} > 0
         and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
         """
     )
     fun flowLocalNoGroup(): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        where type & ${BookType.local} > 0
+        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        """
+    )
+    fun flowBookShelfLocalNoGroup(): Flow<List<BookShelfItem>>
+
     @Query("SELECT * FROM books WHERE (`group` & :group) > 0")
     fun flowByUserGroup(group: Long): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE (`group` & :group) > 0
+        """
+    )
+    fun flowBookShelfByUserGroup(group: Long): Flow<List<BookShelfItem>>
 
     @Query("SELECT * FROM books WHERE name like '%'||:key||'%' or author like '%'||:key||'%'")
     fun flowSearch(key: String): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE name like '%'||:key||'%' or author like '%'||:key||'%'
+        """
+    )
+    fun flowBookShelfSearch(key: String): Flow<List<BookShelfItem>>
+
     @Query("SELECT * FROM books where type & ${BookType.updateError} > 0 order by durChapterTime desc")
     fun flowUpdateError(): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        where type & ${BookType.updateError} > 0 
+        order by durChapterTime desc
+        """
+    )
+    fun flowBookShelfUpdateError(): Flow<List<BookShelfItem>>
 
     @Query("""SELECT * FROM books WHERE durChapterIndex = 0 AND durChapterPos = 0""")
     fun flowUnread(): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE durChapterIndex = 0 AND durChapterPos = 0
+        """
+    )
+    fun flowBookShelfUnread(): Flow<List<BookShelfItem>>
+
     @Query("""SELECT * FROM books WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1""")
     fun flowReadFinished(): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+        """
+    )
+    fun flowBookShelfReadFinished(): Flow<List<BookShelfItem>>
 
     @Query("""SELECT * FROM books WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1""")
     fun flowReading(): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
+        """
+    )
+    fun flowBookShelfReading(): Flow<List<BookShelfItem>>
+
     @Query("SELECT * FROM books WHERE type & ${BookType.image} > 0")
     fun flowManga(): Flow<List<Book>>
 
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE type & ${BookType.image} > 0
+        """
+    )
+    fun flowBookShelfManga(): Flow<List<BookShelfItem>>
+
     @Query("SELECT * FROM books WHERE type & ${BookType.text} > 0")
     fun flowText(): Flow<List<Book>>
+
+    @Query(
+        """
+        SELECT 
+            bookUrl,
+            name,
+            author,
+            coverUrl,
+            customCoverUrl,
+            durChapterTitle,
+            durChapterTime,
+            durChapterPos,
+            latestChapterTitle,
+            latestChapterTime,
+            totalChapterNum,
+            durChapterIndex,
+            type,
+            `group`,
+            `order`,
+            canUpdate
+        FROM books 
+        WHERE type & ${BookType.text} > 0
+        """
+    )
+    fun flowBookShelfText(): Flow<List<BookShelfItem>>
 
     @Query("SELECT * FROM books WHERE (`group` & :group) > 0")
     fun getBooksByGroup(group: Long): List<Book>

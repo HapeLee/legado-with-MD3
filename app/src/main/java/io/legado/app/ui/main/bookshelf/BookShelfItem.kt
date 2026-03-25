@@ -32,6 +32,8 @@ data class BookShelfItem(
 
     val isImage: Boolean get() = (type and BookType.image) > 0
 
+    val isNotShelf: Boolean get() = (type and BookType.notShelf) > 0
+
     fun getUnreadChapterNum() = max(totalChapterNum - durChapterIndex - 1, 0)
 }
 

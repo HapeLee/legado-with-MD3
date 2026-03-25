@@ -77,15 +77,25 @@ object BookCover {
         return paths[random.nextInt(paths.size)]
     }
 
+    // 缓存随机封面 Drawable，避免重复解码
+    private val randomDrawableCache = mutableMapOf<String, Drawable>()
+
     fun getRandomDefaultDrawable(
         seed: Any? = null,
         isNight: Boolean = AppConfig.isNightTheme
     ): Drawable {
         val randomPath = getRandomDefaultPath(seed, isNight)
             ?: return appCtx.resources.getDrawable(R.drawable.image_cover_default, null)
-        return kotlin.runCatching {
-            BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
-        }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
+
+        // 生成缓存键
+        val cacheKey = "$randomPath-${isNight}"
+
+        // 从缓存中获取，如果没有则解码并缓存
+        return randomDrawableCache.getOrPut(cacheKey) {
+            kotlin.runCatching {
+                BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
+            }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
+        }
     }
 
     /**
