@@ -123,16 +123,15 @@ class BookshelfViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val allBooksFlow = appDb.bookDao.flowBookShelf()
-        .map { list -> list.map { it.toBookShelfItem() } }
         .distinctUntilChanged()
         .flowOn(Dispatchers.Default)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
         .flatMapLatest { groupId ->
-            appDb.bookDao.flowByGroup(groupId).map { list ->
+            appDb.bookDao.flowBookShelfByGroup(groupId).map { list ->
                 sortBooks(
-                    list.map { it.toBookShelfItem() },
+                    list,
                     groupsFlow.value.find { it.groupId == groupId })
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
@@ -310,17 +309,16 @@ class BookshelfViewModel(
     @OptIn(ExperimentalCoroutinesApi::class)
     fun getBooksFlow(groupId: Long): Flow<List<BookShelfItem>> {
         return combine(
-            appDb.bookDao.flowByGroup(groupId),
+            appDb.bookDao.flowBookShelfByGroup(groupId),
             searchKeyFlow,
             groupsFlow,
             refreshTrigger
         ) { books, searchKey, groups, _ ->
             val group = groups.find { it.groupId == groupId }
-            val bookshelfItems = books.map { it.toBookShelfItem() }
             val filtered = if (searchKey.isEmpty()) {
-                bookshelfItems
+                books
             } else {
-                bookshelfItems.filter {
+                books.filter {
                     it.name.contains(searchKey, true) || it.author.contains(searchKey, true)
                 }
             }

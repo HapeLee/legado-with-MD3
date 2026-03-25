@@ -13,6 +13,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.ui.main.bookshelf.BookShelfItem
+import io.legado.app.ui.main.bookshelf.toBookShelfItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -36,6 +37,12 @@ interface BookDao {
             else -> flowByUserGroup(groupId)
         }.map { list ->
             list.filterNot { it.isNotShelf }
+        }
+    }
+
+    fun flowBookShelfByGroup(groupId: Long): Flow<List<BookShelfItem>> {
+        return flowByGroup(groupId).map { list ->
+            list.map { it.toBookShelfItem() }
         }
     }
 

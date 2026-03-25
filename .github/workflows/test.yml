@@ -230,38 +230,6 @@ jobs:
           if-no-files-found: ignore
           path: ${{ github.workspace }}/mapping/mapping.txt
 
-
-  test_Branch:
-    needs: [ prepare, build ]
-    runs-on: ubuntu-latest
-    # 仅在所有者的非 PR 事件时执行（即所有者 push 到 main 分支时）
-    if: ${{ github.event_name != 'pull_request' && github.actor == 'HapeLee' }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v5
-        with:
-          pattern: '*-apk-release'
-          path: apk/
-          merge-multiple: true
-      - working-directory: apk/
-        run: |
-          # 使用 find 安全地移动文件
-          find . -type f -name "*.apk" -exec mv {} . \;
-          # 清理子目录
-          find . -type d -mindepth 1 -exec rm -rf {} +
-
-      - name: Push To "test" Branch
-        run: |
-          cd $GITHUB_WORKSPACE/apk/
-          git init
-          git checkout -b test
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git remote add origin "https://${{ github.actor }}:${{ secrets.ACTIONS_TOKEN }}@github.com/${{ github.actor }}/release"
-          git add *.apk
-          git commit -m "${{ needs.prepare.outputs.versionL }}"
-          git push -f -u origin test
-
   create_release:
     needs: [ prepare, build ]
     # 仅在所有者的 push 到 main 分支时执行发布
