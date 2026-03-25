@@ -92,7 +92,8 @@ class PermissionActivity : AppCompatActivity() {
             val settingIntent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
             settingIntent.data = Uri.fromParts("package", packageName, null)
             settingActivityResult.launch(settingIntent)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLog.put("Failed to open manage all files settings", e, true)
             openSettingsActivity()
         }
     }
@@ -109,7 +110,8 @@ class PermissionActivity : AppCompatActivity() {
             try {
                 settingActivityResult.launch(intent)
                 return
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                AppLog.put("Failed to open battery settings intent: $intent", e, true)
             }
         }
 
@@ -122,7 +124,8 @@ class PermissionActivity : AppCompatActivity() {
                 putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
             }
             settingActivityResult.launch(settingIntent)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            AppLog.put("Failed to open notification settings", e, true)
             openSettingsActivity()
         }
     }
