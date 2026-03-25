@@ -30,7 +30,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonGroup
 import com.google.android.material.overflow.OverflowLinearLayout
 import com.google.android.material.slider.Slider
-import com.google.android.material.shape.MaterialShapeDrawable
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ViewReadMenuBinding
@@ -233,11 +232,9 @@ class ReadMenu @JvmOverloads constructor(
             val allButtons = getUserButtons()
             renderButtons(binding.bottomView, allButtons)
         }
-        (titleBar.background as? MaterialShapeDrawable)?.fillColor = ColorStateList.valueOf(alphaBgColor)
-        (titleBar.toolbar.background as? MaterialShapeDrawable)?.fillColor = ColorStateList.valueOf(alphaBgColor)
-        bottomView.background = MaterialShapeDrawable().apply {
-            fillColor = ColorStateList.valueOf(alphaBgColor)
-        }
+        titleBar.setBackgroundColor(alphaBgColor)
+        titleBar.toolbar.setBackgroundColor(alphaBgColor)
+        bottomView.setBackgroundColor(alphaBgColor)
         (tvPre.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
         (tvNext.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
         cdSlider.setCardBackgroundColor(alphaBgColor)
