@@ -204,6 +204,9 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     private fun initView() = binding.run {
+        val bgColor = this@ReadMenu.bgColor
+        val acColor = this@ReadMenu.acColor
+        val bgcColor = this@ReadMenu.bgcColor
         initAnimation()
         updateSliderVisibility()
         val brightnessBackground = GradientDrawable()
@@ -257,7 +260,8 @@ class ReadMenu @JvmOverloads constructor(
         }
     }
 
-    fun updateToolBarColor(){
+    fun updateToolBarColor() {
+        val acColor = this@ReadMenu.acColor
         binding.titleBar.toolbar.navigationIcon?.setTint(acColor)
         binding.titleBar.toolbar.apply {
             setTitleTextColor(acColor)
@@ -270,7 +274,6 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     fun reset() {
-        upColorConfig()
         initView()
         updateToolBarColor()
         upBookView()
@@ -280,25 +283,6 @@ class ReadMenu @JvmOverloads constructor(
 //        if (immersiveMenu) {
 //            //binding.titleBar.setColorFilter(textColor)
 //        }
-    }
-
-    private fun upColorConfig() {
-//        bgColor = if (immersiveMenu) {
-//            kotlin.runCatching {
-//                Color.parseColor(ReadBookConfig.durConfig.curBgStr())
-//            }.getOrDefault(context.bottomBackground)
-//        } else {
-//            context.bottomBackground
-//        }
-//        textColor = if (immersiveMenu) {
-//            ReadBookConfig.durConfig.curTextColor()
-//        } else {
-//            context.getPrimaryTextColor(ColorUtils.isColorLight(bgColor))
-//        }
-//        bottomBackgroundList = Selector.colorBuild()
-//            .setDefaultColor(bgColor)
-//            .setPressedColor(ColorUtils.darkenColor(bgColor))
-//            .create()
     }
 
     fun upBrightnessState() {
