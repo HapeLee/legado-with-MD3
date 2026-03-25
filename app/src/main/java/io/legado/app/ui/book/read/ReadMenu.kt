@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -29,6 +30,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonGroup
 import com.google.android.material.overflow.OverflowLinearLayout
 import com.google.android.material.slider.Slider
+import com.google.android.material.shape.MaterialShapeDrawable
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ViewReadMenuBinding
@@ -207,6 +209,7 @@ class ReadMenu @JvmOverloads constructor(
         val bgColor = this@ReadMenu.bgColor
         val acColor = this@ReadMenu.acColor
         val bgcColor = this@ReadMenu.bgcColor
+        val alphaBgColor = ColorUtils.setAlphaComponent(bgColor, (AppConfig.menuAlpha / 100f * 255).toInt())
         initAnimation()
         updateSliderVisibility()
         val brightnessBackground = GradientDrawable()
@@ -230,9 +233,14 @@ class ReadMenu @JvmOverloads constructor(
             val allButtons = getUserButtons()
             renderButtons(binding.bottomView, allButtons)
         }
-        val alpha = (AppConfig.menuAlpha / 100f * 255).toInt()
-        titleBar.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
-        cdSlider.setCardBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
+        (titleBar.background as? MaterialShapeDrawable)?.fillColor = ColorStateList.valueOf(alphaBgColor)
+        (titleBar.toolbar.background as? MaterialShapeDrawable)?.fillColor = ColorStateList.valueOf(alphaBgColor)
+        bottomView.background = MaterialShapeDrawable().apply {
+            fillColor = ColorStateList.valueOf(alphaBgColor)
+        }
+        (tvPre.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
+        (tvNext.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
+        cdSlider.setCardBackgroundColor(alphaBgColor)
         seekReadPage.trackInactiveTintList = ColorStateList.valueOf(bgcColor)
         seekReadPage.trackActiveTintList = ColorStateList.valueOf(acColor)
         seekReadPage.thumbTintList = ColorStateList.valueOf(acColor)
@@ -255,7 +263,6 @@ class ReadMenu @JvmOverloads constructor(
         if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             binding.bottomMenu.applyNavigationBarPadding()
         } else {
-            bottomView.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
             binding.bottomView.applyNavigationBarPadding()
         }
     }
