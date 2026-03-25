@@ -1,14 +1,17 @@
 package io.legado.app.ui.widget.components.topbar
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -16,17 +19,22 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import io.legado.app.ui.widget.components.AdaptiveAnimatedText
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
@@ -56,7 +64,21 @@ fun <T> DynamicTopAppBar(
     var showMenu by remember { mutableStateOf(false) }
     val isSelecting = state.selectedIds.isNotEmpty()
 
-    Column {
+    val containerColor = GlassTopAppBarDefaults.containerColor()
+    val scrolledColor = GlassTopAppBarDefaults.scrolledContainerColor()
+
+    val collapsedFraction = scrollBehavior.state.collapsedFraction
+
+    val animatedColor by animateColorAsState(
+        targetValue = lerp(containerColor, scrolledColor, collapsedFraction),
+        label = "TopBarContainerColor"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(animatedColor)
+    ) {
         GlassMediumFlexibleTopAppBar(
             title = {
                 val titleText = when {
@@ -110,7 +132,11 @@ fun <T> DynamicTopAppBar(
                     }
                 }
             },
-            scrollBehavior = scrollBehavior
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                scrolledContainerColor = Color.Transparent
+            )
         )
 
         AnimatedVisibility(

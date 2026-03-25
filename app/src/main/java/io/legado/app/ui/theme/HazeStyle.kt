@@ -40,11 +40,13 @@ fun Modifier.responsiveHazeEffect(
         state = state,
         style = style
     ) {
-        if (enableProgressiveBlur) {
-            progressive = HazeProgressive.verticalGradient(
+        progressive = if (enableProgressiveBlur) {
+            HazeProgressive.verticalGradient(
                 startIntensity = 1f,
                 endIntensity = 0f
             )
+        } else {
+            null
         }
     }
 }
