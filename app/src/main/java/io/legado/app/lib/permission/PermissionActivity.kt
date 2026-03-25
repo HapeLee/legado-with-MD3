@@ -3,6 +3,7 @@ package io.legado.app.lib.permission
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -15,6 +16,7 @@ import io.legado.app.utils.toastOnUi
 class PermissionActivity : AppCompatActivity() {
 
     private var rationaleDialog: AlertDialog? = null
+    private var requestType: Int = Request.TYPE_REQUEST_PERMISSION
 
     private val settingActivityResult =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -25,18 +27,32 @@ class PermissionActivity : AppCompatActivity() {
             if (result.values.all { it }) {
                 onRequestPermissionFinish()
             } else {
-                openSettingsActivity()
+                openFollowupSettingsForRequestType()
             }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestType = intent.getIntExtra(KEY_INPUT_REQUEST_TYPE, Request.TYPE_REQUEST_PERMISSION)
         val rationale = intent.getStringExtra(KEY_RATIONALE)
-        val permissions = intent.getStringArrayExtra(KEY_INPUT_PERMISSIONS)!!
+        val permissions = intent.getStringArrayExtra(KEY_INPUT_PERMISSIONS) ?: emptyArray()
 
         showSettingDialog(permissions, rationale) {
             try {
-                requestPermissionsResult.launch(permissions)
+                when (requestType) {
+                    Request.TYPE_REQUEST_SETTING -> openSettingsActivity()
+                    Request.TYPE_MANAGE_ALL_FILES_ACCESS -> openManageAllFilesAccessSettings()
+                    Request.TYPE_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -> openIgnoreBatterySettings()
+                    Request.TYPE_REQUEST_NOTIFICATIONS -> {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            requestPermissionsResult.launch(permissions)
+                        } else {
+                            openNotificationSettings()
+                        }
+                    }
+
+                    else -> requestPermissionsResult.launch(permissions)
+                }
             } catch (e: Exception) {
                 AppLog.put("请求权限出错\n$e", e, true)
                 RequestPlugins.sRequestCallback?.onError(e)
@@ -62,19 +78,50 @@ class PermissionActivity : AppCompatActivity() {
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        RequestPlugins.sRequestCallback?.onRequestPermissionsResult(
-            permissions,
-            grantResults
-        )
-        finish()
+    private fun openFollowupSettingsForRequestType() {
+        when (requestType) {
+            Request.TYPE_MANAGE_ALL_FILES_ACCESS -> openManageAllFilesAccessSettings()
+            Request.TYPE_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS -> openIgnoreBatterySettings()
+            Request.TYPE_REQUEST_NOTIFICATIONS -> openNotificationSettings()
+            else -> openSettingsActivity()
+        }
     }
 
+    private fun openManageAllFilesAccessSettings() {
+        try {
+            val settingIntent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+            settingIntent.data = Uri.fromParts("package", packageName, null)
+            settingActivityResult.launch(settingIntent)
+        } catch (_: Exception) {
+            openSettingsActivity()
+        }
+    }
+
+    private fun openIgnoreBatterySettings() {
+        try {
+            val settingIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            settingIntent.data = Uri.fromParts("package", packageName, null)
+            settingActivityResult.launch(settingIntent)
+        } catch (_: Exception) {
+            try {
+                val settingIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                settingActivityResult.launch(settingIntent)
+            } catch (_: Exception) {
+                openSettingsActivity()
+            }
+        }
+    }
+
+    private fun openNotificationSettings() {
+        try {
+            val settingIntent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+            }
+            settingActivityResult.launch(settingIntent)
+        } catch (_: Exception) {
+            openSettingsActivity()
+        }
+    }
 
     override fun startActivity(intent: Intent) {
         super.startActivity(intent)
