@@ -88,6 +88,14 @@ object GlassTopAppBarDefaults {
     }
 
     @Composable
+    fun scrolledContainerColor(): Color {
+        return GlassDefaults.glassColor(
+            noBlurColor = MaterialTheme.colorScheme.surfaceContainer,
+            blurAlpha = GlassDefaults.TransparentAlpha
+        )
+    }
+
+    @Composable
     fun controlContainerColor(): Color {
         return GlassDefaults.glassColor(
             noBlurColor = MaterialTheme.colorScheme.surfaceContainerHighest,
