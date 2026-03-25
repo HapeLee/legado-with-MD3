@@ -98,18 +98,22 @@ class PermissionActivity : AppCompatActivity() {
     }
 
     private fun openIgnoreBatterySettings() {
-        try {
-            val settingIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-            settingIntent.data = Uri.fromParts("package", packageName, null)
-            settingActivityResult.launch(settingIntent)
-        } catch (_: Exception) {
+        val intentsToTry = listOf(
+            Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                data = Uri.fromParts("package", packageName, null)
+            },
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        )
+
+        for (intent in intentsToTry) {
             try {
-                val settingIntent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                settingActivityResult.launch(settingIntent)
+                settingActivityResult.launch(intent)
+                return
             } catch (_: Exception) {
-                openSettingsActivity()
             }
         }
+
+        openSettingsActivity()
     }
 
     private fun openNotificationSettings() {
