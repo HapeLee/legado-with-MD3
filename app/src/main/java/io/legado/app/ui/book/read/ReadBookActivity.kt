@@ -320,12 +320,6 @@ class ReadBookActivity : BaseReadBookActivity(),
 
         upScreenTimeOut()
         ReadBook.register(this)
-        binding.readMenu.colorSurfaceContainer =
-            themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
-        binding.readMenu.colorSecondary =
-            themeColor(androidx.appcompat.R.attr.colorPrimary)
-        binding.readMenu.colorSecondaryContainer =
-            themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
         binding.cursorLeft.setOnTouchListener(this)
         binding.cursorRight.setOnTouchListener(this)
 

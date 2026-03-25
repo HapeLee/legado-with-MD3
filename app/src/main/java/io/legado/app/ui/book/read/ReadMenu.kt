@@ -94,20 +94,14 @@ class ReadMenu @JvmOverloads constructor(
         fillAfter = true
     }
 
-    var colorSurfaceContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
-        set(value) {
-            field = value
-        }
+    private val colorSurfaceContainer: Int
+        get() = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
 
-    var colorSecondary: Int = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
-        set(value) {
-            field = value
-        }
+    private val colorSecondary: Int
+        get() = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
 
-    var colorSecondaryContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
-        set(value) {
-            field = value
-        }
+    private val colorSecondaryContainer: Int
+        get() = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
 
     private val bgColor: Int
         get() = when (AppConfig.readBarStyle) {
@@ -278,6 +272,7 @@ class ReadMenu @JvmOverloads constructor(
     fun reset() {
         upColorConfig()
         initView()
+        updateToolBarColor()
         upBookView()
     }
 
