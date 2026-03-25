@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.R
 import io.legado.app.data.entities.RuleSub
+import io.legado.app.data.entities.RuleSubType
 import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
@@ -153,17 +154,27 @@ fun RuleSubScreen(
                                 viewModel.toggleSelection(ruleSub)
                             } else {
                                 when (ruleSub.type) {
-                                    0 -> (context as? AppCompatActivity)?.showDialogFragment(
+                                    RuleSubType.BOOK_SOURCE -> (context as? AppCompatActivity)?.showDialogFragment(
                                         ImportBookSourceDialog(ruleSub.url)
                                     )
 
-                                    1 -> (context as? AppCompatActivity)?.showDialogFragment(
+                                    RuleSubType.RSS_SOURCE -> (context as? AppCompatActivity)?.showDialogFragment(
                                         ImportRssSourceDialog(ruleSub.url)
                                     )
 
-                                    2 -> (context as? AppCompatActivity)?.showDialogFragment(
+                                    RuleSubType.REPLACE_RULE -> (context as? AppCompatActivity)?.showDialogFragment(
                                         ImportReplaceRuleDialog(ruleSub.url)
                                     )
+
+                                    RuleSubType.AUTO -> {
+                                        val encodedUrl = java.net.URLEncoder.encode(ruleSub.url, "UTF-8")
+                                        val intent = android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse("legado://import/importonline?src=$encodedUrl")
+                                        )
+                                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        context.startActivity(intent)
+                                    }
                                 }
                             }
                         },

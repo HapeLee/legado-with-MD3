@@ -109,6 +109,7 @@
         <item>书源</item>
         <item>订阅源</item>
         <item>替换规则</item>
+        <item>自动识别</item>
     </string-array>
 
     <string-array name="tip_color">
