@@ -1,9 +1,11 @@
 package io.legado.app.ui.main.bookshelf
 
+import androidx.compose.runtime.Stable
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import kotlin.math.max
 
+@Stable
 data class BookShelfItem(
     val bookUrl: String,
     val name: String,

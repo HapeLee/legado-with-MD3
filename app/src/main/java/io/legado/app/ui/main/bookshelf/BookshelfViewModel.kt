@@ -122,7 +122,10 @@ class BookshelfViewModel(
     val allGroupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val allBooksFlow = appDb.bookDao.flowBookShelf().flowOn(Dispatchers.Default)
+    private val allBooksFlow = appDb.bookDao.flowBookShelf()
+        .map { list -> list.map { it.toBookShelfItem() } }
+        .distinctUntilChanged()
+        .flowOn(Dispatchers.Default)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
@@ -132,7 +135,7 @@ class BookshelfViewModel(
                     list.map { it.toBookShelfItem() },
                     groupsFlow.value.find { it.groupId == groupId })
             }
-        }.flowOn(Dispatchers.Default)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
     private val groupPreviewsFlow =
         combine(groupsFlow, allBooksFlow, refreshTrigger) { groups, allBooks, _ ->
