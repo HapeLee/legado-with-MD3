@@ -168,19 +168,10 @@ object OldThemeConfig {
     fun applyConfig(context: Context, config: Config) {
         try {
             val primary = config.primaryColor.toColorInt()
-            val accent = config.accentColor.toColorInt()
-            val background = config.backgroundColor.toColorInt()
-            val bBackground = config.bottomBackground.toColorInt()
             if (config.isNightTheme) {
                 context.putPrefInt(PreferKey.cNPrimary, primary)
-                context.putPrefInt(PreferKey.cNAccent, accent)
-                context.putPrefInt(PreferKey.cNBackground, background)
-                context.putPrefInt(PreferKey.cNBBackground, bBackground)
             } else {
                 context.putPrefInt(PreferKey.cPrimary, primary)
-                context.putPrefInt(PreferKey.cAccent, accent)
-                context.putPrefInt(PreferKey.cBackground, background)
-                context.putPrefInt(PreferKey.cBBackground, bBackground)
             }
             AppConfig.isNightTheme = config.isNightTheme
             applyDayNight(context)

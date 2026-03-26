@@ -1,11 +1,27 @@
 package io.legado.app.ui.main
 
+import android.content.Context
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseComposeActivity
@@ -23,15 +39,24 @@ import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.config.ConfigNavScreen
+import io.legado.app.ui.config.ConfigTag
+import io.legado.app.ui.config.backupConfig.BackupConfigScreen
+import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.mainConfig.MainConfig
+import io.legado.app.ui.config.otherConfig.OtherConfigScreen
+import io.legado.app.ui.config.readConfig.ReadConfigScreen
+import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -41,7 +66,60 @@ import kotlin.coroutines.suspendCoroutine
  */
 open class MainActivity : BaseComposeActivity() {
 
+    companion object {
+        const val EXTRA_START_ROUTE = "startRoute"
+        private const val ROUTE_MAIN = "main"
+        private const val ROUTE_SETTINGS = "settings"
+        private const val ROUTE_SETTINGS_OTHER = "settings/other"
+        private const val ROUTE_SETTINGS_READ = "settings/read"
+        private const val ROUTE_SETTINGS_COVER = "settings/cover"
+        private const val ROUTE_SETTINGS_THEME = "settings/theme"
+        private const val ROUTE_SETTINGS_BACKUP = "settings/backup"
+
+        fun createIntent(context: Context, configTag: String? = null): Intent {
+            return Intent(context, MainActivity::class.java).apply {
+                putExtra(EXTRA_START_ROUTE, routeForConfigTag(configTag))
+            }
+        }
+
+        private fun routeForConfigTag(configTag: String?): String {
+            return when (configTag) {
+                ConfigTag.OTHER_CONFIG -> ROUTE_SETTINGS_OTHER
+                ConfigTag.READ_CONFIG -> ROUTE_SETTINGS_READ
+                ConfigTag.COVER_CONFIG -> ROUTE_SETTINGS_COVER
+                ConfigTag.THEME_CONFIG -> ROUTE_SETTINGS_THEME
+                ConfigTag.BACKUP_CONFIG -> ROUTE_SETTINGS_BACKUP
+                else -> ROUTE_SETTINGS
+            }
+        }
+    }
+
     private val viewModel by viewModel<MainViewModel>()
+    private val routeEvents = MutableSharedFlow<MainRoute>(extraBufferCapacity = 1)
+
+    @Serializable
+    private sealed interface MainRoute : NavKey
+
+    @Serializable
+    private data object MainRouteHome : MainRoute
+
+    @Serializable
+    private data object MainRouteSettings : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsOther : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsRead : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsCover : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsTheme : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsBackup : MainRoute
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -70,6 +148,12 @@ open class MainActivity : BaseComposeActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        routeEvents.tryEmit(resolveStartRoute(intent))
+    }
+
     @Composable
     override fun Content() {
         val orientation = resources.configuration.orientation
@@ -84,7 +168,169 @@ open class MainActivity : BaseComposeActivity() {
             else -> false
         }
 
-        MainScreen(useRail = useRail)
+        val backStack = rememberNavBackStack(resolveStartRoute(intent))
+
+        LaunchedEffect(backStack) {
+            routeEvents.collect { route ->
+                navigateToRoute(backStack, route)
+            }
+        }
+
+        NavDisplay(
+            backStack = backStack,
+            transitionSpec = {
+                (slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(
+                        durationMillis = 260,
+                        easing = FastOutSlowInEasing
+                    ),
+                    initialOffset = { fullWidth -> fullWidth / 10 }
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 220,
+                        easing = LinearOutSlowInEasing
+                    )
+                )) togetherWith ExitTransition.None
+            },
+            popTransitionSpec = {
+                (slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(
+                        durationMillis = 240,
+                        easing = FastOutSlowInEasing
+                    ),
+                    initialOffset = { fullWidth -> -fullWidth / 8 }
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = LinearOutSlowInEasing
+                    )
+                )) togetherWith
+                        (scaleOut(
+                            targetScale = 0.92f,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) + fadeOut(
+                            animationSpec = tween(durationMillis = 180)
+                        ))
+            },
+            predictivePopTransitionSpec = { _ ->
+                (slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(
+                        durationMillis = 240,
+                        easing = FastOutSlowInEasing
+                    ),
+                    initialOffset = { fullWidth -> -fullWidth / 8 }
+                ) + fadeIn(
+                    animationSpec = tween(
+                        durationMillis = 200,
+                        easing = LinearOutSlowInEasing
+                    )
+                )) togetherWith
+                        (scaleOut(
+                            targetScale = 0.92f,
+                            animationSpec = tween(
+                                durationMillis = 220,
+                                easing = FastOutSlowInEasing
+                            )
+                        ) + fadeOut(
+                            animationSpec = tween(durationMillis = 180)
+                        ))
+            },
+            onBack = {
+                if (backStack.size > 1) {
+                    backStack.removeLastOrNull()
+                } else {
+                    finish()
+                }
+            },
+            entryProvider = entryProvider {
+                entry<MainRouteHome> {
+                    MainScreen(
+                        useRail = useRail,
+                        onOpenSettings = {
+                            navigateToRoute(backStack, MainRouteSettings)
+                        }
+                    )
+                }
+
+                entry<MainRouteSettings> {
+                    ConfigNavScreen(
+                        onBackClick = { navigateBack(backStack) },
+                        onNavigateToOther = { backStack.add(MainRouteSettingsOther) },
+                        onNavigateToRead = { backStack.add(MainRouteSettingsRead) },
+                        onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
+                        onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
+                        onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) }
+                    )
+                }
+
+                entry<MainRouteSettingsOther> {
+                    OtherConfigScreen(onBackClick = { navigateBack(backStack) })
+                }
+
+                entry<MainRouteSettingsRead> {
+                    ReadConfigScreen(onBackClick = { navigateBack(backStack) })
+                }
+
+                entry<MainRouteSettingsCover> {
+                    CoverConfigScreen(onBackClick = { navigateBack(backStack) })
+                }
+
+                entry<MainRouteSettingsTheme> {
+                    ThemeConfigScreen(onBackClick = { navigateBack(backStack) })
+                }
+
+                entry<MainRouteSettingsBackup> {
+                    BackupConfigScreen(onBackClick = { navigateBack(backStack) })
+                }
+            }
+        )
+    }
+
+    private fun navigateToRoute(backStack: MutableList<NavKey>, route: MainRoute) {
+        val currentRoute = backStack.lastOrNull()
+        if (currentRoute == route) return
+
+        when (route) {
+            MainRouteHome -> {
+                backStack.clear()
+                backStack.add(MainRouteHome)
+            }
+
+            MainRouteSettings -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(MainRouteSettings)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(MainRouteSettings)
+                }
+            }
+
+            MainRouteSettingsOther,
+            MainRouteSettingsRead,
+            MainRouteSettingsCover,
+            MainRouteSettingsTheme,
+            MainRouteSettingsBackup -> {
+                backStack.clear()
+                backStack.add(MainRouteHome)
+                backStack.add(MainRouteSettings)
+                backStack.add(route)
+            }
+        }
+    }
+
+    private fun navigateBack(backStack: MutableList<NavKey>) {
+        if (backStack.size > 1) {
+            backStack.removeLastOrNull()
+        } else {
+            finish()
+        }
     }
 
     private fun checkStartupRoute(): Boolean {
@@ -194,6 +440,23 @@ open class MainActivity : BaseComposeActivity() {
         }
         if (!BuildConfig.DEBUG) {
             Backup.autoBack(this)
+        }
+    }
+
+    private fun resolveStartRoute(intent: Intent?): MainRoute {
+        return resolveStartRoute(intent?.getStringExtra(EXTRA_START_ROUTE))
+    }
+
+    private fun resolveStartRoute(route: String?): MainRoute {
+        return when (route) {
+            "main" -> MainRouteHome
+            "settings" -> MainRouteSettings
+            "settings/other" -> MainRouteSettingsOther
+            "settings/read" -> MainRouteSettingsRead
+            "settings/cover" -> MainRouteSettingsCover
+            "settings/theme" -> MainRouteSettingsTheme
+            "settings/backup" -> MainRouteSettingsBackup
+            else -> MainRouteHome
         }
     }
 

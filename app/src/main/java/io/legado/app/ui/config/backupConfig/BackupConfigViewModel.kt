@@ -11,6 +11,12 @@ import splitties.init.appCtx
 
 class BackupConfigViewModel : ViewModel() {
 
+    private suspend fun syncWebDavConfig() {
+        withContext(Dispatchers.IO) {
+            AppWebDav.upConfig()
+        }
+    }
+
     fun setWebDavAccount(account: String, password: String) {
         BackupConfig.webDavAccount = account
         BackupConfig.webDavPassword = password
@@ -25,6 +31,7 @@ class BackupConfigViewModel : ViewModel() {
     }
 
     suspend fun testWebDav(): Boolean {
+        syncWebDavConfig()
         return withContext(Dispatchers.IO) {
             try {
                 AppWebDav.testWebDav()
@@ -51,6 +58,7 @@ class BackupConfigViewModel : ViewModel() {
     }
 
     suspend fun getBackupNames(): List<String> {
+        syncWebDavConfig()
         return withContext(Dispatchers.IO) {
             AppWebDav.getBackupNames()
         }
@@ -59,6 +67,7 @@ class BackupConfigViewModel : ViewModel() {
     fun restoreWebDav(name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                AppWebDav.upConfig()
                 AppWebDav.restoreWebDav(name)
                 withContext(Dispatchers.Main) {
                     onSuccess()

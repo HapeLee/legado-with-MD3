@@ -42,6 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -108,6 +109,9 @@ fun ThemeConfigScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
+    var showThemeListDialog by remember { mutableStateOf(false) }
+    var saveThemeKey by remember { mutableStateOf<String?>(null) }
+    var themeName by remember { mutableStateOf("") }
 
     val fontScaleValue = remember { mutableFloatStateOf(ThemeConfig.fontScale.toFloat()) }
     val primaryColorValue = remember { mutableIntStateOf(ThemeConfig.cPrimary) }
@@ -339,6 +343,22 @@ fun ThemeConfigScreen(
                 )
             }
 
+            SplicedColumnGroup(title = stringResource(R.string.share)) {
+                ClickableSettingItem(
+                    title = stringResource(R.string.theme_list),
+                    description = stringResource(R.string.theme_list_summary),
+                    onClick = { showThemeListDialog = true }
+                )
+                ClickableSettingItem(
+                    title = stringResource(R.string.save_theme_config),
+                    description = stringResource(R.string.save_day_theme_summary),
+                    onClick = {
+                        saveThemeKey = "saveDayTheme"
+                        themeName = ""
+                    }
+                )
+            }
+
             SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
                 SwitchSettingItem(
                     title = stringResource(R.string.use_flexible_top_bar),
@@ -480,6 +500,45 @@ fun ThemeConfigScreen(
             onValueChange = {
                 ThemeConfig.launcherIcon = it
                 LauncherIconHelp.changeIcon(it)
+            }
+        )
+    }
+
+    if (showThemeListDialog) {
+        ThemeListDialog(
+            onDismissRequest = { showThemeListDialog = false }
+        )
+    }
+
+    saveThemeKey?.let { key ->
+        AlertDialog(
+            onDismissRequest = { saveThemeKey = null },
+            title = { Text(stringResource(R.string.theme_name)) },
+            text = {
+                OutlinedTextField(
+                    value = themeName,
+                    onValueChange = { themeName = it },
+                    label = { Text("name") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        when (key) {
+                            "saveDayTheme" -> OldThemeConfig.saveDayTheme(context, themeName)
+                            "saveNightTheme" -> OldThemeConfig.saveNightTheme(context, themeName)
+                        }
+                        saveThemeKey = null
+                    }
+                ) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { saveThemeKey = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
             }
         )
     }

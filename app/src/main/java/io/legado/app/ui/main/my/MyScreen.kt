@@ -15,13 +15,11 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Web
@@ -45,8 +43,6 @@ import io.legado.app.ui.book.bookmark.AllBookmarkActivity
 import io.legado.app.ui.book.readRecord.ReadRecordActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
-import io.legado.app.ui.config.ConfigActivity
-import io.legado.app.ui.config.ConfigTag
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
@@ -61,6 +57,7 @@ import io.legado.app.ui.widget.components.settingItem.SettingItem
 @Composable
 fun MyScreen(
     viewModel: MyViewModel,
+    onOpenSettings: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
 
@@ -91,27 +88,20 @@ fun MyScreen(
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(
-                    top = padding.calculateTopPadding()
-                )
                 .verticalScroll(rememberScrollState()),
             //TODO:暂时这样解决，改天加模糊
         ) {
+            Spacer(
+                modifier = Modifier
+                    .padding(
+                        top = padding.calculateTopPadding()
+                    )
+            )
 
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = ""
             ) {
-                SettingItem(
-                    title = stringResource(R.string.book_source_manage),
-                    description = stringResource(R.string.book_source_manage_desc),
-                    imageVector = Icons.Default.Source,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(BookSourceActivity::class.java)
-                        )
-                    }
-                )
                 SettingItem(
                     title = stringResource(R.string.web_service),
                     description = if (uiState.isWebServiceRun)
@@ -149,66 +139,21 @@ fun MyScreen(
                 )
             }
 
-            SplicedColumnGroup(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                title = stringResource(R.string.setting)) {
-                SettingItem(
-                    title = stringResource(R.string.backup_restore),
-                    description = stringResource(R.string.web_dav_set_import_old),
-                    imageVector = Icons.Default.Backup,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(
-                                ConfigActivity::class.java,
-                                ConfigTag.BACKUP_CONFIG
-                            )
-                        )
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.theme_setting),
-                    description = stringResource(R.string.theme_setting_s),
-                    imageVector = Icons.Default.Palette,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(
-                                ConfigActivity::class.java,
-                                ConfigTag.THEME_CONFIG
-                            )
-                        )
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.read),
-                    description = stringResource(R.string.global_read_setting),
-                    imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(
-                                ConfigActivity::class.java,
-                                ConfigTag.READ_CONFIG
-                            )
-                        )
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.other_setting),
-                    description = stringResource(R.string.other_setting_s),
-                    imageVector = Icons.Default.Settings,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(
-                                ConfigActivity::class.java,
-                                ConfigTag.OTHER_CONFIG
-                            )
-                        )
-                    }
-                )
-            }
+
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = "规则"
             ) {
+                SettingItem(
+                    title = stringResource(R.string.book_source_manage),
+                    description = stringResource(R.string.book_source_manage_desc),
+                    imageVector = Icons.Default.Source,
+                    onClick = {
+                        onNavigate(
+                            PrefClickEvent.StartActivity(BookSourceActivity::class.java)
+                        )
+                    }
+                )
                 SettingItem(
                     title = stringResource(R.string.replace_purify),
                     imageVector = Icons.Default.FindReplace,
@@ -229,7 +174,7 @@ fun MyScreen(
                 )
                 SettingItem(
                     title = stringResource(R.string.dict_rule),
-                    imageVector = Icons.AutoMirrored.Filled.Rule,
+                    imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
                     onClick = {
                         onNavigate(
                             PrefClickEvent.StartActivity(DictRuleActivity::class.java)
@@ -237,9 +182,17 @@ fun MyScreen(
                     }
                 )
             }
+
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = stringResource(R.string.other)) {
+                SettingItem(
+                    title = stringResource(R.string.setting),
+                    imageVector = Icons.Default.Settings,
+                    onClick = {
+                        onOpenSettings()
+                    }
+                )
                 SettingItem(
                     title = stringResource(R.string.bookmark),
                     imageVector = Icons.Default.Bookmark,

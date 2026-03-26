@@ -78,7 +78,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
-    useRail: Boolean
+    useRail: Boolean,
+    onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.state.collectAsStateWithLifecycle()
@@ -362,6 +363,7 @@ fun MainScreen(
                         MainDestination.Rss -> RssScreen()
                         MainDestination.My -> MyScreen(
                             viewModel = koinViewModel(),
+                            onOpenSettings = onOpenSettings,
                             onNavigate = { event ->
                                 viewModel.onPrefClickEvent(context, event)
                             }
