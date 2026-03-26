@@ -118,6 +118,20 @@ fun BookshelfConfigSheet(
                     imageVector = Icons.Default.ViewCompact,
                     onValueChange = { BookshelfConfig.bookshelfGridLayout = it.toInt() }
                 )
+                CompactSwitchSettingItem(
+                    title = "标题小字体",
+                    checked = BookshelfConfig.bookshelfTitleSmallFont,
+                    imageVector = Icons.Default.TextFormat,
+                    color = MaterialTheme.colorScheme.surface,
+                    onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
+                )
+
+                CompactSwitchSettingItem(
+                    title = "标题居中",
+                    checked = BookshelfConfig.bookshelfTitleCenter,
+                    color = MaterialTheme.colorScheme.surface,
+                    onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
+                )
             } else {
                 CompactSwitchSettingItem(
                     title = "紧凑模式",
@@ -125,6 +139,13 @@ fun BookshelfConfigSheet(
                     imageVector = Icons.Default.ViewCompact,
                     color = MaterialTheme.colorScheme.surface,
                     onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
+                )
+                CompactSwitchSettingItem(
+                    title = "显示分隔线",
+                    checked = BookshelfConfig.bookshelfShowDivider,
+                    imageVector = Icons.Default.ViewCompact,
+                    color = MaterialTheme.colorScheme.surface,
+                    onCheckedChange = { BookshelfConfig.bookshelfShowDivider = it }
                 )
             }
 
@@ -140,21 +161,6 @@ fun BookshelfConfigSheet(
                     if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape = it.toInt()
                     else BookshelfConfig.bookshelfLayoutGridPortrait = it.toInt()
                 }
-            )
-
-            CompactSwitchSettingItem(
-                title = "标题小字体",
-                checked = BookshelfConfig.bookshelfTitleSmallFont,
-                imageVector = Icons.Default.TextFormat,
-                color = MaterialTheme.colorScheme.surface,
-                onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
-            )
-
-            CompactSwitchSettingItem(
-                title = "标题居中",
-                checked = BookshelfConfig.bookshelfTitleCenter,
-                color = MaterialTheme.colorScheme.surface,
-                onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
             )
 
             CompactSliderSettingItem(

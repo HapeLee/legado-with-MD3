@@ -91,11 +91,14 @@ object BookCover {
         val cacheKey = "$randomPath-${isNight}"
 
         // 从缓存中获取，如果没有则解码并缓存
-        return randomDrawableCache.getOrPut(cacheKey) {
+        val drawable = randomDrawableCache.getOrPut(cacheKey) {
             kotlin.runCatching {
                 BitmapUtils.decodeBitmap(randomPath, 600, 900)!!.toDrawable(appCtx.resources)
             }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
         }
+
+        // 返回克隆的实例并 mutate，防止多个 View 共享状态（如 bounds）导致显示异常
+        return drawable.constantState?.newDrawable()?.mutate() ?: drawable
     }
 
     /**

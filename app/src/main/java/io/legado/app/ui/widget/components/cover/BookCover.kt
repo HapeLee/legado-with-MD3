@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,10 +38,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import io.legado.app.model.BookCover
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.widget.components.card.TextCard
 import org.koin.compose.koinInject
+import io.legado.app.model.BookCover as BookCoverModel
 
 @Composable
 fun BookCover(
@@ -60,34 +61,23 @@ fun BookCover(
     val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
 
-    // 获取随机封面路径（字符串），增加配置项作为 Key，确保设置更改后立即刷新
     val randomPath = remember(
         name, author, path, isNight,
         CoverConfig.defaultCover,
         CoverConfig.defaultCoverDark
     ) {
-        BookCover.getRandomDefaultPath(
+        BookCoverModel.getRandomDefaultPath(
             seed = name ?: author ?: path ?: "",
             isNight = isNight
         )
     }
 
-    // 获取随机封面 Drawable，用于占位图
-    val randomDrawable = remember(
-        name, author, path, isNight,
-        CoverConfig.defaultCover,
-        CoverConfig.defaultCoverDark
-    ) {
-        BookCover.getRandomDefaultDrawable(
-            seed = name ?: author ?: path ?: "",
-            isNight = isNight
-        )
-    }
-
-    // 检查是否有自定义随机封面设置
     val hasCustomDefault = !randomPath.isNullOrBlank()
 
     var isOnlineCoverLoaded by remember(path) { mutableStateOf(false) }
+    LaunchedEffect(finalPath) {
+        isOnlineCoverLoaded = false
+    }
 
     Box(
         modifier = modifier
@@ -104,49 +94,46 @@ fun BookCover(
                 } else Modifier
             )
     ) {
-        // 如果没有自定义随机封面，显示书本图标作为底图
-        // TODO:暂时先用猫猫头
-        /*
-        if (!hasCustomDefault) {
-            Icon(
-                Icons.Default.Book,
+        if (hasCustomDefault) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(randomPath)
+                    .crossfade(true)
+                    .build(),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .size(32.dp)
-                    .align(Alignment.Center)
+                imageLoader = koinInject(),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
             )
         }
-         */
 
-
-        // 1. 封面图层
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(finalPath ?: randomPath)
-                .placeholder(randomDrawable)
-                .error(randomDrawable)
-                .crossfade(true)
-                .setParameter("sourceOrigin", sourceOrigin)
-                .setParameter("loadOnlyWifi", CoverConfig.loadCoverOnlyWifi)
-                .build(),
-            contentDescription = null,
-            imageLoader = koinInject(),
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize(),
-            onSuccess = {
-                if (finalPath != null) {
+        if (finalPath != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(finalPath)
+                    .crossfade(true)
+                    .setParameter("sourceOrigin", sourceOrigin)
+                    .setParameter("loadOnlyWifi", CoverConfig.loadCoverOnlyWifi)
+                    .build(),
+                contentDescription = null,
+                imageLoader = koinInject(),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = {
                     isOnlineCoverLoaded = true
+                    onLoadFinish?.invoke()
+                },
+                onError = {
+                    isOnlineCoverLoaded = false
+                    onLoadFinish?.invoke()
                 }
-                onLoadFinish?.invoke()
-            },
-            onError = {
-                isOnlineCoverLoaded = false
+            )
+        } else {
+            LaunchedEffect(Unit) {
                 onLoadFinish?.invoke()
             }
-        )
+        }
 
-        // 2. 文字叠加层：当没有书籍自身封面（或加载失败）时，在随机底图上绘制书名/作者
         if (!isOnlineCoverLoaded) {
             CoverTextOverlay(
                 name = name,
@@ -155,7 +142,6 @@ fun BookCover(
             )
         }
 
-        // 3. 角标 (Badge)
         if (!badgeText.isNullOrEmpty()) {
             TextCard(
                 text = badgeText,
@@ -218,7 +204,6 @@ private fun CoverTextOverlay(
                     val textPaint = TextPaint(paint).apply {
                         textAlign = Paint.Align.LEFT
                     }
-
                     val layout = StaticLayout.Builder
                         .obtain(name, 0, name.length, textPaint, maxWidth)
                         .setAlignment(Layout.Alignment.ALIGN_CENTER)

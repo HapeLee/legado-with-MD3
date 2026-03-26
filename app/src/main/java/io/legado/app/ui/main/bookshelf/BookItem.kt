@@ -75,6 +75,8 @@ fun BookshelfItem(
 
                 Box(
                     modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(5f / 7f)
                         .then(
                             if (coverShadow) Modifier.shadow(
                                 4.dp,
@@ -83,7 +85,7 @@ fun BookshelfItem(
                         )
                         .clip(MaterialTheme.shapes.extraSmall) // 先阴影后裁剪
                 ) {
-                    cover(Modifier.fillMaxWidth())
+                    cover(Modifier.fillMaxSize())
                     if (gridStyle == 1) {
                         Text(
                             text = title,
@@ -184,7 +186,7 @@ fun BookshelfItem(
                     }
                 }
             }
-            if (!isCompact) HorizontalDivider(
+            if (BookshelfConfig.bookshelfShowDivider) HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 thickness = 0.5.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -205,78 +207,68 @@ fun BookGroupCover(
             .clip(RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        if (coverPath != null) {
-            BookCover(
-                name = "",
-                author = "",
-                path = coverPath,
-                modifier = Modifier.fillMaxSize(),
-                ignoreUseDefaultCover = true
-            )
-        } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(1.dp)
-                    ) {
-                        books.getOrNull(0)?.let {
-                            BookCover(
-                                name = it.name,
-                                author = it.author,
-                                path = it.getDisplayCover(),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(1.dp)
-                    ) {
-                        books.getOrNull(1)?.let {
-                            BookCover(
-                                name = it.name,
-                                author = it.author,
-                                path = it.getDisplayCover(),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(1.dp)
+                ) {
+                    books.getOrNull(0)?.let {
+                        BookCover(
+                            name = it.name,
+                            author = it.author,
+                            path = it.getDisplayCover(),
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
-                Row(modifier = Modifier.weight(1f)) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(1.dp)
-                    ) {
-                        books.getOrNull(2)?.let {
-                            BookCover(
-                                name = it.name,
-                                author = it.author,
-                                path = it.getDisplayCover(),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(1.dp)
+                ) {
+                    books.getOrNull(1)?.let {
+                        BookCover(
+                            name = it.name,
+                            author = it.author,
+                            path = it.getDisplayCover(),
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .padding(1.dp)
-                    ) {
-                        books.getOrNull(3)?.let {
-                            BookCover(
-                                name = it.name,
-                                author = it.author,
-                                path = it.getDisplayCover(),
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                }
+            }
+            Row(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(1.dp)
+                ) {
+                    books.getOrNull(2)?.let {
+                        BookCover(
+                            name = it.name,
+                            author = it.author,
+                            path = it.getDisplayCover(),
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .padding(1.dp)
+                ) {
+                    books.getOrNull(3)?.let {
+                        BookCover(
+                            name = it.name,
+                            author = it.author,
+                            path = it.getDisplayCover(),
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
             }

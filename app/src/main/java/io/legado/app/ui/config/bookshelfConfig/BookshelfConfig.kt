@@ -99,6 +99,11 @@ object BookshelfConfig {
     var bookshelfLayoutCompact by prefDelegate(PreferKey.bookshelfLayoutCompact, false)
 
     /**
+     * 是否显示书架分隔线
+     */
+    var bookshelfShowDivider by prefDelegate(PreferKey.bookshelfShowDivider, true)
+
+    /**
      * 书架标题小字体
      */
     var bookshelfTitleSmallFont by prefDelegate(PreferKey.bookshelfTitleSmallFont, false)
