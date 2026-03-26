@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -94,20 +95,14 @@ class ReadMenu @JvmOverloads constructor(
         fillAfter = true
     }
 
-    var colorSurfaceContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
-        set(value) {
-            field = value
-        }
+    private val colorSurfaceContainer: Int
+        get() = context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
 
-    var colorSecondary: Int = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
-        set(value) {
-            field = value
-        }
+    private val colorSecondary: Int
+        get() = context.themeColor(androidx.appcompat.R.attr.colorPrimary)
 
-    var colorSecondaryContainer: Int = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
-        set(value) {
-            field = value
-        }
+    private val colorSecondaryContainer: Int
+        get() = context.themeColor(com.google.android.material.R.attr.colorSecondaryContainer)
 
     private val bgColor: Int
         get() = when (AppConfig.readBarStyle) {
@@ -210,6 +205,10 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     private fun initView() = binding.run {
+        val bgColor = this@ReadMenu.bgColor
+        val acColor = this@ReadMenu.acColor
+        val bgcColor = this@ReadMenu.bgcColor
+        val alphaBgColor = ColorUtils.setAlphaComponent(bgColor, (AppConfig.menuAlpha / 100f * 255).toInt())
         initAnimation()
         updateSliderVisibility()
         val brightnessBackground = GradientDrawable()
@@ -233,9 +232,12 @@ class ReadMenu @JvmOverloads constructor(
             val allButtons = getUserButtons()
             renderButtons(binding.bottomView, allButtons)
         }
-        val alpha = (AppConfig.menuAlpha / 100f * 255).toInt()
-        titleBar.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
-        cdSlider.setCardBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
+        titleBar.setBackgroundColor(alphaBgColor)
+        titleBar.toolbar.setBackgroundColor(alphaBgColor)
+        bottomView.setBackgroundColor(alphaBgColor)
+        (tvPre.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
+        (tvNext.background as? RippleDrawable)?.setColor(ColorStateList.valueOf(bgcColor))
+        cdSlider.setCardBackgroundColor(alphaBgColor)
         seekReadPage.trackInactiveTintList = ColorStateList.valueOf(bgcColor)
         seekReadPage.trackActiveTintList = ColorStateList.valueOf(acColor)
         seekReadPage.thumbTintList = ColorStateList.valueOf(acColor)
@@ -258,12 +260,12 @@ class ReadMenu @JvmOverloads constructor(
         if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
             binding.bottomMenu.applyNavigationBarPadding()
         } else {
-            bottomView.setBackgroundColor(ColorUtils.setAlphaComponent(bgColor, alpha))
             binding.bottomView.applyNavigationBarPadding()
         }
     }
 
-    fun updateToolBarColor(){
+    fun updateToolBarColor() {
+        val acColor = this@ReadMenu.acColor
         binding.titleBar.toolbar.navigationIcon?.setTint(acColor)
         binding.titleBar.toolbar.apply {
             setTitleTextColor(acColor)
@@ -276,8 +278,8 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     fun reset() {
-        upColorConfig()
         initView()
+        updateToolBarColor()
         upBookView()
     }
 
@@ -285,25 +287,6 @@ class ReadMenu @JvmOverloads constructor(
 //        if (immersiveMenu) {
 //            //binding.titleBar.setColorFilter(textColor)
 //        }
-    }
-
-    private fun upColorConfig() {
-//        bgColor = if (immersiveMenu) {
-//            kotlin.runCatching {
-//                Color.parseColor(ReadBookConfig.durConfig.curBgStr())
-//            }.getOrDefault(context.bottomBackground)
-//        } else {
-//            context.bottomBackground
-//        }
-//        textColor = if (immersiveMenu) {
-//            ReadBookConfig.durConfig.curTextColor()
-//        } else {
-//            context.getPrimaryTextColor(ColorUtils.isColorLight(bgColor))
-//        }
-//        bottomBackgroundList = Selector.colorBuild()
-//            .setDefaultColor(bgColor)
-//            .setPressedColor(ColorUtils.darkenColor(bgColor))
-//            .create()
     }
 
     fun upBrightnessState() {
