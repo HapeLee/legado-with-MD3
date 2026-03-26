@@ -46,6 +46,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.R
 import io.legado.app.data.entities.RuleSub
@@ -170,9 +171,8 @@ fun RuleSubScreen(
                                         val encodedUrl = java.net.URLEncoder.encode(ruleSub.url, "UTF-8")
                                         val intent = android.content.Intent(
                                             android.content.Intent.ACTION_VIEW,
-                                            android.net.Uri.parse("legado://import/importonline?src=$encodedUrl")
+                                            "legado://import/importonline?src=$encodedUrl".toUri()
                                         )
-                                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                                         context.startActivity(intent)
                                     }
                                 }
