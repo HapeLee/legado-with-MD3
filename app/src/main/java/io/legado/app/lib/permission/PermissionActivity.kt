@@ -2,6 +2,7 @@ package io.legado.app.lib.permission
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,10 +34,15 @@ class PermissionActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val rationale = intent.getStringExtra(KEY_RATIONALE)
         val permissions = intent.getStringArrayExtra(KEY_INPUT_PERMISSIONS)!!
+        val requestType = intent.getIntExtra(KEY_INPUT_REQUEST_TYPE, Request.TYPE_REQUEST_PERMISSION)
 
         showSettingDialog(permissions, rationale) {
             try {
-                requestPermissionsResult.launch(permissions)
+                when (requestType) {
+                    Request.TYPE_MANAGE_ALL_FILES_ACCESS -> openManageAllFilesAccessSettings()
+                    Request.TYPE_REQUEST_SETTING -> openSettingsActivity()
+                    else -> requestPermissionsResult.launch(permissions)
+                }
             } catch (e: Exception) {
                 AppLog.put("请求权限出错\n$e", e, true)
                 RequestPlugins.sRequestCallback?.onError(e)
@@ -59,6 +65,27 @@ class PermissionActivity : AppCompatActivity() {
             toastOnUi(R.string.tip_cannot_jump_setting_page)
             RequestPlugins.sRequestCallback?.onError(e)
             finish()
+        }
+    }
+
+    private fun openManageAllFilesAccessSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            openSettingsActivity()
+            return
+        }
+        val packageUri = Uri.fromParts("package", packageName, null)
+        val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+            data = packageUri
+        }
+        runCatching {
+            settingActivityResult.launch(intent)
+        }.getOrElse {
+            val fallbackIntent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+            runCatching {
+                settingActivityResult.launch(fallbackIntent)
+            }.getOrElse {
+                openSettingsActivity()
+            }
         }
     }
 
