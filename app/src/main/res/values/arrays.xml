@@ -232,6 +232,7 @@
 		<item>BookSource</item>
 		<item>RssSource</item>
 		<item>ReplaceRule</item>
+		<item>Auto Detect</item>
 	</string-array>
 
 	<string-array name="default_home_page">

@@ -85,6 +85,7 @@
         <item>書源</item>
         <item>訂閲源</item>
         <item>替換規則</item>
+        <item>自動識別</item>
     </string-array>
 
     <string-array name="bookshelf_grid_layout">
