@@ -88,7 +88,7 @@ fun BookCover(
             )
             .clip(RoundedCornerShape(4.dp))
             .then(
-                if (!hasCustomDefault) {
+                if (!hasCustomDefault && !isOnlineCoverLoaded) {
                     Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
                 } else Modifier
             )
