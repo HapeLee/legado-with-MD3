@@ -421,7 +421,8 @@ fun TocScreen(
                             selectedTabIndex = pagerState.currentPage,
                             edgePadding = 0.dp,
                             divider = {},
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            containerColor = Color.Transparent
                         ) {
                             Tab(
                                 selected = pagerState.currentPage == 0,

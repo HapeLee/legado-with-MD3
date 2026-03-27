@@ -50,6 +50,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -65,7 +66,6 @@ import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -352,7 +352,7 @@ fun ReplaceRuleScreen(
                         .coerceAtLeast(0),
                     edgePadding = 0.dp,
                     divider = {},
-                    containerColor = GlassTopAppBarDefaults.containerColor(),
+                    containerColor = Color.Transparent,
                 ) {
                     tabItems.forEachIndexed { index, title ->
                         Tab(

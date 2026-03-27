@@ -12,10 +12,12 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.bookmark.BookmarkExporter
+import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
@@ -26,6 +28,7 @@ import io.legado.app.ui.widget.components.list.SelectableItem
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -95,6 +98,14 @@ private data class TocUiConfig(
     val useReplace: Boolean,
     val showWordCount: Boolean,
     val isReverse: Boolean
+)
+
+private data class TitleCacheKey(
+    val bookUrl: String,
+    val useReplace: Boolean,
+    val rulesFingerprint: Int,
+    val chineseConverterType: Int,
+    val chapterCount: Int
 )
 
 data class FabAction(val icon: ImageVector, val label: String, val action: () -> Unit)
@@ -209,12 +220,17 @@ class TocViewModel(
         TocUiConfig(collapsed, useReplace, showWordCount, isReverse)
     }
 
+    private val titleReplaceCache = MutableStateFlow<Map<Int, String>>(emptyMap())
+    private var titleCacheJob: Job? = null
+    private var lastTitleCacheKey: TitleCacheKey? = null
+
     override val rawDataFlow: Flow<List<TocDomainItem>> = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged()
             .flatMapLatest { appDb.bookChapterDao.getChapterListFlow(it) },
         downloadContextFlow,
-        uiConfigFlow
-    ) { originalChapters, downloadCtx, config ->
+        uiConfigFlow,
+        titleReplaceCache
+    ) { originalChapters, downloadCtx, config, cachedTitles ->
         val book = bookState.value ?: return@combine emptyList()
 
         val processedChapters = if (config.isReverse) {
@@ -227,11 +243,19 @@ class TocViewModel(
             ContentProcessor.get(book.name, book.origin).getTitleReplaceRules()
         } else emptyList()
 
+        updateTitleReplaceCacheIfNeeded(
+            book = book,
+            chapters = processedChapters,
+            replaceRules = replaceRules,
+            useReplace = config.useReplace
+        )
+
         if (book.isLocal) {
             return@combine processedChapters.map { chapter ->
+                val baseTitle = chapter.getDisplayTitle(useReplace = false)
                 TocDomainItem(
                     chapter = chapter,
-                    displayTitle = chapter.getDisplayTitle(replaceRules, true),
+                    displayTitle = cachedTitles[chapter.index] ?: baseTitle,
                     downloadState = DownloadState.LOCAL
                 )
             }
@@ -251,9 +275,10 @@ class TocViewModel(
                 else -> DownloadState.NONE
             }
 
+            val baseTitle = chapter.getDisplayTitle(useReplace = false)
             TocDomainItem(
                 chapter,
-                chapter.getDisplayTitle(replaceRules, true),
+                cachedTitles[chapter.index] ?: baseTitle,
                 downloadState
             )
         }
@@ -504,6 +529,58 @@ class TocViewModel(
             } else {
                 group.asReversed()
             }
+        }
+    }
+
+    private fun updateTitleReplaceCacheIfNeeded(
+        book: Book,
+        chapters: List<BookChapter>,
+        replaceRules: List<ReplaceRule>,
+        useReplace: Boolean
+    ) {
+        val shouldUseReplace = useReplace && book.getUseReplaceRule() && replaceRules.isNotEmpty()
+        if (!shouldUseReplace) {
+            titleCacheJob?.cancel()
+            titleCacheJob = null
+            lastTitleCacheKey = null
+            if (titleReplaceCache.value.isNotEmpty()) {
+                titleReplaceCache.value = emptyMap()
+            }
+            return
+        }
+
+        val rulesFingerprint = replaceRules.fold(1) { acc, rule ->
+            var hash = acc
+            hash = 31 * hash + rule.id.hashCode()
+            hash = 31 * hash + rule.pattern.hashCode()
+            hash = 31 * hash + rule.replacement.hashCode()
+            hash = 31 * hash + rule.isRegex.hashCode()
+            hash = 31 * hash + rule.timeoutMillisecond.hashCode()
+            hash
+        }
+
+        val key = TitleCacheKey(
+            bookUrl = book.bookUrl,
+            useReplace = true,
+            rulesFingerprint = rulesFingerprint,
+            chineseConverterType = AppConfig.chineseConverterType,
+            chapterCount = chapters.size
+        )
+
+        val isJobActive = titleCacheJob?.isActive == true
+        if (key == lastTitleCacheKey && (isJobActive || titleReplaceCache.value.isNotEmpty())) {
+            return
+        }
+
+        lastTitleCacheKey = key
+        titleCacheJob?.cancel()
+        titleReplaceCache.value = emptyMap()
+        titleCacheJob = viewModelScope.launch(Dispatchers.Default) {
+            val newCache = HashMap<Int, String>(chapters.size)
+            chapters.forEach { chapter ->
+                newCache[chapter.index] = chapter.getDisplayTitle(replaceRules, true)
+            }
+            titleReplaceCache.value = newCache
         }
     }
 }
