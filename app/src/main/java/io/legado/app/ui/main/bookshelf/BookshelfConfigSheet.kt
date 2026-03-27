@@ -1,6 +1,7 @@
 package io.legado.app.ui.main.bookshelf
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -95,7 +96,9 @@ fun BookshelfConfigSheet(
 
             // Layout Mode
             val layoutMode =
-                if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait
+                if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape
+                else BookshelfConfig.bookshelfLayoutModePortrait
+
             CompactDropdownSettingItem(
                 title = "布局模式",
                 description = stringResource(if (isLandscape) R.string.screen_landscape else R.string.screen_portrait),
@@ -109,59 +112,61 @@ fun BookshelfConfigSheet(
                 }
             )
 
-            if (layoutMode == 1) {
-                CompactDropdownSettingItem(
-                    title = "网格样式",
-                    selectedValue = BookshelfConfig.bookshelfGridLayout.toString(),
-                    displayEntries = stringArrayResource(R.array.bookshelf_grid_layout),
-                    entryValues = Array(stringArrayResource(R.array.bookshelf_grid_layout).size) { it.toString() },
-                    imageVector = Icons.Default.ViewCompact,
-                    onValueChange = { BookshelfConfig.bookshelfGridLayout = it.toInt() }
-                )
-                CompactSwitchSettingItem(
-                    title = "标题小字体",
-                    checked = BookshelfConfig.bookshelfTitleSmallFont,
-                    imageVector = Icons.Default.TextFormat,
-                    color = MaterialTheme.colorScheme.surface,
-                    onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
-                )
+            AnimatedVisibility(
+                visible = layoutMode == 1
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CompactDropdownSettingItem(
+                        title = "网格样式",
+                        selectedValue = BookshelfConfig.bookshelfGridLayout.toString(),
+                        displayEntries = stringArrayResource(R.array.bookshelf_grid_layout),
+                        entryValues = Array(stringArrayResource(R.array.bookshelf_grid_layout).size) { it.toString() },
+                        imageVector = Icons.Default.ViewCompact,
+                        onValueChange = { BookshelfConfig.bookshelfGridLayout = it.toInt() }
+                    )
 
-                CompactSwitchSettingItem(
-                    title = "标题居中",
-                    checked = BookshelfConfig.bookshelfTitleCenter,
-                    color = MaterialTheme.colorScheme.surface,
-                    onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
-                )
-            } else {
-                CompactSwitchSettingItem(
-                    title = "紧凑模式",
-                    checked = BookshelfConfig.bookshelfLayoutCompact,
-                    imageVector = Icons.Default.ViewCompact,
-                    color = MaterialTheme.colorScheme.surface,
-                    onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
-                )
-                CompactSwitchSettingItem(
-                    title = "显示分隔线",
-                    checked = BookshelfConfig.bookshelfShowDivider,
-                    imageVector = Icons.Default.ViewCompact,
-                    color = MaterialTheme.colorScheme.surface,
-                    onCheckedChange = { BookshelfConfig.bookshelfShowDivider = it }
-                )
+                    CompactSwitchSettingItem(
+                        title = "标题小字体",
+                        checked = BookshelfConfig.bookshelfTitleSmallFont,
+                        imageVector = Icons.Default.TextFormat,
+                        color = MaterialTheme.colorScheme.surface,
+                        onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
+                    )
+
+                    CompactSwitchSettingItem(
+                        title = "标题居中",
+                        checked = BookshelfConfig.bookshelfTitleCenter,
+                        color = MaterialTheme.colorScheme.surface,
+                        onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
+                    )
+                }
             }
 
-            // Grid Count
-            val gridCount =
-                if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
-            CompactSliderSettingItem(
-                title = stringResource(R.string.number_rows_columns),
-                value = gridCount.toFloat(),
-                valueRange = 1f..15f,
-                steps = 14,
-                onValueChange = {
-                    if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape = it.toInt()
-                    else BookshelfConfig.bookshelfLayoutGridPortrait = it.toInt()
+            AnimatedVisibility(
+                visible = layoutMode != 1
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CompactSwitchSettingItem(
+                        title = "紧凑模式",
+                        checked = BookshelfConfig.bookshelfLayoutCompact,
+                        imageVector = Icons.Default.ViewCompact,
+                        color = MaterialTheme.colorScheme.surface,
+                        onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
+                    )
+
+                    CompactSwitchSettingItem(
+                        title = "显示分隔线",
+                        checked = BookshelfConfig.bookshelfShowDivider,
+                        imageVector = Icons.Default.ViewCompact,
+                        color = MaterialTheme.colorScheme.surface,
+                        onCheckedChange = { BookshelfConfig.bookshelfShowDivider = it }
+                    )
                 }
-            )
+            }
 
             CompactSliderSettingItem(
                 title = "标题最大行数",

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -365,6 +366,51 @@ fun ThemeConfigScreen(
                     checked = ThemeConfig.useFlexibleTopAppBar,
                     onCheckedChange = { ThemeConfig.useFlexibleTopAppBar = it }
                 )
+                SwitchSettingItem(
+                    title = stringResource(R.string.is_blur_enable),
+                    checked = ThemeConfig.enableBlur,
+                    onCheckedChange = {
+                        ThemeConfig.enableBlur = it
+                        if (!it) ThemeConfig.enableProgressiveBlur = false
+                    }
+                )
+                AnimatedVisibility(visible = ThemeConfig.enableBlur) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.is_blur_progressive_enable),
+                        checked = ThemeConfig.enableProgressiveBlur,
+                        onCheckedChange = { ThemeConfig.enableProgressiveBlur = it }
+                    )
+                }
+                AnimatedVisibility(visible = !ThemeConfig.enableBlur) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        SliderSettingItem(
+                            title = stringResource(R.string.top_bar_opacity),
+                            description = stringResource(
+                                R.string.top_bar_opacity_summary,
+                                ThemeConfig.topBarOpacity
+                            ),
+                            value = ThemeConfig.topBarOpacity.toFloat(),
+                            defaultValue = 100f,
+                            valueRange = 0f..100f,
+                            steps = 99,
+                            onValueChange = { ThemeConfig.topBarOpacity = it.toInt() }
+                        )
+                        SliderSettingItem(
+                            title = stringResource(R.string.bottom_bar_opacity),
+                            description = stringResource(
+                                R.string.bottom_bar_opacity_summary,
+                                ThemeConfig.bottomBarOpacity
+                            ),
+                            value = ThemeConfig.bottomBarOpacity.toFloat(),
+                            defaultValue = 100f,
+                            valueRange = 0f..100f,
+                            steps = 99,
+                            onValueChange = { ThemeConfig.bottomBarOpacity = it.toInt() }
+                        )
+                    }
+                }
                 SliderSettingItem(
                     title = stringResource(R.string.container_opacity),
                     description = stringResource(
@@ -377,18 +423,6 @@ fun ThemeConfigScreen(
                     steps = 99,
                     onValueChange = { ThemeConfig.containerOpacity = it.toInt() }
                 )
-                SwitchSettingItem(
-                    title = stringResource(R.string.is_blur_enable),
-                    checked = ThemeConfig.enableBlur,
-                    onCheckedChange = { ThemeConfig.enableBlur = it }
-                )
-                if (ThemeConfig.enableBlur) {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.is_blur_progressive_enable),
-                        checked = ThemeConfig.enableProgressiveBlur,
-                        onCheckedChange = { ThemeConfig.enableProgressiveBlur = it }
-                    )
-                }
             }
 
             SplicedColumnGroup(title = stringResource(R.string.day)) {

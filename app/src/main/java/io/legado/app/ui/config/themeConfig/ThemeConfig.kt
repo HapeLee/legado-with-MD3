@@ -9,6 +9,10 @@ object ThemeConfig {
 
     var containerOpacity by prefDelegate(PreferKey.containerOpacity, 100)
 
+    var topBarOpacity by prefDelegate(PreferKey.topBarOpacity, 100)
+
+    var bottomBarOpacity by prefDelegate(PreferKey.bottomBarOpacity, 100)
+
     var enableBlur by prefDelegate(PreferKey.enableBlur, false)
 
     var enableProgressiveBlur by prefDelegate(PreferKey.enableProgressiveBlur, true)

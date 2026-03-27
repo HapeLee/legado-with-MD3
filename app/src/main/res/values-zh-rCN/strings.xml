@@ -1397,6 +1397,10 @@
     <string name="compose_engine">主题风格</string>
     <string name="container_opacity">容器背景不透明度</string>
     <string name="container_opacity_summary">%d</string>
+    <string name="top_bar_opacity">顶栏不透明度</string>
+    <string name="top_bar_opacity_summary">%d</string>
+    <string name="bottom_bar_opacity">底栏不透明度</string>
+    <string name="bottom_bar_opacity_summary">%d</string>
     <string name="web_service_auto_start">启动应用时打开Web服务</string>
     <string name="read_aloud_preload">听书预加载数量</string>
     <string name="read_aloud_preload_summary">%d</string>

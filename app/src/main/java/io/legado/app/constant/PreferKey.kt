@@ -186,6 +186,8 @@ object PreferKey {
     const val materialVersion = "materialVersion"
     const val composeEngine = "composeEngine"
     const val containerOpacity = "containerOpacity"
+    const val topBarOpacity = "topBarOpacity"
+    const val bottomBarOpacity = "bottomBarOpacity"
     const val enableBlur = "enableBlur"
     const val enableProgressiveBlur = "enableProgressiveBlur"
     const val useFlexibleTopAppBar = "useFlexibleTopAppBar"

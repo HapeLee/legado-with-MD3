@@ -42,11 +42,11 @@ fun SplicedColumnGroup(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
         ) {
             Column(
-                modifier = Modifier
-                    .animateContentSize(),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 content()

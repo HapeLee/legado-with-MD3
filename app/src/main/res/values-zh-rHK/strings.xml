@@ -1216,4 +1216,8 @@
     <string name="auto_check_new_backup_s">打开软件时检查是否有新备份，有新备份时提示是否更新</string>
     <string name="welcome_book_folder_tip">设置本地书籍保存目录，后续也可在设置中修改。</string>
     <string name="welcome_book_folder_not_selected">未选择文件夹</string>
+    <string name="top_bar_opacity">頂欄不透明度</string>
+    <string name="top_bar_opacity_summary">%d</string>
+    <string name="bottom_bar_opacity">底欄不透明度</string>
+    <string name="bottom_bar_opacity_summary">%d</string>
 </resources>

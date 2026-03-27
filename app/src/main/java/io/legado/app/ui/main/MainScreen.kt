@@ -56,6 +56,7 @@ import io.legado.app.R
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.mainConfig.MainConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
@@ -243,7 +244,10 @@ fun MainScreen(
                         containerColor = GlassDefaults.glassColor(
                             noBlurColor = BottomAppBarDefaults.containerColor,
                             blurAlpha = GlassDefaults.DefaultBlurAlpha
-                        )
+                        ).let { baseColor ->
+                            val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
+                            baseColor.copy(alpha = (baseColor.alpha * opacity).coerceIn(0f, 1f))
+                        }
                     ) {
                         val alwaysShowLabel = when (labelVisibilityMode) {
                             "labeled" -> true
