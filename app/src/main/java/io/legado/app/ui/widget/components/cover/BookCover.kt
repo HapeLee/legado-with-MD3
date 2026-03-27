@@ -9,14 +9,15 @@ import android.text.TextUtils
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Update
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,12 +35,12 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.legado.app.ui.config.coverConfig.CoverConfig
-import io.legado.app.ui.widget.components.card.TextCard
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
@@ -49,8 +50,6 @@ fun BookCover(
     author: String?,
     path: String?,
     modifier: Modifier = Modifier.width(64.dp),
-    badgeText: String? = null,
-    showBadgeDot: Boolean = false,
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
     ignoreUseDefaultCover: Boolean = false
@@ -79,7 +78,7 @@ fun BookCover(
         isOnlineCoverLoaded = false
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .aspectRatio(5f / 7f)
             .then(
@@ -94,6 +93,11 @@ fun BookCover(
                 } else Modifier
             )
     ) {
+        val density = LocalDensity.current
+        val iconSizeDp = with(density) {
+            (minOf(maxWidth, maxHeight).toPx() / 3f).toDp()
+        }
+
         if (hasCustomDefault) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -134,6 +138,17 @@ fun BookCover(
             }
         }
 
+        if (!hasCustomDefault && !isOnlineCoverLoaded) {
+            Icon(
+                Icons.Default.Book,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier
+                    .size(iconSizeDp)
+                    .align(Alignment.Center)
+            )
+        }
+
         if (!isOnlineCoverLoaded) {
             CoverTextOverlay(
                 name = name,
@@ -142,20 +157,6 @@ fun BookCover(
             )
         }
 
-        if (!badgeText.isNullOrEmpty()) {
-            TextCard(
-                text = badgeText,
-                icon = if (showBadgeDot) Icons.Default.Update else null,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp),
-                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                cornerRadius = 4.dp,
-                horizontalPadding = 4.dp,
-                verticalPadding = 0.dp
-            )
-        }
     }
 }
 

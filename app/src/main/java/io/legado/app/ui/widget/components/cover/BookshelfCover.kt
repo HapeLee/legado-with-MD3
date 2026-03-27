@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -11,9 +13,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.card.TextCard
 
 @Composable
-fun BookCoverWithProgress(
+fun BookshelfCover(
     name: String?,
     author: String?,
     path: String?,
@@ -30,11 +33,24 @@ fun BookCoverWithProgress(
             author = author,
             path = path,
             modifier = Modifier.fillMaxWidth(),
-            badgeText = badgeText,
-            showBadgeDot = showBadgeDot,
             sourceOrigin = sourceOrigin,
             onLoadFinish = onLoadFinish
         )
+
+        if (!badgeText.isNullOrEmpty()) {
+            TextCard(
+                text = badgeText,
+                icon = if (showBadgeDot) Icons.Default.Update else null,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(2.dp),
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                cornerRadius = 4.dp,
+                horizontalPadding = 4.dp,
+                verticalPadding = 0.dp
+            )
+        }
 
         if (isUpdating) {
             LinearProgressIndicator(

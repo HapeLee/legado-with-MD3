@@ -35,7 +35,8 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.widget.components.cover.BookCover
-import io.legado.app.ui.widget.components.cover.BookCoverWithProgress
+import io.legado.app.ui.widget.components.cover.BookshelfCover
+import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.utils.toTimeAgo
 
 /**
@@ -207,68 +208,75 @@ fun BookGroupCover(
             .clip(RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(0)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+        if (!coverPath.isNullOrBlank()) {
+            Cover(
+                path = coverPath,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(0)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(1)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(1)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(2)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
-                }
-            }
-            Row(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(2)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .padding(1.dp)
-                ) {
-                    books.getOrNull(3)?.let {
-                        BookCover(
-                            name = it.name,
-                            author = it.author,
-                            path = it.getDisplayCover(),
-                            modifier = Modifier.fillMaxSize()
-                        )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .padding(1.dp)
+                    ) {
+                        books.getOrNull(3)?.let {
+                            BookCover(
+                                name = it.name,
+                                author = it.author,
+                                path = it.getDisplayCover(),
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                 }
             }
@@ -357,7 +365,7 @@ fun BookItem(
         gridStyle = gridStyle,
         isCompact = isCompact,
         cover = { modifier ->
-            BookCoverWithProgress(
+            BookshelfCover(
                 name = book.name,
                 author = book.author,
                 path = book.getDisplayCover(),

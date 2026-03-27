@@ -2,7 +2,6 @@ package io.legado.app.ui.main.bookshelf
 
 import androidx.compose.runtime.Stable
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.Book
 import kotlin.math.max
 
 @Stable
@@ -35,25 +34,4 @@ data class BookShelfItem(
     val isNotShelf: Boolean get() = (type and BookType.notShelf) > 0
 
     fun getUnreadChapterNum() = max(totalChapterNum - durChapterIndex - 1, 0)
-}
-
-fun Book.toBookShelfItem(): BookShelfItem {
-    return BookShelfItem(
-        bookUrl = bookUrl,
-        name = name,
-        author = author,
-        coverUrl = coverUrl,
-        customCoverUrl = customCoverUrl,
-        durChapterTitle = durChapterTitle,
-        durChapterTime = durChapterTime,
-        durChapterPos = durChapterPos,
-        latestChapterTitle = latestChapterTitle,
-        latestChapterTime = latestChapterTime,
-        totalChapterNum = totalChapterNum,
-        durChapterIndex = durChapterIndex,
-        type = type,
-        group = group,
-        order = order,
-        canUpdate = canUpdate
-    )
 }
