@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -182,64 +181,71 @@ open class MainActivity : BaseComposeActivity() {
                 (slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 260,
+                        durationMillis = 520,
                         easing = FastOutSlowInEasing
                     ),
-                    initialOffset = { fullWidth -> fullWidth / 10 }
+                    initialOffset = { fullWidth -> fullWidth }
                 ) + fadeIn(
                     animationSpec = tween(
-                        durationMillis = 220,
+                        durationMillis = 360,
                         easing = LinearOutSlowInEasing
                     )
-                )) togetherWith ExitTransition.None
+                )) togetherWith (slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(
+                        durationMillis = 520,
+                        easing = FastOutSlowInEasing
+                    ),
+                    targetOffset = { fullWidth -> fullWidth / 4 }
+                ) + fadeOut(
+                    animationSpec = tween(
+                        durationMillis = 360,
+                        easing = LinearOutSlowInEasing
+                    )
+                ))
             },
             popTransitionSpec = {
                 (slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 240,
+                        durationMillis = 520,
                         easing = FastOutSlowInEasing
                     ),
-                    initialOffset = { fullWidth -> -fullWidth / 8 }
+                    initialOffset = { fullWidth -> -fullWidth / 4 }
                 ) + fadeIn(
                     animationSpec = tween(
-                        durationMillis = 200,
+                        durationMillis = 360,
                         easing = LinearOutSlowInEasing
                     )
-                )) togetherWith
-                        (scaleOut(
-                            targetScale = 0.92f,
-                            animationSpec = tween(
-                                durationMillis = 220,
-                                easing = FastOutSlowInEasing
-                            )
-                        ) + fadeOut(
-                            animationSpec = tween(durationMillis = 180)
-                        ))
+                )) togetherWith (scaleOut(
+                    targetScale = 0.8f,
+                    animationSpec = tween(
+                        durationMillis = 520,
+                        easing = FastOutSlowInEasing
+                    )
+                ) + fadeOut(
+                    animationSpec = tween(durationMillis = 360)
+                ))
             },
             predictivePopTransitionSpec = { _ ->
                 (slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 240,
                         easing = FastOutSlowInEasing
                     ),
-                    initialOffset = { fullWidth -> -fullWidth / 8 }
+                    initialOffset = { fullWidth -> -fullWidth / 4 }
                 ) + fadeIn(
                     animationSpec = tween(
-                        durationMillis = 200,
                         easing = LinearOutSlowInEasing
                     )
-                )) togetherWith
-                        (scaleOut(
-                            targetScale = 0.92f,
-                            animationSpec = tween(
-                                durationMillis = 220,
-                                easing = FastOutSlowInEasing
-                            )
-                        ) + fadeOut(
-                            animationSpec = tween(durationMillis = 180)
-                        ))
+                )) togetherWith (scaleOut(
+                    targetScale = 0.8f,
+                    animationSpec = tween(
+                        easing = FastOutSlowInEasing
+                    )
+                ) + fadeOut(
+                    animationSpec = tween()
+                ))
             },
             onBack = {
                 if (backStack.size > 1) {
