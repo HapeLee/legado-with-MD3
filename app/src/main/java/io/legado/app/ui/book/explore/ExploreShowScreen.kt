@@ -295,7 +295,6 @@ fun ExploreShowScreen(
                     state = hazeState
                 ),
                 title = selectedTitle ?: title,
-                colors = GlassTopAppBarDefaults.glassColors(),
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBack)
                 },

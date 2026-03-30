@@ -42,7 +42,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -142,6 +141,8 @@ fun ExploreScreen(
         }
     }
 
+    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
+
     ListScaffold(
         title = stringResource(R.string.discovery),
         state = uiState,
@@ -201,7 +202,8 @@ fun ExploreScreen(
                                 }
                             },
                             onRefresh = { viewModel.refreshExploreKinds(item) },
-                            onDelete = { sourceToDelete = item }
+                            onDelete = { sourceToDelete = item },
+                            isMiuix = composeEngine
                         )
                     }
 
@@ -232,7 +234,8 @@ fun ExploreScreen(
                                                     putExtra("exploreUrl", kind.url)
                                                 }
                                             }
-                                        }
+                                        },
+                                        isMiuix = composeEngine
                                     )
                                 }
 
@@ -268,7 +271,8 @@ fun ExploreScreen(
                                     uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
                                 if (index >= 0) listState.animateScrollToItem(index)
                             }
-                        }
+                        },
+                        isMiuix = composeEngine
                     )
                 }
             }
@@ -345,25 +349,25 @@ fun ExploreSourceHeader(
     onLogin: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
+    isMiuix: Boolean,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (isExpanded) 90f else 0f, label = "rotation")
 
-    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
     val containerColor by animateColorAsState(
         targetValue = if (isExpanded)
-            if (composeEngine) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
+            if (isMiuix) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
         else
-            if (composeEngine) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+            if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
 
     val contentColor by animateColorAsState(
         targetValue = if (isExpanded)
-            if (composeEngine) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+            if (isMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
         else
-            if (composeEngine) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
+            if (isMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -461,11 +465,11 @@ fun ExploreSourceHeader(
 @Composable
 fun ExploreStickyCard(
     item: BookSourcePart,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isMiuix: Boolean,
 ) {
     TextCard(
         text = item.bookSourceName,
-        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         textStyle = LegadoTheme.typography.labelLarge,
         horizontalPadding = 8.dp,
         verticalPadding = 6.dp,
@@ -478,8 +482,29 @@ fun ExploreKindItem(
     kind: ExploreKind,
     isClickable: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isMiuix: Boolean,
 ) {
+    val color = if (isMiuix)
+        MiuixTheme.colorScheme.surfaceContainer
+    else
+        MaterialTheme.colorScheme.secondaryContainer
+
+    val contentColor = if (isMiuix)
+        MiuixTheme.colorScheme.onSurface
+    else
+        MaterialTheme.colorScheme.secondary
+
+    val unClickBackColor = if (isMiuix)
+        MiuixTheme.colorScheme.surfaceContainer
+    else
+        MaterialTheme.colorScheme.surface
+
+    val unClickColor = if (isMiuix)
+        MiuixTheme.colorScheme.disabledOnSurface
+    else
+        MaterialTheme.colorScheme.primary
+
     CompositionLocalProvider(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified
     ) {
@@ -490,19 +515,19 @@ fun ExploreKindItem(
             GlassCard(
                 onClick = onClick,
                 shape = shape,
-                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = color.copy(alpha = 0.6f),
+                contentColor = contentColor,
                 modifier = modifier
             ) {
                 KindText(kind)
             }
         } else {
-            OutlinedCard(
+            GlassCard(
                 shape = shape,
-                colors = CardDefaults.outlinedCardColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = modifier
+                containerColor = unClickBackColor.copy(alpha = 0.6f),
+                contentColor = unClickColor,
+                modifier = modifier,
+                border = CardDefaults.outlinedCardBorder()
             ) {
                 KindText(kind)
             }

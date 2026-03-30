@@ -137,23 +137,28 @@ fun ThemeConfigScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            val composeEngine = remember { ThemeConfig.composeEngine }
+            val isMiuixEngine =
+                remember(composeEngine) { ThemeResolver.isMiuixEngine(composeEngine) }
             val isDarkTheme = when (selectedThemeMode) {
                 "1" -> false
                 "2" -> true
                 else -> isSystemInDarkTheme()
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ThemeCard(
-                    context = context,
-                    value = selectedTheme,
-                    isDark = isDarkTheme,
-                    isAmoled = ThemeConfig.isPureBlack,
-                    paletteStyle = ThemeConfig.paletteStyle
-                )
+            if (!isMiuixEngine) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ThemeCard(
+                        context = context,
+                        value = selectedTheme,
+                        isDark = isDarkTheme,
+                        isAmoled = ThemeConfig.isPureBlack,
+                        paletteStyle = ThemeConfig.paletteStyle
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -165,46 +170,62 @@ fun ThemeConfigScreen(
             }
 
             SplicedColumnGroup(title = stringResource(R.string.theme)) {
-                ThemeModeSelector(
-                    selectedMode = selectedThemeMode,
-                    onModeSelected = { mode ->
-                        selectedThemeMode = mode
-                        ThemeConfig.themeMode = mode
-                        OldThemeConfig.applyDayNight(context)
-                    }
-                )
+                if (isMiuixEngine) {
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.theme_mode),
+                        selectedValue = selectedThemeMode,
+                        displayEntries = stringArrayResource(R.array.theme_mode),
+                        entryValues = stringArrayResource(R.array.theme_mode_v),
+                        onValueChange = { mode ->
+                            selectedThemeMode = mode
+                            ThemeConfig.themeMode = mode
+                            OldThemeConfig.applyDayNight(context)
+                        }
+                    )
+                } else {
+                    ThemeModeSelector(
+                        selectedMode = selectedThemeMode,
+                        onModeSelected = { mode ->
+                            selectedThemeMode = mode
+                            ThemeConfig.themeMode = mode
+                            OldThemeConfig.applyDayNight(context)
+                        }
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (!isMiuixEngine) {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                ThemeColorSelector(
-                    context = context,
-                    themes = themes,
-                    selectedTheme = selectedTheme,
-                    isDark = isDarkTheme,
-                    isAmoled = ThemeConfig.isPureBlack,
-                    paletteStyle = ThemeConfig.paletteStyle,
-                    onThemeSelected = { theme ->
-                        if (theme == "13") {
-                            val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
-                            val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
-                            if (!hasLightBg || !hasDarkBg) {
-                                context.toastOnUi(R.string.transparent_theme_alarm)
-                                return@ThemeColorSelector
+                    ThemeColorSelector(
+                        context = context,
+                        themes = themes,
+                        selectedTheme = selectedTheme,
+                        isDark = isDarkTheme,
+                        isAmoled = ThemeConfig.isPureBlack,
+                        paletteStyle = ThemeConfig.paletteStyle,
+                        onThemeSelected = { theme ->
+                            if (theme == "13") {
+                                val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
+                                val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
+                                if (!hasLightBg || !hasDarkBg) {
+                                    context.toastOnUi(R.string.transparent_theme_alarm)
+                                    return@ThemeColorSelector
+                                } else {
+                                    AppConfig.containerOpacity = 0
+                                }
+                            }
+                            val oldTheme = selectedTheme
+                            selectedTheme = theme
+                            ThemeConfig.appTheme = theme
+                            val isDynamicSwitch = (oldTheme == "12" || theme == "12")
+                            if (isDynamicSwitch) {
+                                showRestartDialog = true
                             } else {
-                                AppConfig.containerOpacity = 0
+                                postEvent(EventBus.RECREATE, "")
                             }
                         }
-                        val oldTheme = selectedTheme
-                        selectedTheme = theme
-                        ThemeConfig.appTheme = theme
-                        val isDynamicSwitch = (oldTheme == "12" || theme == "12")
-                        if (isDynamicSwitch) {
-                            showRestartDialog = true
-                        } else {
-                            postEvent(EventBus.RECREATE, "")
-                        }
-                    }
-                )
+                    )
+                }
             }
 
             SplicedColumnGroup {
@@ -240,7 +261,7 @@ fun ThemeConfigScreen(
                         R.string.font_scale_summary,
                         AppContextWrapper.getFontScale(context)
                     ),
-                    value = fontScaleValue.value,
+                    value = fontScaleValue.floatValue,
                     defaultValue = 10f,
                     valueRange = 8f..16f,
                     steps = 7,

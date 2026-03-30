@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
@@ -17,16 +16,12 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.SearchBarSection
@@ -58,19 +53,10 @@ fun <T> DynamicTopAppBar(
     var showMenu by remember { mutableStateOf(false) }
     val isSelecting = state.selectedIds.isNotEmpty()
 
-    val containerColor = GlassTopAppBarDefaults.containerColor()
-    val scrolledColor = GlassTopAppBarDefaults.scrolledContainerColor()
-
-    val animatedColor by remember(scrollBehavior, containerColor, scrolledColor) {
-        derivedStateOf {
-            lerp(containerColor, scrolledColor, scrollBehavior.collapsedFraction)
-        }
-    }
 
     GlassMediumFlexibleTopAppBar(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(animatedColor),
+            .fillMaxWidth(),
         title = when {
             state.isLoading -> "请稍后..."
             isSelecting -> "已选择 ${state.selectedIds.size}/${state.items.size}"
@@ -117,10 +103,6 @@ fun <T> DynamicTopAppBar(
             }
         },
         scrollBehavior = scrollBehavior,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            scrolledContainerColor = Color.Transparent
-        ),
         bottomContent = {
             AnimatedVisibility(
                 visible = state.isSearch && !isSelecting,

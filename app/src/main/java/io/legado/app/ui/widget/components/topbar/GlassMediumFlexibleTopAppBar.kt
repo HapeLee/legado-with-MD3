@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.topbar
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
@@ -13,6 +14,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -35,28 +37,54 @@ fun GlassMediumFlexibleTopAppBar(
     scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
-    colors: TopAppBarColors = GlassTopAppBarDefaults.glassColors(),
     bottomContent: @Composable (ColumnScope.() -> Unit)? = null
 ) {
 
     val hazeState = LocalHazeState.current
+    val composeEngine = LegadoTheme.composeEngine
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+
+    val containerColor = if (!isMiuix) {
+        GlassTopAppBarDefaults.containerColor()
+    } else {
+        GlassTopAppBarDefaults.getMiuixAppBarColor()
+    }
+
+    val scrolledColor = if (!isMiuix) {
+        GlassTopAppBarDefaults.scrolledContainerColor()
+    } else {
+        GlassTopAppBarDefaults.getMiuixAppBarColor()
+    }
+
+    val animatedColor = if (!isMiuix) {
+        val fraction = scrollBehavior?.collapsedFraction ?: 0f
+        lerp(containerColor, scrolledColor, fraction)
+    } else {
+        containerColor
+    }
+
     val finalModifier = if (hazeState != null) {
         modifier.responsiveHazeEffect(state = hazeState)
     } else {
-        modifier
+        modifier.background(color = animatedColor)
     }
 
-    val composeEngine = LegadoTheme.composeEngine
+    val transparentColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent
+    )
 
-    Column(modifier = finalModifier) {
+    Column(
+        modifier = finalModifier
+    ) {
         when {
-            ThemeResolver.isMiuixEngine(composeEngine) -> {
+            isMiuix -> {
                 MiuixTopAppBar(
                     modifier = Modifier,
                     title = title,
                     navigationIcon = navigationIcon,
                     actions = actions,
-                    color = GlassTopAppBarDefaults.getMiuixAppBarColor(),
+                    color = Color.Transparent, // 内部强制透明，透出 Column 背景
                     scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
                 )
             }
@@ -77,7 +105,7 @@ fun GlassMediumFlexibleTopAppBar(
                         navigationIcon = navigationIcon,
                         actions = actions,
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
-                        colors = colors
+                        colors = transparentColors // 应用透明背景
                     )
                 } else {
                     TopAppBar(
@@ -93,11 +121,13 @@ fun GlassMediumFlexibleTopAppBar(
                         navigationIcon = navigationIcon,
                         actions = actions,
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
-                        colors = colors
+                        colors = transparentColors // 应用透明背景
                     )
                 }
             }
         }
+
+        // 现在的 bottomContent 完美包裹在外层 Column 内，共享渐变和模糊效果！
         bottomContent?.invoke(this)
     }
 }

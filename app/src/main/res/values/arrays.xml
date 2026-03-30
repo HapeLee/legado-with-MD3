@@ -219,7 +219,6 @@
 
 	<string-array name="composeEngine">
         <item>Material Design</item>
-        <item>SaltUI</item>
         <item>Miuix</item>
     </string-array>
 

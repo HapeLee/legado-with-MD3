@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.contentColorFor
@@ -35,7 +34,7 @@ fun AppScaffold(
     snackbarHost: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     floatingActionButtonPosition: FabPosition = FabPosition.End,
-    contentColor: Color = contentColorFor(MaterialTheme.colorScheme.background),
+    contentColor: Color = contentColorFor(MiuixTheme.colorScheme.surface),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -56,7 +55,9 @@ fun AppScaffold(
         MiuixTheme.colorScheme.surface
     }
 
-    CompositionLocalProvider(LocalHazeState provides hazeState) {
+    CompositionLocalProvider(
+        LocalHazeState provides if (ThemeConfig.enableBlur) hazeState else null
+    ) {
         when {
             ThemeResolver.isMiuixEngine(composeEngine) -> {
                 val miuixFabPosition = when (floatingActionButtonPosition) {

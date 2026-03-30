@@ -254,7 +254,11 @@ fun MainScreen(
                                 labelString = stringResource(destination.labelId),
                                 miuixIcon = if (selected) destination.miuixSelectedIcon else destination.miuixIcon,
                                 m3Icon = {
-                                    if (selected) destination.m3SelectedIcon else destination.m3Icon
+                                    NavigationIcon(
+                                        destination = destination,
+                                        selected = selected,
+                                        upBooksCount = uiState.upBooksCount
+                                    )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
                                     noBlurColor = MaterialTheme.colorScheme.secondaryContainer,

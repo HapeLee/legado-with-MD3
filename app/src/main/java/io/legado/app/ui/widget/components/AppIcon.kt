@@ -1,6 +1,6 @@
-package io.legado.app.ui.widget.components.icon
+package io.legado.app.ui.widget.components
 
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -8,18 +8,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
-import top.yukonga.miuix.kmp.theme.LocalContentColor
+import androidx.compose.material3.LocalContentColor as MaterialLocalContentColor
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import top.yukonga.miuix.kmp.theme.LocalContentColor as MiuixLocalContentColor
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppIcon(
     imageVector: ImageVector,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    tint: Color = LocalContentColor.current,
+    tint: Color = currentContentColor(),
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+
+    if (isMiuix) {
         MiuixIcon(
             imageVector = imageVector,
             contentDescription = contentDescription,
@@ -33,5 +35,15 @@ fun AppIcon(
             modifier = modifier,
             tint = tint
         )
+    }
+}
+
+@Composable
+fun currentContentColor(): Color {
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+    return if (isMiuix) {
+        MiuixLocalContentColor.current
+    } else {
+        MaterialLocalContentColor.current
     }
 }
