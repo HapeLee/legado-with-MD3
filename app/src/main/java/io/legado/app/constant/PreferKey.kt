@@ -231,6 +231,8 @@ object PreferKey {
     const val sharedElementEnterTransitionEnable = "sharedElementEnterTransitionEnable"
     const val bookshelfLayoutGridLandscape = "bookshelfLayoutGridLandscape"
     const val bookshelfLayoutGridPortrait = "bookshelfLayoutGridPortrait"
+    const val bookshelfLayoutListLandscape = "bookshelfLayoutListLandscape"
+    const val bookshelfLayoutListPortrait = "bookshelfLayoutListPortrait"
     const val bookshelfTitleSmallFont = "bookshelfTitleSmallFont"
     const val bookshelfTitleCenter = "bookshelfTitleCenter"
     const val bookshelfTitleMaxLines = "bookshelfTitleMaxLines"

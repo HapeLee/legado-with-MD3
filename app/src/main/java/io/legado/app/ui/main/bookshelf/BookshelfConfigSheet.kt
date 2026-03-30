@@ -127,6 +127,20 @@ fun BookshelfConfigSheet(
                         onValueChange = { BookshelfConfig.bookshelfGridLayout = it.toInt() }
                     )
 
+                    val gridCount =
+                        if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
+                    CompactSliderSettingItem(
+                        title = stringResource(R.string.number_rows_columns),
+                        value = gridCount.toFloat(),
+                        valueRange = 1f..15f,
+                        steps = 14,
+                        onValueChange = {
+                            if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape =
+                                it.toInt()
+                            else BookshelfConfig.bookshelfLayoutGridPortrait = it.toInt()
+                        }
+                    )
+
                     CompactSwitchSettingItem(
                         title = "标题小字体",
                         checked = BookshelfConfig.bookshelfTitleSmallFont,
@@ -164,6 +178,20 @@ fun BookshelfConfigSheet(
                         imageVector = Icons.Default.ViewCompact,
                         color = MaterialTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfShowDivider = it }
+                    )
+
+                    val listColCount =
+                        if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
+                    CompactSliderSettingItem(
+                        title = stringResource(R.string.number_rows_columns),
+                        value = listColCount.toFloat(),
+                        valueRange = 1f..5f,
+                        steps = 4,
+                        onValueChange = {
+                            if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape =
+                                it.toInt()
+                            else BookshelfConfig.bookshelfLayoutListPortrait = it.toInt()
+                        }
                     )
                 }
             }

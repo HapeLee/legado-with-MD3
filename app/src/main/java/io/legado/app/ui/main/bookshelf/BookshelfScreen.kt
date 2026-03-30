@@ -226,6 +226,8 @@ fun BookshelfScreen(
         if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait
     val bookshelfLayoutGrid =
         if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
+    val bookshelfLayoutList =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
 
     ListScaffold(
         title = title,
@@ -481,6 +483,7 @@ fun BookshelfScreen(
                                 uiState = uiState,
                                 bookshelfLayoutMode = bookshelfLayoutMode,
                                 bookshelfLayoutGrid = bookshelfLayoutGrid,
+                                bookshelfLayoutList = bookshelfLayoutList,
                                 onBookClick = onBookClick,
                                 onBookLongClick = onBookLongClick
                             )
@@ -584,11 +587,13 @@ fun BookshelfPage(
     uiState: BookshelfUiState,
     bookshelfLayoutMode: Int,
     bookshelfLayoutGrid: Int,
+    bookshelfLayoutList: Int,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit
 ) {
+    val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
     FastScrollLazyVerticalGrid(
-        columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
+        columns = GridCells.Fixed(columns.coerceAtLeast(1)),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             top = paddingValues.calculateTopPadding(),

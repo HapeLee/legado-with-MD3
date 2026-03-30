@@ -74,8 +74,10 @@ fun BookCover(
     val hasCustomDefault = !randomPath.isNullOrBlank()
 
     var isOnlineCoverLoaded by remember(path) { mutableStateOf(false) }
+    var isFinalPathLoaded by remember(path) { mutableStateOf(false) }
     LaunchedEffect(finalPath) {
         isOnlineCoverLoaded = false
+        isFinalPathLoaded = false
     }
 
     BoxWithConstraints(
@@ -98,7 +100,7 @@ fun BookCover(
             (minOf(maxWidth, maxHeight).toPx() / 3f).toDp()
         }
 
-        if (hasCustomDefault) {
+        if (hasCustomDefault && !isFinalPathLoaded) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(randomPath)
@@ -125,6 +127,7 @@ fun BookCover(
                 modifier = Modifier.fillMaxSize(),
                 onSuccess = {
                     isOnlineCoverLoaded = true
+                    isFinalPathLoaded = true
                     onLoadFinish?.invoke()
                 },
                 onError = {
