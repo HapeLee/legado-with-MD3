@@ -6,12 +6,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
 fun SmallTextButton(
@@ -32,9 +33,9 @@ fun SmallTextButton(
             modifier = Modifier.size(16.dp)
         )
         Spacer(Modifier.width(4.dp))
-        Text(
+        AppText(
             text = text,
-            style = MaterialTheme.typography.labelMedium
+            style = LegadoTheme.typography.labelMedium
         )
     }
 }

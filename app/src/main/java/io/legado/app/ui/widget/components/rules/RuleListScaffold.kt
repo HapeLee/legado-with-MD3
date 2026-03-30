@@ -10,20 +10,12 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,9 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,7 +44,7 @@ fun <T> RuleListScaffold(
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String = "搜索...",
     topBarActions: @Composable RowScope.() -> Unit = {},
-    bottomContent: @Composable (ColumnScope.(TopAppBarScrollBehavior) -> Unit)? = null,
+    bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     onClearSelection: () -> Unit,
     onSelectAll: () -> Unit,
@@ -59,22 +54,15 @@ fun <T> RuleListScaffold(
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
         onAddClick?.let { onClick ->
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    TooltipAnchorPosition.Above
+            AppFloatingActionButton(
+                onClick = onClick,
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = state.selectedIds.isEmpty(),
+                    alignment = Alignment.BottomEnd,
                 ),
-                tooltip = { PlainTooltip { Text("添加") } },
-                state = rememberTooltipState(),
+                tooltipText = "添加"
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = state.selectedIds.isEmpty(),
-                        alignment = Alignment.BottomEnd,
-                    ),
-                    onClick = onClick
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
-                }
+                Icon(Icons.Default.Add, contentDescription = "Add")
             }
         }
     },
@@ -86,8 +74,8 @@ fun <T> RuleListScaffold(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.del_msg)) },
+            title = { AppText(stringResource(R.string.delete)) },
+            text = { AppText(stringResource(R.string.del_msg)) },
             confirmButton = {
                 OutlinedButton(
                     onClick = {
@@ -98,12 +86,12 @@ fun <T> RuleListScaffold(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )

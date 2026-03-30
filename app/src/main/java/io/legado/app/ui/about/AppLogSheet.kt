@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.AppLog
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.LogUtils
 import java.util.Date
 
@@ -52,9 +53,9 @@ fun AppLogSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.log),
-                style = MaterialTheme.typography.titleLarge,
+                style = LegadoTheme.typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = {
@@ -82,17 +83,17 @@ fun AppLogSheet(
     showStackTrace?.let { stackTrace ->
         AlertDialog(
             onDismissRequest = { showStackTrace = null },
-            title = { Text("Log") },
+            title = { AppText("Log") },
             text = {
                 SelectionContainer {
                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        Text(text = stackTrace, style = MaterialTheme.typography.bodySmall)
+                        AppText(text = stackTrace, style = LegadoTheme.typography.bodySmall)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showStackTrace = null }) {
-                    Text(stringResource(android.R.string.ok))
+                    AppText(stringResource(android.R.string.ok))
                 }
             }
         )
@@ -110,14 +111,14 @@ private fun LogItem(
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
-        Text(
+        AppText(
             text = LogUtils.logTimeFormat.format(Date(item.first)),
-            style = MaterialTheme.typography.labelMedium,
+            style = LegadoTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.outline
         )
-        Text(
+        AppText(
             text = item.second,
-            style = MaterialTheme.typography.bodyMedium,
+            style = LegadoTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 4.dp)
         )
     }

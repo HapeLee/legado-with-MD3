@@ -21,6 +21,9 @@ object ThemeConfig {
 
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
+    //m3 or miuix
+    var composeEngine by prefDelegate(PreferKey.composeEngine, "m3")
+
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 
     var appTheme by prefDelegate(PreferKey.appTheme, "0")

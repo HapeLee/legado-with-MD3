@@ -19,7 +19,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,8 +35,10 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupViewModel
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.move
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -104,9 +105,9 @@ fun GroupManageSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        AppText(
                             text = stringResource(R.string.group_manage),
-                            style = MaterialTheme.typography.titleLarge
+                            style = LegadoTheme.typography.titleLarge
                         )
                         IconButton(onClick = {
                             editingGroup = null

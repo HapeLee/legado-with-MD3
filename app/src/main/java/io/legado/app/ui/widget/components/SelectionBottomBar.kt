@@ -15,7 +15,6 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -27,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.widget.components.text.AppText
 
 data class SelectionActions(
     val primaryAction: ActionItem,
@@ -84,7 +84,7 @@ fun SelectionBottomBar(
                     ) {
                         secondaryActions.forEach { action ->
                             DropdownMenuItem(
-                                text = { Text(action.text) },
+                                text = { AppText(action.text) },
                                 leadingIcon = action.icon,
                                 onClick = {
                                     action.onClick()
@@ -101,7 +101,7 @@ fun SelectionBottomBar(
                 positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                     TooltipAnchorPosition.Above
                 ),
-                tooltip = { PlainTooltip { Text(primaryAction.text) } },
+                tooltip = { PlainTooltip { AppText(primaryAction.text) } },
                 state = rememberTooltipState(),
             ) {
                 FilledIconButton(

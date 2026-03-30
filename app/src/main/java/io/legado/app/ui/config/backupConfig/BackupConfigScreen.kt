@@ -19,7 +19,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -42,14 +41,15 @@ import io.legado.app.help.storage.Restore
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.takePersistablePermissionSafely
 import kotlinx.coroutines.launch
@@ -166,9 +166,7 @@ fun BackupConfigScreen(
         },
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = {
-                    Text(stringResource(R.string.backup_restore))
-                },
+                title = stringResource(R.string.backup_restore),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -387,19 +385,19 @@ fun BackupConfigScreen(
     if (showWebDavAuthDialog) {
         AlertDialog(
             onDismissRequest = { showWebDavAuthDialog = false },
-            title = { Text(stringResource(R.string.web_dav_account)) },
+            title = { AppText(stringResource(R.string.web_dav_account)) },
             text = {
                 Column {
                     TextField(
                         value = tempAccount,
                         onValueChange = { tempAccount = it },
-                        label = { Text("账号") }
+                        label = { AppText("账号") }
                     )
                     Spacer(modifier = Modifier.padding(8.dp))
                     TextField(
                         value = tempPassword,
                         onValueChange = { tempPassword = it },
-                        label = { Text("密码") },
+                        label = { AppText("密码") },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         trailingIcon = {
@@ -432,12 +430,12 @@ fun BackupConfigScreen(
                         }
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showWebDavAuthDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -484,7 +482,7 @@ fun BackupConfigScreen(
     if (showRestoreSheet && backupNames.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { showRestoreSheet = false },
-            title = { Text(stringResource(R.string.select_restore_file)) },
+            title = { AppText(stringResource(R.string.select_restore_file)) },
             text = {
                 Column {
                     backupNames.forEach { name ->
@@ -508,7 +506,7 @@ fun BackupConfigScreen(
                                 }
                             )
                         }) {
-                            Text(name)
+                            AppText(name)
                         }
                     }
                 }
@@ -516,7 +514,7 @@ fun BackupConfigScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showRestoreSheet = false }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -535,7 +533,7 @@ fun BackupConfigScreen(
                 io.legado.app.help.storage.BackupConfig.saveIgnoreConfig()
                 showBackupIgnoreDialog = false
             },
-            title = { Text(stringResource(R.string.restore_ignore)) },
+            title = { AppText(stringResource(R.string.restore_ignore)) },
             text = {
                 Column {
                     io.legado.app.help.storage.BackupConfig.ignoreTitle.forEachIndexed { index, title ->
@@ -546,7 +544,7 @@ fun BackupConfigScreen(
                             ] = checkedItems[index]
                         }) {
                             val isChecked = checkedItems[index]
-                            Text(if (isChecked) "✓ $title" else title)
+                            AppText(if (isChecked) "✓ $title" else title)
                         }
                     }
                 }
@@ -556,7 +554,7 @@ fun BackupConfigScreen(
                     io.legado.app.help.storage.BackupConfig.saveIgnoreConfig()
                     showBackupIgnoreDialog = false
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
@@ -564,7 +562,7 @@ fun BackupConfigScreen(
                     io.legado.app.help.storage.BackupConfig.saveIgnoreConfig()
                     showBackupIgnoreDialog = false
                 }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -573,7 +571,7 @@ fun BackupConfigScreen(
     if (showLoadingDialog) {
         AlertDialog(
             onDismissRequest = {},
-            title = { Text(loadingText) },
+            title = { AppText(loadingText) },
             confirmButton = {},
             dismissButton = {}
         )
@@ -589,16 +587,16 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
+        title = { AppText(title) },
+        text = { AppText(text) },
         confirmButton = {
             OutlinedButton(onClick = onConfirm) {
-                Text(stringResource(R.string.ok))
+                AppText(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                AppText(stringResource(R.string.cancel))
             }
         }
     )

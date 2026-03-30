@@ -52,7 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -79,12 +78,10 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
-import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedTextButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
@@ -94,6 +91,9 @@ import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
@@ -194,16 +194,16 @@ fun ExploreShowScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                Text(
+                AppText(
                     text = "布局列数",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 TextCard(
                     text = "$gridColumnCount 列",
-                    textStyle = MaterialTheme.typography.titleSmall,
+                    textStyle = LegadoTheme.typography.titleSmall,
                     verticalPadding = 4.dp,
                     horizontalPadding = 12.dp,
                     cornerRadius = 12.dp
@@ -229,7 +229,7 @@ fun ExploreShowScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
-                Text("完成")
+                AppText("完成")
             }
         }
     }
@@ -294,13 +294,7 @@ fun ExploreShowScreen(
                 modifier = Modifier.responsiveHazeEffect(
                     state = hazeState
                 ),
-                title = {
-                    AnimatedTextLine(
-                        selectedTitle ?: title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
+                title = selectedTitle ?: title,
                 colors = GlassTopAppBarDefaults.glassColors(),
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBack)
@@ -346,7 +340,7 @@ fun ExploreShowScreen(
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = { Text("全部显示") },
+                            text = { AppText("全部显示") },
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_ALL)
                                 showMenu = false
@@ -358,7 +352,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { Text("隐藏已在书架的同源书籍") },
+                            text = { AppText("隐藏已在书架的同源书籍") },
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
                                 showMenu = false
@@ -370,7 +364,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { Text("隐藏已在书架的非同源书籍") },
+                            text = { AppText("隐藏已在书架的非同源书籍") },
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
                                 showMenu = false
@@ -382,7 +376,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { Text("只显示不在书架的书籍") },
+                            text = { AppText("只显示不在书架的书籍") },
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
                                 showMenu = false
@@ -509,7 +503,7 @@ fun KindGridItem(
         enabled = isClickable,
         selected = isSelected,
         label = {
-            Text(
+            AppText(
                 text = kind.title,
                 fontSize = 12.sp,
                 modifier = Modifier.fillMaxWidth(),
@@ -576,32 +570,32 @@ fun ExploreBookItem(
             .weight(1f)
             .align(Alignment.CenterVertically)) {
 
-            Text(
+            AppText(
                 text = book.name,
-                style = MaterialTheme.typography.titleSmall,
+                style = LegadoTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
             Row {
-                Text(
+                AppText(
                     text = book.author,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LegadoTheme.typography.bodySmall,
                     maxLines = 1
                 )
 
                 val latestChapter = book.latestChapterTitle
                 if (!latestChapter.isNullOrEmpty()) {
-                    Text(
+                    AppText(
                         text = " • ",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = Color.Gray,
                         maxLines = 1
                     )
 
-                    Text(
+                    AppText(
                         text = "最新: $latestChapter",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -612,9 +606,9 @@ fun ExploreBookItem(
 
             val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
             if (intro.isNotEmpty()) {
-                Text(
+                AppText(
                     text = intro,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = LegadoTheme.typography.labelSmall,
                     color = Color.Gray,
                     maxLines = 2,
                     minLines = 2,
@@ -654,9 +648,12 @@ fun ExploreBookGridItem(
 
     val content: (@Composable RowScope.() -> Unit)? = if (!badgeText.isNullOrBlank()) {
         {
-            Text(
+            AppText(
                 text = badgeText,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                style = LegadoTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp
+                )
             )
         }
     } else {
@@ -681,9 +678,9 @@ fun ExploreBookGridItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        Text(
+        AppText(
             text = book.name,
-            style = MaterialTheme.typography.bodySmall,
+            style = LegadoTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -698,10 +695,10 @@ fun TagChip(text: String) {
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
         shape = RoundedCornerShape(4.dp)
     ) {
-        Text(
+        AppText(
             text = text,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary
         )
     }
@@ -742,13 +739,13 @@ fun LoadMoreFooter(
                 },
                 label = "FooterTextChange"
             ) { text ->
-                Text(
+                AppText(
                     text = text,
                     color = when {
                         errorMsg != null -> Color.Red
                         else -> Color.Gray
                     },
-                    style = MaterialTheme.typography.bodySmall
+                    style = LegadoTheme.typography.bodySmall
                 )
             }
 

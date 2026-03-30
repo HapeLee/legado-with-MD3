@@ -43,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,11 +77,10 @@ import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
@@ -101,6 +99,9 @@ import io.legado.app.ui.widget.components.heatmap.rememberWeeks
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -148,11 +149,7 @@ fun ReadRecordScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = {
-                        Text(
-                            text = "阅读记录"
-                        )
-                    },
+                    title = "阅读记录",
                     subtitle = {
                         val subTitle = when (displayMode) {
                             DisplayMode.AGGREGATE -> "汇总视图"
@@ -271,10 +268,10 @@ fun ReadRecordScreen(
             onDismissRequest = {
                 pendingDeleteAction = null
             },
-            title = { Text("确认删除") },
+            title = { AppText("确认删除") },
             text = {
                 Column {
-                    Text("确定要删除这条记录吗？")
+                    AppText("确定要删除这条记录吗？")
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
@@ -289,10 +286,10 @@ fun ReadRecordScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = skipDeleteConfirmTemp, onCheckedChange = null)
-                        Text(
+                        AppText(
                             text = "不再提示",
                             modifier = Modifier.padding(start = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = LegadoTheme.typography.bodyMedium
                         )
                     }
                 }
@@ -311,7 +308,7 @@ fun ReadRecordScreen(
                 TextButton(onClick = {
                     pendingDeleteAction = null
                 }) {
-                    Text("取消")
+                    AppText("取消")
                 }
             }
         )
@@ -346,10 +343,10 @@ fun ReadRecordScreen(
 
         AlertDialog(
             onDismissRequest = { mergeDialogData = null },
-            title = { Text("合并阅读记录") },
+            title = { AppText("合并阅读记录") },
             text = {
                 Column {
-                    Text("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                    AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
                     Spacer(modifier = Modifier.height(8.dp))
 
                     candidates.forEach { candidate ->
@@ -367,10 +364,10 @@ fun ReadRecordScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(checked = isChecked, onCheckedChange = null)
-                            Text(
+                            AppText(
                                 text = "$author（${formatDuring(candidate.readTime)}）",
                                 modifier = Modifier.padding(start = 8.dp),
-                                style = MaterialTheme.typography.bodyMedium
+                                style = LegadoTheme.typography.bodyMedium
                             )
                         }
                     }
@@ -386,12 +383,12 @@ fun ReadRecordScreen(
                         mergeDialogData = null
                     }
                 ) {
-                    Text("合并")
+                    AppText("合并")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { mergeDialogData = null }) {
-                    Text("取消")
+                    AppText("取消")
                 }
             }
         )
@@ -686,21 +683,21 @@ fun LatestReadItem(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 text = record.bookName,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
+            AppText(
                 text = record.bookAuthor.ifBlank { "未知作者" },
-                style = MaterialTheme.typography.bodySmall,
+                style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 modifier = Modifier
                     .basicMarquee(
                         iterations = Int.MAX_VALUE,
@@ -716,7 +713,7 @@ fun LatestReadItem(
                         append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
                     }
                 },
-                style = MaterialTheme.typography.labelSmall,
+                style = LegadoTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -783,9 +780,9 @@ fun TimelineSessionItem(
                 modifier = Modifier.width(48.dp),
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(
+                AppText(
                     text = endTimeText,
-                    style = MaterialTheme.typography.bodySmall
+                    style = LegadoTheme.typography.bodySmall
                 )
             }
 
@@ -795,23 +792,23 @@ fun TimelineSessionItem(
                 Cover(coverPath)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
-                    Text(
+                    AppText(
                         text = session.bookName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = LegadoTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
+                    AppText(
                         text = session.bookAuthor.ifBlank { "未知作者" },
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
+                    AppText(
                         text = chapterTitle.orEmpty(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LegadoTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -847,21 +844,21 @@ fun ReadRecordItem(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            AppText(
                 text = detail.bookName,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 maxLines = 1
             )
-            Text(
+            AppText(
                 text = detail.bookAuthor.ifBlank { "未知作者" },
-                style = MaterialTheme.typography.bodySmall,
+                style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 text = "阅读时长: ${formatDuring(detail.readTime)}",
                 color = MaterialTheme.colorScheme.outline,
-                style = MaterialTheme.typography.labelSmall
+                style = LegadoTheme.typography.labelSmall
             )
         }
     }
@@ -876,17 +873,17 @@ fun DateHeader(
     SectionHeader(
         titleContent = {
             Column {
-                Text(
+                AppText(
                     text = dateText,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.secondary
                 )
 
                 dailyTotalTime?.let { total ->
-                    Text(
+                    AppText(
                         text = "已读 ${formatDuring(total)}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -934,28 +931,28 @@ fun ReadingSummaryCard(
 
             Column(modifier = Modifier.weight(1f)) {
 
-                Text(
+                AppText(
                     text = title,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = LegadoTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
+                    AppText(
                         text = "已读 ",
-                        style = MaterialTheme.typography.titleMedium
+                        style = LegadoTheme.typography.titleMedium
                     )
-                    Text(
+                    AppText(
                         text = "$bookCount",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = LegadoTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
+                    AppText(
                         text = " 本书",
-                        style = MaterialTheme.typography.titleMedium
+                        style = LegadoTheme.typography.titleMedium
                     )
                 }
 
@@ -965,9 +962,9 @@ fun ReadingSummaryCard(
                 val minutes = totalDurationMinutes % 60
                 val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
 
-                Text(
+                AppText(
                     text = "共阅读 $timeString",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LegadoTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }

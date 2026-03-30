@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,6 +44,7 @@ import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,7 +133,7 @@ fun RssFavoritesScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Group, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.all))
+                        AppText(stringResource(R.string.all))
                     }
                 },
                 onClick = {
@@ -151,7 +151,7 @@ fun RssFavoritesScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text(group)
+                            AppText(group)
                         }
                     },
                     onClick = {
@@ -166,7 +166,7 @@ fun RssFavoritesScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.delete_select_group))
+                        AppText(stringResource(R.string.delete_select_group))
                     }
                 },
                 onClick = {
@@ -179,7 +179,7 @@ fun RssFavoritesScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.all))
+                        AppText(stringResource(R.string.all))
                     }
                 },
                 onClick = {
@@ -248,14 +248,14 @@ fun RssFavoritesScreen(
                         },
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = { Text(stringResource(R.string.change_group)) },
+                                text = { AppText(stringResource(R.string.change_group)) },
                                 onClick = {
                                     showSetGroupDialog = rssStar
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
+                                text = { AppText(stringResource(R.string.delete)) },
                                 onClick = {
                                     viewModel.deleteStar(rssStar)
                                     dismiss()

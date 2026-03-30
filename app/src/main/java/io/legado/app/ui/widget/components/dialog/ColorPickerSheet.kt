@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +40,9 @@ import com.github.skydoves.colorpicker.compose.BrightnessSlider
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,9 +87,9 @@ fun ColorPickerSheet(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            AppText(
                 text = "颜色选择",
-                style = MaterialTheme.typography.titleLarge,
+                style = LegadoTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -168,9 +169,9 @@ fun ColorPickerSheet(
                         )
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
+                AppText(
                     text = "#${Integer.toHexString(currentColor.toArgb()).uppercase()}",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = LegadoTheme.typography.bodyLarge
                 )
 
                 Row(
@@ -178,14 +179,14 @@ fun ColorPickerSheet(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismissRequest) {
-                        Text(stringResource(R.string.cancel))
+                        AppText(stringResource(R.string.cancel))
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = {
                         onColorSelected(currentColor.toArgb())
                         onDismissRequest()
                     }) {
-                        Text(stringResource(R.string.ok))
+                        AppText(stringResource(R.string.ok))
                     }
                 }
             }

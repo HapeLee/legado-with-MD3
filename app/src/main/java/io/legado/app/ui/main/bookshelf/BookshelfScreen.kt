@@ -45,7 +45,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -78,6 +78,7 @@ import io.legado.app.ui.book.import.remote.RemoteBookActivity
 import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -85,6 +86,7 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.tabRow.AdaptiveTabRow
 import io.legado.app.utils.readText
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
@@ -235,37 +237,37 @@ fun BookshelfScreen(
         topBarActions = { },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.add_remote_book)) },
+                text = { AppText(stringResource(R.string.add_remote_book)) },
                 onClick = { context.startActivity<RemoteBookActivity>(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Wifi, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.book_local)) },
+                text = { AppText(stringResource(R.string.book_local)) },
                 onClick = { context.startActivity<ImportBookActivity>(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Save, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.update_toc)) },
+                text = { AppText(stringResource(R.string.update_toc)) },
                 onClick = { viewModel.upToc(uiState.items); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text("布局设置") },
+                text = { AppText("布局设置") },
                 onClick = { showConfigSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.GridView, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.group_manage)) },
+                text = { AppText(stringResource(R.string.group_manage)) },
                 onClick = { showGroupManageSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.Edit, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.add_url)) },
+                text = { AppText(stringResource(R.string.add_url)) },
                 onClick = { showAddUrlDialog = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.Link, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.bookshelf_management)) },
+                text = { AppText(stringResource(R.string.bookshelf_management)) },
                 onClick = {
                     val groupId =
                         uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
@@ -277,7 +279,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Settings, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.cache_export)) },
+                text = { AppText(stringResource(R.string.cache_export)) },
                 onClick = {
                     val groupId =
                         uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
@@ -289,7 +291,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Download, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.export_bookshelf)) },
+                text = { AppText(stringResource(R.string.export_bookshelf)) },
                 onClick = {
                     showExportSheet = true
                     dismiss()
@@ -297,12 +299,12 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.ImportExport, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.import_bookshelf)) },
+                text = { AppText(stringResource(R.string.import_bookshelf)) },
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.log)) },
+                text = { AppText(stringResource(R.string.log)) },
                 onClick = {
                     showLogSheet = true
                     dismiss()
@@ -320,32 +322,18 @@ fun BookshelfScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PrimaryScrollableTabRow(
-                            selectedTabIndex = selectedTabIndex,
-                            edgePadding = 0.dp,
-                            divider = { },
-                            containerColor = Color.Transparent,
-                            minTabWidth = 0.dp,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            uiState.groups.forEachIndexed { index, group ->
-                                Tab(
-                                    selected = selectedTabIndex == index,
-                                    onClick = {
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    },
-                                    text = {
-                                        Text(
-                                            text = group.groupName,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                )
-                            }
+                        val tabTitles = remember(uiState.groups) {
+                            uiState.groups.map { it.groupName }
                         }
+
+                        AdaptiveTabRow(
+                            tabTitles = tabTitles,
+                            selectedTabIndex = selectedTabIndex,
+                            onTabSelected = { index ->
+                                scope.launch { pagerState.animateScrollToPage(index) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
 
                         if (BookshelfConfig.shouldShowExpandButton) {
                             Box(modifier = Modifier.padding(end = 16.dp)) {
@@ -361,7 +349,7 @@ fun BookshelfScreen(
                                 ) { dismiss ->
                                     uiState.groups.forEachIndexed { index, group ->
                                         RoundDropdownMenuItem(
-                                            text = { Text(group.groupName) },
+                                            text = { AppText(group.groupName) },
                                             onClick = {
                                                 scope.launch { pagerState.animateScrollToPage(index) }
                                                 dismiss()
@@ -565,10 +553,10 @@ fun BookshelfScreen(
                 ) {
                     CircularProgressIndicator()
                     uiState.loadingText?.let {
-                        Text(
+                        AppText(
                             text = it,
                             modifier = Modifier.padding(top = 16.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = LegadoTheme.typography.bodyMedium
                         )
                     }
                 }

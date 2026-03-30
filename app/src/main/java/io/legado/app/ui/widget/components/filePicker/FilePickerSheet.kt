@@ -20,7 +20,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +27,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 
 enum class FilePickerSheetMode {
     DIR, FILE, EXPORT
@@ -56,9 +57,9 @@ fun FilePickerSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            AppText(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
 
@@ -141,9 +142,9 @@ private fun RowScope.FilePickerOptionCard(
                 tint = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 text = text,
-                style = MaterialTheme.typography.labelMedium,
+                style = LegadoTheme.typography.labelMedium,
                 maxLines = 1
             )
         }

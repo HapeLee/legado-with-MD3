@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
@@ -41,9 +42,9 @@ fun CheckSourceBottomSheet(
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.check_source_config),
-                style = MaterialTheme.typography.titleLarge,
+                style = LegadoTheme.typography.titleLarge,
                 modifier = Modifier.padding(vertical = 16.dp)
             )
 
@@ -131,7 +132,7 @@ fun CheckSourceBottomSheet(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
                 Button(onClick = {
                     if (viewModel.saveCheckSourceConfig()) {
@@ -140,7 +141,7 @@ fun CheckSourceBottomSheet(
                         Toast.makeText(context, R.string.error, Toast.LENGTH_SHORT).show()
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             }
         }

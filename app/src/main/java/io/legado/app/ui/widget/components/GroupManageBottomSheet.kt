@@ -18,7 +18,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,9 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,10 +53,10 @@ fun GroupManageBottomSheet(
                 .padding(bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
+            AppText(
                 modifier = Modifier.padding(bottom = 16.dp),
                 text = stringResource(R.string.group_manage),
-                style = MaterialTheme.typography.titleMedium
+                style = LegadoTheme.typography.titleMedium
             )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(groups, key = { it }) { group ->
@@ -115,7 +116,7 @@ private fun GroupItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
-                label = { Text(stringResource(R.string.edit)) },
+                label = { AppText(stringResource(R.string.edit)) },
                 contentPadding = PaddingValues(
                     top = 4.dp,
                     bottom = 4.dp,

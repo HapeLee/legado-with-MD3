@@ -15,12 +15,10 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,8 +36,10 @@ import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.getClipText
 import io.legado.app.utils.share
@@ -69,9 +69,9 @@ fun ThemeListDialog(
                     .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                AppText(
                     text = stringResource(R.string.theme_list),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = LegadoTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(
@@ -104,13 +104,11 @@ fun ThemeListDialog(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (item.primaryColor.toColorInt() == context.primaryColor) {
-                                MaterialTheme.colorScheme.secondaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer
-                            }
-                        )
+                        containerColor = if (item.primaryColor.toColorInt() == context.primaryColor) {
+                            MaterialTheme.colorScheme.secondaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        }
                     ) {
                         Row(
                             modifier = Modifier
@@ -129,9 +127,9 @@ fun ThemeListDialog(
                                     )
                                     .padding(8.dp)
                             )
-                            Text(
+                            AppText(
                                 text = item.themeName,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = LegadoTheme.typography.bodyLarge,
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(
@@ -161,8 +159,8 @@ fun ThemeListDialog(
     deleteIndex?.let { index ->
         AlertDialog(
             onDismissRequest = { deleteIndex = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.sure_del)) },
+            title = { AppText(stringResource(R.string.delete)) },
+            text = { AppText(stringResource(R.string.sure_del)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -171,12 +169,12 @@ fun ThemeListDialog(
                         deleteIndex = null
                     }
                 ) {
-                    Text(stringResource(android.R.string.ok))
+                    AppText(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { deleteIndex = null }) {
-                    Text(stringResource(android.R.string.cancel))
+                    AppText(stringResource(android.R.string.cancel))
                 }
             }
         )

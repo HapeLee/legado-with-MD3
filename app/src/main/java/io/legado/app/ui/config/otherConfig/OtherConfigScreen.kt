@@ -13,7 +13,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -30,8 +29,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -40,6 +37,9 @@ import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
@@ -83,9 +83,7 @@ fun OtherConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = {
-                    Text(stringResource(R.string.other_setting))
-                },
+                title = stringResource(R.string.other_setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -200,7 +198,10 @@ fun OtherConfigScreen(
 
                 SliderSettingItem(
                     title = stringResource(R.string.bitmap_cache_size),
-                    description = stringResource(R.string.bitmap_cache_size_summary),
+                    description = stringResource(
+                        R.string.bitmap_cache_size_summary,
+                        OtherConfig.bitmapCacheSize
+                    ),
                     value = OtherConfig.bitmapCacheSize.toFloat(),
                     defaultValue = 32f,
                     valueRange = 1f..2047f,
@@ -211,7 +212,10 @@ fun OtherConfigScreen(
 
                 SliderSettingItem(
                     title = stringResource(R.string.image_retain_number),
-                    description = stringResource(R.string.image_retain_number_summary),
+                    description = stringResource(
+                        R.string.image_retain_number_summary,
+                        OtherConfig.imageRetainNum
+                    ),
                     value = OtherConfig.imageRetainNum.toFloat(),
                     defaultValue = 10f,
                     valueRange = 0f..100f,
@@ -220,7 +224,10 @@ fun OtherConfigScreen(
 
                 SliderSettingItem(
                     title = stringResource(R.string.pre_download),
-                    description = stringResource(R.string.pre_download_s),
+                    description = stringResource(
+                        R.string.pre_download_s,
+                        OtherConfig.preDownloadNum
+                    ),
                     value = OtherConfig.preDownloadNum.toFloat(),
                     defaultValue = 10f,
                     valueRange = 0f..100f,
@@ -458,23 +465,23 @@ fun OtherConfigScreen(
         if (showPasswordDialog) {
             AlertDialog(
                 onDismissRequest = { showPasswordDialog = false },
-                title = { Text(stringResource(R.string.set_local_password)) },
+                title = { AppText(stringResource(R.string.set_local_password)) },
                 text = {
                     TextField(
                         value = tempPassword,
                         onValueChange = { tempPassword = it },
-                        label = { Text("Password") }
+                        label = { AppText("Password") }
                     )
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.setLocalPassword(tempPassword)
                         showPasswordDialog = false
-                    }) { Text(stringResource(R.string.ok)) }
+                    }) { AppText(stringResource(R.string.ok)) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showPasswordDialog = false }) {
-                        Text(stringResource(R.string.cancel))
+                        AppText(stringResource(R.string.cancel))
                     }
                 }
             )
@@ -492,16 +499,16 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = { Text(text) },
+        title = { AppText(title) },
+        text = { AppText(text) },
         confirmButton = {
             OutlinedButton(onClick = onConfirm) {
-                Text(stringResource(R.string.ok))
+                AppText(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                AppText(stringResource(R.string.cancel))
             }
         }
     )

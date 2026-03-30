@@ -20,17 +20,12 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
@@ -56,17 +51,19 @@ import io.legado.app.R
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.mainConfig.MainConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.regularHazeEffect
+import io.legado.app.ui.widget.components.AppNavigationBar
+import io.legado.app.ui.widget.components.AppNavigationBarItem
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.launch
@@ -151,7 +148,7 @@ fun MainScreen(
                             onClick = { context.startActivity<SearchActivity>() },
                             expanded = expanded,
                             icon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            text = { Text(stringResource(R.string.search)) }
+                            text = { AppText(stringResource(R.string.search)) }
                         )
                     }
                 }
@@ -198,7 +195,7 @@ fun MainScreen(
                                     ) { dismiss ->
                                         bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
                                             RoundDropdownMenuItem(
-                                                text = { Text(group.groupName) },
+                                                text = { AppText(group.groupName) },
                                                 onClick = {
                                                     coroutineScope.launch {
                                                         if (pagerState.currentPage != index) {
@@ -224,7 +221,7 @@ fun MainScreen(
                             }
                         },
                         label = if (labelVisibilityMode != "unlabeled") {
-                            { Text(stringResource(destination.labelId)) }
+                            { AppText(stringResource(destination.labelId)) }
                         } else null
                     )
                 }
@@ -237,103 +234,34 @@ fun MainScreen(
                 if (!useRail && MainConfig.showBottomView) {
                     val labelVisibilityMode = MainConfig.labelVisibilityMode
                     val isUnlabeled = labelVisibilityMode == "unlabeled"
-                    NavigationBar(
+
+                    AppNavigationBar(
                         modifier = Modifier
                             .regularHazeEffect(state = hazeState)
-                            .height(if (isUnlabeled) 64.dp else 80.dp),
-                        containerColor = GlassDefaults.glassColor(
-                            noBlurColor = BottomAppBarDefaults.containerColor,
-                            blurAlpha = GlassDefaults.DefaultBlurAlpha
-                        ).let { baseColor ->
-                            val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
-                            baseColor.copy(alpha = (baseColor.alpha * opacity).coerceIn(0f, 1f))
-                        }
+                            .height(if (isUnlabeled) 64.dp else 80.dp)
                     ) {
                         val alwaysShowLabel = when (labelVisibilityMode) {
                             "labeled" -> true
-                            "selected" -> false
-                            "unlabeled" -> false
                             else -> false
                         }
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
-                            var showGroupMenu by remember { mutableStateOf(false) }
-                            val haptic = LocalHapticFeedback.current
-
-                            NavigationBarItem(
+                            AppNavigationBarItem(
                                 selected = selected,
                                 onClick = {
-                                    coroutineScope.launch {
-                                        pagerState.animateScrollToPage(index)
-                                    }
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
                                 },
-                                icon = {
-                                    Box {
-                                        NavigationIcon(
-                                            destination = destination,
-                                            selected = selected,
-                                            upBooksCount = uiState.upBooksCount,
-                                            modifier = if (destination == MainDestination.Bookshelf) {
-                                                Modifier.combinedClickable(
-                                                    onClick = {
-                                                        coroutineScope.launch {
-                                                            pagerState.animateScrollToPage(index)
-                                                        }
-                                                    },
-                                                    onLongClick = {
-                                                        haptic.performHapticFeedback(
-                                                            HapticFeedbackType.LongPress
-                                                        )
-                                                        showGroupMenu = true
-                                                    }
-                                                )
-                                            } else Modifier
-                                        )
-
-                                        if (destination == MainDestination.Bookshelf && showGroupMenu) {
-                                            RoundDropdownMenu(
-                                                expanded = showGroupMenu,
-                                                onDismissRequest = { showGroupMenu = false }
-                                            ) { dismiss ->
-                                                bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
-                                                    RoundDropdownMenuItem(
-                                                        text = { Text(group.groupName) },
-                                                        onClick = {
-                                                            coroutineScope.launch {
-                                                                if (pagerState.currentPage != index) {
-                                                                    pagerState.scrollToPage(index)
-                                                                }
-                                                                bookshelfViewModel.changeGroup(
-                                                                    group.groupId
-                                                                )
-                                                                dismiss()
-                                                            }
-                                                        },
-                                                        trailingIcon = {
-                                                            if (bookshelfUiState.selectedGroupIndex == groupIndex) {
-                                                                Icon(
-                                                                    Icons.Default.Check,
-                                                                    null,
-                                                                    modifier = Modifier.size(18.dp)
-                                                                )
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                labelString = stringResource(destination.labelId),
+                                miuixIcon = if (selected) destination.miuixSelectedIcon else destination.miuixIcon,
+                                m3Icon = {
+                                    if (selected) destination.m3SelectedIcon else destination.m3Icon
                                 },
-                                colors = NavigationBarItemDefaults.colors(
-                                    indicatorColor = GlassDefaults.glassColor(
-                                        noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
-                                        blurAlpha = GlassDefaults.ThickBlurAlpha
-                                    ),
+                                m3IndicatorColor = GlassDefaults.glassColor(
+                                    noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    blurAlpha = GlassDefaults.ThickBlurAlpha
                                 ),
-                                label = if (labelVisibilityMode != "unlabeled") {
-                                    { Text(stringResource(destination.labelId)) }
-                                } else null,
-                                alwaysShowLabel = alwaysShowLabel
+                                m3ShowLabel = !isUnlabeled,
+                                m3AlwaysShowLabel = alwaysShowLabel
                             )
                         }
                     }
@@ -386,10 +314,10 @@ private fun NavigationIcon(
     upBooksCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val icon = if (selected) destination.selectedIcon else destination.icon
+    val icon = if (selected) destination.m3SelectedIcon else destination.m3Icon
     Box(modifier = modifier) {
         if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
-            BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
+            BadgedBox(badge = { Badge { AppText(upBooksCount.toString()) } }) {
                 Icon(icon, contentDescription = null)
             }
         } else {

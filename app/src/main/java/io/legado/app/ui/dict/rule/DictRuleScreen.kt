@@ -19,11 +19,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -46,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.DictRule
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -59,6 +58,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -195,8 +195,8 @@ fun DictRuleScreen(
             onConfirm = { viewModel.saveImportedRules() },
             itemContent = { rule, _ ->
                 Column {
-                    Text(rule.name, style = MaterialTheme.typography.titleMedium)
-                    Text(rule.urlRule, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    AppText(rule.name, style = LegadoTheme.typography.titleMedium)
+                    AppText(rule.urlRule, style = LegadoTheme.typography.bodySmall, maxLines = 1)
                 }
             }
         )
@@ -211,16 +211,16 @@ fun DictRuleScreen(
     showDeleteRuleDialog?.let { rule ->
         AlertDialog(
             onDismissRequest = { showDeleteRuleDialog = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.del_msg)) },
+            title = { AppText(stringResource(R.string.delete)) },
+            text = { AppText(stringResource(R.string.del_msg)) },
             confirmButton = {
                 OutlinedButton(onClick = {
                     viewModel.delete(rule); showDeleteRuleDialog = null
-                }) { Text(stringResource(R.string.ok)) }
+                }) { AppText(stringResource(R.string.ok)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    Text(
+                    AppText(
                         stringResource(R.string.cancel)
                     )
                 }
@@ -310,7 +310,7 @@ fun DictRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.import_str)) },
+                text = { AppText(stringResource(R.string.import_str)) },
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )

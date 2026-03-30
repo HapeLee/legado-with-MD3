@@ -15,9 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +29,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -59,7 +59,7 @@ fun AboutScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.about)) },
+                title = stringResource(R.string.about),
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBack)
                 },
@@ -81,9 +81,9 @@ fun AboutScreen(
                     .width(160.dp)
                     .align(Alignment.CenterHorizontally)
             )
-            Text(
+            AppText(
                 text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.bodyLarge,
+                style = LegadoTheme.typography.bodyLarge,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
@@ -98,9 +98,9 @@ fun AboutScreen(
                     .fillMaxWidth()
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .padding(vertical = 4.dp))
-            Text(
+            AppText(
                 text = stringResource(R.string.about_description),
-                style = MaterialTheme.typography.bodyLarge,
+                style = LegadoTheme.typography.bodyLarge,
                 fontSize = 12.sp,
                 modifier = Modifier
                     .fillMaxWidth()

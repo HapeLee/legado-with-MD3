@@ -4,12 +4,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
+import top.yukonga.miuix.kmp.basic.SpinnerEntry
+import top.yukonga.miuix.kmp.extra.SuperSpinner
 
 @Composable
 fun DropdownListSettingItem(
@@ -21,33 +25,62 @@ fun DropdownListSettingItem(
     imageVector: ImageVector? = null,
     onValueChange: (String) -> Unit
 ) {
-    val currentEntry = displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue
+    val composeEngine = LegadoTheme.composeEngine
 
-    SettingItem(
-        title = title,
-        description = description,
-        option = currentEntry,
-        imageVector = imageVector,
-        onClick = { },
-        dropdownMenu = { onDismiss ->
-            displayEntries.forEachIndexed { index, display ->
-                RoundDropdownMenuItem(
-                    text = { Text(display) },
-                    onClick = {
-                        onValueChange(entryValues[index])
-                        onDismiss()
-                    },
-                    trailingIcon = if (selectedValue == entryValues[index]) {
-                        {
-                            Icon(
-                                Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    } else null
-                )
-            }
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
+        val spinnerItems = displayEntries.map { display ->
+            SpinnerEntry(title = display)
         }
-    )
+
+        SuperSpinner(
+            title = title,
+            summary = description,
+            items = spinnerItems,
+            selectedIndex = selectedIndex,
+            startAction = imageVector?.let { icon ->
+                {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null
+                    )
+                }
+            },
+            onSelectedIndexChange = { index ->
+                onValueChange(entryValues[index])
+            }
+        )
+    } else {
+
+        val currentEntry =
+            displayEntries.getOrNull(entryValues.indexOf(selectedValue)) ?: selectedValue
+
+        SettingItem(
+            title = title,
+            description = description,
+            option = currentEntry,
+            imageVector = imageVector,
+            onClick = { },
+            dropdownMenu = { onDismiss ->
+                displayEntries.forEachIndexed { index, display ->
+                    RoundDropdownMenuItem(
+                        text = { AppText(display) },
+                        onClick = {
+                            onValueChange(entryValues[index])
+                            onDismiss()
+                        },
+                        trailingIcon = if (selectedValue == entryValues[index]) {
+                            {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else null
+                    )
+                }
+            }
+        )
+    }
 }

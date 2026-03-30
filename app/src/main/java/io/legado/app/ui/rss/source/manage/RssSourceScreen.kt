@@ -17,11 +17,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.RssSource
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
@@ -58,6 +57,7 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -209,8 +209,12 @@ fun RssSourceScreen(
             onConfirm = { viewModel.saveImportedRules() },
             itemContent = { source, _ ->
                 Column {
-                    Text(source.sourceName, style = MaterialTheme.typography.titleMedium)
-                    Text(source.sourceUrl, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                    AppText(source.sourceName, style = LegadoTheme.typography.titleMedium)
+                    AppText(
+                        source.sourceUrl,
+                        style = LegadoTheme.typography.bodySmall,
+                        maxLines = 1
+                    )
                 }
             }
         )
@@ -225,16 +229,16 @@ fun RssSourceScreen(
     showDeleteRuleDialog?.let { source ->
         AlertDialog(
             onDismissRequest = { showDeleteRuleDialog = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.del_msg)) },
+            title = { AppText(stringResource(R.string.delete)) },
+            text = { AppText(stringResource(R.string.del_msg)) },
             confirmButton = {
                 OutlinedButton(onClick = {
                     viewModel.del(source); showDeleteRuleDialog = null
-                }) { Text(stringResource(R.string.ok)) }
+                }) { AppText(stringResource(R.string.ok)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -287,11 +291,11 @@ fun RssSourceScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 onClick = { showGroupManageSheet = true },
-                text = { Text("分组管理") },
+                text = { AppText("分组管理") },
             )
             Box {
                 RoundDropdownMenuItem(
-                    text = { Text(stringResource(R.string.import_rss_source)) },
+                    text = { AppText(stringResource(R.string.import_rss_source)) },
                     onClick = { showImportMenu = true }
                 )
                 RoundDropdownMenu(
@@ -299,7 +303,7 @@ fun RssSourceScreen(
                     onDismissRequest = { showImportMenu = false }
                 ) {
                     RoundDropdownMenuItem(
-                        text = { Text(stringResource(R.string.import_on_line)) },
+                        text = { AppText(stringResource(R.string.import_on_line)) },
                         onClick = {
                             showImportMenu = false
                             dismiss()
@@ -307,7 +311,7 @@ fun RssSourceScreen(
                         }
                     )
                     RoundDropdownMenuItem(
-                        text = { Text(stringResource(R.string.import_local)) },
+                        text = { AppText(stringResource(R.string.import_local)) },
                         onClick = {
                             showImportMenu = false
                             dismiss()
@@ -315,7 +319,7 @@ fun RssSourceScreen(
                         }
                     )
                     RoundDropdownMenuItem(
-                        text = { Text(stringResource(R.string.import_default_rule)) },
+                        text = { AppText(stringResource(R.string.import_default_rule)) },
                         onClick = {
                             showImportMenu = false
                             dismiss()
@@ -326,29 +330,29 @@ fun RssSourceScreen(
             }
             PillDivider()
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.all)) },
+                text = { AppText(stringResource(R.string.all)) },
                 onClick = { dismiss(); viewModel.setGroupFilter(null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.enabled)) },
+                text = { AppText(stringResource(R.string.enabled)) },
                 onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_ENABLED) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.disabled)) },
+                text = { AppText(stringResource(R.string.disabled)) },
                 onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_DISABLED) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.need_login)) },
+                text = { AppText(stringResource(R.string.need_login)) },
                 onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_LOGIN) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.no_group)) },
+                text = { AppText(stringResource(R.string.no_group)) },
                 onClick = { dismiss(); viewModel.setGroupFilter(RssSourceViewModel.FILTER_NO_GROUP) }
             )
             PillDivider()
             groups.forEach { group ->
                 RoundDropdownMenuItem(
-                    text = { Text(group) },
+                    text = { AppText(group) },
                     onClick = { dismiss(); viewModel.setGroupFilter("${RssSourceViewModel.PREFIX_GROUP}$group") }
                 )
             }

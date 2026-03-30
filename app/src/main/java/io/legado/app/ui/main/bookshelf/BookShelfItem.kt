@@ -16,6 +16,7 @@ data class BookShelfItem(
     val durChapterPos: Int,
     val latestChapterTitle: String?,
     val latestChapterTime: Long,
+    val lastCheckCount: Int,
     val totalChapterNum: Int,
     val durChapterIndex: Int,
     val type: Int,
@@ -32,6 +33,9 @@ data class BookShelfItem(
     val isImage: Boolean get() = (type and BookType.image) > 0
 
     val isNotShelf: Boolean get() = (type and BookType.notShelf) > 0
+
+    val isNew: Boolean get() = lastCheckCount > 0
+
 
     fun getUnreadChapterNum() = max(totalChapterNum - durChapterIndex - 1, 0)
 }

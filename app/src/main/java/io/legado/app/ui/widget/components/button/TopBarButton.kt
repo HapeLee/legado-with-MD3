@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
 
 enum class TopBarButtonVariant {
@@ -109,13 +111,22 @@ fun TopbarNavigationButton(
     contentDescription: String? = "返回",
     style: TopBarButtonVariant = TopBarButtonVariant.Filled
 ) {
-    TopBarButton(
-        onClick = onClick,
-        imageVector = imageVector,
-        contentDescription = contentDescription,
-        modifier = modifier.padding(horizontal = 12.dp),
-        style = style
-    )
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+        MiuixButton(
+            onClick = onClick,
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier.padding(horizontal = 16.dp)
+        )
+    } else {
+        TopBarButton(
+            onClick = onClick,
+            imageVector = imageVector,
+            contentDescription = contentDescription,
+            modifier = modifier.padding(horizontal = 12.dp),
+            style = style
+        )
+    }
 }
 
 @Composable
@@ -126,21 +137,29 @@ fun TopBarActionButton(
     modifier: Modifier = Modifier
 ) {
     val enableProgressive = ThemeConfig.enableProgressiveBlur
-
-    if (enableProgressive) {
-        TopBarButton(
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+        MiuixButton(
             onClick = onClick,
             imageVector = imageVector,
             contentDescription = contentDescription,
-            modifier = modifier.padding(end = 12.dp),
-            style = TopBarButtonVariant.Filled
+            modifier = modifier.padding(end = 8.dp),
         )
     } else {
-        IconButton(onClick = onClick) {
-            Icon(
+        if (enableProgressive) {
+            TopBarButton(
+                onClick = onClick,
                 imageVector = imageVector,
-                contentDescription = contentDescription
+                contentDescription = contentDescription,
+                modifier = modifier.padding(end = 12.dp),
+                style = TopBarButtonVariant.Filled
             )
+        } else {
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = imageVector,
+                    contentDescription = contentDescription
+                )
+            }
         }
     }
 }
@@ -165,43 +184,51 @@ fun TopBarAnimatedActionButton(
             showText = false
         }
     }
-
-    ToggleButton(
-        modifier = modifier.height(36.dp),
-        contentPadding = PaddingValues(horizontal = 8.dp),
-        checked = checked,
-        onCheckedChange = {
-            lastCheckedState = it
-            onCheckedChange(it)
-            showText = true
-        }
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-
-            AnimatedContent(
-                targetState = checked,
-                label = "IconAnimation"
-            ) { targetChecked ->
-                AnimatedIcon(
-                    modifier = Modifier.size(20.dp),
-                    imageVector = if (targetChecked) iconChecked else iconUnchecked,
-                    contentDescription = null
-                )
+    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+        MiuixToggleButton(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            iconChecked = iconChecked,
+            iconUnchecked = iconUnchecked
+        )
+    } else {
+        ToggleButton(
+            modifier = modifier.height(36.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            checked = checked,
+            onCheckedChange = {
+                lastCheckedState = it
+                onCheckedChange(it)
+                showText = true
             }
-
-            AnimatedVisibility(
-                visible = showText
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = if (lastCheckedState) activeText else inactiveText,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(start = 8.dp),
-                    maxLines = 1,
-                    softWrap = false
-                )
+
+                AnimatedContent(
+                    targetState = checked,
+                    label = "IconAnimation"
+                ) { targetChecked ->
+                    AnimatedIcon(
+                        modifier = Modifier.size(20.dp),
+                        imageVector = if (targetChecked) iconChecked else iconUnchecked,
+                        contentDescription = null
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = showText
+                ) {
+                    AppText(
+                        text = if (lastCheckedState) activeText else inactiveText,
+                        style = LegadoTheme.typography.labelMedium,
+                        modifier = Modifier.padding(start = 8.dp),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
             }
         }
     }

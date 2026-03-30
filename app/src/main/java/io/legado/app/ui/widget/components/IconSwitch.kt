@@ -10,6 +10,40 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
+import top.yukonga.miuix.kmp.basic.Switch as MiuixSwitch
+
+@Composable
+fun AdaptiveSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    checkedIcon: ImageVector = Icons.Filled.Check,
+    uncheckedIcon: ImageVector? = null,
+    showIcon: Boolean = true
+) {
+    val composeEngine = LegadoTheme.composeEngine
+
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        MiuixSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier,
+            enabled = enabled
+        )
+    } else {
+        IconSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            checkedIcon = checkedIcon,
+            uncheckedIcon = uncheckedIcon,
+            showIcon = showIcon
+        )
+    }
+}
 
 @Composable
 fun IconSwitch(

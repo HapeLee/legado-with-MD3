@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
 /**
@@ -84,7 +84,7 @@ fun <T> RuleEditSheet(
                     .verticalScroll(rememberScrollState())
             ) {
                 CenterAlignedTopAppBar(
-                    title = { Text(title) },
+                    title = { AppText(title) },
                     navigationIcon = {
                         IconButton(onClick = onDismissRequest) {
                             Icon(
@@ -99,7 +99,7 @@ fun <T> RuleEditSheet(
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.copy_rule)) },
+                                text = { AppText(stringResource(R.string.copy_rule)) },
                                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
                                 onClick = {
                                     onCopy(getCurrentEntity())
@@ -107,7 +107,7 @@ fun <T> RuleEditSheet(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.paste_rule)) },
+                                text = { AppText(stringResource(R.string.paste_rule)) },
                                 leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
                                 onClick = {
                                     scope.launch {
@@ -136,20 +136,20 @@ fun <T> RuleEditSheet(
                         modifier = Modifier.fillMaxWidth(),
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text(stringResource(R.string.name)) },
+                        label = { AppText(stringResource(R.string.name)) },
                         singleLine = true
                     )
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = rule1,
                         onValueChange = { rule1 = it },
-                        label = { Text(label1) }
+                        label = { AppText(label1) }
                     )
                     OutlinedTextField(
                         modifier = Modifier.fillMaxWidth(),
                         value = rule2,
                         onValueChange = { rule2 = it },
-                        label = { Text(label2) },
+                        label = { AppText(label2) },
                         minLines = 3
                     )
                 }

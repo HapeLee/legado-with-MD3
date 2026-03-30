@@ -13,7 +13,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,6 +21,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -54,9 +55,9 @@ fun CollapsibleHeader(
                 if (titleContent != null) {
                     titleContent()
                 } else {
-                    Text(
+                    AppText(
                         text = title,
-                        style = MaterialTheme.typography.bodySmallEmphasized.copy(
+                        style = LegadoTheme.typography.bodySmallEmphasized.copy(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         ),
@@ -64,9 +65,9 @@ fun CollapsibleHeader(
                         overflow = TextOverflow.Ellipsis
                     )
                     subtitle?.let {
-                        Text(
+                        AppText(
                             text = it,
-                            style = MaterialTheme.typography.labelSmallEmphasized.copy(
+                            style = LegadoTheme.typography.labelSmallEmphasized.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             ),
                             maxLines = 1,

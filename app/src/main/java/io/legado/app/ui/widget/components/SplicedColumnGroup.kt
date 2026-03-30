@@ -7,14 +7,14 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.title.AdaptiveTitle
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 
 /**
  * Settings Group Container by https://github.com/wxxsfxyzm/InstallerX-Revived
@@ -29,24 +29,33 @@ fun SplicedColumnGroup(
     title: String = "",
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(modifier = modifier.padding(top = 8.dp, bottom = 16.dp)) {
+    val composeEngine = LegadoTheme.composeEngine
+    Column(modifier = modifier.padding(top = 8.dp, bottom = 8.dp)) {
         if (title.isNotEmpty()) {
-            Text(
+            AdaptiveTitle(
                 text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
             )
         }
 
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-            modifier = Modifier
-                .fillMaxWidth()
-                .animateContentSize()
-        ) {
+        if (ThemeResolver.isMiuixEngine(composeEngine)) {
+            MiuixCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
+                    content()
+                }
+            }
+
+        } else {
             Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize()
+                    .clip(RoundedCornerShape(16.dp)),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 content()

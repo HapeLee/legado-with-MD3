@@ -15,7 +15,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,16 +51,16 @@ fun BookmarkEditSheet(
                 .padding(16.dp)
                 .navigationBarsPadding()
         ) {
-            Text(
+            AppText(
                 text = bookmark.chapterName,
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             OutlinedTextField(
                 value = bookText,
                 onValueChange = { bookText = it },
-                label = { Text("原文") },
+                label = { AppText("原文") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 10
             )
@@ -69,7 +70,7 @@ fun BookmarkEditSheet(
             OutlinedTextField(
                 value = content,
                 onValueChange = { content = it },
-                label = { Text("摘要/笔记") },
+                label = { AppText("摘要/笔记") },
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 5
             )
@@ -86,7 +87,7 @@ fun BookmarkEditSheet(
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("删除")
+                    AppText("删除")
                 }
 
                 Button(
@@ -99,7 +100,7 @@ fun BookmarkEditSheet(
                     },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("保存")
+                    AppText("保存")
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -109,8 +110,8 @@ fun BookmarkEditSheet(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("确认删除") },
-            text = { Text("你确定要删除这条书签吗？") },
+            title = { AppText("确认删除") },
+            text = { AppText("你确定要删除这条书签吗？") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -119,14 +120,14 @@ fun BookmarkEditSheet(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("删除")
+                    AppText("删除")
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteConfirmDialog = false }
                 ) {
-                    Text("取消")
+                    AppText("取消")
                 }
             }
         )

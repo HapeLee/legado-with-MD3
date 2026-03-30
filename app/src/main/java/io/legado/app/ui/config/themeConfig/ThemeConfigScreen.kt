@@ -44,7 +44,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
@@ -78,11 +77,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -90,6 +88,9 @@ import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
@@ -121,7 +122,7 @@ fun ThemeConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.theme_setting)) },
+                title = stringResource(R.string.theme_setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -225,6 +226,13 @@ fun ThemeConfigScreen(
                         ThemeConfig.isPredictiveBackEnabled = it
                         context.toastOnUi(R.string.restart_to_apply)
                     }
+                )
+                DropdownListSettingItem(
+                    title = stringResource(R.string.compose_engine),
+                    selectedValue = ThemeConfig.composeEngine,
+                    displayEntries = stringArrayResource(R.array.composeEngine),
+                    entryValues = stringArrayResource(R.array.composeEngine_value),
+                    onValueChange = { ThemeConfig.composeEngine = it }
                 )
                 SliderSettingItem(
                     title = stringResource(R.string.font_scale),
@@ -478,7 +486,7 @@ fun ThemeConfigScreen(
     if (showRestartDialog) {
         AlertDialog(
             onDismissRequest = { showRestartDialog = false },
-            title = { Text(stringResource(R.string.restart_required_message)) },
+            title = { AppText(stringResource(R.string.restart_required_message)) },
             confirmButton = {
                 OutlinedButton(onClick = {
                     showRestartDialog = false
@@ -486,7 +494,7 @@ fun ThemeConfigScreen(
                         context.restart()
                     }, 100)
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
@@ -494,7 +502,7 @@ fun ThemeConfigScreen(
                     showRestartDialog = false
                     context.toastOnUi(R.string.restart_later_message)
                 }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -547,12 +555,12 @@ fun ThemeConfigScreen(
     saveThemeKey?.let { key ->
         AlertDialog(
             onDismissRequest = { saveThemeKey = null },
-            title = { Text(stringResource(R.string.theme_name)) },
+            title = { AppText(stringResource(R.string.theme_name)) },
             text = {
                 OutlinedTextField(
                     value = themeName,
                     onValueChange = { themeName = it },
-                    label = { Text("name") },
+                    label = { AppText("name") },
                     singleLine = true
                 )
             },
@@ -566,12 +574,12 @@ fun ThemeConfigScreen(
                         saveThemeKey = null
                     }
                 ) {
-                    Text(stringResource(android.R.string.ok))
+                    AppText(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { saveThemeKey = null }) {
-                    Text(stringResource(android.R.string.cancel))
+                    AppText(stringResource(android.R.string.cancel))
                 }
             }
         )
@@ -623,7 +631,7 @@ fun ThemeModeSelector(
 
                 Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
 
-                Text(text = label)
+                AppText(text = label)
             }
         }
     }
@@ -745,9 +753,9 @@ fun ThemeColorButton(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
+        AppText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }

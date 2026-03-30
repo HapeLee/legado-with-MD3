@@ -11,7 +11,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,8 +24,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.BookCover
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -58,9 +59,9 @@ fun CoverRuleConfigSheet(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.cover_rule),
-                style = MaterialTheme.typography.titleLarge,
+                style = LegadoTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -72,7 +73,7 @@ fun CoverRuleConfigSheet(
                     checked = enable,
                     onCheckedChange = { enable = it }
                 )
-                Text(text = stringResource(R.string.enable))
+                AppText(text = stringResource(R.string.enable))
             }
 
             InputSettingItem(
@@ -97,13 +98,16 @@ fun CoverRuleConfigSheet(
                     BookCover.delCoverRule()
                     onDismissRequest()
                 }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    AppText(
+                        stringResource(R.string.delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 OutlinedButton(onClick = onDismissRequest) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
 
                 Spacer(modifier = Modifier.padding(horizontal = 4.dp))
@@ -118,7 +122,7 @@ fun CoverRuleConfigSheet(
                         onDismissRequest()
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             }
         }

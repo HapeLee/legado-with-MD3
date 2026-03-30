@@ -13,7 +13,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -66,7 +66,7 @@ fun CompactDropdownSettingItem(
         dropdownMenu = { onDismiss ->
             displayEntries.forEachIndexed { index, display ->
                 RoundDropdownMenuItem(
-                    text = { Text(display) },
+                    text = { AppText(display) },
                     onClick = {
                         onValueChange(entryValues[index])
                         onDismiss()

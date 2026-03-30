@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -19,6 +18,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -49,17 +50,17 @@ fun BookmarkItem(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            Text(
+            AppText(
                 text = bookmark.chapterName,
-                style = MaterialTheme.typography.titleSmallEmphasized,
+                style = LegadoTheme.typography.titleSmallEmphasized,
                 color = if (isDur) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
             )
 
             if (bookmark.bookText.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
+                AppText(
                     text = bookmark.bookText,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -68,9 +69,9 @@ fun BookmarkItem(
 
             if (bookmark.content.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
+                AppText(
                     text = bookmark.content,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
             }

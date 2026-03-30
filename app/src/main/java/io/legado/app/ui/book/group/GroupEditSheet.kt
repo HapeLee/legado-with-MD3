@@ -18,11 +18,9 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,10 +36,12 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.lib.dialogs.alert
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.SelectImageContract
@@ -113,9 +113,9 @@ fun GroupEditContent(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
+        AppText(
             text = stringResource(R.string.group_edit),
-            style = MaterialTheme.typography.titleLarge,
+            style = LegadoTheme.typography.titleLarge,
             modifier = Modifier.padding(vertical = 16.dp)
         )
 
@@ -138,7 +138,7 @@ fun GroupEditContent(
                 OutlinedTextField(
                     value = groupName,
                     onValueChange = { groupName = it },
-                    label = { Text(stringResource(R.string.group_name)) },
+                    label = { AppText(stringResource(R.string.group_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -206,7 +206,7 @@ fun GroupEditContent(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onDismissRequest) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
                 Button(onClick = {
                     if (groupName.isEmpty()) {
@@ -235,7 +235,7 @@ fun GroupEditContent(
                         }
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             }
         }

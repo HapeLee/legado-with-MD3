@@ -26,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -43,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -104,7 +104,7 @@ fun SearchBarSection(
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
                 .padding(horizontal = 4.dp),
-            placeholder = { Text(placeholder) },
+            placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
             trailingIcon = {
                 Row(

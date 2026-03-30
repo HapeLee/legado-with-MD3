@@ -15,11 +15,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonShapes
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.OutlinedToggleButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.delay
+import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -41,21 +45,32 @@ fun SmallIconButton(
     icon: ImageVector,
     contentDescription: String? = null
 ) {
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        IconButton(
-            onClick = onClick,
-            modifier = Modifier.size(
-                IconButtonDefaults.extraSmallContainerSize(
-                    IconButtonDefaults.IconButtonWidthOption.Uniform
-                )
-            ),
-            shape = IconButtonDefaults.extraSmallRoundShape,
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        MiuixIconButton(
+            onClick = onClick
         ) {
-            Icon(
+            MiuixIcon(
                 imageVector = icon,
-                contentDescription = contentDescription,
-                modifier = Modifier.size(IconButtonDefaults.extraSmallIconSize),
+                contentDescription = contentDescription
             )
+        }
+    } else {
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            IconButton(
+                onClick = onClick,
+                modifier = Modifier.size(
+                    IconButtonDefaults.extraSmallContainerSize(
+                        IconButtonDefaults.IconButtonWidthOption.Uniform
+                    )
+                ),
+                shape = IconButtonDefaults.extraSmallRoundShape,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(IconButtonDefaults.extraSmallIconSize),
+                )
+            }
         }
     }
 }
@@ -204,9 +219,9 @@ fun SmallAnimatedActionButton(
                 AnimatedVisibility(
                     visible = showText
                 ) {
-                    Text(
+                    AppText(
                         text = if (lastCheckedState) activeText else inactiveText,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LegadoTheme.typography.labelSmall,
                         modifier = Modifier.padding(start = 6.dp),
                         maxLines = 1,
                         softWrap = false

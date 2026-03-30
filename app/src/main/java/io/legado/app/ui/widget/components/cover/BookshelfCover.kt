@@ -13,7 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.TextCard
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun BookshelfCover(
@@ -27,6 +31,16 @@ fun BookshelfCover(
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null
 ) {
+    val backgroundColor = if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+    } else {
+        MaterialTheme.colorScheme.secondaryContainer
+    }
+    val contentColor = if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        MiuixTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    }
     Box(modifier = modifier) {
         BookCover(
             name = name,
@@ -44,8 +58,8 @@ fun BookshelfCover(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),
-                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                backgroundColor = backgroundColor,
+                contentColor = contentColor,
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
                 verticalPadding = 0.dp
@@ -59,8 +73,8 @@ fun BookshelfCover(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 6.dp)
                     .height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                color = LegadoTheme.colorScheme.primary,
+                trackColor = LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
                 strokeCap = StrokeCap.Round
             )
         }

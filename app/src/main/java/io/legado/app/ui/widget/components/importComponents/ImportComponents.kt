@@ -42,7 +42,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -59,9 +58,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,25 +78,25 @@ fun SourceInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(title) },
+        title = { AppText(title) },
         text = {
             Column {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { Text(hint) },
+                    label = { AppText(hint) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 5
                 )
 
                 if (historyValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("历史记录:", style = MaterialTheme.typography.labelSmall)
+                    AppText("历史记录:", style = LegadoTheme.typography.labelSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(historyValues) { history ->
                             AssistChip(
                                 onClick = { text = history },
-                                label = { Text(history, maxLines = 1) }
+                                label = { AppText(history, maxLines = 1) }
                             )
                         }
                     }
@@ -105,11 +106,11 @@ fun SourceInputDialog(
         confirmButton = {
             OutlinedButton(
                 onClick = { if (text.isNotBlank()) onConfirm(text) }
-            ) { Text(stringResource(android.R.string.ok)) }
+            ) { AppText(stringResource(android.R.string.ok)) }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text(stringResource(android.R.string.cancel))
+                AppText(stringResource(android.R.string.cancel))
             }
         }
     )
@@ -254,14 +255,14 @@ private fun ImportItemRow(
                 )
             },
             supportingContent = {
-                Text(
+                AppText(
                     text = when (status) {
                         ImportStatus.New -> "新增"
                         ImportStatus.Update -> "更新"
                         ImportStatus.Existing -> "已有"
                         ImportStatus.Error -> "错误"
                     },
-                    style = MaterialTheme.typography.labelMedium,
+                    style = LegadoTheme.typography.labelMedium,
                     color = when (status) {
                         ImportStatus.New -> MaterialTheme.colorScheme.primary
                         ImportStatus.Update -> MaterialTheme.colorScheme.secondary
@@ -315,12 +316,12 @@ fun ImportBottomBar(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onCancel) { Text("取消") }
+            OutlinedButton(onClick = onCancel) { AppText("取消") }
             Button(
                 enabled = selectedCount > 0,
                 onClick = onConfirm
             ) {
-                Text("导入")
+                AppText("导入")
             }
         }
     }

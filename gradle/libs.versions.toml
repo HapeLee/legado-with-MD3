@@ -4,14 +4,14 @@ accompanistWebview = "0.36.0"
 adaptive = "1.3.0-alpha09"
 adaptiveLayout = "1.3.0-alpha09"
 adaptiveNavigation = "1.3.0-alpha09"
-animation = "1.10.1"
-biometric = "1.2.0"
+animation = "1.10.6"
+biometric = "1.4.0-alpha06"
 coilCompose = "2.7.0"
-composeBom = "2026.03.00"
+composeBom = "2026.03.01"
 constraintlayoutCompose = "1.1.1"
 coreSplashscreen = "1.2.0"
 datastorePreferences = "1.2.1"
-foundation = "1.10.5"
+foundation = "1.10.6"
 kotlin = "2.3.10"
 kotlinxSerialization = "1.10.0"
 kotlinxCoroutinesAndroid = "1.10.2"
@@ -83,6 +83,10 @@ biometricKtx = "1.1.0"
 
 reorderable = "3.0.0"
 haze = "1.7.2"
+timber = "5.0.1"
+miuix = "0.8.8"
+backdrop = "1.0.6"
+capsule = "2.1.3"
 [libraries]
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
@@ -238,6 +242,16 @@ zxing-lite = { module = "com.github.jenly1314:zxing-lite", version.ref = "zxingL
 androidx-biometric-ktx = { group = "androidx.biometric", name = "biometric-ktx", version.ref = "biometricKtx" }
 
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
+
+# log
+timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# miuix
+miuix = { group = "top.yukonga.miuix.kmp", name = "miuix-android", version.ref = "miuix" }
+miuix-icons = { group = "top.yukonga.miuix.kmp", name = "miuix-icons-android", version.ref = "miuix" }
+
+capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
+backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
 
 [bundles]
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]

@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
 
 @Composable
@@ -57,7 +58,7 @@ fun RoundDropdownMenuItem(
     ) {
         CompositionLocalProvider(
             LocalContentColor provides contentColor,
-            LocalTextStyle provides MaterialTheme.typography.labelLarge
+            LocalTextStyle provides LegadoTheme.typography.labelLarge
         ) {
             Row(
                 modifier = Modifier

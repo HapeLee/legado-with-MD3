@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,9 +33,11 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
 import io.legado.app.ui.widget.components.cover.Cover
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toTimeAgo
 
 /**
@@ -88,9 +89,9 @@ fun BookshelfItem(
                 ) {
                     cover(Modifier.fillMaxSize())
                     if (gridStyle == 1) {
-                        Text(
+                        AppText(
                             text = title,
-                            style = (if (titleSmallFont) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium).copy(
+                            style = (if (titleSmallFont) LegadoTheme.typography.labelSmall else LegadoTheme.typography.labelMedium).copy(
                                 color = Color.White,
                                 shadow = Shadow(
                                     color = Color.Black.copy(alpha = 0.5f),
@@ -117,9 +118,9 @@ fun BookshelfItem(
                 }
 
                 if (gridStyle == 0) {
-                    Text(
+                    AppText(
                         text = title,
-                        style = if (titleSmallFont) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                        style = if (titleSmallFont) LegadoTheme.typography.labelSmall else LegadoTheme.typography.labelMedium,
                         maxLines = titleMaxLines,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = if (titleCenter) TextAlign.Center else TextAlign.Start,
@@ -152,16 +153,16 @@ fun BookshelfItem(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
+                    AppText(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         maxLines = if (!isCompact) 2 else 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     subTitle?.let {
-                        Text(
+                        AppText(
                             text = it,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = LegadoTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 2.dp)
@@ -169,9 +170,9 @@ fun BookshelfItem(
                     }
                     if (!isCompact) {
                         desc?.let {
-                            Text(
+                            AppText(
                                 text = it,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = LegadoTheme.typography.bodySmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(top = 2.dp)
@@ -372,7 +373,7 @@ fun BookItem(
                 isUpdating = isUpdating,
                 modifier = modifier,
                 badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
-                showBadgeDot = !BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && unreadCount > 0
+                showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew
             )
         },
         title = book.name,
@@ -384,16 +385,16 @@ fun BookItem(
         desc = stringResource(R.string.read_dur_progress, book.durChapterTitle ?: ""),
         extra = {
             if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
-                Text(
+                AppText(
                     text = book.latestChapterTime.toTimeAgo(),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LegadoTheme.typography.bodySmall,
                     color = if (layoutMode != 0 || !isCompact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
-            Text(
+            AppText(
                 text = book.latestChapterTitle ?: "",
-                style = MaterialTheme.typography.bodySmall,
+                style = LegadoTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)

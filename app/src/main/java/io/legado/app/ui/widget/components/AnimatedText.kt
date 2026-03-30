@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
+import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
 fun AnimatedText(
@@ -60,7 +60,7 @@ fun AnimatedText(
                     },
                     label = ""
                 ) {
-                    Text(
+                    AppText(
                         style = style,
                         color = color,
                         softWrap = softWrap,
@@ -117,7 +117,7 @@ fun AnimatedTextLine(
         label = "LineAnimation",
         modifier = modifier
     ) { targetText ->
-        Text(
+        AppText(
             text = targetText,
             modifier = modifier,
             style = style,

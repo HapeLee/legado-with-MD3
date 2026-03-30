@@ -286,4 +286,9 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.haze.core)
     implementation(libs.haze.materials)
+    implementation(libs.miuix)
+    implementation(libs.miuix.icons)
+    implementation(libs.capsule)
+    implementation(libs.backdrop)
+    implementation(libs.timber)
 }
