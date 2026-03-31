@@ -1413,4 +1413,13 @@
     <string name="enable_select_vibrator">选择文本时震动</string>
     <string name="re_sync_webdav">重新同步远程书籍</string>
     <string name="underline_padding">离字间距</string>
+	<string name="layout_setting">布局设置</string>
+	<string name="cover_info_orientation">封面信息方向</string>
+	<string name="rule_segment">Rule</string>
+	<string name="tool_bar_style">工具栏样式</string>
+	<string name="split_title">标题分段</string>
+	<string name="split_title_mode">分段模式</string>
+	<string name="subtitle_scale">次行缩放</string>
+	<string name="subtitle_margin">次行距离</string>
+	<string name="heading_spacing">标题段距</string>
 </resources>
