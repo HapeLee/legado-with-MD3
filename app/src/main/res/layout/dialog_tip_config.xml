@@ -104,7 +104,7 @@
                 android:id="@+id/btn_title_seg_config"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Split Mode"
+                android:text="@string/split_title_mode"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"/>
 
             <com.google.android.material.button.MaterialButton
