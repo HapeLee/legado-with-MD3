@@ -259,8 +259,8 @@
 
 	<string-array name="default_app_variant_value">
 		<item>official_version</item>
-		<item>all_version</item>
 		<item>beta_release_version</item>
+		<item>all_version</item>
 		<item>beta_releaseA_version</item>
 	</string-array>
 

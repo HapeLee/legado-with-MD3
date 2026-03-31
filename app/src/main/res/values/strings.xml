@@ -1330,7 +1330,7 @@
     <string name="text_shadow_y">Y-axis offset</string>
     <string name="text_shadow_radius">Shadow radius</string>
     <string name="text_shadow_color">Text shadow</string>
-    <string name="global_read_setting">Reading Display • 漫画相关</string>
+    <string name="global_read_setting">Reading Display • Manga Related</string>
     <string name="screen_settings">Display Setting</string>
     <string name="reading_behavior">阅读行为</string>
     <string name="page_control">Page Control</string>
@@ -1380,7 +1380,7 @@
     <string name="is_unread">Unread</string>
     <string name="is_read_finished">Finished</string>
     <string name="manga">Manga</string>
-    <string name="noval">Noval</string>
+    <string name="noval">Novel</string>
     <string name="cover_show_shadow">Show Font Shadow</string>
     <string name="cover_show_stroke">Show Font Stroke</string>
     <string name="default_color">Use Default Font Color</string>
