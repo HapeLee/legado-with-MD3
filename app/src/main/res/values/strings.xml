@@ -1351,7 +1351,7 @@
     <string name="cancel_select">取消选择</string>
     <string name="coll_volume">折叠所有卷</string>
     <string name="expand_volume">展开所有卷</string>
-    <string name="custom">自定义</string>
+    <string name="custom">Custom</string>
     <string name="global_setting">Global Setting</string>
     <string name="text_typeface">Font Style</string>
     <string name="shadow_typeface">阴影样式</string>
