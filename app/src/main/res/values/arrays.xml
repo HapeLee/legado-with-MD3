@@ -116,11 +116,11 @@
 	</string-array>
 
     <string-array name="click_image_way_title">
-        <item>新包名行为</item>
-        <item>预览图片</item>
-        <item>经典行为</item>
-        <item>关闭点击</item>
-        <item>双击生效</item>
+        <item>New Package Behavior</item>
+        <item>Preview Image</item>
+        <item>Classic</item>
+        <item>Disable Click</item>
+        <item>Double Click</item>
     </string-array>
 
     <string-array name="double_page_title">
@@ -259,8 +259,8 @@
 
 	<string-array name="default_app_variant_value">
 		<item>official_version</item>
-		<item>beta_release_version</item>
 		<item>all_version</item>
+		<item>beta_release_version</item>
 		<item>beta_releaseA_version</item>
 	</string-array>
 
@@ -311,5 +311,5 @@
 		<item>Maximum</item>
 	</string-array>
 
-	<string name="all_version">所有版本</string>
+	<string name="all_version">All Version</string>
 </resources>

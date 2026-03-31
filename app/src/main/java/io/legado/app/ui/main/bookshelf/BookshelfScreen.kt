@@ -252,7 +252,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text("布局设置") },
+                text = { Text(stringResource(R.string.layout_setting)) },
                 onClick = { showConfigSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.GridView, null) }
             )

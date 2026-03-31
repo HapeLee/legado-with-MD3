@@ -142,7 +142,7 @@ fun MyScreen(
 
             SplicedColumnGroup(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                title = "规则"
+                title = stringResource(R.string.rule_segment),
             ) {
                 SettingItem(
                     title = stringResource(R.string.book_source_manage),

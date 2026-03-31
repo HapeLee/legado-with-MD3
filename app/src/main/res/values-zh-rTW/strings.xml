@@ -1222,4 +1222,13 @@
     <string name="top_bar_opacity_summary">%d</string>
     <string name="bottom_bar_opacity">底欄不透明度</string>
     <string name="bottom_bar_opacity_summary">%d</string>
+	<string name="layout_setting">佈局設定</string>
+	<string name="cover_info_orientation">封面資訊方向</string>
+	<string name="rule_segment">Rule</string>
+	<string name="tool_bar_style">工具栏样式</string>
+	<string name="split_title">标题分段</string>
+	<string name="split_title_mode">分段模式</string>
+	<string name="subtitle_scale">次行缩放</string>
+	<string name="subtitle_margin">次行距离</string>
+	<string name="heading_spacing">标题段距</string>
 </resources>
