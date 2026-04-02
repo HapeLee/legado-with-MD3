@@ -7,12 +7,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.TextCard
 
 @Composable
@@ -44,8 +44,6 @@ fun BookshelfCover(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),
-                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
                 verticalPadding = 0.dp
@@ -59,8 +57,8 @@ fun BookshelfCover(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 6.dp)
                     .height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                color = LegadoTheme.colorScheme.primary,
+                trackColor = LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
                 strokeCap = StrokeCap.Round
             )
         }

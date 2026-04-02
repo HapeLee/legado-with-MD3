@@ -4,6 +4,7 @@ import com.materialkolor.Contrast
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
 
 object ThemeResolver {
 
@@ -48,10 +49,29 @@ object ThemeResolver {
         }
     }
 
+    fun resolveColorSchemeMode(value: String): ColorSchemeMode = when (value) {
+        "0" -> ColorSchemeMode.System
+        "1" -> ColorSchemeMode.Light
+        "2" -> ColorSchemeMode.Dark
+        else -> ColorSchemeMode.System
+    }
+
+    fun isMiuixEngine(composeEngine: String): Boolean = composeEngine == "miuix"
+
+    fun isM3Engine(composeEngine: String): Boolean = composeEngine == "m3"
+
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {
         return when (colorSpec) {
             ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025
             ThemeColorSpec.SPEC_2021 -> ColorSpec.SpecVersion.SPEC_2021
+        }
+    }
+
+    fun resolveColorSpecFromMaterialVersion(value: String?): ThemeColorSpec {
+        return when (value) {
+            "material3Expressive" -> ThemeColorSpec.SPEC_2025
+            "material3" -> ThemeColorSpec.SPEC_2021
+            else -> ThemeColorSpec.SPEC_2021
         }
     }
 

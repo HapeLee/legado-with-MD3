@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,12 +35,15 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoverManageSheet(
+    show: Boolean,
     preferenceKey: String,
     onDismissRequest: () -> Unit,
     viewModel: CoverConfigViewModel
@@ -61,7 +63,8 @@ fun CoverManageSheet(
     }
     val coverList = currentCovers.split(",").filter { it.isNotBlank() }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(
@@ -69,9 +72,9 @@ fun CoverManageSheet(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.default_cover),
-                style = MaterialTheme.typography.titleMedium,
+                style = LegadoTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
 
@@ -141,14 +144,13 @@ fun CoverManageSheet(
         }
     }
 
-    if (showFilePicker) {
-        FilePickerSheet(
-            onDismissRequest = { showFilePicker = false },
-            onSelectSysFiles = {
-                selectImages.launch("image/*")
-                showFilePicker = false
-            },
-            allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
-        )
-    }
+    FilePickerSheet(
+        show = showFilePicker,
+        onDismissRequest = { showFilePicker = false },
+        onSelectSysFiles = {
+            selectImages.launch("image/*")
+            showFilePicker = false
+        },
+        allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
+    )
 }

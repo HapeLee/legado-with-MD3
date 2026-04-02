@@ -22,11 +22,9 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -54,12 +52,14 @@ import io.legado.app.data.entities.RuleSubType
 import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 
@@ -89,11 +89,12 @@ fun RuleSubScreen(
         topBarActions = {},
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = {
+                text = stringResource(R.string.sort),
+                leadingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(12.dp))
-                        Text(stringResource(R.string.sort))
+                        AppText(stringResource(R.string.sort))
                     }
                 },
                 onClick = {
@@ -106,7 +107,7 @@ fun RuleSubScreen(
             TooltipBox(
                 positionProvider =
                     TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("Localized description") } },
+                tooltip = { PlainTooltip { AppText("Localized description") } },
                 state = rememberTooltipState(),
             ) {
                 FloatingActionButton(
@@ -185,7 +186,7 @@ fun RuleSubScreen(
                         },
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete)) },
+                                text = stringResource(R.string.delete),
                                 onClick = {
                                     viewModel.delete(ruleSub)
                                     dismiss()
@@ -226,24 +227,24 @@ fun RuleSubEditDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.rule_subscription)) },
+        title = { AppText(stringResource(R.string.rule_subscription)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.name)) },
+                    label = { AppText(stringResource(R.string.name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("URL") },
+                    label = { AppText("URL") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text(
+                AppText(
                     text = "订阅类型",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 8.dp)
                 )
                 CheckboxGroupContainer(columns = 2) {
@@ -265,12 +266,12 @@ fun RuleSubEditDialog(
             TextButton(onClick = {
                 onConfirm(ruleSub.copy(name = name, url = url, type = type))
             }) {
-                Text(stringResource(R.string.ok))
+                AppText(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+                AppText(stringResource(R.string.cancel))
             }
         }
     )

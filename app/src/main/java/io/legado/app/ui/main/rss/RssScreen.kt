@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,6 +54,7 @@ import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.rss.subscription.RuleSubActivity
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SourceIcon
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -63,6 +63,7 @@ import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import org.koin.androidx.compose.koinViewModel
@@ -135,12 +136,12 @@ fun RssScreen(
                     dismiss()
                 },
                 leadingIcon = { MenuItemIcon(Icons.Default.Settings) },
-                text = { Text("订阅源管理") }
+                text = "订阅源管理"
             )
             PillDivider()
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                text = { Text(stringResource(R.string.all)) },
+                text = stringResource(R.string.all),
                 onClick = {
                     viewModel.setGroup("")
                     dismiss()
@@ -149,7 +150,7 @@ fun RssScreen(
             uiState.groups.forEach { group ->
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                    text = { Text(group) },
+                    text = group,
                     onClick = {
                         viewModel.setGroup(group)
                         dismiss()
@@ -188,8 +189,8 @@ fun RssScreen(
     sourceToDelete?.let { source ->
         AlertDialog(
             onDismissRequest = { sourceToDelete = null },
-            title = { Text(stringResource(R.string.draw)) },
-            text = { Text(stringResource(R.string.sure_del) + "\n" + source.sourceName) },
+            title = { AppText(stringResource(R.string.draw)) },
+            text = { AppText(stringResource(R.string.sure_del) + "\n" + source.sourceName) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -197,12 +198,12 @@ fun RssScreen(
                         sourceToDelete = null
                     }
                 ) {
-                    Text(stringResource(R.string.yes))
+                    AppText(stringResource(R.string.yes))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { sourceToDelete = null }) {
-                    Text(stringResource(R.string.no))
+                    AppText(stringResource(R.string.no))
                 }
             }
         )
@@ -246,7 +247,7 @@ fun RssSourceGridItem(
                 PillHeaderDivider(title = source.sourceName)
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                    text = { Text(stringResource(R.string.to_top)) },
+                    text = stringResource(R.string.to_top),
                     onClick = {
                         onTop()
                         showMenu = false
@@ -254,7 +255,7 @@ fun RssSourceGridItem(
                 )
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                    text = { Text(stringResource(R.string.edit)) },
+                    text = stringResource(R.string.edit),
                     onClick = {
                         onEdit()
                         showMenu = false
@@ -263,7 +264,7 @@ fun RssSourceGridItem(
                 if (!source.loginUrl.isNullOrBlank()) {
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                        text = { Text(stringResource(R.string.login)) },
+                        text = stringResource(R.string.login),
                         onClick = {
                             onLogin()
                             showMenu = false
@@ -272,7 +273,7 @@ fun RssSourceGridItem(
                 }
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.Close) },
-                    text = { Text(stringResource(R.string.disable_source)) },
+                    text = stringResource(R.string.disable_source),
                     onClick = {
                         onDisable()
                         showMenu = false
@@ -285,12 +286,8 @@ fun RssSourceGridItem(
                             tint = MaterialTheme.colorScheme.error
                         )
                     },
-                    text = {
-                        Text(
-                            stringResource(R.string.delete),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    },
+                    text = stringResource(R.string.delete),
+                    color = MaterialTheme.colorScheme.error,
                     onClick = {
                         onDelete()
                         showMenu = false
@@ -299,9 +296,9 @@ fun RssSourceGridItem(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
+        AppText(
             text = source.sourceName,
-            style = MaterialTheme.typography.labelMedium,
+            style = LegadoTheme.typography.labelMedium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,

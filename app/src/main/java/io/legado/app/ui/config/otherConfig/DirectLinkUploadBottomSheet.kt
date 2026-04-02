@@ -24,7 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -41,8 +40,10 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.selector
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
@@ -52,6 +53,7 @@ import io.legado.app.utils.toastOnUi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DirectLinkUploadBottomSheet(
+    show: Boolean,
     viewModel: OtherConfigViewModel,
     onDismiss: () -> Unit
 ) {
@@ -63,7 +65,8 @@ fun DirectLinkUploadBottomSheet(
         viewModel.initDirectLinkRule()
     }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismiss
     ) {
         Column(
@@ -75,9 +78,9 @@ fun DirectLinkUploadBottomSheet(
         ) {
             CenterAlignedTopAppBar(
                 title = {
-                    Text(
+                    AppText(
                         text = stringResource(R.string.direct_link_upload_config),
-                        style = MaterialTheme.typography.titleLarge
+                        style = LegadoTheme.typography.titleLarge
                     )
                 },
                 actions = {
@@ -89,7 +92,7 @@ fun DirectLinkUploadBottomSheet(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("导入默认") },
+                            text = { AppText("导入默认") },
                             leadingIcon = { Icon(Icons.Default.Download, null) },
                             onClick = {
                                 showMenu = false
@@ -99,7 +102,7 @@ fun DirectLinkUploadBottomSheet(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.copy_rule)) },
+                            text = { AppText(stringResource(R.string.copy_rule)) },
                             leadingIcon = { Icon(Icons.Default.ContentCopy, null) },
                             onClick = {
                                 showMenu = false
@@ -113,7 +116,7 @@ fun DirectLinkUploadBottomSheet(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.paste_rule)) },
+                            text = { AppText(stringResource(R.string.paste_rule)) },
                             leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
                             onClick = {
                                 showMenu = false
@@ -141,7 +144,7 @@ fun DirectLinkUploadBottomSheet(
             OutlinedTextField(
                 value = viewModel.uploadUrl,
                 onValueChange = { viewModel.uploadUrl = it },
-                label = { Text(stringResource(R.string.upload_url)) },
+                label = { AppText(stringResource(R.string.upload_url)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -150,7 +153,7 @@ fun DirectLinkUploadBottomSheet(
             OutlinedTextField(
                 value = viewModel.downloadUrlRule,
                 onValueChange = { viewModel.downloadUrlRule = it },
-                label = { Text(stringResource(R.string.download_url_rule)) },
+                label = { AppText(stringResource(R.string.download_url_rule)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -159,7 +162,7 @@ fun DirectLinkUploadBottomSheet(
             OutlinedTextField(
                 value = viewModel.summary,
                 onValueChange = { viewModel.summary = it },
-                label = { Text(stringResource(R.string.summary)) },
+                label = { AppText(stringResource(R.string.summary)) },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -178,11 +181,11 @@ fun DirectLinkUploadBottomSheet(
                 TextButton(onClick = {
                     viewModel.testRule { result -> showTestResult = result }
                 }) {
-                    Text("测试")
+                    AppText("测试")
                 }
                 Spacer(Modifier.weight(1f))
                 OutlinedButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
                 Button(onClick = {
                     if (viewModel.saveDirectLinkRule()) {
@@ -191,7 +194,7 @@ fun DirectLinkUploadBottomSheet(
                         context.toastOnUi("请填写完整信息")
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             }
         }
@@ -200,15 +203,15 @@ fun DirectLinkUploadBottomSheet(
     showTestResult?.let { result ->
         AlertDialog(
             onDismissRequest = { showTestResult = null },
-            title = { Text("Result") },
-            text = { Text(result) },
+            title = { AppText("Result") },
+            text = { AppText(result) },
             confirmButton = {
                 TextButton(onClick = {
                     showTestResult = null
-                }) { Text(stringResource(R.string.ok)) }
+                }) { AppText(stringResource(R.string.ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { context.sendToClip(result) }) { Text(stringResource(R.string.copy_text)) }
+                TextButton(onClick = { context.sendToClip(result) }) { AppText(stringResource(R.string.copy_text)) }
             }
         )
     }

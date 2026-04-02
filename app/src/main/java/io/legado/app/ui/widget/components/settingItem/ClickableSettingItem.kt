@@ -7,6 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.extra.SuperArrow
 
 @Composable
 fun ClickableSettingItem(
@@ -19,20 +23,30 @@ fun ClickableSettingItem(
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
-    SettingItem(
-        modifier = modifier,
-        title = title,
-        description = description,
-        option = option,
-        imageVector = imageVector,
-        trailingContent = trailingContent ?: {
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        onClick = onClick,
-        onLongClick = onLongClick
-    )
+    val composeEngine = LegadoTheme.composeEngine
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        SuperArrow(
+            title = title,
+            summary = description,
+            insideMargin = BasicComponentDefaults.InsideMargin,
+            onClick = onClick
+        )
+    } else {
+        SettingItem(
+            modifier = modifier,
+            title = title,
+            description = description,
+            option = option,
+            imageVector = imageVector,
+            trailingContent = trailingContent ?: {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
+    }
 }

@@ -19,7 +19,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,8 +32,10 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.SettingCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -59,7 +60,7 @@ fun SettingItem(
     var showMenu by remember { mutableStateOf(false) }
     val isExpandable = expandContent != null && onExpandChange != null
 
-    GlassCard(
+    SettingCard(
         modifier = modifier
             .fillMaxWidth(),
         shape = shape,
@@ -101,25 +102,25 @@ fun SettingItem(
                     }
                 } else null,
                 headlineContent = {
-                    Text(
+                    AppText(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium
+                        style = LegadoTheme.typography.titleMedium
                     )
                 },
                 supportingContent = if (description != null || option != null) {
                     {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             description?.let {
-                                Text(
+                                AppText(
                                     it,
-                                    style = MaterialTheme.typography.bodySmallEmphasized,
+                                    style = LegadoTheme.typography.bodySmallEmphasized,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
                             option?.let {
-                                Text(
+                                AppText(
                                     it,
-                                    style = MaterialTheme.typography.labelMediumEmphasized,
+                                    style = LegadoTheme.typography.labelMediumEmphasized,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }

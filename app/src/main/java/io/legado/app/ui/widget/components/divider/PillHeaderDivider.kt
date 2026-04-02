@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,14 +15,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
 fun PillHeaderDivider(
     title: String,
     modifier: Modifier = Modifier,
     dotSize: Dp = 2.dp,
-    dotColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
-    titleColor: Color = MaterialTheme.colorScheme.primary
+    dotColor: Color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
+    titleColor: Color = LegadoTheme.colorScheme.primary
 ) {
     Row(
         modifier = modifier
@@ -40,9 +40,9 @@ fun PillHeaderDivider(
                 .background(dotColor)
         )
 
-        Text(
+        AppText(
             text = title,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
             color = titleColor,
             modifier = Modifier.padding(horizontal = 12.dp),
             maxLines = 1

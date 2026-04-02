@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -70,7 +71,7 @@ fun EmptyMessageView(
 
         AnimatedTextLine(
             text = message,
-            style = MaterialTheme.typography.labelLarge,
+            style = LegadoTheme.typography.labelLarge,
             textAlign = TextAlign.Center,
             maxLines = 2,
             softWrap = true,

@@ -15,19 +15,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.Icon
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,11 +27,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -52,28 +46,21 @@ fun <T> ListScaffold(
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String = "搜索...",
     topBarActions: @Composable RowScope.() -> Unit = {},
-    bottomContent: @Composable (ColumnScope.(TopAppBarScrollBehavior) -> Unit)? = null,
+    bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
     selectionActions: SelectionActions? = null,
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
         onAddClick?.let { onClick ->
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    TooltipAnchorPosition.Above
+            AppFloatingActionButton(
+                onClick = onClick,
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = state.selectedIds.isEmpty(),
+                    alignment = Alignment.BottomEnd,
                 ),
-                tooltip = { PlainTooltip { Text("添加") } },
-                state = rememberTooltipState(),
+                tooltipText = "添加"
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = state.selectedIds.isEmpty(),
-                        alignment = Alignment.BottomEnd,
-                    ),
-                    onClick = onClick
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
-                }
+                Icon(Icons.Default.Add, contentDescription = "Add")
             }
         }
     },

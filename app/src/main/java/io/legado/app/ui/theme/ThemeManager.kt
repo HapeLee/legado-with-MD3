@@ -66,7 +66,8 @@ object ThemeManager {
             }
 
             AppThemeMode.CUSTOM -> {
-                CustomColorScheme(context.primaryColor, style)
+                val colorSpec = ThemeResolver.resolveColorSpecFromMaterialVersion(materialVersion)
+                CustomColorScheme(context.primaryColor, style, colorSpec)
                     .getColorScheme(darkTheme)
             }
 

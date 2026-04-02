@@ -181,7 +181,7 @@ open class MainActivity : BaseComposeActivity() {
                 (slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 520,
+                        durationMillis = 480,
                         easing = FastOutSlowInEasing
                     ),
                     initialOffset = { fullWidth -> fullWidth }
@@ -193,7 +193,7 @@ open class MainActivity : BaseComposeActivity() {
                 )) togetherWith (slideOutOfContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 520,
+                        durationMillis = 480,
                         easing = FastOutSlowInEasing
                     ),
                     targetOffset = { fullWidth -> fullWidth / 4 }
@@ -208,7 +208,7 @@ open class MainActivity : BaseComposeActivity() {
                 (slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Start,
                     animationSpec = tween(
-                        durationMillis = 520,
+                        durationMillis = 480,
                         easing = FastOutSlowInEasing
                     ),
                     initialOffset = { fullWidth -> -fullWidth / 4 }
@@ -220,7 +220,7 @@ open class MainActivity : BaseComposeActivity() {
                 )) togetherWith (scaleOut(
                     targetScale = 0.8f,
                     animationSpec = tween(
-                        durationMillis = 520,
+                        durationMillis = 480,
                         easing = FastOutSlowInEasing
                     )
                 ) + fadeOut(

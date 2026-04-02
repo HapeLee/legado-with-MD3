@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +40,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.AnimatedActionButton
+import io.legado.app.ui.widget.components.text.AppText
 import java.time.LocalDate
 
 /**
@@ -60,7 +61,7 @@ fun HeatmapCalendarTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("时间线", style = MaterialTheme.typography.titleMedium)
+        AppText("时间线", style = LegadoTheme.typography.titleMedium)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             AnimatedActionButton(
@@ -107,7 +108,7 @@ fun WeekdayLabelsColumn(
 
         labels.forEachIndexed { index, label ->
             if (index % 2 == 0) {
-                Text(
+                AppText(
                     text = label,
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -170,7 +171,7 @@ fun NoEarlierDataIndicator(
             verticalArrangement = Arrangement.Center
         ) {
             "没有更早数据".forEach { char ->
-                Text(
+                AppText(
                     text = char.toString(),
                     fontSize = 9.sp,
                     lineHeight = 12.sp,
@@ -252,7 +253,7 @@ fun HeatmapWeekColumn(
 
         // 月份标签
         if (firstDayOfMonth != null) {
-            Text(
+            AppText(
                 text = "${firstDayOfMonth.monthValue}月",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -280,9 +281,9 @@ fun HeatmapLegend(
     ) {
         val legendUnit = if (mode == HeatmapMode.COUNT) "次" else "长"
 
-        Text(
+        AppText(
             "少($legendUnit)",
-            style = MaterialTheme.typography.bodySmall,
+            style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
 
@@ -298,9 +299,9 @@ fun HeatmapLegend(
             Spacer(modifier = Modifier.width(4.dp))
         }
 
-        Text(
+        AppText(
             "多($legendUnit)",
-            style = MaterialTheme.typography.bodySmall,
+            style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
     }

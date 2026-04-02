@@ -15,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -78,11 +79,10 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -90,10 +90,17 @@ import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -121,7 +128,7 @@ fun ThemeConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.theme_setting)) },
+                title = stringResource(R.string.theme_setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -136,23 +143,29 @@ fun ThemeConfigScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            val composeEngine = ThemeConfig.composeEngine
+            val isMiuixEngine = remember(composeEngine) {
+                ThemeResolver.isMiuixEngine(composeEngine)
+            }
             val isDarkTheme = when (selectedThemeMode) {
                 "1" -> false
                 "2" -> true
                 else -> isSystemInDarkTheme()
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                ThemeCard(
-                    context = context,
-                    value = selectedTheme,
-                    isDark = isDarkTheme,
-                    isAmoled = ThemeConfig.isPureBlack,
-                    paletteStyle = ThemeConfig.paletteStyle
-                )
+            if (!isMiuixEngine) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    ThemeCard(
+                        context = context,
+                        value = selectedTheme,
+                        isDark = isDarkTheme,
+                        isAmoled = ThemeConfig.isPureBlack,
+                        paletteStyle = ThemeConfig.paletteStyle
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -163,47 +176,77 @@ fun ThemeConfigScreen(
                 themeItems.zip(themeValues).toList()
             }
 
+            if (isMiuixEngine) {
+                MiuixCard(
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(16.dp),
+                    colors = MiuixCardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.primaryVariant,
+                        contentColor = MiuixTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    MiuixText("Miuix 目前为测试主题，且不对基于View的界面生效！")
+                }
+            }
+
+
             SplicedColumnGroup(title = stringResource(R.string.theme)) {
-                ThemeModeSelector(
-                    selectedMode = selectedThemeMode,
-                    onModeSelected = { mode ->
-                        selectedThemeMode = mode
-                        ThemeConfig.themeMode = mode
-                        OldThemeConfig.applyDayNight(context)
-                    }
-                )
+                if (isMiuixEngine) {
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.theme_mode),
+                        selectedValue = selectedThemeMode,
+                        displayEntries = stringArrayResource(R.array.theme_mode),
+                        entryValues = stringArrayResource(R.array.theme_mode_v),
+                        onValueChange = { mode ->
+                            selectedThemeMode = mode
+                            ThemeConfig.themeMode = mode
+                            OldThemeConfig.applyDayNight(context)
+                        }
+                    )
+                } else {
+                    ThemeModeSelector(
+                        selectedMode = selectedThemeMode,
+                        onModeSelected = { mode ->
+                            selectedThemeMode = mode
+                            ThemeConfig.themeMode = mode
+                            OldThemeConfig.applyDayNight(context)
+                        }
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                if (!isMiuixEngine) {
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                ThemeColorSelector(
-                    context = context,
-                    themes = themes,
-                    selectedTheme = selectedTheme,
-                    isDark = isDarkTheme,
-                    isAmoled = ThemeConfig.isPureBlack,
-                    paletteStyle = ThemeConfig.paletteStyle,
-                    onThemeSelected = { theme ->
-                        if (theme == "13") {
-                            val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
-                            val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
-                            if (!hasLightBg || !hasDarkBg) {
-                                context.toastOnUi(R.string.transparent_theme_alarm)
-                                return@ThemeColorSelector
+                    ThemeColorSelector(
+                        context = context,
+                        themes = themes,
+                        selectedTheme = selectedTheme,
+                        isDark = isDarkTheme,
+                        isAmoled = ThemeConfig.isPureBlack,
+                        paletteStyle = ThemeConfig.paletteStyle,
+                        onThemeSelected = { theme ->
+                            if (theme == "13") {
+                                val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
+                                val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
+                                if (!hasLightBg || !hasDarkBg) {
+                                    context.toastOnUi(R.string.transparent_theme_alarm)
+                                    return@ThemeColorSelector
+                                } else {
+                                    AppConfig.containerOpacity = 0
+                                }
+                            }
+                            val oldTheme = selectedTheme
+                            selectedTheme = theme
+                            ThemeConfig.appTheme = theme
+                            val isDynamicSwitch = (oldTheme == "12" || theme == "12")
+                            if (isDynamicSwitch) {
+                                showRestartDialog = true
                             } else {
-                                AppConfig.containerOpacity = 0
+                                postEvent(EventBus.RECREATE, "")
                             }
                         }
-                        val oldTheme = selectedTheme
-                        selectedTheme = theme
-                        ThemeConfig.appTheme = theme
-                        val isDynamicSwitch = (oldTheme == "12" || theme == "12")
-                        if (isDynamicSwitch) {
-                            showRestartDialog = true
-                        } else {
-                            postEvent(EventBus.RECREATE, "")
-                        }
-                    }
-                )
+                    )
+                }
             }
 
             SplicedColumnGroup {
@@ -226,13 +269,22 @@ fun ThemeConfigScreen(
                         context.toastOnUi(R.string.restart_to_apply)
                     }
                 )
+                DropdownListSettingItem(
+                    title = stringResource(R.string.compose_engine),
+                    selectedValue = ThemeConfig.composeEngine,
+                    displayEntries = stringArrayResource(R.array.composeEngine),
+                    entryValues = stringArrayResource(R.array.composeEngine_value),
+                    onValueChange = {
+                        ThemeConfig.composeEngine = it
+                    }
+                )
                 SliderSettingItem(
                     title = stringResource(R.string.font_scale),
                     description = stringResource(
                         R.string.font_scale_summary,
                         AppContextWrapper.getFontScale(context)
                     ),
-                    value = fontScaleValue.value,
+                    value = fontScaleValue.floatValue,
                     defaultValue = 10f,
                     valueRange = 8f..16f,
                     steps = 7,
@@ -478,7 +530,7 @@ fun ThemeConfigScreen(
     if (showRestartDialog) {
         AlertDialog(
             onDismissRequest = { showRestartDialog = false },
-            title = { Text(stringResource(R.string.restart_required_message)) },
+            title = { AppText(stringResource(R.string.restart_required_message)) },
             confirmButton = {
                 OutlinedButton(onClick = {
                     showRestartDialog = false
@@ -486,7 +538,7 @@ fun ThemeConfigScreen(
                         context.restart()
                     }, 100)
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
@@ -494,7 +546,7 @@ fun ThemeConfigScreen(
                     showRestartDialog = false
                     context.toastOnUi(R.string.restart_later_message)
                 }) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
             }
         )
@@ -502,57 +554,56 @@ fun ThemeConfigScreen(
 
     manageKey?.let { isDark ->
         BackgroundImageManageSheet(
+            show = true,
             isDarkTheme = isDark,
             onDismissRequest = { manageKey = null }
         )
     }
 
-    if (showColorPicker) {
-        ColorPickerSheet(
-            initialColor = primaryColorValue.value,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                primaryColorValue.value = color
-                ThemeConfig.cPrimary = color
-                ThemeStore.editTheme(context)
-                    .primaryColor(color)
-                    .apply()
-                DynamicColors.applyToActivitiesIfAvailable(
-                    context.applicationContext as android.app.Application,
-                    DynamicColorsOptions.Builder()
-                        .setContentBasedSource(context.primaryColor)
-                        .build()
-                )
-            }
-        )
-    }
 
-    if (showLauncherIconPicker) {
-        LauncherIconPickerSheet(
-            selectedValue = ThemeConfig.launcherIcon,
-            onDismissRequest = { showLauncherIconPicker = false },
-            onValueChange = {
-                ThemeConfig.launcherIcon = it
-                LauncherIconHelp.changeIcon(it)
-            }
-        )
-    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = primaryColorValue.value,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            primaryColorValue.value = color
+            ThemeConfig.cPrimary = color
+            ThemeStore.editTheme(context)
+                .primaryColor(color)
+                .apply()
+            DynamicColors.applyToActivitiesIfAvailable(
+                context.applicationContext as android.app.Application,
+                DynamicColorsOptions.Builder()
+                    .setContentBasedSource(context.primaryColor)
+                    .build()
+            )
+        }
+    )
 
-    if (showThemeListDialog) {
-        ThemeListDialog(
-            onDismissRequest = { showThemeListDialog = false }
-        )
-    }
+    LauncherIconPickerSheet(
+        show = showLauncherIconPicker,
+        selectedValue = ThemeConfig.launcherIcon,
+        onDismissRequest = { showLauncherIconPicker = false },
+        onValueChange = {
+            ThemeConfig.launcherIcon = it
+            LauncherIconHelp.changeIcon(it)
+        }
+    )
+
+    ThemeListDialog(
+        show = showThemeListDialog,
+        onDismissRequest = { showThemeListDialog = false }
+    )
 
     saveThemeKey?.let { key ->
         AlertDialog(
             onDismissRequest = { saveThemeKey = null },
-            title = { Text(stringResource(R.string.theme_name)) },
+            title = { AppText(stringResource(R.string.theme_name)) },
             text = {
                 OutlinedTextField(
                     value = themeName,
                     onValueChange = { themeName = it },
-                    label = { Text("name") },
+                    label = { AppText("name") },
                     singleLine = true
                 )
             },
@@ -566,12 +617,12 @@ fun ThemeConfigScreen(
                         saveThemeKey = null
                     }
                 ) {
-                    Text(stringResource(android.R.string.ok))
+                    AppText(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { saveThemeKey = null }) {
-                    Text(stringResource(android.R.string.cancel))
+                    AppText(stringResource(android.R.string.cancel))
                 }
             }
         )
@@ -745,9 +796,9 @@ fun ThemeColorButton(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        Text(
+        AppText(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }

@@ -15,11 +15,14 @@ object ThemeConfig {
 
     var enableBlur by prefDelegate(PreferKey.enableBlur, false)
 
-    var enableProgressiveBlur by prefDelegate(PreferKey.enableProgressiveBlur, true)
+    var enableProgressiveBlur by prefDelegate(PreferKey.enableProgressiveBlur, false)
 
     var useFlexibleTopAppBar by prefDelegate(PreferKey.useFlexibleTopAppBar, true)
 
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
+
+    //m3 or miuix
+    var composeEngine by prefDelegate(PreferKey.composeEngine, "material")
 
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 

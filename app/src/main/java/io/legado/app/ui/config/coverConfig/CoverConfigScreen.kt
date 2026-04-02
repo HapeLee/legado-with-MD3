@@ -12,7 +12,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,14 +26,14 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +51,7 @@ fun CoverConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.cover_config)) },
+                title = stringResource(R.string.cover_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -247,17 +246,17 @@ fun CoverConfigScreen(
         }
     }
 
-    if (showCoverRuleSheet) {
-        CoverRuleConfigSheet(onDismissRequest = { showCoverRuleSheet = false })
-    }
+    CoverRuleConfigSheet(
+        show = showCoverRuleSheet,
+        onDismissRequest = { showCoverRuleSheet = false }
+    )
 
-    manageKey?.let { key ->
-        CoverManageSheet(
-            preferenceKey = key,
-            onDismissRequest = { manageKey = null },
-            viewModel = viewModel
-        )
-    }
+    CoverManageSheet(
+        show = manageKey != null,
+        preferenceKey = manageKey!!,
+        onDismissRequest = { manageKey = null },
+        viewModel = viewModel
+    )
 
     showColorPickerByField?.let { field ->
         val initialColor = when (field) {
@@ -269,6 +268,7 @@ fun CoverConfigScreen(
         }
 
         ColorPickerSheet(
+            show = showColorPickerByField != null,
             initialColor = initialColor,
             onDismissRequest = { showColorPickerByField = null },
             onColorSelected = { color ->

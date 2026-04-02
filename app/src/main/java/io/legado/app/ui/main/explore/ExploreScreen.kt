@@ -42,8 +42,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -73,6 +71,9 @@ import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
@@ -81,9 +82,11 @@ import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -138,6 +141,8 @@ fun ExploreScreen(
         }
     }
 
+    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
+
     ListScaffold(
         title = stringResource(R.string.discovery),
         state = uiState,
@@ -148,13 +153,13 @@ fun ExploreScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                text = { Text(stringResource(R.string.all)) },
+                text = stringResource(R.string.all),
                 onClick = { viewModel.setGroup(""); dismiss() }
             )
             uiState.groups.forEach { group ->
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                    text = { Text(group) },
+                    text = group,
                     onClick = { viewModel.setGroup(group); dismiss() }
                 )
             }
@@ -197,7 +202,8 @@ fun ExploreScreen(
                                 }
                             },
                             onRefresh = { viewModel.refreshExploreKinds(item) },
-                            onDelete = { sourceToDelete = item }
+                            onDelete = { sourceToDelete = item },
+                            isMiuix = composeEngine
                         )
                     }
 
@@ -228,7 +234,8 @@ fun ExploreScreen(
                                                     putExtra("exploreUrl", kind.url)
                                                 }
                                             }
-                                        }
+                                        },
+                                        isMiuix = composeEngine
                                     )
                                 }
 
@@ -264,7 +271,8 @@ fun ExploreScreen(
                                     uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
                                 if (index >= 0) listState.animateScrollToItem(index)
                             }
-                        }
+                        },
+                        isMiuix = composeEngine
                     )
                 }
             }
@@ -274,19 +282,19 @@ fun ExploreScreen(
     sourceToDelete?.let { source ->
         AlertDialog(
             onDismissRequest = { sourceToDelete = null },
-            title = { Text(stringResource(R.string.draw)) },
-            text = { Text(stringResource(R.string.sure_del) + "\n" + source.bookSourceName) },
+            title = { AppText(stringResource(R.string.draw)) },
+            text = { AppText(stringResource(R.string.sure_del) + "\n" + source.bookSourceName) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteSource(source)
                     sourceToDelete = null
                 }) {
-                    Text(stringResource(R.string.yes))
+                    AppText(stringResource(R.string.yes))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { sourceToDelete = null }) {
-                    Text(stringResource(R.string.no))
+                    AppText(stringResource(R.string.no))
                 }
             }
         )
@@ -341,14 +349,25 @@ fun ExploreSourceHeader(
     onLogin: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
+    isMiuix: Boolean,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val rotation by animateFloatAsState(if (isExpanded) 90f else 0f, label = "rotation")
+
     val containerColor by animateColorAsState(
         targetValue = if (isExpanded)
-            MaterialTheme.colorScheme.secondaryContainer
+            if (isMiuix) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
         else
-            MaterialTheme.colorScheme.surfaceContainerLow,
+            if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+        label = "CardColor"
+    )
+
+    val contentColor by animateColorAsState(
+        targetValue = if (isExpanded)
+            if (isMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+        else
+            if (isMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -358,7 +377,7 @@ fun ExploreSourceHeader(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        containerColor = containerColor
     ) {
         ListItem(
             modifier = Modifier
@@ -371,14 +390,10 @@ fun ExploreSourceHeader(
                 containerColor = Color.Transparent
             ),
             headlineContent = {
-                Text(
+                AppText(
                     text = item.bookSourceName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (isExpanded) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
+                    style = LegadoTheme.typography.titleMedium,
+                    color = contentColor
                 )
             },
             trailingContent = {
@@ -401,29 +416,29 @@ fun ExploreSourceHeader(
                     PillHeaderDivider(title = item.bookSourceName)
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                        text = { Text(stringResource(R.string.to_top)) },
+                        text = stringResource(R.string.to_top),
                         onClick = { onTop(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                        text = { Text(stringResource(R.string.edit)) },
+                        text = stringResource(R.string.edit),
                         onClick = { onEdit(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Search) },
-                        text = { Text(stringResource(R.string.search)) },
+                        text = stringResource(R.string.search),
                         onClick = { onSearch(); showMenu = false }
                     )
                     if (item.hasLoginUrl) {
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                            text = { Text(stringResource(R.string.login)) },
+                            text = stringResource(R.string.login),
                             onClick = { onLogin(); showMenu = false }
                         )
                     }
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                        text = { Text(stringResource(R.string.refresh)) },
+                        text = stringResource(R.string.refresh),
                         onClick = { onRefresh(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
@@ -433,12 +448,8 @@ fun ExploreSourceHeader(
                                 tint = MaterialTheme.colorScheme.error
                             )
                         },
-                        text = {
-                            Text(
-                                stringResource(R.string.delete),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
+                        text = stringResource(R.string.delete),
+                        color = LegadoTheme.colorScheme.error,
                         onClick = { onDelete(); showMenu = false }
                     )
                 }
@@ -450,12 +461,12 @@ fun ExploreSourceHeader(
 @Composable
 fun ExploreStickyCard(
     item: BookSourcePart,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isMiuix: Boolean,
 ) {
     TextCard(
         text = item.bookSourceName,
-        backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        textStyle = MaterialTheme.typography.labelLarge,
+        textStyle = LegadoTheme.typography.labelLarge,
         horizontalPadding = 8.dp,
         verticalPadding = 6.dp,
         onClick = onClick
@@ -467,8 +478,29 @@ fun ExploreKindItem(
     kind: ExploreKind,
     isClickable: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isMiuix: Boolean,
 ) {
+    val color = if (isMiuix)
+        MiuixTheme.colorScheme.surfaceContainer
+    else
+        MaterialTheme.colorScheme.secondaryContainer
+
+    val contentColor = if (isMiuix)
+        MiuixTheme.colorScheme.onSurface
+    else
+        MaterialTheme.colorScheme.secondary
+
+    val unClickBackColor = if (isMiuix)
+        MiuixTheme.colorScheme.surfaceContainer
+    else
+        MaterialTheme.colorScheme.surface
+
+    val unClickColor = if (isMiuix)
+        MiuixTheme.colorScheme.disabledOnSurface
+    else
+        MaterialTheme.colorScheme.primary
+
     CompositionLocalProvider(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified
     ) {
@@ -479,21 +511,19 @@ fun ExploreKindItem(
             GlassCard(
                 onClick = onClick,
                 shape = shape,
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ),
+                containerColor = color.copy(alpha = 0.6f),
+                contentColor = contentColor,
                 modifier = modifier
             ) {
                 KindText(kind)
             }
         } else {
-            OutlinedCard(
+            GlassCard(
                 shape = shape,
-                colors = CardDefaults.outlinedCardColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = modifier
+                containerColor = unClickBackColor.copy(alpha = 0.6f),
+                contentColor = unClickColor,
+                modifier = modifier,
+                border = CardDefaults.outlinedCardBorder()
             ) {
                 KindText(kind)
             }
@@ -506,12 +536,12 @@ fun ExploreKindItem(
 private fun KindText(
     kind: ExploreKind
 ) {
-    Text(
+    AppText(
         text = kind.title,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        style = MaterialTheme.typography.labelMediumEmphasized,
+        style = LegadoTheme.typography.labelMediumEmphasized,
         textAlign = TextAlign.Center,
         overflow = TextOverflow.Ellipsis,
         maxLines = 1

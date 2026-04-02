@@ -105,7 +105,6 @@
 
     <string-array name="composeEngine_value">
         <item>material</item>
-        <item>salt</item>
         <item>miuix</item>
     </string-array>
 

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -17,10 +16,8 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +25,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 
 enum class FilePickerSheetMode {
     DIR, FILE, EXPORT
@@ -37,6 +37,7 @@ enum class FilePickerSheetMode {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilePickerSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     title: String = stringResource(R.string.select_operation),
     onSelectSysDir: (() -> Unit)? = null,
@@ -46,22 +47,17 @@ fun FilePickerSheet(
     onUpload: (() -> Unit)? = null,
     allowExtensions: Array<String>? = null,
 ) {
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
+        title = title,
         onDismissRequest = onDismissRequest,
-        containerColor = { it.surface }
+        containerColor = LegadoTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 20.dp)
-            )
-
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -126,7 +122,7 @@ private fun RowScope.FilePickerOptionCard(
             .weight(1f)
             .height(100.dp),
         shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = LegadoTheme.colorScheme.surfaceContainerLow,
         tonalElevation = 2.dp
     ) {
         Column(
@@ -134,16 +130,16 @@ private fun RowScope.FilePickerOptionCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
+            AppIcon(
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = LegadoTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
+            AppText(
                 text = text,
-                style = MaterialTheme.typography.labelMedium,
+                style = LegadoTheme.typography.labelMedium,
                 maxLines = 1
             )
         }

@@ -52,7 +52,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -78,10 +77,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -119,7 +119,7 @@ fun ReplaceEditScreen(
                 .imePadding(),
             topBar = {
                 GlassMediumFlexibleTopAppBar(
-                    title = { Text(if (state.id > 0) "编辑替换规则" else "新增替换规则") },
+                    title = if (state.id > 0) "编辑替换规则" else "新增替换规则",
                     navigationIcon = {
                         TopbarNavigationButton(onClick = onBack)
                     },
@@ -143,14 +143,14 @@ fun ReplaceEditScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("复制规则") },
+                                text = { AppText("复制规则") },
                                 onClick = {
                                     showMenu = false
                                     viewModel.copyRule()
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("粘贴规则") },
+                                text = { AppText("粘贴规则") },
                                 onClick = {
                                     showMenu = false
                                     viewModel.pasteRule(onSuccess = {})
@@ -167,7 +167,7 @@ fun ReplaceEditScreen(
                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
                         TooltipAnchorPosition.Above
                     ),
-                    tooltip = { PlainTooltip { Text("添加") } },
+                    tooltip = { PlainTooltip { AppText("添加") } },
                     state = rememberTooltipState(),
                 ) {
                     FloatingActionButton(
@@ -214,7 +214,7 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.name,
                         onValueChange = viewModel::onNameChange,
-                        label = { Text("规则名称") },
+                        label = { AppText("规则名称") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged {
@@ -234,8 +234,8 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.pattern,
                         onValueChange = viewModel::onPatternChange,
-                        label = { Text("匹配规则") },
-                        placeholder = { Text("输入正则表达式或关键字") },
+                        label = { AppText("匹配规则") },
+                        placeholder = { AppText("输入正则表达式或关键字") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged {
@@ -247,8 +247,8 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.replacement,
                         onValueChange = viewModel::onReplacementChange,
-                        label = { Text("替换为") },
-                        placeholder = { Text("输入替换内容或捕获组") },
+                        label = { AppText("替换为") },
+                        placeholder = { AppText("输入替换内容或捕获组") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged {
@@ -265,7 +265,7 @@ fun ReplaceEditScreen(
                         FilterChip(
                             selected = state.scopeTitle,
                             onClick = { viewModel.onScopeTitleChange(!state.scopeTitle) },
-                            label = { Text("标题") },
+                            label = { AppText("标题") },
                             leadingIcon = if (state.scopeTitle) {
                                 {
                                     Icon(
@@ -282,7 +282,7 @@ fun ReplaceEditScreen(
                         FilterChip(
                             selected = state.scopeContent,
                             onClick = { viewModel.onScopeContentChange(!state.scopeContent) },
-                            label = { Text("内容") },
+                            label = { AppText("内容") },
                             leadingIcon = if (state.scopeContent) {
                                 {
                                     Icon(
@@ -299,7 +299,7 @@ fun ReplaceEditScreen(
                         FilterChip(
                             selected = state.isRegex,
                             onClick = { viewModel.onRegexChange(!state.isRegex) },
-                            label = { Text("使用正则") },
+                            label = { AppText("使用正则") },
                             leadingIcon = if (state.isRegex) {
                                 {
                                     Icon(
@@ -316,8 +316,8 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.scope,
                         onValueChange = viewModel::onScopeChange,
-                        label = { Text("特定范围") },
-                        placeholder = { Text("指定规则适用的范围") },
+                        label = { AppText("特定范围") },
+                        placeholder = { AppText("指定规则适用的范围") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged {
@@ -329,8 +329,8 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.excludeScope,
                         onValueChange = viewModel::onExcludeScopeChange,
-                        label = { Text("排除范围") },
-                        placeholder = { Text("指定规则不适用的范围") },
+                        label = { AppText("排除范围") },
+                        placeholder = { AppText("指定规则不适用的范围") },
                         modifier = Modifier
                             .fillMaxWidth()
                             .onFocusChanged {
@@ -342,8 +342,8 @@ fun ReplaceEditScreen(
                     OutlinedTextField(
                         value = state.timeout,
                         onValueChange = viewModel::onTimeoutChange,
-                        label = { Text("超时 (ms)") },
-                        placeholder = { Text("3000") },
+                        label = { AppText("超时 (ms)") },
+                        placeholder = { AppText("3000") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -383,8 +383,8 @@ fun GroupSelector(
             OutlinedTextField(
                 value = currentGroup,
                 onValueChange = onGroupChange,
-                label = { Text("分组") },
-                placeholder = { Text("默认") },
+                label = { AppText("分组") },
+                placeholder = { AppText("默认") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                 modifier = Modifier
@@ -400,7 +400,7 @@ fun GroupSelector(
             ) {
                 allGroups.forEach { selectionOption ->
                     DropdownMenuItem(
-                        text = { Text(selectionOption) },
+                        text = { AppText(selectionOption) },
                         onClick = {
                             onGroupChange(selectionOption)
                             expanded = false
@@ -426,9 +426,9 @@ fun ManageGroupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("分组管理") },
+        title = { AppText("分组管理") },
         text = {
-            if (groups.isEmpty()) Text("暂无其他分组")
+            if (groups.isEmpty()) AppText("暂无其他分组")
             else Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -448,7 +448,7 @@ fun ManageGroupDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = isSelected, onCheckedChange = null)
-                        Text(group, Modifier.padding(start = 8.dp))
+                        AppText(group, Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -462,7 +462,7 @@ fun ManageGroupDialog(
                 text = "删除选中"
             )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("关闭") } }
+        dismissButton = { TextButton(onClick = onDismiss) { AppText("关闭") } }
     )
 }
 
@@ -482,7 +482,7 @@ fun QuickInputBar(
         symbols.forEach { symbol ->
             AssistChip(
                 onClick = { onInsert(symbol) },
-                label = { Text(symbol) },
+                label = { AppText(symbol) },
                 modifier = Modifier.padding(end = 8.dp)
             )
         }

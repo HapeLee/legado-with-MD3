@@ -7,8 +7,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.hazeStyle.HazeLegado
 
 /**
  * 自动感知全局配置的 HazeSource
@@ -31,9 +31,9 @@ fun Modifier.responsiveHazeEffect(
     if (!enableBlur) return this
 
     val style = if (enableProgressiveBlur) {
-        HazeMaterials.ultraThin()
+        HazeLegado.ultraThin()
     } else {
-        HazeMaterials.regular()
+        HazeLegado.regular()
     }
 
     return this.hazeEffect(
@@ -61,6 +61,6 @@ fun Modifier.regularHazeEffect(state: HazeState): Modifier {
 
     return this.hazeEffect(
         state = state,
-        style = HazeMaterials.ultraThin()
+        style = HazeLegado.ultraThin()
     )
 }

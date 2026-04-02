@@ -44,7 +44,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -64,11 +63,9 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchContentHistory
-import io.legado.app.ui.widget.components.AnimatedText
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -76,6 +73,9 @@ import io.legado.app.ui.widget.components.button.TopBarAnimatedActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -140,12 +140,9 @@ fun SearchContentScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = {
-                        val title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
-                            "共 ${searchResults.size} 条结果"
-                        } else "搜索内容"
-                        AnimatedText(text = title)
-                    },
+                    title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
+                        "共 ${searchResults.size} 条结果"
+                    } else "搜索内容",
                     navigationIcon = { TopbarNavigationButton(onClick = onBack) },
                     actions = {
                         Row(
@@ -191,7 +188,7 @@ fun SearchContentScreen(
                 ),
                 tooltip = {
                     PlainTooltip {
-                        Text(if (isSearching) "停止搜索" else "跳转到当前章节")
+                        AppText(if (isSearching) "停止搜索" else "跳转到当前章节")
                     }
                 },
                 state = rememberTooltipState(),
@@ -310,10 +307,10 @@ fun SearchHistoryList(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Text(
+            AppText(
                 text = "搜索历史",
-                style = MaterialTheme.typography.titleSmallEmphasized,
-                color = MaterialTheme.colorScheme.primary,
+                style = LegadoTheme.typography.titleSmallEmphasized,
+                color = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center)
             )
             SmallAnimatedActionButton(
@@ -342,7 +339,7 @@ fun SearchHistoryList(
                             .clickable { onHistoryClick(item) }
                             .animateItem(),
                         headlineContent = {
-                            Text(
+                            AppText(
                                 text = item.query,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -378,7 +375,7 @@ fun SearchHistoryList(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("清除搜索历史")
+                            AppText("清除搜索历史")
                         }
                     }
                 }
@@ -407,7 +404,7 @@ fun SearchResultItem(
         Box(modifier = Modifier.padding(16.dp)) {
 
             Column {
-                Text(
+                AppText(
                     text = buildAnnotatedString {
                         append(
                             result.getTitleSpannable(
@@ -415,14 +412,14 @@ fun SearchResultItem(
                             )
                         )
                     },
-                    style = MaterialTheme.typography.titleSmall
+                    style = LegadoTheme.typography.titleSmall
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
                 HorizontalDivider()
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
+                AppText(
                     text = buildAnnotatedString {
                         append(
                             result.getContentSpannable(
@@ -432,7 +429,7 @@ fun SearchResultItem(
                             )
                         )
                     },
-                    style = MaterialTheme.typography.bodyMedium
+                    style = LegadoTheme.typography.bodyMedium
                 )
             }
 

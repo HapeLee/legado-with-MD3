@@ -26,7 +26,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,8 +40,6 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -51,6 +48,8 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.lazylist.Scroller
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
@@ -98,11 +97,7 @@ fun AllBookmarkScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = {
-                        Text(
-                            text = "所有书签"
-                        )
-                    },
+                    title = "所有书签",
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         TopbarNavigationButton(onClick = onBack)
@@ -132,7 +127,7 @@ fun AllBookmarkScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             RoundDropdownMenuItem(
-                                text = { Text("导出 JSON") },
+                                text = "导出 JSON",
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = false
@@ -140,7 +135,7 @@ fun AllBookmarkScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("导出 Markdown") },
+                                text = "导出 Markdown",
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = true
@@ -242,22 +237,21 @@ fun AllBookmarkScreen(
             }
         }
 
-        if (showBottomSheet && editingBookmark != null) {
-            BookmarkEditSheet(
-                bookmark = editingBookmark!!,
-                onDismiss = {
-                    showBottomSheet = false
-                    editingBookmark = null
-                },
-                onSave = { updatedBookmark ->
-                    viewModel.updateBookmark(updatedBookmark)
-                    showBottomSheet = false
-                },
-                onDelete = { bookmarkToDelete ->
-                    viewModel.deleteBookmark(bookmarkToDelete)
-                    showBottomSheet = false
-                }
-            )
-        }
+        BookmarkEditSheet(
+            show = showBottomSheet && editingBookmark != null,
+            bookmark = editingBookmark ?: Bookmark(),
+            onDismiss = {
+                showBottomSheet = false
+                editingBookmark = null
+            },
+            onSave = { updatedBookmark ->
+                viewModel.updateBookmark(updatedBookmark)
+                showBottomSheet = false
+            },
+            onDelete = { bookmarkToDelete ->
+                viewModel.deleteBookmark(bookmarkToDelete)
+                showBottomSheet = false
+            }
+        )
     }
 }

@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 
 @Composable
 fun CheckboxItem(
@@ -45,9 +46,9 @@ fun CheckboxItem(
             enabled = enabled,
             modifier = Modifier.alpha(alpha)
         )
-        Text(
+        AppText(
             text = title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = LegadoTheme.typography.bodyMedium,
             maxLines = 1,
             modifier = Modifier
                 .padding(start = 12.dp)

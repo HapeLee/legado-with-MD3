@@ -51,7 +51,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -80,6 +79,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.remote.RemoteBook
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionActions
@@ -88,7 +88,8 @@ import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.FileDoc
@@ -157,19 +158,19 @@ fun RemoteBookScreen(
             is RemoteBookDialog.DownloadArchive -> {
                 AlertDialog(
                     onDismissRequest = { dialogState = null },
-                    title = { Text(stringResource(R.string.draw)) },
-                    text = { Text(stringResource(R.string.archive_not_found)) },
+                    title = { AppText(stringResource(R.string.draw)) },
+                    text = { AppText(stringResource(R.string.archive_not_found)) },
                     confirmButton = {
                         OutlinedButton(onClick = {
                             scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
                             dialogState = null
                         }) {
-                            Text(stringResource(android.R.string.ok))
+                            AppText(stringResource(android.R.string.ok))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { dialogState = null }) {
-                            Text(stringResource(android.R.string.cancel))
+                            AppText(stringResource(android.R.string.cancel))
                         }
                     }
                 )
@@ -178,19 +179,19 @@ fun RemoteBookScreen(
             is RemoteBookDialog.ReImport -> {
                 AlertDialog(
                     onDismissRequest = { dialogState = null },
-                    title = { Text("是否重新加入书架？") },
-                    text = { Text("将会覆盖书籍") },
+                    title = { AppText("是否重新加入书架？") },
+                    text = { AppText("将会覆盖书籍") },
                     confirmButton = {
                         OutlinedButton(onClick = {
                             scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
                             dialogState = null
                         }) {
-                            Text(stringResource(android.R.string.ok))
+                            AppText(stringResource(android.R.string.ok))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { dialogState = null }) {
-                            Text(stringResource(android.R.string.cancel))
+                            AppText(stringResource(android.R.string.cancel))
                         }
                     }
                 )
@@ -198,42 +199,41 @@ fun RemoteBookScreen(
         }
     }
 
-    if (showSheet != null) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showSheet = null }
-        ) {
-            when (val state = showSheet) {
-                is RemoteBookSheet.Servers -> {
-                    ServersSheetContent(
-                        servers = uiState.servers,
-                        selectedServerId = uiState.selectedServerId,
-                        onSelect = {
-                            viewModel.selectServer(it)
-                            showSheet = null
-                        },
-                        onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
-                        onDelete = { viewModel.deleteServer(it) },
-                        onAdd = { showSheet = RemoteBookSheet.ServerConfig(null) },
-                        onDefault = {
-                            viewModel.selectServer(AppConst.DEFAULT_WEBDAV_ID)
-                            showSheet = null
-                        }
-                    )
-                }
-
-                is RemoteBookSheet.ServerConfig -> {
-                    ServerConfigSheetContent(
-                        server = state.server,
-                        onSave = {
-                            viewModel.saveServer(it)
-                            showSheet = RemoteBookSheet.Servers
-                        },
-                        onCancel = { showSheet = RemoteBookSheet.Servers }
-                    )
-                }
-
-                else -> {}
+    AppModalBottomSheet(
+        show = showSheet != null,
+        onDismissRequest = { showSheet = null }
+    ) {
+        when (val state = showSheet) {
+            is RemoteBookSheet.Servers -> {
+                ServersSheetContent(
+                    servers = uiState.servers,
+                    selectedServerId = uiState.selectedServerId,
+                    onSelect = {
+                        viewModel.selectServer(it)
+                        showSheet = null
+                    },
+                    onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
+                    onDelete = { viewModel.deleteServer(it) },
+                    onAdd = { showSheet = RemoteBookSheet.ServerConfig(null) },
+                    onDefault = {
+                        viewModel.selectServer(AppConst.DEFAULT_WEBDAV_ID)
+                        showSheet = null
+                    }
+                )
             }
+
+            is RemoteBookSheet.ServerConfig -> {
+                ServerConfigSheetContent(
+                    server = state.server,
+                    onSave = {
+                        viewModel.saveServer(it)
+                        showSheet = RemoteBookSheet.Servers
+                    },
+                    onCancel = { showSheet = RemoteBookSheet.Servers }
+                )
+            }
+
+            else -> {}
         }
     }
 
@@ -259,7 +259,7 @@ fun RemoteBookScreen(
         },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text("按名称排序") },
+                text = "按名称排序",
                 onClick = {
                     viewModel.toggleSort(RemoteBookSort.Name)
                     dismiss()
@@ -271,7 +271,7 @@ fun RemoteBookScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = { Text("按时间排序") },
+                text = "按时间排序",
                 onClick = {
                     viewModel.toggleSort(RemoteBookSort.Default)
                     dismiss()
@@ -381,9 +381,9 @@ private fun ServersSheetContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
+            AppText(
                 text = stringResource(R.string.server_config),
-                style = MaterialTheme.typography.titleLarge
+                style = LegadoTheme.typography.titleLarge
             )
             IconButton(onClick = onAdd) {
                 Icon(Icons.Default.Add, contentDescription = "添加")
@@ -447,9 +447,9 @@ private fun ServerItem(
         ListItem(
             modifier = Modifier.animateContentSize(),
             headlineContent = {
-                Text(
+                AppText(
                     text = name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = LegadoTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -462,9 +462,9 @@ private fun ServerItem(
             },
             supportingContent = url?.let {
                 {
-                    Text(
+                    AppText(
                         text = it,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -514,16 +514,16 @@ private fun ServerConfigSheetContent(
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        Text(
+        AppText(
             text = if (server == null) "添加服务器" else "编辑服务器",
-            style = MaterialTheme.typography.titleLarge,
+            style = LegadoTheme.typography.titleLarge,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("名称") },
+            label = { AppText("名称") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -531,7 +531,7 @@ private fun ServerConfigSheetContent(
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text("URL") },
+            label = { AppText("URL") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -539,7 +539,7 @@ private fun ServerConfigSheetContent(
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("用户名") },
+            label = { AppText("用户名") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -547,7 +547,7 @@ private fun ServerConfigSheetContent(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("密码") },
+            label = { AppText("密码") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -571,7 +571,7 @@ private fun ServerConfigSheetContent(
                 onClick = onCancel,
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(android.R.string.cancel))
+                AppText(stringResource(android.R.string.cancel))
             }
             Button(
                 onClick = {
@@ -587,7 +587,7 @@ private fun ServerConfigSheetContent(
                 modifier = Modifier.weight(1f),
                 enabled = name.isNotBlank() && url.isNotBlank()
             ) {
-                Text("保存")
+                AppText("保存")
             }
         }
     }
@@ -625,9 +625,9 @@ private fun PathNavigationBar(
                 itemsIndexed(pathNames) { index, name ->
                     val isLast = index == pathNames.lastIndex
 
-                    Text(
+                    AppText(
                         text = name,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LegadoTheme.typography.labelSmall,
                         fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Medium,
                         color = if (isLast)
                             MaterialTheme.colorScheme.primary
@@ -716,9 +716,9 @@ private fun RemoteBookItem(
                 modifier = Modifier.weight(1f)
             ) {
 
-                Text(
+                AppText(
                     text = book.filename.substringBeforeLast("."),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LegadoTheme.typography.bodyMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -732,7 +732,7 @@ private fun RemoteBookItem(
                         if (book.contentType.isNotEmpty()) {
                             TextCard(
                                 text = book.contentType.uppercase(),
-                                textStyle = MaterialTheme.typography.labelSmall,
+                                textStyle = LegadoTheme.typography.labelSmall,
                                 horizontalPadding = 4.dp,
                                 verticalPadding = 2.dp,
                                 cornerRadius = 4.dp,
@@ -743,11 +743,11 @@ private fun RemoteBookItem(
                             Spacer(modifier = Modifier.width(6.dp))
                         }
 
-                        Text(
+                        AppText(
                             text = "${ConvertUtils.formatFileSize(book.size)} • ${
                                 AppConst.dateFormat.format(book.lastModify)
                             }",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = LegadoTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

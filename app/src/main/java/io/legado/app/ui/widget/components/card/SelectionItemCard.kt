@@ -24,8 +24,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,10 +39,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.AdaptiveSwitch
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SelectionItemCard(
@@ -66,11 +71,14 @@ fun SelectionItemCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
+    val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
     val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
-            selectedContainerColor ?: MaterialTheme.colorScheme.secondaryContainer
+            selectedContainerColor
+                ?: if (composeEngine) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
         else
-            containerColor ?: MaterialTheme.colorScheme.surfaceContainerLow,
+            containerColor
+                ?: if (composeEngine) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -78,10 +86,9 @@ fun SelectionItemCard(
     GlassCard(
         onClick = onToggleSelection,
         modifier = modifier
-            .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = animatedContainerColor),
+        containerColor = animatedContainerColor,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
         Row(
@@ -113,28 +120,49 @@ fun SelectionItemCard(
                 }
             }
 
-            ListItem(
-                modifier = Modifier.weight(1f),
-                headlineContent = {
-                    Text(
+            if (composeEngine) {
+                BasicComponent(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    AppText(
                         text = title,
-                        style = MaterialTheme.typography.titleSmall,
+                        style = LegadoTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                },
-                supportingContent = if (!subtitle.isNullOrBlank()) {
-                    {
-                        Text(
+                    if (!subtitle.isNullOrBlank()) {
+                        AppText(
                             text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = LegadoTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                } else null,
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+                }
+            } else {
+                ListItem(
+                    modifier = Modifier.weight(1f),
+                    headlineContent = {
+                        AppText(
+                            text = title,
+                            style = LegadoTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    supportingContent = if (!subtitle.isNullOrBlank()) {
+                        {
+                            AppText(
+                                text = subtitle,
+                                style = LegadoTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else null,
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+            }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -143,7 +171,7 @@ fun SelectionItemCard(
                     .padding(end = 8.dp)
             ) {
                 onEnabledChange?.let {
-                    Switch(
+                    AdaptiveSwitch(
                         modifier = Modifier.scale(0.8f),
                         checked = isEnabled,
                         onCheckedChange = it

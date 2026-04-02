@@ -40,12 +40,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -60,13 +57,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
@@ -78,6 +73,7 @@ import io.legado.app.ui.book.import.remote.RemoteBookActivity
 import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -85,6 +81,8 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.readText
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
@@ -237,37 +235,37 @@ fun BookshelfScreen(
         topBarActions = { },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.add_remote_book)) },
+                text = stringResource(R.string.add_remote_book),
                 onClick = { context.startActivity<RemoteBookActivity>(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Wifi, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.book_local)) },
+                text = stringResource(R.string.book_local),
                 onClick = { context.startActivity<ImportBookActivity>(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Save, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.update_toc)) },
+                text = stringResource(R.string.update_toc),
                 onClick = { viewModel.upToc(uiState.items); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text("布局设置") },
+                text = "布局设置",
                 onClick = { showConfigSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.GridView, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.group_manage)) },
+                text = stringResource(R.string.group_manage),
                 onClick = { showGroupManageSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.Edit, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.add_url)) },
+                text = stringResource(R.string.add_url),
                 onClick = { showAddUrlDialog = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.Link, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.bookshelf_management)) },
+                text = stringResource(R.string.bookshelf_management),
                 onClick = {
                     val groupId =
                         uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
@@ -279,7 +277,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Settings, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.cache_export)) },
+                text = stringResource(R.string.cache_export),
                 onClick = {
                     val groupId =
                         uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
@@ -291,7 +289,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Download, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.export_bookshelf)) },
+                text = stringResource(R.string.export_bookshelf),
                 onClick = {
                     showExportSheet = true
                     dismiss()
@@ -299,12 +297,12 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.ImportExport, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.import_bookshelf)) },
+                text = stringResource(R.string.import_bookshelf),
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.log)) },
+                text = stringResource(R.string.log),
                 onClick = {
                     showLogSheet = true
                     dismiss()
@@ -322,32 +320,18 @@ fun BookshelfScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PrimaryScrollableTabRow(
-                            selectedTabIndex = selectedTabIndex,
-                            edgePadding = 0.dp,
-                            divider = { },
-                            containerColor = Color.Transparent,
-                            minTabWidth = 0.dp,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            uiState.groups.forEachIndexed { index, group ->
-                                Tab(
-                                    selected = selectedTabIndex == index,
-                                    onClick = {
-                                        scope.launch { pagerState.animateScrollToPage(index) }
-                                    },
-                                    text = {
-                                        Text(
-                                            text = group.groupName,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.padding(horizontal = 8.dp),
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                )
-                            }
+                        val tabTitles = remember(uiState.groups) {
+                            uiState.groups.map { it.groupName }
                         }
+
+                        AppTabRow(
+                            tabTitles = tabTitles,
+                            selectedTabIndex = selectedTabIndex,
+                            onTabSelected = { index ->
+                                scope.launch { pagerState.animateScrollToPage(index) }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
 
                         if (BookshelfConfig.shouldShowExpandButton) {
                             Box(modifier = Modifier.padding(end = 16.dp)) {
@@ -363,7 +347,7 @@ fun BookshelfScreen(
                                 ) { dismiss ->
                                     uiState.groups.forEachIndexed { index, group ->
                                         RoundDropdownMenuItem(
-                                            text = { Text(group.groupName) },
+                                            text = group.groupName,
                                             onClick = {
                                                 scope.launch { pagerState.animateScrollToPage(index) }
                                                 dismiss()
@@ -502,13 +486,15 @@ fun BookshelfScreen(
         }
     }
 
-    if (showConfigSheet) {
-        BookshelfConfigSheet(onDismissRequest = { showConfigSheet = false })
-    }
+    BookshelfConfigSheet(
+        show = showConfigSheet,
+        onDismissRequest = { showConfigSheet = false }
+    )
 
-    if (showGroupManageSheet) {
-        GroupManageSheet(onDismissRequest = { showGroupManageSheet = false })
-    }
+    GroupManageSheet(
+        show = showGroupManageSheet,
+        onDismissRequest = { showGroupManageSheet = false }
+    )
 
     if (showAddUrlDialog) {
         SourceInputDialog(
@@ -521,40 +507,39 @@ fun BookshelfScreen(
         )
     }
 
-    if (showImportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showImportSheet = false },
-            title = stringResource(R.string.import_bookshelf),
-            onSelectSysFile = { types ->
-                importLauncher.launch(types)
-                showImportSheet = false
-            },
-            onManualInput = {
-                showAddUrlDialog = true
-                showImportSheet = false
-            },
-            allowExtensions = arrayOf("json", "txt")
-        )
-    }
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_bookshelf),
+        onSelectSysFile = { types ->
+            importLauncher.launch(types)
+            showImportSheet = false
+        },
+        onManualInput = {
+            showAddUrlDialog = true
+            showImportSheet = false
+        },
+        allowExtensions = arrayOf("json", "txt")
+    )
 
-    if (showExportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showExportSheet = false },
-            title = stringResource(R.string.export_bookshelf),
-            onSelectSysDir = {
-                showExportSheet = false
-                exportLauncher.launch("bookshelf.json")
-            },
-            onUpload = {
-                showExportSheet = false
-                viewModel.uploadBookshelf(uiState.items)
-            }
-        )
-    }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        title = stringResource(R.string.export_bookshelf),
+        onSelectSysDir = {
+            showExportSheet = false
+            exportLauncher.launch("bookshelf.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            viewModel.uploadBookshelf(uiState.items)
+        }
+    )
 
-    if (showLogSheet) {
-        AppLogSheet(onDismissRequest = { showLogSheet = false })
-    }
+    AppLogSheet(
+        show = showLogSheet,
+        onDismissRequest = { showLogSheet = false }
+    )
 
     if (uiState.isLoading) {
         Dialog(onDismissRequest = {}) {
@@ -568,10 +553,10 @@ fun BookshelfScreen(
                 ) {
                     CircularProgressIndicator()
                     uiState.loadingText?.let {
-                        Text(
+                        AppText(
                             text = it,
                             modifier = Modifier.padding(top = 16.dp),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = LegadoTheme.typography.bodyMedium
                         )
                     }
                 }

@@ -63,7 +63,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.material3.animateFloatingActionButton
@@ -95,11 +94,11 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -109,7 +108,9 @@ import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -312,33 +313,33 @@ fun TocScreen(
                     when (pagerState.currentPage) {
                         0 -> {
                             RoundDropdownMenuItem(
-                                text = { Text("使用替换规则") },
+                                text = "使用替换规则",
                                 trailingIcon = {
                                     Checkbox(checked = useReplace, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleUseReplace() }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("显示字数") },
+                                text = "显示字数",
                                 trailingIcon = {
                                     Checkbox(checked = showWordCount, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleShowWordCount() }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("反转目录") },
+                                text = "反转目录",
                                 onClick = { viewModel.reverseToc() }
                             )
                             PillDivider()
                             RoundDropdownMenuItem(
-                                text = { Text("替换规则") },
+                                text = "替换规则",
                                 onClick = {
                                     onOpenReplaceRule(null)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("新建替换规则") },
+                                text = "新建替换规则",
                                 onClick = {
                                     val scopes = mutableListOf<String>()
                                     book?.name?.let { scopes.add(it) }
@@ -358,7 +359,7 @@ fun TocScreen(
                             if (book?.isLocal == true) {
                                 PillHeaderDivider(title = "本地书籍选项")
                                 RoundDropdownMenuItem(
-                                    text = { Text("本地书籍目录规则") },
+                                    text = "本地书籍目录规则",
                                     onClick = {
                                         val intent =
                                             Intent(context, TxtTocRuleActivity::class.java).apply {
@@ -369,7 +370,7 @@ fun TocScreen(
                                     }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = { Text("拆分超长章节") },
+                                    text = "拆分超长章节",
                                     trailingIcon = {
                                         Checkbox(
                                             checked = viewModel.isSplitLongChapter,
@@ -386,7 +387,7 @@ fun TocScreen(
 
                         else -> {
                             RoundDropdownMenuItem(
-                                text = { Text("导出书签为JSON") },
+                                text = "导出书签为JSON",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -398,7 +399,7 @@ fun TocScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { Text("导出书签为MarkDown") },
+                                text = "导出书签为MarkDown",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -428,7 +429,7 @@ fun TocScreen(
                                 selected = pagerState.currentPage == 0,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
                                 text = {
-                                    Text(
+                                    AppText(
                                         text = "目录",
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -439,7 +440,7 @@ fun TocScreen(
                                 selected = pagerState.currentPage == 1,
                                 onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                                 text = {
-                                    Text(
+                                    AppText(
                                         text = "书签",
                                         modifier = Modifier.padding(horizontal = 16.dp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -464,13 +465,13 @@ fun TocScreen(
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
                                     RoundDropdownMenuItem(
-                                        text = { Text("展开所有卷") },
+                                        text = "展开所有卷",
                                         onClick = {
                                             viewModel.expandAllVolumes(); showVolumeMenu = false
                                         }
                                     )
                                     RoundDropdownMenuItem(
-                                        text = { Text("收起所有卷") },
+                                        text = "收起所有卷",
                                         onClick = {
                                             viewModel.collapseAllVolumes(); showVolumeMenu = false
                                         }
@@ -482,7 +483,7 @@ fun TocScreen(
                                         PillHeaderDivider(title = "快速跳转")
                                         volumeItems.forEach { uiItem ->
                                             RoundDropdownMenuItem(
-                                                text = { Text(uiItem.title) },
+                                                text = uiItem.title,
                                                 onClick = {
                                                     scope.launch {
                                                         val targetIndex =
@@ -541,7 +542,7 @@ fun TocScreen(
                             fabMenuExpanded = false
                         },
                         icon = { Icon(icon, contentDescription = null) },
-                        text = { Text(text = label) }
+                        text = { AppText(text = label) }
                     )
                 }
             }
@@ -593,20 +594,19 @@ fun TocScreen(
             }
         }
 
-        if (editingBookmark != null) {
-            BookmarkEditSheet(
-                bookmark = editingBookmark!!,
-                onDismiss = { editingBookmark = null },
-                onSave = { updatedBookmark ->
-                    viewModel.updateBookmark(updatedBookmark)
-                    editingBookmark = null
-                },
-                onDelete = { bookmarkToDelete ->
-                    viewModel.deleteBookmark(bookmarkToDelete)
-                    editingBookmark = null
-                }
-            )
-        }
+        BookmarkEditSheet(
+            show = editingBookmark != null,
+            bookmark = editingBookmark!!,
+            onDismiss = { editingBookmark = null },
+            onSave = { updatedBookmark ->
+                viewModel.updateBookmark(updatedBookmark)
+                editingBookmark = null
+            },
+            onDelete = { bookmarkToDelete ->
+                viewModel.deleteBookmark(bookmarkToDelete)
+                editingBookmark = null
+            }
+        )
     }
 }
 
@@ -729,9 +729,9 @@ fun ChapterItem(
                         )
                     }
 
-                    Text(
+                    AppText(
                         text = item.title,
-                        style = MaterialTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
+                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -739,9 +739,9 @@ fun ChapterItem(
                 }
 
                 if (!item.tag.isNullOrEmpty()) {
-                    Text(
+                    AppText(
                         text = item.tag,
-                        style = MaterialTheme.typography.labelSmallEmphasized,
+                        style = LegadoTheme.typography.labelSmallEmphasized,
                         color = detailColor.copy(alpha = 0.8f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -910,11 +910,11 @@ private fun StatusIcon(
                     color = Color.Transparent
                 ) {
                     if (wordCount != null) {
-                        Text(
+                        AppText(
                             modifier = Modifier
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             text = wordCount,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

@@ -30,7 +30,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -47,12 +46,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.button.TopBarButtonVariant
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
@@ -71,7 +71,7 @@ fun BookInfoEditScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = { Text(text = stringResource(id = R.string.book_info_edit)) },
+                title = stringResource(id = R.string.book_info_edit),
                 navigationIcon = {
                     TopbarNavigationButton(
                         onClick = onBack,
@@ -191,35 +191,35 @@ fun BookInfoEditContent(
         OutlinedTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            label = { Text("书名") },
+            label = { AppText("书名") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
-            label = { Text("作者") },
+            label = { AppText("作者") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
-            label = { Text("封面链接") },
+            label = { AppText("封面链接") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
-            label = { Text("简介") },
+            label = { AppText("简介") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
-            label = { Text("备注") },
+            label = { AppText("备注") },
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -251,7 +251,7 @@ fun BookTypeDropdown(
             state = textFieldState,
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
-            label = { Text("书籍类型") },
+            label = { AppText("书籍类型") },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -269,7 +269,7 @@ fun BookTypeDropdown(
         ) {
             bookTypes.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { AppText(option) },
                     onClick = {
                         onTypeSelected(option)
                         expanded = false

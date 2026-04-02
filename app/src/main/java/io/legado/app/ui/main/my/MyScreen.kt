@@ -1,13 +1,20 @@
 package io.legado.app.ui.main.my
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,20 +23,19 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Web
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,11 +52,14 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -70,11 +79,7 @@ fun MyScreen(
             .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.my)
-                    )
-                },
+                title = stringResource(R.string.my),
                 actions = {
                     IconButton(
                         onClick = { onNavigate(PrefClickEvent.ShowMd("appHelp", "xxx")) }
@@ -99,52 +104,21 @@ fun MyScreen(
             )
 
             SplicedColumnGroup(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.adaptiveHorizontalPadding(),
                 title = ""
             ) {
-                SettingItem(
-                    title = stringResource(R.string.web_service),
-                    description = if (uiState.isWebServiceRun)
-                        uiState.webServiceAddress
-                    else
-                        stringResource(R.string.web_service_desc),
-                    imageVector = Icons.Default.Web,
-                    trailingContent = {
-                        Switch(
-                            checked = uiState.isWebServiceRun,
-                            onCheckedChange = {
-                                viewModel.onEvent(PrefClickEvent.ToggleWebService)
-                            }
-                        )
-                    },
-                    dropdownMenu = if (uiState.isWebServiceRun) {
-                        { onDismiss ->
-                            DropdownMenuItem(
-                                text = { Text("复制地址") },
-                                onClick = {
-                                    onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
-                                    onDismiss()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("浏览器打开") },
-                                onClick = {
-                                    onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
-                                    onDismiss()
-                                }
-                            )
-                        }
-                    } else null,
-                    onClick = { }
+                WebServiceSettingBlock(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    onNavigate = onNavigate
                 )
             }
 
-
             SplicedColumnGroup(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.adaptiveHorizontalPadding(),
                 title = "规则"
             ) {
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.book_source_manage),
                     description = stringResource(R.string.book_source_manage_desc),
                     imageVector = Icons.Default.Source,
@@ -154,7 +128,7 @@ fun MyScreen(
                         )
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.replace_purify),
                     imageVector = Icons.Default.FindReplace,
                     onClick = {
@@ -163,7 +137,7 @@ fun MyScreen(
                         )
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.txt_toc_rule),
                     imageVector = Icons.AutoMirrored.Filled.Rule,
                     onClick = {
@@ -172,7 +146,7 @@ fun MyScreen(
                         )
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.dict_rule),
                     imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
                     onClick = {
@@ -184,44 +158,44 @@ fun MyScreen(
             }
 
             SplicedColumnGroup(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.adaptiveHorizontalPadding(),
                 title = stringResource(R.string.other)) {
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.setting),
                     imageVector = Icons.Default.Settings,
                     onClick = {
                         onOpenSettings()
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.bookmark),
                     imageVector = Icons.Default.Bookmark,
                     onClick = {
                         onNavigate(PrefClickEvent.StartActivity(AllBookmarkActivity::class.java))
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.read_record),
                     imageVector = Icons.Default.History,
                     onClick = {
                         onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.file_manage),
                     imageVector = Icons.Default.Folder,
                     onClick = {
                         onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
                     onClick = {
                         onNavigate(PrefClickEvent.StartActivity(AboutActivity::class.java))
                     }
                 )
-                SettingItem(
+                ClickableSettingItem(
                     title = stringResource(R.string.exit),
                     imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                     onClick = {
@@ -231,6 +205,61 @@ fun MyScreen(
             }
 
             Spacer(Modifier.height(120.dp))
+        }
+    }
+}
+
+
+@Composable
+fun WebServiceSettingBlock(
+    uiState: MyUiState,
+    viewModel: MyViewModel,
+    onNavigate: (PrefClickEvent) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SwitchSettingItem(
+            title = stringResource(R.string.web_service),
+            description = if (uiState.isWebServiceRun) {
+                uiState.webServiceAddress
+            } else {
+                stringResource(R.string.web_service_desc)
+            },
+            imageVector = Icons.Default.Web,
+            checked = uiState.isWebServiceRun,
+            onCheckedChange = {
+                viewModel.onEvent(PrefClickEvent.ToggleWebService)
+            }
+        )
+
+        AnimatedVisibility(
+            visible = uiState.isWebServiceRun,
+            enter = expandVertically(),
+            exit = shrinkVertically()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                SmallTextButton(
+                    text = "复制地址",
+                    icon = Icons.Default.ContentCopy,
+                    onClick = {
+                        onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
+                    }
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                SmallTextButton(
+                    text = "浏览器打开",
+                    icon = Icons.Default.OpenInBrowser,
+                    onClick = {
+                        onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
+                    }
+                )
+            }
         }
     }
 }

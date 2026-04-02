@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,14 +19,14 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import org.koin.androidx.compose.koinViewModel
 
@@ -45,9 +44,7 @@ fun ReadConfigScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = {
-                    Text(stringResource(R.string.read_config))
-                },
+                title = stringResource(R.string.read_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopbarNavigationButton(onClick = onBackClick)
@@ -323,7 +320,8 @@ fun ReadConfigScreen(
         }
     }
 
-    if (showPageKeySheet) {
-        PageKeySheet(onDismissRequest = { showPageKeySheet = false })
-    }
+    PageKeySheet(
+        show = showPageKeySheet,
+        onDismissRequest = { showPageKeySheet = false }
+    )
 }

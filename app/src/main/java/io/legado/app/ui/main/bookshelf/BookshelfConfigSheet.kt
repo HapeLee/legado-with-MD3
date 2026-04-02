@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.ViewCompact
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -32,7 +31,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
@@ -40,28 +40,28 @@ import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookshelfConfigSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(
+        title = stringResource(R.string.bookshelf_layout),
+        show = show,
+        onDismissRequest = onDismissRequest
+    ) {
+        GlassCard() {
+
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .animateContentSize()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = stringResource(R.string.bookshelf_layout),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
-
-            // Group Style
             CompactDropdownSettingItem(
                 title = stringResource(R.string.group_style),
                 selectedValue = BookshelfConfig.bookGroupStyle.toString(),

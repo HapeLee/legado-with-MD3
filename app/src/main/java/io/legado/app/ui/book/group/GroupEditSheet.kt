@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,11 +17,9 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -39,9 +36,10 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.widget.components.cover.Cover
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.SelectImageContract
@@ -55,11 +53,12 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupEditSheet(
+    show: Boolean,
     group: BookGroup? = null,
     onDismissRequest: () -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
-    GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
         GroupEditContent(
             group = group,
             onDismissRequest = onDismissRequest,
@@ -108,17 +107,9 @@ fun GroupEditContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 16.dp)
             .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            text = stringResource(R.string.group_edit),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
@@ -138,7 +129,7 @@ fun GroupEditContent(
                 OutlinedTextField(
                     value = groupName,
                     onValueChange = { groupName = it },
-                    label = { Text(stringResource(R.string.group_name)) },
+                    label = { AppText(stringResource(R.string.group_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -206,7 +197,7 @@ fun GroupEditContent(
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onDismissRequest) {
-                    Text(stringResource(R.string.cancel))
+                    AppText(stringResource(R.string.cancel))
                 }
                 Button(onClick = {
                     if (groupName.isEmpty()) {
@@ -235,7 +226,7 @@ fun GroupEditContent(
                         }
                     }
                 }) {
-                    Text(stringResource(R.string.ok))
+                    AppText(stringResource(R.string.ok))
                 }
             }
         }

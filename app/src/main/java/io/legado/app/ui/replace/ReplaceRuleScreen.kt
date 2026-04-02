@@ -8,11 +8,9 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,20 +18,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
@@ -50,14 +43,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +67,8 @@ import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -165,56 +158,48 @@ fun ReplaceRuleScreen(
         )
     }
 
-    if (showImportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showImportSheet = false },
-            title = stringResource(R.string.import_replace_rule),
-            onSelectSysFile = { types ->
-                importDoc.launch(types)
-                showImportSheet = false
-            },
-            onManualInput = {
-                showUrlInput = true
-                showImportSheet = false
-            },
-            allowExtensions = arrayOf("json", "txt")
-        )
-    }
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_replace_rule),
+        onSelectSysFile = { types ->
+            importDoc.launch(types)
+            showImportSheet = false
+        },
+        onManualInput = {
+            showUrlInput = true
+            showImportSheet = false
+        },
+        allowExtensions = arrayOf("json", "txt")
+    )
 
-    if (showExportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showExportSheet = false },
-            onSelectSysDir = {
-                showExportSheet = false
-                exportDoc.launch("exportReplaceRule.json")
-            },
-            onUpload = {
-                showExportSheet = false
-                viewModel.uploadSelectedRules(selectedIds, rules)
-            },
-            allowExtensions = arrayOf("json")
-        )
-    }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        onSelectSysDir = {
+            showExportSheet = false
+            exportDoc.launch("exportReplaceRule.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            viewModel.uploadSelectedRules(selectedIds, rules)
+        },
+        allowExtensions = arrayOf("json")
+    )
 
-    (importState as? BaseImportUiState.Success<ReplaceRule>)?.let { state ->
-        BatchImportDialog(
-            title = stringResource(R.string.import_replace_rule),
-            importState = state,
-            onDismissRequest = { viewModel.cancelImport() },
-            onToggleItem = { viewModel.toggleImportSelection(it) },
-            onToggleAll = { viewModel.toggleImportAll(it) },
-            onConfirm = { viewModel.saveImportedRules() },
-            topBarActions = {},
-            itemContent = { rule, _ ->
-                Column {
-                    Text(rule.name, style = MaterialTheme.typography.titleMedium)
-                    if (!rule.group.isNullOrBlank()) {
-                        Text(rule.group!!, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        )
-    }
+    BatchImportDialog(
+        title = stringResource(R.string.import_replace_rule),
+        importState = importState,
+        onDismissRequest = { viewModel.cancelImport() },
+        onToggleItem = { viewModel.toggleImportSelection(it) },
+        onToggleAll = { viewModel.toggleImportAll(it) },
+        onConfirm = { viewModel.saveImportedRules() },
+        topBarActions = {},
+        itemTitle = { rule -> rule.name },
+        itemSubtitle = { rule ->
+            rule.group?.takeIf { it.isNotBlank() }
+        }
+    )
 
     if (importState is BaseImportUiState.Loading) {
         Dialog(onDismissRequest = { viewModel.cancelImport() }) { LoadingIndicator() }
@@ -267,28 +252,29 @@ fun ReplaceRuleScreen(
         }
     }
 
-    if (showGroupManageSheet) {
-        GroupManageBottomSheet(
-            groups = groups,
-            onDismissRequest = { showGroupManageSheet = false },
-            onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
-            onDeleteGroup = { viewModel.delGroup(it) }
-        )
-    }
+
+    GroupManageBottomSheet(
+        show = showGroupManageSheet,
+        groups = groups,
+        onDismissRequest = { showGroupManageSheet = false },
+        onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
+        onDeleteGroup = { viewModel.delGroup(it) }
+    )
+
 
     showDeleteRuleDialog?.let { rule ->
         AlertDialog(
             onDismissRequest = { showDeleteRuleDialog = null },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.del_msg)) },
+            title = { AppText(stringResource(R.string.delete)) },
+            text = { AppText(stringResource(R.string.del_msg)) },
             confirmButton = {
                 OutlinedButton(onClick = {
                     viewModel.delete(rule); showDeleteRuleDialog = null
-                }) { Text(stringResource(R.string.ok)) }
+                }) { AppText(stringResource(R.string.ok)) }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    Text(
+                    AppText(
                         stringResource(R.string.cancel)
                     )
                 }
@@ -347,39 +333,21 @@ fun ReplaceRuleScreen(
         },
         bottomContent = {
             if (tabItems.size > 1) {
-                PrimaryScrollableTabRow(
-                    selectedTabIndex = selectedTabIndex.coerceAtMost(tabItems.size - 1)
-                        .coerceAtLeast(0),
-                    edgePadding = 0.dp,
-                    divider = {},
-                    containerColor = Color.Transparent,
-                ) {
-                    tabItems.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = {
-                                selectedTabIndex = index
-                                viewModel.setGroup(title)
-                            },
-                            text = {
-                                Text(
-                                    text = title,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        )
+                AppTabRow(
+                    tabTitles = tabItems,
+                    selectedTabIndex = selectedTabIndex,
+                    onTabSelected = { index ->
+                        selectedTabIndex = index
+                        viewModel.setGroup(tabItems[index])
                     }
-                }
+                )
             }
         },
         floatingActionButton = {
             TooltipBox(
                 positionProvider =
                     TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("Localized description") } },
+                tooltip = { PlainTooltip { AppText("Localized description") } },
                 state = rememberTooltipState(),
             ) {
                 with(sharedTransitionScope) {
@@ -406,29 +374,29 @@ fun ReplaceRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { Text(stringResource(R.string.import_str)) },
+                text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )
             RoundDropdownMenuItem(
-                text = { Text("分组管理") },
+                text = "分组管理",
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { Text("帮助") },
+                text = "帮助",
                 onClick = { /*TODO*/ dismiss() }
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = { Text("旧的在前") },
+                text = "旧的在前",
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { Text("新的在前") },
+                text = "新的在前",
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { Text("名称升序") },
+                text = "名称升序",
                 onClick = {
                     viewModel.setSortMode("name_asc")
                     dismiss()
@@ -438,7 +406,7 @@ fun ReplaceRuleScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = { Text("名称降序") },
+                text = "名称降序",
                 onClick = {
                     viewModel.setSortMode("name_desc")
                     dismiss()
@@ -495,16 +463,16 @@ fun ReplaceRuleScreen(
                                     //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
                                 ),
                             dropdownContent = { dismiss ->
-                                DropdownMenuItem(
-                                    text = { Text("移至顶部") },
+                                RoundDropdownMenuItem(
+                                    text = "移至顶部",
                                     onClick = { viewModel.toTop(ui.rule); dismiss() }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("移至底部") },
+                                RoundDropdownMenuItem(
+                                    text = "移至底部",
                                     onClick = { viewModel.toBottom(ui.rule); dismiss() }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text("删除") },
+                                RoundDropdownMenuItem(
+                                    text = "删除",
                                     onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
                                 )
                             }
