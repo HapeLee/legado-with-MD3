@@ -90,7 +90,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -180,111 +180,110 @@ fun ExploreShowScreen(
         }
     }
 
-    if (showGridCountSheet) {
 
-        GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = showGridCountSheet,
+        modifier = Modifier
+            .padding(16.dp),
+        onDismissRequest = { showGridCountSheet = false }
+    ) {
+        Row(
             modifier = Modifier
-                .padding(16.dp),
-            onDismissRequest = { showGridCountSheet = false }
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                AppText(
-                    text = "布局列数",
-                    style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                TextCard(
-                    text = "$gridColumnCount 列",
-                    textStyle = LegadoTheme.typography.titleSmall,
-                    verticalPadding = 4.dp,
-                    horizontalPadding = 12.dp,
-                    cornerRadius = 12.dp
-                )
-            }
-
-            Slider(
-                value = gridColumnCount.toFloat(),
-                onValueChange = {
-                    val col = it.toInt().coerceIn(1, 10)
-                    viewModel.saveGridCount(col)
-                },
-                valueRange = 1f..10f,
-                steps = 8,
-                modifier = Modifier.padding(horizontal = 20.dp)
+            AppText(
+                text = "布局列数",
+                style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            OutlinedButton(
-                onClick = { showGridCountSheet = false },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                AppText("完成")
-            }
+            TextCard(
+                text = "$gridColumnCount 列",
+                textStyle = LegadoTheme.typography.titleSmall,
+                verticalPadding = 4.dp,
+                horizontalPadding = 12.dp,
+                cornerRadius = 12.dp
+            )
+        }
+
+        Slider(
+            value = gridColumnCount.toFloat(),
+            onValueChange = {
+                val col = it.toInt().coerceIn(1, 10)
+                viewModel.saveGridCount(col)
+            },
+            valueRange = 1f..10f,
+            steps = 8,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        OutlinedButton(
+            onClick = { showGridCountSheet = false },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        ) {
+            AppText("完成")
         }
     }
 
-    if (showKindSheet) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showKindSheet = false }
-        ) {
 
-            var kindQuery by remember { mutableStateOf("") }
+    AppModalBottomSheet(
+        show = showKindSheet,
+        onDismissRequest = { showKindSheet = false }
+    ) {
 
-            SearchBarSection(
-                query = kindQuery,
-                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                onQueryChange = { kindQuery = it },
-                placeholder = "选择或搜索分类",
-            )
+        var kindQuery by remember { mutableStateOf("") }
 
-            val filteredKinds = remember(kindQuery, kinds) {
-                if (kindQuery.isBlank()) kinds
-                else kinds.filter { kind ->
-                    kind.title.contains(kindQuery, ignoreCase = true) ||
-                            (kind.url?.contains(kindQuery, ignoreCase = true) == true)
-                }
+        SearchBarSection(
+            query = kindQuery,
+            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            onQueryChange = { kindQuery = it },
+            placeholder = "选择或搜索分类",
+        )
+
+        val filteredKinds = remember(kindQuery, kinds) {
+            if (kindQuery.isBlank()) kinds
+            else kinds.filter { kind ->
+                kind.title.contains(kindQuery, ignoreCase = true) ||
+                        (kind.url?.contains(kindQuery, ignoreCase = true) == true)
             }
+        }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f, fill = false)
-            ) {
-                itemsIndexed(
-                    items = filteredKinds,
-                    key = { index, kind -> "${kind.url ?: kind.title}_$index" },
-                    span = { _, kind ->
-                        val isClickable = !kind.url.isNullOrBlank()
-                        if (isClickable) GridItemSpan(1) else GridItemSpan(3)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(3),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f, fill = false)
+        ) {
+            itemsIndexed(
+                items = filteredKinds,
+                key = { index, kind -> "${kind.url ?: kind.title}_$index" },
+                span = { _, kind ->
+                    val isClickable = !kind.url.isNullOrBlank()
+                    if (isClickable) GridItemSpan(1) else GridItemSpan(3)
+                }
+            ) { _, kind ->
+                KindGridItem(
+                    modifier = Modifier.animateItem(),
+                    kind = kind,
+                    currentTitle = selectedTitle ?: title,
+                    onClick = {
+                        showKindSheet = false
+                        viewModel.switchExploreUrl(kind)
                     }
-                ) { _, kind ->
-                    KindGridItem(
-                        modifier = Modifier.animateItem(),
-                        kind = kind,
-                        currentTitle = selectedTitle ?: title,
-                        onClick = {
-                            showKindSheet = false
-                            viewModel.switchExploreUrl(kind)
-                        }
-                    )
-                }
+                )
             }
-
         }
     }
+
 
     AppScaffold(
         modifier = Modifier
@@ -339,7 +338,7 @@ fun ExploreShowScreen(
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = { AppText("全部显示") },
+                            text = "全部显示",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_ALL)
                                 showMenu = false
@@ -351,7 +350,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { AppText("隐藏已在书架的同源书籍") },
+                            text = "隐藏已在书架的同源书籍",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
                                 showMenu = false
@@ -363,7 +362,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { AppText("隐藏已在书架的非同源书籍") },
+                            text = "隐藏已在书架的非同源书籍",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
                                 showMenu = false
@@ -375,7 +374,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = { AppText("只显示不在书架的书籍") },
+                            text = "只显示不在书架的书籍",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
                                 showMenu = false

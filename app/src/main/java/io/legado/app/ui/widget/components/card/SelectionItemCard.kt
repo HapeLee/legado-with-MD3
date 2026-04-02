@@ -86,7 +86,6 @@ fun SelectionItemCard(
     GlassCard(
         onClick = onToggleSelection,
         modifier = modifier
-            .padding(horizontal = 16.dp)
             .fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         containerColor = animatedContainerColor,

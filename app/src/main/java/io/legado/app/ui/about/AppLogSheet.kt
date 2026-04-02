@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.LogUtils
 import java.util.Date
@@ -39,12 +39,14 @@ import java.util.Date
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppLogSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit
 ) {
     var logs by remember { mutableStateOf(AppLog.logs) }
     var showStackTrace by remember { mutableStateOf<String?>(null) }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Row(

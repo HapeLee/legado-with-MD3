@@ -6,8 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
-import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.basic.Switch
+import top.yukonga.miuix.kmp.extra.SuperSwitch
 
 
 @Composable
@@ -23,22 +22,12 @@ fun SwitchSettingItem(
     val composeEngine = LegadoTheme.composeEngine
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        val toggleAction = {
-            if (enabled) onCheckedChange(!checked)
-        }
-
-        BasicComponent(
+        SuperSwitch(
             title = title,
             summary = description,
+            checked = checked,
+            onCheckedChange = onCheckedChange,
             enabled = enabled,
-            onClick = toggleAction,
-            endActions = {
-                Switch(
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                    enabled = enabled
-                )
-            }
         )
     } else {
         SettingItem(

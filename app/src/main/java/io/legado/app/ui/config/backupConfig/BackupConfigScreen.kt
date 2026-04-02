@@ -453,31 +453,30 @@ fun BackupConfigScreen(
         )
     }
 
-    if (showBackupFilePicker) {
-        FilePickerSheet(
-            onDismissRequest = { showBackupFilePicker = false },
-            onSelectSysDir = {
-                showBackupFilePicker = false
-                try {
-                    selectBackupPathLauncher.launch(null)
-                } catch (e: Exception) {
-                }
+    FilePickerSheet(
+        show = showBackupFilePicker,
+        onDismissRequest = { showBackupFilePicker = false },
+        onSelectSysDir = {
+            showBackupFilePicker = false
+            try {
+                selectBackupPathLauncher.launch(null)
+            } catch (e: Exception) {
             }
-        )
-    }
+        }
+    )
 
-    if (showRestoreFilePicker) {
-        FilePickerSheet(
-            onDismissRequest = { showRestoreFilePicker = false },
-            onSelectSysDir = {
-                showRestoreFilePicker = false
-                try {
-                    backupAndSelectLauncher.launch(null)
-                } catch (e: Exception) {
-                }
+
+    FilePickerSheet(
+        show = showRestoreFilePicker,
+        onDismissRequest = { showRestoreFilePicker = false },
+        onSelectSysDir = {
+            showRestoreFilePicker = false
+            try {
+                backupAndSelectLauncher.launch(null)
+            } catch (e: Exception) {
             }
-        )
-    }
+        }
+    )
 
     if (showRestoreSheet && backupNames.isNotEmpty()) {
         AlertDialog(

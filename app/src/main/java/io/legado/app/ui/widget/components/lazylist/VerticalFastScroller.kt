@@ -46,6 +46,7 @@ import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastLastOrNull
 import androidx.compose.ui.util.fastMaxBy
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.lazylist.Scroller.STICKY_HEADER_KEY_PREFIX
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -67,7 +68,7 @@ fun VerticalFastScroller(
     listState: LazyListState,
     modifier: Modifier = Modifier,
     thumbAllowed: () -> Boolean = { true },
-    thumbColor: Color = MaterialTheme.colorScheme.primary,
+    thumbColor: Color = LegadoTheme.colorScheme.primary,
     topContentPadding: Dp = Dp.Hairline,
     bottomContentPadding: Dp = Dp.Hairline,
     endContentPadding: Dp = Dp.Hairline,

@@ -153,13 +153,13 @@ fun ExploreScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                text = { AppText(stringResource(R.string.all)) },
+                text = stringResource(R.string.all),
                 onClick = { viewModel.setGroup(""); dismiss() }
             )
             uiState.groups.forEach { group ->
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                    text = { AppText(group) },
+                    text = group,
                     onClick = { viewModel.setGroup(group); dismiss() }
                 )
             }
@@ -416,29 +416,29 @@ fun ExploreSourceHeader(
                     PillHeaderDivider(title = item.bookSourceName)
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                        text = { AppText(stringResource(R.string.to_top)) },
+                        text = stringResource(R.string.to_top),
                         onClick = { onTop(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                        text = { AppText(stringResource(R.string.edit)) },
+                        text = stringResource(R.string.edit),
                         onClick = { onEdit(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Search) },
-                        text = { AppText(stringResource(R.string.search)) },
+                        text = stringResource(R.string.search),
                         onClick = { onSearch(); showMenu = false }
                     )
                     if (item.hasLoginUrl) {
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                            text = { AppText(stringResource(R.string.login)) },
+                            text = stringResource(R.string.login),
                             onClick = { onLogin(); showMenu = false }
                         )
                     }
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                        text = { AppText(stringResource(R.string.refresh)) },
+                        text = stringResource(R.string.refresh),
                         onClick = { onRefresh(); showMenu = false }
                     )
                     RoundDropdownMenuItem(
@@ -448,12 +448,8 @@ fun ExploreSourceHeader(
                                 tint = MaterialTheme.colorScheme.error
                             )
                         },
-                        text = {
-                            AppText(
-                                stringResource(R.string.delete),
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
+                        text = stringResource(R.string.delete),
+                        color = LegadoTheme.colorScheme.error,
                         onClick = { onDelete(); showMenu = false }
                     )
                 }

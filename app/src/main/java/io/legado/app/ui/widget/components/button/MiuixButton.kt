@@ -7,21 +7,21 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import top.yukonga.miuix.kmp.basic.Icon
-import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 
 @Composable
-fun MiuixButton(
+fun MiuixIconButton(
     modifier: Modifier = Modifier,
     imageVector: ImageVector = MiuixIcons.Regular.Back,
     tint: Color = LocalContentColor.current,
     contentDescription: String? = stringResource(id = R.string.back),
     onClick: () -> Unit,
 ) {
-    IconButton(
+    MiuixIconButton(
         onClick = onClick,
         modifier = modifier
     ) {
@@ -44,7 +44,7 @@ fun MiuixToggleButton(
     uncheckedTint: Color = LocalContentColor.current,
     contentDescription: String? = null,
 ) {
-    IconButton(
+    MiuixIconButton(
         onClick = { onCheckedChange(!checked) },
         modifier = modifier
     ) {

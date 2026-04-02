@@ -23,18 +23,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PageKeySheet(
+    show: Boolean,
     onDismissRequest: () -> Unit
 ) {
     var prevKeys by remember { mutableStateOf(ReadConfig.prevKeys) }
     var nextKeys by remember { mutableStateOf(ReadConfig.nextKeys) }
 
-    GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
         Column(
             modifier = Modifier.Companion
                 .fillMaxWidth()

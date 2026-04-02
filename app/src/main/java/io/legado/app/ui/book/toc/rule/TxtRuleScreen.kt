@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,13 +43,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -154,54 +151,49 @@ fun TxtRuleScreen(
         )
     }
 
-    if (showExportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showExportSheet = false },
-            title = stringResource(R.string.export),
-            onSelectSysDir = {
-                showExportSheet = false
-                exportDoc.launch("exportDictRule.json")
-            },
-            onUpload = {
-                showExportSheet = false
-                viewModel.uploadSelectedRules(selectedIds, rules)
-            },
-            allowExtensions = arrayOf("json")
-        )
-    }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        title = stringResource(R.string.export),
+        onSelectSysDir = {
+            showExportSheet = false
+            exportDoc.launch("exportDictRule.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            viewModel.uploadSelectedRules(selectedIds, rules)
+        },
+        allowExtensions = arrayOf("json")
+    )
 
-    if (showImportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showImportSheet = false },
-            title = stringResource(R.string.import_txt_toc_rule),
-            onSelectSysFile = { types ->
-                importDoc.launch(types)
-                showImportSheet = false
-            },
-            onManualInput = {
-                showUrlInput = true
-                showImportSheet = false
-            },
-            allowExtensions = arrayOf("json", "txt")
-        )
-    }
 
-    (importState as? BaseImportUiState.Success<TxtTocRule>)?.let { state ->
-        BatchImportDialog(
-            title = "导入词典规则",
-            importState = state,
-            onDismissRequest = { viewModel.cancelImport() },
-            onToggleItem = { viewModel.toggleImportSelection(it) },
-            onToggleAll = { viewModel.toggleImportAll(it) },
-            onConfirm = { viewModel.saveImportedRules() },
-            itemContent = { rule, _ ->
-                Column {
-                    AppText(rule.name, style = LegadoTheme.typography.titleMedium)
-                    AppText(rule.rule, style = LegadoTheme.typography.bodySmall, maxLines = 1)
-                }
-            }
-        )
-    }
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_txt_toc_rule),
+        onSelectSysFile = { types ->
+            importDoc.launch(types)
+            showImportSheet = false
+        },
+        onManualInput = {
+            showUrlInput = true
+            showImportSheet = false
+        },
+        allowExtensions = arrayOf("json", "txt")
+    )
+
+    BatchImportDialog(
+        title = "导入词典规则",
+        importState = importState,
+        onDismissRequest = { viewModel.cancelImport() },
+        onToggleItem = { viewModel.toggleImportSelection(it) },
+        onToggleAll = { viewModel.toggleImportAll(it) },
+        onConfirm = { viewModel.saveImportedRules() },
+        itemTitle = { rule -> rule.name },
+        itemSubtitle = { rule ->
+            rule.rule.takeIf { it.isNotBlank() }
+        }
+    )
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
@@ -229,48 +221,47 @@ fun TxtRuleScreen(
         )
     }
 
-    if (showEditSheet) {
-        RuleEditSheet(
-            rule = editingRule,
-            title = stringResource(R.string.txt_toc_rule),
-            label1 = stringResource(R.string.regex),
-            label2 = stringResource(R.string.example),
-            onDismissRequest = {
-                showEditSheet = false
-                editingRule = null
-            },
-            onSave = { updatedRule ->
-                //TODO：我很想把他改为自增主键，但为了兼容性日后再说
-                if (editingRule == null) {
-                    viewModel.insert(updatedRule)
-                } else {
-                    viewModel.update(updatedRule)
-                }
-                showEditSheet = false
-                editingRule = null
-            },
-            onCopy = { viewModel.copyRule(it) },
-            onPaste = { viewModel.pasteRule() },
-            toFields = { r ->
-                RuleEditFields(
-                    name = r?.name ?: "",
-                    rule1 = r?.rule ?: "",
-                    rule2 = r?.example ?: ""
-                )
-            },
-            fromFields = { fields, old ->
-                old?.copy(
-                    name = fields.name,
-                    rule = fields.rule1,
-                    example = fields.rule2
-                ) ?: TxtTocRule(
-                    name = fields.name,
-                    rule = fields.rule1,
-                    example = fields.rule2
-                )
+    RuleEditSheet(
+        show = showEditSheet,
+        rule = editingRule,
+        title = stringResource(R.string.txt_toc_rule),
+        label1 = stringResource(R.string.regex),
+        label2 = stringResource(R.string.example),
+        onDismissRequest = {
+            showEditSheet = false
+            editingRule = null
+        },
+        onSave = { updatedRule ->
+            //TODO：我很想把他改为自增主键，但为了兼容性日后再说
+            if (editingRule == null) {
+                viewModel.insert(updatedRule)
+            } else {
+                viewModel.update(updatedRule)
             }
-        )
-    }
+            showEditSheet = false
+            editingRule = null
+        },
+        onCopy = { viewModel.copyRule(it) },
+        onPaste = { viewModel.pasteRule() },
+        toFields = { r ->
+            RuleEditFields(
+                name = r?.name ?: "",
+                rule1 = r?.rule ?: "",
+                rule2 = r?.example ?: ""
+            )
+        },
+        fromFields = { fields, old ->
+            old?.copy(
+                name = fields.name,
+                rule = fields.rule1,
+                example = fields.rule2
+            ) ?: TxtTocRule(
+                name = fields.name,
+                rule = fields.rule1,
+                example = fields.rule2
+            )
+        }
+    )
 
     RuleListScaffold(
         title = if (isPickMode) "选择目录规则" else "目录规则",
@@ -312,7 +303,7 @@ fun TxtRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { AppText(stringResource(R.string.import_str)) },
+                text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )

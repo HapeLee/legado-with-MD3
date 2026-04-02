@@ -7,13 +7,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -25,13 +22,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.button.PrimaryButton
+import io.legado.app.ui.widget.components.button.SecondaryButton
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookmarkEditSheet(
+    show: Boolean,
     bookmark: Bookmark,
     onDismiss: () -> Unit,
     onSave: (Bookmark) -> Unit,
@@ -42,21 +41,16 @@ fun BookmarkEditSheet(
     var bookText by remember { mutableStateOf(bookmark.bookText) }
     var content by remember { mutableStateOf(bookmark.content) }
 
-    GlassModalBottomSheet(
-        onDismissRequest = onDismiss
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismiss,
+        title = bookmark.chapterName,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
                 .navigationBarsPadding()
         ) {
-            AppText(
-                text = bookmark.chapterName,
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
             OutlinedTextField(
                 value = bookText,
                 onValueChange = { bookText = it },
@@ -82,15 +76,13 @@ fun BookmarkEditSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
+                SecondaryButton(
                     onClick = { showDeleteConfirmDialog = true },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    AppText("删除")
-                }
+                    modifier = Modifier.weight(1f),
+                    text = "删除"
+                )
 
-                Button(
+                PrimaryButton(
                     onClick = {
                         val newBookmark = bookmark.apply {
                             this.bookText = bookText
@@ -98,10 +90,9 @@ fun BookmarkEditSheet(
                         }
                         onSave(newBookmark)
                     },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    AppText("保存")
-                }
+                    modifier = Modifier.weight(1f),
+                    text = "保存"
+                )
             }
             Spacer(modifier = Modifier.height(16.dp))
         }

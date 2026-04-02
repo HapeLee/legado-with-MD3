@@ -313,33 +313,33 @@ fun TocScreen(
                     when (pagerState.currentPage) {
                         0 -> {
                             RoundDropdownMenuItem(
-                                text = { AppText("使用替换规则") },
+                                text = "使用替换规则",
                                 trailingIcon = {
                                     Checkbox(checked = useReplace, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleUseReplace() }
                             )
                             RoundDropdownMenuItem(
-                                text = { AppText("显示字数") },
+                                text = "显示字数",
                                 trailingIcon = {
                                     Checkbox(checked = showWordCount, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleShowWordCount() }
                             )
                             RoundDropdownMenuItem(
-                                text = { AppText("反转目录") },
+                                text = "反转目录",
                                 onClick = { viewModel.reverseToc() }
                             )
                             PillDivider()
                             RoundDropdownMenuItem(
-                                text = { AppText("替换规则") },
+                                text = "替换规则",
                                 onClick = {
                                     onOpenReplaceRule(null)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { AppText("新建替换规则") },
+                                text = "新建替换规则",
                                 onClick = {
                                     val scopes = mutableListOf<String>()
                                     book?.name?.let { scopes.add(it) }
@@ -359,7 +359,7 @@ fun TocScreen(
                             if (book?.isLocal == true) {
                                 PillHeaderDivider(title = "本地书籍选项")
                                 RoundDropdownMenuItem(
-                                    text = { AppText("本地书籍目录规则") },
+                                    text = "本地书籍目录规则",
                                     onClick = {
                                         val intent =
                                             Intent(context, TxtTocRuleActivity::class.java).apply {
@@ -370,7 +370,7 @@ fun TocScreen(
                                     }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = { AppText("拆分超长章节") },
+                                    text = "拆分超长章节",
                                     trailingIcon = {
                                         Checkbox(
                                             checked = viewModel.isSplitLongChapter,
@@ -387,7 +387,7 @@ fun TocScreen(
 
                         else -> {
                             RoundDropdownMenuItem(
-                                text = { AppText("导出书签为JSON") },
+                                text = "导出书签为JSON",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -399,7 +399,7 @@ fun TocScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { AppText("导出书签为MarkDown") },
+                                text = "导出书签为MarkDown",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
@@ -465,13 +465,13 @@ fun TocScreen(
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
                                     RoundDropdownMenuItem(
-                                        text = { AppText("展开所有卷") },
+                                        text = "展开所有卷",
                                         onClick = {
                                             viewModel.expandAllVolumes(); showVolumeMenu = false
                                         }
                                     )
                                     RoundDropdownMenuItem(
-                                        text = { AppText("收起所有卷") },
+                                        text = "收起所有卷",
                                         onClick = {
                                             viewModel.collapseAllVolumes(); showVolumeMenu = false
                                         }
@@ -483,7 +483,7 @@ fun TocScreen(
                                         PillHeaderDivider(title = "快速跳转")
                                         volumeItems.forEach { uiItem ->
                                             RoundDropdownMenuItem(
-                                                text = { AppText(uiItem.title) },
+                                                text = uiItem.title,
                                                 onClick = {
                                                     scope.launch {
                                                         val targetIndex =
@@ -594,20 +594,19 @@ fun TocScreen(
             }
         }
 
-        if (editingBookmark != null) {
-            BookmarkEditSheet(
-                bookmark = editingBookmark!!,
-                onDismiss = { editingBookmark = null },
-                onSave = { updatedBookmark ->
-                    viewModel.updateBookmark(updatedBookmark)
-                    editingBookmark = null
-                },
-                onDelete = { bookmarkToDelete ->
-                    viewModel.deleteBookmark(bookmarkToDelete)
-                    editingBookmark = null
-                }
-            )
-        }
+        BookmarkEditSheet(
+            show = editingBookmark != null,
+            bookmark = editingBookmark!!,
+            onDismiss = { editingBookmark = null },
+            onSave = { updatedBookmark ->
+                viewModel.updateBookmark(updatedBookmark)
+                editingBookmark = null
+            },
+            onDelete = { bookmarkToDelete ->
+                viewModel.deleteBookmark(bookmarkToDelete)
+                editingBookmark = null
+            }
+        )
     }
 }
 

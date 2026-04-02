@@ -88,7 +88,7 @@ import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ConvertUtils
@@ -199,42 +199,41 @@ fun RemoteBookScreen(
         }
     }
 
-    if (showSheet != null) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showSheet = null }
-        ) {
-            when (val state = showSheet) {
-                is RemoteBookSheet.Servers -> {
-                    ServersSheetContent(
-                        servers = uiState.servers,
-                        selectedServerId = uiState.selectedServerId,
-                        onSelect = {
-                            viewModel.selectServer(it)
-                            showSheet = null
-                        },
-                        onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
-                        onDelete = { viewModel.deleteServer(it) },
-                        onAdd = { showSheet = RemoteBookSheet.ServerConfig(null) },
-                        onDefault = {
-                            viewModel.selectServer(AppConst.DEFAULT_WEBDAV_ID)
-                            showSheet = null
-                        }
-                    )
-                }
-
-                is RemoteBookSheet.ServerConfig -> {
-                    ServerConfigSheetContent(
-                        server = state.server,
-                        onSave = {
-                            viewModel.saveServer(it)
-                            showSheet = RemoteBookSheet.Servers
-                        },
-                        onCancel = { showSheet = RemoteBookSheet.Servers }
-                    )
-                }
-
-                else -> {}
+    AppModalBottomSheet(
+        show = showSheet != null,
+        onDismissRequest = { showSheet = null }
+    ) {
+        when (val state = showSheet) {
+            is RemoteBookSheet.Servers -> {
+                ServersSheetContent(
+                    servers = uiState.servers,
+                    selectedServerId = uiState.selectedServerId,
+                    onSelect = {
+                        viewModel.selectServer(it)
+                        showSheet = null
+                    },
+                    onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
+                    onDelete = { viewModel.deleteServer(it) },
+                    onAdd = { showSheet = RemoteBookSheet.ServerConfig(null) },
+                    onDefault = {
+                        viewModel.selectServer(AppConst.DEFAULT_WEBDAV_ID)
+                        showSheet = null
+                    }
+                )
             }
+
+            is RemoteBookSheet.ServerConfig -> {
+                ServerConfigSheetContent(
+                    server = state.server,
+                    onSave = {
+                        viewModel.saveServer(it)
+                        showSheet = RemoteBookSheet.Servers
+                    },
+                    onCancel = { showSheet = RemoteBookSheet.Servers }
+                )
+            }
+
+            else -> {}
         }
     }
 
@@ -260,7 +259,7 @@ fun RemoteBookScreen(
         },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { AppText("按名称排序") },
+                text = "按名称排序",
                 onClick = {
                     viewModel.toggleSort(RemoteBookSort.Name)
                     dismiss()
@@ -272,7 +271,7 @@ fun RemoteBookScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = { AppText("按时间排序") },
+                text = "按时间排序",
                 onClick = {
                     viewModel.toggleSort(RemoteBookSort.Default)
                     dismiss()

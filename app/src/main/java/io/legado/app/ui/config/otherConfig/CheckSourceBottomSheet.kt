@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -21,19 +20,22 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckSourceBottomSheet(
+    show: Boolean,
     viewModel: OtherConfigViewModel = koinViewModel(),
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismiss
     ) {
         Column(

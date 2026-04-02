@@ -15,6 +15,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
@@ -95,6 +97,10 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Card as MiuixCard
+import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -137,9 +143,10 @@ fun ThemeConfigScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            val composeEngine = remember { ThemeConfig.composeEngine }
-            val isMiuixEngine =
-                remember(composeEngine) { ThemeResolver.isMiuixEngine(composeEngine) }
+            val composeEngine = ThemeConfig.composeEngine
+            val isMiuixEngine = remember(composeEngine) {
+                ThemeResolver.isMiuixEngine(composeEngine)
+            }
             val isDarkTheme = when (selectedThemeMode) {
                 "1" -> false
                 "2" -> true
@@ -168,6 +175,20 @@ fun ThemeConfigScreen(
             val themes = remember(themeItems, themeValues) {
                 themeItems.zip(themeValues).toList()
             }
+
+            if (isMiuixEngine) {
+                MiuixCard(
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(16.dp),
+                    colors = MiuixCardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.primaryVariant,
+                        contentColor = MiuixTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    MiuixText("Miuix 目前为测试主题，且不对基于View的界面生效！")
+                }
+            }
+
 
             SplicedColumnGroup(title = stringResource(R.string.theme)) {
                 if (isMiuixEngine) {
@@ -253,7 +274,9 @@ fun ThemeConfigScreen(
                     selectedValue = ThemeConfig.composeEngine,
                     displayEntries = stringArrayResource(R.array.composeEngine),
                     entryValues = stringArrayResource(R.array.composeEngine_value),
-                    onValueChange = { ThemeConfig.composeEngine = it }
+                    onValueChange = {
+                        ThemeConfig.composeEngine = it
+                    }
                 )
                 SliderSettingItem(
                     title = stringResource(R.string.font_scale),
@@ -531,47 +554,46 @@ fun ThemeConfigScreen(
 
     manageKey?.let { isDark ->
         BackgroundImageManageSheet(
+            show = true,
             isDarkTheme = isDark,
             onDismissRequest = { manageKey = null }
         )
     }
 
-    if (showColorPicker) {
-        ColorPickerSheet(
-            initialColor = primaryColorValue.value,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                primaryColorValue.value = color
-                ThemeConfig.cPrimary = color
-                ThemeStore.editTheme(context)
-                    .primaryColor(color)
-                    .apply()
-                DynamicColors.applyToActivitiesIfAvailable(
-                    context.applicationContext as android.app.Application,
-                    DynamicColorsOptions.Builder()
-                        .setContentBasedSource(context.primaryColor)
-                        .build()
-                )
-            }
-        )
-    }
 
-    if (showLauncherIconPicker) {
-        LauncherIconPickerSheet(
-            selectedValue = ThemeConfig.launcherIcon,
-            onDismissRequest = { showLauncherIconPicker = false },
-            onValueChange = {
-                ThemeConfig.launcherIcon = it
-                LauncherIconHelp.changeIcon(it)
-            }
-        )
-    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = primaryColorValue.value,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            primaryColorValue.value = color
+            ThemeConfig.cPrimary = color
+            ThemeStore.editTheme(context)
+                .primaryColor(color)
+                .apply()
+            DynamicColors.applyToActivitiesIfAvailable(
+                context.applicationContext as android.app.Application,
+                DynamicColorsOptions.Builder()
+                    .setContentBasedSource(context.primaryColor)
+                    .build()
+            )
+        }
+    )
 
-    if (showThemeListDialog) {
-        ThemeListDialog(
-            onDismissRequest = { showThemeListDialog = false }
-        )
-    }
+    LauncherIconPickerSheet(
+        show = showLauncherIconPicker,
+        selectedValue = ThemeConfig.launcherIcon,
+        onDismissRequest = { showLauncherIconPicker = false },
+        onValueChange = {
+            ThemeConfig.launcherIcon = it
+            LauncherIconHelp.changeIcon(it)
+        }
+    )
+
+    ThemeListDialog(
+        show = showThemeListDialog,
+        onDismissRequest = { showThemeListDialog = false }
+    )
 
     saveThemeKey?.let { key ->
         AlertDialog(
@@ -652,7 +674,7 @@ fun ThemeModeSelector(
 
                 Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
 
-                AppText(text = label)
+                Text(text = label)
             }
         }
     }

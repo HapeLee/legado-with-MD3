@@ -136,12 +136,12 @@ fun RssScreen(
                     dismiss()
                 },
                 leadingIcon = { MenuItemIcon(Icons.Default.Settings) },
-                text = { AppText("订阅源管理") }
+                text = "订阅源管理"
             )
             PillDivider()
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
-                text = { AppText(stringResource(R.string.all)) },
+                text = stringResource(R.string.all),
                 onClick = {
                     viewModel.setGroup("")
                     dismiss()
@@ -150,7 +150,7 @@ fun RssScreen(
             uiState.groups.forEach { group ->
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
-                    text = { AppText(group) },
+                    text = group,
                     onClick = {
                         viewModel.setGroup(group)
                         dismiss()
@@ -247,7 +247,7 @@ fun RssSourceGridItem(
                 PillHeaderDivider(title = source.sourceName)
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                    text = { AppText(stringResource(R.string.to_top)) },
+                    text = stringResource(R.string.to_top),
                     onClick = {
                         onTop()
                         showMenu = false
@@ -255,7 +255,7 @@ fun RssSourceGridItem(
                 )
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                    text = { AppText(stringResource(R.string.edit)) },
+                    text = stringResource(R.string.edit),
                     onClick = {
                         onEdit()
                         showMenu = false
@@ -264,7 +264,7 @@ fun RssSourceGridItem(
                 if (!source.loginUrl.isNullOrBlank()) {
                     RoundDropdownMenuItem(
                         leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                        text = { AppText(stringResource(R.string.login)) },
+                        text = stringResource(R.string.login),
                         onClick = {
                             onLogin()
                             showMenu = false
@@ -273,7 +273,7 @@ fun RssSourceGridItem(
                 }
                 RoundDropdownMenuItem(
                     leadingIcon = { MenuItemIcon(Icons.Default.Close) },
-                    text = { AppText(stringResource(R.string.disable_source)) },
+                    text = stringResource(R.string.disable_source),
                     onClick = {
                         onDisable()
                         showMenu = false
@@ -286,12 +286,8 @@ fun RssSourceGridItem(
                             tint = MaterialTheme.colorScheme.error
                         )
                     },
-                    text = {
-                        AppText(
-                            stringResource(R.string.delete),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    },
+                    text = stringResource(R.string.delete),
+                    color = MaterialTheme.colorScheme.error,
                     onClick = {
                         onDelete()
                         showMenu = false

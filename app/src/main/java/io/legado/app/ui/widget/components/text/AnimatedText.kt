@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.text
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
-import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
 fun AnimatedText(

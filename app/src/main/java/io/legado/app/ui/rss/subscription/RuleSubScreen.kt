@@ -89,7 +89,8 @@ fun RuleSubScreen(
         topBarActions = {},
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = {
+                text = stringResource(R.string.sort),
+                leadingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.size(12.dp))
@@ -185,7 +186,7 @@ fun RuleSubScreen(
                         },
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = { AppText(stringResource(R.string.delete)) },
+                                text = stringResource(R.string.delete),
                                 onClick = {
                                     viewModel.delete(ruleSub)
                                     dismiss()

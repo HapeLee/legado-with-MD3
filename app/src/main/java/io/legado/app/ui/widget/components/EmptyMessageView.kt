@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

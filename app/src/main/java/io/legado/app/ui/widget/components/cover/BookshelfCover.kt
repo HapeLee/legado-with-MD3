@@ -7,17 +7,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.TextCard
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun BookshelfCover(
@@ -31,16 +27,6 @@ fun BookshelfCover(
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null
 ) {
-    val backgroundColor = if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-    } else {
-        MaterialTheme.colorScheme.secondaryContainer
-    }
-    val contentColor = if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    }
     Box(modifier = modifier) {
         BookCover(
             name = name,
@@ -58,8 +44,6 @@ fun BookshelfCover(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),
-                backgroundColor = backgroundColor,
-                contentColor = contentColor,
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
                 verticalPadding = 0.dp

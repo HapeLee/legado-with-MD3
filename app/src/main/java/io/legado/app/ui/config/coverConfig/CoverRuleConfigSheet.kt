@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.BookCover
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
@@ -36,6 +36,7 @@ import splitties.init.appCtx
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoverRuleConfigSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit
 ) {
     var enable by remember { mutableStateOf(false) }
@@ -51,7 +52,8 @@ fun CoverRuleConfigSheet(
         coverRule = rule.coverRule
     }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(

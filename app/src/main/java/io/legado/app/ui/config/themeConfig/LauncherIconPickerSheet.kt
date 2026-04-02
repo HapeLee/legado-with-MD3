@@ -39,7 +39,7 @@ import io.legado.app.ui.main.Launcher5
 import io.legado.app.ui.main.Launcher6
 import io.legado.app.ui.main.LauncherW
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.getCompatDrawable
 import splitties.init.appCtx
@@ -47,6 +47,7 @@ import splitties.init.appCtx
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LauncherIconPickerSheet(
+    show: Boolean,
     selectedValue: String,
     onDismissRequest: () -> Unit,
     onValueChange: (String) -> Unit
@@ -54,7 +55,8 @@ fun LauncherIconPickerSheet(
     val context = LocalContext.current
     val icons = LauncherIcons.list
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(

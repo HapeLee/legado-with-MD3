@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,13 +43,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.DictRule
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -153,54 +150,49 @@ fun DictRuleScreen(
         )
     }
 
-    if (showExportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showExportSheet = false },
-            title = stringResource(R.string.export),
-            onSelectSysDir = {
-                showExportSheet = false
-                exportDoc.launch("exportDictRule.json")
-            },
-            onUpload = {
-                showExportSheet = false
-                viewModel.uploadSelectedRules(selectedIds, rules)
-            },
-            allowExtensions = arrayOf("json")
-        )
-    }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        title = stringResource(R.string.export),
+        onSelectSysDir = {
+            showExportSheet = false
+            exportDoc.launch("exportDictRule.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            viewModel.uploadSelectedRules(selectedIds, rules)
+        },
+        allowExtensions = arrayOf("json")
+    )
 
-    if (showImportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showImportSheet = false },
-            title = stringResource(R.string.import_dict_rule),
-            onSelectSysFile = { types ->
-                importDoc.launch(types)
-                showImportSheet = false
-            },
-            onManualInput = {
-                showUrlInput = true
-                showImportSheet = false
-            },
-            allowExtensions = arrayOf("json", "txt")
-        )
-    }
 
-    (importState as? BaseImportUiState.Success<DictRule>)?.let { state ->
-        BatchImportDialog(
-            title = "导入词典规则",
-            importState = state,
-            onDismissRequest = { viewModel.cancelImport() },
-            onToggleItem = { viewModel.toggleImportSelection(it) },
-            onToggleAll = { viewModel.toggleImportAll(it) },
-            onConfirm = { viewModel.saveImportedRules() },
-            itemContent = { rule, _ ->
-                Column {
-                    AppText(rule.name, style = LegadoTheme.typography.titleMedium)
-                    AppText(rule.urlRule, style = LegadoTheme.typography.bodySmall, maxLines = 1)
-                }
-            }
-        )
-    }
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_dict_rule),
+        onSelectSysFile = { types ->
+            importDoc.launch(types)
+            showImportSheet = false
+        },
+        onManualInput = {
+            showUrlInput = true
+            showImportSheet = false
+        },
+        allowExtensions = arrayOf("json", "txt")
+    )
+
+    BatchImportDialog(
+        title = "导入词典规则",
+        importState = importState,
+        onDismissRequest = { viewModel.cancelImport() },
+        onToggleItem = { viewModel.toggleImportSelection(it) },
+        onToggleAll = { viewModel.toggleImportAll(it) },
+        onConfirm = { viewModel.saveImportedRules() },
+        itemTitle = { rule -> rule.name },
+        itemSubtitle = { rule ->
+            rule.urlRule.takeIf { it.isNotBlank() }
+        }
+    )
 
     LaunchedEffect(reorderableState.isAnyItemDragging) {
         if (!reorderableState.isAnyItemDragging) {
@@ -228,47 +220,46 @@ fun DictRuleScreen(
         )
     }
 
-    if (showEditSheet) {
-        RuleEditSheet(
-            rule = editingRule,
-            title = stringResource(R.string.dict_rule),
-            label1 = stringResource(R.string.url_rule),
-            label2 = stringResource(R.string.show_rule),
-            onDismissRequest = {
-                showEditSheet = false
-                editingRule = null
-            },
-            onSave = { updatedRule ->
-                if (editingRule == null) {
-                    viewModel.insert(updatedRule)
-                } else {
-                    viewModel.update(updatedRule)
-                }
-                showEditSheet = false
-                editingRule = null
-            },
-            onCopy = { viewModel.copyRule(it) },
-            onPaste = { viewModel.pasteRule() },
-            toFields = { r ->
-                RuleEditFields(
-                    name = r?.name ?: "",
-                    rule1 = r?.urlRule ?: "",
-                    rule2 = r?.showRule ?: ""
-                )
-            },
-            fromFields = { fields, old ->
-                old?.copy(
-                    name = fields.name,
-                    urlRule = fields.rule1,
-                    showRule = fields.rule2
-                ) ?: DictRule(
-                    name = fields.name,
-                    urlRule = fields.rule1,
-                    showRule = fields.rule2
-                )
+    RuleEditSheet(
+        show = showEditSheet,
+        rule = editingRule,
+        title = stringResource(R.string.dict_rule),
+        label1 = stringResource(R.string.url_rule),
+        label2 = stringResource(R.string.show_rule),
+        onDismissRequest = {
+            showEditSheet = false
+            editingRule = null
+        },
+        onSave = { updatedRule ->
+            if (editingRule == null) {
+                viewModel.insert(updatedRule)
+            } else {
+                viewModel.update(updatedRule)
             }
-        )
-    }
+            showEditSheet = false
+            editingRule = null
+        },
+        onCopy = { viewModel.copyRule(it) },
+        onPaste = { viewModel.pasteRule() },
+        toFields = { r ->
+            RuleEditFields(
+                name = r?.name ?: "",
+                rule1 = r?.urlRule ?: "",
+                rule2 = r?.showRule ?: ""
+            )
+        },
+        fromFields = { fields, old ->
+            old?.copy(
+                name = fields.name,
+                urlRule = fields.rule1,
+                showRule = fields.rule2
+            ) ?: DictRule(
+                name = fields.name,
+                urlRule = fields.rule1,
+                showRule = fields.rule2
+            )
+        }
+    )
 
     RuleListScaffold(
         title = "字典规则",
@@ -310,7 +301,7 @@ fun DictRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { AppText(stringResource(R.string.import_str)) },
+                text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )

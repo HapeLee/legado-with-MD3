@@ -41,12 +41,13 @@ import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ColorPickerSheet(
+    show: Boolean,
     initialColor: Int,
     onDismissRequest: () -> Unit,
     onColorSelected: (Int) -> Unit
@@ -80,7 +81,7 @@ fun ColorPickerSheet(
         )
     }
 
-    GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

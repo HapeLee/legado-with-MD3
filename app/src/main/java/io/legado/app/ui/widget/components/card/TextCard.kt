@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,11 +16,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.LegadoTheme.composeEngine
-import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.AnimatedTextLine
-import io.legado.app.ui.widget.components.AppIcon
-import top.yukonga.miuix.kmp.theme.MiuixTheme
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -40,17 +36,8 @@ fun TextCard(
     spacing: Dp = 4.dp,
     textStyle: TextStyle = LegadoTheme.typography.labelSmallEmphasized
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
-
-    val defaultBackground = if (isMiuix)
-        MiuixTheme.colorScheme.surfaceContainer
-    else
-        MaterialTheme.colorScheme.primaryContainer
-
-    val defaultContent = if (isMiuix)
-        MiuixTheme.colorScheme.onSurface
-    else
-        MaterialTheme.colorScheme.primary
+    val defaultBackground = LegadoTheme.colorScheme.surfaceContainer
+    val defaultContent = LegadoTheme.colorScheme.onSurface
 
     val finalBackgroundColor = backgroundColor ?: defaultBackground
     val finalContentColor = contentColor ?: defaultContent

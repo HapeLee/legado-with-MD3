@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,8 +23,8 @@ fun PillHeaderDivider(
     title: String,
     modifier: Modifier = Modifier,
     dotSize: Dp = 2.dp,
-    dotColor: Color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
-    titleColor: Color = MaterialTheme.colorScheme.primary
+    dotColor: Color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.8f),
+    titleColor: Color = LegadoTheme.colorScheme.primary
 ) {
     Row(
         modifier = modifier

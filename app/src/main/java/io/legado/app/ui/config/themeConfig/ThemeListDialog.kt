@@ -38,7 +38,7 @@ import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.getClipText
@@ -48,6 +48,7 @@ import io.legado.app.utils.toastOnUi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeListDialog(
+    show: Boolean,
     onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
@@ -55,7 +56,8 @@ fun ThemeListDialog(
     var deleteIndex by remember { mutableStateOf<Int?>(null) }
     val themeList = remember(listVersion) { OldThemeConfig.configList.toList() }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(

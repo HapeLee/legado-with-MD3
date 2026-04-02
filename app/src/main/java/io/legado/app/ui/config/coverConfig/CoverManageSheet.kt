@@ -37,12 +37,13 @@ import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoverManageSheet(
+    show: Boolean,
     preferenceKey: String,
     onDismissRequest: () -> Unit,
     viewModel: CoverConfigViewModel
@@ -62,7 +63,8 @@ fun CoverManageSheet(
     }
     val coverList = currentCovers.split(",").filter { it.isNotBlank() }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(
@@ -142,14 +144,13 @@ fun CoverManageSheet(
         }
     }
 
-    if (showFilePicker) {
-        FilePickerSheet(
-            onDismissRequest = { showFilePicker = false },
-            onSelectSysFiles = {
-                selectImages.launch("image/*")
-                showFilePicker = false
-            },
-            allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
-        )
-    }
+    FilePickerSheet(
+        show = showFilePicker,
+        onDismissRequest = { showFilePicker = false },
+        onSelectSysFiles = {
+            selectImages.launch("image/*")
+            showFilePicker = false
+        },
+        allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
+    )
 }

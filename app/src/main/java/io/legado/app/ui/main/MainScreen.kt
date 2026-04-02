@@ -26,6 +26,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
@@ -195,7 +196,7 @@ fun MainScreen(
                                     ) { dismiss ->
                                         bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
                                             RoundDropdownMenuItem(
-                                                text = { AppText(group.groupName) },
+                                                text = group.groupName,
                                                 onClick = {
                                                     coroutineScope.launch {
                                                         if (pagerState.currentPage != index) {
@@ -321,7 +322,7 @@ private fun NavigationIcon(
     val icon = if (selected) destination.m3SelectedIcon else destination.m3Icon
     Box(modifier = modifier) {
         if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
-            BadgedBox(badge = { Badge { AppText(upBooksCount.toString()) } }) {
+            BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
                 Icon(icon, contentDescription = null)
             }
         } else {

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -36,9 +35,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.Cover
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -55,11 +53,12 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupEditSheet(
+    show: Boolean,
     group: BookGroup? = null,
     onDismissRequest: () -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
-    GlassModalBottomSheet(onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
         GroupEditContent(
             group = group,
             onDismissRequest = onDismissRequest,
@@ -108,17 +107,9 @@ fun GroupEditContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 16.dp)
             .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        AppText(
-            text = stringResource(R.string.group_edit),
-            style = LegadoTheme.typography.titleLarge,
-            modifier = Modifier.padding(vertical = 16.dp)
-        )
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,

@@ -32,7 +32,7 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -40,6 +40,7 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundImageManageSheet(
+    show: Boolean,
     isDarkTheme: Boolean,
     onDismissRequest: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel()
@@ -65,7 +66,8 @@ fun BackgroundImageManageSheet(
         ThemeConfig.bgImageLight
     }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Column(
@@ -140,14 +142,13 @@ fun BackgroundImageManageSheet(
         }
     }
 
-    if (showFilePicker) {
-        FilePickerSheet(
-            onDismissRequest = { showFilePicker = false },
-            onSelectSysFile = {
-                selectImage.launch("image/*")
-                showFilePicker = false
-            },
-            allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
-        )
-    }
+    FilePickerSheet(
+        show = showFilePicker,
+        onDismissRequest = { showFilePicker = false },
+        onSelectSysFile = {
+            selectImage.launch("image/*")
+            showFilePicker = false
+        },
+        allowExtensions = arrayOf("jpg", "jpeg", "png", "webp")
+    )
 }

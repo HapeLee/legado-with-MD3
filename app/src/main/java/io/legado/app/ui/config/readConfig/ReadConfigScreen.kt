@@ -320,7 +320,8 @@ fun ReadConfigScreen(
         }
     }
 
-    if (showPageKeySheet) {
-        PageKeySheet(onDismissRequest = { showPageKeySheet = false })
-    }
+    PageKeySheet(
+        show = showPageKeySheet,
+        onDismissRequest = { showPageKeySheet = false }
+    )
 }

@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
@@ -107,12 +108,12 @@ fun TopBarButton(
 fun TopbarNavigationButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    imageVector: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
+    imageVector: ImageVector = AppIcons.Back,
     contentDescription: String? = "返回",
     style: TopBarButtonVariant = TopBarButtonVariant.Filled
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        MiuixButton(
+        MiuixIconButton(
             onClick = onClick,
             imageVector = imageVector,
             contentDescription = contentDescription,
@@ -138,7 +139,7 @@ fun TopBarActionButton(
 ) {
     val enableProgressive = ThemeConfig.enableProgressiveBlur
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        MiuixButton(
+        MiuixIconButton(
             onClick = onClick,
             imageVector = imageVector,
             contentDescription = contentDescription,

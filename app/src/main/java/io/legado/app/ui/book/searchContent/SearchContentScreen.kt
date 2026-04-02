@@ -310,7 +310,7 @@ fun SearchHistoryList(
             AppText(
                 text = "搜索历史",
                 style = LegadoTheme.typography.titleSmallEmphasized,
-                color = MaterialTheme.colorScheme.primary,
+                color = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center)
             )
             SmallAnimatedActionButton(

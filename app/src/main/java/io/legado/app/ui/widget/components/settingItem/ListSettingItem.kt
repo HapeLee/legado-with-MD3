@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.SpinnerEntry
 import top.yukonga.miuix.kmp.extra.SuperSpinner
 
@@ -64,7 +63,7 @@ fun DropdownListSettingItem(
             dropdownMenu = { onDismiss ->
                 displayEntries.forEachIndexed { index, display ->
                     RoundDropdownMenuItem(
-                        text = { AppText(display) },
+                        text = display,
                         onClick = {
                             onValueChange(entryValues[index])
                             onDismiss()

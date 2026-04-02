@@ -1,6 +1,8 @@
 package io.legado.app.ui.widget.components.button
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -80,8 +82,24 @@ fun SmallIconButton(
 fun SmallOutlinedIconButton(
     onClick: () -> Unit,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
+
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+    if (isMiuix) {
+        MiuixIconButton(
+            onClick = onClick,
+            modifier = modifier.size(32.dp),
+            backgroundColor = LegadoTheme.colorScheme.surfaceContainer
+        ) {
+            MiuixIcon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    } else {
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
         OutlinedIconButton(
             onClick = onClick,
@@ -102,6 +120,7 @@ fun SmallOutlinedIconButton(
             )
         }
     }
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -109,26 +128,41 @@ fun SmallOutlinedIconButton(
 fun SmallTonalIconButton(
     onClick: () -> Unit,
     icon: ImageVector,
+    modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        FilledTonalIconButton(
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+
+    if (isMiuix) {
+        MiuixIconButton(
             onClick = onClick,
-            modifier = Modifier.size(
-                IconButtonDefaults.extraSmallContainerSize(
-                    IconButtonDefaults.IconButtonWidthOption.Uniform
-                )
-            ),
-            shapes = IconButtonDefaults.shapes(),
-            colors = IconButtonDefaults.filledTonalIconButtonColors()
+            modifier = modifier.size(32.dp),
+            backgroundColor = LegadoTheme.colorScheme.surfaceContainer
         ) {
-            Icon(
+            MiuixIcon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(
-                    IconButtonDefaults.extraSmallIconSize
-                )
+                modifier = Modifier.size(18.dp)
             )
+        }
+    } else {
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            FilledTonalIconButton(
+                onClick = onClick,
+                modifier = modifier.size(
+                    IconButtonDefaults.extraSmallContainerSize(
+                        IconButtonDefaults.IconButtonWidthOption.Uniform
+                    )
+                ),
+                shapes = IconButtonDefaults.shapes(),
+                colors = IconButtonDefaults.filledTonalIconButtonColors()
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(IconButtonDefaults.extraSmallIconSize)
+                )
+            }
         }
     }
 }
@@ -142,34 +176,66 @@ fun SmallOutlinedIconToggleButton(
     modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
-    val defaultShape = IconButtonDefaults.extraSmallRoundShape
-    val pressedShape = IconButtonDefaults.extraSmallPressedShape
-    val checkedShape = IconButtonDefaults.extraSmallSelectedRoundShape
+    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
 
-    val toggleShapes = remember(defaultShape, checkedShape) {
-        IconToggleButtonShapes(
-            shape = defaultShape,
-            pressedShape = pressedShape,
-            checkedShape = checkedShape
+    if (isMiuix) {
+
+        val containerColor by animateColorAsState(
+            targetValue = if (checked) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
+            animationSpec = tween(150),
+            label = "MiuixToggleContainerColor"
         )
-    }
 
-    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-        OutlinedIconToggleButton(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = modifier.size(
-                IconButtonDefaults.extraSmallContainerSize(
-                    IconButtonDefaults.IconButtonWidthOption.Uniform
-                )
-            ),
-            shapes = toggleShapes
+        val iconTint by animateColorAsState(
+            targetValue = if (checked) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
+            animationSpec = tween(150),
+            label = "MiuixToggleIconTint"
+        )
+
+        MiuixIconButton(
+            onClick = { onCheckedChange(!checked) },
+            modifier = modifier
+                .size(32.dp),
+            backgroundColor = containerColor
         ) {
-            Icon(
+            MiuixIcon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(IconButtonDefaults.extraSmallIconSize),
+                tint = iconTint,
+                modifier = Modifier.size(18.dp)
             )
+        }
+
+    } else {
+        val defaultShape = IconButtonDefaults.extraSmallRoundShape
+        val pressedShape = IconButtonDefaults.extraSmallPressedShape
+        val checkedShape = IconButtonDefaults.extraSmallSelectedRoundShape
+
+        val toggleShapes = remember(defaultShape, checkedShape) {
+            IconToggleButtonShapes(
+                shape = defaultShape,
+                pressedShape = pressedShape,
+                checkedShape = checkedShape
+            )
+        }
+
+        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+            OutlinedIconToggleButton(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = modifier.size(
+                    IconButtonDefaults.extraSmallContainerSize(
+                        IconButtonDefaults.IconButtonWidthOption.Uniform
+                    )
+                ),
+                shapes = toggleShapes
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.size(IconButtonDefaults.extraSmallIconSize),
+                )
+            }
         }
     }
 }

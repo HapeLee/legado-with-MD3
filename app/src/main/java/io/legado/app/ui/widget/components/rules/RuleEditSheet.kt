@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
@@ -52,6 +52,7 @@ data class RuleEditFields(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> RuleEditSheet(
+    show: Boolean,
     rule: T?,
     title: String,
     label1: String,
@@ -74,7 +75,8 @@ fun <T> RuleEditSheet(
 
     fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest
     ) {
         Box(modifier = Modifier.fillMaxWidth()) {

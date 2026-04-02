@@ -398,33 +398,30 @@ fun OtherConfigScreen(
             }
         }
 
-        if (showFilePicker) {
-            FilePickerSheet(
-                onDismissRequest = { showFilePicker = false },
-                onSelectSysDir = {
-                    showFilePicker = false
-                    try {
-                        selectDocTree.launch(null)
-                    } catch (e: Exception) {
+        FilePickerSheet(
+            show = showFilePicker,
+            onDismissRequest = { showFilePicker = false },
+            onSelectSysDir = {
+                showFilePicker = false
+                try {
+                    selectDocTree.launch(null)
+                } catch (e: Exception) {
 
-                    }
                 }
-            )
-        }
+            }
+        )
 
-        if (showCheckSourceSheet) {
-            CheckSourceBottomSheet(
-                viewModel = viewModel,
-                onDismiss = { showCheckSourceSheet = false }
-            )
-        }
+        CheckSourceBottomSheet(
+            show = showCheckSourceSheet,
+            viewModel = viewModel,
+            onDismiss = { showCheckSourceSheet = false }
+        )
 
-        if (showDirectLinkUploadSheet) {
-            DirectLinkUploadBottomSheet(
-                viewModel = viewModel,
-                onDismiss = { showDirectLinkUploadSheet = false }
-            )
-        }
+        DirectLinkUploadBottomSheet(
+            show = showDirectLinkUploadSheet,
+            viewModel = viewModel,
+            onDismiss = { showDirectLinkUploadSheet = false }
+        )
 
         if (showClearCacheDialog) {
             ConfirmDialog(

@@ -32,13 +32,9 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -78,13 +74,14 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AnimatedTextLine
+import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
-import io.legado.app.ui.widget.components.SectionHeader
 import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
@@ -96,9 +93,11 @@ import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -164,7 +163,7 @@ fun ReadRecordScreen(
                         TopbarNavigationButton(onClick = onBackClick)
                     },
                     actions = {
-                        IconButton(onClick = {
+                        AppIconButton(onClick = {
                             val newMode = when (displayMode) {
                                 DisplayMode.AGGREGATE -> DisplayMode.TIMELINE
                                 DisplayMode.TIMELINE -> DisplayMode.LATEST
@@ -178,13 +177,16 @@ fun ReadRecordScreen(
                                 DisplayMode.LATEST -> Icons.AutoMirrored.Filled.List
                             }
                             val description = if (displayMode == DisplayMode.AGGREGATE) "Switch to Timeline" else "Switch to Aggregate"
-                            Icon(icon, description)
+                            AppIcon(icon, description)
                         }
-                        IconButton(onClick = { showCalendar = !showCalendar }) {
-                            Icon(Icons.Default.CalendarMonth, contentDescription = "Toggle Calendar")
+                        AppIconButton(onClick = { showCalendar = !showCalendar }) {
+                            AppIcon(
+                                Icons.Default.CalendarMonth,
+                                contentDescription = "Toggle Calendar"
+                            )
                         }
-                        IconButton(onClick = { showSearch = !showSearch }) {
-                            Icon(Icons.Default.Search, contentDescription = null)
+                        AppIconButton(onClick = { showSearch = !showSearch }) {
+                            AppIcon(Icons.Default.Search, contentDescription = null)
                         }
                     },
                     scrollBehavior = scrollBehavior
@@ -314,24 +316,23 @@ fun ReadRecordScreen(
         )
     }
 
-    if (showCalendar) {
-        GlassModalBottomSheet(
-            onDismissRequest = { showCalendar = false }
-        ) {
-            HeatmapCalendarSection(
-                dailyReadCounts = state.dailyReadCounts,
-                dailyReadTimes = state.dailyReadTimes,
-                selectedDate = state.selectedDate,
-                onDateSelected = { date ->
-                    viewModel.setSelectedDate(date)
-                    showCalendar = false
-                },
-                onClearDate = {
-                    viewModel.setSelectedDate(null)
-                    showCalendar = false
-                }
-            )
-        }
+    AppModalBottomSheet(
+        show = showCalendar,
+        onDismissRequest = { showCalendar = false }
+    ) {
+        HeatmapCalendarSection(
+            dailyReadCounts = state.dailyReadCounts,
+            dailyReadTimes = state.dailyReadTimes,
+            selectedDate = state.selectedDate,
+            onDateSelected = { date ->
+                viewModel.setSelectedDate(date)
+                showCalendar = false
+            },
+            onClearDate = {
+                viewModel.setSelectedDate(null)
+                showCalendar = false
+            }
+        )
     }
 
 
@@ -869,28 +870,27 @@ fun DateHeader(
     date: String,
     dailyTotalTime: Long? = null
 ) {
-    val dateText = formatFriendlyDate(date)
-    SectionHeader(
+    CollapsibleHeader(
+        showIcon = false,
+        isCollapsed = false,
+        onToggle = { },
+        title = "",
         titleContent = {
-            Column {
+            val dateText = formatFriendlyDate(date)
+            AppText(
+                text = dateText,
+                style = LegadoTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = LegadoTheme.colorScheme.primary
+            )
+            dailyTotalTime?.let { total ->
                 AppText(
-                    text = dateText,
-                    style = LegadoTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
+                    text = "已读 ${formatDuring(total)}",
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurface
                 )
-
-                dailyTotalTime?.let { total ->
-                    AppText(
-                        text = "已读 ${formatDuring(total)}",
-                        style = LegadoTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
             }
-        },
-        detailContent = null,
-        horizontalArrangement = Arrangement.Start
+        }
     )
 }
 
@@ -912,14 +912,12 @@ fun ReadingSummaryCard(
 
     val totalDurationMinutes = totalTimeMillis / 60000
 
-    Card(
+    GlassCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+        containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
         Row(
             modifier = Modifier
@@ -934,7 +932,7 @@ fun ReadingSummaryCard(
                 AppText(
                     text = title,
                     style = LegadoTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = LegadoTheme.colorScheme.primary
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -947,7 +945,7 @@ fun ReadingSummaryCard(
                     AppText(
                         text = "$bookCount",
                         style = LegadoTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = LegadoTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
                     AppText(
@@ -965,7 +963,7 @@ fun ReadingSummaryCard(
                 AppText(
                     text = "共阅读 $timeString",
                     style = LegadoTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             }
 

@@ -42,7 +42,7 @@ import io.legado.app.help.DirectLinkUpload
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -53,6 +53,7 @@ import io.legado.app.utils.toastOnUi
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DirectLinkUploadBottomSheet(
+    show: Boolean,
     viewModel: OtherConfigViewModel,
     onDismiss: () -> Unit
 ) {
@@ -64,7 +65,8 @@ fun DirectLinkUploadBottomSheet(
         viewModel.initDirectLinkRule()
     }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismiss
     ) {
         Column(

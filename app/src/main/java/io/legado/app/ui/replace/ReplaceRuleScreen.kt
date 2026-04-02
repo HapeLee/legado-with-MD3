@@ -8,7 +8,6 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
@@ -57,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
@@ -70,7 +67,7 @@ import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
-import io.legado.app.ui.widget.components.tabRow.AdaptiveTabRow
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -161,56 +158,48 @@ fun ReplaceRuleScreen(
         )
     }
 
-    if (showImportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showImportSheet = false },
-            title = stringResource(R.string.import_replace_rule),
-            onSelectSysFile = { types ->
-                importDoc.launch(types)
-                showImportSheet = false
-            },
-            onManualInput = {
-                showUrlInput = true
-                showImportSheet = false
-            },
-            allowExtensions = arrayOf("json", "txt")
-        )
-    }
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_replace_rule),
+        onSelectSysFile = { types ->
+            importDoc.launch(types)
+            showImportSheet = false
+        },
+        onManualInput = {
+            showUrlInput = true
+            showImportSheet = false
+        },
+        allowExtensions = arrayOf("json", "txt")
+    )
 
-    if (showExportSheet) {
-        FilePickerSheet(
-            onDismissRequest = { showExportSheet = false },
-            onSelectSysDir = {
-                showExportSheet = false
-                exportDoc.launch("exportReplaceRule.json")
-            },
-            onUpload = {
-                showExportSheet = false
-                viewModel.uploadSelectedRules(selectedIds, rules)
-            },
-            allowExtensions = arrayOf("json")
-        )
-    }
+    FilePickerSheet(
+        show = showExportSheet,
+        onDismissRequest = { showExportSheet = false },
+        onSelectSysDir = {
+            showExportSheet = false
+            exportDoc.launch("exportReplaceRule.json")
+        },
+        onUpload = {
+            showExportSheet = false
+            viewModel.uploadSelectedRules(selectedIds, rules)
+        },
+        allowExtensions = arrayOf("json")
+    )
 
-    (importState as? BaseImportUiState.Success<ReplaceRule>)?.let { state ->
-        BatchImportDialog(
-            title = stringResource(R.string.import_replace_rule),
-            importState = state,
-            onDismissRequest = { viewModel.cancelImport() },
-            onToggleItem = { viewModel.toggleImportSelection(it) },
-            onToggleAll = { viewModel.toggleImportAll(it) },
-            onConfirm = { viewModel.saveImportedRules() },
-            topBarActions = {},
-            itemContent = { rule, _ ->
-                Column {
-                    AppText(rule.name, style = LegadoTheme.typography.titleMedium)
-                    if (!rule.group.isNullOrBlank()) {
-                        AppText(rule.group!!, style = LegadoTheme.typography.bodySmall)
-                    }
-                }
-            }
-        )
-    }
+    BatchImportDialog(
+        title = stringResource(R.string.import_replace_rule),
+        importState = importState,
+        onDismissRequest = { viewModel.cancelImport() },
+        onToggleItem = { viewModel.toggleImportSelection(it) },
+        onToggleAll = { viewModel.toggleImportAll(it) },
+        onConfirm = { viewModel.saveImportedRules() },
+        topBarActions = {},
+        itemTitle = { rule -> rule.name },
+        itemSubtitle = { rule ->
+            rule.group?.takeIf { it.isNotBlank() }
+        }
+    )
 
     if (importState is BaseImportUiState.Loading) {
         Dialog(onDismissRequest = { viewModel.cancelImport() }) { LoadingIndicator() }
@@ -263,14 +252,15 @@ fun ReplaceRuleScreen(
         }
     }
 
-    if (showGroupManageSheet) {
-        GroupManageBottomSheet(
-            groups = groups,
-            onDismissRequest = { showGroupManageSheet = false },
-            onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
-            onDeleteGroup = { viewModel.delGroup(it) }
-        )
-    }
+
+    GroupManageBottomSheet(
+        show = showGroupManageSheet,
+        groups = groups,
+        onDismissRequest = { showGroupManageSheet = false },
+        onUpdateGroup = { old, new -> viewModel.upGroup(old, new) },
+        onDeleteGroup = { viewModel.delGroup(it) }
+    )
+
 
     showDeleteRuleDialog?.let { rule ->
         AlertDialog(
@@ -343,7 +333,7 @@ fun ReplaceRuleScreen(
         },
         bottomContent = {
             if (tabItems.size > 1) {
-                AdaptiveTabRow(
+                AppTabRow(
                     tabTitles = tabItems,
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { index ->
@@ -384,29 +374,29 @@ fun ReplaceRuleScreen(
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = { AppText(stringResource(R.string.import_str)) },
+                text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.FileOpen, null) }
             )
             RoundDropdownMenuItem(
-                text = { AppText("分组管理") },
+                text = "分组管理",
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { AppText("帮助") },
+                text = "帮助",
                 onClick = { /*TODO*/ dismiss() }
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = { AppText("旧的在前") },
+                text = "旧的在前",
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { AppText("新的在前") },
+                text = "新的在前",
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = { AppText("名称升序") },
+                text = "名称升序",
                 onClick = {
                     viewModel.setSortMode("name_asc")
                     dismiss()
@@ -416,7 +406,7 @@ fun ReplaceRuleScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = { AppText("名称降序") },
+                text = "名称降序",
                 onClick = {
                     viewModel.setSortMode("name_desc")
                     dismiss()
@@ -473,16 +463,16 @@ fun ReplaceRuleScreen(
                                     //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
                                 ),
                             dropdownContent = { dismiss ->
-                                DropdownMenuItem(
-                                    text = { AppText("移至顶部") },
+                                RoundDropdownMenuItem(
+                                    text = "移至顶部",
                                     onClick = { viewModel.toTop(ui.rule); dismiss() }
                                 )
-                                DropdownMenuItem(
-                                    text = { AppText("移至底部") },
+                                RoundDropdownMenuItem(
+                                    text = "移至底部",
                                     onClick = { viewModel.toBottom(ui.rule); dismiss() }
                                 )
-                                DropdownMenuItem(
-                                    text = { AppText("删除") },
+                                RoundDropdownMenuItem(
+                                    text = "删除",
                                     onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
                                 )
                             }

@@ -1,10 +1,6 @@
 package io.legado.app.ui.widget.components.importComponents
 
 import android.annotation.SuppressLint
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,16 +22,10 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -44,7 +34,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,9 +48,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AnimatedText
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.text.AnimatedText
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
@@ -116,31 +107,42 @@ fun SourceInputDialog(
     )
 }
 
+//TODO: 动画
 @SuppressLint("ConfigurationScreenWidthHeight")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun <T> BatchImportDialog(
     title: String,
-    importState: BaseImportUiState.Success<T>,
+    importState: BaseImportUiState<T>,
     onDismissRequest: () -> Unit,
-    onConfirm: (List<T>) -> Unit, // 返回选中的原始数据列表
+    onConfirm: (List<T>) -> Unit,
     onToggleItem: (index: Int) -> Unit,
     onToggleAll: (isSelected: Boolean) -> Unit,
     onItemInfoClick: (index: Int) -> Unit = {},
-    // 插槽：允许调用方自定义顶部菜单
     topBarActions: @Composable RowScope.() -> Unit = {},
-    // 插槽：自定义每一行的显示内容
-    itemContent: @Composable (data: T, status: ImportStatus) -> Unit
+    itemTitle: (data: T) -> String,
+    itemSubtitle: (data: T) -> String? = { null }
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val show = importState is BaseImportUiState.Success<T>
+
+    var cachedState by remember { mutableStateOf<BaseImportUiState.Success<T>?>(null) }
+    if (importState is BaseImportUiState.Success<T>) {
+        cachedState = importState
+    }
+
+    if (!show && cachedState == null) return
+
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val selectedCount = importState.items.count { it.isSelected }
-    val totalCount = importState.items.size
 
-    GlassModalBottomSheet(
+    val currentState = cachedState!!
+    val selectedCount = currentState.items.count { it.isSelected }
+    val totalCount = currentState.items.size
+
+    AppModalBottomSheet(
+        show = show,
         onDismissRequest = onDismissRequest,
-        containerColor = { it.surfaceContainer }
+        containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
         AppScaffold(
             modifier = Modifier
@@ -171,44 +173,34 @@ fun <T> BatchImportDialog(
                 ImportBottomBar(
                     selectedCount = selectedCount,
                     totalCount = totalCount,
-                    onToggleSelectAll = { isAll -> onToggleAll(isAll) },
+                    onToggleSelectAll = onToggleAll,
                     onConfirm = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                val selectedData =
-                                    importState.items.filter { it.isSelected }.map { it.data }
-                                onConfirm(selectedData)
-                            }
-                        }
+                        val selectedData =
+                            currentState.items.filter { it.isSelected }.map { it.data }
+                        onConfirm(selectedData)
                     },
-                    onCancel = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                onDismissRequest()
-                            }
-                        }
-                    }
+                    onCancel = onDismissRequest
                 )
             }
         ) { padding ->
             LazyColumn(
-                modifier = Modifier
-                    .padding(padding),
+                modifier = Modifier.padding(padding),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                itemsIndexed(importState.items, key = { _, item -> item.data.hashCode() }) { index, itemWrapper ->
+                itemsIndexed(
+                    currentState.items,
+                    key = { _, item -> item.data.hashCode() }) { index, itemWrapper ->
                     ImportItemRow(
+                        title = itemTitle(itemWrapper.data),
+                        subtitle = itemSubtitle(itemWrapper.data),
                         isSelected = itemWrapper.isSelected,
                         status = itemWrapper.status,
                         onClick = { onToggleItem(index) },
                         onInfoClick = {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("其实还没写桀桀桀")
-                            }
+                            scope.launch { snackbarHostState.showSnackbar("其实还没写桀桀桀") }
                             onItemInfoClick(index)
-                        },
-                        content = { itemContent(itemWrapper.data, itemWrapper.status) }
+                        }
                     )
                 }
             }
@@ -216,74 +208,47 @@ fun <T> BatchImportDialog(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ImportItemRow(
+fun ImportItemRow(
+    title: String,
+    subtitle: String? = null,
     isSelected: Boolean,
     status: ImportStatus,
     onClick: () -> Unit,
-    onInfoClick: () -> Unit,
-    content: @Composable () -> Unit
+    onInfoClick: () -> Unit
 ) {
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected)
-            MaterialTheme.colorScheme.secondaryContainer
-        else
-            MaterialTheme.colorScheme.surface,
-        animationSpec = tween(
-            durationMillis = 200,
-            easing = FastOutSlowInEasing
-        ),
-        label = "CardColor"
-    )
-
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        )
-    ) {
-        ListItem(
-            modifier = Modifier.animateContentSize(),
-            headlineContent = { content() },
-            leadingContent = {
-                Checkbox(
-                    checked = isSelected,
-                    onCheckedChange = null
-                )
-            },
-            supportingContent = {
-                AppText(
-                    text = when (status) {
-                        ImportStatus.New -> "新增"
-                        ImportStatus.Update -> "更新"
-                        ImportStatus.Existing -> "已有"
-                        ImportStatus.Error -> "错误"
-                    },
-                    style = LegadoTheme.typography.labelMedium,
-                    color = when (status) {
-                        ImportStatus.New -> MaterialTheme.colorScheme.primary
-                        ImportStatus.Update -> MaterialTheme.colorScheme.secondary
-                        ImportStatus.Error -> MaterialTheme.colorScheme.error
-                        else -> MaterialTheme.colorScheme.outline
-                    }
-                )
-            },
-            trailingContent = {
-                IconButton(onClick = onInfoClick) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "详情"
-                    )
-                }
-            },
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
+    SelectionItemCard(
+        title = title,
+        subtitle = subtitle,
+        isSelected = isSelected,
+        inSelectionMode = true,
+        onToggleSelection = onClick,
+        modifier = Modifier.padding(vertical = 4.dp),
+        trailingAction = {
+            AppText(
+                text = when (status) {
+                    ImportStatus.New -> "新增"
+                    ImportStatus.Update -> "更新"
+                    ImportStatus.Existing -> "已有"
+                    ImportStatus.Error -> "错误"
+                },
+                style = LegadoTheme.typography.labelMedium,
+                color = when (status) {
+                    ImportStatus.New -> MaterialTheme.colorScheme.primary
+                    ImportStatus.Update -> MaterialTheme.colorScheme.secondary
+                    ImportStatus.Error -> MaterialTheme.colorScheme.error
+                    else -> MaterialTheme.colorScheme.outline
+                },
+                modifier = Modifier.padding(end = 4.dp)
             )
-        )
-    }
+
+            SmallIconButton(
+                onClick = onInfoClick,
+                icon = Icons.Default.Info,
+                contentDescription = "详情"
+            )
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

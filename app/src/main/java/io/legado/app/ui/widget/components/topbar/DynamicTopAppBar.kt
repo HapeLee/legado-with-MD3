@@ -10,12 +10,9 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,12 +20,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import io.legado.app.ui.widget.components.AnimatedTextLine
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +68,7 @@ fun <T> DynamicTopAppBar(
             if (isSelecting || onBackClick != null) {
                 TopbarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
-                    imageVector = if (isSelecting) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = if (isSelecting) AppIcons.Close else AppIcons.Back,
                     contentDescription = if (isSelecting) "取消选择" else "返回"
                 )
             }
@@ -113,7 +111,6 @@ fun <T> DynamicTopAppBar(
                     query = state.searchKey,
                     onQueryChange = onSearchQueryChange,
                     placeholder = searchPlaceholder,
-                    leadingIcon = { Icon(searchLeadingIcon, null) },
                     trailingIcon = searchTrailingIcon,
                     dropdownMenu = searchDropdownMenu
                 )

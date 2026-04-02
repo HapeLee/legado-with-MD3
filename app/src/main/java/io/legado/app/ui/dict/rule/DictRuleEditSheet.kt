@@ -36,7 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.DictRule
-import io.legado.app.ui.widget.components.modalBottomSheet.GlassModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
@@ -56,7 +56,8 @@ fun DictRuleEditSheet(
     var showRule by remember(rule) { mutableStateOf(rule?.showRule ?: "") }
     var showMenu by remember { mutableStateOf(false) }
 
-    GlassModalBottomSheet(
+    AppModalBottomSheet(
+        show = true,
         onDismissRequest = onDismissRequest
     ) {
         Box(

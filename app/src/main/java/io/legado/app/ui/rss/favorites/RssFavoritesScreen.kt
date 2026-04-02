@@ -3,11 +3,9 @@ package io.legado.app.ui.rss.favorites
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -44,7 +42,6 @@ import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,11 +126,10 @@ fun RssFavoritesScreen(
         topBarActions = {},
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = {
+                text = stringResource(R.string.all),
+                leadingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Group, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(12.dp))
-                        AppText(stringResource(R.string.all))
                     }
                 },
                 onClick = {
@@ -143,15 +139,14 @@ fun RssFavoritesScreen(
             )
             groups.forEach { group ->
                 RoundDropdownMenuItem(
-                    text = {
+                    text = group,
+                    leadingIcon = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.AutoMirrored.Outlined.Label,
                                 null,
                                 modifier = Modifier.size(18.dp)
                             )
-                            Spacer(Modifier.width(12.dp))
-                            AppText(group)
                         }
                     },
                     onClick = {
@@ -162,11 +157,10 @@ fun RssFavoritesScreen(
             }
             PillDivider()
             RoundDropdownMenuItem(
-                text = {
+                text = stringResource(R.string.delete_select_group),
+                leadingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DeleteSweep, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(12.dp))
-                        AppText(stringResource(R.string.delete_select_group))
                     }
                 },
                 onClick = {
@@ -175,11 +169,10 @@ fun RssFavoritesScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = {
+                text = stringResource(R.string.all),
+                leadingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DeleteForever, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(12.dp))
-                        AppText(stringResource(R.string.all))
                     }
                 },
                 onClick = {
@@ -248,14 +241,14 @@ fun RssFavoritesScreen(
                         },
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = { AppText(stringResource(R.string.change_group)) },
+                                text = stringResource(R.string.change_group),
                                 onClick = {
                                     showSetGroupDialog = rssStar
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = { AppText(stringResource(R.string.delete)) },
+                                text = stringResource(R.string.delete),
                                 onClick = {
                                     viewModel.deleteStar(rssStar)
                                     dismiss()

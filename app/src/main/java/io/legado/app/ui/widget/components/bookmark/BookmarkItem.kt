@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +30,7 @@ fun BookmarkItem(
     onLongClick: () -> Unit
 ) {
     val backgroundColor by animateColorAsState(
-        targetValue = if (isDur) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+        targetValue = if (isDur) LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
         else Color.Transparent,
         label = "BgColor"
     )
@@ -53,7 +52,7 @@ fun BookmarkItem(
             AppText(
                 text = bookmark.chapterName,
                 style = LegadoTheme.typography.titleSmallEmphasized,
-                color = if (isDur) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                color = if (isDur) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.secondary
             )
 
             if (bookmark.bookText.isNotEmpty()) {
@@ -63,7 +62,7 @@ fun BookmarkItem(
                     style = LegadoTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -72,7 +71,7 @@ fun BookmarkItem(
                 AppText(
                     text = bookmark.content,
                     style = LegadoTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = LegadoTheme.colorScheme.primary
                 )
             }
         }

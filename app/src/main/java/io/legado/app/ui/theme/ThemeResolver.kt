@@ -67,4 +67,12 @@ object ThemeResolver {
         }
     }
 
+    fun resolveColorSpecFromMaterialVersion(value: String?): ThemeColorSpec {
+        return when (value) {
+            "material3Expressive" -> ThemeColorSpec.SPEC_2025
+            "material3" -> ThemeColorSpec.SPEC_2021
+            else -> ThemeColorSpec.SPEC_2021
+        }
+    }
+
 }
