@@ -538,6 +538,10 @@ private fun KindText(
 ) {
     AppText(
         text = kind.title,
+        color = if (kind.url.isNullOrBlank())
+            LegadoTheme.colorScheme.primary
+        else
+            LegadoTheme.colorScheme.onSurface,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),

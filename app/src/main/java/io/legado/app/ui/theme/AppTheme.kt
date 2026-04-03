@@ -180,7 +180,10 @@ fun AppTheme(
                         tertiaryFixed = miuixColorScheme.tertiaryContainer,
                         tertiaryFixedDim = miuixColorScheme.tertiaryContainerVariant,
                         onTertiaryFixed = miuixColorScheme.onTertiaryContainer,
-                        onTertiaryFixedVariant = miuixColorScheme.onTertiaryContainer
+                        onTertiaryFixedVariant = miuixColorScheme.onTertiaryContainer,
+
+                        cardContainer = miuixColorScheme.tertiaryContainer,
+                        onCardContainer = miuixColorScheme.primary
                     )
                 }
 
@@ -282,7 +285,10 @@ fun AppTheme(
                         tertiaryFixed = colorScheme.tertiaryFixed,
                         tertiaryFixedDim = colorScheme.tertiaryFixedDim,
                         onTertiaryFixed = colorScheme.onTertiaryFixed,
-                        onTertiaryFixedVariant = colorScheme.onTertiaryFixedVariant
+                        onTertiaryFixedVariant = colorScheme.onTertiaryFixedVariant,
+
+                        cardContainer = colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        onCardContainer = colorScheme.primary
                     )
                 }
 

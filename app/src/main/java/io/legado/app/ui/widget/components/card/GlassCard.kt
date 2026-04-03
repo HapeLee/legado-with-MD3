@@ -35,8 +35,7 @@ private fun BaseCard(
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         val colors = MiuixCardDefaults.defaultColors(
-            color = (containerColor
-                ?: MiuixTheme.colorScheme.secondaryContainer).copy(alpha = alpha),
+            color = (containerColor ?: MiuixTheme.colorScheme.secondaryContainer.copy(alpha)),
             contentColor = contentColor ?: MiuixTheme.colorScheme.onSurface
         )
         MiuixCard(

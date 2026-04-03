@@ -85,6 +85,7 @@ import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -608,12 +609,9 @@ private fun PathNavigationBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
-        Card(
+        GlassCard(
             modifier = Modifier.weight(1f),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            ),
+            containerColor = LegadoTheme.colorScheme.surfaceContainer,
             shape = MaterialTheme.shapes.medium
         ) {
             LazyRow(
@@ -676,17 +674,17 @@ private fun RemoteBookItem(
     onUpdateClick: (RemoteBook) -> Unit
 ) {
     val containerColor = if (isSelected) {
-        MaterialTheme.colorScheme.secondaryContainer
+        LegadoTheme.colorScheme.secondaryContainer
     } else {
-        MaterialTheme.colorScheme.surfaceContainerLow
+        LegadoTheme.colorScheme.surfaceContainerLow
     }
 
-    Card(
+    GlassCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = containerColor)
+        containerColor = containerColor
     ) {
         Row(
             modifier = Modifier
@@ -704,9 +702,9 @@ private fun RemoteBookItem(
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = if (book.isDir) {
-                    MaterialTheme.colorScheme.primary
+                    LegadoTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    LegadoTheme.colorScheme.onSurfaceVariant
                 }
             )
 
@@ -737,7 +735,7 @@ private fun RemoteBookItem(
                                 verticalPadding = 2.dp,
                                 cornerRadius = 4.dp,
                                 icon = null,
-                                backgroundColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHighest
                             )
 
                             Spacer(modifier = Modifier.width(6.dp))
@@ -748,7 +746,7 @@ private fun RemoteBookItem(
                                 AppConst.dateFormat.format(book.lastModify)
                             }",
                             style = LegadoTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

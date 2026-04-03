@@ -71,6 +71,9 @@ data class LegadoColorScheme(
     val tertiaryFixedDim: Color,
     val onTertiaryFixed: Color,
     val onTertiaryFixedVariant: Color,
+
+    val cardContainer: Color,
+    val onCardContainer: Color
 )
 
 data class LegadoTypography(

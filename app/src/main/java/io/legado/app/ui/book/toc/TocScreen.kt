@@ -594,9 +594,12 @@ fun TocScreen(
             }
         }
 
+        val bookmarkForSheet = editingBookmark ?: remember(editingBookmark == null) {
+            Bookmark()
+        }
         BookmarkEditSheet(
             show = editingBookmark != null,
-            bookmark = editingBookmark!!,
+            bookmark = bookmarkForSheet,
             onDismiss = { editingBookmark = null },
             onSave = { updatedBookmark ->
                 viewModel.updateBookmark(updatedBookmark)

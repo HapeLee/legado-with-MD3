@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -29,6 +28,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupViewModel
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -115,7 +115,7 @@ fun GroupManageSheet(
                             title = group.groupName.ifBlank { manageNameInfo.suffix.orEmpty() },
                             subtitle = if (group.groupName.isNotBlank()) manageNameInfo.suffix else null,
                             isEnabled = group.show,
-                            containerColor = MaterialTheme.colorScheme.surface,
+                            containerColor = LegadoTheme.colorScheme.surface,
                             onEnabledChange = { isChecked ->
                                 viewModel.upGroup(group.copy(show = isChecked))
                             },

@@ -690,14 +690,14 @@ fun ExploreBookGridItem(
 @Composable
 fun TagChip(text: String) {
     Surface(
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+        color = LegadoTheme.colorScheme.cardContainer,
         shape = RoundedCornerShape(4.dp)
     ) {
         AppText(
             text = text,
             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
             style = LegadoTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary
+            color = LegadoTheme.colorScheme.onCardContainer
         )
     }
 }

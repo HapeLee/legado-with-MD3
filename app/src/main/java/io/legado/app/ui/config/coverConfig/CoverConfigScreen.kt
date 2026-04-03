@@ -251,12 +251,14 @@ fun CoverConfigScreen(
         onDismissRequest = { showCoverRuleSheet = false }
     )
 
-    CoverManageSheet(
-        show = manageKey != null,
-        preferenceKey = manageKey!!,
-        onDismissRequest = { manageKey = null },
-        viewModel = viewModel
-    )
+    manageKey?.let { key ->
+        CoverManageSheet(
+            show = true,
+            preferenceKey = key,
+            onDismissRequest = { manageKey = null },
+            viewModel = viewModel
+        )
+    }
 
     showColorPickerByField?.let { field ->
         val initialColor = when (field) {

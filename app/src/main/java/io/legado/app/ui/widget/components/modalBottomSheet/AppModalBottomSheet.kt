@@ -41,7 +41,7 @@ fun AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
-    containerColor: Color = LegadoTheme.colorScheme.surfaceContainerLow,
+    containerColor: Color = LegadoTheme.colorScheme.surfaceContainer,
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
