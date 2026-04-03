@@ -46,9 +46,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -69,16 +67,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppScaffold
@@ -88,6 +85,7 @@ import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopbarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.Cover
+import io.legado.app.ui.widget.components.explore.ExploreKindItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -132,6 +130,7 @@ fun ExploreShowScreen(
     val isGridMode = layoutState == 1
     var showGridCountSheet by remember { mutableStateOf(false) }
     val gridColumnCount by viewModel.gridCount.collectAsState()
+    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -236,6 +235,7 @@ fun ExploreShowScreen(
 
     AppModalBottomSheet(
         show = showKindSheet,
+        containerColor = LegadoTheme.colorScheme.surface,
         onDismissRequest = { showKindSheet = false }
     ) {
 
@@ -243,7 +243,7 @@ fun ExploreShowScreen(
 
         SearchBarSection(
             query = kindQuery,
-            backgroundColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
             onQueryChange = { kindQuery = it },
             placeholder = "选择或搜索分类",
         )
@@ -258,7 +258,7 @@ fun ExploreShowScreen(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f, fill = false)
@@ -271,14 +271,15 @@ fun ExploreShowScreen(
                     if (isClickable) GridItemSpan(1) else GridItemSpan(3)
                 }
             ) { _, kind ->
-                KindGridItem(
+                ExploreKindItem(
                     modifier = Modifier.animateItem(),
                     kind = kind,
-                    currentTitle = selectedTitle ?: title,
+                    isClickable = !kind.url.isNullOrBlank(),
                     onClick = {
                         showKindSheet = false
                         viewModel.switchExploreUrl(kind)
-                    }
+                    },
+                    isMiuix = isMiuix
                 )
             }
         }
@@ -484,34 +485,6 @@ fun ExploreShowScreen(
             }
         }
     }
-}
-
-@Composable
-fun KindGridItem(
-    kind: ExploreKind,
-    currentTitle: String?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val isClickable = !kind.url.isNullOrBlank()
-    val isSelected = kind.title == currentTitle
-
-    FilterChip(
-        onClick = { if (isClickable) onClick() },
-        enabled = isClickable,
-        selected = isSelected,
-        label = {
-            AppText(
-                text = kind.title,
-                fontSize = 12.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        modifier = modifier.fillMaxWidth()
-    )
 }
 
 @Composable

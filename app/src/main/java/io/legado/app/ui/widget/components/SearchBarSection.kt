@@ -12,7 +12,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +36,7 @@ fun SearchBarSection(
     placeholder: String = "搜索...",
     leadingIcon: @Composable (() -> Unit)? = {
         AppIcon(
+            modifier = Modifier.padding(horizontal = 12.dp),
             imageVector = AppIcons.Search,
             contentDescription = null
         )
@@ -67,23 +67,13 @@ fun SearchBarSection(
             }
     }
 
-    val showScrollToTop by remember(scrollState) {
-        derivedStateOf {
-            (scrollState?.firstVisibleItemIndex ?: 0) > 0
-        }
-    }
-
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
     val searchTextField = @Composable {
         AppTextField(
             state = textFieldState,
             modifier = Modifier
-                .fillMaxWidth()
-                .then(
-                    if (isMiuix) Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    else Modifier
-                ),
+                .fillMaxWidth(),
             placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
             lineLimits = TextFieldLineLimits.SingleLine,

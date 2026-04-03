@@ -8,7 +8,7 @@ import io.legado.app.ui.theme.LegadoTheme.composeEngine
 
 @Composable
 fun Modifier.adaptiveHorizontalPadding(): Modifier {
-    val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 12.dp else 16.dp
+    val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 8.dp else 16.dp
     return this.padding(horizontal = horizontal)
 }
 

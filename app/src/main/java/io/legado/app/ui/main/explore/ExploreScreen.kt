@@ -33,18 +33,14 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -59,9 +55,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
@@ -77,6 +70,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+import io.legado.app.ui.widget.components.explore.ExploreKindItem
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
@@ -473,81 +467,3 @@ fun ExploreStickyCard(
     )
 }
 
-@Composable
-fun ExploreKindItem(
-    kind: ExploreKind,
-    isClickable: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isMiuix: Boolean,
-) {
-    val color = if (isMiuix)
-        MiuixTheme.colorScheme.surfaceContainer
-    else
-        MaterialTheme.colorScheme.secondaryContainer
-
-    val contentColor = if (isMiuix)
-        MiuixTheme.colorScheme.onSurface
-    else
-        MaterialTheme.colorScheme.secondary
-
-    val unClickBackColor = if (isMiuix)
-        MiuixTheme.colorScheme.surfaceContainer
-    else
-        MaterialTheme.colorScheme.surface
-
-    val unClickColor = if (isMiuix)
-        MiuixTheme.colorScheme.disabledOnSurface
-    else
-        MaterialTheme.colorScheme.primary
-
-    CompositionLocalProvider(
-        LocalMinimumInteractiveComponentSize provides Dp.Unspecified
-    ) {
-
-        val shape = MaterialTheme.shapes.medium
-
-        if (isClickable) {
-            GlassCard(
-                onClick = onClick,
-                shape = shape,
-                containerColor = color.copy(alpha = 0.6f),
-                contentColor = contentColor,
-                modifier = modifier
-            ) {
-                KindText(kind)
-            }
-        } else {
-            GlassCard(
-                shape = shape,
-                containerColor = unClickBackColor.copy(alpha = 0.6f),
-                contentColor = unClickColor,
-                modifier = modifier,
-                border = CardDefaults.outlinedCardBorder()
-            ) {
-                KindText(kind)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun KindText(
-    kind: ExploreKind
-) {
-    AppText(
-        text = kind.title,
-        color = if (kind.url.isNullOrBlank())
-            LegadoTheme.colorScheme.primary
-        else
-            LegadoTheme.colorScheme.onSurface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        style = LegadoTheme.typography.labelMediumEmphasized,
-        textAlign = TextAlign.Center,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 1
-    )
-}

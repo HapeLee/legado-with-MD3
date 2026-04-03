@@ -45,6 +45,7 @@ fun TextCard(
     NormalCard(
         modifier = modifier,
         shape = RoundedCornerShape(cornerRadius),
+        cornerRadius = 4.dp,
         containerColor = finalBackgroundColor,
         contentColor = finalContentColor,
         onClick = onClick

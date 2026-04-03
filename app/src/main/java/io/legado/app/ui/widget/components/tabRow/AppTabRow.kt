@@ -29,7 +29,8 @@ fun AppTabRow(
             tabs = tabTitles,
             selectedTabIndex = selectedTabIndex,
             onTabSelected = onTabSelected,
-            modifier = modifier.padding(start = 12.dp),
+            modifier = modifier
+                .padding(vertical = 4.dp),
             colors = TabRowDefaults.tabRowColors(
                 backgroundColor = Color.Transparent
             )

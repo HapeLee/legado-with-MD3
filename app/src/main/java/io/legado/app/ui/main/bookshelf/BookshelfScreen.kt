@@ -74,6 +74,7 @@ import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -317,7 +318,9 @@ fun BookshelfScreen(
                     val selectedTabIndex =
                         pagerState.currentPage.coerceIn(0, uiState.groups.size - 1)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .adaptiveHorizontalPadding(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val tabTitles = remember(uiState.groups) {
@@ -334,7 +337,7 @@ fun BookshelfScreen(
                         )
 
                         if (BookshelfConfig.shouldShowExpandButton) {
-                            Box(modifier = Modifier.padding(end = 16.dp)) {
+                            Box(modifier = Modifier) {
                                 SmallOutlinedIconToggleButton(
                                     checked = showGroupMenu,
                                     onCheckedChange = { showGroupMenu = it },

@@ -188,11 +188,12 @@ fun BookshelfItem(
                     }
                 }
             }
-            if (BookshelfConfig.bookshelfShowDivider) HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            )
+            if (BookshelfConfig.bookshelfShowDivider)
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    thickness = 0.5.dp,
+                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
         }
     }
 }

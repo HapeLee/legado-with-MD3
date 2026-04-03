@@ -36,12 +36,9 @@ fun AppTextField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     readOnly: Boolean = false,
-    // 1. 核心思想：保留 AppText 的统一样式与颜色降级参数
     textStyle: TextStyle? = null,
     textColor: Color = Color.Unspecified,
-    // 2. 将 Label 统一定义为 String 以兼容两套引擎
     label: String? = null,
-    // 3. 保留 M3 TextField 的所有其他参数
     labelPosition: TextFieldLabelPosition = TextFieldLabelPosition.Attached(),
     placeholder: @Composable (() -> Unit)? = null,
     leadingIcon: @Composable (() -> Unit)? = null,
@@ -77,6 +74,7 @@ fun AppTextField(
             enabled = enabled,
             readOnly = readOnly,
             textStyle = MiuixTheme.textStyles.main,
+            backgroundColor = MiuixTheme.colorScheme.surfaceContainerHigh,
             label = label ?: "",
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,

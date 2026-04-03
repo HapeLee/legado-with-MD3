@@ -60,9 +60,8 @@ import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.material3.animateFloatingActionButton
@@ -95,6 +94,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppScaffold
@@ -108,6 +108,7 @@ import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -415,39 +416,21 @@ fun TocScreen(
                 },
                 bottomContent = {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .adaptiveHorizontalPadding(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        PrimaryScrollableTabRow(
+                        AppTabRow(
+                            tabTitles = listOf("目录", "书签"),
                             selectedTabIndex = pagerState.currentPage,
-                            edgePadding = 0.dp,
-                            divider = {},
-                            modifier = Modifier.weight(1f),
-                            containerColor = Color.Transparent
-                        ) {
-                            Tab(
-                                selected = pagerState.currentPage == 0,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
-                                text = {
-                                    AppText(
-                                        text = "目录",
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                            onTabSelected = { index ->
+                                scope.launch {
+                                    pagerState.animateScrollToPage(index)
                                 }
-                            )
-                            Tab(
-                                selected = pagerState.currentPage == 1,
-                                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
-                                text = {
-                                    AppText(
-                                        text = "书签",
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            )
-                        }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
 
                         if (pagerState.currentPage == 0 && hasVolumes) {
                             Box(
@@ -542,7 +525,7 @@ fun TocScreen(
                             fabMenuExpanded = false
                         },
                         icon = { Icon(icon, contentDescription = null) },
-                        text = { AppText(text = label) }
+                        text = { Text(text = label) }
                     )
                 }
             }
@@ -683,25 +666,25 @@ fun ChapterItem(
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-            item.isDur -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            item.isSelected -> LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            item.isDur -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
             else -> Color.Transparent
         }, label = "BgColor"
     )
 
     val textColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.onSurface
-            item.isDur -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurface
+            item.isSelected -> LegadoTheme.colorScheme.onSurface
+            item.isDur -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurface
         }, label = "BgColor"
     )
 
     val detailColor by animateColorAsState(
         targetValue = when {
-            item.isSelected -> MaterialTheme.colorScheme.onSurfaceVariant
-            item.isDur -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurfaceVariant
+            item.isSelected -> LegadoTheme.colorScheme.onSurfaceVariant
+            item.isDur -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurfaceVariant
         }, label = "BgColor"
     )
 
@@ -725,7 +708,7 @@ fun ChapterItem(
                         Icon(
                             imageVector = Icons.Default.Lock,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
+                            tint = LegadoTheme.colorScheme.error,
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 4.dp)
@@ -891,7 +874,7 @@ private fun StatusIcon(
                     imageVector = Icons.Rounded.LocationOn,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = LegadoTheme.colorScheme.secondary
                 )
             }
 
@@ -899,7 +882,7 @@ private fun StatusIcon(
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
                     strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.secondary
+                    color = LegadoTheme.colorScheme.secondary
                 )
             }
 
@@ -908,7 +891,7 @@ private fun StatusIcon(
                     shape = MaterialTheme.shapes.medium,
                     border = BorderStroke(
                         1.dp,
-                        MaterialTheme.colorScheme.outlineVariant
+                        LegadoTheme.colorScheme.outlineVariant
                     ),
                     color = Color.Transparent
                 ) {
@@ -918,7 +901,7 @@ private fun StatusIcon(
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             text = wordCount,
                             style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -929,7 +912,7 @@ private fun StatusIcon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = LegadoTheme.colorScheme.secondary
                 )
             }
 
@@ -938,7 +921,7 @@ private fun StatusIcon(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.error
+                    tint = LegadoTheme.colorScheme.error
                 )
             }
 
@@ -947,7 +930,7 @@ private fun StatusIcon(
                     imageVector = Icons.Outlined.DownloadForOffline,
                     contentDescription = null,
                     modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    tint = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                 )
             }
         }
