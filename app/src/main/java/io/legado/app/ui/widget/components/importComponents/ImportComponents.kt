@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -28,11 +27,9 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedToggleButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -58,24 +57,26 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SourceInputDialog(
+    show: Boolean,
     title: String = "网络导入",
     hint: String = "请输入 URL 或 JSON",
     initialValue: String = "",
-    historyValues: List<String> = emptyList(), // 历史记录
+    historyValues: List<String> = emptyList(),
     onDismissRequest: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var text by remember { mutableStateOf(initialValue) }
+    var text by remember(show) { mutableStateOf(initialValue) }
 
-    AlertDialog(
+    AppAlertDialog(
+        show = show,
         onDismissRequest = onDismissRequest,
-        title = { AppText(title) },
-        text = {
+        title = title,
+        content = {
             Column {
-                OutlinedTextField(
+                AppTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { AppText(hint) },
+                    label = hint,
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 5
                 )
@@ -94,16 +95,13 @@ fun SourceInputDialog(
                 }
             }
         },
-        confirmButton = {
-            OutlinedButton(
-                onClick = { if (text.isNotBlank()) onConfirm(text) }
-            ) { AppText(stringResource(android.R.string.ok)) }
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            // 拦截空输入，非空才执行回调
+            if (text.isNotBlank()) onConfirm(text)
         },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                AppText(stringResource(android.R.string.cancel))
-            }
-        }
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = onDismissRequest
     )
 }
 

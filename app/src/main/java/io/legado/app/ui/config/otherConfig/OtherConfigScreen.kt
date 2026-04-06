@@ -7,14 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,16 +25,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.service.WebService
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.restart
@@ -86,7 +85,7 @@ fun OtherConfigScreen(
                 title = stringResource(R.string.other_setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = onBackClick)
                 }
             )
         }
@@ -423,90 +422,63 @@ fun OtherConfigScreen(
             onDismiss = { showDirectLinkUploadSheet = false }
         )
 
-        if (showClearCacheDialog) {
-            ConfirmDialog(
-                title = stringResource(R.string.clear_cache),
-                text = stringResource(R.string.sure_del),
-                onConfirm = {
-                    viewModel.clearCache(context)
-                    showClearCacheDialog = false
-                },
-                onDismiss = { showClearCacheDialog = false }
-            )
-        }
+        AppAlertDialog(
+            show = showClearCacheDialog,
+            onDismissRequest = { showClearCacheDialog = false },
+            title = stringResource(R.string.clear_cache),
+            text = stringResource(R.string.sure_del),
+            onConfirm = {
+                viewModel.clearCache(context)
+                showClearCacheDialog = false
+            },
+            onDismiss = { showClearCacheDialog = false }
+        )
 
-        if (showShrinkDbDialog) {
-            ConfirmDialog(
-                title = stringResource(R.string.shrink_database),
-                text = stringResource(R.string.sure),
-                onConfirm = {
-                    viewModel.shrinkDatabase()
-                    showShrinkDbDialog = false
-                },
-                onDismiss = { showShrinkDbDialog = false }
-            )
-        }
+        AppAlertDialog(
+            show = showShrinkDbDialog,
+            onDismissRequest = { showShrinkDbDialog = false },
+            title = stringResource(R.string.shrink_database),
+            text = stringResource(R.string.sure),
+            onConfirm = {
+                viewModel.shrinkDatabase()
+                showShrinkDbDialog = false
+            },
+            onDismiss = { showShrinkDbDialog = false }
+        )
 
-        if (showClearWebViewDialog) {
-            ConfirmDialog(
-                title = stringResource(R.string.clear_webview_data),
-                text = stringResource(R.string.sure_del),
-                onConfirm = {
-                    viewModel.clearWebViewData(context)
-                    showClearWebViewDialog = false
-                },
-                onDismiss = { showClearWebViewDialog = false }
-            )
-        }
+        AppAlertDialog(
+            show = showClearWebViewDialog,
+            onDismissRequest = { showClearWebViewDialog = false },
+            title = stringResource(R.string.clear_webview_data),
+            text = stringResource(R.string.sure_del),
+            onConfirm = {
+                viewModel.clearWebViewData(context)
+                showClearWebViewDialog = false
+            },
+            onDismiss = { showClearWebViewDialog = false }
+        )
 
-        if (showPasswordDialog) {
-            AlertDialog(
-                onDismissRequest = { showPasswordDialog = false },
-                title = { AppText(stringResource(R.string.set_local_password)) },
-                text = {
-                    TextField(
-                        value = tempPassword,
-                        onValueChange = { tempPassword = it },
-                        label = { AppText("Password") }
-                    )
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.setLocalPassword(tempPassword)
-                        showPasswordDialog = false
-                    }) { AppText(stringResource(R.string.ok)) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPasswordDialog = false }) {
-                        AppText(stringResource(R.string.cancel))
-                    }
-                }
-            )
-        }
+        AppAlertDialog(
+            show = showPasswordDialog,
+            onDismissRequest = { showPasswordDialog = false },
+            title = stringResource(R.string.set_local_password),
+            content = {
+                AppTextField(
+                    value = tempPassword,
+                    onValueChange = { tempPassword = it },
+                    label = "Password",
+                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmText = stringResource(R.string.ok),
+            onConfirm = {
+                viewModel.setLocalPassword(tempPassword)
+                showPasswordDialog = false
+            },
+            dismissText = stringResource(R.string.cancel),
+            onDismiss = { showPasswordDialog = false }
+        )
     }
 
-}
-
-@Composable
-fun ConfirmDialog(
-    title: String,
-    text: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { AppText(title) },
-        text = { AppText(text) },
-        confirmButton = {
-            OutlinedButton(onClick = onConfirm) {
-                AppText(stringResource(R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                AppText(stringResource(R.string.cancel))
-            }
-        }
-    )
 }

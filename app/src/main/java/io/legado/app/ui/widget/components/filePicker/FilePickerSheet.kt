@@ -1,34 +1,17 @@
 package io.legado.app.ui.widget.components.filePicker
 
 import android.webkit.MimeTypeMap
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 
 enum class FilePickerSheetMode {
     DIR, FILE, EXPORT
@@ -47,100 +30,48 @@ fun FilePickerSheet(
     onUpload: (() -> Unit)? = null,
     allowExtensions: Array<String>? = null,
 ) {
-    AppModalBottomSheet(
+    OptionSheet(
         show = show,
-        title = title,
         onDismissRequest = onDismissRequest,
-        containerColor = LegadoTheme.colorScheme.surface
+        title = title
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                maxItemsInEachRow = 2
-            ) {
-
-                onSelectSysDir?.let {
-                    FilePickerOptionCard(
-                        icon = Icons.Default.FolderOpen,
-                        text = stringResource(R.string.sys_folder_picker),
-                        onClick = it
-                    )
-                }
-
-                onSelectSysFile?.let {
-                    FilePickerOptionCard(
-                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                        text = stringResource(R.string.sys_file_picker),
-                        onClick = { it(typesOfExtensions(allowExtensions)) }
-                    )
-                }
-
-                onSelectSysFiles?.let {
-                    FilePickerOptionCard(
-                        icon = Icons.AutoMirrored.Filled.InsertDriveFile,
-                        text = "多选项目",
-                        onClick = { it(typesOfExtensions(allowExtensions)) }
-                    )
-                }
-
-                onManualInput?.let {
-                    FilePickerOptionCard(
-                        icon = Icons.Default.EditNote,
-                        text = stringResource(R.string.manual_input),
-                        onClick = it
-                    )
-                }
-
-                onUpload?.let {
-                    FilePickerOptionCard(
-                        icon = Icons.Default.CloudUpload,
-                        text = stringResource(R.string.upload_url),
-                        onClick = it
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun RowScope.FilePickerOptionCard(
-    icon: ImageVector,
-    text: String,
-    onClick: () -> Unit
-) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier
-            .weight(1f)
-            .height(100.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = LegadoTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            AppIcon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(32.dp),
-                tint = LegadoTheme.colorScheme.primary
+        onSelectSysDir?.let {
+            OptionCard(
+                icon = Icons.Default.FolderOpen,
+                text = stringResource(R.string.sys_folder_picker),
+                onClick = it
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            AppText(
-                text = text,
-                style = LegadoTheme.typography.labelMedium,
-                maxLines = 1
+        }
+
+        onSelectSysFile?.let {
+            OptionCard(
+                icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                text = stringResource(R.string.sys_file_picker),
+                onClick = { it(typesOfExtensions(allowExtensions)) }
+            )
+        }
+
+        onSelectSysFiles?.let {
+            OptionCard(
+                icon = Icons.AutoMirrored.Filled.InsertDriveFile,
+                text = "多选项目",
+                onClick = { it(typesOfExtensions(allowExtensions)) }
+            )
+        }
+
+        onManualInput?.let {
+            OptionCard(
+                icon = Icons.Default.EditNote,
+                text = stringResource(R.string.manual_input),
+                onClick = it
+            )
+        }
+
+        onUpload?.let {
+            OptionCard(
+                icon = Icons.Default.CloudUpload,
+                text = stringResource(R.string.upload_url),
+                onClick = it
             )
         }
     }

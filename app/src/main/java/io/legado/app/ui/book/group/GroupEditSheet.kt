@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.ui.widget.components.cover.Cover
+import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
@@ -115,7 +115,10 @@ fun GroupEditContent(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Cover(
+            BookCover(
+                name = null,
+                author = null,
+                sourceOrigin = group?.groupName,
                 path = coverPath,
                 modifier = Modifier
                     .width(96.dp)

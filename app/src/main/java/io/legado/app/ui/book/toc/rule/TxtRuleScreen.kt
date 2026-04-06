@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -43,8 +44,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -140,16 +143,15 @@ fun TxtRuleScreen(
         }
     )
 
-    if (showUrlInput) {
-        SourceInputDialog(
-            title = stringResource(R.string.import_on_line),
-            onDismissRequest = { showUrlInput = false },
-            onConfirm = {
-                showUrlInput = false
-                viewModel.importSource(it)
-            }
-        )
-    }
+    SourceInputDialog(
+        show = showUrlInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showUrlInput = false },
+        onConfirm = {
+            showUrlInput = false
+            viewModel.importSource(it)
+        }
+    )
 
     FilePickerSheet(
         show = showExportSheet,
@@ -201,25 +203,19 @@ fun TxtRuleScreen(
         }
     }
 
-    showDeleteRuleDialog?.let { rule ->
-        AlertDialog(
-            onDismissRequest = { showDeleteRuleDialog = null },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.del_msg)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    viewModel.delete(rule); showDeleteRuleDialog = null
-                }) { AppText(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    AppText(
-                        stringResource(R.string.cancel)
-                    )
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = showDeleteRuleDialog, // 传入 nullable 的 rule 对象
+        onDismissRequest = { showDeleteRuleDialog = null },
+        title = stringResource(R.string.delete),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { rule ->
+            viewModel.delete(rule)
+            showDeleteRuleDialog = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteRuleDialog = null },
+        content = { Text(text = stringResource(R.string.del_msg)) }
+    )
 
     RuleEditSheet(
         show = showEditSheet,
@@ -304,8 +300,7 @@ fun TxtRuleScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() },
-                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
+                onClick = { showImportSheet = true; dismiss() }
             )
         }
     ) { paddingValues ->
@@ -316,9 +311,9 @@ fun TxtRuleScreen(
             FastScrollLazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(
-                    top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 120.dp
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

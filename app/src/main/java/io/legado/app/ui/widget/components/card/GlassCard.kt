@@ -16,6 +16,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.utils.PressFeedbackType
 import top.yukonga.miuix.kmp.basic.Card as MiuixCard
 import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
 
@@ -26,6 +27,7 @@ private fun BaseCard(
     onClick: (() -> Unit)? = null,
     shape: Shape = CardDefaults.shape,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
+    pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
     elevation: CardElevation = CardDefaults.cardElevation(),
@@ -41,6 +43,8 @@ private fun BaseCard(
         MiuixCard(
             modifier = modifier,
             cornerRadius = cornerRadius,
+            pressFeedbackType = pressFeedbackType,
+            showIndication = true,
             onClick = onClick,
             content = content,
             colors = colors
@@ -84,6 +88,7 @@ fun GlassCard(
     onClick: (() -> Unit)? = null,
     shape: Shape = CardDefaults.shape,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
+    pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
     elevation: CardElevation = CardDefaults.cardElevation(),
@@ -95,6 +100,7 @@ fun GlassCard(
         onClick = onClick,
         shape = shape,
         cornerRadius = cornerRadius,
+        pressFeedbackType = pressFeedbackType,
         containerColor = containerColor,
         contentColor = contentColor,
         elevation = elevation,
@@ -111,6 +117,7 @@ fun NormalCard(
     onClick: (() -> Unit)? = null,
     shape: Shape = CardDefaults.shape,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
+    pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
     elevation: CardElevation = CardDefaults.cardElevation(),
@@ -122,6 +129,7 @@ fun NormalCard(
         onClick = onClick,
         shape = shape,
         cornerRadius = cornerRadius,
+        pressFeedbackType = pressFeedbackType,
         containerColor = containerColor,
         contentColor = contentColor,
         elevation = elevation,

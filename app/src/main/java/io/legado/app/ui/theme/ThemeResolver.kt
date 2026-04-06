@@ -58,8 +58,6 @@ object ThemeResolver {
 
     fun isMiuixEngine(composeEngine: String): Boolean = composeEngine == "miuix"
 
-    fun isM3Engine(composeEngine: String): Boolean = composeEngine == "m3"
-
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {
         return when (colorSpec) {
             ThemeColorSpec.SPEC_2025 -> ColorSpec.SpecVersion.SPEC_2025

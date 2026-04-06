@@ -10,13 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -52,7 +50,7 @@ import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
-import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.SmallTextButton
@@ -91,120 +89,113 @@ fun MyScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .verticalScroll(rememberScrollState()),
-            //TODO:暂时这样解决，改天加模糊
-        ) {
-            Spacer(
-                modifier = Modifier
-                    .padding(
-                        top = padding.calculateTopPadding()
-                    )
+        LazyColumn(
+            modifier = Modifier,
+            contentPadding = adaptiveContentPadding(
+                top = padding.calculateTopPadding(),
+                bottom = 120.dp
             )
+        ) {
+            item {
+                SplicedColumnGroup(
+                    title = ""
+                ) {
+                    WebServiceSettingBlock(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        onNavigate = onNavigate
+                    )
+                }
 
-            SplicedColumnGroup(
-                modifier = Modifier.adaptiveHorizontalPadding(),
-                title = ""
-            ) {
-                WebServiceSettingBlock(
-                    uiState = uiState,
-                    viewModel = viewModel,
-                    onNavigate = onNavigate
-                )
+                SplicedColumnGroup(
+                    title = "规则"
+                ) {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.book_source_manage),
+                        description = stringResource(R.string.book_source_manage_desc),
+                        imageVector = Icons.Default.Source,
+                        onClick = {
+                            onNavigate(
+                                PrefClickEvent.StartActivity(BookSourceActivity::class.java)
+                            )
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.replace_purify),
+                        imageVector = Icons.Default.FindReplace,
+                        onClick = {
+                            onNavigate(
+                                PrefClickEvent.StartActivity(ReplaceRuleActivity::class.java)
+                            )
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.txt_toc_rule),
+                        imageVector = Icons.AutoMirrored.Filled.Rule,
+                        onClick = {
+                            onNavigate(
+                                PrefClickEvent.StartActivity(TxtTocRuleActivity::class.java)
+                            )
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.dict_rule),
+                        imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
+                        onClick = {
+                            onNavigate(
+                                PrefClickEvent.StartActivity(DictRuleActivity::class.java)
+                            )
+                        }
+                    )
+                }
+
+                SplicedColumnGroup(
+                    title = stringResource(R.string.other)
+                ) {
+                    ClickableSettingItem(
+                        title = stringResource(R.string.setting),
+                        imageVector = Icons.Default.Settings,
+                        onClick = {
+                            onOpenSettings()
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.bookmark),
+                        imageVector = Icons.Default.Bookmark,
+                        onClick = {
+                            onNavigate(PrefClickEvent.StartActivity(AllBookmarkActivity::class.java))
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.read_record),
+                        imageVector = Icons.Default.History,
+                        onClick = {
+                            onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.file_manage),
+                        imageVector = Icons.Default.Folder,
+                        onClick = {
+                            onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.about),
+                        imageVector = Icons.Default.Info,
+                        onClick = {
+                            onNavigate(PrefClickEvent.StartActivity(AboutActivity::class.java))
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.exit),
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        onClick = {
+                            onNavigate(PrefClickEvent.ExitApp)
+                        }
+                    )
+                }
             }
-
-            SplicedColumnGroup(
-                modifier = Modifier.adaptiveHorizontalPadding(),
-                title = "规则"
-            ) {
-                ClickableSettingItem(
-                    title = stringResource(R.string.book_source_manage),
-                    description = stringResource(R.string.book_source_manage_desc),
-                    imageVector = Icons.Default.Source,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(BookSourceActivity::class.java)
-                        )
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.replace_purify),
-                    imageVector = Icons.Default.FindReplace,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(ReplaceRuleActivity::class.java)
-                        )
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.txt_toc_rule),
-                    imageVector = Icons.AutoMirrored.Filled.Rule,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(TxtTocRuleActivity::class.java)
-                        )
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.dict_rule),
-                    imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
-                    onClick = {
-                        onNavigate(
-                            PrefClickEvent.StartActivity(DictRuleActivity::class.java)
-                        )
-                    }
-                )
-            }
-
-            SplicedColumnGroup(
-                modifier = Modifier.adaptiveHorizontalPadding(),
-                title = stringResource(R.string.other)) {
-                ClickableSettingItem(
-                    title = stringResource(R.string.setting),
-                    imageVector = Icons.Default.Settings,
-                    onClick = {
-                        onOpenSettings()
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.bookmark),
-                    imageVector = Icons.Default.Bookmark,
-                    onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(AllBookmarkActivity::class.java))
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.read_record),
-                    imageVector = Icons.Default.History,
-                    onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.file_manage),
-                    imageVector = Icons.Default.Folder,
-                    onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.about),
-                    imageVector = Icons.Default.Info,
-                    onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(AboutActivity::class.java))
-                    }
-                )
-                ClickableSettingItem(
-                    title = stringResource(R.string.exit),
-                    imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                    onClick = {
-                        onNavigate(PrefClickEvent.ExitApp)
-                    }
-                )
-            }
-
-            Spacer(Modifier.height(120.dp))
         }
     }
 }

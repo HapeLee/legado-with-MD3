@@ -17,7 +17,6 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +34,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.widget.components.AppFloatingActionButton
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
@@ -76,6 +78,45 @@ fun <T> RuleEditSheet(
     fun getCurrentEntity() = fromFields(RuleEditFields(name, rule1, rule2), rule)
 
     AppModalBottomSheet(
+        title = title,
+        startAction = {
+            IconButton(onClick = onDismissRequest) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.cancel)
+                )
+            }
+        },
+        endAction = {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More")
+            }
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { AppText(stringResource(R.string.copy_rule)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
+                    onClick = {
+                        onCopy(getCurrentEntity())
+                        showMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { AppText(stringResource(R.string.paste_rule)) },
+                    leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
+                    onClick = {
+                        scope.launch {
+                            onPaste()?.let { pasted ->
+                                val fields = toFields(pasted)
+                                name = fields.name
+                                rule1 = fields.rule1
+                                rule2 = fields.rule2
+                            }
+                        }
+                        showMenu = false
+                    }
+                )
+            }
+        },
         show = show,
         onDismissRequest = onDismissRequest
     ) {
@@ -83,88 +124,39 @@ fun <T> RuleEditSheet(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 120.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                CenterAlignedTopAppBar(
-                    title = { AppText(title) },
-                    navigationIcon = {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.cancel)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { AppText(stringResource(R.string.copy_rule)) },
-                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
-                                onClick = {
-                                    onCopy(getCurrentEntity())
-                                    showMenu = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { AppText(stringResource(R.string.paste_rule)) },
-                                leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                                onClick = {
-                                    scope.launch {
-                                        onPaste()?.let { pasted ->
-                                            val fields = toFields(pasted)
-                                            name = fields.name
-                                            rule1 = fields.rule1
-                                            rule2 = fields.rule2
-                                        }
-                                    }
-                                    showMenu = false
-                                }
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                AppTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.name),
+                    singleLine = true
                 )
-
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { AppText(stringResource(R.string.name)) },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = rule1,
-                        onValueChange = { rule1 = it },
-                        label = { AppText(label1) }
-                    )
-                    OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
-                        value = rule2,
-                        onValueChange = { rule2 = it },
-                        label = { AppText(label2) },
-                        minLines = 3
-                    )
-                }
+                AppTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = rule1,
+                    onValueChange = { rule1 = it },
+                    label = label1
+                )
+                AppTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = rule2,
+                    onValueChange = { rule2 = it },
+                    label = label2,
+                    minLines = 3
+                )
             }
 
-            FloatingActionButton(
+            AppFloatingActionButton(
                 onClick = { onSave(getCurrentEntity()) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer
+                    .padding(16.dp)
             ) {
-                Icon(Icons.Default.Save, contentDescription = "Save")
+                AppIcon(Icons.Default.Save, contentDescription = "Save")
             }
         }
     }

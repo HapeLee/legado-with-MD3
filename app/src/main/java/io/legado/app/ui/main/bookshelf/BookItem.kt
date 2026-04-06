@@ -36,7 +36,6 @@ import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
-import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toTimeAgo
 
@@ -208,10 +207,12 @@ fun BookGroupCover(
         modifier = modifier
             .aspectRatio(5f / 7f)
             .clip(RoundedCornerShape(4.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .background(LegadoTheme.colorScheme.surfaceContainer)
     ) {
         if (!coverPath.isNullOrBlank()) {
-            Cover(
+            BookCover(
+                name = null,
+                author = null,
                 path = coverPath,
                 modifier = Modifier.fillMaxSize()
             )
@@ -339,8 +340,6 @@ fun BookGroupItemList(
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
         modifier = modifier,
-        subTitle = "${previewBooks.size} 本书籍",
-        desc = "点击打开文件夹",
         onClick = onClick,
         onLongClick = onLongClick
     )

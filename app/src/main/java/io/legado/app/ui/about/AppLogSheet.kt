@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,12 +14,10 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.LogUtils
@@ -82,24 +82,28 @@ fun AppLogSheet(
         }
     }
 
-    showStackTrace?.let { stackTrace ->
-        AlertDialog(
-            onDismissRequest = { showStackTrace = null },
-            title = { AppText("Log") },
-            text = {
-                SelectionContainer {
-                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                        AppText(text = stackTrace, style = LegadoTheme.typography.bodySmall)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showStackTrace = null }) {
-                    AppText(stringResource(android.R.string.ok))
+
+    AppAlertDialog(
+        data = showStackTrace,
+        onDismissRequest = { showStackTrace = null },
+        title = "Log",
+        content = { stackTrace ->
+            SelectionContainer {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    AppText(
+                        text = stackTrace,
+                        style = LegadoTheme.typography.bodySmall
+                    )
                 }
             }
-        )
-    }
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { showStackTrace = null }
+    )
 }
 
 @Composable

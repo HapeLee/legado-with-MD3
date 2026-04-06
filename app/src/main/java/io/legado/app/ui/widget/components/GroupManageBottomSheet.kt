@@ -16,7 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -30,7 +29,6 @@ import io.legado.app.R
 import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SettingItem
-import io.legado.app.ui.widget.components.text.AppText
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,12 +96,12 @@ private fun GroupItem(
             }
         },
         expandContent = {
-            TextField(
+            AppTextField(
                 state = state,
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp),
-                label = { AppText(stringResource(R.string.edit)) },
+                label = stringResource(R.string.edit),
                 contentPadding = PaddingValues(
                     top = 4.dp,
                     bottom = 4.dp,

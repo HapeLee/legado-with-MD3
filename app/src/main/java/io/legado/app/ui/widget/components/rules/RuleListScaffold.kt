@@ -28,6 +28,7 @@ import io.legado.app.R
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.SelectionActions
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.text.AppText
@@ -71,31 +72,19 @@ fun <T> RuleListScaffold(
 ) {
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    if (showDeleteConfirmDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.del_msg)) },
-            confirmButton = {
-                OutlinedButton(
-                    onClick = {
-                        onDeleteSelected(state.selectedIds)
-                        showDeleteConfirmDialog = false
-                    },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    AppText(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) {
-                    AppText(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        show = showDeleteConfirmDialog,
+        onDismissRequest = { showDeleteConfirmDialog = false },
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.del_msg),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onDeleteSelected(state.selectedIds)
+            showDeleteConfirmDialog = false
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteConfirmDialog = false }
+    )
 
     ListScaffold(
         title = title,

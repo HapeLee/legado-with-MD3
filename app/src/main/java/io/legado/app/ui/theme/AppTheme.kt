@@ -120,15 +120,15 @@ fun AppTheme(
                         onPrimaryContainer = miuixColorScheme.onPrimaryContainer,
                         inversePrimary = miuixColorScheme.primaryVariant,
 
-                        secondary = miuixColorScheme.primary.copy(alpha = 0.5f),
-                        onSecondary = miuixColorScheme.onPrimary.copy(alpha = 0.5f),
-                        secondaryContainer = miuixColorScheme.primaryContainer.copy(alpha = 0.5f),
-                        onSecondaryContainer = miuixColorScheme.onPrimaryContainer.copy(alpha = 0.5f),
+                        secondary = miuixColorScheme.secondary,
+                        onSecondary = miuixColorScheme.onSecondary,
+                        secondaryContainer = miuixColorScheme.secondaryContainer,
+                        onSecondaryContainer = miuixColorScheme.onSecondaryContainer,
 
-                        tertiary = miuixColorScheme.secondary,
-                        onTertiary = miuixColorScheme.onSecondary,
-                        tertiaryContainer = miuixColorScheme.secondaryContainer,
-                        onTertiaryContainer = miuixColorScheme.onSecondaryContainer,
+                        tertiary = miuixColorScheme.primary,
+                        onTertiary = miuixColorScheme.onPrimary,
+                        tertiaryContainer = miuixColorScheme.primaryContainer,
+                        onTertiaryContainer = miuixColorScheme.primaryVariant,
 
                         // ================= 4. 背景与表面 (Background & Surface) =================
                         background = miuixColorScheme.background,

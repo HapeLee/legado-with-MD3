@@ -41,6 +41,7 @@ import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.theme.LegadoTheme
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
@@ -91,7 +92,7 @@ fun BookCover(
             .clip(RoundedCornerShape(4.dp))
             .then(
                 if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                    Modifier.background(MaterialTheme.colorScheme.surfaceContainer)
+                    Modifier.background(LegadoTheme.colorScheme.surfaceContainer)
                 } else Modifier
             )
     ) {
@@ -145,7 +146,7 @@ fun BookCover(
             Icon(
                 Icons.Default.Book,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = LegadoTheme.colorScheme.secondary,
                 modifier = Modifier
                     .size(iconSizeDp)
                     .align(Alignment.Center)

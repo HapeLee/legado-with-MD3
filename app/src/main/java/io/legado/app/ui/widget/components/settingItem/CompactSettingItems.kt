@@ -32,8 +32,8 @@ import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.extra.SuperSwitch
-import top.yukonga.miuix.kmp.extra.WindowDropdown
+import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -53,7 +53,7 @@ fun CompactDropdownSettingItem(
         val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
         val spinnerItems = displayEntries.toList()
 
-        WindowDropdown(
+        WindowDropdownPreference(
             title = title,
             summary = description,
             items = spinnerItems,
@@ -225,7 +225,7 @@ fun CompactSwitchSettingItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        SuperSwitch(
+        SwitchPreference(
             title = title,
             summary = description,
             checked = checked,

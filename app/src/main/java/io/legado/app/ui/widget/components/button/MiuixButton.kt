@@ -11,7 +11,10 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.LocalContentColor
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Button as MiuixButton
+import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @Composable
 fun MiuixIconButton(
@@ -52,6 +55,44 @@ fun MiuixToggleButton(
             imageVector = if (checked) iconChecked else iconUnchecked,
             contentDescription = contentDescription,
             tint = if (checked) checkedTint else uncheckedTint
+        )
+    }
+}
+
+@Composable
+fun MiuixPrimaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    text: String
+) {
+    MiuixButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = MiuixButtonDefaults.buttonColorsPrimary()
+    ) {
+        MiuixText(
+            text = text
+        )
+    }
+}
+
+@Composable
+fun MiuixSecondaryButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    text: String
+) {
+    MiuixButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = MiuixButtonDefaults.buttonColors()
+    ) {
+        MiuixText(
+            text = text
         )
     }
 }

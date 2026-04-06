@@ -55,7 +55,9 @@ import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.rss.subscription.RuleSubActivity
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.SourceIcon
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
@@ -135,12 +137,10 @@ fun RssScreen(
                     context.startActivity<RssSourceActivity>()
                     dismiss()
                 },
-                leadingIcon = { MenuItemIcon(Icons.Default.Settings) },
                 text = "订阅源管理"
             )
             PillDivider()
             RoundDropdownMenuItem(
-                leadingIcon = { MenuItemIcon(Icons.Default.Group) },
                 text = stringResource(R.string.all),
                 onClick = {
                     viewModel.setGroup("")
@@ -149,7 +149,6 @@ fun RssScreen(
             )
             uiState.groups.forEach { group ->
                 RoundDropdownMenuItem(
-                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Outlined.Label) },
                     text = group,
                     onClick = {
                         viewModel.setGroup(group)
@@ -162,10 +161,8 @@ fun RssScreen(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 72.dp),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 12.dp,
-                end = 12.dp,
-                top = paddingValues.calculateTopPadding() + 8.dp,
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
                 bottom = 120.dp
             ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -186,28 +183,18 @@ fun RssScreen(
         }
     }
 
-    sourceToDelete?.let { source ->
-        AlertDialog(
-            onDismissRequest = { sourceToDelete = null },
-            title = { AppText(stringResource(R.string.draw)) },
-            text = { AppText(stringResource(R.string.sure_del) + "\n" + source.sourceName) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.del(source)
-                        sourceToDelete = null
-                    }
-                ) {
-                    AppText(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { sourceToDelete = null }) {
-                    AppText(stringResource(R.string.no))
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = sourceToDelete,
+        onDismissRequest = { sourceToDelete = null },
+        title = stringResource(R.string.draw),
+        confirmText = stringResource(R.string.yes),
+        onConfirm = { source ->
+            viewModel.del(source)
+            sourceToDelete = null
+        },
+        dismissText = stringResource(R.string.no),
+        onDismiss = { sourceToDelete = null }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -12,7 +12,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.SpinnerEntry
-import top.yukonga.miuix.kmp.extra.SuperSpinner
+import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
 
 @Composable
 fun DropdownListSettingItem(
@@ -32,7 +32,7 @@ fun DropdownListSettingItem(
             SpinnerEntry(title = display)
         }
 
-        SuperSpinner(
+        OverlaySpinnerPreference(
             title = title,
             summary = description,
             items = spinnerItems,

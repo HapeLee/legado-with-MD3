@@ -3,14 +3,13 @@ package io.legado.app.ui.replace
 import android.content.ClipData
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,19 +19,14 @@ import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,12 +49,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -78,8 +76,6 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 )
 @Composable
 fun ReplaceRuleScreen(
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     viewModel: ReplaceRuleViewModel = koinViewModel(),
     onBackClick: () -> Unit,
     onNavigateToEdit: (ReplaceEditRoute) -> Unit,
@@ -147,16 +143,15 @@ fun ReplaceRuleScreen(
         }
     )
 
-    if (showUrlInput) {
-        SourceInputDialog(
-            title = stringResource(R.string.import_on_line),
-            onDismissRequest = { showUrlInput = false },
-            onConfirm = {
-                showUrlInput = false
-                viewModel.importSource(it)
-            }
-        )
-    }
+    SourceInputDialog(
+        show = showUrlInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showUrlInput = false },
+        onConfirm = {
+            showUrlInput = false
+            viewModel.importSource(it)
+        }
+    )
 
     FilePickerSheet(
         show = showImportSheet,
@@ -262,25 +257,18 @@ fun ReplaceRuleScreen(
     )
 
 
-    showDeleteRuleDialog?.let { rule ->
-        AlertDialog(
-            onDismissRequest = { showDeleteRuleDialog = null },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.del_msg)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    viewModel.delete(rule); showDeleteRuleDialog = null
-                }) { AppText(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    AppText(
-                        stringResource(R.string.cancel)
-                    )
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = showDeleteRuleDialog,
+        onDismissRequest = { showDeleteRuleDialog = null },
+        title = stringResource(R.string.delete),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { rule ->
+            viewModel.delete(rule)
+            showDeleteRuleDialog = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteRuleDialog = null }
+    )
 
     RuleListScaffold(
         title = "替换规则",
@@ -334,6 +322,8 @@ fun ReplaceRuleScreen(
         bottomContent = {
             if (tabItems.size > 1) {
                 AppTabRow(
+                    modifier = Modifier
+                        .adaptiveHorizontalPadding(),
                     tabTitles = tabItems,
                     selectedTabIndex = selectedTabIndex,
                     onTabSelected = { index ->
@@ -344,39 +334,24 @@ fun ReplaceRuleScreen(
             }
         },
         floatingActionButton = {
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { AppText("Localized description") } },
-                state = rememberTooltipState(),
+            AppFloatingActionButton(
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = !inSelectionMode,
+                    alignment = Alignment.BottomEnd,
+                ),
+                onClick = {
+                    onNavigateToEdit(ReplaceEditRoute(id = -1))
+                },
+                tooltipText = "Localized description"
             ) {
-                with(sharedTransitionScope) {
-                    FloatingActionButton(
-                        modifier = Modifier
-                            .animateFloatingActionButton(
-                                visible = !inSelectionMode,
-                                alignment = Alignment.BottomEnd,
-                            )
-                            .sharedBounds(
-                                sharedContentState = rememberSharedContentState(key = "fab_add"),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-                            ),
-                        onClick = {
-                            onNavigateToEdit(ReplaceEditRoute(id = -1))
-                        }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Rule")
-                    }
-                }
+                AppIcon(Icons.Default.Add, contentDescription = "Add Rule")
             }
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() },
-                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
+                onClick = { showImportSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
                 text = "分组管理",
@@ -401,7 +376,7 @@ fun ReplaceRuleScreen(
                     viewModel.setSortMode("name_asc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("非时间排序模式下将禁用拖动")
+                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
                     }
                 }
             )
@@ -411,7 +386,7 @@ fun ReplaceRuleScreen(
                     viewModel.setSortMode("name_desc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("非时间排序模式下将禁用拖动")
+                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
                     }
                 }
             )
@@ -425,59 +400,51 @@ fun ReplaceRuleScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 120.dp
+                contentPadding = adaptiveContentPadding(
+                    top = padding.calculateTopPadding(),
+                    bottom = 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(filteredRules, key = { it.id }) { ui ->
-                    with(sharedTransitionScope) {
-                        ReorderableSelectionItem(
-                            state = reorderableState,
-                            key = ui.id,
-                            title = ui.name,
-                            isEnabled = ui.isEnabled,
-                            isSelected = selectedIds.contains(ui.id),
-                            inSelectionMode = inSelectionMode,
-                            canReorder = canReorder,
-                            onToggleSelection = {
-                                viewModel.toggleSelection(ui.id)
-                            },
-                            onEnabledChange = { enabled ->
-                                viewModel.update(ui.rule.copy(isEnabled = enabled))
-                            },
-                            onClickEdit = {
-                                onNavigateToEdit(
-                                    ReplaceEditRoute(
-                                        id = ui.id,
-                                        pattern = ui.rule.pattern
-                                    )
+                    ReorderableSelectionItem(
+                        state = reorderableState,
+                        key = ui.id,
+                        title = ui.name,
+                        isEnabled = ui.isEnabled,
+                        isSelected = selectedIds.contains(ui.id),
+                        inSelectionMode = inSelectionMode,
+                        canReorder = canReorder,
+                        onToggleSelection = {
+                            viewModel.toggleSelection(ui.id)
+                        },
+                        onEnabledChange = { enabled ->
+                            viewModel.update(ui.rule.copy(isEnabled = enabled))
+                        },
+                        onClickEdit = {
+                            onNavigateToEdit(
+                                ReplaceEditRoute(
+                                    id = ui.id,
+                                    pattern = ui.rule.pattern
                                 )
-                            },
-                            modifier = Modifier
-                                .sharedBounds(
-                                    sharedContentState = rememberSharedContentState(key = "rule_${ui.id}"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
-                                    //clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(12.dp))
-                                ),
-                            dropdownContent = { dismiss ->
-                                RoundDropdownMenuItem(
-                                    text = "移至顶部",
-                                    onClick = { viewModel.toTop(ui.rule); dismiss() }
-                                )
-                                RoundDropdownMenuItem(
-                                    text = "移至底部",
-                                    onClick = { viewModel.toBottom(ui.rule); dismiss() }
-                                )
-                                RoundDropdownMenuItem(
-                                    text = "删除",
-                                    onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
-                                )
-                            }
-                        )
-                    }
+                            )
+                        },
+                        modifier = Modifier,
+                        dropdownContent = { dismiss ->
+                            RoundDropdownMenuItem(
+                                text = "移至顶部",
+                                onClick = { viewModel.toTop(ui.rule); dismiss() }
+                            )
+                            RoundDropdownMenuItem(
+                                text = "移至底部",
+                                onClick = { viewModel.toBottom(ui.rule); dismiss() }
+                            )
+                            RoundDropdownMenuItem(
+                                text = "删除",
+                                onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
+                            )
+                        }
+                    )
                 }
             }
             if (inSelectionMode) {
@@ -496,3 +463,4 @@ fun ReplaceRuleScreen(
         }
     }
 }
+

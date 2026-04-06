@@ -83,6 +83,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionActions
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -154,51 +155,39 @@ fun RemoteBookScreen(
             }
         }
 
-    dialogState?.let { state ->
-        when (state) {
-            is RemoteBookDialog.DownloadArchive -> {
-                AlertDialog(
-                    onDismissRequest = { dialogState = null },
-                    title = { AppText(stringResource(R.string.draw)) },
-                    text = { AppText(stringResource(R.string.archive_not_found)) },
-                    confirmButton = {
-                        OutlinedButton(onClick = {
-                            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
-                            dialogState = null
-                        }) {
-                            AppText(stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { dialogState = null }) {
-                            AppText(stringResource(android.R.string.cancel))
-                        }
-                    }
-                )
-            }
 
-            is RemoteBookDialog.ReImport -> {
-                AlertDialog(
-                    onDismissRequest = { dialogState = null },
-                    title = { AppText("是否重新加入书架？") },
-                    text = { AppText("将会覆盖书籍") },
-                    confirmButton = {
-                        OutlinedButton(onClick = {
-                            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
-                            dialogState = null
-                        }) {
-                            AppText(stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { dialogState = null }) {
-                            AppText(stringResource(android.R.string.cancel))
-                        }
-                    }
-                )
-            }
-        }
-    }
+
+    AppAlertDialog(
+        data = dialogState as? RemoteBookDialog.DownloadArchive,
+        onDismissRequest = { dialogState = null },
+        title = stringResource(R.string.draw),
+        content = {
+            AppText(stringResource(R.string.archive_not_found))
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { state ->
+            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
+            dialogState = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { dialogState = null }
+    )
+
+    AppAlertDialog(
+        data = dialogState as? RemoteBookDialog.ReImport,
+        onDismissRequest = { dialogState = null },
+        title = "是否重新加入书架？",
+        content = {
+            AppText("将会覆盖书籍")
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { state ->
+            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
+            dialogState = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { dialogState = null }
+    )
 
     AppModalBottomSheet(
         show = showSheet != null,
@@ -378,7 +367,7 @@ private fun ServersSheetContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -430,16 +419,16 @@ private fun ServerItem(
     onDelete: (() -> Unit)? = null
 ) {
     val containerColor = if (isSelected) {
-        MaterialTheme.colorScheme.secondaryContainer
+        LegadoTheme.colorScheme.secondaryContainer
     } else {
-        MaterialTheme.colorScheme.surface
+        LegadoTheme.colorScheme.surface
     }
 
     Card(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(vertical = 4.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = containerColor
@@ -466,7 +455,7 @@ private fun ServerItem(
                     AppText(
                         text = it,
                         style = LegadoTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -512,7 +501,6 @@ private fun ServerConfigSheetContent(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         AppText(
@@ -628,9 +616,9 @@ private fun PathNavigationBar(
                         style = LegadoTheme.typography.labelSmall,
                         fontWeight = if (isLast) FontWeight.SemiBold else FontWeight.Medium,
                         color = if (isLast)
-                            MaterialTheme.colorScheme.primary
+                            LegadoTheme.colorScheme.primary
                         else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
+                            LegadoTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .clip(MaterialTheme.shapes.small)
                             .then(
@@ -646,7 +634,7 @@ private fun PathNavigationBar(
                             imageVector = Icons.Default.ChevronRight,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
                 }

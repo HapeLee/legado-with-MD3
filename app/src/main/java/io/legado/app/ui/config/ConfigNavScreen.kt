@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -38,7 +38,7 @@ fun ConfigNavScreen(
                 title = stringResource(R.string.setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = onBackClick)
                 }
             )
         }

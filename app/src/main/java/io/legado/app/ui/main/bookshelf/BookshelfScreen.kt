@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.ImportExport
@@ -74,6 +73,7 @@ import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -299,8 +299,7 @@ fun BookshelfScreen(
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_bookshelf),
-                onClick = { showImportSheet = true; dismiss() },
-                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
+                onClick = { showImportSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.log),
@@ -404,11 +403,9 @@ fun BookshelfScreen(
                     FastScrollLazyVerticalGrid(
                         columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
+                        contentPadding = adaptiveContentPadding(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = 120.dp,
-                            start = if (bookshelfLayoutMode != 0) 12.dp else 0.dp,
-                            end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
+                            bottom = 120.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
                         horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
@@ -499,16 +496,15 @@ fun BookshelfScreen(
         onDismissRequest = { showGroupManageSheet = false }
     )
 
-    if (showAddUrlDialog) {
-        SourceInputDialog(
-            title = stringResource(R.string.add_book_url),
-            onDismissRequest = { showAddUrlDialog = false },
-            onConfirm = { url ->
-                viewModel.addBookByUrl(url)
-                showAddUrlDialog = false
-            }
-        )
-    }
+    SourceInputDialog(
+        show = showAddUrlDialog,
+        title = stringResource(R.string.add_book_url),
+        onDismissRequest = { showAddUrlDialog = false },
+        onConfirm = { url ->
+            viewModel.addBookByUrl(url)
+            showAddUrlDialog = false
+        }
+    )
 
     FilePickerSheet(
         show = showImportSheet,
@@ -583,11 +579,10 @@ fun BookshelfPage(
     FastScrollLazyVerticalGrid(
         columns = GridCells.Fixed(columns.coerceAtLeast(1)),
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
+        contentPadding = adaptiveContentPadding(
             top = paddingValues.calculateTopPadding(),
             bottom = 120.dp,
-            start = if (bookshelfLayoutMode != 0) 12.dp else 0.dp,
-            end = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
+            horizontal = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
         ),
         verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
         horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),

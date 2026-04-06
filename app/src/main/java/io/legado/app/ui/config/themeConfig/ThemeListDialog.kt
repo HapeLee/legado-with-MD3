@@ -37,6 +37,7 @@ import io.legado.app.R
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -158,27 +159,17 @@ fun ThemeListDialog(
         }
     }
 
-    deleteIndex?.let { index ->
-        AlertDialog(
-            onDismissRequest = { deleteIndex = null },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.sure_del)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        OldThemeConfig.delConfig(index)
-                        listVersion++
-                        deleteIndex = null
-                    }
-                ) {
-                    AppText(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { deleteIndex = null }) {
-                    AppText(stringResource(android.R.string.cancel))
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = deleteIndex,
+        onDismissRequest = { deleteIndex = null },
+        title = stringResource(R.string.delete),
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { index ->
+            OldThemeConfig.delConfig(index)
+            listVersion++
+            deleteIndex = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { deleteIndex = null }
+    )
 }

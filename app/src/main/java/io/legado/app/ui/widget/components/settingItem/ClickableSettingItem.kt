@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
-import top.yukonga.miuix.kmp.extra.SuperArrow
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 
 @Composable
 fun ClickableSettingItem(
@@ -25,7 +25,7 @@ fun ClickableSettingItem(
 ) {
     val composeEngine = LegadoTheme.composeEngine
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        SuperArrow(
+        ArrowPreference(
             title = title,
             summary = description,
             insideMargin = BasicComponentDefaults.InsideMargin,

@@ -2,6 +2,8 @@ package io.legado.app.ui.widget.components.button
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -22,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,14 +35,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
+import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 
 enum class TopBarButtonVariant {
     Filled, Outlined, Icon
@@ -105,19 +113,18 @@ fun TopBarButton(
 }
 
 @Composable
-fun TopbarNavigationButton(
+fun TopBarNavigationButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     imageVector: ImageVector = AppIcons.Back,
-    contentDescription: String? = "返回",
+    contentDescription: String? = stringResource(id = R.string.back),
     style: TopBarButtonVariant = TopBarButtonVariant.Filled
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         MiuixIconButton(
             onClick = onClick,
             imageVector = imageVector,
-            contentDescription = contentDescription,
-            modifier = modifier.padding(horizontal = 16.dp)
+            contentDescription = contentDescription
         )
     } else {
         TopBarButton(
@@ -128,6 +135,27 @@ fun TopbarNavigationButton(
             style = style
         )
     }
+}
+
+@Deprecated(
+    message = "Use TopBarNavigationButton for consistent TopBar naming.",
+    replaceWith = ReplaceWith("TopBarNavigationButton(onClick, modifier, imageVector, contentDescription, style)")
+)
+@Composable
+fun TopbarNavigationButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    imageVector: ImageVector = AppIcons.Back,
+    contentDescription: String? = stringResource(id = R.string.back),
+    style: TopBarButtonVariant = TopBarButtonVariant.Filled
+) {
+    TopBarNavigationButton(
+        onClick = onClick,
+        modifier = modifier,
+        imageVector = imageVector,
+        contentDescription = contentDescription,
+        style = style
+    )
 }
 
 @Composable
@@ -143,7 +171,7 @@ fun TopBarActionButton(
             onClick = onClick,
             imageVector = imageVector,
             contentDescription = contentDescription,
-            modifier = modifier.padding(end = 8.dp),
+            modifier = modifier,
         )
     } else {
         if (enableProgressive) {
@@ -186,12 +214,52 @@ fun TopBarAnimatedActionButton(
         }
     }
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-        MiuixToggleButton(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            iconChecked = iconChecked,
-            iconUnchecked = iconUnchecked
+
+        val containerColor by animateColorAsState(
+            targetValue = if (checked) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainerHigh,
+            animationSpec = tween(150),
+            label = "MiuixActionButtonContainer"
         )
+
+        val contentColor by animateColorAsState(
+            targetValue = if (checked) MiuixTheme.colorScheme.onPrimaryContainer else MiuixTheme.colorScheme.onSurface,
+            animationSpec = tween(150),
+            label = "MiuixActionButtonContainer"
+        )
+
+        MiuixIconButton(
+            onClick = {
+                lastCheckedState = !checked
+                onCheckedChange(!checked)
+                showText = true
+            },
+            backgroundColor = containerColor
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                MiuixIcon(
+                    tint = contentColor,
+                    imageVector = if (checked) iconChecked else iconUnchecked,
+                    contentDescription = null
+                )
+
+                AnimatedVisibility(
+                    visible = showText
+                ) {
+                    MiuixText(
+                        text = if (lastCheckedState) activeText else inactiveText,
+                        color = contentColor,
+                        style = LegadoTheme.typography.labelMedium,
+                        modifier = Modifier.padding(start = 8.dp),
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+            }
+        }
     } else {
         ToggleButton(
             modifier = modifier.height(36.dp),
@@ -222,7 +290,7 @@ fun TopBarAnimatedActionButton(
                 AnimatedVisibility(
                     visible = showText
                 ) {
-                    AppText(
+                    Text(
                         text = if (lastCheckedState) activeText else inactiveText,
                         style = LegadoTheme.typography.labelMedium,
                         modifier = Modifier.padding(start = 8.dp),

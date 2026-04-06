@@ -27,10 +27,12 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.CoroutineScope
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchBarSection(
+    modifier: Modifier = Modifier,
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String = "搜索...",
@@ -69,21 +71,25 @@ fun SearchBarSection(
 
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
+    val modifier = modifier
+        .fillMaxWidth()
+        .then(
+            if (isMiuix) modifier.padding(vertical = 4.dp)
+            else modifier
+        )
+
     val searchTextField = @Composable {
         AppTextField(
             state = textFieldState,
-            modifier = Modifier
-                .fillMaxWidth(),
+            modifier = modifier,
             placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
             lineLimits = TextFieldLineLimits.SingleLine,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-            )
+            backgroundColor = if (!isMiuix) {
+                Color.Transparent
+            } else {
+                MiuixTheme.colorScheme.surfaceContainer
+            }
         )
     }
 
@@ -93,7 +99,7 @@ fun SearchBarSection(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                .padding(bottom = 4.dp),
             shape = RoundedCornerShape(32.dp),
             color = backgroundColor
         ) {

@@ -21,10 +21,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.text.AppText
 
+/**
+ * 基础版：由 Boolean 控制显示/隐藏
+ */
 @Composable
 fun TextListInputDialog(
+    show: Boolean,
     title: String,
     hint: String,
     initialValue: String = "",
@@ -32,17 +38,18 @@ fun TextListInputDialog(
     onDismissRequest: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
-    var text by remember { mutableStateOf(initialValue) }
+    var text by remember(show) { mutableStateOf(initialValue) }
 
-    AlertDialog(
+    AppAlertDialog(
+        show = show,
         onDismissRequest = onDismissRequest,
-        title = { AppText(title) },
-        text = {
+        title = title,
+        content = {
             Column {
-                OutlinedTextField(
+                AppTextField(
                     value = text,
                     onValueChange = { text = it },
-                    label = { AppText(hint) },
+                    label = hint,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -68,17 +75,36 @@ fun TextListInputDialog(
                 }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(text) }
-            ) {
-                AppText(stringResource(android.R.string.ok))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                AppText(stringResource(android.R.string.cancel))
-            }
-        }
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { onConfirm(text) },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = onDismissRequest
     )
+}
+
+@Composable
+fun <T> TextListInputDialog(
+    data: T?,
+    title: String,
+    hint: String,
+    initialValue: (T) -> String,
+    suggestions: List<String> = emptyList(),
+    onDismissRequest: () -> Unit,
+    onConfirm: (T, String) -> Unit
+) {
+    var cachedData by remember { mutableStateOf(data) }
+    if (data != null) cachedData = data
+
+    val currentData = cachedData
+    if (currentData != null) {
+        TextListInputDialog(
+            show = data != null,
+            title = title,
+            hint = hint,
+            initialValue = initialValue(currentData),
+            suggestions = suggestions,
+            onDismissRequest = onDismissRequest,
+            onConfirm = { text -> onConfirm(currentData, text) }
+        )
+    }
 }

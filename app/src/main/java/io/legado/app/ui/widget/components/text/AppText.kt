@@ -40,10 +40,8 @@ fun AppText(
 ) {
     val baseStyle = style ?: LegadoTheme.typography.bodyMedium
 
-    // 2. 获取默认文本色：直接拿你自己封装的 LegadoTheme.colorScheme.onSurface
     val defaultTextColor = LegadoTheme.colorScheme.onSurface
 
-    // 3. 颜色降级逻辑：传入的 color -> style 中的 color -> 主题默认色
     val finalTextColor = color.takeOrElse {
         baseStyle.color.takeOrElse { defaultTextColor }
     }

@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
@@ -47,7 +47,7 @@ fun ReadConfigScreen(
                 title = stringResource(R.string.read_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = onBackClick)
                 }
             )
         }

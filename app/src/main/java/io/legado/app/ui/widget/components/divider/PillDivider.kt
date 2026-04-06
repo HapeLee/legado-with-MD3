@@ -29,8 +29,9 @@ fun PillDivider(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(vertical = 2.dp)
                 .height(4.dp)
-                .background(MiuixTheme.colorScheme.secondaryContainer)
+                .background(MiuixTheme.colorScheme.dividerLine)
         )
     } else {
         Box(

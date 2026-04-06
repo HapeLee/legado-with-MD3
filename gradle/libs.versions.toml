@@ -17,7 +17,7 @@ kotlinxSerialization = "1.10.0"
 kotlinxCoroutinesAndroid = "1.10.2"
 kotlinxSerializationJson = "1.10.0"
 ksp = "2.3.6"
-agp = "8.13.2"
+agp = "9.1.0"
 appcompat = "1.7.1"
 colorpicker = "1.1.0"
 colorpicker-compose = "1.1.3"
@@ -84,7 +84,7 @@ biometricKtx = "1.1.0"
 reorderable = "3.0.0"
 haze = "1.7.2"
 timber = "5.0.1"
-miuix = "0.8.8"
+miuix = "0.9.0"
 backdrop = "1.0.6"
 capsule = "2.1.3"
 [libraries]
@@ -128,6 +128,8 @@ androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayo
 
 haze-core = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 haze-materials = { module = "dev.chrisbanes.haze:haze-materials", version.ref = "haze" }
+kmp-miuix-preference = { module = "top.yukonga.miuix.kmp:miuix-preference" }
+kmp-miuix-ui = { module = "top.yukonga.miuix.kmp:miuix-ui" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-core = { module = "io.insert-koin:koin-core" }
 koin-android = { group = "io.insert-koin", name = "koin-android" }
@@ -173,10 +175,8 @@ markwon-image-glide = { module = "io.noties.markwon:image-glide", version.ref = 
 markwon-ext-tables = { module = "io.noties.markwon:ext-tables", version.ref = "markwon" }
 markwon-html = { module = "io.noties.markwon:html", version.ref = "markwon" }
 
-
 nanohttpd-nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanoHttpd" }
 nanohttpd-websocket = { module = "org.nanohttpd:nanohttpd-websocket", version.ref = "nanoHttpd" }
-
 
 navigation-compose = { module = "androidx.navigation:navigation-compose" }
 preference-preference = { module = "androidx.preference:preference", version.ref = "preference" }
@@ -247,8 +247,12 @@ reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reo
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 # miuix
-miuix = { group = "top.yukonga.miuix.kmp", name = "miuix-android", version.ref = "miuix" }
-miuix-icons = { group = "top.yukonga.miuix.kmp", name = "miuix-icons-android", version.ref = "miuix" }
+miuix-core = { module = "top.yukonga.miuix.kmp:miuix-core", version.ref = "miuix" }
+miuix-blur-android = { module = "top.yukonga.miuix.kmp:miuix-blur-android", version.ref = "miuix" }
+miuix-icons-android = { module = "top.yukonga.miuix.kmp:miuix-icons-android", version.ref = "miuix" }
+miuix-preference-android = { module = "top.yukonga.miuix.kmp:miuix-preference-android", version.ref = "miuix" }
+miuix-shapes-android = { module = "top.yukonga.miuix.kmp:miuix-shapes-android", version.ref = "miuix" }
+miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.ref = "miuix" }
 
 capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }

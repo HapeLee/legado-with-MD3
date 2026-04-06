@@ -74,14 +74,17 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.AppIconButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
@@ -160,7 +163,7 @@ fun ReadRecordScreen(
                         )
                     },
                     navigationIcon = {
-                        TopbarNavigationButton(onClick = onBackClick)
+                        TopBarNavigationButton(onClick = onBackClick)
                     },
                     actions = {
                         AppIconButton(onClick = {
@@ -192,7 +195,10 @@ fun ReadRecordScreen(
                     scrollBehavior = scrollBehavior
                 )
 
-                AnimatedVisibility(visible = showSearch) {
+                AnimatedVisibility(
+                    modifier = Modifier.adaptiveHorizontalPadding(),
+                    visible = showSearch
+                ) {
                     SearchBarSection(
                         query = state.searchKey ?: "",
                         onQueryChange = { viewModel.setSearchKey(it) }
@@ -264,57 +270,34 @@ fun ReadRecordScreen(
         }
     }
 
-    if (pendingDeleteAction != null) {
-        var skipDeleteConfirmTemp by remember { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = {
-                pendingDeleteAction = null
-            },
-            title = { AppText("确认删除") },
-            text = {
-                Column {
-                    AppText("确定要删除这条记录吗？")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.small)
-                            .background(
-                                color = if (skipDeleteConfirmTemp) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
-                                shape = MaterialTheme.shapes.small
-                            )
-                            .clickable { skipDeleteConfirmTemp = !skipDeleteConfirmTemp }
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(checked = skipDeleteConfirmTemp, onCheckedChange = null)
-                        AppText(
-                            text = "不再提示",
-                            modifier = Modifier.padding(start = 8.dp),
-                            style = LegadoTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                AlertButton(
-                    onClick = {
-                        pendingDeleteAction?.invoke()
-                        pendingDeleteAction = null
-                        skipDeleteConfirm = skipDeleteConfirmTemp
-                    },
-                    text = "删除"
+    var skipDeleteConfirmTemp by remember(pendingDeleteAction != null) { mutableStateOf(false) }
+
+    AppAlertDialog(
+        data = pendingDeleteAction,
+        onDismissRequest = { pendingDeleteAction = null },
+        title = "确认删除",
+        content = { _ ->
+            Column {
+                AppText("确定要删除这条记录吗？")
+                Spacer(modifier = Modifier.height(8.dp))
+                CheckboxItem(
+                    title = "不再提示",
+                    checked = skipDeleteConfirmTemp,
+                    onCheckedChange = { skipDeleteConfirmTemp = it }
                 )
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingDeleteAction = null
-                }) {
-                    AppText("取消")
-                }
             }
-        )
-    }
+        },
+        confirmText = "删除",
+        onConfirm = { action ->
+            action.invoke()
+            pendingDeleteAction = null
+            skipDeleteConfirm = skipDeleteConfirmTemp
+        },
+        dismissText = "取消",
+        onDismiss = {
+            pendingDeleteAction = null
+        }
+    )
 
     AppModalBottomSheet(
         show = showCalendar,
@@ -335,65 +318,52 @@ fun ReadRecordScreen(
         )
     }
 
-
-    mergeDialogData?.let { (targetRecord, candidates) ->
-
-        var selectedAuthors by remember(targetRecord, candidates) {
-            mutableStateOf(candidates.map { it.bookAuthor }.toSet())
-        }
-
-        AlertDialog(
-            onDismissRequest = { mergeDialogData = null },
-            title = { AppText("合并阅读记录") },
-            text = {
-                Column {
-                    AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    candidates.forEach { candidate ->
-                        val author = candidate.bookAuthor.ifBlank { "未知作者" }
-                        val isChecked = selectedAuthors.contains(candidate.bookAuthor)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    selectedAuthors =
-                                        if (isChecked) selectedAuthors - candidate.bookAuthor
-                                        else selectedAuthors + candidate.bookAuthor
-                                }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(checked = isChecked, onCheckedChange = null)
-                            AppText(
-                                text = "$author（${formatDuring(candidate.readTime)}）",
-                                modifier = Modifier.padding(start = 8.dp),
-                                style = LegadoTheme.typography.bodyMedium
-                            )
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.mergeReadRecords(
-                            targetRecord,
-                            candidates.filter { selectedAuthors.contains(it.bookAuthor) }
-                        )
-                        mergeDialogData = null
-                    }
-                ) {
-                    AppText("合并")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mergeDialogData = null }) {
-                    AppText("取消")
-                }
-            }
+    var selectedAuthors by remember(mergeDialogData != null) {
+        mutableStateOf(
+            mergeDialogData?.let { (_, candidates) ->
+                candidates.map { it.bookAuthor }.toSet()
+            } ?: emptySet()
         )
     }
+
+    AppAlertDialog(
+        data = mergeDialogData,
+        onDismissRequest = { mergeDialogData = null },
+        title = "合并阅读记录",
+        content = { (targetRecord, candidates) ->
+            Column {
+                AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                candidates.forEach { candidate ->
+                    val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                    val isChecked = selectedAuthors.contains(candidate.bookAuthor)
+
+                    CheckboxItem(
+                        title = "$author（${formatDuring(candidate.readTime)}）",
+                        checked = isChecked,
+                        onCheckedChange = { checked ->
+                            selectedAuthors = if (checked) {
+                                selectedAuthors + candidate.bookAuthor
+                            } else {
+                                selectedAuthors - candidate.bookAuthor
+                            }
+                        }
+                    )
+                }
+            }
+        },
+        confirmText = "合并",
+        onConfirm = { (targetRecord, candidates) ->
+            viewModel.mergeReadRecords(
+                targetRecord,
+                candidates.filter { selectedAuthors.contains(it.bookAuthor) }
+            )
+            mergeDialogData = null
+        },
+        dismissText = "取消",
+        onDismiss = { mergeDialogData = null }
+    )
 }
 
 @Composable
@@ -590,7 +560,7 @@ fun LazyListScope.renderListByMode(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.error,
+                            background = LegadoTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteDetail(detail) }
                             }
@@ -613,7 +583,7 @@ fun LazyListScope.renderListByMode(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
                             icon = Icons.Default.Delete,
-                            background = MaterialTheme.colorScheme.error,
+                            background = LegadoTheme.colorScheme.error,
                             onSwipe = {
                                 onConfirmDelete { viewModel.deleteSession(session) }
                             }
@@ -635,14 +605,14 @@ fun LazyListScope.renderListByMode(
                     modifier = Modifier.animateItem(),
                     startAction = SwipeAction(
                         icon = Icons.Default.Delete,
-                        background = MaterialTheme.colorScheme.error,
+                        background = LegadoTheme.colorScheme.error,
                         onSwipe = {
                             onConfirmDelete { viewModel.deleteReadRecord(record) }
                         }
                     ),
                     endAction = SwipeAction(
                         icon = Icons.Default.Merge,
-                        background = MaterialTheme.colorScheme.primary,
+                        background = LegadoTheme.colorScheme.primary,
                         onSwipe = {
                             onMergeClick(record)
                         }
@@ -693,7 +663,7 @@ fun LatestReadItem(
             AppText(
                 text = record.bookAuthor.ifBlank { "未知作者" },
                 style = LegadoTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

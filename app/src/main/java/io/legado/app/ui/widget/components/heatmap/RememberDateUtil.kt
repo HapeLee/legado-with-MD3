@@ -6,6 +6,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import io.legado.app.ui.theme.LegadoTheme
 import java.time.LocalDate
 
 /**
@@ -104,8 +105,8 @@ fun rememberHeatmapLevel(
 @Composable
 fun heatmapColorForLevel(
     level: Int,
-    primary: Color = MaterialTheme.colorScheme.primary,
-    emptyColor: Color = MaterialTheme.colorScheme.surfaceVariant
+    primary: Color = LegadoTheme.colorScheme.primary,
+    emptyColor: Color = LegadoTheme.colorScheme.surface
 ): Color {
     return when (level) {
         0 -> emptyColor

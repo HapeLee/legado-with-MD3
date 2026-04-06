@@ -21,7 +21,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.extra.SuperListPopup
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -38,7 +38,7 @@ fun RoundDropdownMenu(
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
     if (isMiuix) {
-        SuperListPopup(
+        OverlayListPopup(
             show = expanded,
             onDismissRequest = onDismissRequest,
             popupModifier = modifier

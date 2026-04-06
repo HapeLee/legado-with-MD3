@@ -1,19 +1,13 @@
 package io.legado.app.ui.main.explore
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,14 +26,12 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,12 +59,15 @@ import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.explore.ExploreKindItem
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -163,7 +158,7 @@ fun ExploreScreen(
             FastScrollLazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
+                contentPadding = adaptiveContentPadding(
                     top = paddingValues.calculateTopPadding(),
                     bottom = 120.dp
                 )
@@ -211,7 +206,7 @@ fun ExploreScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .animateItem()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 rowItems.forEach { (kind, span) ->
@@ -245,54 +240,42 @@ fun ExploreScreen(
                 }
             }
 
-            AnimatedVisibility(
-                visible = stickyHeaderSource != null,
+            TopFloatingStickyItem(
+                item = stickyHeaderSource,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(top = paddingValues.calculateTopPadding() + 4.dp, start = 8.dp),
-                enter = fadeIn() + slideInVertically { -it },
-                exit = fadeOut() + slideOutVertically { -it }
-            ) {
-                var lastSource by remember { mutableStateOf<BookSourcePart?>(null) }
-                stickyHeaderSource?.let { lastSource = it }
-
-                lastSource?.let { item ->
-                    ExploreStickyCard(
-                        item = item,
-                        onClick = {
-                            scope.launch {
-                                val index =
-                                    uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
-                                if (index >= 0) listState.animateScrollToItem(index)
-                            }
-                        },
-                        isMiuix = composeEngine
-                    )
-                }
+                    .padding(top = paddingValues.calculateTopPadding() + 4.dp, start = 8.dp)
+            ) { item ->
+                TextCard(
+                    text = item.bookSourceName,
+                    textStyle = LegadoTheme.typography.labelLarge,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 6.dp,
+                    onClick = {
+                        scope.launch {
+                            val index =
+                                uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
+                            if (index >= 0) listState.animateScrollToItem(index)
+                        }
+                    }
+                )
             }
         }
     }
 
-    sourceToDelete?.let { source ->
-        AlertDialog(
-            onDismissRequest = { sourceToDelete = null },
-            title = { AppText(stringResource(R.string.draw)) },
-            text = { AppText(stringResource(R.string.sure_del) + "\n" + source.bookSourceName) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteSource(source)
-                    sourceToDelete = null
-                }) {
-                    AppText(stringResource(R.string.yes))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { sourceToDelete = null }) {
-                    AppText(stringResource(R.string.no))
-                }
-            }
-        )
-    }
+
+    AppAlertDialog(
+        data = sourceToDelete,
+        onDismissRequest = { sourceToDelete = null },
+        title = stringResource(R.string.sure_del),
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { source ->
+            viewModel.deleteSource(source)
+            sourceToDelete = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { sourceToDelete = null },
+    )
 }
 
 private fun calculateRows(
@@ -369,7 +352,7 @@ fun ExploreSourceHeader(
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(vertical = 4.dp),
         shape = MaterialTheme.shapes.medium,
         containerColor = containerColor
     ) {
@@ -452,18 +435,4 @@ fun ExploreSourceHeader(
     }
 }
 
-@Composable
-fun ExploreStickyCard(
-    item: BookSourcePart,
-    onClick: () -> Unit,
-    isMiuix: Boolean,
-) {
-    TextCard(
-        text = item.bookSourceName,
-        textStyle = LegadoTheme.typography.labelLarge,
-        horizontalPadding = 8.dp,
-        verticalPadding = 6.dp,
-        onClick = onClick
-    )
-}
 

@@ -20,9 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -66,7 +67,7 @@ fun <T> DynamicTopAppBar(
         },
         navigationIcon = {
             if (isSelecting || onBackClick != null) {
-                TopbarNavigationButton(
+                TopBarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
                     imageVector = if (isSelecting) AppIcons.Close else AppIcons.Back,
                     contentDescription = if (isSelecting) "取消选择" else "返回"
@@ -103,6 +104,8 @@ fun <T> DynamicTopAppBar(
         scrollBehavior = scrollBehavior,
         bottomContent = {
             AnimatedVisibility(
+                modifier = Modifier
+                    .adaptiveHorizontalPadding(),
                 visible = state.isSearch && !isSelecting,
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()

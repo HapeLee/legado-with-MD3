@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
-import top.yukonga.miuix.kmp.extra.SuperSwitch
+import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 
 @Composable
@@ -22,7 +22,7 @@ fun SwitchSettingItem(
     val composeEngine = LegadoTheme.composeEngine
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        SuperSwitch(
+        SwitchPreference(
             title = title,
             summary = description,
             checked = checked,

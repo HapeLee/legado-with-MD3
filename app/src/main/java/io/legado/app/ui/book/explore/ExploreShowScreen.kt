@@ -82,7 +82,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.AnimatedTextButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.explore.ExploreKindItem
@@ -296,7 +296,7 @@ fun ExploreShowScreen(
                 ),
                 title = selectedTitle ?: title,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBack)
+                    TopBarNavigationButton(onClick = onBack)
                 },
                 actions = {
                     Row(

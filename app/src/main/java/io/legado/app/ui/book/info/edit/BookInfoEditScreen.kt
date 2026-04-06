@@ -20,16 +20,11 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,11 +41,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.button.TopBarButtonVariant
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
-import io.legado.app.ui.widget.components.cover.Cover
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.cover.BookCover
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.SelectImageContract
@@ -73,13 +71,13 @@ fun BookInfoEditScreen(
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(id = R.string.book_info_edit),
                 navigationIcon = {
-                    TopbarNavigationButton(
+                    TopBarNavigationButton(
                         onClick = onBack,
                         style = TopBarButtonVariant.Outlined
                     )
                 },
                 actions = {
-                    TopbarNavigationButton(
+                    TopBarNavigationButton(
                         onClick = { viewModel.save(onSave) },
                         imageVector = Icons.Default.Save
                     )
@@ -125,11 +123,12 @@ fun BookInfoEditContent(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Cover(
+            BookCover(
+                name = uiState.name,
+                author = uiState.author,
                 path = uiState.coverUrl,
                 modifier = Modifier
                     .width(110.dp)
-                    .height(154.dp)
             )
             Column(
                 modifier = Modifier.weight(1f),
@@ -137,7 +136,7 @@ fun BookInfoEditContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
+                    MediumOutlinedIconButton(
                         onClick = {
                             (context as? BookInfoEditActivity)?.showDialogFragment(
                                 ChangeCoverDialog(
@@ -146,31 +145,16 @@ fun BookInfoEditContent(
                                 )
                             )
                         },
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Icon(
-                            Icons.Default.ImageSearch,
-                            contentDescription = stringResource(id = R.string.default_cover)
-                        )
-                    }
-                    OutlinedButton(
+                        icon = Icons.Default.ImageSearch
+                    )
+                    MediumOutlinedIconButton(
                         onClick = { selectCover.launch() },
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Icon(
-                            Icons.Default.FolderOpen,
-                            contentDescription = stringResource(id = R.string.default_cover)
-                        )
-                    }
-                    OutlinedButton(
+                        icon = Icons.Default.FolderOpen
+                    )
+                    MediumOutlinedIconButton(
                         onClick = { viewModel.resetCover() },
-                        shapes = ButtonDefaults.shapes()
-                    ) {
-                        Icon(
-                            Icons.Default.Replay,
-                            contentDescription = stringResource(id = R.string.default_cover)
-                        )
-                    }
+                        icon = Icons.Default.Replay
+                    )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 BookTypeDropdown(
@@ -188,38 +172,38 @@ fun BookInfoEditContent(
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
+        AppTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            label = { AppText("书名") },
+            label = "书名",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
-            label = { AppText("作者") },
+            label = "作者",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
-            label = { AppText("封面链接") },
+            label = "封面链接",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
-            label = { AppText("简介") },
+            label = "简介",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
-            label = { AppText("备注") },
+            label = "备注",
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -247,11 +231,11 @@ fun BookTypeDropdown(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded }
     ) {
-        OutlinedTextField(
+        AppTextField(
             state = textFieldState,
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
-            label = { AppText("书籍类型") },
+            label = "书籍类型",
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -263,13 +247,13 @@ fun BookTypeDropdown(
                 ),
         )
 
-        ExposedDropdownMenu(
+        RoundDropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             bookTypes.forEach { option ->
-                DropdownMenuItem(
-                    text = { AppText(option) },
+                RoundDropdownMenuItem(
+                    text = option,
                     onClick = {
                         onTypeSelected(option)
                         expanded = false

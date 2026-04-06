@@ -83,8 +83,10 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -131,7 +133,7 @@ fun ThemeConfigScreen(
                 title = stringResource(R.string.theme_setting),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = onBackClick)
                 }
             )
         }
@@ -527,30 +529,25 @@ fun ThemeConfigScreen(
         }
     }
 
-    if (showRestartDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestartDialog = false },
-            title = { AppText(stringResource(R.string.restart_required_message)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    showRestartDialog = false
-                    Handler(Looper.getMainLooper()).postDelayed({
-                        context.restart()
-                    }, 100)
-                }) {
-                    AppText(stringResource(R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showRestartDialog = false
-                    context.toastOnUi(R.string.restart_later_message)
-                }) {
-                    AppText(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
+
+    AppAlertDialog(
+        show = showRestartDialog,
+        onDismissRequest = { showRestartDialog = false },
+        title = stringResource(R.string.restart_required_message),
+        onConfirm = {
+            showRestartDialog = false
+            Handler(Looper.getMainLooper()).postDelayed({
+                context.restart()
+            }, 100)
+        },
+        confirmText = stringResource(R.string.ok),
+        onDismiss = {
+            showRestartDialog = false
+            context.toastOnUi(R.string.restart_later_message)
+        },
+        dismissText = stringResource(R.string.cancel)
+    )
+
 
     manageKey?.let { isDark ->
         BackgroundImageManageSheet(
@@ -595,38 +592,31 @@ fun ThemeConfigScreen(
         onDismissRequest = { showThemeListDialog = false }
     )
 
-    saveThemeKey?.let { key ->
-        AlertDialog(
-            onDismissRequest = { saveThemeKey = null },
-            title = { AppText(stringResource(R.string.theme_name)) },
-            text = {
-                OutlinedTextField(
-                    value = themeName,
-                    onValueChange = { themeName = it },
-                    label = { AppText("name") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        when (key) {
-                            "saveDayTheme" -> OldThemeConfig.saveDayTheme(context, themeName)
-                            "saveNightTheme" -> OldThemeConfig.saveNightTheme(context, themeName)
-                        }
-                        saveThemeKey = null
-                    }
-                ) {
-                    AppText(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { saveThemeKey = null }) {
-                    AppText(stringResource(android.R.string.cancel))
-                }
+    AppAlertDialog(
+        data = saveThemeKey,
+        onDismissRequest = { saveThemeKey = null },
+        title = stringResource(R.string.theme_name),
+        content = {
+            AppTextField(
+                value = themeName,
+                onValueChange = { themeName = it },
+                label = "name",
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = LegadoTheme.colorScheme.surface
+            )
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { key ->
+            when (key) {
+                "saveDayTheme" -> OldThemeConfig.saveDayTheme(context, themeName)
+                "saveNightTheme" -> OldThemeConfig.saveNightTheme(context, themeName)
             }
-        )
-    }
+            saveThemeKey = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { saveThemeKey = null }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

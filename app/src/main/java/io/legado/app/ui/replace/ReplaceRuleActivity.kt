@@ -1,16 +1,23 @@
-package io.legado.app.ui.replace
+﻿package io.legado.app.ui.replace
 
 import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.LocalActivity
-import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.ui.replace.edit.ReplaceEditScreen
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
@@ -36,59 +43,132 @@ class ReplaceRuleActivity : BaseComposeActivity() {
     @Composable
     override fun Content() {
         AppTheme {
-            val navController = rememberNavController()
             val context = LocalActivity.current
+            val startRouteJson = intent.getStringExtra(EXTRA_START_ROUTE)
+            val backStack = rememberNavBackStack(
+                remember(startRouteJson) {
+                    resolveStartRoute(startRouteJson)
+                }
+            )
 
             LaunchedEffect(Unit) {
                 context?.setResult(RESULT_OK)
             }
 
-            val startRouteJson = intent.getStringExtra(EXTRA_START_ROUTE)
-            val initialEditRoute = remember(startRouteJson) {
-                startRouteJson?.let { Json.decodeFromString<ReplaceEditRoute>(it) }
-            }
-
-            val startDestination: Any = initialEditRoute ?: ReplaceRuleRoute
-
-            SharedTransitionLayout {
-                NavHost(
-                    navController = navController,
-                    startDestination = startDestination
-                ) {
-                    composable<ReplaceRuleRoute> {
+            NavDisplay(
+                backStack = backStack,
+                transitionSpec = {
+                    (slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = 480,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { fullWidth -> fullWidth }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 360,
+                            easing = LinearOutSlowInEasing
+                        )
+                    )) togetherWith (slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = 480,
+                            easing = FastOutSlowInEasing
+                        ),
+                        targetOffset = { fullWidth -> fullWidth / 4 }
+                    ) + fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 360,
+                            easing = LinearOutSlowInEasing
+                        )
+                    ))
+                },
+                popTransitionSpec = {
+                    (slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            durationMillis = 480,
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { fullWidth -> -fullWidth / 4 }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 360,
+                            easing = LinearOutSlowInEasing
+                        )
+                    )) togetherWith (scaleOut(
+                        targetScale = 0.8f,
+                        animationSpec = tween(
+                            durationMillis = 480,
+                            easing = FastOutSlowInEasing
+                        )
+                    ) + fadeOut(
+                        animationSpec = tween(durationMillis = 360)
+                    ))
+                },
+                predictivePopTransitionSpec = { _ ->
+                    (slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(
+                            easing = FastOutSlowInEasing
+                        ),
+                        initialOffset = { fullWidth -> -fullWidth / 4 }
+                    ) + fadeIn(
+                        animationSpec = tween(
+                            easing = LinearOutSlowInEasing
+                        )
+                    )) togetherWith (scaleOut(
+                        targetScale = 0.8f,
+                        animationSpec = tween(
+                            easing = FastOutSlowInEasing
+                        )
+                    ) + fadeOut(
+                        animationSpec = tween()
+                    ))
+                },
+                onBack = {
+                    if (backStack.size > 1) {
+                        backStack.removeLastOrNull()
+                    } else {
+                        finish()
+                    }
+                },
+                entryProvider = entryProvider {
+                    entry<ReplaceRuleRoute> {
                         ReplaceRuleScreen(
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable,
                             onBackClick = { finish() },
-                            onNavigateToEdit = { route -> navController.navigate(route) }
+                            onNavigateToEdit = { route -> backStack.add(route) }
                         )
                     }
 
-                    composable<ReplaceEditRoute> { backStackEntry ->
-                        val route = backStackEntry.toRoute<ReplaceEditRoute>()
+                    entry<ReplaceEditRoute> { route ->
                         val viewModel: ReplaceEditViewModel = koinViewModel { parametersOf(route) }
 
                         ReplaceEditScreen(
-                            sharedTransitionScope = this@SharedTransitionLayout,
-                            animatedVisibilityScope = this@composable,
                             viewModel = viewModel,
                             onBack = {
-                                // 如果编辑页是唯一的页面，点击返回应关闭 Activity
-                                if (navController.previousBackStackEntry == null) {
-                                    finish()
+                                if (backStack.size > 1) {
+                                    backStack.removeLastOrNull()
                                 } else {
-                                    navController.popBackStack()
+                                    finish()
                                 }
                             },
                             onSaveSuccess = {
-                                if (navController.previousBackStackEntry == null) finish()
-                                else navController.popBackStack()
+                                if (backStack.size > 1) {
+                                    backStack.removeLastOrNull()
+                                } else {
+                                    finish()
+                                }
                             }
                         )
                     }
                 }
-            }
+            )
         }
     }
-}
 
+    private fun resolveStartRoute(route: String?): NavKey {
+        return route?.let { Json.decodeFromString<ReplaceEditRoute>(it) } ?: ReplaceRuleRoute
+    }
+}

@@ -1,8 +1,6 @@
 package io.legado.app.ui.replace.edit
 
 import android.app.Application
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,15 +24,15 @@ import kotlinx.coroutines.launch
 
 data class ReplaceEditUiState(
     val id: Long = 0,
-    val name: TextFieldValue = TextFieldValue(""),
+    val name: String = "",
     val group: String = "默认",
-    val pattern: TextFieldValue = TextFieldValue(""),
-    val replacement: TextFieldValue = TextFieldValue(""),
+    val pattern: String = "",
+    val replacement: String = "",
     val isRegex: Boolean = false,
-    val scope: TextFieldValue = TextFieldValue(""),
+    val scope: String = "",
     val scopeTitle: Boolean = false,
     val scopeContent: Boolean = false,
-    val excludeScope: TextFieldValue = TextFieldValue(""),
+    val excludeScope: String = "",
     val timeout: String = "3000",
     val allGroups: List<String> = emptyList(),
     val showGroupDialog: Boolean = false
@@ -71,13 +69,13 @@ class ReplaceEditViewModel(
                 _uiState.update {
                     it.copy(
                         id = id,
-                        name = TextFieldValue(route.pattern ?: ""),
-                        pattern = TextFieldValue(route.pattern ?: ""),
+                        name = route.pattern ?: "",
+                        pattern = route.pattern ?: "",
                         isRegex = route.isRegex,
-                        scope = TextFieldValue(route.scope ?: ""),
+                        scope = route.scope ?: "",
                         scopeTitle = route.isScopeTitle,
                         scopeContent = route.isScopeContent,
-                        excludeScope = TextFieldValue(""),
+                        excludeScope = "",
                     )
                 }
             }
@@ -96,15 +94,15 @@ class ReplaceEditViewModel(
         _uiState.update {
             it.copy(
                 id = rule.id,
-                name = TextFieldValue(rule.name),
+                name = rule.name,
                 group = rule.group ?: "默认",
-                pattern = TextFieldValue(rule.pattern),
-                replacement = TextFieldValue(rule.replacement),
+                pattern = rule.pattern,
+                replacement = rule.replacement,
                 isRegex = rule.isRegex,
                 scopeTitle = rule.scopeTitle,
                 scopeContent = rule.scopeContent,
-                scope = TextFieldValue(rule.scope ?: ""),
-                excludeScope = TextFieldValue(rule.excludeScope ?: ""),
+                scope = rule.scope ?: "",
+                excludeScope = rule.excludeScope ?: "",
                 timeout = rule.timeoutMillisecond.toString()
             )
         }
@@ -114,15 +112,15 @@ class ReplaceEditViewModel(
         val state = _uiState.value
         val rule = ReplaceRule().apply {
             id = state.id
-            name = state.name.text
+            name = state.name
             group = if (state.group == "默认" || state.group.isBlank()) null else state.group
-            pattern = state.pattern.text
-            replacement = state.replacement.text
+            pattern = state.pattern
+            replacement = state.replacement
             isRegex = state.isRegex
             scopeTitle = state.scopeTitle
             scopeContent = state.scopeContent
-            scope = state.scope.text
-            excludeScope = state.excludeScope.text
+            scope = state.scope
+            excludeScope = state.excludeScope
             timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
         }
         return rule
@@ -160,23 +158,27 @@ class ReplaceEditViewModel(
         }
     }
 
-    fun onNameChange(v: TextFieldValue) {
+    fun onNameChange(v: String) {
         _uiState.update { it.copy(name = v) }
         activeField = ActiveField.Name
     }
-    fun onScopeChange(v: TextFieldValue) {
+
+    fun onScopeChange(v: String) {
         _uiState.update { it.copy(scope = v) }
         activeField = ActiveField.Scope
     }
-    fun onPatternChange(v: TextFieldValue) {
+
+    fun onPatternChange(v: String) {
         _uiState.update { it.copy(pattern = v) }
         activeField = ActiveField.Pattern
     }
-    fun onReplacementChange(v: TextFieldValue) {
+
+    fun onReplacementChange(v: String) {
         _uiState.update { it.copy(replacement = v) }
         activeField = ActiveField.Replacement
     }
-    fun onExcludeScopeChange(v: TextFieldValue) {
+
+    fun onExcludeScopeChange(v: String) {
         _uiState.update { it.copy(excludeScope = v) }
         activeField = ActiveField.Exclude
     }
@@ -189,39 +191,13 @@ class ReplaceEditViewModel(
     fun insertTextAtCursor(text: String) {
         val state = _uiState.value
         when (activeField) {
-            ActiveField.Name -> {
-                val newTfv = insertIntoTextFieldValue(state.name, text)
-                _uiState.update { it.copy(name = newTfv) }
-            }
-            ActiveField.Pattern -> {
-                val newTfv = insertIntoTextFieldValue(state.pattern, text)
-                _uiState.update { it.copy(pattern = newTfv) }
-            }
-            ActiveField.Replacement -> {
-                val newTfv = insertIntoTextFieldValue(state.replacement, text)
-                _uiState.update { it.copy(replacement = newTfv) }
-            }
-            ActiveField.Scope -> {
-                val newTfv = insertIntoTextFieldValue(state.scope, text)
-                _uiState.update { it.copy(scope = newTfv) }
-            }
-            ActiveField.Exclude -> {
-                val newTfv = insertIntoTextFieldValue(state.excludeScope, text)
-                _uiState.update { it.copy(excludeScope = newTfv) }
-            }
+            ActiveField.Name -> _uiState.update { it.copy(name = it.name + text) }
+            ActiveField.Pattern -> _uiState.update { it.copy(pattern = it.pattern + text) }
+            ActiveField.Replacement -> _uiState.update { it.copy(replacement = it.replacement + text) }
+            ActiveField.Scope -> _uiState.update { it.copy(scope = it.scope + text) }
+            ActiveField.Exclude -> _uiState.update { it.copy(excludeScope = it.excludeScope + text) }
             else -> {}
         }
-    }
-
-    private fun insertIntoTextFieldValue(current: TextFieldValue, insert: String): TextFieldValue {
-        val start = current.selection.start
-        val end = current.selection.end
-        val newText = current.text.replaceRange(start, end, insert)
-        val newCursor = start + insert.length
-        return TextFieldValue(
-            text = newText,
-            selection = TextRange(newCursor)
-        )
     }
 
     fun save(onSuccess: () -> Unit) {
@@ -230,15 +206,15 @@ class ReplaceEditViewModel(
 
             val rule = ReplaceRule().apply {
                 id = if (state.id <= 0) System.currentTimeMillis() else state.id
-                name = state.name.text
+                name = state.name
                 group = if (state.group == "默认" || state.group.isBlank()) null else state.group
-                pattern = state.pattern.text
-                replacement = state.replacement.text
+                pattern = state.pattern
+                replacement = state.replacement
                 isRegex = state.isRegex
                 scopeTitle = state.scopeTitle
                 scopeContent = state.scopeContent
-                scope = state.scope.text
-                excludeScope = state.excludeScope.text
+                scope = state.scope
+                excludeScope = state.excludeScope
                 timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
             }
 

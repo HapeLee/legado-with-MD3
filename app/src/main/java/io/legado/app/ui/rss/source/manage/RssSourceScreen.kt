@@ -43,6 +43,7 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
@@ -133,44 +134,42 @@ fun RssSourceScreen(
         }
     )
 
-    if (showUrlInput) {
-        SourceInputDialog(
-            title = stringResource(R.string.import_on_line),
-            onDismissRequest = { showUrlInput = false },
-            onConfirm = {
-                showUrlInput = false
-                viewModel.importSource(it)
-            }
-        )
-    }
+    SourceInputDialog(
+        show = showUrlInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showUrlInput = false },
+        onConfirm = {
+            showUrlInput = false
+            viewModel.importSource(it)
+        }
+    )
 
-    if (showAddToGroupDialog) {
-        TextListInputDialog(
-            title = stringResource(R.string.add_group),
-            hint = stringResource(R.string.group_name),
-            suggestions = groups,
-            onDismissRequest = { showAddToGroupDialog = false },
-            onConfirm = {
-                viewModel.selectionAddToGroups(selectedIds, it)
-                showAddToGroupDialog = false
-                viewModel.setSelection(emptySet())
-            }
-        )
-    }
 
-    if (showRemoveFromGroupDialog) {
-        TextListInputDialog(
-            title = stringResource(R.string.remove_group),
-            hint = stringResource(R.string.group_name),
-            suggestions = groups,
-            onDismissRequest = { showRemoveFromGroupDialog = false },
-            onConfirm = {
-                viewModel.selectionRemoveFromGroups(selectedIds, it)
-                showRemoveFromGroupDialog = false
-                viewModel.setSelection(emptySet())
-            }
-        )
-    }
+    TextListInputDialog(
+        show = showAddToGroupDialog,
+        title = stringResource(R.string.add_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showAddToGroupDialog = false },
+        onConfirm = { text ->
+            viewModel.selectionAddToGroups(selectedIds, text)
+            showAddToGroupDialog = false
+            viewModel.setSelection(emptySet())
+        }
+    )
+
+    TextListInputDialog(
+        show = showRemoveFromGroupDialog,
+        title = stringResource(R.string.remove_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showRemoveFromGroupDialog = false },
+        onConfirm = { text ->
+            viewModel.selectionRemoveFromGroups(selectedIds, text)
+            showRemoveFromGroupDialog = false
+            viewModel.setSelection(emptySet())
+        }
+    )
 
     GroupManageBottomSheet(
         show = showGroupManageSheet,
@@ -214,23 +213,18 @@ fun RssSourceScreen(
         }
     }
 
-    showDeleteRuleDialog?.let { source ->
-        AlertDialog(
-            onDismissRequest = { showDeleteRuleDialog = null },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.del_msg)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    viewModel.del(source); showDeleteRuleDialog = null
-                }) { AppText(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    AppText(stringResource(R.string.cancel))
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = showDeleteRuleDialog,
+        onDismissRequest = { showDeleteRuleDialog = null },
+        title = stringResource(R.string.delete),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { rule ->
+            viewModel.del(rule)
+            showDeleteRuleDialog = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteRuleDialog = null }
+    )
 
     RuleListScaffold(
         title = stringResource(R.string.rss_source),

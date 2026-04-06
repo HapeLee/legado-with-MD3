@@ -36,19 +36,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PlainTooltip
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -64,14 +60,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.button.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.TopBarAnimatedActionButton
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -143,10 +143,9 @@ fun SearchContentScreen(
                     title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
                         "共 ${searchResults.size} 条结果"
                     } else "搜索内容",
-                    navigationIcon = { TopbarNavigationButton(onClick = onBack) },
+                    navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                     actions = {
                         Row(
-                            modifier = Modifier.padding(end = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             TopBarAnimatedActionButton(
@@ -170,11 +169,16 @@ fun SearchContentScreen(
                     },
                     scrollBehavior = scrollBehavior
                 )
-                SearchBarSection(
-                    query = searchQuery,
-                    scrollState = listState,
-                    onQueryChange = { viewModel.onQueryChange(it) }
-                )
+                Box(
+                    modifier = Modifier.adaptiveHorizontalPadding()
+                ) {
+                    SearchBarSection(
+                        query = searchQuery,
+                        scrollState = listState,
+                        onQueryChange = { viewModel.onQueryChange(it) }
+                    )
+                }
+
                 AnimatedVisibility(visible = isSearching) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
@@ -182,39 +186,28 @@ fun SearchContentScreen(
         },
         floatingActionButton = {
             val fabVisible = (isSearching || searchResults.isNotEmpty()) && searchQuery.isNotBlank()
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
-                    TooltipAnchorPosition.Above
+            AppFloatingActionButton(
+                modifier = Modifier.animateFloatingActionButton(
+                    visible = fabVisible,
+                    alignment = Alignment.BottomEnd,
                 ),
-                tooltip = {
-                    PlainTooltip {
-                        AppText(if (isSearching) "停止搜索" else "跳转到当前章节")
+                onClick = {
+                    if (isSearching) {
+                        viewModel.stopSearch()
+                    } else {
+                        scrollToCurrentChapter()
                     }
                 },
-                state = rememberTooltipState(),
+                tooltipText = if (isSearching) "停止搜索" else "跳转到当前章节"
             ) {
-                FloatingActionButton(
-                    modifier = Modifier.animateFloatingActionButton(
-                        visible = fabVisible,
-                        alignment = Alignment.BottomEnd,
-                    ),
-                    onClick = {
-                        if (isSearching) {
-                            viewModel.stopSearch()
-                        } else {
-                            scrollToCurrentChapter()
-                        }
-                    }
-                ) {
-                    AnimatedContent(
-                        targetState = isSearching,
-                        label = "FabIconTransition"
-                    ) { searching ->
-                        if (searching) {
-                            Icon(Icons.Default.Stop, contentDescription = "停止搜索")
-                        } else {
-                            Icon(Icons.Default.MyLocation, contentDescription = "定位当前章节")
-                        }
+                AnimatedContent(
+                    targetState = isSearching,
+                    label = "FabIconTransition"
+                ) { searching ->
+                    if (searching) {
+                        AppIcon(Icons.Default.Stop, contentDescription = "停止搜索")
+                    } else {
+                        AppIcon(Icons.Default.MyLocation, contentDescription = "定位当前章节")
                     }
                 }
             }
@@ -305,7 +298,8 @@ fun SearchHistoryList(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .adaptiveHorizontalPadding()
+                .padding(vertical = 4.dp),
         ) {
             AppText(
                 text = "搜索历史",
@@ -354,7 +348,11 @@ fun SearchHistoryList(
                                 icon = Icons.Default.Close,
                                 contentDescription = "删除"
                             )
-                        }
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = LegadoTheme.colorScheme.surface,
+                            contentColor = LegadoTheme.colorScheme.onSurface
+                        )
                     )
                 }
                 item {
@@ -365,18 +363,12 @@ fun SearchHistoryList(
                             .animateItem(),
                         contentAlignment = Alignment.Center
                     ) {
-                        OutlinedButton(
+                        MediumOutlinedButton(
                             onClick = onClearHistory,
-                            modifier = Modifier.fillMaxWidth(0.6f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteSweep,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            AppText("清除搜索历史")
-                        }
+                            modifier = Modifier.fillMaxWidth(0.6f),
+                            icon = Icons.Outlined.DeleteSweep,
+                            text = "清除搜索历史"
+                        )
                     }
                 }
             }
@@ -398,7 +390,7 @@ fun SearchResultItem(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
             containerColor =
-                MaterialTheme.colorScheme.surfaceContainerLow
+                LegadoTheme.colorScheme.surfaceContainer
         )
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
@@ -408,7 +400,7 @@ fun SearchResultItem(
                     text = buildAnnotatedString {
                         append(
                             result.getTitleSpannable(
-                                MaterialTheme.colorScheme.primary.toArgb()
+                                LegadoTheme.colorScheme.primary.toArgb()
                             )
                         )
                     },
@@ -416,16 +408,18 @@ fun SearchResultItem(
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                HorizontalDivider()
+                HorizontalDivider(
+                    color = LegadoTheme.colorScheme.surface
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 AppText(
                     text = buildAnnotatedString {
                         append(
                             result.getContentSpannable(
-                                textColor = MaterialTheme.colorScheme.onSurface.toArgb(),
-                                accentColor = MaterialTheme.colorScheme.primary.toArgb(),
-                                bgColor = MaterialTheme.colorScheme.primaryContainer.toArgb()
+                                textColor = LegadoTheme.colorScheme.onSurface.toArgb(),
+                                accentColor = LegadoTheme.colorScheme.primary.toArgb(),
+                                bgColor = LegadoTheme.colorScheme.primaryContainer.toArgb()
                             )
                         )
                     },
@@ -441,8 +435,8 @@ fun SearchResultItem(
                 if (isCurrentChapter) {
                     TextCard(
                         text = "当前章节",
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        backgroundColor = LegadoTheme.colorScheme.secondaryContainer,
+                        contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                         cornerRadius = 8.dp,
                         horizontalPadding = 4.dp,
                         verticalPadding = 2.dp,
@@ -452,8 +446,8 @@ fun SearchResultItem(
                 if (result.progressPercent > 0f) {
                     TextCard(
                         text = String.format("%.1f%%", result.progressPercent),
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        backgroundColor = LegadoTheme.colorScheme.secondaryContainer,
+                        contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                         cornerRadius = 8.dp,
                         horizontalPadding = 4.dp,
                         verticalPadding = 2.dp,

@@ -29,7 +29,7 @@ val appName = "legado"
 val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     namespace = "io.legado.app"
 
     kotlin {
@@ -56,7 +56,7 @@ android {
     defaultConfig {
         applicationId = "io.legato.kazusa"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = System.getenv("COMMIT_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
         versionName = System.getenv("APP_VERSION_NAME") ?: projectVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -285,8 +285,12 @@ dependencies {
     implementation(libs.material.kolor)
     implementation(libs.haze.core)
     implementation(libs.haze.materials)
-    implementation(libs.miuix)
-    implementation(libs.miuix.icons)
+    implementation(libs.miuix.ui.android)
+    implementation(libs.miuix.preference.android)
+    implementation(libs.miuix.icons.android)
+    //implementation(libs.miuix.blur.android)
+    implementation(libs.miuix.core)
+    implementation(libs.miuix.shapes.android)
     implementation(libs.capsule)
     implementation(libs.backdrop)
     implementation(libs.timber)

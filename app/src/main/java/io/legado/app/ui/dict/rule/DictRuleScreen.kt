@@ -5,7 +5,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
@@ -13,15 +12,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,8 +37,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.DictRule
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -55,7 +51,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleEditFields
 import io.legado.app.ui.widget.components.rules.RuleEditSheet
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
-import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -139,16 +134,15 @@ fun DictRuleScreen(
         }
     )
 
-    if (showUrlInput) {
-        SourceInputDialog(
-            title = stringResource(R.string.import_on_line),
-            onDismissRequest = { showUrlInput = false },
-            onConfirm = {
-                showUrlInput = false
-                viewModel.importSource(it)
-            }
-        )
-    }
+    SourceInputDialog(
+        show = showUrlInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showUrlInput = false },
+        onConfirm = {
+            showUrlInput = false
+            viewModel.importSource(it)
+        }
+    )
 
     FilePickerSheet(
         show = showExportSheet,
@@ -200,25 +194,18 @@ fun DictRuleScreen(
         }
     }
 
-    showDeleteRuleDialog?.let { rule ->
-        AlertDialog(
-            onDismissRequest = { showDeleteRuleDialog = null },
-            title = { AppText(stringResource(R.string.delete)) },
-            text = { AppText(stringResource(R.string.del_msg)) },
-            confirmButton = {
-                OutlinedButton(onClick = {
-                    viewModel.delete(rule); showDeleteRuleDialog = null
-                }) { AppText(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteRuleDialog = null }) {
-                    AppText(
-                        stringResource(R.string.cancel)
-                    )
-                }
-            }
-        )
-    }
+    AppAlertDialog(
+        data = showDeleteRuleDialog,
+        onDismissRequest = { showDeleteRuleDialog = null },
+        title = stringResource(R.string.delete),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { rule ->
+            viewModel.delete(rule)
+            showDeleteRuleDialog = null
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { showDeleteRuleDialog = null }
+    )
 
     RuleEditSheet(
         show = showEditSheet,
@@ -302,8 +289,7 @@ fun DictRuleScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_str),
-                onClick = { showImportSheet = true; dismiss() },
-                leadingIcon = { Icon(Icons.Default.FileOpen, null) }
+                onClick = { showImportSheet = true; dismiss() }
             )
         }
     ) { paddingValues ->
@@ -314,9 +300,9 @@ fun DictRuleScreen(
             FastScrollLazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(
-                    top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 120.dp
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

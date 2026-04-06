@@ -19,18 +19,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipAnchorPosition
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.animateFloatingActionButton
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,7 +48,9 @@ import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
@@ -104,24 +101,18 @@ fun RuleSubScreen(
             )
         },
         floatingActionButton = {
-            TooltipBox(
-                positionProvider =
-                    TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { AppText("Localized description") } },
-                state = rememberTooltipState(),
+            AppFloatingActionButton(
+                modifier = Modifier
+                    .animateFloatingActionButton(
+                        visible = true,
+                        alignment = Alignment.BottomEnd,
+                    ),
+                onClick = {
+                    showEditDialog = RuleSub(customOrder = state.items.size + 1)
+                },
+                tooltipText = "Localized description"
             ) {
-                FloatingActionButton(
-                    modifier = Modifier
-                        .animateFloatingActionButton(
-                            visible = true,
-                            alignment = Alignment.BottomEnd,
-                        ),
-                    onClick = {
-                        showEditDialog = RuleSub(customOrder = state.items.size + 1)
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Rule")
-                }
+                Icon(Icons.Default.Add, contentDescription = "Add Rule")
             }
         }
     ) { paddingValues ->
@@ -199,80 +190,82 @@ fun RuleSubScreen(
         }
     }
 
-    showEditDialog?.let { ruleSub ->
-        RuleSubEditDialog(
-            ruleSub = ruleSub,
-            onDismiss = { showEditDialog = null },
-            onConfirm = { updatedRuleSub ->
-                viewModel.save(
-                    updatedRuleSub,
-                    onSuccess = { showEditDialog = null },
-                    onError = { context.toastOnUi(it) }
-                )
-            }
-        )
-    }
+    RuleSubEditDialog(
+        ruleSub = showEditDialog,
+        onDismiss = { showEditDialog = null },
+        onConfirm = { updatedRuleSub ->
+            viewModel.save(
+                updatedRuleSub,
+                onSuccess = { showEditDialog = null },
+                onError = { context.toastOnUi(it) }
+            )
+        }
+    )
 }
 
 @Composable
 fun RuleSubEditDialog(
-    ruleSub: RuleSub,
+    ruleSub: RuleSub?,
     onDismiss: () -> Unit,
     onConfirm: (RuleSub) -> Unit
 ) {
-    var name by remember { mutableStateOf(ruleSub.name) }
-    var url by remember { mutableStateOf(ruleSub.url) }
-    var type by remember { mutableIntStateOf(ruleSub.type) }
+    var cachedRule by remember { mutableStateOf(ruleSub) }
+    if (ruleSub != null) {
+        cachedRule = ruleSub
+    }
+
+    var name by remember(cachedRule) { mutableStateOf(cachedRule?.name ?: "") }
+    var url by remember(cachedRule) { mutableStateOf(cachedRule?.url ?: "") }
+    var type by remember(cachedRule) { mutableIntStateOf(cachedRule?.type ?: 0) }
+
     val typeArray = stringArrayResource(R.array.rule_type)
 
-    AlertDialog(
+    AppAlertDialog(
+        show = ruleSub != null,
         onDismissRequest = onDismiss,
-        title = { AppText(stringResource(R.string.rule_subscription)) },
-        text = {
+        title = stringResource(R.string.rule_subscription),
+        content = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
+                // 替换原生的 OutlinedTextField，确保双端主题适配
+                AppTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { AppText(stringResource(R.string.name)) },
+                    label = stringResource(R.string.name),
                     modifier = Modifier.fillMaxWidth()
                 )
-                OutlinedTextField(
+                AppTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { AppText("URL") },
+                    label = "URL",
                     modifier = Modifier.fillMaxWidth()
                 )
+
                 AppText(
                     text = "订阅类型",
                     style = LegadoTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 8.dp)
                 )
+
                 CheckboxGroupContainer(columns = 2) {
                     typeArray.forEachIndexed { index, text ->
                         item {
                             CheckboxItem(
                                 title = text,
                                 checked = (index == type),
-                                onCheckedChange = {
-                                    if (it) type = index
-                                }
+                                onCheckedChange = { if (it) type = index }
                             )
                         }
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = {
-                onConfirm(ruleSub.copy(name = name, url = url, type = type))
-            }) {
-                AppText(stringResource(R.string.ok))
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            cachedRule?.let {
+                onConfirm(it.copy(name = name, url = url, type = type))
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                AppText(stringResource(R.string.cancel))
-            }
-        }
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = onDismiss
     )
 }

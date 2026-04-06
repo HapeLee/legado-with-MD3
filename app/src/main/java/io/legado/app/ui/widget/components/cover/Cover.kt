@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import io.legado.app.ui.theme.LegadoTheme
 import org.koin.compose.koinInject
 
 @Composable
@@ -43,14 +43,14 @@ fun Cover(
     val boxModifier = modifier
         .aspectRatio(3f / 4f)
         .clip(RoundedCornerShape(4.dp))
-        .background(MaterialTheme.colorScheme.surfaceContainer)
+        .background(LegadoTheme.colorScheme.surfaceContainer)
 
     Box(modifier = boxModifier) {
         if (path == null) {
             Icon(
                 Icons.Default.Book,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.surfaceContainerHighest,
+                tint = LegadoTheme.colorScheme.surfaceContainerHighest,
                 modifier = Modifier
                     .size(24.dp)
                     .align(Alignment.Center)
@@ -80,8 +80,8 @@ fun Cover(
                     .align(Alignment.TopEnd)
                     .padding(2.dp),
                 shape = RoundedCornerShape(4.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = LegadoTheme.colorScheme.secondaryContainer,
+                contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                 tonalElevation = 2.dp
             ) {
                 Row(

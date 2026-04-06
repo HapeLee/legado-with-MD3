@@ -52,7 +52,7 @@ fun BookmarkItem(
             AppText(
                 text = bookmark.chapterName,
                 style = LegadoTheme.typography.titleSmallEmphasized,
-                color = if (isDur) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.secondary
+                color = if (isDur) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.onSurface
             )
 
             if (bookmark.bookText.isNotEmpty()) {

@@ -19,12 +19,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,7 +37,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.AnimatedActionButton
+import io.legado.app.ui.widget.components.button.MediumAnimatedActionButton
+import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.text.AppText
 import java.time.LocalDate
 
@@ -64,7 +61,7 @@ fun HeatmapCalendarTopBar(
         AppText("时间线", style = LegadoTheme.typography.titleMedium)
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimatedActionButton(
+            MediumAnimatedActionButton(
                 checked = currentMode == HeatmapMode.TIME,
                 onCheckedChange = {
                     onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
@@ -77,16 +74,10 @@ fun HeatmapCalendarTopBar(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            OutlinedIconButton(
+            MediumOutlinedIconButton(
                 onClick = onClearDate,
-                shapes = IconButtonDefaults.shapes(),
-                border = ButtonDefaults.outlinedButtonBorder()
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = "清除选择"
-                )
-            }
+                icon = Icons.Outlined.Delete,
+            )
         }
     }
 }
@@ -111,7 +102,7 @@ fun WeekdayLabelsColumn(
                 AppText(
                     text = label,
                     fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.height(cellSize)
                 )
             } else {
@@ -256,7 +247,7 @@ fun HeatmapWeekColumn(
             AppText(
                 text = "${firstDayOfMonth.monthValue}月",
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .wrapContentWidth(unbounded = true)

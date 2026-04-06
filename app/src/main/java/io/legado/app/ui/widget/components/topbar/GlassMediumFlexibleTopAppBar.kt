@@ -84,7 +84,7 @@ fun GlassMediumFlexibleTopAppBar(
                     title = title,
                     navigationIcon = navigationIcon,
                     actions = actions,
-                    color = Color.Transparent, // 内部强制透明，透出 Column 背景
+                    color = Color.Transparent,
                     scrollBehavior = (scrollBehavior as? MiuixGlassScrollBehavior)?.miuixBehavior
                 )
             }
@@ -105,7 +105,7 @@ fun GlassMediumFlexibleTopAppBar(
                         navigationIcon = navigationIcon,
                         actions = actions,
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
-                        colors = transparentColors // 应用透明背景
+                        colors = transparentColors
                     )
                 } else {
                     TopAppBar(
@@ -121,13 +121,12 @@ fun GlassMediumFlexibleTopAppBar(
                         navigationIcon = navigationIcon,
                         actions = actions,
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
-                        colors = transparentColors // 应用透明背景
+                        colors = transparentColors
                     )
                 }
             }
         }
 
-        // 现在的 bottomContent 完美包裹在外层 Column 内，共享渐变和模糊效果！
         bottomContent?.invoke(this)
     }
 }

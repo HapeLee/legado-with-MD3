@@ -27,7 +27,7 @@ import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.TopbarNavigationButton
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -54,7 +54,7 @@ fun CoverConfigScreen(
                 title = stringResource(R.string.cover_config),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopbarNavigationButton(onClick = onBackClick)
+                    TopBarNavigationButton(onClick = onBackClick)
                 }
             )
         }

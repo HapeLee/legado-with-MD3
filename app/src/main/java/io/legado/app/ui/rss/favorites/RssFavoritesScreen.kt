@@ -59,47 +59,44 @@ fun RssFavoritesScreen(
     var showRemoveFromGroupDialog by remember { mutableStateOf(false) }
     var showSetGroupDialog by remember { mutableStateOf<RssStar?>(null) }
 
-    if (showAddToGroupDialog) {
-        TextListInputDialog(
-            title = stringResource(R.string.add_group),
-            hint = stringResource(R.string.group_name),
-            suggestions = groups,
-            onDismissRequest = { showAddToGroupDialog = false },
-            onConfirm = {
-                viewModel.selectionAddToGroups(state.selectedIds, it)
-                showAddToGroupDialog = false
-                viewModel.clearSelection()
-            }
-        )
-    }
+    TextListInputDialog(
+        show = showAddToGroupDialog,
+        title = stringResource(R.string.add_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showAddToGroupDialog = false },
+        onConfirm = { text ->
+            viewModel.selectionAddToGroups(state.selectedIds, text)
+            showAddToGroupDialog = false
+            viewModel.clearSelection()
+        }
+    )
 
-    if (showRemoveFromGroupDialog) {
-        TextListInputDialog(
-            title = stringResource(R.string.remove_group),
-            hint = stringResource(R.string.group_name),
-            suggestions = groups,
-            onDismissRequest = { showRemoveFromGroupDialog = false },
-            onConfirm = {
-                viewModel.selectionRemoveFromGroups(state.selectedIds, it)
-                showRemoveFromGroupDialog = false
-                viewModel.clearSelection()
-            }
-        )
-    }
+    TextListInputDialog(
+        show = showRemoveFromGroupDialog,
+        title = stringResource(R.string.remove_group),
+        hint = stringResource(R.string.group_name),
+        suggestions = groups,
+        onDismissRequest = { showRemoveFromGroupDialog = false },
+        onConfirm = { text ->
+            viewModel.selectionRemoveFromGroups(state.selectedIds, text)
+            showRemoveFromGroupDialog = false
+            viewModel.clearSelection()
+        }
+    )
 
-    showSetGroupDialog?.let { rssStar ->
-        TextListInputDialog(
-            title = stringResource(R.string.change_group),
-            hint = stringResource(R.string.group_name),
-            initialValue = rssStar.group,
-            suggestions = groups,
-            onDismissRequest = { showSetGroupDialog = null },
-            onConfirm = {
-                viewModel.updateGroup(rssStar, it)
-                showSetGroupDialog = null
-            }
-        )
-    }
+    TextListInputDialog(
+        data = showSetGroupDialog,
+        title = stringResource(R.string.change_group),
+        hint = stringResource(R.string.group_name),
+        initialValue = { rssStar -> rssStar.group },
+        suggestions = groups,
+        onDismissRequest = { showSetGroupDialog = null },
+        onConfirm = { rssStar, text ->
+            viewModel.updateGroup(rssStar, text)
+            showSetGroupDialog = null
+        }
+    )
 
     RuleListScaffold(
         title = stringResource(R.string.favorite),
