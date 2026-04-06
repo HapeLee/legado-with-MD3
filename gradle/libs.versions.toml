@@ -76,7 +76,7 @@ viewpager2 = "1.1.0"
 webkit = "1.15.0"
 collection = "1.6.0"
 
-zxingLite = "3.3.0"
+zxingLite = "3.4.1"
 
 koin-bom = "4.2.0"
 biometricKtx = "1.1.0"
