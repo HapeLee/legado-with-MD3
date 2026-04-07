@@ -58,6 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
@@ -69,7 +70,6 @@ import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.regularHazeEffect
-import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppNavigationBar
 import io.legado.app.ui.widget.components.AppNavigationBarItem
 import io.legado.app.ui.widget.components.AppScaffold
@@ -260,9 +260,7 @@ fun MainScreen(
         }
 
         AppScaffold(
-            modifier = Modifier
-                .weight(1f)
-                .responsiveHazeSource(hazeState),
+            modifier = Modifier.weight(1f),
             bottomBar = {
                 if (!useRail && MainConfig.showBottomView) {
                     if (useFloatingBottomBar) {
@@ -362,6 +360,7 @@ fun MainScreen(
         ) { _ ->
             Box(
                 modifier = Modifier
+                    .hazeSource(hazeState)
                     .then(
                         if (useFloatingBottomBar) {
                             Modifier.layerBackdrop(floatingBarBackdrop)
