@@ -72,6 +72,13 @@ object ThemeConfig {
 
     var showBottomView by prefDelegate(PreferKey.showBottomView, true)
 
+    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, false)
+
+    var useFloatingBottomBarLiquidGlass by prefDelegate(
+        PreferKey.useFloatingBottomBarLiquidGlass,
+        false
+    )
+
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
 
     var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")

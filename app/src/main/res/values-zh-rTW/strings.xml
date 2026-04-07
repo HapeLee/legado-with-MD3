@@ -304,6 +304,7 @@
     <string name="jf_convert_j">繁轉簡</string>
     <string name="page_mode">翻頁模式</string>
     <string name="nb_file_sub_count">%1$d 項</string>
+    <string name="book_count">%1$d 本</string>
     <string name="nb_file_path">記憶卡：</string>
     <string name="nb_file_add_shelf">加入書架</string>
     <string name="nb_file_add_shelves">加入書架(%1$d)</string>
@@ -1222,4 +1223,6 @@
     <string name="top_bar_opacity_summary">%d</string>
     <string name="bottom_bar_opacity">底欄不透明度</string>
     <string name="bottom_bar_opacity_summary">%d</string>
+    <string name="web_file">網頁文件</string>
+    <string name="show_book_count">顯示分組書籍數量</string>
 </resources>

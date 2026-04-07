@@ -61,7 +61,7 @@ fun RowScope.AppNavigationBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     labelString: String,
-    miuixIcon: ImageVector,
+    iconVector: ImageVector,
     m3Icon: @Composable () -> Unit,
     m3IndicatorColor: Color,
     m3ShowLabel: Boolean,
@@ -73,7 +73,7 @@ fun RowScope.AppNavigationBarItem(
         MiuixNavigationBarItem(
             selected = selected,
             onClick = onClick,
-            icon = miuixIcon,
+            icon = iconVector,
             label = labelString,
             modifier = modifier
         )

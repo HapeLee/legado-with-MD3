@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,10 +42,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
@@ -375,6 +371,20 @@ fun ThemeConfigScreen(
                     checked = ThemeConfig.showBottomView,
                     onCheckedChange = { ThemeConfig.showBottomView = it }
                 )
+                SwitchSettingItem(
+                    title = stringResource(R.string.floating_bottom_bar),
+                    description = stringResource(R.string.floating_bottom_bar_summary),
+                    checked = ThemeConfig.useFloatingBottomBar,
+                    onCheckedChange = { ThemeConfig.useFloatingBottomBar = it }
+                )
+                AnimatedVisibility(visible = ThemeConfig.useFloatingBottomBar) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.floating_bottom_bar_liquid_glass),
+                        description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
+                        checked = ThemeConfig.useFloatingBottomBarLiquidGlass,
+                        onCheckedChange = { ThemeConfig.useFloatingBottomBarLiquidGlass = it }
+                    )
+                }
                 DropdownListSettingItem(
                     title = stringResource(R.string.tabletInterface),
                     selectedValue = ThemeConfig.tabletInterface,

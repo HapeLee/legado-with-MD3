@@ -7,6 +7,11 @@ object MainConfig {
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
     var showRSS by prefDelegate(PreferKey.showRss, true)
     var showBottomView by prefDelegate(PreferKey.showBottomView, true)
+    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, false)
+    var useFloatingBottomBarLiquidGlass by prefDelegate(
+        PreferKey.useFloatingBottomBarLiquidGlass,
+        false
+    )
     var defaultHomePage by prefDelegate(PreferKey.defaultHomePage, "bookshelf")
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
     var labelVisibilityMode by prefDelegate(PreferKey.labelVisibilityMode, "auto")

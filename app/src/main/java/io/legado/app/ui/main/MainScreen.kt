@@ -1,14 +1,21 @@
 package io.legado.app.ui.main
 
+import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -39,15 +46,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.search.SearchActivity
@@ -57,11 +67,17 @@ import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.regularHazeEffect
+import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppNavigationBar
 import io.legado.app.ui.widget.components.AppNavigationBarItem
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.FloatingBottomBar
+import io.legado.app.ui.widget.components.FloatingBottomBarItem
 import io.legado.app.ui.widget.components.GlassDefaults
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -88,6 +104,11 @@ fun MainScreen(
     val bookshelfUiState by bookshelfViewModel.uiState.collectAsState()
 
     val hazeState = remember { HazeState() }
+    val floatingBarSurfaceColor = MaterialTheme.colorScheme.surface
+    val floatingBarBackdrop = rememberLayerBackdrop {
+        drawRect(floatingBarSurfaceColor)
+        drawContent()
+    }
     val destinations = remember(MainConfig.showDiscovery, MainConfig.showRSS) {
         MainDestination.mainDestinations.filter {
             when (it) {
@@ -103,6 +124,15 @@ fun MainScreen(
         if (index != -1) index else 0
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
+    val labelVisibilityMode = MainConfig.labelVisibilityMode
+    val isUnlabeled = labelVisibilityMode == "unlabeled"
+    val useFloatingBottomBar =
+        !useRail && MainConfig.showBottomView && MainConfig.useFloatingBottomBar
+    val useLiquidGlass = useFloatingBottomBar &&
+            MainConfig.useFloatingBottomBarLiquidGlass &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+    val alwaysShowLabel = labelVisibilityMode == "labeled"
+    val showLabel = !isUnlabeled
 
     val navState = rememberWideNavigationRailState(
         initialValue = if (MainConfig.navExtended)
@@ -230,51 +260,116 @@ fun MainScreen(
         }
 
         AppScaffold(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .responsiveHazeSource(hazeState),
             bottomBar = {
                 if (!useRail && MainConfig.showBottomView) {
-                    val labelVisibilityMode = MainConfig.labelVisibilityMode
-                    val isUnlabeled = labelVisibilityMode == "unlabeled"
-
-                    AppNavigationBar(
-                        modifier = Modifier
-                            .regularHazeEffect(state = hazeState)
-                            .height(if (isUnlabeled) 64.dp else 80.dp)
-                    ) {
-                        val alwaysShowLabel = when (labelVisibilityMode) {
-                            "labeled" -> true
-                            else -> false
-                        }
-                        destinations.forEachIndexed { index, destination ->
-                            val selected = pagerState.targetPage == index
-                            AppNavigationBarItem(
-                                selected = selected,
-                                onClick = {
-                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                },
-                                labelString = stringResource(destination.labelId),
-                                miuixIcon = if (selected) destination.miuixSelectedIcon else destination.miuixIcon,
-                                m3Icon = {
-                                    NavigationIcon(
-                                        destination = destination,
-                                        selected = selected,
-                                        upBooksCount = uiState.upBooksCount
+                    if (useFloatingBottomBar) {
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            FloatingBottomBar(
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClick = {}
                                     )
+                                    .padding(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        bottom = 12.dp + WindowInsets.navigationBars
+                                            .asPaddingValues()
+                                            .calculateBottomPadding()
+                                    ),
+                                selectedIndex = { pagerState.currentPage },
+                                onSelected = { index ->
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
                                 },
-                                m3IndicatorColor = GlassDefaults.glassColor(
-                                    noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
-                                    blurAlpha = GlassDefaults.ThickBlurAlpha
-                                ),
-                                m3ShowLabel = !isUnlabeled,
-                                m3AlwaysShowLabel = alwaysShowLabel
-                            )
+                                backdrop = floatingBarBackdrop,
+                                tabsCount = destinations.size,
+                                isBlurEnabled = useLiquidGlass
+                            ) {
+                                destinations.forEachIndexed { index, destination ->
+                                    val selected = pagerState.currentPage == index
+                                    FloatingBottomBarItem(
+                                        onClick = {
+                                            coroutineScope.launch {
+                                                pagerState.animateScrollToPage(index)
+                                            }
+                                        },
+                                        modifier = Modifier.defaultMinSize(minWidth = 76.dp)
+                                    ) {
+                                        NavigationIcon(
+                                            destination = destination,
+                                            selected = selected,
+                                            upBooksCount = uiState.upBooksCount
+                                        )
+                                        if (showLabel && (alwaysShowLabel || selected)) {
+                                            Text(
+                                                text = stringResource(destination.labelId),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (selected) {
+                                                    LegadoTheme.colorScheme.primary
+                                                } else {
+                                                    LegadoTheme.colorScheme.onSurface
+                                                },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        AppNavigationBar(
+                            modifier = Modifier
+                                .regularHazeEffect(state = hazeState)
+                                .height(if (isUnlabeled) 64.dp else 80.dp)
+                        ) {
+                            destinations.forEachIndexed { index, destination ->
+                                val selected = pagerState.targetPage == index
+                                AppNavigationBarItem(
+                                    selected = selected,
+                                    onClick = {
+                                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                    },
+                                    labelString = stringResource(destination.labelId),
+                                    iconVector = AppIcons.mainDestination(destination, selected),
+                                    m3Icon = {
+                                        NavigationIcon(
+                                            destination = destination,
+                                            selected = selected,
+                                            upBooksCount = uiState.upBooksCount
+                                        )
+                                    },
+                                    m3IndicatorColor = GlassDefaults.glassColor(
+                                        noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
+                                        blurAlpha = GlassDefaults.ThickBlurAlpha
+                                    ),
+                                    m3ShowLabel = showLabel,
+                                    m3AlwaysShowLabel = alwaysShowLabel
+                                )
+                            }
                         }
                     }
                 }
             },
             contentWindowInsets = WindowInsets(0)
         ) { _ ->
-            Box(modifier = Modifier.hazeSource(hazeState)) {
+            Box(
+                modifier = Modifier
+                    .then(
+                        if (useFloatingBottomBar) {
+                            Modifier.layerBackdrop(floatingBarBackdrop)
+                        } else {
+                            Modifier
+                        }
+                    )
+            ) {
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
@@ -319,14 +414,14 @@ private fun NavigationIcon(
     upBooksCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val icon = if (selected) destination.m3SelectedIcon else destination.m3Icon
+    val icon = AppIcons.mainDestination(destination, selected)
     Box(modifier = modifier) {
         if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
             BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
-                Icon(icon, contentDescription = null)
+                AppIcon(icon, contentDescription = null)
             }
         } else {
-            Icon(icon, contentDescription = null)
+            AppIcon(icon, contentDescription = null)
         }
     }
 }

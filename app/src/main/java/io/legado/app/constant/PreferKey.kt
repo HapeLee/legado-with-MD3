@@ -207,6 +207,8 @@ object PreferKey {
     const val themePref = "themePref"
     const val bookshelfSortOrder = "bookshelfSortOrder"
     const val showBottomView = "showBottomView"
+    const val useFloatingBottomBar = "useFloatingBottomBar"
+    const val useFloatingBottomBarLiquidGlass = "useFloatingBottomBarLiquidGlass"
     const val mangaScrollMode = "mangaScrollMode"
     const val webtoonSidePaddingDp = "webtoonSidePaddingDp"
     const val mangaVolumeKeyPage = "mangaVolumeKeyPage"
@@ -267,6 +269,7 @@ object PreferKey {
     const val defaultSourceChangeAll = "defaultSourceChangeAll"
 
     const val showTip = "showTip"
+    const val showBookCount = "showBookCount"
     const val sliderVibrator = "sliderVibrator"
     const val selectVibrator = "selectVibrator"
     const val audioCacheCleanTime = "audioCacheCleanTime"

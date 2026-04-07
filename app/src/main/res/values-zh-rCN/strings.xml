@@ -325,6 +325,7 @@
     <string name="jf_convert_j">繁转简</string>
     <string name="page_mode">翻页模式</string>
     <string name="nb_file_sub_count">%1$d 项</string>
+    <string name="book_count">%1$d 本</string>
     <string name="nb_file_path">存储卡：</string>
     <string name="nb_file_add_shelf">加入书架</string>
     <string name="nb_file_add_shelves">加入书架（%1$d）</string>
@@ -577,6 +578,7 @@
     <string name="skip_next">下一个</string>
     <string name="music">音乐</string>
     <string name="audio">音频</string>
+    <string name="web_file">网页文件</string>
     <string name="is_enable">启用</string>
     <string name="enable_js">启用 JavaScript</string>
     <string name="load_with_base_url">加载 BaseUrl</string>
@@ -1293,6 +1295,10 @@
     <string name="custom_mode">自定义模式</string>
     <string name="be_swiped">仍可滑动切换页面</string>
     <string name="show_bottom_nav">显示导航栏</string>
+    <string name="floating_bottom_bar">悬浮底栏</string>
+    <string name="floating_bottom_bar_summary">底部导航栏使用悬浮胶囊样式</string>
+    <string name="floating_bottom_bar_liquid_glass">液态玻璃效果</string>
+    <string name="floating_bottom_bar_liquid_glass_summary">为悬浮底栏启用液态玻璃高光效果，需要 Android 13 及以上系统</string>
     <string name="nav_label_mode">导航栏标签显示方式</string>
     <string name="read">阅读</string>
     <string name="privacy">隐私</string>
@@ -1372,6 +1378,7 @@
     <string name="read_change_all">换源按钮默认弹出整书换源</string>
     <string name="read_change_all_s">反之则默认弹出单章换源</string>
     <string name="show_tip">显示书籍类型</string>
+    <string name="show_book_count">显示分组书籍数量</string>
     <string name="is_reading">在读</string>
     <string name="is_unread">未读</string>
     <string name="is_read_finished">已读</string>

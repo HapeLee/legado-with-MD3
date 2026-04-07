@@ -328,6 +328,7 @@
     <string name="jf_convert_j">Traditional to simplified</string>
     <string name="page_mode">Flipping mode</string>
     <string name="nb_file_sub_count">%1$d items</string>
+    <string name="book_count">%1$d books</string>
     <string name="nb_file_path">Storage:</string>
     <string name="nb_file_add_shelf">Add to Bookshelf</string>
     <string name="nb_file_add_shelves">Add to Bookshelf(%1$d)</string>
@@ -580,6 +581,7 @@
     <string name="skip_next">Next</string>
     <string name="music">Music</string>
     <string name="audio">Audio</string>
+    <string name="web_file">Web file</string>
     <string name="is_enable">Enable</string>
     <string name="enable_js">Enable js</string>
     <string name="load_with_base_url">Load BaseUrl</string>
@@ -1296,6 +1298,10 @@
     <string name="custom_mode">Custom Mode</string>
     <string name="be_swiped">Pages can still be swiped</string>
     <string name="show_bottom_nav">Show Navigation Bar</string>
+    <string name="floating_bottom_bar">Floating Bottom Bar</string>
+    <string name="floating_bottom_bar_summary">Use a detached capsule style for the bottom navigation bar</string>
+    <string name="floating_bottom_bar_liquid_glass">Liquid Glass Effect</string>
+    <string name="floating_bottom_bar_liquid_glass_summary">Enable the liquid glass highlight for the floating bar. Requires blur and Android 13+</string>
     <string name="nav_label_mode">Navigation Bar Label Mode</string>
     <string name="read">Read</string>
     <string name="privacy">Privacy</string>
@@ -1376,6 +1382,7 @@
     <string name="read_change_all">换源按钮默认弹出整书换源</string>
     <string name="read_change_all_s">反之则默认弹出单章换源</string>
     <string name="show_tip">显示书籍类型</string>
+    <string name="show_book_count">显示分组书籍数量</string>
     <string name="is_reading">在读</string>
     <string name="is_unread">未读</string>
     <string name="is_read_finished">已读</string>
