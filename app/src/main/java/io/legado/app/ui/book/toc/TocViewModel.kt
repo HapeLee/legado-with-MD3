@@ -488,6 +488,38 @@ class TocViewModel(
     fun deleteBookmark(bookmark: Bookmark) =
         viewModelScope.launch(Dispatchers.IO) { appDb.bookmarkDao.delete(bookmark) }
 
+    fun addBookmarksForSelected() = viewModelScope.launch(Dispatchers.IO) {
+        val book = bookState.value ?: return@launch
+        val selectedItems = uiState.value.items
+            .asSequence()
+            .filter { it.id in uiState.value.selectedIds }
+            .filterNot { it.isVolume }
+            .toList()
+
+        if (selectedItems.isEmpty()) {
+            context.toastOnUi("请选择章节")
+            return@launch
+        }
+
+        val bookmarks = selectedItems.map { item ->
+            Bookmark(
+                bookName = book.name,
+                bookAuthor = book.author,
+                chapterIndex = item.id,
+                chapterPos = 0,
+                chapterName = item.title,
+                bookText = "",
+                content = ""
+            )
+        }
+
+        appDb.bookmarkDao.insert(*bookmarks.toTypedArray())
+        context.toastOnUi("已添加 ${bookmarks.size} 个书签")
+        withContext(Dispatchers.Main) {
+            clearSelection()
+        }
+    }
+
     fun downloadSelected() {
         val book = bookState.value ?: return
         val indices = uiState.value.selectedIds.toList()

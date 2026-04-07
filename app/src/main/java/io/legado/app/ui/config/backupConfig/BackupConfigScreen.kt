@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -94,6 +95,20 @@ fun BackupConfigScreen(
 
     var showLoadingDialog by remember { mutableStateOf(false) }
     var loadingText by remember { mutableStateOf("") }
+
+    val webDavUrl = BackupConfig.webDavUrl
+    val webDavDir = BackupConfig.webDavDir
+    val webDavAccount = BackupConfig.webDavAccount
+    val webDavPassword = BackupConfig.webDavPassword
+    var webDavSyncReady by remember { mutableStateOf(false) }
+
+    LaunchedEffect(webDavUrl, webDavDir, webDavAccount, webDavPassword) {
+        if (webDavSyncReady) {
+            viewModel.refreshWebDavConfig()
+        } else {
+            webDavSyncReady = true
+        }
+    }
 
     val selectBackupPathLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()

@@ -17,6 +17,10 @@ class BackupConfigViewModel : ViewModel() {
         }
     }
 
+    suspend fun refreshWebDavConfig() {
+        syncWebDavConfig()
+    }
+
     fun setWebDavAccount(account: String, password: String) {
         BackupConfig.webDavAccount = account
         BackupConfig.webDavPassword = password

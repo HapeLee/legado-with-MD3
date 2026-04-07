@@ -222,7 +222,7 @@ fun TocScreen(
             ActionItem(
                 text = "添加书签",
                 icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
-                onClick = { /* TODO: viewModel.addBookmarksForSelected() */ }
+                onClick = { viewModel.addBookmarksForSelected() }
             )
         )
     }
