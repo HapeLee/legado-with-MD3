@@ -44,6 +44,11 @@ object BookshelfConfig {
     var showTip by prefDelegate(PreferKey.showTip, false)
 
     /**
+     * 鏄惁鏄剧ず鍒嗙粍鍐呬功绫嶆暟閲?
+     */
+    var showBookCount by prefDelegate(PreferKey.showBookCount, true)
+
+    /**
      * 是否在列表中显示最后更新时间
      */
     var showLastUpdateTime by prefDelegate(PreferKey.showLastUpdateTime, false)

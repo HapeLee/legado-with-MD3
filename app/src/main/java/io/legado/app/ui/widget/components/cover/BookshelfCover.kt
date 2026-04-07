@@ -24,6 +24,7 @@ fun BookshelfCover(
     isUpdating: Boolean = false,
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
+    leftBottomText: String? = null,
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null
 ) {
@@ -45,6 +46,20 @@ fun BookshelfCover(
                 contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
+                    .padding(2.dp),
+                cornerRadius = 4.dp,
+                horizontalPadding = 4.dp,
+                verticalPadding = 0.dp
+            )
+        }
+
+        if (!leftBottomText.isNullOrEmpty()) {
+            TextCard(
+                text = leftBottomText,
+                backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                contentColor = LegadoTheme.colorScheme.onCardContainer,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
                     .padding(2.dp),
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,

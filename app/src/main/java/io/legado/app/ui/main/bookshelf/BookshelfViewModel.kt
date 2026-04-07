@@ -126,6 +126,11 @@ class BookshelfViewModel(
         .distinctUntilChanged()
         .flowOn(Dispatchers.Default)
 
+    private data class GroupPreviewState(
+        val previews: Map<Long, List<BookShelfItem>>,
+        val counts: Map<Long, Int>
+    )
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val booksFlow = combine(groupIdFlow, refreshTrigger) { groupId, _ -> groupId }
         .flatMapLatest { groupId ->
@@ -138,59 +143,68 @@ class BookshelfViewModel(
 
     private val groupPreviewsFlow =
         combine(groupsFlow, allBooksFlow, refreshTrigger) { groups, allBooks, _ ->
-        if (BookshelfConfig.bookGroupStyle in 2..3) {
-            groups.associate { group ->
-                val groupBooks = when (group.groupId) {
-                    BookGroup.IdRoot -> {
-                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
-                        allBooks.filter { book ->
-                            (book.type and BookType.text) > 0 &&
-                                    (book.type and BookType.local) == 0 &&
-                                    (sumUserGroupIds and book.group) == 0L
+            if (BookshelfConfig.bookGroupStyle in 2..3) {
+                val previews = HashMap<Long, List<BookShelfItem>>(groups.size)
+                val counts = HashMap<Long, Int>(groups.size)
+                groups.forEach { group ->
+                    val groupBooks = when (group.groupId) {
+                        BookGroup.IdRoot -> {
+                            val sumUserGroupIds =
+                                groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                            allBooks.filter { book ->
+                                (book.type and BookType.text) > 0 &&
+                                        (book.type and BookType.local) == 0 &&
+                                        (sumUserGroupIds and book.group) == 0L
+                            }
                         }
-                    }
 
-                    BookGroup.IdAll -> allBooks
-                    BookGroup.IdLocal -> allBooks.filter { (it.type and BookType.local) > 0 }
-                    BookGroup.IdAudio -> allBooks.filter { (it.type and BookType.audio) > 0 }
-                    BookGroup.IdNetNone -> {
-                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
-                        allBooks.filter { book ->
-                            (book.type and BookType.audio) == 0 &&
-                                    (book.type and BookType.local) == 0 &&
-                                    (sumUserGroupIds and book.group) == 0L
+                        BookGroup.IdAll -> allBooks
+                        BookGroup.IdLocal -> allBooks.filter { (it.type and BookType.local) > 0 }
+                        BookGroup.IdAudio -> allBooks.filter { (it.type and BookType.audio) > 0 }
+                        BookGroup.IdNetNone -> {
+                            val sumUserGroupIds =
+                                groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                            allBooks.filter { book ->
+                                (book.type and BookType.audio) == 0 &&
+                                        (book.type and BookType.local) == 0 &&
+                                        (sumUserGroupIds and book.group) == 0L
+                            }
                         }
-                    }
 
-                    BookGroup.IdLocalNone -> {
-                        val sumUserGroupIds = groups.filter { it.groupId > 0 }.sumOf { it.groupId }
-                        allBooks.filter { book ->
-                            (book.type and BookType.local) > 0 &&
-                                    (sumUserGroupIds and book.group) == 0L
+                        BookGroup.IdLocalNone -> {
+                            val sumUserGroupIds =
+                                groups.filter { it.groupId > 0 }.sumOf { it.groupId }
+                            allBooks.filter { book ->
+                                (book.type and BookType.local) > 0 &&
+                                        (sumUserGroupIds and book.group) == 0L
+                            }
                         }
-                    }
 
-                    BookGroup.IdManga -> allBooks.filter { (it.type and BookType.image) > 0 }
-                    BookGroup.IdText -> allBooks.filter { (it.type and BookType.text) > 0 }
-                    BookGroup.IdError -> allBooks.filter { (it.type and BookType.updateError) > 0 }
-                    BookGroup.IdUnread -> allBooks.filter { it.durChapterIndex == 0 && it.durChapterPos == 0 }
-                    BookGroup.IdReading -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex > 0 && it.durChapterIndex < it.totalChapterNum - 1 }
-                    BookGroup.IdReadFinished -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex >= it.totalChapterNum - 1 }
-                    else -> allBooks.filter { (it.group and group.groupId) != 0L }
+                        BookGroup.IdManga -> allBooks.filter { (it.type and BookType.image) > 0 }
+                        BookGroup.IdText -> allBooks.filter { (it.type and BookType.text) > 0 }
+                        BookGroup.IdError -> allBooks.filter { (it.type and BookType.updateError) > 0 }
+                        BookGroup.IdUnread -> allBooks.filter { it.durChapterIndex == 0 && it.durChapterPos == 0 }
+                        BookGroup.IdReading -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex > 0 && it.durChapterIndex < it.totalChapterNum - 1 }
+                        BookGroup.IdReadFinished -> allBooks.filter { it.totalChapterNum > 0 && it.durChapterIndex >= it.totalChapterNum - 1 }
+                        else -> allBooks.filter { (it.group and group.groupId) != 0L }
+                    }
+                    counts[group.groupId] = groupBooks.size
+                    val sortedBooks = sortBooks(groupBooks, group)
+                    val booksWithCover = sortedBooks.filter { it.getDisplayCover() != null }
+                    val result = if (booksWithCover.size >= 4) {
+                        booksWithCover.take(4)
+                    } else {
+                        (booksWithCover + sortedBooks.filter { it.getDisplayCover() == null }).take(
+                            4
+                        )
+                    }
+                    previews[group.groupId] = result
                 }
-                val sortedBooks = sortBooks(groupBooks, group)
-                val booksWithCover = sortedBooks.filter { it.getDisplayCover() != null }
-                val result = if (booksWithCover.size >= 4) {
-                    booksWithCover.take(4)
-                } else {
-                    (booksWithCover + sortedBooks.filter { it.getDisplayCover() == null }).take(4)
-                }
-                group.groupId to result
+                GroupPreviewState(previews, counts)
+            } else {
+                GroupPreviewState(emptyMap(), emptyMap())
             }
-        } else {
-            emptyMap()
-        }
-    }.distinctUntilChanged().flowOn(Dispatchers.Default)
+        }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
     private val internalStateFlow = combine(
         groupIdFlow,
@@ -228,7 +242,8 @@ class BookshelfViewModel(
         BookshelfUiState(
             items = filteredBooks,
             groups = groups,
-            groupPreviews = previews,
+            groupPreviews = previews.previews,
+            groupBookCounts = previews.counts,
             selectedGroupIndex = groups.indexOfFirst { it.groupId == internal.groupId }
                 .coerceAtLeast(0),
             searchKey = internal.searchKey,

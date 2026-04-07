@@ -400,8 +400,10 @@ fun BookshelfScreen(
                 label = "FolderTransition"
             ) { isRoot ->
                 if (bookGroupStyle == 2 && isRoot) {
+                    val folderColumns =
+                        if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
                     FastScrollLazyVerticalGrid(
-                        columns = GridCells.Fixed(bookshelfLayoutGrid.coerceAtLeast(1)),
+                        columns = GridCells.Fixed(folderColumns.coerceAtLeast(1)),
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = adaptiveContentPadding(
                             top = paddingValues.calculateTopPadding(),
@@ -414,11 +416,19 @@ fun BookshelfScreen(
                         itemsIndexed(
                             uiState.groups,
                             key = { _, it -> it.groupId }) { index, group ->
+                            val countText = if (BookshelfConfig.showBookCount) {
+                                uiState.groupBookCounts[group.groupId]?.let {
+                                    stringResource(R.string.book_count, it)
+                                }
+                            } else {
+                                null
+                            }
                             if (bookshelfLayoutMode == 0) {
                                 BookGroupItemList(
                                     group = group,
                                     previewBooks = uiState.groupPreviews[group.groupId]
                                         ?: emptyList(),
+                                    countText = countText,
                                     isCompact = BookshelfConfig.bookshelfLayoutCompact,
                                     titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
                                     titleCenter = BookshelfConfig.bookshelfTitleCenter,
@@ -434,6 +444,7 @@ fun BookshelfScreen(
                                     group = group,
                                     previewBooks = uiState.groupPreviews[group.groupId]
                                         ?: emptyList(),
+                                    countText = countText,
                                     gridStyle = BookshelfConfig.bookshelfGridLayout,
                                     titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
                                     titleCenter = BookshelfConfig.bookshelfTitleCenter,

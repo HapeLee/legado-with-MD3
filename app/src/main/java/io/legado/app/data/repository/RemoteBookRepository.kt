@@ -23,18 +23,15 @@ class RemoteBookRepository(
 ) {
 
     suspend fun getWebDav(book: Book): RemoteBookWebDav? {
-        val remoteUrl = book.getRemoteUrl() ?: return null
-        val analyzeUrl = AnalyzeUrl(remoteUrl)
+        val remoteUrl = book.getRemoteUrl()
+        val serverId = remoteUrl?.let { AnalyzeUrl(it).serverID }
 
-        // 优先从书籍 origin 中解析 serverID
-        val serverId = analyzeUrl.serverID
         if (serverId != null && serverId != AppConst.DEFAULT_WEBDAV_ID) {
             appDb.serverDao.get(serverId)?.getWebDavConfig()?.let {
                 return RemoteBookWebDav(it.url, Authorization(it), serverId)
             }
         }
 
-        // 如果没有指定 serverID，尝试使用目前选择的 WebDAV 服务器
         val currentServerId = AppConfig.remoteServerId
         if (currentServerId != AppConst.DEFAULT_WEBDAV_ID) {
             appDb.serverDao.get(currentServerId)?.getWebDavConfig()?.let {
@@ -42,7 +39,6 @@ class RemoteBookRepository(
             }
         }
 
-        // 最后回退到默认的 WebDAV 配置
         return AppWebDav.defaultBookWebDav
     }
 

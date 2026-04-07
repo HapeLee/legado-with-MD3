@@ -11,6 +11,7 @@ data class BookshelfUiState(
     override val isLoading: Boolean = false,
     val groups: List<BookGroup> = emptyList(),
     val groupPreviews: Map<Long, List<BookShelfItem>> = emptyMap(),
+    val groupBookCounts: Map<Long, Int> = emptyMap(),
     val selectedGroupIndex: Int = 0,
     val loadingText: String? = null,
     val updatingBooks: Set<String> = emptySet()

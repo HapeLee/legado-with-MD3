@@ -31,9 +31,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
 import io.legado.app.ui.widget.components.text.AppText
@@ -201,6 +203,7 @@ fun BookshelfItem(
 fun BookGroupCover(
     books: List<BookShelfItem>,
     coverPath: String? = null,
+    leftBottomText: String? = null,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -284,6 +287,20 @@ fun BookGroupCover(
                 }
             }
         }
+
+        if (!leftBottomText.isNullOrEmpty()) {
+            TextCard(
+                text = leftBottomText,
+                backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                contentColor = LegadoTheme.colorScheme.onCardContainer,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(2.dp),
+                cornerRadius = 4.dp,
+                horizontalPadding = 4.dp,
+                verticalPadding = 0.dp
+            )
+        }
     }
 }
 
@@ -291,6 +308,7 @@ fun BookGroupCover(
 fun BookGroupItemGrid(
     group: BookGroup,
     previewBooks: List<BookShelfItem>,
+    countText: String? = null,
     gridStyle: Int = 0,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
@@ -304,7 +322,14 @@ fun BookGroupItemGrid(
         isGrid = true,
         gridStyle = gridStyle,
         isCompact = false,
-        cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
+        cover = {
+            BookGroupCover(
+                books = previewBooks,
+                coverPath = group.cover,
+                leftBottomText = countText,
+                modifier = it
+            )
+        },
         title = group.groupName,
         modifier = modifier,
         titleSmallFont = titleSmallFont,
@@ -320,6 +345,7 @@ fun BookGroupItemGrid(
 fun BookGroupItemList(
     group: BookGroup,
     previewBooks: List<BookShelfItem>,
+    countText: String? = null,
     isCompact: Boolean = false,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
@@ -335,6 +361,7 @@ fun BookGroupItemList(
         isCompact = isCompact,
         cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
         title = group.groupName,
+        subTitle = countText,
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
@@ -360,6 +387,17 @@ fun BookItem(
     onLongClick: () -> Unit
 ) {
     val unreadCount = book.getUnreadChapterNum()
+    val bookTypeLabel = if (BookshelfConfig.showTip) {
+        when {
+            book.isAudio -> stringResource(R.string.audio)
+            book.isImage -> stringResource(R.string.manga)
+            (book.type and BookType.webFile) > 0 -> stringResource(R.string.web_file)
+            book.isLocal -> stringResource(R.string.local)
+            else -> stringResource(R.string.noval)
+        }
+    } else {
+        null
+    }
 
     BookshelfItem(
         isGrid = layoutMode != 0,
@@ -373,7 +411,8 @@ fun BookItem(
                 isUpdating = isUpdating,
                 modifier = modifier,
                 badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
-                showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew
+                showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
+                leftBottomText = bookTypeLabel
             )
         },
         title = book.name,
