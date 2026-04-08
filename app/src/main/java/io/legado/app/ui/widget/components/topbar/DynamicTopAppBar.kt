@@ -27,7 +27,6 @@ import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,9 +61,7 @@ fun <T> DynamicTopAppBar(
             else -> title
         },
         useCharMode = isSelecting || state.isLoading,
-        subtitle = subtitle?.let {
-            { AnimatedTextLine(text = it) }
-        },
+        subtitle = subtitle,
         navigationIcon = {
             if (isSelecting || onBackClick != null) {
                 TopBarNavigationButton(

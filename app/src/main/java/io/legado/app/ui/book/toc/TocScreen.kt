@@ -157,25 +157,37 @@ fun TocScreen(
     val useReplace = viewModel.useReplace
     val showWordCount = viewModel.showWordCount
 
-    val subtitle = remember(
+    val topBarTitle = remember(
         pagerState.currentPage,
+        book?.name,
         book?.durChapterTitle,
+    ) {
+        when (pagerState.currentPage) {
+            0 -> {
+                book?.durChapterTitle?.takeIf { it.isNotBlank() } ?: (book?.name ?: "")
+            }
+
+            1 -> "书签管理"
+            else -> book?.name ?: ""
+        }
+    }
+
+    val topBarSubtitle = remember(
+        pagerState.currentPage,
         book?.durChapterIndex,
         book?.totalChapterNum
     ) {
         when (pagerState.currentPage) {
             0 -> {
-                val durTitle = book?.durChapterTitle ?: ""
-                val durIndex = (book?.durChapterIndex ?: 0) + 1
+                val durIndex = (book?.durChapterIndex ?: -1) + 1
                 val totalNum = book?.totalChapterNum ?: 0
-                if (totalNum > 0) {
-                    "$durTitle · $durIndex / $totalNum 章"
+                if (durIndex > 0 && totalNum > 0) {
+                    "$durIndex / $totalNum"
                 } else {
-                    durTitle
+                    null
                 }
             }
 
-            1 -> "书签管理"
             else -> null
         }
     }
@@ -301,8 +313,8 @@ fun TocScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             DynamicTopAppBar(
-                title = book?.name ?: "",
-                subtitle = subtitle,
+                title = topBarTitle,
+                subtitle = topBarSubtitle,
                 state = state,
                 scrollBehavior = scrollBehavior,
                 onBackClick = onBackClick,

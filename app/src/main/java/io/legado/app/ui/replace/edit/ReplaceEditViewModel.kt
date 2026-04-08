@@ -1,10 +1,8 @@
 package io.legado.app.ui.replace.edit
 
 import android.app.Application
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import io.legado.app.data.dao.ReplaceRuleDao
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.exception.NoStackTraceException
@@ -41,10 +39,8 @@ data class ReplaceEditUiState(
 class ReplaceEditViewModel(
     private val app: Application,
     private val replaceRuleDao: ReplaceRuleDao,
-    private val savedStateHandle: SavedStateHandle
+    private val route: ReplaceEditRoute
 ) : ViewModel() {
-
-    private val route = savedStateHandle.toRoute<ReplaceEditRoute>()
 
     private val _uiState = MutableStateFlow(ReplaceEditUiState())
     val uiState = _uiState.asStateFlow()
@@ -59,7 +55,6 @@ class ReplaceEditViewModel(
 
     private fun initData() {
         viewModelScope.launch {
-
             val id = route.id
 
             if (id > 0) {

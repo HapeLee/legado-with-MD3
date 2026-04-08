@@ -107,6 +107,7 @@ class BookshelfViewModel(
     private val waitUpTocBooks = LinkedList<String>()
     private val onUpTocBooks = ConcurrentHashMap.newKeySet<String>()
     private val updatingBooksFlow = MutableStateFlow<Set<String>>(emptySet())
+    private val upBooksCountFlow = MutableStateFlow(0)
     private var upTocJob: Job? = null
     private var cacheBookJob: Job? = null
     private val eventListenerSource = ConcurrentHashMap<BookSource, Boolean>()
@@ -210,16 +211,18 @@ class BookshelfViewModel(
         groupIdFlow,
         searchKeyFlow,
         loadingTextFlow,
-        updatingBooksFlow
-    ) { groupId, searchKey, loadingText, updatingBooks ->
-        InternalState(groupId, searchKey, loadingText, updatingBooks)
+        updatingBooksFlow,
+        upBooksCountFlow
+    ) { groupId, searchKey, loadingText, updatingBooks, upBooksCount ->
+        InternalState(groupId, searchKey, loadingText, updatingBooks, upBooksCount)
     }
 
     data class InternalState(
         val groupId: Long,
         val searchKey: String,
         val loadingText: String?,
-        val updatingBooks: Set<String>
+        val updatingBooks: Set<String>,
+        val upBooksCount: Int
     )
 
     val uiState: StateFlow<BookshelfUiState> = combine(
@@ -250,6 +253,7 @@ class BookshelfViewModel(
             isSearch = internal.searchKey.isNotEmpty(),
             isLoading = internal.loadingText != null,
             loadingText = internal.loadingText,
+            upBooksCount = internal.upBooksCount,
             updatingBooks = internal.updatingBooks
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BookshelfUiState())
@@ -275,6 +279,9 @@ class BookshelfViewModel(
         }
         viewModelScope.launch {
             snapshotFlow { BookshelfConfig.bookGroupStyle }.collect { refresh() }
+        }
+        viewModelScope.launch {
+            snapshotFlow { BookshelfConfig.showWaitUpCount }.collect { postUpBooksCount() }
         }
 
         if (BookshelfConfig.autoRefreshBook) {
@@ -382,6 +389,7 @@ class BookshelfViewModel(
                 waitUpTocBooks.add(book.bookUrl)
             }
         }
+        postUpBooksCount()
         if (upTocJob == null) {
             startUpTocJob()
         }
@@ -480,7 +488,7 @@ class BookshelfViewModel(
     private fun postUpBooksCount() {
         val count =
             if (BookshelfConfig.showWaitUpCount) waitUpTocBooks.size + onUpTocBooks.size else 0
-        FlowEventBus.post(EventBus.UP_BOOKSHELF_COUNT, count)
+        upBooksCountFlow.value = count
     }
 
     private fun addDownload(source: BookSource, book: Book) {

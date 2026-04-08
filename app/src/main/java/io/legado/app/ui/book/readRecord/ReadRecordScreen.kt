@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,15 +30,12 @@ import androidx.compose.material.icons.filled.Merge
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,7 +48,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
@@ -80,7 +75,6 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -100,7 +94,6 @@ import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
-import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -152,15 +145,13 @@ fun ReadRecordScreen(
             Column {
                 GlassMediumFlexibleTopAppBar(
                     title = "阅读记录",
-                    subtitle = {
+                    subtitle = run {
                         val subTitle = when (displayMode) {
                             DisplayMode.AGGREGATE -> "汇总视图"
                             DisplayMode.TIMELINE -> "时间线视图"
                             DisplayMode.LATEST -> "最后阅读"
                         }
-                        AnimatedTextLine(
-                            text = subTitle
-                        )
+                        subTitle
                     },
                     navigationIcon = {
                         TopBarNavigationButton(onClick = onBackClick)

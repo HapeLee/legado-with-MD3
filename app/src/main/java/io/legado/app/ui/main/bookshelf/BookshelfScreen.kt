@@ -198,7 +198,7 @@ fun BookshelfScreen(
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
     // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图
     var isInFolderRoot by remember(bookGroupStyle) { mutableStateOf(bookGroupStyle == 2) }
-    val title = when {
+    val baseTitle = when {
         bookGroupStyle == 1 -> {
             uiState.groups.getOrNull(pagerState.currentPage)?.groupName
                 ?: stringResource(R.string.bookshelf)
@@ -211,6 +211,11 @@ fun BookshelfScreen(
         }
 
         else -> stringResource(R.string.bookshelf)
+    }
+    val title = if (uiState.upBooksCount > 0) {
+        "$baseTitle (${uiState.upBooksCount})"
+    } else {
+        baseTitle
     }
 
     if (bookGroupStyle == 2 && !isInFolderRoot) {

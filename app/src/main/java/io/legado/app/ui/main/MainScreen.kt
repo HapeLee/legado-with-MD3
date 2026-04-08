@@ -25,15 +25,12 @@ import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
@@ -54,7 +51,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -68,7 +64,6 @@ import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.rss.RssScreen
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.regularHazeEffect
 import io.legado.app.ui.widget.components.AppNavigationBar
 import io.legado.app.ui.widget.components.AppNavigationBarItem
@@ -97,7 +92,6 @@ fun MainScreen(
     onOpenSettings: () -> Unit
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.state.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
 
     val bookshelfViewModel: BookshelfViewModel = koinViewModel()
@@ -203,7 +197,6 @@ fun MainScreen(
                                 NavigationIcon(
                                     destination = destination,
                                     selected = selected,
-                                    upBooksCount = uiState.upBooksCount,
                                     modifier = if (destination == MainDestination.Bookshelf) {
                                         Modifier.combinedClickable(
                                             onClick = {
@@ -280,7 +273,7 @@ fun MainScreen(
                                             .asPaddingValues()
                                             .calculateBottomPadding()
                                     ),
-                                selectedIndex = { pagerState.currentPage },
+                                selectedIndex = { pagerState.targetPage },
                                 onSelected = { index ->
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(index)
@@ -291,7 +284,7 @@ fun MainScreen(
                                 isBlurEnabled = useLiquidGlass
                             ) {
                                 destinations.forEachIndexed { index, destination ->
-                                    val selected = pagerState.currentPage == index
+                                    val selected = pagerState.targetPage == index
                                     FloatingBottomBarItem(
                                         onClick = {
                                             coroutineScope.launch {
@@ -302,18 +295,12 @@ fun MainScreen(
                                     ) {
                                         NavigationIcon(
                                             destination = destination,
-                                            selected = selected,
-                                            upBooksCount = uiState.upBooksCount
+                                            selected = selected
                                         )
                                         if (showLabel && (alwaysShowLabel || selected)) {
-                                            Text(
+                                            AppText(
                                                 text = stringResource(destination.labelId),
                                                 style = MaterialTheme.typography.labelSmall,
-                                                color = if (selected) {
-                                                    LegadoTheme.colorScheme.primary
-                                                } else {
-                                                    LegadoTheme.colorScheme.onSurface
-                                                },
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -340,8 +327,7 @@ fun MainScreen(
                                     m3Icon = {
                                         NavigationIcon(
                                             destination = destination,
-                                            selected = selected,
-                                            upBooksCount = uiState.upBooksCount
+                                            selected = selected
                                         )
                                     },
                                     m3IndicatorColor = GlassDefaults.glassColor(
@@ -410,17 +396,8 @@ fun MainScreen(
 private fun NavigationIcon(
     destination: MainDestination,
     selected: Boolean,
-    upBooksCount: Int,
     modifier: Modifier = Modifier
 ) {
     val icon = AppIcons.mainDestination(destination, selected)
-    Box(modifier = modifier) {
-        if (destination == MainDestination.Bookshelf && upBooksCount > 0) {
-            BadgedBox(badge = { Badge { Text(upBooksCount.toString()) } }) {
-                AppIcon(icon, contentDescription = null)
-            }
-        } else {
-            AppIcon(icon, contentDescription = null)
-        }
-    }
+    AppIcon(icon, contentDescription = null, modifier = modifier)
 }

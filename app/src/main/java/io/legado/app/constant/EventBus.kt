@@ -38,6 +38,5 @@ object EventBus {
     const val REFRESH_BOOK_CONTENT = "refreshBookContent"
     const val UP_TOC = "upToc"
 
-    const val UP_BOOKSHELF_COUNT = "upBookshelfCount"
     const val UP_ALL_BOOK_TOC = "upAllBookToc"
 }

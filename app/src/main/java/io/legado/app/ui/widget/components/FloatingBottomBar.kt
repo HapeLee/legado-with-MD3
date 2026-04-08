@@ -67,7 +67,6 @@ import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.animation.InteractiveHighlight
 import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.sign
@@ -143,7 +142,7 @@ fun FloatingBottomBar(
         }
     }
 
-    var currentIndex by remember(selectedIndex) { mutableIntStateOf(selectedIndex()) }
+    var currentIndex by remember { mutableIntStateOf(selectedIndex()) }
 
     class DampedDragAnimationHolder {
         var instance: DampedDragAnimation? = null
@@ -179,6 +178,9 @@ fun FloatingBottomBar(
                 val targetIndex = targetValue.fastRoundToInt().fastCoerceIn(0, tabsCount - 1)
                 currentIndex = targetIndex
                 animateToValue(targetIndex.toFloat())
+                if (targetIndex != selectedIndex()) {
+                    onSelected(targetIndex)
+                }
                 animationScope.launch {
                     offsetAnimation.animateTo(0f, spring(1f, 300f, 0.5f))
                 }
@@ -197,13 +199,10 @@ fun FloatingBottomBar(
         ).also { holder.instance = it }
     }
 
-    LaunchedEffect(selectedIndex) {
-        snapshotFlow { selectedIndex() }.collectLatest { currentIndex = it }
-    }
-    LaunchedEffect(dampedDragAnimation) {
-        snapshotFlow { currentIndex }.drop(1).collectLatest { index ->
+    LaunchedEffect(selectedIndex, dampedDragAnimation) {
+        snapshotFlow { selectedIndex() }.collectLatest { index ->
+            currentIndex = index
             dampedDragAnimation.animateToValue(index.toFloat())
-            onSelected(index)
         }
     }
 

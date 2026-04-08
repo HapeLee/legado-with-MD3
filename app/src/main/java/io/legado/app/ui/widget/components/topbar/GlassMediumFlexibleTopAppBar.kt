@@ -23,6 +23,7 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.widget.components.GlassDefaults
 import io.legado.app.ui.widget.components.text.AdaptiveAnimatedText
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.TopAppBar as MiuixTopAppBar
@@ -33,7 +34,7 @@ fun GlassMediumFlexibleTopAppBar(
     title: String,
     modifier: Modifier = Modifier,
     useCharMode: Boolean = false,
-    subtitle: (@Composable () -> Unit)? = null,
+    subtitle: String? = null,
     scrollBehavior: GlassTopAppBarScrollBehavior? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
@@ -73,6 +74,7 @@ fun GlassMediumFlexibleTopAppBar(
         containerColor = Color.Transparent,
         scrolledContainerColor = Color.Transparent
     )
+    val subtitleText = subtitle?.takeIf { it.isNotBlank() }
 
     Column(
         modifier = finalModifier
@@ -82,6 +84,7 @@ fun GlassMediumFlexibleTopAppBar(
                 MiuixTopAppBar(
                     modifier = Modifier,
                     title = title,
+                    subtitle = subtitleText.orEmpty(),
                     navigationIcon = navigationIcon,
                     actions = actions,
                     color = Color.Transparent,
@@ -101,7 +104,11 @@ fun GlassMediumFlexibleTopAppBar(
                                 overflow = TextOverflow.Ellipsis
                             )
                         },
-                        subtitle = subtitle,
+                        subtitle = subtitleText?.let { text ->
+                            {
+                                AnimatedTextLine(text = text)
+                            }
+                        },
                         navigationIcon = navigationIcon,
                         actions = actions,
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
@@ -111,12 +118,23 @@ fun GlassMediumFlexibleTopAppBar(
                     TopAppBar(
                         modifier = Modifier,
                         title = {
-                            AdaptiveAnimatedText(
-                                text = title,
-                                useCharMode = useCharMode,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            Column {
+                                AdaptiveAnimatedText(
+                                    text = title,
+                                    useCharMode = useCharMode,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                subtitleText?.let { text ->
+                                    AnimatedTextLine(
+                                        text = text,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         },
                         navigationIcon = navigationIcon,
                         actions = actions,

@@ -3,7 +3,6 @@ package io.legado.app.ui.main
 import android.app.Application
 import android.content.Context
 import android.content.Intent
-import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
@@ -12,31 +11,10 @@ import io.legado.app.help.DefaultData
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.sendToClip
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-
-data class MainUiState(
-    val upBooksCount: Int = 0
-)
 
 class MainViewModel(application: Application) : BaseViewModel(application) {
 
-    private val upBooksCountFlow = MutableStateFlow(0)
-
-    val state: StateFlow<MainUiState> = upBooksCountFlow
-        .map { count -> MainUiState(count) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MainUiState())
-
     init {
-        viewModelScope.launch {
-            FlowEventBus.with<Int>(EventBus.UP_BOOKSHELF_COUNT).collect {
-                upBooksCountFlow.value = it
-            }
-        }
         deleteNotShelfBook()
     }
 

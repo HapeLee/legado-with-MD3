@@ -14,5 +14,6 @@ data class BookshelfUiState(
     val groupBookCounts: Map<Long, Int> = emptyMap(),
     val selectedGroupIndex: Int = 0,
     val loadingText: String? = null,
+    val upBooksCount: Int = 0,
     val updatingBooks: Set<String> = emptySet()
 ) : ListUiState<BookShelfItem>

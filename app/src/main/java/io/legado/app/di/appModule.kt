@@ -106,7 +106,7 @@ val appModule = module {
         ReplaceEditViewModel(
             app = get(),
             replaceRuleDao = get(),
-            savedStateHandle = get()
+            route = route
         )
     }
 
