@@ -115,15 +115,15 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     private var mCachedShadowOffsetY = 0f
 
     init {
-        //设置颜色数组 - 使用更自然的阴影颜色
-        val folderColor = intArrayOf(0x40000000, 0x00000000) // 更柔和的文件夹阴影
+        //设置颜色数组 - 使用更自然的阴影颜色，参考SimulationPageAnim.java的实现
+        val folderColor = intArrayOf(0x333333, 0xb0333333) // 更真实的文件夹阴影
         mFolderShadowDrawableRL = GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, folderColor)
         mFolderShadowDrawableRL.gradientType = GradientDrawable.LINEAR_GRADIENT
 
         mFolderShadowDrawableLR = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, folderColor)
         mFolderShadowDrawableLR.gradientType = GradientDrawable.LINEAR_GRADIENT
 
-        mBackShadowColors = intArrayOf(0x30000000, 0x00000000) // 更自然的背面阴影
+        mBackShadowColors = intArrayOf(0xff111111, 0x111111) // 更真实的背面阴影
         mBackShadowDrawableRL =
             GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, mBackShadowColors)
         mBackShadowDrawableRL.gradientType = GradientDrawable.LINEAR_GRADIENT
@@ -132,7 +132,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, mBackShadowColors)
         mBackShadowDrawableLR.gradientType = GradientDrawable.LINEAR_GRADIENT
 
-        mFrontShadowColors = intArrayOf(0x40000000, 0x00000000) // 更自然的前面阴影
+        mFrontShadowColors = intArrayOf(0x80111111, 0x111111) // 更真实的前面阴影
         mFrontShadowDrawableVLR =
             GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, mFrontShadowColors)
         mFrontShadowDrawableVLR.gradientType = GradientDrawable.LINEAR_GRADIENT
@@ -215,36 +215,40 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     }
 
     override fun onAnimStart(animationSpeed: Int) {
-        var dx: Float
-        val dy: Float
+        var dx: Int
+        var dy: Int
+        // dx 水平方向滑动的距离，负值会使滚动向左滚动
         // dy 垂直方向滑动的距离，负值会使滚动向上滚动
         if (isCancel) {
-            dx = if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
-                (viewWidth - touchX)
+
+            if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
+                dx = (viewWidth - touchX).toInt()
             } else {
-                -touchX
+                dx = -touchX.toInt()
             }
+
             if (mDirection != PageDirection.NEXT) {
-                dx = -(viewWidth + touchX)
+                dx = -(viewWidth + touchX).toInt()
             }
-            dy = if (mCornerY > 0) {
-                (viewHeight - touchY)
+
+            if (mCornerY > 0) {
+                dy = (viewHeight - touchY).toInt()
             } else {
-                -touchY // 防止mTouchY最终变为0
+                dy = -touchY.toInt() // 防止mTouchY最终变为0
             }
         } else {
-            dx = if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
-                -(viewWidth + touchX)
+            if (mCornerX > 0 && mDirection == PageDirection.NEXT) {
+                dx = -(viewWidth + touchX).toInt()
             } else {
-                viewWidth - touchX
+                dx = (viewWidth - touchX + viewWidth).toInt()
             }
-            dy = if (mCornerY > 0) {
-                (viewHeight - touchY)
+            if (mCornerY > 0) {
+                dy = (viewHeight - touchY).toInt()
             } else {
-                (1 - touchY) // 防止mTouchY最终变为0
+                dy = (1 - touchY).toInt() // 防止mTouchY最终变为0
             }
         }
-        startScroll(touchX.toInt(), touchY.toInt(), dx.toInt(), dy.toInt(), animationSpeed)
+        startScroll(touchX.toInt(), touchY.toInt(), dx, dy, animationSpeed)
     }
 
     override fun onAnimStop() {
@@ -255,24 +259,30 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
 
     override fun onDraw(canvas: Canvas) {
         if (!isRunning) return
-        when (mDirection) {
-            PageDirection.NEXT -> {
-                calcPoints()
-                drawCurrentPageArea(canvas, curBitmap)
-                drawNextPageAreaAndShadow(canvas, nextBitmap)
-                drawCurrentPageShadow(canvas)
-                drawCurrentBackArea(canvas, curBitmap)
-            }
+        try {
+            when (mDirection) {
+                PageDirection.NEXT -> {
+                    calcPoints()
+                    drawCurrentPageArea(canvas, curBitmap)
+                    drawNextPageAreaAndShadow(canvas, nextBitmap)
+                    drawCurrentPageShadow(canvas)
+                    drawCurrentBackArea(canvas, curBitmap)
+                }
 
-            PageDirection.PREV -> {
-                calcPoints()
-                drawCurrentPageArea(canvas, prevBitmap)
-                drawNextPageAreaAndShadow(canvas, curBitmap)
-                drawCurrentPageShadow(canvas)
-                drawCurrentBackArea(canvas, prevBitmap)
-            }
+                PageDirection.PREV -> {
+                    calcPoints()
+                    drawCurrentPageArea(canvas, prevBitmap)
+                    drawNextPageAreaAndShadow(canvas, curBitmap)
+                    drawCurrentPageShadow(canvas)
+                    drawCurrentBackArea(canvas, prevBitmap)
+                }
 
-            else -> return
+                else -> return
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // 发生异常时停止动画，避免崩溃
+            isRunning = false
         }
     }
 
@@ -309,25 +319,18 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             mFolderShadowDrawable = mFolderShadowDrawableRL
         }
         canvas.save()
-        canvas.clipPath(mPath0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.clipPath(mPath1)
-        } else {
-            canvas.clipPath(mPath1, Region.Op.INTERSECT)
+        try {
+            canvas.clipPath(mPath0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                canvas.clipPath(mPath1)
+            } else {
+                canvas.clipPath(mPath1, Region.Op.INTERSECT)
+            }
+        } catch (ignored: Exception) {
         }
 
-        // 增强背面效果，添加轻微的模糊和变暗效果
-        mPaint.colorFilter = ColorMatrixColorFilter(
-            ColorMatrix(
-                floatArrayOf(
-                    0.9f, 0f, 0f, 0f, -10f,
-                    0f, 0.9f, 0f, 0f, -10f,
-                    0f, 0f, 0.9f, 0f, -10f,
-                    0f, 0f, 0f, 1f, 0f
-                )
-            )
-        )
-        
+        mPaint.colorFilter = mColorMatrixFilter
+
         val dis = hypot(
             mCornerX - mBezierControl1.x.toDouble(),
             mBezierControl2.y - mCornerY.toDouble()
@@ -342,11 +345,11 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mMatrix.setValues(mMatrixArray)
         mMatrix.preTranslate(-mBezierControl1.x, -mBezierControl1.y)
         mMatrix.postTranslate(mBezierControl1.x, mBezierControl1.y)
-        canvas.drawColor(ReadBookConfig.bgMeanColor)
         canvas.drawBitmap(bitmap, mMatrix, mPaint)
+
         mPaint.colorFilter = null
-        
-        // 增强阴影效果
+
+        // 增强阴影效果 - 参考SimulationPageAnim.java的实现
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
         mFolderShadowDrawable.setBounds(
             left, mBezierStart1.y.toInt(),
@@ -367,13 +370,9 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             Math.PI / 4 - atan2(mTouchY - mBezierControl1.y, mTouchX - mBezierControl1.x)
         }
         
-        // 根据翻页角度动态调整阴影强度
-        val shadowStrength = 0.8f * abs(cos(degree)).toFloat() // 阴影强度随角度变化
-        val shadowDistance = 25f * shadowStrength
-        
-        // 翻起页阴影顶点与touch点的距离
-        val d1 = shadowDistance * 1.414 * cos(degree)
-        val d2 = shadowDistance * 1.414 * sin(degree)
+        // 翻起页阴影顶点与touch点的距离 - 参考SimulationPageAnim.java的实现
+        val d1 = 25.0 * 1.414 * cos(degree)
+        val d2 = 25.0 * 1.414 * sin(degree)
         val x = (mTouchX + d1).toFloat()
         val y: Float = if (mIsRtOrLb) {
             (mTouchY + d2).toFloat()
@@ -387,25 +386,30 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mPath1.lineTo(mBezierStart1.x, mBezierStart1.y)
         mPath1.close()
         canvas.save()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.clipOutPath(mPath0)
-        } else {
-            canvas.clipPath(mPath0, Region.Op.XOR)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                canvas.clipOutPath(mPath0)
+            } else {
+                canvas.clipPath(mPath0, Region.Op.XOR)
+            }
+
+            canvas.clipPath(mPath1, Region.Op.INTERSECT)
+        } catch (ignored: Exception) {
         }
-        canvas.clipPath(mPath1, Region.Op.INTERSECT)
 
         var leftX: Int
         var rightX: Int
         var mCurrentPageShadow: GradientDrawable
         if (mIsRtOrLb) {
             leftX = mBezierControl1.x.toInt()
-            rightX = (mBezierControl1.x + shadowDistance).toInt()
+            rightX = (mBezierControl1.x + 25).toInt()
             mCurrentPageShadow = mFrontShadowDrawableVLR
         } else {
-            leftX = (mBezierControl1.x - shadowDistance).toInt()
+            leftX = (mBezierControl1.x - 25).toInt()
             rightX = (mBezierControl1.x + 1).toInt()
             mCurrentPageShadow = mFrontShadowDrawableVRL
         }
+
         var rotateDegrees = Math.toDegrees(
             atan2(mTouchX - mBezierControl1.x, mBezierControl1.y - mTouchY).toDouble()
         ).toFloat()
@@ -424,19 +428,23 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mPath1.lineTo(mBezierStart2.x, mBezierStart2.y)
         mPath1.close()
         canvas.save()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.clipOutPath(mPath0)
-        } else {
-            canvas.clipPath(mPath0, Region.Op.XOR)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                canvas.clipOutPath(mPath0)
+            } else {
+                canvas.clipPath(mPath0, Region.Op.XOR)
+            }
+
+            canvas.clipPath(mPath1)
+        } catch (ignored: Exception) {
         }
-        canvas.clipPath(mPath1)
 
         if (mIsRtOrLb) {
             leftX = mBezierControl2.y.toInt()
-            rightX = (mBezierControl2.y + shadowDistance).toInt()
+            rightX = (mBezierControl2.y + 25).toInt()
             mCurrentPageShadow = mFrontShadowDrawableHTB
         } else {
-            leftX = (mBezierControl2.y - shadowDistance).toInt()
+            leftX = (mBezierControl2.y - 25).toInt()
             rightX = (mBezierControl2.y + 1).toInt()
             mCurrentPageShadow = mFrontShadowDrawableHBT
         }
@@ -447,10 +455,11 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         val temp =
             if (mBezierControl2.y < 0) (mBezierControl2.y - viewHeight).toDouble()
             else mBezierControl2.y.toDouble()
+
         val hmg = hypot(mBezierControl2.x.toDouble(), temp)
         if (hmg > mMaxLength)
             mCurrentPageShadow.setBounds(
-                (mBezierControl2.x - shadowDistance - hmg).toInt(), leftX,
+                (mBezierControl2.x - 25 - hmg).toInt(), leftX,
                 (mBezierControl2.x + mMaxLength - hmg).toInt(), rightX
             )
         else
@@ -458,6 +467,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 (mBezierControl2.x - mMaxLength).toInt(), leftX,
                 mBezierControl2.x.toInt(), rightX
             )
+
         mCurrentPageShadow.draw(canvas)
         canvas.restore()
     }
@@ -494,11 +504,14 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             mBackShadowDrawable = mBackShadowDrawableRL
         }
         canvas.save()
-        canvas.clipPath(mPath0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            canvas.clipPath(mPath1)
-        } else {
-            canvas.clipPath(mPath1, Region.Op.INTERSECT)
+        try {
+            canvas.clipPath(mPath0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                canvas.clipPath(mPath1)
+            } else {
+                canvas.clipPath(mPath1, Region.Op.INTERSECT)
+            }
+        } catch (ignored: Exception) {
         }
         canvas.drawBitmap(bitmap, 0f, 0f, null)
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
@@ -532,7 +545,11 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             canvas.clipPath(mPath0, Region.Op.XOR)
         }
         canvas.drawBitmap(bitmap, 0f, 0f, null)
-        canvas.restore()
+        try {
+            canvas.restore()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     /**
@@ -559,8 +576,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         
         // 避免除零错误
         if (deltaX != 0f) {
-            // 调整控制点位置，使翻页曲线更加自然
-            mBezierControl1.x = mMiddleX - (deltaY * deltaY) / (deltaX * 1.2f) // 增加系数使曲线更平缓
+            // 调整控制点位置，使翻页曲线更加自然 - 使用更精确的计算方式
+            mBezierControl1.x = mMiddleX - (deltaY * deltaY) / deltaX
         } else {
             mBezierControl1.x = mMiddleX - (deltaY * deltaY) / 0.1f
         }
@@ -568,8 +585,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mBezierControl2.x = mCornerX.toFloat()
 
         if (deltaY != 0f) {
-            // 调整控制点位置，使翻页曲线更加自然
-            mBezierControl2.y = mMiddleY - (deltaX * deltaX) / (deltaY * 1.2f) // 增加系数使曲线更平缓
+            // 调整控制点位置，使翻页曲线更加自然 - 使用更精确的计算方式
+            mBezierControl2.y = mMiddleY - (deltaX * deltaX) / deltaY
         } else {
             mBezierControl2.y = mMiddleY - (deltaX * deltaX) / 0.1f
         }
@@ -600,7 +617,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 val newDeltaY = mCornerY - mMiddleY
                 
                 if (newDeltaX != 0f) {
-                    mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / (newDeltaX * 1.2f)
+                    mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / newDeltaX
                 } else {
                     mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / 0.1f
                 }
@@ -608,7 +625,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 mBezierControl2.x = mCornerX.toFloat()
 
                 if (newDeltaY != 0f) {
-                    mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / (newDeltaY * 1.2f)
+                    mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / newDeltaY
                 } else {
                     mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / 0.1f
                 }
@@ -636,7 +653,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             mBezierStart2
         )
 
-        // 计算贝塞尔曲线顶点
+        // 计算贝塞尔曲线顶点 - 优化计算方式，使曲线更加平滑
         mBezierVertex1.x = (mBezierStart1.x + 2 * mBezierControl1.x + mBezierEnd1.x) / 4
         mBezierVertex1.y = (2 * mBezierControl1.y + mBezierStart1.y + mBezierEnd1.y) / 4
         mBezierVertex2.x = (mBezierStart2.x + 2 * mBezierControl2.x + mBezierEnd2.x) / 4
