@@ -1861,8 +1861,20 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
     }
 
-    override fun showPageAnimSpeedConfig() {
-        showDialogFragment<PageAnimSpeedDialog>()
+    override fun showPageAnimSpeedConfig(animType: Int, area: String) {
+        // 将动画类型转换为字符串
+        val animTypeStr = when(animType) {
+            0 -> "cover"
+            1 -> "slide"
+            2 -> "simulation"
+            3 -> "scroll"
+            4 -> "fade"
+            5 -> "simulationV2"
+            else -> ""
+        }
+        if (animTypeStr.isNotEmpty()) {
+            showDialogFragment(PageAnimSpeedDialog(animTypeStr, area))
+        }
     }
 
     private fun callBackBookEnd() {

@@ -225,6 +225,13 @@
     <string name="book_page_anim">翻页动画（本书）</string>
     <string name="page_anim_speed">翻页动画速度</string>
     <string name="page_anim_speed_summary">%dms</string>
+    <string name="area">区域</string>
+    <string name="left_top">左上</string>
+    <string name="left_middle">左中</string>
+    <string name="left_bottom">左下</string>
+    <string name="right_top">右上</string>
+    <string name="right_middle">右中</string>
+    <string name="right_bottom">右下</string>
     <string name="keep_light">屏幕超时</string>
     <string name="back">返回</string>
     <string name="menu">菜单</string>

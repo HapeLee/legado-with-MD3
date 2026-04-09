@@ -317,9 +317,13 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 长按选择
      */
     private fun onLongPress() {
-        if (ReadBook.pageAnim() == PageAnim.simulationPageAnimV2) {
-            callBack.showPageAnimSpeedConfig()
+        // 检查是否在翻页区域长按
+        val area = getTouchArea(startX, startY)
+        if (area in listOf("tl", "ml", "bl", "tr", "mr", "br")) {
+            // 对于所有动画类型，在翻页区域长按都显示速度调节弹窗
+            callBack.showPageAnimSpeedConfig(ReadBook.pageAnim(), area)
         } else {
+            // 在非翻页区域长按，仍然进行文本选择
             kotlin.runCatching {
                 curPage.longPress(startX, startY) { textPos: TextPos ->
                     isTextSelected = true
@@ -392,6 +396,24 @@ class ReadView(context: Context, attrs: AttributeSet) :
     }
 
     /**
+     * 获取触摸区域
+     */
+    fun getTouchArea(x: Float, y: Float): String {
+        return when {
+            tlRect.contains(x, y) -> "tl"
+            mlRect.contains(x, y) -> "ml"
+            blRect.contains(x, y) -> "bl"
+            trRect.contains(x, y) -> "tr"
+            mrRect.contains(x, y) -> "mr"
+            brRect.contains(x, y) -> "br"
+            tcRect.contains(x, y) -> "tc"
+            mcRect.contains(x, y) -> "mc"
+            bcRect.contains(x, y) -> "bc"
+            else -> ""
+        }
+    }
+
+    /**
      * 单击
      */
     private fun onSingleTapUp() {
@@ -439,14 +461,15 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 点击
      */
     private fun click(action: Int) {
+        val animationSpeed = getAnimationSpeed(getTouchArea(startX, startY))
         when (action) {
             0 -> {
                 pageDelegate?.dismissSnackBar()
                 callBack.showActionMenu()
             }
 
-            1 -> pageDelegate?.nextPageByAnim(defaultAnimationSpeed)
-            2 -> pageDelegate?.prevPageByAnim(defaultAnimationSpeed)
+            1 -> pageDelegate?.nextPageByAnim(animationSpeed)
+            2 -> pageDelegate?.prevPageByAnim(animationSpeed)
             3 -> ReadBook.moveToNextChapter(true)
             4 -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
             5 -> ReadAloud.prevParagraph(context)
@@ -467,6 +490,21 @@ class ReadView(context: Context, attrs: AttributeSet) :
                     ReadAloud.resume(context)
                 }
             }
+        }
+    }
+
+    /**
+     * 获取动画速度
+     */
+    fun getAnimationSpeed(area: String): Int {
+        return when (ReadBook.pageAnim()) {
+            PageAnim.coverPageAnim -> AppConfig.getCoverPageAnimSpeed(area)
+            PageAnim.slidePageAnim -> AppConfig.getSlidePageAnimSpeed(area)
+            PageAnim.simulationPageAnim -> AppConfig.getSimulationPageAnimSpeed(area)
+            PageAnim.simulationPageAnimV2 -> AppConfig.getSimulationPageAnimV2Speed(area)
+            PageAnim.scrollPageAnim -> AppConfig.getScrollPageAnimSpeed(area)
+            PageAnim.fadePageAnim -> AppConfig.getGradientPageAnimSpeed(area)
+            else -> 200
         }
     }
 
@@ -775,6 +813,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
         fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
         fun sureNewProgress(progress: BookProgress)
-        fun showPageAnimSpeedConfig()
+        fun showPageAnimSpeedConfig(animType: Int, area: String)
     }
 }

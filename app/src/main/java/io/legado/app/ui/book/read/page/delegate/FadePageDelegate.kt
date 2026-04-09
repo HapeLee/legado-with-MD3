@@ -62,7 +62,10 @@ class FadePageDelegate(readView: ReadView) : PageDelegate(readView) {
                 // 超过阈值自动翻页，否则回弹
                 val shouldFlip = fadeProgress >= flipThreshold
                 isCancel = !shouldFlip
-                onAnimStart(readView.defaultAnimationSpeed)
+                // 获取当前触摸区域的动画速度
+                val area = (readView as ReadView).getTouchArea(readView.startX, readView.startY)
+                val animationSpeed = (readView as ReadView).getAnimationSpeed(area)
+                onAnimStart(animationSpeed)
             }
         }
     }

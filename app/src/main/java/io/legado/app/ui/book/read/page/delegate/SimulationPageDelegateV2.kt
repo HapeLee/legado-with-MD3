@@ -280,7 +280,7 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
                 dy = (1 - touchY).toInt() // 防止mTouchY最终变为0
             }
         }
-        startScroll(touchX.toInt(), touchY.toInt(), dx, dy, this.animationSpeed)
+        startScroll(touchX.toInt(), touchY.toInt(), dx, dy, animationSpeed)
     }
 
     override fun onAnimStop() {

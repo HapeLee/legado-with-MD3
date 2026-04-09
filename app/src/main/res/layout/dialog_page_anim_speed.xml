@@ -16,6 +16,28 @@
         android:layout_gravity="center_horizontal" />
 
     <LinearLayout
+        android:id="@+id/ll_area"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="horizontal"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/area" />
+
+        <TextView
+            android:id="@+id/tv_area"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <LinearLayout
         android:id="@+id/ll_page_anim_speed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -42,8 +64,8 @@
         android:id="@+id/seek_page_anim_speed"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:stepSize="50.0"
-        android:valueFrom="100.0"
+        android:stepSize="10.0"
+        android:valueFrom="10.0"
         android:valueTo="500.0"
         tools:ignore="UnusedAttribute" />
 

@@ -58,7 +58,10 @@ class ScrollPageDelegate(readView: ReadView) : PageDelegate(readView) {
             }
 
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
-                onAnimStart(readView.defaultAnimationSpeed)
+                // 获取当前触摸区域的动画速度
+                val area = (readView as ReadView).getTouchArea(readView.startX, readView.startY)
+                val animationSpeed = (readView as ReadView).getAnimationSpeed(area)
+                onAnimStart(animationSpeed)
             }
         }
     }

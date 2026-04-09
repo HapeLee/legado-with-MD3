@@ -62,7 +62,34 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var recordLog = appCtx.getPrefBoolean(PreferKey.recordLog)
     var webServiceAutoStart = appCtx.getPrefBoolean(PreferKey.webServiceAutoStart, false)
     
-    // 仿真二翻页动画速度
+    // 翻页动画速度设置（所有动画类型和方位）
+    // 6个方位：tl(左上), ml(左中), bl(左下), tr(右上), mr(右中), br(右下)
+    
+    // 覆盖动画速度
+    fun getCoverPageAnimSpeed(area: String): Int = appCtx.getPrefInt("coverPageAnimSpeed_$area", 200)
+    fun setCoverPageAnimSpeed(area: String, value: Int) = appCtx.putPrefInt("coverPageAnimSpeed_$area", value)
+    
+    // 滑动动画速度
+    fun getSlidePageAnimSpeed(area: String): Int = appCtx.getPrefInt("slidePageAnimSpeed_$area", 200)
+    fun setSlidePageAnimSpeed(area: String, value: Int) = appCtx.putPrefInt("slidePageAnimSpeed_$area", value)
+    
+    // 仿真动画速度
+    fun getSimulationPageAnimSpeed(area: String): Int = appCtx.getPrefInt("simulationPageAnimSpeed_$area", 200)
+    fun setSimulationPageAnimSpeed(area: String, value: Int) = appCtx.putPrefInt("simulationPageAnimSpeed_$area", value)
+    
+    // 仿真二动画速度
+    fun getSimulationPageAnimV2Speed(area: String): Int = appCtx.getPrefInt("simulationPageAnimV2Speed_$area", 200)
+    fun setSimulationPageAnimV2Speed(area: String, value: Int) = appCtx.putPrefInt("simulationPageAnimV2Speed_$area", value)
+    
+    // 滚动动画速度
+    fun getScrollPageAnimSpeed(area: String): Int = appCtx.getPrefInt("scrollPageAnimSpeed_$area", 200)
+    fun setScrollPageAnimSpeed(area: String, value: Int) = appCtx.putPrefInt("scrollPageAnimSpeed_$area", value)
+    
+    // 渐变动画速度
+    fun getGradientPageAnimSpeed(area: String): Int = appCtx.getPrefInt("gradientPageAnimSpeed_$area", 200)
+    fun setGradientPageAnimSpeed(area: String, value: Int) = appCtx.putPrefInt("gradientPageAnimSpeed_$area", value)
+    
+    // 兼容旧版设置
     var simulationPageAnimV2Speed: Int
         get() = appCtx.getPrefInt("simulationPageAnimV2Speed", 300)
         set(value) = appCtx.putPrefInt("simulationPageAnimV2Speed", value)

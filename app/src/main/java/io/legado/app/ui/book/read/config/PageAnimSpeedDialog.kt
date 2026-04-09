@@ -13,7 +13,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.util.Locale
 
 
-class PageAnimSpeedDialog : BaseBottomSheetDialogFragment(R.layout.dialog_page_anim_speed) {
+class PageAnimSpeedDialog(private val animType: String, private val area: String) : BaseBottomSheetDialogFragment(R.layout.dialog_page_anim_speed) {
 
     private val binding by viewBinding(DialogPageAnimSpeedBinding::bind)
 
@@ -28,12 +28,23 @@ class PageAnimSpeedDialog : BaseBottomSheetDialogFragment(R.layout.dialog_page_a
             dismiss()
             return@run
         }
+        // 显示方位信息
+        val areaName = when(area) {
+            "tl" -> getString(R.string.left_top)
+            "ml" -> getString(R.string.left_middle)
+            "bl" -> getString(R.string.left_bottom)
+            "tr" -> getString(R.string.right_top)
+            "mr" -> getString(R.string.right_middle)
+            "br" -> getString(R.string.right_bottom)
+            else -> area
+        }
+        binding.tvArea.text = areaName
         initOnChange()
         initData()
     }
 
     private fun initData() {
-        val speed = AppConfig.simulationPageAnimV2Speed
+        val speed = getCurrentSpeed()
         binding.tvPageAnimSpeed.text = String.format(Locale.ROOT, "%dms", speed)
         binding.seekPageAnimSpeed.value = speed.toFloat()
     }
@@ -50,8 +61,31 @@ class PageAnimSpeedDialog : BaseBottomSheetDialogFragment(R.layout.dialog_page_a
             }
 
             override fun onStopTrackingTouch(slider: Slider) {
-                AppConfig.simulationPageAnimV2Speed = slider.value.toInt()
+                setCurrentSpeed(slider.value.toInt())
             }
         })
+    }
+
+    private fun getCurrentSpeed(): Int {
+        return when(animType) {
+            "cover" -> AppConfig.getCoverPageAnimSpeed(area)
+            "slide" -> AppConfig.getSlidePageAnimSpeed(area)
+            "simulation" -> AppConfig.getSimulationPageAnimSpeed(area)
+            "simulationV2" -> AppConfig.getSimulationPageAnimV2Speed(area)
+            "scroll" -> AppConfig.getScrollPageAnimSpeed(area)
+            "gradient" -> AppConfig.getGradientPageAnimSpeed(area)
+            else -> 200
+        }
+    }
+
+    private fun setCurrentSpeed(speed: Int) {
+        when(animType) {
+            "cover" -> AppConfig.setCoverPageAnimSpeed(area, speed)
+            "slide" -> AppConfig.setSlidePageAnimSpeed(area, speed)
+            "simulation" -> AppConfig.setSimulationPageAnimSpeed(area, speed)
+            "simulationV2" -> AppConfig.setSimulationPageAnimV2Speed(area, speed)
+            "scroll" -> AppConfig.setScrollPageAnimSpeed(area, speed)
+            "gradient" -> AppConfig.setGradientPageAnimSpeed(area, speed)
+        }
     }
 }
