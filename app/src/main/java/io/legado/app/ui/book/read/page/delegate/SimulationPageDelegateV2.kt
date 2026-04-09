@@ -13,6 +13,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.MotionEvent
 import io.legado.app.help.config.AppConfig
+import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.widget.DetailSeekBar
@@ -115,42 +116,55 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
     private var isLongPress = false
 
     // 动画速度
-    private var animationSpeed = AppConfig.simulationPageAnimV2Speed ?: 300
+    private var animationSpeed = AppConfig.simulationPageAnimV2Speed
 
     init {
         //设置颜色数组 - 参考SimulationPageAnim.java的实现
         val folderColor = intArrayOf(0x333333, 0xb0333333) // 更真实的文件夹阴影
-        mFolderShadowDrawableRL = GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, folderColor)
-        mFolderShadowDrawableRL.gradientType = GradientDrawable.LINEAR_GRADIENT
-
-        mFolderShadowDrawableLR = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, folderColor)
-        mFolderShadowDrawableLR.gradientType = GradientDrawable.LINEAR_GRADIENT
+        mFolderShadowDrawableRL = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.RIGHT_LEFT
+            colors = folderColor
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
+        mFolderShadowDrawableLR = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.LEFT_RIGHT
+            colors = folderColor
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
 
         mBackShadowColors = intArrayOf(0xff111111, 0x111111) // 更真实的背面阴影
-        mBackShadowDrawableRL =
-            GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, mBackShadowColors)
-        mBackShadowDrawableRL.gradientType = GradientDrawable.LINEAR_GRADIENT
-
-        mBackShadowDrawableLR =
-            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, mBackShadowColors)
-        mBackShadowDrawableLR.gradientType = GradientDrawable.LINEAR_GRADIENT
+        mBackShadowDrawableRL = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.RIGHT_LEFT
+            colors = mBackShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
+        mBackShadowDrawableLR = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.LEFT_RIGHT
+            colors = mBackShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
 
         mFrontShadowColors = intArrayOf(0x80111111, 0x111111) // 更真实的前面阴影
-        mFrontShadowDrawableVLR =
-            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, mFrontShadowColors)
-        mFrontShadowDrawableVLR.gradientType = GradientDrawable.LINEAR_GRADIENT
-
-        mFrontShadowDrawableVRL =
-            GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, mFrontShadowColors)
-        mFrontShadowDrawableVRL.gradientType = GradientDrawable.LINEAR_GRADIENT
-
-        mFrontShadowDrawableHTB =
-            GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, mFrontShadowColors)
-        mFrontShadowDrawableHTB.gradientType = GradientDrawable.LINEAR_GRADIENT
-
-        mFrontShadowDrawableHBT =
-            GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, mFrontShadowColors)
-        mFrontShadowDrawableHBT.gradientType = GradientDrawable.LINEAR_GRADIENT
+        mFrontShadowDrawableVLR = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.LEFT_RIGHT
+            colors = mFrontShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
+        mFrontShadowDrawableVRL = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.RIGHT_LEFT
+            colors = mFrontShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
+        mFrontShadowDrawableHTB = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            colors = mFrontShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
+        mFrontShadowDrawableHBT = GradientDrawable().apply {
+            orientation = GradientDrawable.Orientation.BOTTOM_TOP
+            colors = mFrontShadowColors
+            gradientType = GradientDrawable.LINEAR_GRADIENT
+        }
     }
 
     override fun setBitmap() {

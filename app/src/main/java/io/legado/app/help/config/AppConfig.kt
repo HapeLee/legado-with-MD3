@@ -63,10 +63,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var webServiceAutoStart = appCtx.getPrefBoolean(PreferKey.webServiceAutoStart, false)
     
     // 仿真二翻页动画速度
-    var simulationPageAnimV2Speed by prefDelegate(
-        "simulationPageAnimV2Speed",
-        300
-    )
+    var simulationPageAnimV2Speed: Int
+        get() = appCtx.getPrefInt("simulationPageAnimV2Speed", 300)
+        set(value) = appCtx.putPrefInt("simulationPageAnimV2Speed", value)
 
     // -- lyc 版本特性 --
     var adaptSpecialStyle = appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)
