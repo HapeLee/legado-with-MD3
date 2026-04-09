@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -46,6 +44,7 @@ import io.legado.app.help.storage.Restore
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -199,20 +198,21 @@ fun BackupConfigScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 120.dp
+            )
         ) {
-            SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
-                InputSettingItem(
-                    title = stringResource(R.string.web_dav_url),
-                    value = BackupConfig.webDavUrl,
-                    defaultValue = "",
-                    onConfirm = { BackupConfig.webDavUrl = it }
-                )
+            item {
+                SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
+                    InputSettingItem(
+                        title = stringResource(R.string.web_dav_url),
+                        value = BackupConfig.webDavUrl,
+                        defaultValue = "",
+                        onConfirm = { BackupConfig.webDavUrl = it }
+                    )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.web_dav_account),
@@ -285,7 +285,7 @@ fun BackupConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
+                SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
                 ClickableSettingItem(
                     title = stringResource(R.string.backup_path),
                     description = BackupConfig.backupPath
@@ -403,6 +403,7 @@ fun BackupConfigScreen(
                     checked = BackupConfig.onlyLatestBackup,
                     onCheckedChange = { BackupConfig.onlyLatestBackup = it }
                 )
+                }
             }
         }
     }

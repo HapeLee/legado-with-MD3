@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessageView
@@ -203,7 +204,6 @@ fun AllBookmarkScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
         ) {
             AnimatedContent(
                 targetState = contentState,
@@ -216,6 +216,10 @@ fun AllBookmarkScreen(
                             isLoading = true,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .padding(
+                                    top = paddingValues.calculateTopPadding(),
+                                    bottom = 120.dp
+                                )
                         )
                     }
 
@@ -224,6 +228,10 @@ fun AllBookmarkScreen(
                             message = "没有书签！",
                             modifier = Modifier
                                 .fillMaxSize()
+                                .padding(
+                                    top = paddingValues.calculateTopPadding(),
+                                    bottom = 120.dp
+                                )
                         )
                     }
 
@@ -233,7 +241,11 @@ fun AllBookmarkScreen(
                         ) {
                             FastScrollLazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = adaptiveContentPaddingOnlyVertical(
+                                    top = paddingValues.calculateTopPadding(),
+                                    bottom = 120.dp
+                                )
                             ) {
                                 items(
                                     items = bookmarkGroups,
@@ -245,7 +257,7 @@ fun AllBookmarkScreen(
                                         modifier = Modifier
                                             .animateItem()
                                             .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                                            .padding(vertical = 4.dp),
                                         shape = MaterialTheme.shapes.medium,
                                         containerColor = LegadoTheme.colorScheme.surfaceContainer
                                     ) {
@@ -288,7 +300,10 @@ fun AllBookmarkScreen(
                             TopFloatingStickyItem(
                                 item = stickyGroup,
                                 modifier = Modifier
-                                    .padding(top = 4.dp, start = 8.dp)
+                                    .padding(
+                                        top = paddingValues.calculateTopPadding() + 4.dp,
+                                        start = 8.dp
+                                    )
                             ) { group ->
                                 TextCard(
                                     text = group.bookName,

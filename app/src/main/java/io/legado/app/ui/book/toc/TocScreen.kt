@@ -94,6 +94,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
@@ -103,9 +104,11 @@ import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
@@ -193,6 +196,23 @@ fun TocScreen(
     }
 
     val isOnTocPage = pagerState.currentPage == 0
+    val collapsedVolumes by viewModel.collapsedVolumes.collectAsStateWithLifecycle()
+    val stickyVolume by remember(state.items, collapsedVolumes, isOnTocPage, listState) {
+        derivedStateOf {
+            if (!isOnTocPage || state.items.isEmpty()) return@derivedStateOf null
+            val firstVisibleIndex = listState.firstVisibleItemIndex
+            if (firstVisibleIndex !in state.items.indices) return@derivedStateOf null
+
+            val volumeIndex = (firstVisibleIndex downTo 0)
+                .firstOrNull { state.items[it].isVolume } ?: return@derivedStateOf null
+            val volumeItem = state.items[volumeIndex]
+            val isCollapsed = collapsedVolumes.contains(volumeItem.id)
+            val shouldStick =
+                firstVisibleIndex > volumeIndex || listState.firstVisibleItemScrollOffset > 24
+
+            if (!isCollapsed && shouldStick) volumeItem else null
+        }
+    }
 
     val fabItems = remember(state.items) {
         listOf(
@@ -445,10 +465,7 @@ fun TocScreen(
                         )
 
                         if (pagerState.currentPage == 0 && hasVolumes) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(end = 16.dp)
-                            ) {
+                            Box {
                                 SmallOutlinedIconToggleButton(
                                     checked = showVolumeMenu,
                                     onCheckedChange = { showVolumeMenu = it },
@@ -566,26 +583,55 @@ fun TocScreen(
                 )
             }
 
-            Column(modifier = Modifier.padding(padding)) {
-                HorizontalPager(state = pagerState) { page ->
-                    when (page) {
-                        0 -> ChapterListContent(
-                            viewModel = viewModel,
-                            listState = listState,
-                            onChapterClick = onChapterClick,
-                            contentPadding = PaddingValues(bottom = if (isSelectionMode) 80.dp else 0.dp)
+            HorizontalPager(state = pagerState) { page ->
+                when (page) {
+                    0 -> ChapterListContent(
+                        viewModel = viewModel,
+                        listState = listState,
+                        onChapterClick = onChapterClick,
+                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                            top = padding.calculateTopPadding(),
+                            bottom = 120.dp
                         )
+                    )
 
-                        1 -> BookmarkListContent(
-                            viewModel = viewModel,
-                            onBookmarkLongClick = onBookmarkClick,
-                            onBookmarkClick = { bookmark ->
-                                editingBookmark = bookmark
-                            },
-                            contentPadding = PaddingValues(bottom = if (isSelectionMode) 80.dp else 0.dp)
+                    1 -> BookmarkListContent(
+                        viewModel = viewModel,
+                        onBookmarkLongClick = onBookmarkClick,
+                        onBookmarkClick = { bookmark ->
+                            editingBookmark = bookmark
+                        },
+                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                            top = padding.calculateTopPadding(),
+                            bottom = 120.dp
                         )
-                    }
+                    )
                 }
+            }
+
+            TopFloatingStickyItem(
+                item = stickyVolume,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = padding.calculateTopPadding() + 4.dp, start = 8.dp)
+            ) { volume ->
+                TextCard(
+                    text = volume.title,
+                    textStyle = LegadoTheme.typography.labelLarge,
+                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                    contentColor = LegadoTheme.colorScheme.onCardContainer,
+                    cornerRadius = 8.dp,
+                    horizontalPadding = 8.dp,
+                    verticalPadding = 6.dp,
+                    onClick = {
+                        scope.launch {
+                            val index = state.items.indexOfFirst { it.id == volume.id }
+                            if (index >= 0) {
+                                listState.animateScrollToItem(index)
+                            }
+                        }
+                    }
+                )
             }
         }
 
@@ -629,7 +675,7 @@ fun ChapterListContent(
 
             if (uiItem.isVolume) {
 
-                stickyHeader(key = "volume-${uiItem.id}") {
+                item(key = "volume-${uiItem.id}") {
                     CollapsibleHeader(
                         modifier = Modifier.animateItem(),
                         title = uiItem.title,
@@ -711,7 +757,7 @@ fun ChapterItem(
     ) {
         Row(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .adaptiveHorizontalPadding(vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -810,7 +856,12 @@ fun BookmarkListContent(
 
     if (bookmarks.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = contentPadding.calculateTopPadding(),
+                    bottom = contentPadding.calculateBottomPadding()
+                ),
             contentAlignment = Alignment.Center
         ) {
             EmptyMessageView(
