@@ -15,10 +15,12 @@ object PageAnim {
 
     const val fadePageAnim = 4
     const val noAnim = 5
+    
+    const val simulationPageAnimV2 = 6
 
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
-    @IntDef(coverPageAnim, slidePageAnim, simulationPageAnim, scrollPageAnim, noAnim)
+    @IntDef(coverPageAnim, slidePageAnim, simulationPageAnim, scrollPageAnim, fadePageAnim, noAnim, simulationPageAnimV2)
     annotation class Anim
 
 }

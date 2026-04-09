@@ -12,9 +12,10 @@ import android.graphics.Region
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.MotionEvent
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.widget.DetailSeekBar
 import io.legado.app.utils.screenshot
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -24,7 +25,7 @@ import kotlin.math.min
 import kotlin.math.sin
 
 @Suppress("DEPRECATION")
-class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readView) {
+class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(readView) {
     //不让x,y为0,否则在点计算时会有问题
     private var mTouchX = 0.1f
     private var mTouchY = 0.1f
@@ -108,14 +109,16 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
     private var nextBitmap: Bitmap? = null
     private var canvas: Canvas = Canvas()
 
-    // 缓存计算结果，减少重复计算
-    private var mCachedDegree = 0.0
-    private var mCachedShadowDistance = 0f
-    private var mCachedShadowOffsetX = 0f
-    private var mCachedShadowOffsetY = 0f
+    // 长按检测
+    private var longPressTime = 0L
+    private val longPressThreshold = 600L
+    private var isLongPress = false
+
+    // 动画速度
+    private var animationSpeed = AppConfig.simulationPageAnimV2Speed ?: 300
 
     init {
-        //设置颜色数组 - 使用更自然的阴影颜色，参考SimulationPageAnim.java的实现
+        //设置颜色数组 - 参考SimulationPageAnim.java的实现
         val folderColor = intArrayOf(0x333333, 0xb0333333) // 更真实的文件夹阴影
         mFolderShadowDrawableRL = GradientDrawable(GradientDrawable.Orientation.RIGHT_LEFT, folderColor)
         mFolderShadowDrawableRL.gradientType = GradientDrawable.LINEAR_GRADIENT
@@ -176,6 +179,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 calcCornerXY(event.x, event.y)
+                longPressTime = System.currentTimeMillis()
+                isLongPress = false
             }
 
             MotionEvent.ACTION_MOVE -> {
@@ -189,6 +194,18 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                     && mDirection == PageDirection.NEXT
                 ) {
                     readView.touchY = 1f
+                }
+                
+                // 取消长按检测
+                if (System.currentTimeMillis() - longPressTime > longPressThreshold) {
+                    isLongPress = true
+                }
+            }
+
+            MotionEvent.ACTION_UP -> {
+                // 检测长按
+                if (!isMoved && System.currentTimeMillis() - longPressTime > longPressThreshold) {
+                    showSpeedAdjustDialog()
                 }
             }
         }
@@ -248,7 +265,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 dy = (1 - touchY).toInt() // 防止mTouchY最终变为0
             }
         }
-        startScroll(touchX.toInt(), touchY.toInt(), dx, dy, animationSpeed)
+        startScroll(touchX.toInt(), touchY.toInt(), dx, dy, this.animationSpeed)
     }
 
     override fun onAnimStop() {
@@ -570,13 +587,12 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mMiddleX = (mTouchX + mCornerX) / 2
         mMiddleY = (mTouchY + mCornerY) / 2
         
-        // 计算贝塞尔曲线控制点 - 优化算法，使曲线更加自然
+        // 计算贝塞尔曲线控制点 - 参考SimulationPageAnim.java的实现
         val deltaX = mCornerX - mMiddleX
         val deltaY = mCornerY - mMiddleY
         
         // 避免除零错误
         if (deltaX != 0f) {
-            // 调整控制点位置，使翻页曲线更加自然 - 使用更精确的计算方式
             mBezierControl1.x = mMiddleX - (deltaY * deltaY) / deltaX
         } else {
             mBezierControl1.x = mMiddleX - (deltaY * deltaY) / 0.1f
@@ -585,7 +601,6 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mBezierControl2.x = mCornerX.toFloat()
 
         if (deltaY != 0f) {
-            // 调整控制点位置，使翻页曲线更加自然 - 使用更精确的计算方式
             mBezierControl2.y = mMiddleY - (deltaX * deltaX) / deltaY
         } else {
             mBezierControl2.y = mMiddleY - (deltaX * deltaX) / 0.1f
@@ -653,7 +668,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             mBezierStart2
         )
 
-        // 计算贝塞尔曲线顶点 - 优化计算方式，使曲线更加平滑
+        // 计算贝塞尔曲线顶点
         mBezierVertex1.x = (mBezierStart1.x + 2 * mBezierControl1.x + mBezierEnd1.x) / 4
         mBezierVertex1.y = (2 * mBezierControl1.y + mBezierStart1.y + mBezierEnd1.y) / 4
         mBezierVertex2.x = (mBezierStart2.x + 2 * mBezierControl2.x + mBezierEnd2.x) / 4
@@ -674,4 +689,27 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         crossP.y = a1 * crossP.x + b1
         return crossP
     }
-}
+
+    /**
+     * 显示速度调整弹窗
+     */
+    private fun showSpeedAdjustDialog() {
+        context.alert(title = "翻页动画速度", message = null) {
+            customView {
+                val sliderView = DetailSeekBar(ctx).apply {
+                    max = 500
+                    min = 100
+                    progress = animationSpeed
+                    valueFormat = { "${it}ms" }
+                    setTitle("动画速度")
+                    onChanged = { speed ->
+                        animationSpeed = speed
+                        AppConfig.simulationPageAnimV2Speed = speed
+                    }
+                }
+                sliderView
+            }
+            okButton()
+            cancelButton()
+        }
+    }
