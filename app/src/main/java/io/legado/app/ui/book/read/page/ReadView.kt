@@ -213,10 +213,11 @@ class ReadView(context: Context, attrs: AttributeSet) :
 
             MotionEvent.ACTION_MOVE -> {
                 if (!pressDown) return true
-                val absX = abs(startX - event.x)
-                val absY = abs(startY - event.y)
+                val deltaX = (startX - event.x).toInt()
+                val deltaY = (startY - event.y).toInt()
+                val distance = deltaX * deltaX + deltaY * deltaY
                 if (!isMove) {
-                    isMove = absX > slopSquare || absY > slopSquare
+                    isMove = distance > pageSlopSquare2
                 }
                 if (isMove) {
                     longPressed = false
