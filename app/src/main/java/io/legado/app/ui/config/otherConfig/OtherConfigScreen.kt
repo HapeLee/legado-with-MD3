@@ -5,12 +5,9 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -90,15 +88,15 @@ fun OtherConfigScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 120.dp
+            )
         ) {
-
-            SplicedColumnGroup {
+            item {
+                SplicedColumnGroup {
                 DropdownListSettingItem(
                     title = stringResource(R.string.language),
                     selectedValue = OtherConfig.language,
@@ -282,7 +280,7 @@ fun OtherConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
+                SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
 
                 SwitchSettingItem(
                     title = stringResource(R.string.use_animation),
@@ -394,6 +392,7 @@ fun OtherConfigScreen(
                     checked = OtherConfig.recordHeapDump,
                     onCheckedChange = { OtherConfig.recordHeapDump = it }
                 )
+                }
             }
         }
 

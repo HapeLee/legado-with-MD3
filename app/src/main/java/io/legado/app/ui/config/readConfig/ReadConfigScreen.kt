@@ -1,10 +1,7 @@
 package io.legado.app.ui.config.readConfig
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +15,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
@@ -52,15 +50,15 @@ fun ReadConfigScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 120.dp
+            )
         ) {
-
-            SplicedColumnGroup(title = stringResource(R.string.screen_settings)) {
+            item {
+                SplicedColumnGroup(title = stringResource(R.string.screen_settings)) {
                 DropdownListSettingItem(
                     title = stringResource(R.string.screen_direction),
                     selectedValue = ReadConfig.screenOrientation,
@@ -236,7 +234,7 @@ fun ReadConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.other)) {
+                SplicedColumnGroup(title = stringResource(R.string.other)) {
                 SwitchSettingItem(
                     title = stringResource(R.string.enable_slider_vibrator),
                     checked = ReadConfig.sliderVibrator,
@@ -316,6 +314,7 @@ fun ReadConfigScreen(
                     checked = ReadConfig.showReadTitleAddition,
                     onCheckedChange = { ReadConfig.showReadTitleAddition = it }
                 )
+                }
             }
         }
     }

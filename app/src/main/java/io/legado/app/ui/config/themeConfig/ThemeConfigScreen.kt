@@ -24,12 +24,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Check
@@ -78,6 +77,7 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeManager
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -134,22 +134,23 @@ fun ThemeConfigScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 120.dp
+            )
         ) {
-            val composeEngine = ThemeConfig.composeEngine
-            val isMiuixEngine = remember(composeEngine) {
-                ThemeResolver.isMiuixEngine(composeEngine)
-            }
-            val isDarkTheme = when (selectedThemeMode) {
-                "1" -> false
-                "2" -> true
-                else -> isSystemInDarkTheme()
-            }
+            item {
+                val composeEngine = ThemeConfig.composeEngine
+                val isMiuixEngine = remember(composeEngine) {
+                    ThemeResolver.isMiuixEngine(composeEngine)
+                }
+                val isDarkTheme = when (selectedThemeMode) {
+                    "1" -> false
+                    "2" -> true
+                    else -> isSystemInDarkTheme()
+                }
 
             if (!isMiuixEngine) {
                 Column(
@@ -513,7 +514,7 @@ fun ThemeConfigScreen(
                 }
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.night)) {
+                SplicedColumnGroup(title = stringResource(R.string.night)) {
                 val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrBlank()
                 ClickableSettingItem(
                     title = stringResource(R.string.background_image),
@@ -534,6 +535,7 @@ fun ThemeConfigScreen(
                             ThemeConfig.bgImageNBlurring = it.toInt()
                         }
                     )
+                }
                 }
             }
         }

@@ -3,13 +3,10 @@ package io.legado.app.ui.config.coverConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -25,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
@@ -59,14 +57,15 @@ fun CoverConfigScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPadding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = 120.dp
+            )
         ) {
-            SplicedColumnGroup {
+            item {
+                SplicedColumnGroup {
                 SwitchSettingItem(
                     title = stringResource(R.string.only_wifi),
                     description = stringResource(R.string.only_wifi_summary),
@@ -187,7 +186,7 @@ fun CoverConfigScreen(
                 )
             }
 
-            SplicedColumnGroup(title = stringResource(R.string.night)) {
+                SplicedColumnGroup(title = stringResource(R.string.night)) {
                 val coverCount =
                     CoverConfig.defaultCoverDark.split(",").filter { it.isNotBlank() }.size
                 ClickableSettingItem(
@@ -242,6 +241,7 @@ fun CoverConfigScreen(
                     enabled = CoverConfig.coverShowNameN,
                     onCheckedChange = { viewModel.updateShowAuthor(it, true) }
                 )
+                }
             }
         }
     }
