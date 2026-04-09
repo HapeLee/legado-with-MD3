@@ -110,11 +110,6 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
     private var nextBitmap: Bitmap? = null
     private var canvas: Canvas = Canvas()
 
-    // 长按检测
-    private var longPressTime = 0L
-    private val longPressThreshold = 600L
-    private var isLongPress = false
-
     // 动画速度
     private val animationSpeed: Int
         get() = AppConfig.simulationPageAnimV2Speed
@@ -194,8 +189,6 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 calcCornerXY(event.x, event.y)
-                longPressTime = System.currentTimeMillis()
-                isLongPress = false
             }
 
             MotionEvent.ACTION_MOVE -> {
@@ -209,18 +202,6 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
                     && mDirection == PageDirection.NEXT
                 ) {
                     readView.touchY = 1f
-                }
-                
-                // 取消长按检测
-                if (System.currentTimeMillis() - longPressTime > longPressThreshold) {
-                    isLongPress = true
-                }
-            }
-
-            MotionEvent.ACTION_UP -> {
-                // 检测长按
-                if (!isMoved && System.currentTimeMillis() - longPressTime > longPressThreshold) {
-                    showSpeedAdjustDialog()
                 }
             }
         }
@@ -705,26 +686,4 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
         return crossP
     }
 
-    /**
-     * 显示速度调整弹窗
-     */
-    private fun showSpeedAdjustDialog() {
-        context.alert(title = "翻页动画速度", message = null) {
-            customView {
-                val sliderView = DetailSeekBar(ctx).apply {
-                    max = 500
-                    min = 100
-                    progress = animationSpeed
-                    valueFormat = { "${it}ms" }
-                    setTitle("动画速度")
-                    onChanged = { speed ->
-                        AppConfig.simulationPageAnimV2Speed = speed
-                    }
-                }
-                sliderView
-            }
-            okButton()
-            cancelButton()
-        }
-    }
 }

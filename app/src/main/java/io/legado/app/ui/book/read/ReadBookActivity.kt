@@ -1870,6 +1870,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             3 -> "scroll"
             4 -> "fade"
             5 -> "simulationV2"
+            6 -> "simulationV2"
             else -> ""
         }
         if (animTypeStr.isNotEmpty()) {
