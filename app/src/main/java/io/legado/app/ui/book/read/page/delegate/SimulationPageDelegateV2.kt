@@ -718,7 +718,6 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
                     valueFormat = { "${it}ms" }
                     setTitle("动画速度")
                     onChanged = { speed ->
-                        animationSpeed = speed
                         AppConfig.simulationPageAnimV2Speed = speed
                     }
                 }
