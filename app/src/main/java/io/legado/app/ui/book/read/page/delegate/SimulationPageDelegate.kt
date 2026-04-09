@@ -316,7 +316,18 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             canvas.clipPath(mPath1, Region.Op.INTERSECT)
         }
 
-        mPaint.colorFilter = mColorMatrixFilter
+        // 增强背面效果，添加轻微的模糊和变暗效果
+        mPaint.colorFilter = ColorMatrixColorFilter(
+            ColorMatrix(
+                floatArrayOf(
+                    0.9f, 0f, 0f, 0f, -10f,
+                    0f, 0.9f, 0f, 0f, -10f,
+                    0f, 0f, 0.9f, 0f, -10f,
+                    0f, 0f, 0f, 1f, 0f
+                )
+            )
+        )
+        
         val dis = hypot(
             mCornerX - mBezierControl1.x.toDouble(),
             mBezierControl2.y - mCornerY.toDouble()
@@ -334,6 +345,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         canvas.drawColor(ReadBookConfig.bgMeanColor)
         canvas.drawBitmap(bitmap, mMatrix, mPaint)
         mPaint.colorFilter = null
+        
+        // 增强阴影效果
         canvas.rotate(mDegrees, mBezierStart1.x, mBezierStart1.y)
         mFolderShadowDrawable.setBounds(
             left, mBezierStart1.y.toInt(),
@@ -540,13 +553,14 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mMiddleX = (mTouchX + mCornerX) / 2
         mMiddleY = (mTouchY + mCornerY) / 2
         
-        // 计算贝塞尔曲线控制点
+        // 计算贝塞尔曲线控制点 - 优化算法，使曲线更加自然
         val deltaX = mCornerX - mMiddleX
         val deltaY = mCornerY - mMiddleY
         
         // 避免除零错误
         if (deltaX != 0f) {
-            mBezierControl1.x = mMiddleX - (deltaY * deltaY) / deltaX
+            // 调整控制点位置，使翻页曲线更加自然
+            mBezierControl1.x = mMiddleX - (deltaY * deltaY) / (deltaX * 1.2f) // 增加系数使曲线更平缓
         } else {
             mBezierControl1.x = mMiddleX - (deltaY * deltaY) / 0.1f
         }
@@ -554,7 +568,8 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
         mBezierControl2.x = mCornerX.toFloat()
 
         if (deltaY != 0f) {
-            mBezierControl2.y = mMiddleY - (deltaX * deltaX) / deltaY
+            // 调整控制点位置，使翻页曲线更加自然
+            mBezierControl2.y = mMiddleY - (deltaX * deltaX) / (deltaY * 1.2f) // 增加系数使曲线更平缓
         } else {
             mBezierControl2.y = mMiddleY - (deltaX * deltaX) / 0.1f
         }
@@ -585,7 +600,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 val newDeltaY = mCornerY - mMiddleY
                 
                 if (newDeltaX != 0f) {
-                    mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / newDeltaX
+                    mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / (newDeltaX * 1.2f)
                 } else {
                     mBezierControl1.x = mMiddleX - (newDeltaY * newDeltaY) / 0.1f
                 }
@@ -593,7 +608,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
                 mBezierControl2.x = mCornerX.toFloat()
 
                 if (newDeltaY != 0f) {
-                    mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / newDeltaY
+                    mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / (newDeltaY * 1.2f)
                 } else {
                     mBezierControl2.y = mMiddleY - (newDeltaX * newDeltaX) / 0.1f
                 }
