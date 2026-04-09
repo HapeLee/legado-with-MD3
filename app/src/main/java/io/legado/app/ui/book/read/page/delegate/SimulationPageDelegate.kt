@@ -116,7 +116,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
 
     init {
         //设置颜色数组 - 使用更自然的阴影颜色，参考SimulationPageAnim.java的实现
-        val folderColor = intArrayOf(0x333333, 0xb0333333) // 更真实的文件夹阴影
+        val folderColor = intArrayOf(0x333333, 0xb0333333.toInt()) // 更真实的文件夹阴影
         mFolderShadowDrawableRL = GradientDrawable().apply {
             orientation = GradientDrawable.Orientation.RIGHT_LEFT
             colors = folderColor
@@ -128,7 +128,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             gradientType = GradientDrawable.LINEAR_GRADIENT
         }
 
-        mBackShadowColors = intArrayOf(0xff111111, 0x111111) // 更真实的背面阴影
+        mBackShadowColors = intArrayOf(0xff111111.toInt(), 0x111111) // 更真实的背面阴影
         mBackShadowDrawableRL = GradientDrawable().apply {
             orientation = GradientDrawable.Orientation.RIGHT_LEFT
             colors = mBackShadowColors
@@ -140,7 +140,7 @@ class SimulationPageDelegate(readView: ReadView) : HorizontalPageDelegate(readVi
             gradientType = GradientDrawable.LINEAR_GRADIENT
         }
 
-        mFrontShadowColors = intArrayOf(0x80111111, 0x111111) // 更真实的前面阴影
+        mFrontShadowColors = intArrayOf(0x80111111.toInt(), 0x111111) // 更真实的前面阴影
         mFrontShadowDrawableVLR = GradientDrawable().apply {
             orientation = GradientDrawable.Orientation.LEFT_RIGHT
             colors = mFrontShadowColors
