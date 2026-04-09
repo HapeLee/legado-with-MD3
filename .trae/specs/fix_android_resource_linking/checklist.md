@@ -1,0 +1,9 @@
+- [x] Checkpoint 1: 默认values/strings.xml中包含area字符串资源
+- [x] Checkpoint 2: 默认values/strings.xml中包含left_top字符串资源
+- [x] Checkpoint 3: 默认values/strings.xml中包含left_middle字符串资源
+- [x] Checkpoint 4: 默认values/strings.xml中包含left_bottom字符串资源
+- [x] Checkpoint 5: 默认values/strings.xml中包含right_top字符串资源
+- [x] Checkpoint 6: 默认values/strings.xml中包含right_middle字符串资源
+- [x] Checkpoint 7: 默认values/strings.xml中包含right_bottom字符串资源
+- [x] Checkpoint 8: 应用能够成功编译，没有资源链接失败错误
+- [ ] Checkpoint 9: 翻页速度调节弹窗能够正常显示区域信息（如果有测试设备）

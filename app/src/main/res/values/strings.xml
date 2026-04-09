@@ -1427,4 +1427,11 @@
     <string name="enable_select_vibrator">选择文本时震动</string>
     <string name="re_sync_webdav">重新同步远程书籍</string>
     <string name="underline_padding">离字间距</string>
+    <string name="area">Area</string>
+    <string name="left_top">Left Top</string>
+    <string name="left_middle">Left Middle</string>
+    <string name="left_bottom">Left Bottom</string>
+    <string name="right_top">Right Top</string>
+    <string name="right_middle">Right Middle</string>
+    <string name="right_bottom">Right Bottom</string>
 </resources>
