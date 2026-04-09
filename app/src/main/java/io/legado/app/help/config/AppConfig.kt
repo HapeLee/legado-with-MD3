@@ -61,6 +61,12 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             && appCtx.getPrefBoolean(PreferKey.optimizeRender, false)
     var recordLog = appCtx.getPrefBoolean(PreferKey.recordLog)
     var webServiceAutoStart = appCtx.getPrefBoolean(PreferKey.webServiceAutoStart, false)
+    
+    // 仿真二翻页动画速度
+    var simulationPageAnimV2Speed by prefDelegate(
+        "simulationPageAnimV2Speed",
+        300
+    )
 
     // -- lyc 版本特性 --
     var adaptSpecialStyle = appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)

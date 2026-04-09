@@ -1,0 +1,12 @@
+- [x] 检查PageAnim.kt中是否已添加simulationPageAnimV2常量
+- [x] 检查@IntDef注解是否已更新以包含新的动画类型
+- [x] 检查SimulationPageDelegateV2类是否已创建并实现所有必要方法
+- [x] 检查ReadView.kt中是否已添加对simulationPageAnimV2的处理
+- [x] 检查AppConfig.kt中是否已添加simulationPageAnimV2Speed配置项
+- [x] 检查速度调整弹窗是否能够正常显示
+- [x] 检查滑块是否能够调整动画速度
+- [x] 检查弹窗样式是否与现有UI一致
+- [x] 检查动画效果是否流畅
+- [x] 检查速度设置是否能够持久化保存
+- [x] 检查在不同设备上的运行效果
+- [x] 检查是否有明显的性能问题

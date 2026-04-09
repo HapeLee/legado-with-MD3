@@ -542,6 +542,10 @@ class ReadView(context: Context, attrs: AttributeSet) :
                 pageDelegate = FadePageDelegate(this)
             }
 
+            PageAnim.simulationPageAnimV2 -> if (pageDelegate !is SimulationPageDelegateV2) {
+                pageDelegate = SimulationPageDelegateV2(this)
+            }
+
             else -> if (pageDelegate !is NoAnimPageDelegate) {
                 pageDelegate = NoAnimPageDelegate(this)
             }
