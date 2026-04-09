@@ -223,6 +223,8 @@
     <string name="click_turn_page">点击翻页</string>
     <string name="page_anim">翻页动画</string>
     <string name="book_page_anim">翻页动画（本书）</string>
+    <string name="page_anim_speed">翻页动画速度</string>
+    <string name="page_anim_speed_summary">%dms</string>
     <string name="keep_light">屏幕超时</string>
     <string name="back">返回</string>
     <string name="menu">菜单</string>
@@ -399,6 +401,7 @@
     <string name="page_anim_cover">覆盖</string>
     <string name="page_anim_slide">滑动</string>
     <string name="page_anim_simulation">仿真</string>
+    <string name="page_anim_simulation_v2">仿真二</string>
     <string name="page_anim_scroll">滚动</string>
     <string name="page_anim_none">无动画</string>
     <string name="up_change_source_last_chapter_t">后台更新换源最新章节</string>

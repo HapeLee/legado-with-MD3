@@ -19,6 +19,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ContentEditDialog
+import io.legado.app.ui.book.read.config.PageAnimSpeedDialog
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
 import io.legado.app.ui.book.read.page.delegate.FadePageDelegate
@@ -316,72 +317,76 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * 长按选择
      */
     private fun onLongPress() {
-        kotlin.runCatching {
-            curPage.longPress(startX, startY) { textPos: TextPos ->
-                isTextSelected = true
-                pressOnTextSelected = true
-                initialTextPos.upData(textPos)
-                val startPos = textPos.copy()
-                val endPos = textPos.copy()
-                val page = curPage.relativePage(textPos.relativePagePos)
-                val stringBuilder = StringBuilder()
-                var cIndex = textPos.columnIndex
-                var lineStart = textPos.lineIndex
-                var lineEnd = textPos.lineIndex
-                for (index in textPos.lineIndex - 1 downTo 0) {
-                    val textLine = page.getLine(index)
-                    if (textLine.isParagraphEnd) {
-                        break
-                    } else {
-                        stringBuilder.insert(0, textLine.text)
-                        lineStart -= 1
-                        cIndex += textLine.charSize
-                    }
-                }
-                for (index in textPos.lineIndex until page.lineSize) {
-                    val textLine = page.getLine(index)
-                    stringBuilder.append(textLine.text)
-                    lineEnd += 1
-                    if (textLine.isParagraphEnd) {
-                        break
-                    }
-                }
-                var start: Int
-                var end: Int
-                boundary.setText(stringBuilder.toString())
-                start = boundary.first()
-                end = boundary.next()
-                while (end != BreakIterator.DONE) {
-                    if (cIndex in start until end) {
-                        break
-                    }
-                    start = end
-                    end = boundary.next()
-                }
-                kotlin.run {
-                    var ci = 0
-                    for (index in lineStart..lineEnd) {
+        if (ReadBook.pageAnim() == PageAnim.simulationPageAnimV2) {
+            callBack.showPageAnimSpeedConfig()
+        } else {
+            kotlin.runCatching {
+                curPage.longPress(startX, startY) { textPos: TextPos ->
+                    isTextSelected = true
+                    pressOnTextSelected = true
+                    initialTextPos.upData(textPos)
+                    val startPos = textPos.copy()
+                    val endPos = textPos.copy()
+                    val page = curPage.relativePage(textPos.relativePagePos)
+                    val stringBuilder = StringBuilder()
+                    var cIndex = textPos.columnIndex
+                    var lineStart = textPos.lineIndex
+                    var lineEnd = textPos.lineIndex
+                    for (index in textPos.lineIndex - 1 downTo 0) {
                         val textLine = page.getLine(index)
-                        for (j in textLine.columns.indices) {
-                            if (ci == start) {
-                                startPos.lineIndex = index
-                                startPos.columnIndex = j
-                            } else if (ci == end - 1) {
-                                endPos.lineIndex = index
-                                endPos.columnIndex = j
-                                return@run
-                            }
-                            val column = textLine.getColumn(j)
-                            if (column is TextBaseColumn) {
-                                ci += column.charData.length
-                            } else {
-                                ci++
+                        if (textLine.isParagraphEnd) {
+                            break
+                        } else {
+                            stringBuilder.insert(0, textLine.text)
+                            lineStart -= 1
+                            cIndex += textLine.charSize
+                        }
+                    }
+                    for (index in textPos.lineIndex until page.lineSize) {
+                        val textLine = page.getLine(index)
+                        stringBuilder.append(textLine.text)
+                        lineEnd += 1
+                        if (textLine.isParagraphEnd) {
+                            break
+                        }
+                    }
+                    var start: Int
+                    var end: Int
+                    boundary.setText(stringBuilder.toString())
+                    start = boundary.first()
+                    end = boundary.next()
+                    while (end != BreakIterator.DONE) {
+                        if (cIndex in start until end) {
+                            break
+                        }
+                        start = end
+                        end = boundary.next()
+                    }
+                    kotlin.run {
+                        var ci = 0
+                        for (index in lineStart..lineEnd) {
+                            val textLine = page.getLine(index)
+                            for (j in textLine.columns.indices) {
+                                if (ci == start) {
+                                    startPos.lineIndex = index
+                                    startPos.columnIndex = j
+                                } else if (ci == end - 1) {
+                                    endPos.lineIndex = index
+                                    endPos.columnIndex = j
+                                    return@run
+                                }
+                                val column = textLine.getColumn(j)
+                                if (column is TextBaseColumn) {
+                                    ci += column.charData.length
+                                } else {
+                                    ci++
+                                }
                             }
                         }
                     }
+                    curPage.selectStartMoveIndex(startPos)
+                    curPage.selectEndMoveIndex(endPos)
                 }
-                curPage.selectStartMoveIndex(startPos)
-                curPage.selectEndMoveIndex(endPos)
             }
         }
     }
@@ -770,5 +775,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
         fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
         fun sureNewProgress(progress: BookProgress)
+        fun showPageAnimSpeedConfig()
     }
 }

@@ -226,6 +226,8 @@
     <string name="click_turn_page">Tap screen to turn page</string>
     <string name="page_anim">Flip animation</string>
     <string name="book_page_anim">Flip animation (book)</string>
+    <string name="page_anim_speed">Flip animation speed</string>
+    <string name="page_anim_speed_summary">%dms</string>
     <string name="keep_light">Keep screen awake</string>
     <string name="back">Back</string>
     <string name="menu">Menu</string>
@@ -402,6 +404,7 @@
     <string name="page_anim_cover">Cover</string>
     <string name="page_anim_slide">Slide</string>
     <string name="page_anim_simulation">Simulation</string>
+    <string name="page_anim_simulation_v2">Simulation 2</string>
     <string name="page_anim_scroll">Scroll</string>
     <string name="page_anim_none">None</string>
     <string name="up_change_source_last_chapter_t">Update the latest chapter after changed origin in the background</string>

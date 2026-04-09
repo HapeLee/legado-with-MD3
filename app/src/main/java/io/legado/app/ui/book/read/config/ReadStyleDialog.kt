@@ -136,6 +136,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
                 R.id.rb_anim0 -> 0  // 覆盖动画
                 R.id.rb_anim1 -> 1  // 滑动动画
                 R.id.rb_simulation_anim -> 2  // 仿真翻页
+                R.id.rb_simulation_anim_v2 -> 6  // 仿真二翻页
                 R.id.rb_scroll_anim -> 3  // 滚动动画
                 R.id.rb_fade_anim -> 4
                 R.id.rb_no_anim -> 5  // 无动画

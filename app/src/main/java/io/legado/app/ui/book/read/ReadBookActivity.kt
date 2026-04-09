@@ -85,6 +85,7 @@ import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_ACCENT_
 import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.book.read.config.FontSelectDialog
 import io.legado.app.ui.book.read.config.ReadAloudDialog
+import io.legado.app.ui.book.read.config.PageAnimSpeedDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
@@ -1858,6 +1859,10 @@ class ReadBookActivity : BaseReadBookActivity(),
             }
             noButton()
         }
+    }
+
+    override fun showPageAnimSpeedConfig() {
+        showDialogFragment<PageAnimSpeedDialog>()
     }
 
     private fun callBackBookEnd() {

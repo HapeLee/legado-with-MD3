@@ -116,7 +116,8 @@ class SimulationPageDelegateV2(readView: ReadView) : HorizontalPageDelegate(read
     private var isLongPress = false
 
     // 动画速度
-    private var animationSpeed = AppConfig.simulationPageAnimV2Speed
+    private val animationSpeed: Int
+        get() = AppConfig.simulationPageAnimV2Speed
 
     init {
         //设置颜色数组 - 参考SimulationPageAnim.java的实现
