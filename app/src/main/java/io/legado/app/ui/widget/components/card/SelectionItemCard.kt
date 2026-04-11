@@ -181,7 +181,7 @@ fun SelectionItemCard(
                 if (onClickEdit != null) {
                     SmallIconButton(
                         onClick = onClickEdit,
-                        icon = Icons.Default.Edit,
+                        imageVector = Icons.Default.Edit,
                         contentDescription = "Edit"
                     )
                 }
@@ -194,7 +194,7 @@ fun SelectionItemCard(
                     Box {
                         SmallIconButton(
                             onClick = { showMenu = true },
-                            icon = Icons.Default.MoreVert,
+                            imageVector = Icons.Default.MoreVert,
                             contentDescription = "More"
                         )
                         RoundDropdownMenu(
@@ -272,3 +272,4 @@ fun LazyItemScope.ReorderableSelectionItem(
         )
     }
 }
+

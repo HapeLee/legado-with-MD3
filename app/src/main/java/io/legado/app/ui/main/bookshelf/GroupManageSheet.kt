@@ -83,7 +83,7 @@ fun GroupManageSheet(
                         editingGroup = null
                         isEditing = true
                     },
-                    icon = Icons.Default.Add
+                    imageVector = Icons.Default.Add
                 )
             }
         }
@@ -130,3 +130,4 @@ fun GroupManageSheet(
         }
     }
 }
+

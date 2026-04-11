@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -242,7 +243,7 @@ fun AllBookmarkScreen(
                             FastScrollLazyColumn(
                                 state = listState,
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = adaptiveContentPaddingOnlyVertical(
+                                contentPadding = adaptiveContentPadding(
                                     top = paddingValues.calculateTopPadding(),
                                     bottom = 120.dp
                                 )

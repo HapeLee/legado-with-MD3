@@ -41,7 +41,6 @@ fun AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
-    containerColor: Color = LegadoTheme.colorScheme.surfaceContainer,
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
@@ -52,14 +51,15 @@ fun AppModalBottomSheet(
             startAction = startAction,
             endAction = endAction,
             insideMargin = DpSize(16.dp, 12.dp),
-            backgroundColor = containerColor,
             onDismissRequest = onDismissRequest,
             onDismissFinished = onDismissRequest,
             enableWindowDim = true,
             allowDismiss = true
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
                 content = content
             )
         }
@@ -75,7 +75,6 @@ fun AppModalBottomSheet(
             ModalBottomSheet(
                 onDismissRequest = onDismissRequest,
                 sheetState = sheetState,
-                containerColor = containerColor,
                 contentColor = colorScheme.onSurface,
                 dragHandle = { BottomSheetDefaults.DragHandle() }
             ) {

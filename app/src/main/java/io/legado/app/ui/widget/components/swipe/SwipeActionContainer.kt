@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +129,7 @@ private fun SwipeBackground(
         targetValue = if (isThresholdReached)
             action.background
         else
-            MaterialTheme.colorScheme.surfaceVariant,
+            LegadoTheme.colorScheme.surfaceVariant,
         label = "bgColor"
     )
 
@@ -160,7 +161,7 @@ private fun SwipeBackground(
             tint = if (isThresholdReached)
                 contentColorFor(action.background)
             else
-                MaterialTheme.colorScheme.onSurfaceVariant
+                LegadoTheme.colorScheme.onSurfaceVariant
         )
     }
 }

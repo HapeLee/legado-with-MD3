@@ -32,8 +32,7 @@ fun OptionSheet(
     AppModalBottomSheet(
         show = show,
         title = title,
-        onDismissRequest = onDismissRequest,
-        containerColor = LegadoTheme.colorScheme.surface
+        onDismissRequest = onDismissRequest
     ) {
         Column(
             modifier = Modifier

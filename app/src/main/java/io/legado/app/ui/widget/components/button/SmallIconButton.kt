@@ -64,7 +64,7 @@ private fun SmallNoMinTouchTarget(content: @Composable () -> Unit) {
 @Composable
 fun SmallIconButton(
     onClick: () -> Unit,
-    icon: ImageVector,
+    imageVector: ImageVector,
     contentDescription: String? = null
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
@@ -72,7 +72,7 @@ fun SmallIconButton(
             onClick = onClick
         ) {
             MiuixIcon(
-                imageVector = icon,
+                imageVector = imageVector,
                 contentDescription = contentDescription
             )
         }
@@ -84,7 +84,7 @@ fun SmallIconButton(
                 shape = IconButtonDefaults.extraSmallRoundShape,
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = imageVector,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(smallIconSize),
                 )
@@ -97,11 +97,10 @@ fun SmallIconButton(
 @Composable
 fun SmallOutlinedIconButton(
     onClick: () -> Unit,
-    icon: ImageVector,
+    imageVector: ImageVector,
     modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
-
     val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
     if (isMiuix) {
         MiuixIconButton(
@@ -110,7 +109,7 @@ fun SmallOutlinedIconButton(
             backgroundColor = LegadoTheme.colorScheme.surfaceContainer
         ) {
             MiuixIcon(
-                imageVector = icon,
+                imageVector = imageVector,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(SmallMiuixIconSize)
             )
@@ -124,7 +123,7 @@ fun SmallOutlinedIconButton(
                 border = ButtonDefaults.outlinedButtonBorder()
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = imageVector,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(smallIconSize)
                 )
@@ -137,7 +136,7 @@ fun SmallOutlinedIconButton(
 @Composable
 fun SmallTonalIconButton(
     onClick: () -> Unit,
-    icon: ImageVector,
+    imageVector: ImageVector,
     modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
@@ -150,7 +149,7 @@ fun SmallTonalIconButton(
             backgroundColor = LegadoTheme.colorScheme.surfaceContainer
         ) {
             MiuixIcon(
-                imageVector = icon,
+                imageVector = imageVector,
                 contentDescription = contentDescription,
                 modifier = Modifier.size(SmallMiuixIconSize)
             )
@@ -164,7 +163,7 @@ fun SmallTonalIconButton(
                 colors = IconButtonDefaults.filledTonalIconButtonColors()
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = imageVector,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(smallIconSize)
                 )
@@ -178,7 +177,7 @@ fun SmallTonalIconButton(
 fun SmallOutlinedIconToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector,
+    imageVector: ImageVector,
     modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
@@ -205,7 +204,7 @@ fun SmallOutlinedIconToggleButton(
             backgroundColor = containerColor
         ) {
             MiuixIcon(
-                imageVector = icon,
+                imageVector = imageVector,
                 contentDescription = contentDescription,
                 tint = iconTint,
                 modifier = Modifier.size(SmallMiuixIconSize)
@@ -233,7 +232,7 @@ fun SmallOutlinedIconToggleButton(
                 shapes = toggleShapes
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = imageVector,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(smallIconSize),
                 )

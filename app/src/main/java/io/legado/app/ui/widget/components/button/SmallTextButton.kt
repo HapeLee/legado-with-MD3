@@ -22,7 +22,7 @@ import top.yukonga.miuix.kmp.basic.Text as MiuixText
 @Composable
 fun SmallTextButton(
     text: String,
-    icon: ImageVector,
+    imageVector: ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -44,7 +44,7 @@ fun SmallTextButton(
             shape = MaterialTheme.shapes.small
         ) {
             Icon(
-                imageVector = icon,
+                imageVector = imageVector,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp)
             )

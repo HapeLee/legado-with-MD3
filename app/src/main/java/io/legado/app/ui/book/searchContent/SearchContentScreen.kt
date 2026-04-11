@@ -345,7 +345,7 @@ fun SearchHistoryList(
                         trailingContent = {
                             SmallIconButton(
                                 onClick = { onDeleteHistory(item) },
-                                icon = Icons.Default.Close,
+                                imageVector = Icons.Default.Close,
                                 contentDescription = "删除"
                             )
                         },
@@ -366,7 +366,7 @@ fun SearchHistoryList(
                         MediumOutlinedButton(
                             onClick = onClearHistory,
                             modifier = Modifier.fillMaxWidth(0.6f),
-                            icon = Icons.Outlined.DeleteSweep,
+                            imageVector = Icons.Outlined.DeleteSweep,
                             text = "清除搜索历史"
                         )
                     }

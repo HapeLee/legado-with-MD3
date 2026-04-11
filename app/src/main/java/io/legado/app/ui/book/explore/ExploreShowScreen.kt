@@ -235,7 +235,6 @@ fun ExploreShowScreen(
 
     AppModalBottomSheet(
         show = showKindSheet,
-        containerColor = LegadoTheme.colorScheme.surface,
         onDismissRequest = { showKindSheet = false }
     ) {
 

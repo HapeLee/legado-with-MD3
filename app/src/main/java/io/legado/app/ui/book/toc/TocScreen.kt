@@ -469,7 +469,7 @@ fun TocScreen(
                                 SmallOutlinedIconToggleButton(
                                     checked = showVolumeMenu,
                                     onCheckedChange = { showVolumeMenu = it },
-                                    icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                                     contentDescription = "卷管理"
                                 )
                                 RoundDropdownMenu(

@@ -37,6 +37,8 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
+import io.legado.app.ui.book.import.local.ImportBookScreen
+import io.legado.app.ui.book.import.remote.RemoteBookScreen
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ConfigTag
@@ -74,6 +76,8 @@ open class MainActivity : BaseComposeActivity() {
         private const val ROUTE_SETTINGS_COVER = "settings/cover"
         private const val ROUTE_SETTINGS_THEME = "settings/theme"
         private const val ROUTE_SETTINGS_BACKUP = "settings/backup"
+        private const val ROUTE_IMPORT_LOCAL = "import/local"
+        private const val ROUTE_IMPORT_REMOTE = "import/remote"
 
         fun createIntent(context: Context, configTag: String? = null): Intent {
             return Intent(context, MainActivity::class.java).apply {
@@ -119,6 +123,12 @@ open class MainActivity : BaseComposeActivity() {
 
     @Serializable
     private data object MainRouteSettingsBackup : MainRoute
+
+    @Serializable
+    private data object MainRouteImportLocal : MainRoute
+
+    @Serializable
+    private data object MainRouteImportRemote : MainRoute
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -260,6 +270,12 @@ open class MainActivity : BaseComposeActivity() {
                         useRail = useRail,
                         onOpenSettings = {
                             navigateToRoute(backStack, MainRouteSettings)
+                        },
+                        onNavigateToRemoteImport = {
+                            navigateToRoute(backStack, MainRouteImportRemote)
+                        },
+                        onNavigateToLocalImport = {
+                            navigateToRoute(backStack, MainRouteImportLocal)
                         }
                     )
                 }
@@ -294,6 +310,18 @@ open class MainActivity : BaseComposeActivity() {
                 entry<MainRouteSettingsBackup> {
                     BackupConfigScreen(onBackClick = { navigateBack(backStack) })
                 }
+
+                entry<MainRouteImportLocal> {
+                    ImportBookScreen(
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
+
+                entry<MainRouteImportRemote> {
+                    RemoteBookScreen(
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
             }
         )
     }
@@ -327,6 +355,17 @@ open class MainActivity : BaseComposeActivity() {
                 backStack.add(MainRouteHome)
                 backStack.add(MainRouteSettings)
                 backStack.add(route)
+            }
+
+            MainRouteImportLocal,
+            MainRouteImportRemote -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
             }
         }
     }
@@ -462,6 +501,8 @@ open class MainActivity : BaseComposeActivity() {
             "settings/cover" -> MainRouteSettingsCover
             "settings/theme" -> MainRouteSettingsTheme
             "settings/backup" -> MainRouteSettingsBackup
+            "import/local" -> MainRouteImportLocal
+            "import/remote" -> MainRouteImportRemote
             else -> MainRouteHome
         }
     }

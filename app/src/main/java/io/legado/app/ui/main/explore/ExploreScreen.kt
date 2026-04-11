@@ -249,8 +249,11 @@ fun ExploreScreen(
                 TextCard(
                     text = item.bookSourceName,
                     textStyle = LegadoTheme.typography.labelLarge,
+                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                    contentColor = LegadoTheme.colorScheme.onCardContainer,
+                    cornerRadius = 8.dp,
                     horizontalPadding = 8.dp,
-                    verticalPadding = 6.dp,
+                    verticalPadding = 8.dp,
                     onClick = {
                         scope.launch {
                             val index =

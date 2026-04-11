@@ -320,7 +320,7 @@ fun DictRuleScreen(
                         trailingAction = {
                             SmallIconButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                icon = Icons.Default.Delete
+                                imageVector = Icons.Default.Delete
                             )
                         }
                     )

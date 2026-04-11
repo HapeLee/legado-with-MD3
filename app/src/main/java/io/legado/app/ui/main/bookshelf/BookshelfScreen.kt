@@ -67,12 +67,11 @@ import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.cache.CacheActivity
-import io.legado.app.ui.book.import.local.ImportBookActivity
-import io.legado.app.ui.book.import.remote.RemoteBookActivity
 import io.legado.app.ui.book.manage.BookshelfManageActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
@@ -100,7 +99,9 @@ import org.koin.androidx.compose.koinViewModel
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit
+    onBookLongClick: (BookShelfItem) -> Unit,
+    onNavigateToRemoteImport: () -> Unit,
+    onNavigateToLocalImport: () -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -196,7 +197,7 @@ fun BookshelfScreen(
     }
 
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
-    // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图
+    // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视�?
     var isInFolderRoot by remember(bookGroupStyle) { mutableStateOf(bookGroupStyle == 2) }
     val baseTitle = when {
         bookGroupStyle == 1 -> {
@@ -232,6 +233,10 @@ fun BookshelfScreen(
         if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
     val bookshelfLayoutList =
         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
+    val totalHorizontalPadding =
+        if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
+    val gridContentHorizontalPadding = totalHorizontalPadding / 2
+    val gridInnerHorizontalPadding = totalHorizontalPadding / 2
 
     ListScaffold(
         title = title,
@@ -242,12 +247,12 @@ fun BookshelfScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 text = stringResource(R.string.add_remote_book),
-                onClick = { context.startActivity<RemoteBookActivity>(); dismiss() },
+                onClick = { onNavigateToRemoteImport(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Wifi, null) }
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.book_local),
-                onClick = { context.startActivity<ImportBookActivity>(); dismiss() },
+                onClick = { onNavigateToLocalImport(); dismiss() },
                 leadingIcon = { Icon(Icons.Default.Save, null) }
             )
             RoundDropdownMenuItem(
@@ -345,7 +350,7 @@ fun BookshelfScreen(
                                 SmallOutlinedIconToggleButton(
                                     checked = showGroupMenu,
                                     onCheckedChange = { showGroupMenu = it },
-                                    icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
                                     contentDescription = stringResource(R.string.group_manage)
                                 )
                                 RoundDropdownMenu(
@@ -407,15 +412,19 @@ fun BookshelfScreen(
                 if (bookGroupStyle == 2 && isRoot) {
                     val folderColumns =
                         if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
+                    val isGridMode = bookshelfLayoutMode != 0
                     FastScrollLazyVerticalGrid(
                         columns = GridCells.Fixed(folderColumns.coerceAtLeast(1)),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = if (isGridMode) gridInnerHorizontalPadding else 0.dp),
                         contentPadding = adaptiveContentPadding(
                             top = paddingValues.calculateTopPadding(),
-                            bottom = 120.dp
+                            bottom = 120.dp,
+                            horizontal = if (isGridMode) gridContentHorizontalPadding else 0.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
-                        horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
                         showFastScroll = BookshelfConfig.showBookshelfFastScroller
                     ) {
                         itemsIndexed(
@@ -592,16 +601,23 @@ fun BookshelfPage(
     onBookLongClick: (BookShelfItem) -> Unit
 ) {
     val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
+    val isGridMode = bookshelfLayoutMode != 0
+    val totalHorizontalPadding =
+        if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
+    val gridContentHorizontalPadding = totalHorizontalPadding / 2
+    val gridInnerHorizontalPadding = totalHorizontalPadding / 2
     FastScrollLazyVerticalGrid(
         columns = GridCells.Fixed(columns.coerceAtLeast(1)),
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = if (isGridMode) gridInnerHorizontalPadding else 0.dp),
         contentPadding = adaptiveContentPadding(
             top = paddingValues.calculateTopPadding(),
             bottom = 120.dp,
-            horizontal = if (bookshelfLayoutMode != 0) 12.dp else 0.dp
+            horizontal = if (isGridMode) gridContentHorizontalPadding else 0.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
-        horizontalArrangement = Arrangement.spacedBy(if (bookshelfLayoutMode != 0) 8.dp else 0.dp),
+        verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
         showFastScroll = BookshelfConfig.showBookshelfFastScroller
     ) {
         items(books, key = { it.bookUrl }) { book ->
@@ -621,3 +637,4 @@ fun BookshelfPage(
         }
     }
 }
+

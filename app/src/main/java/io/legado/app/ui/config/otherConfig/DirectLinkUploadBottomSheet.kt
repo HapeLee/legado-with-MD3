@@ -68,7 +68,7 @@ fun DirectLinkUploadBottomSheet(
         endAction = {
             MediumIconButton(
                 onClick = { showMenu = true },
-                icon = Icons.Default.MoreVert
+                imageVector = Icons.Default.MoreVert
             )
             RoundDropdownMenu(
                 expanded = showMenu,

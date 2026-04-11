@@ -203,7 +203,7 @@ fun RssFavoritesScreen(
                     SelectionItemCard(
                         title = rssStar.title,
                         subtitle = if (rssStar.group.isNotBlank()) {
-                            "${rssStar.group} â€¢ ${rssStar.pubDate ?: ""}"
+                            "${rssStar.group} â€?${rssStar.pubDate ?: ""}"
                         } else {
                             rssStar.pubDate
                         },
@@ -232,7 +232,7 @@ fun RssFavoritesScreen(
                             }
                             SmallIconButton(
                                 onClick = openAction,
-                                icon = Icons.AutoMirrored.Filled.OpenInNew,
+                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
                                 contentDescription = "Open"
                             )
                         },
@@ -258,3 +258,4 @@ fun RssFavoritesScreen(
         }
     }
 }
+

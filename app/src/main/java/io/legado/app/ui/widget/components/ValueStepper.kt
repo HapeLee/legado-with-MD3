@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+﻿package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -31,7 +31,7 @@ fun ValueStepper(
                 val newValue = (value.toInt() - 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Remove
+            imageVector = Icons.Default.Remove
         )
         TextCard(
             cornerRadius = 8.dp,
@@ -46,7 +46,7 @@ fun ValueStepper(
                 val newValue = (value.toInt() + 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Add
+            imageVector = Icons.Default.Add
         )
     }
 }

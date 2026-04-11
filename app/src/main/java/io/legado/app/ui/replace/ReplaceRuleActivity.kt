@@ -143,7 +143,9 @@ class ReplaceRuleActivity : BaseComposeActivity() {
                     }
 
                     entry<ReplaceEditRoute> { route ->
-                        val viewModel: ReplaceEditViewModel = koinViewModel { parametersOf(route) }
+                        val viewModel: ReplaceEditViewModel = koinViewModel(
+                            key = "replace_edit_${System.identityHashCode(route)}"
+                        ) { parametersOf(route) }
 
                         ReplaceEditScreen(
                             viewModel = viewModel,

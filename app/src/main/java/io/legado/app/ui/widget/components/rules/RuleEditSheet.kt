@@ -34,15 +34,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 
 /**
- * 通用编辑数据包装，用于适配不同的规则实体
+ * 通用编辑数据包装，用于适配不同的规则
  */
 data class RuleEditFields(
     val name: String = "",
@@ -80,41 +84,44 @@ fun <T> RuleEditSheet(
     AppModalBottomSheet(
         title = title,
         startAction = {
-            IconButton(onClick = onDismissRequest) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = stringResource(R.string.cancel)
-                )
-            }
+            MediumIconButton(
+                onClick = onDismissRequest,
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close",
+            )
         },
         endAction = {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More")
-            }
-            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                DropdownMenuItem(
-                    text = { AppText(stringResource(R.string.copy_rule)) },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
-                    onClick = {
-                        onCopy(getCurrentEntity())
-                        showMenu = false
-                    }
+            Box{
+                MediumIconButton(
+                    onClick = { showMenu = true },
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More"
                 )
-                DropdownMenuItem(
-                    text = { AppText(stringResource(R.string.paste_rule)) },
-                    leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
-                    onClick = {
-                        scope.launch {
-                            onPaste()?.let { pasted ->
-                                val fields = toFields(pasted)
-                                name = fields.name
-                                rule1 = fields.rule1
-                                rule2 = fields.rule2
-                            }
+                RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.copy_rule),
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.NoteAdd, null) },
+                        onClick = {
+                            onCopy(getCurrentEntity())
+                            showMenu = false
                         }
-                        showMenu = false
-                    }
-                )
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.paste_rule),
+                        leadingIcon = { Icon(Icons.Default.ContentPaste, null) },
+                        onClick = {
+                            scope.launch {
+                                onPaste()?.let { pasted ->
+                                    val fields = toFields(pasted)
+                                    name = fields.name
+                                    rule1 = fields.rule1
+                                    rule2 = fields.rule2
+                                }
+                            }
+                            showMenu = false
+                        }
+                    )
+                }
             }
         },
         show = show,
@@ -132,6 +139,7 @@ fun <T> RuleEditSheet(
                     modifier = Modifier.fillMaxWidth(),
                     value = name,
                     onValueChange = { name = it },
+                    backgroundColor = LegadoTheme.colorScheme.surface,
                     label = stringResource(R.string.name),
                     singleLine = true
                 )
@@ -139,12 +147,14 @@ fun <T> RuleEditSheet(
                     modifier = Modifier.fillMaxWidth(),
                     value = rule1,
                     onValueChange = { rule1 = it },
+                    backgroundColor = LegadoTheme.colorScheme.surface,
                     label = label1
                 )
                 AppTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = rule2,
                     onValueChange = { rule2 = it },
+                    backgroundColor = LegadoTheme.colorScheme.surface,
                     label = label2,
                     minLines = 3
                 )

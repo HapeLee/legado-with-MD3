@@ -42,13 +42,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
@@ -73,8 +72,11 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.button.ToggleChip
+import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -115,15 +117,19 @@ fun ReplaceEditScreen(
                         enter = fadeIn(),
                         exit = fadeOut()
                     ) {
-                        IconButton(onClick = {
-                            viewModel.save(onSaveSuccess)
-                        }) {
-                            Icon(Icons.Default.Save, contentDescription = "保存")
-                        }
+                        TopBarActionButton(
+                            onClick = {
+                                viewModel.save(onSaveSuccess)
+                            },
+                            imageVector = Icons.Default.Save,
+                            contentDescription = "保存"
+                        )
                     }
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "更多操作")
-                    }
+                    TopBarActionButton(
+                        onClick = { showMenu = true },
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "更多操作"
+                    )
                     RoundDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
@@ -158,7 +164,7 @@ fun ReplaceEditScreen(
                 onClick = { viewModel.save(onSaveSuccess) },
                 tooltipText = "添加"
             ) {
-                Icon(Icons.Default.Save, contentDescription = "保存")
+                AppIcon(Icons.Default.Save, contentDescription = "保存")
             }
         }, contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
@@ -242,53 +248,29 @@ fun ReplaceEditScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    FilterChip(
+                    ToggleChip(
+                        label = "标题",
                         selected = state.scopeTitle,
-                        onClick = { viewModel.onScopeTitleChange(!state.scopeTitle) },
-                        label = { AppText("标题") },
-                        leadingIcon = if (state.scopeTitle) {
-                            {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "已选择",
-                                    Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
-                        } else null
+                        checkedContentDescription = "已选择",
+                        onToggle = { viewModel.onScopeTitleChange(!state.scopeTitle) }
                     )
 
                     Spacer(Modifier.width(8.dp))
 
-                    FilterChip(
+                    ToggleChip(
+                        label = "内容",
                         selected = state.scopeContent,
-                        onClick = { viewModel.onScopeContentChange(!state.scopeContent) },
-                        label = { AppText("内容") },
-                        leadingIcon = if (state.scopeContent) {
-                            {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "已选择",
-                                    Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
-                        } else null
+                        checkedContentDescription = "已选择",
+                        onToggle = { viewModel.onScopeContentChange(!state.scopeContent) }
                     )
 
                     Spacer(Modifier.weight(1f))
 
-                    FilterChip(
+                    ToggleChip(
+                        label = "使用正则",
                         selected = state.isRegex,
-                        onClick = { viewModel.onRegexChange(!state.isRegex) },
-                        label = { AppText("使用正则") },
-                        leadingIcon = if (state.isRegex) {
-                            {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "正则已启用",
-                                    Modifier.size(FilterChipDefaults.IconSize)
-                                )
-                            }
-                        } else null
+                        checkedContentDescription = "正则已启用",
+                        onToggle = { viewModel.onRegexChange(!state.isRegex) }
                     )
 
                 }

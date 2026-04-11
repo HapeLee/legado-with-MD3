@@ -145,15 +145,15 @@ fun BookInfoEditContent(
                                 )
                             )
                         },
-                        icon = Icons.Default.ImageSearch
+                        imageVector = Icons.Default.ImageSearch
                     )
                     MediumOutlinedIconButton(
                         onClick = { selectCover.launch() },
-                        icon = Icons.Default.FolderOpen
+                        imageVector = Icons.Default.FolderOpen
                     )
                     MediumOutlinedIconButton(
                         onClick = { viewModel.resetCover() },
-                        icon = Icons.Default.Replay
+                        imageVector = Icons.Default.Replay
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))

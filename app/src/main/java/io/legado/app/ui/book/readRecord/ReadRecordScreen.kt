@@ -69,6 +69,8 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.AppScaffold
@@ -78,9 +80,12 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.cover.Cover
-import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarTopBar
+import io.legado.app.ui.widget.components.heatmap.HEATMAP_CALENDAR_TITLE
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
+import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapConfig
 import io.legado.app.ui.widget.components.heatmap.HeatmapLegend
 import io.legado.app.ui.widget.components.heatmap.HeatmapMode
@@ -91,6 +96,7 @@ import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
 import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
@@ -118,6 +124,7 @@ fun ReadRecordScreen(
     val displayMode by viewModel.displayMode.collectAsState()
     var showSearch by remember { mutableStateOf(false) }
     var showCalendar by remember { mutableStateOf(false) }
+    var heatmapMode by remember { mutableStateOf(HeatmapMode.COUNT) }
     val listState = rememberLazyListState()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -129,6 +136,36 @@ fun ReadRecordScreen(
             action()
         } else {
             pendingDeleteAction = action
+        }
+    }
+    val stickyDate by remember(displayMode, listState) {
+        derivedStateOf {
+            if (displayMode == DisplayMode.LATEST) return@derivedStateOf null
+            val stickyKey = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { info ->
+                    val key = info.key.toString()
+                    key.startsWith("header_") ||
+                        key.startsWith("timeline_header_") ||
+                        key.startsWith("agg_item_") ||
+                        key.startsWith("timeline_item_")
+                }?.key?.toString() ?: return@derivedStateOf null
+
+            when {
+                stickyKey.startsWith("header_") -> stickyKey.removePrefix("header_")
+                stickyKey.startsWith("timeline_header_") -> stickyKey.removePrefix("timeline_header_")
+                stickyKey.startsWith("agg_item_") -> stickyKey.removePrefix("agg_item_").substringBefore("|")
+                stickyKey.startsWith("timeline_item_") -> stickyKey.removePrefix("timeline_item_").substringBefore("|")
+                else -> null
+            }
+        }
+    }
+    val floatingDate by remember(stickyDate, listState, displayMode) {
+        derivedStateOf {
+            if (displayMode == DisplayMode.LATEST) return@derivedStateOf null
+            if (stickyDate == null) return@derivedStateOf null
+            val shouldStick = listState.firstVisibleItemIndex > 1 ||
+                listState.firstVisibleItemScrollOffset > 24
+            if (shouldStick) stickyDate else null
         }
     }
 
@@ -198,41 +235,52 @@ fun ReadRecordScreen(
             }
         }
     ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
-            val contentState = when {
-                state.isLoading -> "LOADING"
-                (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
-                        (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
-                        (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
-                else -> "CONTENT"
-            }
-            AnimatedContent(
-                targetState = contentState,
-                label = "MainContentAnimation"
-            ) { targetState ->
-                when (targetState) {
-                    "LOADING" -> {
-                        EmptyMessageView(
-                            modifier = Modifier.fillMaxSize(),
-                            message = "加载中",
-                            isLoading = true
-                        )
-                    }
+        val contentState = when {
+            state.isLoading -> "LOADING"
+            (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
+                (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
+                (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
+            else -> "CONTENT"
+        }
+        AnimatedContent(
+            targetState = contentState,
+            label = "MainContentAnimation"
+        ) { targetState ->
+            when (targetState) {
+                "LOADING" -> {
+                    EmptyMessageView(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding()
+                            ),
+                        message = "加载中",
+                        isLoading = true
+                    )
+                }
 
-                    "EMPTY" -> {
-                        EmptyMessageView(
-                            modifier = Modifier.fillMaxSize(),
-                            message = "没有记录"
-                        )
-                    }
+                "EMPTY" -> {
+                    EmptyMessageView(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding()
+                            ),
+                        message = "没有记录"
+                    )
+                }
 
-                    "CONTENT" -> {
+                "CONTENT" -> {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier
-                                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = adaptiveContentPaddingOnlyVertical(
+                                top = padding.calculateTopPadding(),
+                                bottom = padding.calculateBottomPadding() + 16.dp
+                            )
                         ) {
                             item(key = "summary_card") {
                                 SummarySection(state, viewModel)
@@ -253,6 +301,32 @@ fun ReadRecordScreen(
                                         }
                                     }
                                 }
+                            )
+                        }
+
+                        TopFloatingStickyItem(
+                            item = floatingDate,
+                            modifier = Modifier.padding(
+                                top = padding.calculateTopPadding() + 4.dp,
+                                start = 8.dp
+                            )
+                        ) { date ->
+                            val text = buildString {
+                                append(formatFriendlyDate(date))
+                                if (displayMode == DisplayMode.AGGREGATE) {
+                                    val dailyTotal = state.groupedRecords[date]?.sumOf { it.readTime } ?: 0L
+                                    append(" · ")
+                                    append(formatDuring(dailyTotal))
+                                }
+                            }
+                            TextCard(
+                                text = text,
+                                textStyle = LegadoTheme.typography.labelLarge,
+                                backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                                contentColor = LegadoTheme.colorScheme.onCardContainer,
+                                cornerRadius = 8.dp,
+                                horizontalPadding = 8.dp,
+                                verticalPadding = 8.dp
                             )
                         }
                     }
@@ -292,18 +366,30 @@ fun ReadRecordScreen(
 
     AppModalBottomSheet(
         show = showCalendar,
-        onDismissRequest = { showCalendar = false }
+        onDismissRequest = { showCalendar = false },
+        title = HEATMAP_CALENDAR_TITLE,
+        startAction = {
+            HeatmapCalendarStartAction(
+                currentMode = heatmapMode,
+                onModeChanged = { heatmapMode = it }
+            )
+        },
+        endAction = {
+            HeatmapCalendarEndAction(
+                onClearDate = {
+                    viewModel.setSelectedDate(null)
+                    showCalendar = false
+                }
+            )
+        }
     ) {
         HeatmapCalendarSection(
             dailyReadCounts = state.dailyReadCounts,
             dailyReadTimes = state.dailyReadTimes,
+            currentMode = heatmapMode,
             selectedDate = state.selectedDate,
             onDateSelected = { date ->
                 viewModel.setSelectedDate(date)
-                showCalendar = false
-            },
-            onClearDate = {
-                viewModel.setSelectedDate(null)
                 showCalendar = false
             }
         )
@@ -404,13 +490,11 @@ fun HeatmapCalendarSection(
     modifier: Modifier = Modifier,
     dailyReadCounts: Map<LocalDate, Int>,
     dailyReadTimes: Map<LocalDate, Long>,
+    currentMode: HeatmapMode,
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
-    onClearDate: () -> Unit,
     config: HeatmapConfig = HeatmapConfig()
 ) {
-    var currentMode by remember { mutableStateOf(HeatmapMode.COUNT) }
-
     val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
     val days = rememberDaysInRange(startDate, endDate)
     val weeks = rememberWeeks(days, startDate)
@@ -452,14 +536,6 @@ fun HeatmapCalendarSection(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .padding(bottom = 32.dp)
     ) {
-        HeatmapCalendarTopBar(
-            currentMode = currentMode,
-            onModeChanged = { currentMode = it },
-            onClearDate = onClearDate
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         Row(modifier = Modifier.fillMaxWidth()) {
             WeekdayLabelsColumn(
                 cellSize = config.cellSize,
@@ -543,10 +619,13 @@ fun LazyListScope.renderListByMode(
     when (displayMode) {
         DisplayMode.AGGREGATE -> {
             state.groupedRecords.forEach { (date, details) ->
-                stickyHeader(key = "header_$date") {
+                item(key = "header_$date") {
                     DateHeader(date, details.sumOf { it.readTime })
                 }
-                items(items = details, key = { "${it.bookName}_${it.bookAuthor}_${it.date}" }) { detail ->
+                items(
+                    items = details,
+                    key = { "agg_item_${date}|${it.bookName}_${it.bookAuthor}_${it.date}" }
+                ) { detail ->
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -568,8 +647,8 @@ fun LazyListScope.renderListByMode(
 
         DisplayMode.TIMELINE -> {
             state.timelineRecords.forEach { (date, sessions) ->
-                stickyHeader(key = "timeline_header_$date") { DateHeader(date) }
-                items(items = sessions, key = { it.id }) { session ->
+                item(key = "timeline_header_$date") { DateHeader(date) }
+                items(items = sessions, key = { "timeline_item_${date}|${it.id}" }) { session ->
                     SwipeActionContainer(
                         modifier = Modifier.animateItem(),
                         startAction = SwipeAction(
@@ -637,7 +716,7 @@ fun LatestReadItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Cover(coverPath)
@@ -798,7 +877,7 @@ fun ReadRecordItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Cover(coverPath)
@@ -877,7 +956,7 @@ fun ReadingSummaryCard(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .adaptiveHorizontalPadding(vertical = 8.dp),
         containerColor = LegadoTheme.colorScheme.surfaceContainer
     ) {
         Row(

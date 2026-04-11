@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.FormatListNumbered
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,43 +42,41 @@ import io.legado.app.ui.widget.components.text.AppText
 import java.time.LocalDate
 
 /**
- * 热力图日历顶部操作栏
+ * 热力图日历弹窗标题
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+const val HEATMAP_CALENDAR_TITLE = "时间线"
+
+/**
+ * 热力图日历弹窗左侧操作
+ */
 @Composable
-fun HeatmapCalendarTopBar(
+fun HeatmapCalendarStartAction(
     currentMode: HeatmapMode,
     onModeChanged: (HeatmapMode) -> Unit,
-    onClearDate: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppText("时间线", style = LegadoTheme.typography.titleMedium)
+    MediumAnimatedActionButton(
+        checked = currentMode == HeatmapMode.TIME,
+        onCheckedChange = {
+            onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
+        },
+        iconChecked = Icons.Default.AccessTime,
+        iconUnchecked = Icons.Default.FormatListNumbered,
+        activeText = "按时长",
+        inactiveText = "按次数"
+    )
+}
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            MediumAnimatedActionButton(
-                checked = currentMode == HeatmapMode.TIME,
-                onCheckedChange = {
-                    onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
-                },
-                iconChecked = Icons.Default.AccessTime,
-                iconUnchecked = Icons.Default.FormatListNumbered,
-                activeText = "按时长",
-                inactiveText = "按次数"
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            MediumOutlinedIconButton(
-                onClick = onClearDate,
-                icon = Icons.Outlined.Delete,
-            )
-        }
-    }
+/**
+ * 热力图日历弹窗右侧操作
+ */
+@Composable
+fun HeatmapCalendarEndAction(
+    onClearDate: () -> Unit
+) {
+    MediumOutlinedIconButton(
+        onClick = onClearDate,
+        imageVector = Icons.Outlined.Delete,
+    )
 }
 
 /**

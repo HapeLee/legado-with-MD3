@@ -84,14 +84,14 @@ fun InputSettingItem(
                     ) {
                         SmallTextButton(
                             text = "默认",
-                            icon = Icons.Default.Replay,
+                            imageVector = Icons.Default.Replay,
                             onClick = {
                                 state.edit { replace(0, length, defaultValue.toString()) }
                             }
                         )
                         SmallTextButton(
                             text = "确认",
-                            icon = Icons.Default.Check,
+                            imageVector = Icons.Default.Check,
                             onClick = {
                                 onConfirm(state.text.toString())
                                 expanded = false
@@ -133,14 +133,14 @@ fun InputSettingItem(
                 ) {
                     SmallTextButton(
                         text = "默认",
-                        icon = Icons.Default.Replay,
+                        imageVector = Icons.Default.Replay,
                         onClick = {
                             state.edit { replace(0, length, defaultValue.toString()) }
                         }
                     )
                     SmallTextButton(
                         text = "确认",
-                        icon = Icons.Default.Check,
+                        imageVector = Icons.Default.Check,
                         onClick = {
                             onConfirm(state.text.toString())
                             expanded = false

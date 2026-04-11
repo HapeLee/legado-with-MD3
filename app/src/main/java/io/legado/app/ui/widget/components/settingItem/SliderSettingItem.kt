@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.settingItem
+﻿package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -78,7 +78,7 @@ fun SliderSettingItem(
                             MiuixTextField(
                                 state = textFieldState,
                                 lineLimits = TextFieldLineLimits.SingleLine,
-                                label = "输入数值 (${valueRange.start.toInt()}-${valueRange.endInclusive.toInt()})",
+                                label = "杈撳叆鏁板€?(${valueRange.start.toInt()}-${valueRange.endInclusive.toInt()})",
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier.fillMaxWidth(),
                                 inputTransformation = {
@@ -120,16 +120,16 @@ fun SliderSettingItem(
                         horizontalArrangement = Arrangement.End
                     ) {
                         SmallTextButton(
-                            text = if (isInputMode) "滑块" else "输入",
-                            icon = if (isInputMode) Icons.Default.LinearScale else Icons.Default.Edit,
+                            text = if (isInputMode) "婊戝潡" else "杈撳叆",
+                            imageVector = if (isInputMode) Icons.Default.LinearScale else Icons.Default.Edit,
                             onClick = { isInputMode = !isInputMode }
                         )
 
                         Spacer(Modifier.width(8.dp))
 
                         SmallTextButton(
-                            text = "默认",
-                            icon = Icons.Default.RestartAlt,
+                            text = "榛樿",
+                            imageVector = Icons.Default.RestartAlt,
                             onClick = {
                                 onValueChange(defaultValue)
                                 textFieldState.edit {
@@ -163,7 +163,7 @@ fun SliderSettingItem(
                             TextField(
                                 state = textFieldState,
                                 lineLimits = TextFieldLineLimits.SingleLine,
-                                label = { AppText("输入数值 (${valueRange.start.toInt()}-${valueRange.endInclusive.toInt()})") },
+                                label = { AppText("杈撳叆鏁板€?(${valueRange.start.toInt()}-${valueRange.endInclusive.toInt()})") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -212,16 +212,16 @@ fun SliderSettingItem(
                     horizontalArrangement = Arrangement.End
                 ) {
                     SmallTextButton(
-                        text = if (isInputMode) "滑块" else "输入",
-                        icon = if (isInputMode) Icons.Default.LinearScale else Icons.Default.Edit,
+                        text = if (isInputMode) "婊戝潡" else "杈撳叆",
+                        imageVector = if (isInputMode) Icons.Default.LinearScale else Icons.Default.Edit,
                         onClick = { isInputMode = !isInputMode }
                     )
 
                     Spacer(Modifier.width(8.dp))
 
                     SmallTextButton(
-                        text = "默认",
-                        icon = Icons.Default.RestartAlt,
+                        text = "榛樿",
+                        imageVector = Icons.Default.RestartAlt,
                         onClick = {
                             onValueChange(defaultValue)
                             textFieldState.edit {
@@ -238,3 +238,4 @@ fun SliderSettingItem(
         )
     }
 }
+

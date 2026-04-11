@@ -235,7 +235,7 @@ fun WebServiceSettingBlock(
             ) {
                 SmallTextButton(
                     text = "复制地址",
-                    icon = Icons.Default.ContentCopy,
+                    imageVector = Icons.Default.ContentCopy,
                     onClick = {
                         onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
                     }
@@ -245,7 +245,7 @@ fun WebServiceSettingBlock(
 
                 SmallTextButton(
                     text = "浏览器打开",
-                    icon = Icons.Default.OpenInBrowser,
+                    imageVector = Icons.Default.OpenInBrowser,
                     onClick = {
                         onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
                     }
@@ -254,3 +254,4 @@ fun WebServiceSettingBlock(
         }
     }
 }
+

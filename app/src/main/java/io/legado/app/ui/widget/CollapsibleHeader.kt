@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -37,7 +38,7 @@ fun CollapsibleHeader(
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, top = 4.dp, end = 16.dp),
+            .adaptiveHorizontalPadding(vertical = 4.dp),
         shape = MaterialTheme.shapes.medium,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         onClick = onToggle

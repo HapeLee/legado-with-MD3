@@ -89,7 +89,9 @@ import org.koin.androidx.compose.koinViewModel
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
     useRail: Boolean,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onNavigateToRemoteImport: () -> Unit,
+    onNavigateToLocalImport: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -373,7 +375,9 @@ fun MainScreen(
                                     putExtra("author", book.author)
                                     putExtra("bookUrl", book.bookUrl)
                                 }
-                            }
+                            },
+                            onNavigateToRemoteImport = onNavigateToRemoteImport,
+                            onNavigateToLocalImport = onNavigateToLocalImport
                         )
 
                         MainDestination.Explore -> ExploreScreen()

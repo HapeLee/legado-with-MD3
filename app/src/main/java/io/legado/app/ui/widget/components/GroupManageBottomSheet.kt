@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+﻿package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -120,7 +120,7 @@ private fun GroupItem(
             ) {
                 SmallTextButton(
                     text = stringResource(id = R.string.ok),
-                    icon = Icons.Default.Check,
+                    imageVector = Icons.Default.Check,
                     onClick = {
                         onUpdateGroup(group, state.text.toString())
                         expanded = false
@@ -130,3 +130,4 @@ private fun GroupItem(
         }
     )
 }
+
