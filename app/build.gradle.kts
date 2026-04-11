@@ -4,7 +4,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.room)
@@ -31,12 +30,6 @@ val projectVersionName = "$versionMajor.$versionMinor.$versionPatch"
 android {
     compileSdk = 37
     namespace = "io.legado.app"
-
-    kotlin {
-        jvmToolchain {
-            languageVersion.set(JavaLanguageVersion.of(21))
-        }
-    }
 
     signingConfigs {
         if (project.hasProperty("RELEASE_STORE_FILE")) {
@@ -139,31 +132,6 @@ android {
         }
     }
 
-    applicationVariants.all {
-        val variant = this
-        outputs.all {
-            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val abi = output.getFilter(com.android.build.OutputFile.ABI)
-            val flavor = variant.productFlavors[0].name
-            val baseVersionName = variant.versionName
-            var apkName = "${appName}_${flavor}_${baseVersionName}"
-            if (abi != null) {
-                apkName += "_$abi"
-            }
-            output.outputFileName = "$apkName.apk"
-        }
-    }
-
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
-
-    ksp {
-        arg("room.incremental", "true")
-        arg("room.expandProjection", "true")
-        arg("room.generateKotlin", "false")
-    }
-
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
@@ -175,12 +143,28 @@ android {
     }
 
     sourceSets {
-        getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
 
     lint {
         checkDependencies = true
     }
+}
+
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+ksp {
+    arg("room.incremental", "true")
+    arg("room.expandProjection", "true")
+    arg("room.generateKotlin", "false")
 }
 
 dependencies {

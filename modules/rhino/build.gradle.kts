@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -23,10 +22,10 @@ android {
     }
     lint {
         checkDependencies = true
-        targetSdk = 36
+        targetSdk = 37
     }
     testOptions {
-        targetSdk = 36
+        targetSdk = 37
     }
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.add("-Xlint:deprecation")
