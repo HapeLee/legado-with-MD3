@@ -139,8 +139,7 @@ fun <T> BatchImportDialog(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest,
-        containerColor = LegadoTheme.colorScheme.surfaceContainer
+        onDismissRequest = onDismissRequest
     ) {
         AppScaffold(
             modifier = Modifier
@@ -242,7 +241,7 @@ fun ImportItemRow(
 
             SmallIconButton(
                 onClick = onInfoClick,
-                icon = Icons.Default.Info,
+                imageVector = Icons.Default.Info,
                 contentDescription = "详情"
             )
         }

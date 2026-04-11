@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.import.remote
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -39,18 +41,13 @@ import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -59,12 +56,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -75,30 +71,32 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.AppConst
-import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Server
 import io.legado.app.help.config.AppConfig
+import io.legado.app.lib.dialogs.alert
+import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppRadioButton
+import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ConvertUtils
 import io.legado.app.utils.FileDoc
-import io.legado.app.utils.find
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import io.legado.app.utils.isUri
+import io.legado.app.utils.startActivityForBook
+import io.legado.app.utils.toastOnUi
 import org.json.JSONObject
 import org.koin.androidx.compose.koinViewModel
 
@@ -116,46 +114,17 @@ sealed class RemoteBookSheet {
 @Composable
 fun RemoteBookScreen(
     viewModel: RemoteBookViewModel = koinViewModel(),
-    onBackClick: () -> Unit,
-    startReadBook: (Book) -> Unit,
-    onArchiveFileClick: (FileDoc) -> Unit,
-    selectBookFolder: () -> Unit
+    onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val scope = rememberCoroutineScope()
     var dialogState by remember { mutableStateOf<RemoteBookDialog?>(null) }
     var showSheet by remember { mutableStateOf<RemoteBookSheet?>(null) }
-
-    val startRead: (RemoteBook) -> Unit =
-        remember(viewModel, startReadBook, onArchiveFileClick, selectBookFolder) {
-            { remoteBook ->
-                scope.launch {
-                    val downloadFileName = remoteBook.filename
-                    if (!ArchiveUtils.isArchive(downloadFileName)) {
-                        viewModel.getLocalBook(downloadFileName)?.let {
-                            startReadBook(it)
-                        }
-                    } else {
-                        val bookTreeUri = AppConfig.defaultBookTreeUri
-                        if (bookTreeUri == null) {
-                            selectBookFolder()
-                        } else {
-                            val downloadArchiveFileDoc = withContext(Dispatchers.IO) {
-                                FileDoc.fromUri(bookTreeUri.toUri(), true)
-                                    .find(downloadFileName)
-                            }
-                            if (downloadArchiveFileDoc == null) {
-                                dialogState = RemoteBookDialog.DownloadArchive(remoteBook)
-                            } else {
-                                onArchiveFileClick(downloadArchiveFileDoc)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
+    val selectDocTree = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        viewModel.dispatch(RemoteBookIntent.BookFolderPicked(uri))
+    }
 
     AppAlertDialog(
         data = dialogState as? RemoteBookDialog.DownloadArchive,
@@ -166,7 +135,7 @@ fun RemoteBookScreen(
         },
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { state ->
-            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
+            viewModel.dispatch(RemoteBookIntent.AddBooks(setOf(state.remoteBook)))
             dialogState = null
         },
         dismissText = stringResource(android.R.string.cancel),
@@ -182,7 +151,7 @@ fun RemoteBookScreen(
         },
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { state ->
-            scope.launch { viewModel.addToBookshelf(setOf(state.remoteBook)) }
+            viewModel.dispatch(RemoteBookIntent.AddBooks(setOf(state.remoteBook)))
             dialogState = null
         },
         dismissText = stringResource(android.R.string.cancel),
@@ -191,7 +160,26 @@ fun RemoteBookScreen(
 
     AppModalBottomSheet(
         show = showSheet != null,
-        onDismissRequest = { showSheet = null }
+        onDismissRequest = { showSheet = null },
+        title = when (val state = showSheet) {
+            is RemoteBookSheet.Servers -> stringResource(R.string.server_config)
+            is RemoteBookSheet.ServerConfig -> {
+                val actionText =
+                    if (state.server == null) stringResource(R.string.add)
+                    else stringResource(R.string.edit)
+                "$actionText ${stringResource(R.string.server_config)}"
+            }
+            else -> null
+        },
+        endAction = if (showSheet is RemoteBookSheet.Servers) {
+            {
+                IconButton(onClick = { showSheet = RemoteBookSheet.ServerConfig(null) }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
+                }
+            }
+        } else {
+            null
+        }
     ) {
         when (val state = showSheet) {
             is RemoteBookSheet.Servers -> {
@@ -199,14 +187,13 @@ fun RemoteBookScreen(
                     servers = uiState.servers,
                     selectedServerId = uiState.selectedServerId,
                     onSelect = {
-                        viewModel.selectServer(it)
+                        viewModel.dispatch(RemoteBookIntent.SelectServer(it))
                         showSheet = null
                     },
                     onEdit = { showSheet = RemoteBookSheet.ServerConfig(it) },
                     onDelete = { viewModel.deleteServer(it) },
-                    onAdd = { showSheet = RemoteBookSheet.ServerConfig(null) },
                     onDefault = {
-                        viewModel.selectServer(AppConst.DEFAULT_WEBDAV_ID)
+                        viewModel.dispatch(RemoteBookIntent.SelectServer(AppConst.DEFAULT_WEBDAV_ID))
                         showSheet = null
                     }
                 )
@@ -228,19 +215,54 @@ fun RemoteBookScreen(
     }
 
     LaunchedEffect(viewModel) {
-        viewModel.initData { viewModel.loadRemoteBookList() }
-    }
+        viewModel.dispatch(RemoteBookIntent.Initialize)
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is RemoteBookEffect.OpenBook -> context.startActivityForBook(effect.book)
+                is RemoteBookEffect.RequestBookFolderPicker -> {
+                    selectDocTree.launch(
+                        effect.initialUri
+                            ?: AppConfig.defaultBookTreeUri?.takeIf { it.isUri() }?.toUri()
+                    )
+                }
 
-    LaunchedEffect(viewModel) {
-        viewModel.permissionDenialEvent.collect { selectBookFolder() }
+                is RemoteBookEffect.ShowArchiveEntries -> {
+                    context.selector(R.string.start_read, effect.fileNames) { _, name, _ ->
+                        viewModel.dispatch(
+                            RemoteBookIntent.ArchiveEntrySelected(effect.fileDoc, name)
+                        )
+                    }
+                }
+
+                is RemoteBookEffect.ShowImportArchiveDialog -> {
+                    context.alert(R.string.draw, R.string.no_book_found_bookshelf) {
+                        okButton {
+                            viewModel.dispatch(
+                                RemoteBookIntent.ImportArchiveConfirmed(
+                                    effect.fileDoc,
+                                    effect.fileName
+                                )
+                            )
+                        }
+                        noButton()
+                    }
+                }
+
+                is RemoteBookEffect.ShowDownloadArchiveDialog -> {
+                    dialogState = RemoteBookDialog.DownloadArchive(effect.remoteBook)
+                }
+
+                is RemoteBookEffect.ShowToast -> context.toastOnUi(effect.message)
+            }
+        }
     }
 
     ListScaffold(
         title = "远程书籍",
         state = uiState,
         onBackClick = onBackClick,
-        onSearchToggle = { viewModel.setSearchMode(it) },
-        onSearchQueryChange = { viewModel.setSearchKey(it) },
+        onSearchToggle = { viewModel.dispatch(RemoteBookIntent.SearchToggle(it)) },
+        onSearchQueryChange = { viewModel.dispatch(RemoteBookIntent.SearchChange(it)) },
         searchPlaceholder = "搜索",
         topBarActions = {
             IconButton(onClick = { showSheet = RemoteBookSheet.Servers }) {
@@ -251,7 +273,7 @@ fun RemoteBookScreen(
             RoundDropdownMenuItem(
                 text = "按名称排序",
                 onClick = {
-                    viewModel.toggleSort(RemoteBookSort.Name)
+                    viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
                     dismiss()
                 },
                 trailingIcon = {
@@ -263,7 +285,7 @@ fun RemoteBookScreen(
             RoundDropdownMenuItem(
                 text = "按时间排序",
                 onClick = {
-                    viewModel.toggleSort(RemoteBookSort.Default)
+                    viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
                     dismiss()
                 },
                 trailingIcon = {
@@ -277,13 +299,13 @@ fun RemoteBookScreen(
             PathNavigationBar(
                 pathNames = uiState.pathNames,
                 canGoBack = uiState.canGoBack,
-                onNavigateBack = { viewModel.navigateBack() },
-                onNavigateToLevel = { viewModel.navigateToLevel(it) }
+                onNavigateBack = { viewModel.dispatch(RemoteBookIntent.NavigateBack) },
+                onNavigateToLevel = { viewModel.dispatch(RemoteBookIntent.NavigateToLevel(it)) }
             )
         },
         selectionActions = SelectionActions(
-            onSelectAll = { viewModel.selectAllCheckable() },
-            onSelectInvert = { viewModel.invertSelection() },
+            onSelectAll = { viewModel.dispatch(RemoteBookIntent.SelectAll) },
+            onSelectInvert = { viewModel.dispatch(RemoteBookIntent.SelectInvert) },
             primaryAction = ActionItem(
                 text = "添加至书架",
                 icon = { Icon(Icons.Default.CloudDownload, null) },
@@ -292,7 +314,7 @@ fun RemoteBookScreen(
                         .filter { it.id in uiState.selectedIds }
                         .map { it.remoteBook }
                         .toSet()
-                    scope.launch { viewModel.addToBookshelf(selectedBooks) }
+                    viewModel.dispatch(RemoteBookIntent.AddBooks(selectedBooks))
                 }
             ),
             secondaryActions = emptyList()
@@ -306,7 +328,7 @@ fun RemoteBookScreen(
                 .padding(paddingValues),
             isRefreshing = uiState.isLoading,
             state = pullToRefreshState,
-            onRefresh = { viewModel.refreshData() }
+            onRefresh = { viewModel.dispatch(RemoteBookIntent.Refresh) }
         ) {
             if (uiState.items.isEmpty()) {
                 if (uiState.isLoading) {
@@ -328,14 +350,10 @@ fun RemoteBookScreen(
                             book = book,
                             isSelected = itemUi.id in uiState.selectedIds,
                             onClick = {
-                                when {
-                                    book.isDir -> viewModel.navigateToDir(book)
-                                    book.isOnBookShelf -> startRead(book)
-                                    else -> viewModel.toggleSelection(itemUi.id)
-                                }
+                                viewModel.dispatch(RemoteBookIntent.OpenItem(book))
                             },
                             onAddClick = { remoteBook ->
-                                scope.launch { viewModel.addToBookshelf(setOf(remoteBook)) }
+                                viewModel.dispatch(RemoteBookIntent.AddBooks(setOf(remoteBook)))
                             },
                             onUpdateClick = { remoteBook ->
                                 dialogState = RemoteBookDialog.ReImport(remoteBook)
@@ -355,7 +373,6 @@ private fun ServersSheetContent(
     onSelect: (Long) -> Unit,
     onEdit: (Server) -> Unit,
     onDelete: (Server) -> Unit,
-    onAdd: () -> Unit,
     onDefault: () -> Unit
 ) {
     Column(
@@ -364,22 +381,6 @@ private fun ServersSheetContent(
             .navigationBarsPadding()
             .padding(bottom = 8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            AppText(
-                text = stringResource(R.string.server_config),
-                style = LegadoTheme.typography.titleLarge
-            )
-            IconButton(onClick = onAdd) {
-                Icon(Icons.Default.Add, contentDescription = "添加")
-            }
-        }
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -418,70 +419,45 @@ private fun ServerItem(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
-    val containerColor = if (isSelected) {
-        LegadoTheme.colorScheme.secondaryContainer
-    } else {
-        LegadoTheme.colorScheme.surface
-    }
-
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = containerColor
-        )
-    ) {
-        ListItem(
-            modifier = Modifier.animateContentSize(),
-            headlineContent = {
-                AppText(
-                    text = name,
-                    style = LegadoTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            },
-            leadingContent = {
-                RadioButton(
-                    selected = isSelected,
-                    onClick = null
-                )
-            },
-            supportingContent = url?.let {
-                {
-                    AppText(
-                        text = it,
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            },
-            trailingContent = if (onEdit != null || onDelete != null) {
-                {
-                    Row {
-                        onEdit?.let {
-                            IconButton(onClick = it) {
-                                Icon(Icons.Default.Edit, contentDescription = "编辑")
-                            }
-                        }
-                        onDelete?.let {
-                            IconButton(onClick = it) {
-                                Icon(Icons.Default.Delete, contentDescription = "删除")
-                            }
-                        }
+    SelectionItemCard(
+        title = name,
+        subtitle = url,
+        isSelected = isSelected,
+        onToggleSelection = onClick,
+        leadingContent = {
+            AppRadioButton(
+                selected = isSelected,
+                onClick = null
+            )
+        },
+        trailingAction = if (onEdit != null || onDelete != null) {
+            {
+                Row {
+                    onEdit?.let {
+                        SmallIconButton(
+                            onClick = it,
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit"
+                        )
+                    }
+                    onDelete?.let {
+                        SmallIconButton(
+                            onClick = it,
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete"
+                        )
                     }
                 }
-            } else null,
-            colors = ListItemDefaults.colors(
-                containerColor = Color.Transparent
-            )
-        )
-    }
+            }
+        } else {
+            null
+        },
+        containerColor = LegadoTheme.colorScheme.surface,
+        selectedContainerColor = LegadoTheme.colorScheme.secondaryContainer,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    )
 }
 
 @Composable
@@ -503,40 +479,34 @@ private fun ServerConfigSheetContent(
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
-        AppText(
-            text = if (server == null) "添加服务器" else "编辑服务器",
-            style = LegadoTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
-        )
-
-        OutlinedTextField(
+        AppTextField(
             value = name,
             onValueChange = { name = it },
-            label = { AppText("名称") },
+            label = "名称",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = url,
             onValueChange = { url = it },
-            label = { AppText("URL") },
+            label = "URL",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = username,
             onValueChange = { username = it },
-            label = { AppText("用户名") },
+            label = "用户名",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
         Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
+        AppTextField(
             value = password,
             onValueChange = { password = it },
-            label = { AppText("密码") },
+            label = "密码",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -644,7 +614,7 @@ private fun PathNavigationBar(
         if (canGoBack) {
             SmallTonalIconButton(
                 onClick = onNavigateBack,
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "返回上级"
             )
         }
@@ -664,7 +634,7 @@ private fun RemoteBookItem(
     val containerColor = if (isSelected) {
         LegadoTheme.colorScheme.secondaryContainer
     } else {
-        LegadoTheme.colorScheme.surfaceContainerLow
+        LegadoTheme.colorScheme.surfaceContainer
     }
 
     GlassCard(
@@ -751,7 +721,7 @@ private fun RemoteBookItem(
                             onAddClick(book)
                         }
                     },
-                    icon = if (book.isOnBookShelf)
+                    imageVector = if (book.isOnBookShelf)
                         Icons.Outlined.CloudSync
                     else
                         Icons.Outlined.AddCircleOutline,
