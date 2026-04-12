@@ -31,7 +31,7 @@ fun TextCard(
     contentColor: Color? = null,
     cornerRadius: Dp = 8.dp,
     horizontalPadding: Dp = 8.dp,
-    verticalPadding: Dp = 2.dp,
+    verticalPadding: Dp = 4.dp,
     iconSize: Dp = 14.dp,
     spacing: Dp = 4.dp,
     textStyle: TextStyle = LegadoTheme.typography.labelSmallEmphasized

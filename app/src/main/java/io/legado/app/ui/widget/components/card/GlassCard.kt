@@ -6,7 +6,6 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,8 +36,8 @@ private fun BaseCard(
 ) {
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         val colors = MiuixCardDefaults.defaultColors(
-            color = (containerColor ?: MiuixTheme.colorScheme.secondaryContainer.copy(alpha)),
-            contentColor = contentColor ?: MiuixTheme.colorScheme.onSurface
+            color = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer.copy(alpha)),
+            contentColor = contentColor ?: LegadoTheme.colorScheme.onSurface
         )
         MiuixCard(
             modifier = modifier,
@@ -51,12 +50,12 @@ private fun BaseCard(
         )
     } else {
         val colors = CardDefaults.cardColors(
-            containerColor = (containerColor ?: MaterialTheme.colorScheme.secondaryContainer).copy(
+            containerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer).copy(
                 alpha = alpha
             ),
-            contentColor = contentColor ?: MaterialTheme.colorScheme.onSecondaryContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f),
-            disabledContentColor = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f)
+            contentColor = contentColor ?: LegadoTheme.colorScheme.onSecondaryContainer,
+            disabledContainerColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f),
+            disabledContentColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f)
         )
         if (onClick != null) {
             Card(

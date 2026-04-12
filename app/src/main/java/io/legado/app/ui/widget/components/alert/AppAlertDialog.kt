@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -18,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.MiuixPrimaryButton
@@ -91,6 +94,11 @@ fun AppAlertDialog(
             AlertDialog(
                 onDismissRequest = onDismissRequest,
                 modifier = modifier,
+                containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                iconContentColor = LegadoTheme.colorScheme.primary,
+                titleContentColor = LegadoTheme.colorScheme.onSurface,
+                textContentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                tonalElevation = AlertDialogDefaults.TonalElevation,
                 title = title?.let { { Text(text = it) } },
                 text = {
                     Column {
@@ -108,7 +116,10 @@ fun AppAlertDialog(
                 confirmButton = {
                     if (onConfirm != null) {
                         OutlinedButton(
-                            onClick = onConfirm
+                            onClick = onConfirm,
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = LegadoTheme.colorScheme.primary
+                            )
                         ) {
                             Text(text = confirmText)
                         }
@@ -120,7 +131,10 @@ fun AppAlertDialog(
                             onClick = {
                                 onDismiss()
                                 onDismissRequest()
-                            }
+                            },
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = LegadoTheme.colorScheme.primary
+                            )
                         ) {
                             Text(text = dismissText)
                         }

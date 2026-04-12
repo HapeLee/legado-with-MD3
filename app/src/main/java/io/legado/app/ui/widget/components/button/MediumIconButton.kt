@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -42,6 +43,7 @@ import top.yukonga.miuix.kmp.basic.Text as MiuixText
 fun MediumIconButton(
     onClick: () -> Unit,
     imageVector: ImageVector,
+    tint: Color = LegadoTheme.colorScheme.onSurface,
     modifier: Modifier = Modifier,
     contentDescription: String? = null
 ) {
@@ -52,7 +54,8 @@ fun MediumIconButton(
         ) {
             MiuixIcon(
                 imageVector = imageVector,
-                contentDescription = contentDescription
+                contentDescription = contentDescription,
+                tint = tint
             )
         }
     } else {
@@ -62,7 +65,8 @@ fun MediumIconButton(
         ) {
             Icon(
                 imageVector = imageVector,
-                contentDescription = contentDescription
+                contentDescription = contentDescription,
+                tint = tint
             )
         }
     }

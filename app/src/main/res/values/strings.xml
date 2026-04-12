@@ -397,6 +397,7 @@
     <string name="imm_navigation_bar">immersion navigation bar</string>
     <string name="imm_navigation_bar_s">The navigation bar becomes transparent</string>
     <string name="add_to_bookshelf">Add to Bookshelf</string>
+    <string name="click_to_remove">Tap to remove</string>
     <string name="continue_read">Continue reading</string>
     <string name="cover_path">Cover path</string>
     <string name="page_anim_cover">Cover</string>
@@ -1240,6 +1241,8 @@
     <string name="refresh_explore">Refresh Explore</string>
     <string name="ungroup">Ungrouped</string>
     <string name="dynamic_colors">Dynamic Colors</string>
+    <string name="dynamic_colors_summary">Use wallpaper-based theme colors</string>
+    <string name="input_value_range">Enter value (%1$d-%2$d)</string>
     <string name="change_icon_success">Icon Updated</string>
     <string name="replace_rule_title_setting">Configure Replace Rules</string>
     <string name="more_setting">More Settings</string>
@@ -1292,6 +1295,8 @@
     <string name="light_mode">Light</string>
     <string name="dark_mode">Dark</string>
     <string name="pure_black">True Black Mode</string>
+    <string name="miuix_monet">Miuix Monet</string>
+    <string name="miuix_monet_summary">Use Monet to generate the Miuix palette. If the current theme is Dynamic on Android 12+, the system accent is used; otherwise the seed color below is used.</string>
     <string name="transparent_theme_alarm">Please set the transparent theme after setting a background image.</string>
     <string name="seed_color_summary">Create a theme from a seed color</string>
     <string name="seed_color">Seed Color</string>

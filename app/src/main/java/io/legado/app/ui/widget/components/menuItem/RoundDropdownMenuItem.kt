@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.menuItem
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Color.Companion
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,13 +37,16 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.rememberOpaqueColorScheme
 import io.legado.app.ui.widget.components.icon.AppIcon
+import top.yukonga.miuix.kmp.basic.DropdownDefaults
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.basic.Check
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @Composable
 fun RoundDropdownMenuItem(
     text: String,
-    color: Color = LegadoTheme.colorScheme.surface,
+    color: Color = Color.Unspecified,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
@@ -51,18 +58,19 @@ fun RoundDropdownMenuItem(
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val interaction = interactionSource ?: remember { MutableInteractionSource() }
+    val hasCustomContentColor = color != Color.Unspecified
 
     if (isMiuix) {
-        val backgroundColor = if (isSelected) {
-            LegadoTheme.colorScheme.primaryContainer
+        val dropdownColors = DropdownDefaults.dropdownColors()
+        val (textColor, backgroundColor) = if (isSelected) {
+            dropdownColors.selectedContentColor to dropdownColors.selectedContainerColor
+        } else {
+            dropdownColors.contentColor to dropdownColors.containerColor
+        }
+        val checkColor = if (isSelected) {
+            dropdownColors.selectedContentColor
         } else {
             Color.Transparent
-        }
-
-        val contentColor = if (isSelected) {
-            LegadoTheme.colorScheme.onPrimaryContainer
-        } else {
-            LegadoTheme.colorScheme.onSurface
         }
 
         Row(
@@ -73,16 +81,13 @@ fun RoundDropdownMenuItem(
                 .drawBehind { drawRect(backgroundColor) }
                 .clickable(
                     interactionSource = interaction,
-                    indication = androidx.compose.foundation.LocalIndication.current,
+                    indication = LocalIndication.current,
                     enabled = enabled,
                     onClick = onClick
                 )
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            CompositionLocalProvider(
-                LocalContentColor provides contentColor,
-                LocalTextStyle provides MiuixTheme.textStyles.body1
-            ) {
+            CompositionLocalProvider(LocalContentColor provides textColor) {
                 if (leadingIcon != null) {
                     leadingIcon()
                     Spacer(Modifier.width(12.dp))
@@ -93,24 +98,46 @@ fun RoundDropdownMenuItem(
                     contentAlignment = Alignment.CenterStart
                 ) {
                     MiuixText(
+                        modifier = Modifier.widthIn(max = 200.dp),
                         text = text,
-                        fontWeight = FontWeight.Medium
+                        fontSize = MiuixTheme.textStyles.body1.fontSize,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor,
                     )
                 }
 
                 if (trailingIcon != null) {
                     Spacer(Modifier.width(12.dp))
                     trailingIcon()
+                } else {
+                    Spacer(Modifier.width(12.dp))
+                    AppIcon(
+                        imageVector = MiuixIcons.Basic.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = checkColor
+                    )
                 }
             }
         }
     } else {
         val colorScheme = rememberOpaqueColorScheme()
+        val selectedContentColor = colorScheme.onPrimaryContainer
+        val defaultContentColor = colorScheme.onSurface
         val contentColor = if (enabled) {
-            MaterialTheme.colorScheme.onSurface
+            when {
+                hasCustomContentColor -> color
+                isSelected -> selectedContentColor
+                else -> defaultContentColor
+            }
         } else {
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            when {
+                hasCustomContentColor -> color.copy(alpha = 0.38f)
+                isSelected -> selectedContentColor.copy(alpha = 0.38f)
+                else -> defaultContentColor.copy(alpha = 0.38f)
+            }
         }
+        val containerColor = if (isSelected) colorScheme.primaryContainer else colorScheme.surface
 
         Surface(
             onClick = onClick,
@@ -119,7 +146,8 @@ fun RoundDropdownMenuItem(
                 .fillMaxWidth(),
             enabled = enabled,
             shape = MaterialTheme.shapes.small,
-            color = colorScheme.surface,
+            color = containerColor,
+            contentColor = contentColor,
             interactionSource = interaction
         ) {
             Row(
@@ -141,13 +169,22 @@ fun RoundDropdownMenuItem(
                     Text(
                         modifier = Modifier.widthIn(max = 200.dp),
                         text = text,
-                        style = LegadoTheme.typography.bodyMediumEmphasized
+                        style = LegadoTheme.typography.bodyMediumEmphasized,
+                        color = contentColor
                     )
                 }
 
                 if (trailingIcon != null) {
                     Spacer(Modifier.width(8.dp))
                     trailingIcon()
+                } else {
+                    Spacer(Modifier.width(8.dp))
+                    AppIcon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = if (isSelected) contentColor else Color.Transparent
+                    )
                 }
             }
         }

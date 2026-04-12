@@ -176,7 +176,8 @@
         <activity
             android:name=".ui.book.info.edit.BookInfoEditActivity"
             android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 音频播放界面 -->
         <activity
             android:name="io.legado.app.ui.book.audio.AudioPlayActivity"

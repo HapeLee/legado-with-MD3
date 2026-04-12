@@ -56,6 +56,7 @@ fun SelectionItemCard(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
     isEnabled: Boolean = true,
     isSelected: Boolean = false,
     inSelectionMode: Boolean = false,
@@ -75,10 +76,10 @@ fun SelectionItemCard(
     val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
             selectedContainerColor
-                ?: if (composeEngine) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                ?: if (composeEngine) LegadoTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.secondaryContainer
         else
             containerColor
-                ?: if (composeEngine) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                ?: if (composeEngine) LegadoTheme.colorScheme.surfaceContainer else LegadoTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -130,13 +131,16 @@ fun SelectionItemCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (!subtitle.isNullOrBlank()) {
-                        AppText(
-                            text = subtitle,
-                            style = LegadoTheme.typography.bodySmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    when {
+                        supportingContent != null -> supportingContent()
+                        !subtitle.isNullOrBlank() -> {
+                            AppText(
+                                text = subtitle,
+                                style = LegadoTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             } else {
@@ -150,16 +154,20 @@ fun SelectionItemCard(
                             overflow = TextOverflow.Ellipsis
                         )
                     },
-                    supportingContent = if (!subtitle.isNullOrBlank()) {
-                        {
-                            AppText(
-                                text = subtitle,
-                                style = LegadoTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                    supportingContent = when {
+                        supportingContent != null -> supportingContent
+                        !subtitle.isNullOrBlank() -> {
+                            {
+                                AppText(
+                                    text = subtitle,
+                                    style = LegadoTheme.typography.bodySmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
-                    } else null,
+                        else -> null
+                    },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
@@ -218,6 +226,7 @@ fun LazyItemScope.ReorderableSelectionItem(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
     isEnabled: Boolean = true,
     isSelected: Boolean = false,
     inSelectionMode: Boolean = false,
@@ -242,6 +251,7 @@ fun LazyItemScope.ReorderableSelectionItem(
         SelectionItemCard(
             title = title,
             subtitle = subtitle,
+            supportingContent = supportingContent,
             isEnabled = isEnabled,
             isSelected = isSelected,
             inSelectionMode = inSelectionMode,

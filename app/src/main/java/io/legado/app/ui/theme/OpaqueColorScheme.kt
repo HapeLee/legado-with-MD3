@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.ui.theme.ThemeManager.getColorScheme
+import io.legado.app.ui.theme.ThemeEngine.getColorScheme
 
 @Composable
 fun rememberOpaqueColorScheme(): ColorScheme {

@@ -25,8 +25,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
@@ -51,6 +53,8 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
     }
     private var task: Job? = null
     val searchStateData = MutableLiveData<Boolean>()
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching = _isSearching.asStateFlow()
     var name: String = ""
     var author: String = ""
     val searchBooks: MutableList<SearchBook> = Collections.synchronizedList(arrayListOf())
@@ -94,6 +98,11 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         }
     }
 
+    fun initData(name: String, author: String) {
+        this.name = name
+        this.author = author.replace(AppPattern.authorRegex, "")
+    }
+
     private fun initSearchPool() {
         searchPool = Executors
             .newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
@@ -121,12 +130,14 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
                 }
             }.onStart {
                 searchStateData.postValue(true)
+                _isSearching.value = true
             }.mapParallelSafe(threadCount) {
                 withTimeout(60000L) {
                     search(it)
                 }
             }.onCompletion {
                 searchStateData.postValue(false)
+                _isSearching.value = false
             }.catch {
                 AppLog.put("封面换源搜索出错\n${it.localizedMessage}", it)
             }.collect()
@@ -156,10 +167,11 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    private fun stopSearch() {
+    fun stopSearch() {
         task?.cancel()
         searchPool?.close()
         searchStateData.postValue(false)
+        _isSearching.value = false
     }
 
     override fun onCleared() {

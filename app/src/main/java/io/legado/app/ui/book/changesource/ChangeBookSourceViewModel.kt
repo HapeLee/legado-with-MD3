@@ -62,6 +62,8 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     private val threadCount = AppConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     val searchStateData = MutableLiveData<Boolean>()
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching = _isSearching.asStateFlow()
     var searchFinishCallback: ((isEmpty: Boolean) -> Unit)? = null
     var name: String = ""
     var author: String = ""
@@ -163,6 +165,19 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
     }
 
+    @CallSuper
+    open fun initData(
+        name: String,
+        author: String,
+        book: Book?,
+        fromReadBookActivity: Boolean
+    ) {
+        this.name = name
+        this.author = author.replace(AppPattern.authorRegex, "")
+        this.fromReadBookActivity = fromReadBookActivity
+        oldBook = book
+    }
+
     private fun initSearchPool() {
         searchPool = Executors
             .newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
@@ -234,6 +249,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 }
             }.onStart {
                 searchStateData.postValue(true)
+                _isSearching.value = true
             }.mapParallel(threadCount) {
                 try {
                     withTimeout(60000L) {
@@ -250,6 +266,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             }.onCompletion {
                 ensureActive()
                 searchStateData.postValue(false)
+                _isSearching.value = false
                 searchFinishCallback?.invoke(searchBooks.isEmpty())
             }.catch {
                 AppLog.put("换源搜索出错\n${it.localizedMessage}", it)
@@ -383,6 +400,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 }
             }.onStart {
                 searchStateData.postValue(true)
+                _isSearching.value = true
             }.mapParallelSafe(threadCount) {
                 val source = appDb.bookSourceDao.getBookSource(it.origin)!!
                 withTimeout(60000L) {
@@ -390,6 +408,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 }
             }.onCompletion {
                 searchStateData.postValue(false)
+                _isSearching.value = false
             }.catch {
                 AppLog.put("换源刷新列表出错\n${it.localizedMessage}", it)
             }.collect()
@@ -446,6 +465,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         task?.cancel()
         searchPool?.close()
         searchStateData.postValue(false)
+        _isSearching.value = false
     }
 
     fun getToc(
@@ -554,10 +574,8 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     fun setBookScore(searchBook: SearchBook, score: Int) {
-        execute {
-            SourceConfig.setBookScore(searchBook.origin, searchBook.name, searchBook.author, score)
-            searchCallback?.upAdapter()
-        }
+        SourceConfig.setBookScore(searchBook.origin, searchBook.name, searchBook.author, score)
+        searchCallback?.upAdapter()
     }
 
     fun getBookScore(searchBook: SearchBook): Int {

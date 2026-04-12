@@ -24,6 +24,10 @@ object ThemeConfig {
     //m3 or miuix
     var composeEngine by prefDelegate(PreferKey.composeEngine, "material")
 
+    var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false) {
+        postEvent(EventBus.RECREATE, "")
+    }
+
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 
     var appTheme by prefDelegate(PreferKey.appTheme, "0")

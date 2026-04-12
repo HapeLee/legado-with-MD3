@@ -394,6 +394,7 @@
     <string name="imm_navigation_bar">沉浸式导航栏</string>
     <string name="imm_navigation_bar_s">导航栏颜色透明</string>
     <string name="add_to_bookshelf">放入书架</string>
+    <string name="click_to_remove">点击删除</string>
     <string name="continue_read">继续阅读</string>
     <string name="cover_path">封面地址</string>
     <string name="page_anim_cover">覆盖</string>
@@ -1237,6 +1238,8 @@
     <string name="refresh_explore">刷新发现</string>
     <string name="ungroup">未分组</string>
     <string name="dynamic_colors">动态取色</string>
+    <string name="dynamic_colors_summary">使用基于壁纸的主题颜色</string>
+    <string name="input_value_range">输入数值（%1$d-%2$d）</string>
     <string name="change_icon_success">图标已修改</string>
     <string name="replace_rule_title_setting">配置替换规则</string>
     <string name="more_setting">更多设置</string>
@@ -1289,6 +1292,8 @@
     <string name="light_mode">浅色</string>
     <string name="dark_mode">深色</string>
     <string name="pure_black">纯黑深色模式</string>
+    <string name="miuix_monet">自定义主题色</string>
+    <string name="miuix_monet_summary">为 Miuix 使用自定义主题配色</string>
     <string name="transparent_theme_alarm">透明主题请于设置背景图片后设置</string>
     <string name="seed_color_summary">使用种子颜色生成主题颜色</string>
     <string name="seed_color">种子色</string>

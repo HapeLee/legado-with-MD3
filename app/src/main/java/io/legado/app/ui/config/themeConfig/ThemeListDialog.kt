@@ -38,6 +38,7 @@ import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -59,41 +60,27 @@ fun ThemeListDialog(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.theme_list),
+        endAction = {
+            MediumIconButton(
+                onClick = {
+                    val clipText = context.getClipText()
+                    if (clipText != null && OldThemeConfig.addConfig(clipText)) {
+                        listVersion++
+                    } else {
+                        context.toastOnUi("Import failed")
+                    }
+                },
+                imageVector = Icons.Default.FileDownload
+            )
+        }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AppText(
-                    text = stringResource(R.string.theme_list),
-                    style = LegadoTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(
-                    onClick = {
-                        val clipText = context.getClipText()
-                        if (clipText != null && OldThemeConfig.addConfig(clipText)) {
-                            listVersion++
-                        } else {
-                            context.toastOnUi("Import failed")
-                        }
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FileDownload,
-                        contentDescription = stringResource(R.string.import_theme)
-                    )
-                }
-            }
-
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -104,8 +91,7 @@ fun ThemeListDialog(
                             OldThemeConfig.applyConfig(context, item)
                         },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
                         containerColor = if (item.primaryColor.toColorInt() == context.primaryColor) {
                             MaterialTheme.colorScheme.secondaryContainer

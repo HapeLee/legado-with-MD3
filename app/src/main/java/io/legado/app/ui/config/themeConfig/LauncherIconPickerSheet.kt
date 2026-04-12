@@ -57,18 +57,14 @@ fun LauncherIconPickerSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.change_icon)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            AppText(
-                text = stringResource(R.string.change_icon),
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp)
-            )
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
@@ -89,15 +85,15 @@ fun LauncherIconPickerSheet(
                             .clip(MaterialTheme.shapes.large)
                             .background(
                                 if (isSelected)
-                                    MaterialTheme.colorScheme.secondaryContainer
+                                    LegadoTheme.colorScheme.secondaryContainer
                                 else
-                                    MaterialTheme.colorScheme.surfaceContainer
+                                    LegadoTheme.colorScheme.surfaceContainer
                             )
                             .then(
                                 if (isSelected) {
                                     Modifier.border(
                                         width = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = LegadoTheme.colorScheme.primary,
                                         shape = MaterialTheme.shapes.large
                                     )
                                 } else {

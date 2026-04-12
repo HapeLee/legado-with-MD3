@@ -75,7 +75,7 @@ import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.ThemeStore
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.ThemeManager
+import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -112,6 +112,7 @@ fun ThemeConfigScreen(
 
     var selectedThemeMode by remember { mutableStateOf(ThemeConfig.themeMode) }
     var selectedTheme by remember { mutableStateOf(ThemeConfig.appTheme) }
+    var useMiuixMonet by remember { mutableStateOf(ThemeConfig.useMiuixMonet) }
     var showRestartDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
@@ -202,6 +203,37 @@ fun ThemeConfigScreen(
                             OldThemeConfig.applyDayNight(context)
                         }
                     )
+
+                    SwitchSettingItem(
+                        title = stringResource(R.string.miuix_monet),
+                        description = stringResource(R.string.miuix_monet_summary),
+                        checked = useMiuixMonet,
+                        onCheckedChange = {
+                            useMiuixMonet = it
+                            ThemeConfig.useMiuixMonet = it
+                            if (it && selectedTheme != "0" && selectedTheme != "12") {
+                                selectedTheme = "0"
+                                ThemeConfig.appTheme = "0"
+                            }
+                        }
+                    )
+
+                    if (useMiuixMonet) {
+                        SwitchSettingItem(
+                            title = stringResource(R.string.dynamic_colors),
+                            description = stringResource(R.string.dynamic_colors_summary),
+                            checked = selectedTheme == "0",
+                            onCheckedChange = { checked ->
+                                val newTheme = if (checked) "0" else "12"
+                                val oldTheme = selectedTheme
+                                selectedTheme = newTheme
+                                ThemeConfig.appTheme = newTheme
+                                if (oldTheme != newTheme) {
+                                    showRestartDialog = true
+                                }
+                            }
+                        )
+                    }
                 } else {
                     ThemeModeSelector(
                         selectedMode = selectedThemeMode,
@@ -249,10 +281,14 @@ fun ThemeConfigScreen(
             }
 
             SplicedColumnGroup {
-                SwitchSettingItem(
-                    title = stringResource(R.string.pure_black),
-                    checked = ThemeConfig.isPureBlack,
-                    onCheckedChange = { ThemeConfig.isPureBlack = it }
+                DropdownListSettingItem(
+                    title = stringResource(R.string.compose_engine),
+                    selectedValue = ThemeConfig.composeEngine,
+                    displayEntries = stringArrayResource(R.array.composeEngine),
+                    entryValues = stringArrayResource(R.array.composeEngine_value),
+                    onValueChange = {
+                        ThemeConfig.composeEngine = it
+                    }
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.change_icon),
@@ -266,15 +302,6 @@ fun ThemeConfigScreen(
                     onCheckedChange = {
                         ThemeConfig.isPredictiveBackEnabled = it
                         context.toastOnUi(R.string.restart_to_apply)
-                    }
-                )
-                DropdownListSettingItem(
-                    title = stringResource(R.string.compose_engine),
-                    selectedValue = ThemeConfig.composeEngine,
-                    displayEntries = stringArrayResource(R.array.composeEngine),
-                    entryValues = stringArrayResource(R.array.composeEngine_value),
-                    onValueChange = {
-                        ThemeConfig.composeEngine = it
                     }
                 )
                 SliderSettingItem(
@@ -294,7 +321,8 @@ fun ThemeConfigScreen(
                 )
             }
 
-            if (selectedTheme == "12") {
+            val showCustomThemeOptions = selectedTheme == "12" && (!isMiuixEngine || useMiuixMonet)
+            if (showCustomThemeOptions) {
                 SplicedColumnGroup(title = stringResource(R.string.custom_theme)) {
                     ClickableSettingItem(
                         title = stringResource(R.string.seed_color),
@@ -426,11 +454,18 @@ fun ThemeConfigScreen(
             }
 
             SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
-                SwitchSettingItem(
-                    title = stringResource(R.string.use_flexible_top_bar),
-                    checked = ThemeConfig.useFlexibleTopAppBar,
-                    onCheckedChange = { ThemeConfig.useFlexibleTopAppBar = it }
-                )
+                if (!isMiuixEngine) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.pure_black),
+                        checked = ThemeConfig.isPureBlack,
+                        onCheckedChange = { ThemeConfig.isPureBlack = it }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.use_flexible_top_bar),
+                        checked = ThemeConfig.useFlexibleTopAppBar,
+                        onCheckedChange = { ThemeConfig.useFlexibleTopAppBar = it }
+                    )
+                }
                 SwitchSettingItem(
                     title = stringResource(R.string.is_blur_enable),
                     checked = ThemeConfig.enableBlur,
@@ -446,7 +481,7 @@ fun ThemeConfigScreen(
                         onCheckedChange = { ThemeConfig.enableProgressiveBlur = it }
                     )
                 }
-                AnimatedVisibility(visible = !ThemeConfig.enableBlur) {
+                AnimatedVisibility(visible = !isMiuixEngine && !ThemeConfig.enableBlur) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
@@ -476,18 +511,20 @@ fun ThemeConfigScreen(
                         )
                     }
                 }
-                SliderSettingItem(
-                    title = stringResource(R.string.container_opacity),
-                    description = stringResource(
-                        R.string.container_opacity_summary,
-                        ThemeConfig.containerOpacity
-                    ),
-                    value = ThemeConfig.containerOpacity.toFloat(),
-                    defaultValue = 100f,
-                    valueRange = 0f..100f,
-                    steps = 99,
-                    onValueChange = { ThemeConfig.containerOpacity = it.toInt() }
-                )
+                if (!isMiuixEngine) {
+                    SliderSettingItem(
+                        title = stringResource(R.string.container_opacity),
+                        description = stringResource(
+                            R.string.container_opacity_summary,
+                            ThemeConfig.containerOpacity
+                        ),
+                        value = ThemeConfig.containerOpacity.toFloat(),
+                        defaultValue = 100f,
+                        valueRange = 0f..100f,
+                        steps = 99,
+                        onValueChange = { ThemeConfig.containerOpacity = it.toInt() }
+                    )
+                }
             }
 
             SplicedColumnGroup(title = stringResource(R.string.day)) {
@@ -738,7 +775,7 @@ fun ThemeColorButton(
             shape = RoundedCornerShape(16.dp),
             border = if (isSelected) BorderStroke(
                 borderWidth,
-                MaterialTheme.colorScheme.primary
+                LegadoTheme.colorScheme.primary
             ) else null,
             colors = CardDefaults.cardColors(containerColor = colors.surfaceContainer)
         ) {
@@ -801,7 +838,7 @@ fun ThemeColorButton(
         AppText(
             text = label,
             style = LegadoTheme.typography.labelSmall,
-            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            color = if (isSelected) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.onSurface
         )
     }
 }
@@ -915,7 +952,7 @@ private fun getThemeColorPalette(
     materialVersion: String? = null
 ): ThemeColorPalette {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
-    val colorScheme = ThemeManager.getColorScheme(
+    val colorScheme = ThemeEngine.getColorScheme(
         context = context,
         mode = appThemeMode,
         darkTheme = isDark,
@@ -942,7 +979,7 @@ private fun getThemeColors(
     materialVersion: String? = null
 ): ThemeColors {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
-    val colorScheme = ThemeManager.getColorScheme(
+    val colorScheme = ThemeEngine.getColorScheme(
         context = context,
         mode = appThemeMode,
         darkTheme = isDark,

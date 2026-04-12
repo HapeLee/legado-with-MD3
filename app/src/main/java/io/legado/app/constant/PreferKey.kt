@@ -185,6 +185,7 @@ object PreferKey {
     const val paletteStyle = "paletteStyle"
     const val materialVersion = "materialVersion"
     const val composeEngine = "composeEngine"
+    const val useMiuixMonet = "useMiuixMonet"
     const val containerOpacity = "containerOpacity"
     const val topBarOpacity = "topBarOpacity"
     const val bottomBarOpacity = "bottomBarOpacity"

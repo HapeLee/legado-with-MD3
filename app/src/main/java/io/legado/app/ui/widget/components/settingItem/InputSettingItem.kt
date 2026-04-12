@@ -1,17 +1,12 @@
 package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
@@ -76,28 +71,18 @@ fun InputSettingItem(
                         }
                     )
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        SmallTextButton(
-                            text = "默认",
-                            imageVector = Icons.Default.Replay,
-                            onClick = {
-                                state.edit { replace(0, length, defaultValue.toString()) }
-                            }
-                        )
-                        SmallTextButton(
-                            text = "确认",
-                            imageVector = Icons.Default.Check,
-                            onClick = {
-                                onConfirm(state.text.toString())
-                                expanded = false
-                            }
-                        )
-                    }
+                    ConfirmDismissButtonsRow(
+                        modifier = Modifier.padding(top = 16.dp),
+                        onDismiss = {
+                            state.edit { replace(0, length, defaultValue.toString()) }
+                        },
+                        onConfirm = {
+                            onConfirm(state.text.toString())
+                            expanded = false
+                        },
+                        dismissText = stringResource(R.string.text_default),
+                        confirmText = stringResource(R.string.confirm)
+                    )
                 }
             }
         }
@@ -127,26 +112,18 @@ fun InputSettingItem(
                     }
                 )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    SmallTextButton(
-                        text = "默认",
-                        imageVector = Icons.Default.Replay,
-                        onClick = {
-                            state.edit { replace(0, length, defaultValue.toString()) }
-                        }
-                    )
-                    SmallTextButton(
-                        text = "确认",
-                        imageVector = Icons.Default.Check,
-                        onClick = {
-                            onConfirm(state.text.toString())
-                            expanded = false
-                        }
-                    )
-                }
+                ConfirmDismissButtonsRow(
+                    modifier = Modifier.padding(top = 16.dp),
+                    onDismiss = {
+                        state.edit { replace(0, length, defaultValue.toString()) }
+                    },
+                    onConfirm = {
+                        onConfirm(state.text.toString())
+                        expanded = false
+                    },
+                    dismissText = stringResource(R.string.text_default),
+                    confirmText = stringResource(R.string.confirm)
+                )
             }
         )
     }

@@ -370,6 +370,7 @@
     <string name="imm_navigation_bar">沉浸式导航栏</string>
     <string name="imm_navigation_bar_s">导航栏颜色透明</string>
     <string name="add_to_bookshelf">放入書架</string>
+    <string name="click_to_remove">點擊刪除</string>
     <string name="continue_read">繼續閲讀</string>
     <string name="cover_path">封面地址</string>
     <string name="page_anim_cover">覆蓋</string>
@@ -1223,4 +1224,8 @@
     <string name="bottom_bar_opacity_summary">%d</string>
     <string name="web_file">網頁文件</string>
     <string name="show_book_count">顯示分組書籍數量</string>
+    <string name="dynamic_colors_summary">使用基於桌布的主題顏色</string>
+    <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
+    <string name="miuix_monet">Miuix Monet</string>
+    <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法生成配色。目前主題為動態主題且系統為 Android 12 或以上時，會優先使用系統取色；否則使用下方種子色。</string>
 </resources>
