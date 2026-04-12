@@ -208,19 +208,22 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: universal-apk-${{ env.type }}
-          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/legado_${{ env.product }}_*[0-9]*.apk
+          if-no-files-found: error
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*universal*.apk
 
       - name: Upload arm64-v8a APK
         uses: actions/upload-artifact@v4
         with:
           name: arm64-v8a-apk-${{ env.type }}
-          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*arm64-v8a.apk
+          if-no-files-found: error
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*arm64-v8a*.apk
 
       - name: Upload armeabi-v7a APK
         uses: actions/upload-artifact@v4
         with:
           name: armeabi-v7a-apk-${{ env.type }}
-          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*armeabi-v7a.apk
+          if-no-files-found: error
+          path: app/build/outputs/apk/${{ env.product }}/${{ env.type }}/*armeabi-v7a*.apk
 
       - name: Upload Mapping File To Artifact
         if: matrix.type == 'release'
@@ -252,6 +255,7 @@ jobs:
           pattern: '*-apk-*'
           path: artifacts
           merge-multiple: true
+          if-no-artifact-found: error
 
       # 2. 重命名逻辑
       - name: 整理并重命名 APK 文件
@@ -259,17 +263,29 @@ jobs:
         run: |
           VERSIONL="${{ needs.prepare.outputs.versionL }}"
           echo "正在整理 APK 文件..."
+          if [ ! -d artifacts ]; then
+            echo "::error::artifacts 目录不存在，说明上一步没有下载到 APK。"
+            exit 1
+          fi
           cd artifacts
-          # 重命名 release 版本
-          for f in *app_${VERSIONL}.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}.apk"; done
-          for f in *app_${VERSIONL}_arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-arm64-v8a.apk"; done
-          for f in *app_${VERSIONL}_armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-armeabi-v7a.apk"; done
-          
-          # 重命名 noR8 版本 (如果存在)
-          for f in *app_${VERSIONL}-noR8.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8.apk"; done
-          for f in *app_${VERSIONL}-noR8_arm64-v8a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-arm64-v8a.apk"; done
-          for f in *app_${VERSIONL}-noR8_armeabi-v7a.apk; do [ -f "$f" ] && mv "$f" "legado-${VERSIONL}-noR8-armeabi-v7a.apk"; done
-          
+
+          shopt -s nullglob
+          for f in *.apk; do
+            out="legado-${VERSIONL}"
+            if [[ "$f" == *noR8* || "$f" == *nor8* ]]; then
+              out="${out}-noR8"
+            fi
+
+            if [[ "$f" == *arm64-v8a* ]]; then
+              out="${out}-arm64-v8a"
+            elif [[ "$f" == *armeabi-v7a* ]]; then
+              out="${out}-armeabi-v7a"
+            fi
+
+            out="${out}.apk"
+            mv "$f" "$out"
+          done
+
           ls -l
 
       #
