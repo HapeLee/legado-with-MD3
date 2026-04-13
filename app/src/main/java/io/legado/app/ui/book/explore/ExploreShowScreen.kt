@@ -2,6 +2,7 @@ package io.legado.app.ui.book.explore
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -31,7 +32,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -66,6 +66,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,7 @@ import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -85,7 +87,8 @@ import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.Cover
-import io.legado.app.ui.widget.components.explore.ExploreKindItem
+import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
+import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -95,6 +98,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
 @OptIn(
@@ -131,6 +135,14 @@ fun ExploreShowScreen(
     var showGridCountSheet by remember { mutableStateOf(false) }
     val gridColumnCount by viewModel.gridCount.collectAsState()
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val context = LocalContext.current
+    val activity = context as? AppCompatActivity
+    val sourceUrl = remember(intent) { intent.getStringExtra("sourceUrl") }
+    val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
+
+    LaunchedEffect(sourceUrl) {
+        exploreKindUseCase.warmUp(sourceUrl)
+    }
 
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -242,7 +254,7 @@ fun ExploreShowScreen(
 
         SearchBarSection(
             query = kindQuery,
-            backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+            backgroundColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.5f),
             onQueryChange = { kindQuery = it },
             placeholder = "选择或搜索分类",
         )
@@ -254,32 +266,48 @@ fun ExploreShowScreen(
                         (kind.url?.contains(kindQuery, ignoreCase = true) == true)
             }
         }
+        val kindRows = remember(filteredKinds) {
+            calculateExploreKindRows(filteredKinds, 6)
+        }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+        LazyColumn(
             contentPadding = PaddingValues(vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.weight(1f, fill = false)
         ) {
-            itemsIndexed(
-                items = filteredKinds,
-                key = { index, kind -> "${kind.url ?: kind.title}_$index" },
-                span = { _, kind ->
-                    val isClickable = !kind.url.isNullOrBlank()
-                    if (isClickable) GridItemSpan(1) else GridItemSpan(3)
+            items(kindRows) { rowItems ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItem()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowItems.forEach { (kind, span) ->
+                        ExploreKindMultiTypeItem(
+                            modifier = Modifier
+                                .weight(span.toFloat())
+                                .animateItem(),
+                            kind = kind,
+                            sourceUrl = sourceUrl,
+                            activity = activity,
+                            onOpenUrl = { url ->
+                                showKindSheet = false
+                                viewModel.switchExploreUrl(kind.copy(url = url))
+                            },
+                            onRefreshKinds = viewModel::refreshKinds,
+                            backgroundColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.5f),
+                            isMiuix = isMiuix,
+                            useCase = exploreKindUseCase
+                        )
+                    }
+
+                    val totalSpan = rowItems.sumOf { it.second }
+                    if (totalSpan < 6) {
+                        Spacer(
+                            modifier = Modifier.weight((6 - totalSpan).toFloat())
+                        )
+                    }
                 }
-            ) { _, kind ->
-                ExploreKindItem(
-                    modifier = Modifier.animateItem(),
-                    kind = kind,
-                    isClickable = !kind.url.isNullOrBlank(),
-                    onClick = {
-                        showKindSheet = false
-                        viewModel.switchExploreUrl(kind)
-                    },
-                    isMiuix = isMiuix
-                )
             }
         }
     }

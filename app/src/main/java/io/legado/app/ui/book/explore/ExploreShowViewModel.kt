@@ -56,6 +56,7 @@ class ExploreShowViewModel(
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMsg = MutableStateFlow<String?>(null)
     private var bookSource: BookSource? = null
+    private var sourceUrl: String? = null
     private var exploreUrl: String? = null
     private var page = 1
     private val _isEndStateFlow = MutableStateFlow(false)
@@ -110,13 +111,14 @@ class ExploreShowViewModel(
     }
 
     fun initData(intent: Intent) {
-        val sourceUrl = intent.getStringExtra("sourceUrl")
+        val incomingSourceUrl = intent.getStringExtra("sourceUrl")
+        sourceUrl = incomingSourceUrl
         exploreUrl = intent.getStringExtra("exploreUrl")
 
         viewModelScope.launch {
-            if (bookSource == null && sourceUrl != null) {
-                bookSource = repository.getBookSource(sourceUrl)
-                loadKinds(sourceUrl)
+            if (bookSource == null && incomingSourceUrl != null) {
+                bookSource = repository.getBookSource(incomingSourceUrl)
+                loadKinds(incomingSourceUrl)
             }
             loadMore(isRefresh = true)
         }
@@ -126,6 +128,10 @@ class ExploreShowViewModel(
         viewModelScope.launch {
             _kinds.value = repository.getSourceExploreKinds(sourceUrl)
         }
+    }
+
+    fun refreshKinds() {
+        sourceUrl?.let { loadKinds(it) }
     }
 
     fun switchExploreUrl(kind: ExploreKind) {

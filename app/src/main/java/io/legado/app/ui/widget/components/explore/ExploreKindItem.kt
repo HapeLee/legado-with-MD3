@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.explore
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CardDefaults
@@ -8,6 +9,7 @@ import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,28 +27,11 @@ fun ExploreKindItem(
     isClickable: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    isMiuix: Boolean
+    isMiuix: Boolean,
+    backgroundColor: androidx.compose.ui.graphics.Color = LegadoTheme.colorScheme.surfaceContainer,
+    displayText: String = kind.title,
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
-    val color = if (isMiuix)
-        MiuixTheme.colorScheme.surfaceContainer
-    else
-        MaterialTheme.colorScheme.secondaryContainer
-
-    val contentColor = if (isMiuix)
-        MiuixTheme.colorScheme.onSurface
-    else
-        MaterialTheme.colorScheme.secondary
-
-    val unClickBackColor = if (isMiuix)
-        MiuixTheme.colorScheme.surfaceContainer
-    else
-        MaterialTheme.colorScheme.surface
-
-    val unClickColor = if (isMiuix)
-        MiuixTheme.colorScheme.disabledOnSurface
-    else
-        MaterialTheme.colorScheme.primary
-
     CompositionLocalProvider(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified
     ) {
@@ -57,21 +42,29 @@ fun ExploreKindItem(
             GlassCard(
                 onClick = onClick,
                 shape = shape,
-                containerColor = LegadoTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
+                containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.onSurface,
                 modifier = modifier
             ) {
-                KindText(kind)
+                KindText(
+                    text = displayText,
+                    isClickable = true,
+                    trailingIcon = trailingIcon
+                )
             }
         } else {
             GlassCard(
                 shape = shape,
-                containerColor = LegadoTheme.colorScheme.surfaceContainer.copy(alpha = 0.6f),
+                containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.primary,
                 modifier = modifier,
                 border = CardDefaults.outlinedCardBorder()
             ) {
-                KindText(kind)
+                KindText(
+                    text = displayText,
+                    isClickable = false,
+                    trailingIcon = trailingIcon
+                )
             }
         }
     }
@@ -80,20 +73,34 @@ fun ExploreKindItem(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun KindText(
-    kind: ExploreKind
+    text: String,
+    isClickable: Boolean,
+    trailingIcon: (@Composable () -> Unit)? = null
 ) {
-    AppText(
-        text = kind.title,
-        color = if (kind.url.isNullOrBlank())
-            LegadoTheme.colorScheme.primary
-        else
-            LegadoTheme.colorScheme.onSurface,
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        style = LegadoTheme.typography.labelMediumEmphasized,
-        textAlign = TextAlign.Center,
-        overflow = TextOverflow.Ellipsis,
-        maxLines = 1
-    )
+            .padding(vertical = 8.dp)
+    ) {
+        AppText(
+            text = text,
+            color = if (isClickable) LegadoTheme.colorScheme.onSurface else LegadoTheme.colorScheme.primary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = if (trailingIcon == null) 0.dp else 18.dp),
+            style = LegadoTheme.typography.labelMediumEmphasized,
+            textAlign = TextAlign.Center,
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1
+        )
+        if (trailingIcon != null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp)
+            ) {
+                trailingIcon()
+            }
+        }
+    }
 }

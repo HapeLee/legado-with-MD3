@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.explore
 
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -50,7 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.book.explore.ExploreShowActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
@@ -64,7 +65,8 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
-import io.legado.app.ui.widget.components.explore.ExploreKindItem
+import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
+import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
@@ -75,8 +77,8 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -84,10 +86,12 @@ fun ExploreScreen(
     viewModel: ExploreViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
+    val activity = context as? AppCompatActivity
     val uiState by viewModel.uiState.collectAsState()
     var sourceToDelete by remember { mutableStateOf<BookSourcePart?>(null) }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
 
     // 自动滚动置顶
     LaunchedEffect(uiState.expandedId) {
@@ -113,7 +117,7 @@ fun ExploreScreen(
             var contentRowCount = 0
             for (item in uiState.items) {
                 if (item.bookSourceUrl == expandedId) {
-                    contentRowCount = calculateRows(uiState.exploreKinds, 6).size
+                    contentRowCount = calculateExploreKindRows(uiState.exploreKinds, 6).size
                     break
                 }
                 headerIndex++
@@ -167,6 +171,11 @@ fun ExploreScreen(
                     val isExpanded = uiState.expandedId == item.bookSourceUrl
 
                     item(key = item.bookSourceUrl) {
+                        if (isExpanded) {
+                            LaunchedEffect(item.bookSourceUrl) {
+                                exploreKindUseCase.warmUp(item.bookSourceUrl)
+                            }
+                        }
                         ExploreSourceHeader(
                             modifier = Modifier.animateItem(),
                             item = item,
@@ -197,7 +206,7 @@ fun ExploreScreen(
                     }
 
                     if (isExpanded) {
-                        val rows = calculateRows(uiState.exploreKinds, 6)
+                        val rows = calculateExploreKindRows(uiState.exploreKinds, 6)
                         itemsIndexed(
                             items = rows,
                             key = { index, _ -> "${item.bookSourceUrl}_$index" }
@@ -210,21 +219,21 @@ fun ExploreScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 rowItems.forEach { (kind, span) ->
-                                    val isClickable = !kind.url.isNullOrBlank()
-                                    ExploreKindItem(
+                                    ExploreKindMultiTypeItem(
                                         kind = kind,
-                                        isClickable = isClickable,
-                                        modifier = Modifier.weight(span.toFloat()),
-                                        onClick = {
-                                            if (isClickable) {
-                                                context.startActivity<ExploreShowActivity> {
-                                                    putExtra("exploreName", kind.title)
-                                                    putExtra("sourceUrl", item.bookSourceUrl)
-                                                    putExtra("exploreUrl", kind.url)
-                                                }
+                                        sourceUrl = item.bookSourceUrl,
+                                        activity = activity,
+                                        onOpenUrl = { url ->
+                                            context.startActivity<ExploreShowActivity> {
+                                                putExtra("exploreName", kind.title)
+                                                putExtra("sourceUrl", item.bookSourceUrl)
+                                                putExtra("exploreUrl", url)
                                             }
                                         },
-                                        isMiuix = composeEngine
+                                        onRefreshKinds = { viewModel.refreshExploreKinds(item) },
+                                        modifier = Modifier.weight(span.toFloat()),
+                                        isMiuix = composeEngine,
+                                        useCase = exploreKindUseCase
                                     )
                                 }
 
@@ -248,11 +257,11 @@ fun ExploreScreen(
             ) { item ->
                 TextCard(
                     text = item.bookSourceName,
-                    textStyle = LegadoTheme.typography.labelLarge,
+                    textStyle = LegadoTheme.typography.labelMediumEmphasized,
                     backgroundColor = LegadoTheme.colorScheme.cardContainer,
                     contentColor = LegadoTheme.colorScheme.onCardContainer,
-                    cornerRadius = 8.dp,
-                    horizontalPadding = 8.dp,
+                    cornerRadius = 12.dp,
+                    horizontalPadding = 12.dp,
                     verticalPadding = 8.dp,
                     onClick = {
                         scope.launch {
@@ -279,40 +288,6 @@ fun ExploreScreen(
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { sourceToDelete = null },
     )
-}
-
-private fun calculateRows(
-    kinds: List<ExploreKind>,
-    maxSpan: Int
-): List<List<Pair<ExploreKind, Int>>> {
-    val rows = mutableListOf<MutableList<Pair<ExploreKind, Int>>>()
-    var currentRow = mutableListOf<Pair<ExploreKind, Int>>()
-    var currentSpan = 0
-    kinds.forEach { kind ->
-        val style = kind.style()
-        val span = when {
-            style.layout_wrapBefore || style.layout_flexBasisPercent >= 1.0f -> maxSpan
-            style.layout_flexBasisPercent > 0 -> (maxSpan * style.layout_flexBasisPercent).roundToInt()
-                .coerceIn(1, maxSpan)
-
-            style.layout_flexGrow > 0f -> 3
-            else -> 2
-        }
-        if ((style.layout_wrapBefore && currentRow.isNotEmpty()) || (currentSpan + span > maxSpan)) {
-            rows.add(currentRow)
-            currentRow = mutableListOf()
-            currentSpan = 0
-        }
-        currentRow.add(kind to span)
-        currentSpan += span
-        if (currentSpan >= maxSpan) {
-            rows.add(currentRow)
-            currentRow = mutableListOf()
-            currentSpan = 0
-        }
-    }
-    if (currentRow.isNotEmpty()) rows.add(currentRow)
-    return rows
 }
 
 @OptIn(ExperimentalFoundationApi::class)

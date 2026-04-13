@@ -70,6 +70,11 @@ fun SearchBarSection(
     }
 
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val resolvedBackgroundColor = if (backgroundColor != Color.Unspecified) {
+        backgroundColor
+    } else {
+        if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow
+    }
 
     val modifier = modifier
         .fillMaxWidth()
@@ -88,7 +93,7 @@ fun SearchBarSection(
             backgroundColor = if (!isMiuix) {
                 Color.Transparent
             } else {
-                MiuixTheme.colorScheme.surfaceContainer
+                resolvedBackgroundColor
             }
         )
     }
@@ -101,7 +106,7 @@ fun SearchBarSection(
                 .fillMaxWidth()
                 .padding(bottom = 4.dp),
             shape = RoundedCornerShape(32.dp),
-            color = backgroundColor
+            color = resolvedBackgroundColor
         ) {
             searchTextField()
         }
