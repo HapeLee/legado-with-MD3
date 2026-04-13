@@ -101,6 +101,7 @@ fun <T> RuleListScaffold(
         floatingActionButton = floatingActionButton,
         snackbarHostState = snackbarHostState,
         selectionActions = SelectionActions(
+            onClearSelection = onClearSelection,
             onSelectAll = onSelectAll,
             onSelectInvert = onSelectInvert,
             primaryAction = ActionItem(

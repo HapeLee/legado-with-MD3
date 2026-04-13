@@ -88,7 +88,7 @@ fun <T> ListScaffold(
                 onSearchToggle = onSearchToggle,
                 onSearchQueryChange = onSearchQueryChange,
                 searchPlaceholder = searchPlaceholder,
-                onClearSelection = { selectionActions?.onSelectInvert?.invoke() },
+                onClearSelection = { selectionActions?.onClearSelection?.invoke() },
                 topBarActions = topBarActions,
                 dropDownMenuContent = dropDownMenuContent,
                 bottomContent = bottomContent

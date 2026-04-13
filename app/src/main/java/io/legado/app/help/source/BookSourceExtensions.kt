@@ -1,6 +1,7 @@
 package io.legado.app.help.source
 
 import com.script.rhino.runScriptWithContext
+import androidx.collection.LruCache
 import io.legado.app.constant.BookSourceType
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookSource
@@ -8,6 +9,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.utils.ACache
 import io.legado.app.utils.GSON
+import io.legado.app.utils.InfoMap
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.isJsonArray
@@ -25,6 +27,15 @@ import java.util.concurrent.ConcurrentHashMap
 private val mutexMap by lazy { hashMapOf<String, Mutex>() }
 private val exploreKindsMap by lazy { ConcurrentHashMap<String, List<ExploreKind>>() }
 private val aCache by lazy { ACache.get("explore") }
+private val exploreInfoMapList by lazy { LruCache<String, InfoMap>(99) }
+
+fun getExploreInfoMap(sourceUrl: String): InfoMap {
+    return synchronized(exploreInfoMapList) {
+        exploreInfoMapList[sourceUrl] ?: InfoMap(sourceUrl).also {
+            exploreInfoMapList.put(sourceUrl, it)
+        }
+    }
+}
 
 private fun BookSource.getExploreKindsKey(): String {
     return MD5Utils.md5Encode(bookSourceUrl + exploreUrl)
@@ -57,13 +68,16 @@ suspend fun BookSource.exploreKinds(): List<ExploreKind> {
                 ) {
                     ruleStr = aCache.getAsString(exploreKindsKey)
                     if (ruleStr.isNullOrBlank()) {
+                        val exploreInfoMap = getExploreInfoMap(bookSourceUrl)
                         val jsStr = if (exploreUrl.startsWith("@")) {
                             exploreUrl.substring(4)
                         } else {
                             exploreUrl.substring(4, exploreUrl.lastIndexOf("<"))
                         }
                         ruleStr = runScriptWithContext {
-                            evalJS(jsStr).toString().trim()
+                            evalJS(jsStr) {
+                                put("infoMap", exploreInfoMap)
+                            }.toString().trim()
                         }
                         aCache.put(exploreKindsKey, ruleStr)
                     }

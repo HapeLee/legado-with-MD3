@@ -31,6 +31,7 @@ import io.legado.app.ui.widget.components.text.AppText
 data class SelectionActions(
     val primaryAction: ActionItem,
     val secondaryActions: List<ActionItem> = emptyList(),
+    val onClearSelection: (() -> Unit)? = null,
     val onSelectAll: () -> Unit,
     val onSelectInvert: () -> Unit,
 )

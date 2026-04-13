@@ -3,6 +3,7 @@ package io.legado.app.ui.widget.components
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
@@ -268,6 +270,61 @@ fun AppTextFieldSurface(
         scrollState = scrollState,
         shape = shape,
         contentPadding = contentPadding,
+        interactionSource = interactionSource
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppDenseTextField(
+    state: TextFieldState,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    backgroundColor: Color = Color.Unspecified,
+    label: String? = null,
+    labelPosition: TextFieldLabelPosition = TextFieldLabelPosition.Attached(),
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    prefix: @Composable (() -> Unit)? = null,
+    suffix: @Composable (() -> Unit)? = null,
+    supportingText: @Composable (() -> Unit)? = null,
+    isError: Boolean = false,
+    inputTransformation: InputTransformation? = null,
+    outputTransformation: OutputTransformation? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    onKeyboardAction: KeyboardActionHandler? = null,
+    lineLimits: TextFieldLineLimits = TextFieldLineLimits.Default,
+    onTextLayout: (Density.(getResult: () -> TextLayoutResult?) -> Unit)? = null,
+    scrollState: ScrollState = rememberScrollState(),
+    shape: Shape = TextFieldDefaults.shape,
+    interactionSource: MutableInteractionSource? = null,
+) {
+    AppTextField(
+        state = state,
+        modifier = modifier.heightIn(min = 48.dp),
+        enabled = enabled,
+        readOnly = readOnly,
+        backgroundColor = backgroundColor,
+        label = label,
+        labelPosition = labelPosition,
+        placeholder = placeholder,
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
+        prefix = prefix,
+        suffix = suffix,
+        supportingText = supportingText,
+        isError = isError,
+        inputTransformation = inputTransformation,
+        outputTransformation = outputTransformation,
+        keyboardOptions = keyboardOptions,
+        onKeyboardAction = onKeyboardAction,
+        lineLimits = lineLimits,
+        onTextLayout = onTextLayout,
+        scrollState = scrollState,
+        shape = shape,
+        contentPadding = PaddingValues(top = 4.dp, bottom = 4.dp, start = 12.dp, end = 12.dp),
         interactionSource = interactionSource
     )
 }

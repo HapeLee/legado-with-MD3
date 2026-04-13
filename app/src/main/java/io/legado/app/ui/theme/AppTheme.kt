@@ -13,8 +13,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
@@ -132,37 +130,7 @@ fun AppTheme(
             MiuixTheme(controller = controller) {
                 val miuixStyles = MiuixTheme.textStyles
                 val legadoTypography = remember(miuixStyles) {
-                    LegadoTypography(
-                        headlineLarge = miuixStyles.title1,
-                        headlineLargeEmphasized = miuixStyles.title1.emphasized(),
-                        headlineMedium = miuixStyles.title2,
-                        headlineMediumEmphasized = miuixStyles.title2.emphasized(),
-                        headlineSmall = miuixStyles.title3,
-                        headlineSmallEmphasized = miuixStyles.title3.emphasized(),
-
-
-                        titleLarge = miuixStyles.headline1,
-                        titleLargeEmphasized = miuixStyles.headline1.emphasized(),
-                        titleMedium = miuixStyles.headline2,
-                        titleMediumEmphasized = miuixStyles.headline2.emphasized(),
-                        titleSmall = miuixStyles.subtitle,
-                        titleSmallEmphasized = miuixStyles.subtitle.emphasized(),
-
-
-                        bodyLarge = miuixStyles.paragraph,
-                        bodyLargeEmphasized = miuixStyles.paragraph.emphasized(),
-                        bodyMedium = miuixStyles.body1,
-                        bodyMediumEmphasized = miuixStyles.body1.emphasized(),
-                        bodySmall = miuixStyles.body2,
-                        bodySmallEmphasized = miuixStyles.body2.emphasized(),
-
-                        labelLarge = miuixStyles.button,
-                        labelLargeEmphasized = miuixStyles.button.emphasized(),
-                        labelMedium = miuixStyles.footnote1,
-                        labelMediumEmphasized = miuixStyles.footnote1.emphasized(),
-                        labelSmall = miuixStyles.footnote2,
-                        labelSmallEmphasized = miuixStyles.footnote2.emphasized()
-                    )
+                    miuixStylesToM3Typography(miuixStyles).toLegadoTypography()
                 }
 
                 val miuixColorScheme = MiuixTheme.colorScheme
@@ -289,8 +257,4 @@ private fun Typography.toLegadoTypography(): LegadoTypography {
         labelSmall = labelSmall,
         labelSmallEmphasized = labelSmallEmphasized
     )
-}
-
-private fun TextStyle.emphasized(): TextStyle {
-    return copy(fontWeight = FontWeight.Medium)
 }

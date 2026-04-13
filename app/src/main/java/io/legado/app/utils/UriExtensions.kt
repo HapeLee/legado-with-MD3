@@ -38,6 +38,13 @@ fun Uri.takePersistablePermissionSafely(
     modeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 ): Boolean {
     if (!isContentScheme()) return false
+    kotlin.runCatching {
+        context.contentResolver.takePersistableUriPermission(this, modeFlags)
+    }.onSuccess {
+        return true
+    }.onFailure {
+        AppLog.put("持久化读写权限失败(组合模式): $this", it)
+    }
     var granted = false
     if (modeFlags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0) {
         kotlin.runCatching {

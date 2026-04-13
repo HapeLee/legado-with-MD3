@@ -79,7 +79,7 @@ fun SearchBarSection(
         )
 
     val searchTextField = @Composable {
-        AppTextField(
+        AppDenseTextField(
             state = textFieldState,
             modifier = modifier,
             placeholder = { AppText(placeholder) },

@@ -304,6 +304,7 @@ fun RemoteBookScreen(
             )
         },
         selectionActions = SelectionActions(
+            onClearSelection = { viewModel.clearSelection() },
             onSelectAll = { viewModel.dispatch(RemoteBookIntent.SelectAll) },
             onSelectInvert = { viewModel.dispatch(RemoteBookIntent.SelectInvert) },
             primaryAction = ActionItem(

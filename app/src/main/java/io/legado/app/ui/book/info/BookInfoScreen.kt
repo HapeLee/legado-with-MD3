@@ -845,11 +845,14 @@ private fun BookInfoSummary(
         ) {
             AppText(
                 text = stringResource(R.string.read_chapter_total, book.totalChapterNum),
-                style = LegadoTheme.typography.bodyMedium,
+                style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            AppText(text = "|", color = LegadoTheme.colorScheme.secondary)
+            AppText(
+                text = "|",
+                color = LegadoTheme.colorScheme.secondary
+            )
             AppText(
                 text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "已读完" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
                 style = LegadoTheme.typography.labelMedium,

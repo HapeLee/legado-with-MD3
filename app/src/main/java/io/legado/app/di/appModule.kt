@@ -15,6 +15,7 @@ import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
@@ -64,6 +65,7 @@ val appModule = module {
     singleOf(::BookGroupRepository)
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
+    singleOf(::ExploreKindUiUseCase)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
