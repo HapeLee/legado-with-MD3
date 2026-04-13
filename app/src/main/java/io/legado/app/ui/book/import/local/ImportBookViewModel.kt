@@ -2,6 +2,8 @@ package io.legado.app.ui.book.import.local
 
 import android.app.Application
 import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.DocumentsContract.getTreeDocumentId
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.Immutable
@@ -11,29 +13,28 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.delete
-import io.legado.app.utils.getPrefInt
+import io.legado.app.utils.exists
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.isUri
 import io.legado.app.utils.list
 import io.legado.app.utils.mapParallel
-import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -85,6 +87,7 @@ sealed interface ImportBookIntent {
     data object SelectAll : ImportBookIntent
     data object SelectInvert : ImportBookIntent
     data object AddToBookshelf : ImportBookIntent
+    data class AddSingleToBookshelf(val item: ImportBook) : ImportBookIntent
     data object DeleteSelection : ImportBookIntent
     data class ItemClick(val item: ImportBook) : ImportBookIntent
     data class ArchiveEntrySelected(val fileDoc: FileDoc, val fileName: String) : ImportBookIntent
@@ -105,6 +108,11 @@ sealed interface ImportBookEffect {
 
 class ImportBookViewModel(application: Application) : BaseViewModel(application) {
 
+    private enum class SourceMode {
+        CURRENT_DIR,
+        SCAN_RECURSIVE
+    }
+
     private data class InternalState(
         val rootDoc: FileDoc? = null,
         val subDocs: List<FileDoc> = emptyList(),
@@ -112,16 +120,18 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         val selectedIds: Set<String> = emptySet(),
         val searchKey: String = "",
         val sort: Int,
+        val sourceMode: SourceMode = SourceMode.CURRENT_DIR,
         val interaction: InteractionState = InteractionState()
     )
 
     private val _state = MutableStateFlow(
-        InternalState(sort = context.getPrefInt(PreferKey.localBookImportSort))
+        InternalState(sort = ImportBookConfig.localBookImportSort)
     )
     private val _effects = MutableSharedFlow<ImportBookEffect>(extraBufferCapacity = 1)
     val effects = _effects.asSharedFlow()
 
     private var scanDocJob: Job? = null
+    private var autoSyncJob: Job? = null
 
     fun dispatch(intent: ImportBookIntent) {
         when (intent) {
@@ -130,7 +140,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 _effects.tryEmit(
                     ImportBookEffect.RequestFolderPicker(
                         target = ImportFolderPickTarget.IMPORT_FOLDER,
-                        initialUri = AppConfig.importBookPath
+                        initialUri = ImportBookConfig.importBookPath
                             ?.takeIf { it.isUri() }
                             ?.toUri()
                     )
@@ -147,6 +157,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             ImportBookIntent.SelectAll -> selectAllCheckable()
             ImportBookIntent.SelectInvert -> invertSelection()
             ImportBookIntent.AddToBookshelf -> addSelectedToBookshelf()
+            is ImportBookIntent.AddSingleToBookshelf -> addSingleToBookshelf(intent.item)
             ImportBookIntent.DeleteSelection -> deleteSelectedDocs()
             is ImportBookIntent.ItemClick -> onItemClick(intent.item)
             is ImportBookIntent.ArchiveEntrySelected -> onArchiveEntrySelected(
@@ -220,34 +231,66 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     fun hasRootDoc(): Boolean = _state.value.rootDoc != null
 
     private fun initialize() {
-        if (AppConfig.defaultBookTreeUri.isNullOrBlank()) {
+        val defaultPath = ImportBookConfig.defaultBookTreeUri?.takeIf { it.isUri() }
+        val effectiveDefaultPath = defaultPath ?: firstPersistedTreeUri()?.toString()
+        if (effectiveDefaultPath.isNullOrBlank()) {
             _effects.tryEmit(
                 ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.DEFAULT_BOOK)
             )
             return
         }
-        if (AppConfig.importBookPath.isNullOrBlank()) {
-            AppConfig.importBookPath = AppConfig.defaultBookTreeUri
+        if (ImportBookConfig.defaultBookTreeUri != effectiveDefaultPath) {
+            ImportBookConfig.defaultBookTreeUri = effectiveDefaultPath
         }
-        initRootDoc(changedFolder = false)
+        val importPath = ImportBookConfig.importBookPath
+        if (importPath.isNullOrBlank() || !importPath.isUri()) {
+            ImportBookConfig.importBookPath = effectiveDefaultPath
+        }
+        initRootDoc(changedFolder = true)
+        startAutoSync()
     }
 
     private fun onFolderPicked(uri: Uri?, target: ImportFolderPickTarget) {
         uri ?: return
-        uri.takePersistablePermissionSafely(context)
+        val pickedUri = persistFolderPermission(uri)
         when (target) {
             ImportFolderPickTarget.DEFAULT_BOOK -> {
-                AppConfig.defaultBookTreeUri = uri.toString()
-                if (AppConfig.importBookPath.isNullOrBlank()) {
-                    AppConfig.importBookPath = AppConfig.defaultBookTreeUri
+                ImportBookConfig.defaultBookTreeUri = pickedUri.toString()
+                if (ImportBookConfig.importBookPath.isNullOrBlank()) {
+                    ImportBookConfig.importBookPath = ImportBookConfig.defaultBookTreeUri
                 }
             }
 
             ImportFolderPickTarget.IMPORT_FOLDER -> {
-                AppConfig.importBookPath = uri.toString()
+                ImportBookConfig.importBookPath = pickedUri.toString()
+                if (ImportBookConfig.defaultBookTreeUri.isNullOrBlank()) {
+                    ImportBookConfig.defaultBookTreeUri = pickedUri.toString()
+                }
             }
         }
         initRootDoc(changedFolder = true)
+        startAutoSync()
+    }
+
+    private fun persistFolderPermission(uri: Uri): Uri {
+        val normalizedUri = normalizeFolderUri(uri)
+        uri.takePersistablePermissionSafely(context)
+        if (normalizedUri != uri) {
+            normalizedUri.takePersistablePermissionSafely(context)
+        }
+        return normalizedUri
+    }
+
+    private fun normalizeFolderUri(uri: Uri): Uri {
+        if (!uri.isContentScheme()) return uri
+        return runCatching {
+            DocumentsContract.buildTreeDocumentUri(uri.authority, getTreeDocumentId(uri))
+        }.recoverCatching {
+            DocumentsContract.buildTreeDocumentUri(
+                uri.authority,
+                DocumentsContract.getDocumentId(uri)
+            )
+        }.getOrDefault(uri)
     }
 
     private fun initRootDoc(changedFolder: Boolean) {
@@ -255,48 +298,111 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             reloadCurrentDoc()
             return
         }
-        val lastPath = AppConfig.importBookPath
-        if (lastPath.isNullOrBlank()) {
+        val candidates = linkedSetOf<String>().apply {
+            ImportBookConfig.importBookPath
+                ?.takeIf { it.isNotBlank() && it.isUri() }
+                ?.let(::add)
+            ImportBookConfig.defaultBookTreeUri
+                ?.takeIf { it.isNotBlank() && it.isUri() }
+                ?.let(::add)
+        }
+        if (candidates.isEmpty()) {
+            firstPersistedTreeUri()?.toString()?.let { persistedPath ->
+                if (trySetRootDoc(persistedPath)) {
+                    ImportBookConfig.defaultBookTreeUri = persistedPath
+                    ImportBookConfig.importBookPath = persistedPath
+                    return
+                }
+            }
             _effects.tryEmit(
-                ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.IMPORT_FOLDER)
+                ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.DEFAULT_BOOK)
             )
             return
         }
 
-        val rootUri = if (lastPath.isUri()) {
-            lastPath.toUri()
-        } else {
-            Uri.fromFile(File(lastPath))
-        }
-
-        when {
-            rootUri.isContentScheme() -> {
-                kotlin.runCatching {
-                    val doc = DocumentFile.fromTreeUri(context, rootUri)
-                    if (doc == null || doc.name.isNullOrEmpty()) {
-                        _effects.tryEmit(
-                            ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.IMPORT_FOLDER)
-                        )
-                    } else {
-                        setRootDoc(FileDoc.fromDocumentFile(doc))
-                    }
-                }.onFailure {
-                    _effects.tryEmit(
-                        ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.IMPORT_FOLDER)
-                    )
+        for (path in candidates) {
+            if (trySetRootDoc(path)) {
+                if (ImportBookConfig.importBookPath != path) {
+                    ImportBookConfig.importBookPath = path
                 }
+                return
             }
-
-            else -> {
-                kotlin.runCatching {
-                    setRootDoc(FileDoc.fromFile(File(rootUri.path!!)))
-                }.onFailure {
-                    _effects.tryEmit(
-                        ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.IMPORT_FOLDER)
-                    )
+            val persistedUri = path.takeIf { it.isUri() }
+                ?.toUri()
+                ?.let(::findPersistedTreeUri)
+            if (persistedUri != null) {
+                val persistedPath = persistedUri.toString()
+                if (trySetRootDoc(persistedPath)) {
+                    ImportBookConfig.importBookPath = persistedPath
+                    return
                 }
             }
         }
+
+        firstPersistedTreeUri()?.toString()?.let { persistedPath ->
+            if (trySetRootDoc(persistedPath)) {
+                ImportBookConfig.defaultBookTreeUri = persistedPath
+                ImportBookConfig.importBookPath = persistedPath
+                return
+            }
+        }
+
+        _effects.tryEmit(
+            ImportBookEffect.RequestFolderPicker(target = ImportFolderPickTarget.DEFAULT_BOOK)
+        )
+    }
+
+    private fun trySetRootDoc(path: String): Boolean {
+        val rootUri = if (path.isUri()) path.toUri() else Uri.fromFile(File(path))
+        return kotlin.runCatching {
+            if (rootUri.isContentScheme()) {
+                val doc = DocumentFile.fromTreeUri(context, rootUri)
+                    ?: DocumentFile.fromSingleUri(context, rootUri)
+                    ?: return false
+                val rootName = doc.name
+                    ?.takeIf { it.isNotBlank() }
+                    ?: runCatching {
+                        getTreeDocumentId(rootUri).substringAfter(':').ifBlank { "root" }
+                    }.getOrElse { "root" }
+                setRootDoc(
+                    FileDoc(
+                        name = rootName,
+                        isDir = true,
+                        size = doc.length(),
+                        lastModified = doc.lastModified(),
+                        uri = doc.uri
+                    )
+                )
+            } else {
+                val file = File(rootUri.path ?: return false)
+                if (!file.exists() || !file.isDirectory) return false
+                setRootDoc(FileDoc.fromFile(file))
+            }
+            true
+        }.getOrDefault(false)
+    }
+
+    private fun findPersistedTreeUri(targetUri: Uri): Uri? {
+        if (!targetUri.isContentScheme()) return null
+        val permissions = context.contentResolver.persistedUriPermissions
+        if (permissions.isEmpty()) return null
+        val targetAuthority = targetUri.authority
+        val targetTreeId = runCatching { getTreeDocumentId(targetUri) }.getOrNull()
+
+        return permissions.firstOrNull { permission ->
+            permission.isReadPermission
+                    && permission.uri.authority == targetAuthority
+                    && runCatching { getTreeDocumentId(permission.uri) }.getOrNull() == targetTreeId
+        }?.uri ?: permissions.firstOrNull { permission ->
+            permission.isReadPermission && permission.uri.authority == targetAuthority
+        }?.uri
+    }
+
+    private fun firstPersistedTreeUri(): Uri? {
+        return context.contentResolver.persistedUriPermissions
+            .firstOrNull { it.isReadPermission && it.uri.isContentScheme() }
+            ?.uri
+            ?.let(::normalizeFolderUri)
     }
 
     fun clearRoot() {
@@ -305,7 +411,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 rootDoc = null,
                 subDocs = emptyList(),
                 sourceDocs = emptyList(),
-                selectedIds = emptySet()
+                selectedIds = emptySet(),
+                sourceMode = SourceMode.CURRENT_DIR
             )
         }
     }
@@ -315,7 +422,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             it.copy(
                 rootDoc = rootDoc,
                 subDocs = emptyList(),
-                selectedIds = emptySet()
+                selectedIds = emptySet(),
+                sourceMode = SourceMode.CURRENT_DIR
             )
         }
         loadCurrentDoc()
@@ -369,7 +477,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
 
     fun setSort(sort: Int) {
         _state.update { it.copy(sort = sort) }
-        context.putPrefInt(PreferKey.localBookImportSort, sort)
+        ImportBookConfig.localBookImportSort = sort
     }
 
     fun setSearchMode(isSearch: Boolean) {
@@ -436,6 +544,22 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             context.toastOnUi("添加书架成功")
         }.onFinally {
             clearSelection()
+        }
+    }
+
+    private fun addSingleToBookshelf(item: ImportBook) {
+        if (item.isDir || item.isOnBookShelf) return
+        execute {
+            LocalBook.importFiles(listOf(item.file.uri))
+        }.onError {
+            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            AppLog.put("添加书架失败\n${it.localizedMessage}", it)
+        }.onSuccess {
+            context.toastOnUi("添加书架成功")
+        }.onFinally {
+            _state.update { state ->
+                state.copy(selectedIds = state.selectedIds - item.selectionId)
+            }
         }
     }
 
@@ -506,12 +630,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 .filter { it.toString() in selectedIds }
                 .forEach { it.delete() }
         }.onFinally {
-            _state.update { state ->
-                state.copy(
-                    sourceDocs = state.sourceDocs.filterNot { it.toString() in selectedIds },
-                    selectedIds = emptySet()
-                )
-            }
+            clearSelection()
+            refreshCurrentSource()
         }
     }
 
@@ -523,6 +643,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             it.copy(
                 sourceDocs = emptyList(),
                 selectedIds = emptySet(),
+                sourceMode = SourceMode.SCAN_RECURSIVE,
                 interaction = it.interaction.copy(isLoading = true)
             )
         }
@@ -534,6 +655,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 _state.update {
                     it.copy(
                         sourceDocs = docs,
+                        selectedIds = emptySet(),
                         interaction = it.interaction.copy(isLoading = false)
                     )
                 }
@@ -562,22 +684,18 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             it.copy(
                 sourceDocs = emptyList(),
                 selectedIds = emptySet(),
+                sourceMode = SourceMode.CURRENT_DIR,
                 interaction = it.interaction.copy(isLoading = true)
             )
         }
 
         execute {
-            fileDoc.list { item ->
-                when {
-                    item.name.startsWith(".") -> false
-                    item.isDir -> true
-                    else -> item.name.matches(bookFileRegex) || item.name.matches(archiveFileRegex)
-                }
-            } ?: emptyList()
+            listCurrentDocDocs(fileDoc)
         }.onSuccess { docs ->
             _state.update {
                 it.copy(
                     sourceDocs = docs,
+                    selectedIds = emptySet(),
                     interaction = it.interaction.copy(isLoading = false)
                 )
             }
@@ -585,6 +703,68 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             context.toastOnUi("获取文件列表出错\n${it.localizedMessage}")
             _state.update { state ->
                 state.copy(interaction = state.interaction.copy(isLoading = false))
+            }
+        }
+    }
+
+    private fun listCurrentDocDocs(fileDoc: FileDoc): List<FileDoc> {
+        return fileDoc.list { item ->
+            when {
+                item.name.startsWith(".") -> false
+                item.isDir -> true
+                else -> item.name.matches(bookFileRegex) || item.name.matches(archiveFileRegex)
+            }
+        } ?: emptyList()
+    }
+
+    private fun refreshCurrentSource() {
+        when (_state.value.sourceMode) {
+            SourceMode.CURRENT_DIR -> loadCurrentDoc()
+            SourceMode.SCAN_RECURSIVE -> scanCurrentDoc()
+        }
+    }
+
+    private fun startAutoSync() {
+        if (autoSyncJob?.isActive == true) return
+        autoSyncJob = viewModelScope.launch(IO) {
+            while (isActive) {
+                delay(1500)
+                syncSourceDocs()
+            }
+        }
+    }
+
+    private suspend fun syncSourceDocs() {
+        if (scanDocJob?.isActive == true) return
+        val snapshot = _state.value
+        if (snapshot.interaction.isLoading || snapshot.sourceDocs.isEmpty()) return
+
+        val current = currentDoc(snapshot) ?: return
+        when (snapshot.sourceMode) {
+            SourceMode.CURRENT_DIR -> {
+                val latestDocs = kotlin.runCatching { listCurrentDocDocs(current) }.getOrNull() ?: return
+                val latestIds = latestDocs.asSequence().map { it.toString() }.toSet()
+                val sourceIds = snapshot.sourceDocs.asSequence().map { it.toString() }.toSet()
+                if (latestIds == sourceIds) return
+
+                _state.update { state ->
+                    state.copy(
+                        sourceDocs = latestDocs,
+                        selectedIds = state.selectedIds.filterTo(hashSetOf()) { it in latestIds }
+                    )
+                }
+            }
+
+            SourceMode.SCAN_RECURSIVE -> {
+                if (snapshot.sourceDocs.none { !it.exists() }) return
+                val latestDocs = kotlin.runCatching { scanDoc(current) }.getOrNull() ?: return
+                val latestIds = latestDocs.asSequence().map { it.toString() }.toSet()
+                _state.update { state ->
+                    state.copy(
+                        sourceDocs = latestDocs,
+                        selectedIds = state.selectedIds.filterTo(hashSetOf()) { it in latestIds }
+                    )
+                }
             }
         }
     }
@@ -617,6 +797,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     }
 
     override fun onCleared() {
+        autoSyncJob?.cancel()
         scanDocJob?.cancel()
         super.onCleared()
     }

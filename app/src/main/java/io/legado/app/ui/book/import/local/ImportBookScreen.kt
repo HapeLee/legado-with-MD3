@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.import.local
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
@@ -21,12 +22,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.CircularProgressIndicator
@@ -58,7 +61,7 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.permission.Permissions
@@ -69,11 +72,13 @@ import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessageView
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -102,8 +107,10 @@ private fun ImportBookContent(
     onNavigateBack: () -> Unit,
     onNavigateToLevel: (Int) -> Unit,
     onSelectAll: () -> Unit,
+    onClearSelection: () -> Unit,
     onSelectInvert: () -> Unit,
     onAddToBookshelf: () -> Unit,
+    onItemAddToBookshelf: (ImportBook) -> Unit,
     onDeleteSelection: () -> Unit,
     onItemClick: (ImportBook) -> Unit
 ) {
@@ -182,6 +189,7 @@ private fun ImportBookContent(
             )
         },
         selectionActions = SelectionActions(
+            onClearSelection = onClearSelection,
             onSelectAll = onSelectAll,
             onSelectInvert = onSelectInvert,
             primaryAction = ActionItem(
@@ -227,7 +235,8 @@ private fun ImportBookContent(
                                 modifier = Modifier.animateItem(),
                                 item = item,
                                 isSelected = item.selectionId in state.selectedIds,
-                                onClick = { onItemClick(item) }
+                                onClick = { onItemClick(item) },
+                                onAddToBookshelf = { onItemAddToBookshelf(item) }
                             )
                         }
                     }
@@ -246,12 +255,24 @@ fun ImportBookScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showFolderPicker by remember { mutableStateOf(false) }
     var showImportFileNameDialog by remember { mutableStateOf(false) }
-    var fileNameJs by remember { mutableStateOf(AppConfig.bookImportFileName.orEmpty()) }
+    var pendingSingleAddBook by remember { mutableStateOf<ImportBook?>(null) }
+    var fileNameJs by remember { mutableStateOf(ImportBookConfig.bookImportFileName.orEmpty()) }
     var pickerTarget by remember { mutableStateOf(ImportFolderPickTarget.IMPORT_FOLDER) }
     val selectDocTree = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         viewModel.dispatch(ImportBookIntent.FolderPicked(uri, pickerTarget))
+    }
+    val handleBack = {
+        when {
+            uiState.selectedIds.isNotEmpty() -> viewModel.clearSelection()
+            uiState.canGoBack -> viewModel.dispatch(ImportBookIntent.NavigateBack)
+            else -> onBackClick()
+        }
+    }
+
+    BackHandler(enabled = !showFolderPicker && !showImportFileNameDialog) {
+        handleBack()
     }
 
     LaunchedEffect(viewModel) {
@@ -320,30 +341,48 @@ fun ImportBookScreen(
         },
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
-            AppConfig.bookImportFileName = fileNameJs
+            ImportBookConfig.bookImportFileName = fileNameJs
             showImportFileNameDialog = false
         },
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { showImportFileNameDialog = false }
     )
 
+    pendingSingleAddBook?.let { book ->
+        AppAlertDialog(
+            show = true,
+            onDismissRequest = { pendingSingleAddBook = null },
+            title = stringResource(R.string.add_to_bookshelf),
+            text = stringResource(R.string.check_add_bookshelf, book.name),
+            confirmText = stringResource(android.R.string.ok),
+            onConfirm = {
+                viewModel.dispatch(ImportBookIntent.AddSingleToBookshelf(book))
+                pendingSingleAddBook = null
+            },
+            dismissText = stringResource(android.R.string.cancel),
+            onDismiss = { pendingSingleAddBook = null }
+        )
+    }
+
     ImportBookContent(
         state = uiState,
-        onBackClick = onBackClick,
+        onBackClick = handleBack,
         onSearchToggle = { viewModel.dispatch(ImportBookIntent.SearchToggle(it)) },
         onSearchQueryChange = { viewModel.dispatch(ImportBookIntent.SearchQueryChange(it)) },
         onSelectFolder = { showFolderPicker = true },
         onScanFolder = { viewModel.dispatch(ImportBookIntent.ScanFolder) },
         onImportFileName = {
-            fileNameJs = AppConfig.bookImportFileName.orEmpty()
+            fileNameJs = ImportBookConfig.bookImportFileName.orEmpty()
             showImportFileNameDialog = true
         },
         onSortChange = { viewModel.dispatch(ImportBookIntent.SortChange(it)) },
         onNavigateBack = { viewModel.dispatch(ImportBookIntent.NavigateBack) },
         onNavigateToLevel = { viewModel.dispatch(ImportBookIntent.NavigateToLevel(it)) },
         onSelectAll = { viewModel.dispatch(ImportBookIntent.SelectAll) },
+        onClearSelection = { viewModel.clearSelection() },
         onSelectInvert = { viewModel.dispatch(ImportBookIntent.SelectInvert) },
         onAddToBookshelf = { viewModel.dispatch(ImportBookIntent.AddToBookshelf) },
+        onItemAddToBookshelf = { pendingSingleAddBook = it },
         onDeleteSelection = { viewModel.dispatch(ImportBookIntent.DeleteSelection) },
         onItemClick = { viewModel.dispatch(ImportBookIntent.ItemClick(it)) }
     )
@@ -417,7 +456,8 @@ private fun ImportBookItem(
     modifier: Modifier,
     item: ImportBook,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAddToBookshelf: () -> Unit
 ) {
     val containerColor = if (isSelected) {
         LegadoTheme.colorScheme.secondaryContainer
@@ -438,7 +478,7 @@ private fun ImportBookItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
+            AppIcon(
                 imageVector = when {
                     item.isDir -> Icons.Default.Folder
                     item.isOnBookShelf -> Icons.Outlined.Book
@@ -446,7 +486,7 @@ private fun ImportBookItem(
                 },
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = if (item.isDir) {
+                tint = if (item.isOnBookShelf) {
                     LegadoTheme.colorScheme.primary
                 } else {
                     LegadoTheme.colorScheme.onSurfaceVariant
@@ -486,10 +526,9 @@ private fun ImportBookItem(
 
             if (!item.isDir && !item.isOnBookShelf) {
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(
-                    imageVector = if (isSelected) Icons.Default.Check else Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = LegadoTheme.colorScheme.primary
+                SmallIconButton(
+                    onClick = onAddToBookshelf,
+                    imageVector = if (isSelected) Icons.Default.Check else Icons.Default.AddCircleOutline
                 )
             }
         }
