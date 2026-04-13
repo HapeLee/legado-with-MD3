@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import io.legado.app.R
-import io.legado.app.base.BaseDialogFragment
+import io.legado.app.base.BaseOverlayDialogFragment
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogClickActionConfigBinding
 import io.legado.app.help.config.AppConfig
@@ -19,7 +19,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 /**
  * 点击区域设置
  */
-class ClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_action_config) {
+class ClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_click_action_config) {
     private val binding by viewBinding(DialogClickActionConfigBinding::bind)
     private val actions by lazy {
         linkedMapOf(
