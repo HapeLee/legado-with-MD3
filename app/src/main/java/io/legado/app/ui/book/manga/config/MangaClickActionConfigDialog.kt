@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import io.legado.app.R
-import io.legado.app.base.BaseDialogFragment
+import io.legado.app.base.BaseOverlayDialogFragment
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.DialogClickActionConfigBinding
 import io.legado.app.help.config.AppConfig
@@ -15,7 +15,7 @@ import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
-class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_action_config) {
+class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_click_action_config) {
     private val binding by viewBinding(DialogClickActionConfigBinding::bind)
 
     private val actions by lazy {
@@ -142,4 +142,3 @@ class MangaClickActionConfigDialog : BaseDialogFragment(R.layout.dialog_click_ac
         AppConfig.detectMangaClickArea()
     }
 }
-
