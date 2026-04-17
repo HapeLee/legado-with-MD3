@@ -1230,4 +1230,13 @@
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
     <string name="miuix_monet">Miuix Monet</string>
     <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法產生配色。目前主題為動態主題且系統為 Android 12 以上時，會優先使用系統取色；否則使用下方種子色。</string>
+	<string name="layout_setting">佈局設定</string>
+	<string name="cover_info_orientation">封面資訊方向</string>
+	<string name="rule_segment">Rule</string>
+	<string name="tool_bar_style">工具欄樣式</string>
+	<string name="split_title">標題分段</string>
+	<string name="split_title_mode">分段模式</string>
+	<string name="subtitle_scale">次行縮放</string>
+	<string name="subtitle_margin">次行距離</string>
+	<string name="heading_spacing">標題段距</string>
 </resources>

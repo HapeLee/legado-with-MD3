@@ -97,14 +97,14 @@
                 android:id="@+id/btn_title_segType"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="标题分段"
+                android:text="@string/split_title"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"/>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_title_seg_config"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="分段模式"
+                android:text="@string/split_title_mode"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"/>
 
             <com.google.android.material.button.MaterialButton
@@ -127,7 +127,7 @@
                 android:layout_height="wrap_content"
                 app:max="20"
                 app:min="-20"
-                app:title="次行缩放" />
+                app:title="@string/subtitle_scale" />
 
             <View
                 android:layout_width="0dp"
@@ -154,7 +154,7 @@
                 android:layout_height="wrap_content"
                 app:max="30"
                 app:min="-30"
-                app:title="次行距离" />
+                app:title="@string/subtitle_margin" />
 
             <View
                 android:layout_width="0dp"
@@ -166,7 +166,7 @@
                 android:layout_width="108dp"
                 android:layout_height="wrap_content"
                 app:max="20"
-                app:title="标题段距" />
+                app:title="@string/heading_spacing" />
 
         </LinearLayout>
 
@@ -200,7 +200,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="工具栏样式"
+            android:text="@string/tool_bar_style"
             android:textSize="16sp"
             android:textStyle="bold"/>
 
@@ -226,7 +226,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
-                android:text="跟随阅读背景" />
+                android:text="@string/follow_background" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/bottom_mode3"

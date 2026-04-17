@@ -116,7 +116,7 @@ fun CoverConfigScreen(
 
             SplicedColumnGroup {
                 DropdownListSettingItem(
-                    title = "封面信息方向",
+                    title = stringResource(R.string.cover_info_orientation),
                     selectedValue = CoverConfig.coverInfoOrientation,
                     displayEntries = arrayOf(
                         stringResource(R.string.screen_portrait),

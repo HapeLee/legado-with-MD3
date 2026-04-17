@@ -108,7 +108,7 @@ fun MyScreen(
                 }
 
                 SplicedColumnGroup(
-                    title = "规则"
+                    title = stringResource(R.string.rule_segment),
                 ) {
                     ClickableSettingItem(
                         title = stringResource(R.string.book_source_manage),

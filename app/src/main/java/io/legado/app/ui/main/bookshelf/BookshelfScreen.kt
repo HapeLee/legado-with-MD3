@@ -211,6 +211,7 @@ fun BookshelfScreen(
             else uiState.groups.getOrNull(pagerState.currentPage)?.groupName
                 ?: stringResource(R.string.bookshelf)
         }
+
         else -> stringResource(R.string.bookshelf)
     }
     val title = if (uiState.upBooksCount > 0) {
@@ -261,7 +262,7 @@ fun BookshelfScreen(
                 leadingIcon = { Icon(Icons.Default.Refresh, null) }
             )
             RoundDropdownMenuItem(
-                text = "布局设置",
+                text = stringResource(R.string.layout_setting),
                 onClick = { showConfigSheet = true; dismiss() },
                 leadingIcon = { Icon(Icons.Default.GridView, null) }
             )
