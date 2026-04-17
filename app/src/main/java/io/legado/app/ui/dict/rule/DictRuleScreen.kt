@@ -44,6 +44,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -320,7 +321,7 @@ fun DictRuleScreen(
                         trailingAction = {
                             SmallIconButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                imageVector = Icons.Default.Delete
+                                imageVector = AppIcons.Delete
                             )
                         }
                     )

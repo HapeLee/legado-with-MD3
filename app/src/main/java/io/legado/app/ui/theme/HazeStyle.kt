@@ -51,6 +51,29 @@ fun Modifier.responsiveHazeEffect(
     }
 }
 
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun Modifier.responsiveHazeEffectFixedStyle(
+    state: HazeState
+): Modifier {
+    val enableBlur = ThemeConfig.enableBlur
+
+    if (!enableBlur) return this
+
+    val style = HazeLegado.ultraThinPlus()
+
+    return this.hazeEffect(
+        state = state,
+        style = style
+    ) {
+        progressive =
+            HazeProgressive.verticalGradient(
+                startIntensity = 1f,
+                endIntensity = 0f
+            )
+    }
+}
+
 /**
  * 仅判断 enableBlur 的简单 HazeEffect
  */

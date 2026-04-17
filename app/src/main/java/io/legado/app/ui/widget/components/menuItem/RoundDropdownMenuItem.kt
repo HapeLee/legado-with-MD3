@@ -137,7 +137,7 @@ fun RoundDropdownMenuItem(
                 else -> defaultContentColor.copy(alpha = 0.38f)
             }
         }
-        val containerColor = if (isSelected) colorScheme.primaryContainer else colorScheme.surface
+        val containerColor = colorScheme.surface
 
         Surface(
             onClick = onClick,

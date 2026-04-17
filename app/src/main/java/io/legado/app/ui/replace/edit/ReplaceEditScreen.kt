@@ -72,6 +72,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AlertButton
+import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
@@ -368,21 +369,20 @@ fun GroupSelector(
                 }
             }
         }
-        IconButton(onClick = onManageClick) {
-            Icon(Icons.Default.Settings, "Manage")
-        }
+        MediumIconButton(
+            onClick = onManageClick,
+            imageVector = Icons.Default.Settings
+        )
     }
 }
 
 @Composable
 fun ManageGroupDialog(
-    show: Boolean, // 💡 新增 show 参数，外层直接传值，不要用 if 包裹！
+    show: Boolean,
     groups: List<String>,
     onDismiss: () -> Unit,
     onDelete: (List<String>) -> Unit
 ) {
-    // 💡 使用 Set 来管理多选状态，并且以 show 作为 key。
-    // 这样每次重新打开弹窗时，选中状态会自动清空，防止上次的残留
     var selectedGroups by remember(show) { mutableStateOf(emptySet<String>()) }
 
     AppAlertDialog(
@@ -395,7 +395,6 @@ fun ManageGroupDialog(
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
-                    // 去掉了 spacedBy(8.dp)，因为 CheckboxItem 内部已经有了合适的 padding
                 ) {
                     groups.forEach { group ->
                         val isSelected = selectedGroups.contains(group)
@@ -418,7 +417,6 @@ fun ManageGroupDialog(
         confirmText = "删除选中",
         onConfirm = {
             onDelete(selectedGroups.toList())
-            // 注意：外层需要在 onDelete 回调中将 show 置为 false
         },
         dismissText = "关闭",
         onDismiss = onDismiss

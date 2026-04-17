@@ -376,6 +376,7 @@ fun BookGroupItemList(
 fun BookItem(
     book: BookShelfItem,
     layoutMode: Int,
+    modifier: Modifier = Modifier,
     gridStyle: Int = 0,
     isCompact: Boolean = false,
     isUpdating: Boolean = false,
@@ -403,6 +404,7 @@ fun BookItem(
         isGrid = layoutMode != 0,
         gridStyle = gridStyle,
         isCompact = isCompact,
+        modifier = modifier,
         cover = { modifier ->
             BookshelfCover(
                 name = book.name,

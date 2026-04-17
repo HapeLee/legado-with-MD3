@@ -69,12 +69,11 @@ import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
@@ -248,7 +247,7 @@ fun ReadRecordScreen(
         ) { targetState ->
             when (targetState) {
                 "LOADING" -> {
-                    EmptyMessageView(
+                    EmptyMessage(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(
@@ -261,7 +260,7 @@ fun ReadRecordScreen(
                 }
 
                 "EMPTY" -> {
-                    EmptyMessageView(
+                    EmptyMessage(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(

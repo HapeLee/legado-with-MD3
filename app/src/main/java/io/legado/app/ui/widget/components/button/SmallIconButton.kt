@@ -73,7 +73,8 @@ fun SmallIconButton(
         ) {
             MiuixIcon(
                 imageVector = imageVector,
-                contentDescription = contentDescription
+                contentDescription = contentDescription,
+                modifier = Modifier.size(smallIconSize),
             )
         }
     } else {

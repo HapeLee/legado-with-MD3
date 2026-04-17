@@ -99,7 +99,7 @@ import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -864,7 +864,7 @@ fun BookmarkListContent(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            EmptyMessageView(
+            EmptyMessage(
                 message = "暂无书签"
             )
         }

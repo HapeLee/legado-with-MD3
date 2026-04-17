@@ -18,6 +18,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -36,116 +38,102 @@ fun CheckSourceBottomSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.check_source_config)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 32.dp)
         ) {
-            AppText(
-                text = stringResource(R.string.check_source_config),
-                style = LegadoTheme.typography.titleLarge,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
 
-            SliderSettingItem(
-                title = stringResource(R.string.check_source_timeout),
-                color = MaterialTheme.colorScheme.surface,
-                value = viewModel.checkSourceTimeout.toFloat(),
-                defaultValue = 180f,
-                onValueChange = { viewModel.checkSourceTimeout = it.toLong() },
-                valueRange = 0f..300f,
-            )
+            GlassCard {
+                SliderSettingItem(
+                    title = stringResource(R.string.check_source_timeout),
+                    value = viewModel.checkSourceTimeout.toFloat(),
+                    defaultValue = 180f,
+                    onValueChange = { viewModel.checkSourceTimeout = it.toLong() },
+                    valueRange = 0f..300f,
+                )
+            }
+
 
             Spacer(modifier = Modifier.padding(8.dp))
 
-            CheckboxGroupContainer(columns = 2) {
-                item {
-                    CheckboxItem(
-                        title = stringResource(R.string.search),
-                        checked = viewModel.checkSearch,
-                        onCheckedChange = {
-                            viewModel.checkSearch = it
-                            if (!it && !viewModel.checkDiscovery) {
-                                viewModel.checkDiscovery = true
-                            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                CheckboxItem(
+                    title = stringResource(R.string.search),
+                    checked = viewModel.checkSearch,
+                    onCheckedChange = {
+                        viewModel.checkSearch = it
+                        if (!it && !viewModel.checkDiscovery) {
+                            viewModel.checkDiscovery = true
                         }
-                    )
-                }
+                    }
+                )
 
-                item {
-                    CheckboxItem(
-                        title = stringResource(R.string.discovery),
-                        checked = viewModel.checkDiscovery,
-                        onCheckedChange = {
-                            viewModel.checkDiscovery = it
-                            if (!it && !viewModel.checkSearch) {
-                                viewModel.checkSearch = true
-                            }
+                CheckboxItem(
+                    title = stringResource(R.string.discovery),
+                    checked = viewModel.checkDiscovery,
+                    onCheckedChange = {
+                        viewModel.checkDiscovery = it
+                        if (!it && !viewModel.checkSearch) {
+                            viewModel.checkSearch = true
                         }
-                    )
-                }
+                    }
+                )
+
+
+
+                CheckboxItem(
+                    title = stringResource(R.string.source_tab_info),
+                    checked = viewModel.checkInfo,
+                    onCheckedChange = {
+                        viewModel.checkInfo = it
+                        if (!it) {
+                            viewModel.checkCategory = false
+                            viewModel.checkContent = false
+                        }
+                    }
+                )
+
+
+                CheckboxItem(
+                    title = stringResource(R.string.chapter_list),
+                    checked = viewModel.checkCategory,
+                    enabled = viewModel.checkInfo,
+                    onCheckedChange = {
+                        viewModel.checkCategory = it
+                        if (!it) viewModel.checkContent = false
+                    }
+                )
+
+
+                CheckboxItem(
+                    title = stringResource(R.string.source_tab_content),
+                    checked = viewModel.checkContent,
+                    enabled = viewModel.checkCategory,
+                    onCheckedChange = { viewModel.checkContent = it }
+                )
             }
 
-
-            CheckboxGroupContainer(columns = 3) {
-                item {
-                    CheckboxItem(
-                        title = stringResource(R.string.source_tab_info),
-                        checked = viewModel.checkInfo,
-                        onCheckedChange = {
-                            viewModel.checkInfo = it
-                            if (!it) {
-                                viewModel.checkCategory = false
-                                viewModel.checkContent = false
-                            }
-                        }
-                    )
-                }
-
-                item {
-                    CheckboxItem(
-                        title = stringResource(R.string.chapter_list),
-                        checked = viewModel.checkCategory,
-                        enabled = viewModel.checkInfo,
-                        onCheckedChange = {
-                            viewModel.checkCategory = it
-                            if (!it) viewModel.checkContent = false
-                        }
-                    )
-                }
-
-                item {
-                    CheckboxItem(
-                        title = stringResource(R.string.source_tab_content),
-                        checked = viewModel.checkContent,
-                        enabled = viewModel.checkCategory,
-                        onCheckedChange = { viewModel.checkContent = it }
-                    )
-                }
-            }
-
-            Row(
+            ConfirmDismissButtonsRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = onDismiss) {
-                    AppText(stringResource(R.string.cancel))
-                }
-                Button(onClick = {
+                onDismiss = onDismiss,
+                onConfirm = {
                     if (viewModel.saveCheckSourceConfig()) {
                         onDismiss()
                     } else {
                         Toast.makeText(context, R.string.error, Toast.LENGTH_SHORT).show()
                     }
-                }) {
-                    AppText(stringResource(R.string.ok))
-                }
-            }
+                },
+                dismissText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.ok)
+            )
         }
     }
 }

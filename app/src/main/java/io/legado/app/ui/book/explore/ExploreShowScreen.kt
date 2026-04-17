@@ -92,6 +92,8 @@ import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.book.SearchBookGridItem
+import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -521,111 +523,12 @@ fun ExploreBookItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
-
-    val badge: (@Composable RowScope.() -> Unit)?
-            = when (shelfState) {
-
-        BookShelfState.IN_SHELF -> {
-            {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "已在书架",
-                    modifier = Modifier.size(12.dp)
-                )
-            }
-        }
-
-        BookShelfState.SAME_NAME_AUTHOR -> {
-            {
-                Icon(
-                    imageVector = Icons.Default.Warning,
-                    contentDescription = "同名书籍",
-                    modifier = Modifier.size(12.dp)
-                )
-
-            }
-        }
-
-        BookShelfState.NOT_IN_SHELF -> null
-    }
-
-    Row(
+    SearchBookListItem(
+        book = book,
+        shelfState = shelfState,
+        onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-
-        Cover(
-            path = book.coverUrl,
-            modifier = Modifier.width(72.dp),
-            badgeContent = badge)
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column(modifier = Modifier
-            .weight(1f)
-            .align(Alignment.CenterVertically)) {
-
-            AppText(
-                text = book.name,
-                style = LegadoTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Row {
-                AppText(
-                    text = book.author,
-                    style = LegadoTheme.typography.bodySmall,
-                    maxLines = 1
-                )
-
-                val latestChapter = book.latestChapterTitle
-                if (!latestChapter.isNullOrEmpty()) {
-                    AppText(
-                        text = " • ",
-                        style = LegadoTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        maxLines = 1
-                    )
-
-                    AppText(
-                        text = "最新: $latestChapter",
-                        style = LegadoTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
-            if (intro.isNotEmpty()) {
-                AppText(
-                    text = intro,
-                    style = LegadoTheme.typography.labelSmall,
-                    color = Color.Gray,
-                    maxLines = 2,
-                    minLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            val kinds = book.getKindList()
-            if (kinds.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    kinds.forEach { kind ->
-                        TagChip(text = kind)
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-                }
-            }
-        }
-    }
+    )
 }
 
 @Composable
@@ -635,71 +538,12 @@ fun ExploreBookGridItem(
     shelfState: Flow<BookShelfState>,
     modifier: Modifier = Modifier
 ) {
-
-    val shelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
-
-    val badgeText: String? = when (shelfState) {
-        BookShelfState.IN_SHELF -> "已在书架"
-        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
-        BookShelfState.NOT_IN_SHELF -> null
-    }
-
-    val content: (@Composable RowScope.() -> Unit)? = if (!badgeText.isNullOrBlank()) {
-        {
-            AppText(
-                text = badgeText,
-                style = LegadoTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp
-                )
-            )
-        }
-    } else {
-        null
-    }
-
-    Column(
+    SearchBookGridItem(
+        book = book,
+        shelfState = shelfState,
+        onClick = onClick,
         modifier = modifier
-            .width(IntrinsicSize.Min)
-            .clip(RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-    ) {
-
-        Cover(
-            path = book.coverUrl,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(12 / 17f),
-            badgeContent = content
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        AppText(
-            text = book.name,
-            style = LegadoTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-// 简单的标签组件
-@Composable
-fun TagChip(text: String) {
-    Surface(
-        color = LegadoTheme.colorScheme.cardContainer,
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        AppText(
-            text = text,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-            style = LegadoTheme.typography.labelSmall,
-            color = LegadoTheme.colorScheme.onCardContainer
-        )
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

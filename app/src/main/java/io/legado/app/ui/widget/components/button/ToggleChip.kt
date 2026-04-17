@@ -46,14 +46,15 @@ fun ToggleChip(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 AnimatedVisibility(visible = selected) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         MiuixIcon(
                             imageVector = Icons.Default.Check,
                             contentDescription = checkedContentDescription,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp),
+                            tint = if (selected) MiuixTheme.colorScheme.onPrimary else MiuixTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.width(6.dp))
                     }
@@ -61,9 +62,10 @@ fun ToggleChip(
 
                 MiuixText(
                     text = label,
-                    style = LegadoTheme.typography.labelSmall,
+                    style = LegadoTheme.typography.labelMediumEmphasized,
                     maxLines = 1,
-                    softWrap = false
+                    softWrap = false,
+                    color = if (selected) MiuixTheme.colorScheme.onPrimary else MiuixTheme.colorScheme.onSurface
                 )
             }
         }

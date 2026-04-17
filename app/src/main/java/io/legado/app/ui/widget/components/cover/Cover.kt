@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import io.legado.app.ui.theme.LegadoTheme
 import org.koin.compose.koinInject
 
@@ -57,16 +56,18 @@ fun Cover(
             )
         } else {
             AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(path)
-                    .crossfade(true)
-                    .setParameter("sourceOrigin", sourceOrigin)
-                    .setParameter("loadOnlyWifi", loadOnlyWifi)
-                    .listener(
+                model = buildCoverImageRequest(
+                    context = context,
+                    data = path,
+                    sourceOrigin = sourceOrigin,
+                    loadOnlyWifi = loadOnlyWifi,
+                    crossfade = true,
+                ) {
+                    listener(
                         onSuccess = { _, _ -> onLoadFinish?.invoke() },
                         onError = { _, _ -> onLoadFinish?.invoke() }
                     )
-                    .build(),
+                },
                 imageLoader = imageLoader,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,

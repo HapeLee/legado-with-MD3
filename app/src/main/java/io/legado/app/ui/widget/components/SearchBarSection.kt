@@ -9,14 +9,9 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -49,7 +44,6 @@ fun SearchBarSection(
     trailingIcon: @Composable (() -> Unit)? = null,
     dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     val textFieldState = rememberTextFieldState(initialText = query)
 
     LaunchedEffect(query) {
@@ -76,30 +70,20 @@ fun SearchBarSection(
         if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow
     }
 
-    val modifier = modifier
-        .fillMaxWidth()
-        .then(
-            if (isMiuix) modifier.padding(vertical = 4.dp)
-            else modifier
-        )
-
-    val searchTextField = @Composable {
+    if (isMiuix) {
         AppDenseTextField(
             state = textFieldState,
-            modifier = modifier,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
             placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
+            trailingIcon = trailingIcon,
             lineLimits = TextFieldLineLimits.SingleLine,
-            backgroundColor = if (!isMiuix) {
-                Color.Transparent
-            } else {
-                resolvedBackgroundColor
-            }
+            backgroundColor = resolvedBackgroundColor,
+            miuixUseSearchBarInputField = true,
+            miuixSearchBarLabel = placeholder
         )
-    }
-
-    if (isMiuix) {
-        searchTextField()
     } else {
         Surface(
             modifier = Modifier
@@ -108,7 +92,15 @@ fun SearchBarSection(
             shape = RoundedCornerShape(32.dp),
             color = resolvedBackgroundColor
         ) {
-            searchTextField()
+            AppDenseTextField(
+                state = textFieldState,
+                modifier = modifier.fillMaxWidth(),
+                placeholder = { AppText(placeholder) },
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                lineLimits = TextFieldLineLimits.SingleLine,
+                backgroundColor = Color.Transparent
+            )
         }
     }
 }

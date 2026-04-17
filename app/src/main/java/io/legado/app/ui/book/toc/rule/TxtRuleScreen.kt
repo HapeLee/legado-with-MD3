@@ -51,6 +51,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.BatchImportDialog
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -204,17 +205,17 @@ fun TxtRuleScreen(
     }
 
     AppAlertDialog(
-        data = showDeleteRuleDialog, // 传入 nullable �?rule 对象
+        data = showDeleteRuleDialog,
         onDismissRequest = { showDeleteRuleDialog = null },
         title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
         confirmText = stringResource(R.string.ok),
         onConfirm = { rule ->
             viewModel.delete(rule)
             showDeleteRuleDialog = null
         },
         dismissText = stringResource(R.string.cancel),
-        onDismiss = { showDeleteRuleDialog = null },
-        content = { Text(text = stringResource(R.string.del_msg)) }
+        onDismiss = { showDeleteRuleDialog = null }
     )
 
     RuleEditSheet(
@@ -228,7 +229,7 @@ fun TxtRuleScreen(
             editingRule = null
         },
         onSave = { updatedRule ->
-            //TODO：我很想把他改为自增主键，但为了兼容性日后再�?
+            //TODO：我很想把他改为自增主键，但为了兼容性日后再�?
             if (editingRule == null) {
                 viewModel.insert(updatedRule)
             } else {
@@ -346,7 +347,7 @@ fun TxtRuleScreen(
                         trailingAction = {
                             SmallIconButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                imageVector = Icons.Default.Delete
+                                imageVector = AppIcons.Delete
                             )
                         }
                     )

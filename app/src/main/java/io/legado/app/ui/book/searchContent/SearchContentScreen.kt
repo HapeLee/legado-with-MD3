@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -42,8 +40,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -62,10 +58,9 @@ import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.button.MediumOutlinedButton
-import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.TopBarAnimatedActionButton
@@ -225,7 +220,7 @@ fun SearchContentScreen(
             ) { state ->
                 when (state) {
                     is SearchContentState.Error -> {
-                        EmptyMessageView(
+                        EmptyMessage(
                             message = state.throwable.localizedMessage ?: "发生未知错误",
                             modifier = Modifier
                                 .fillMaxSize()
@@ -244,7 +239,7 @@ fun SearchContentScreen(
                         )
                     }
                     SearchContentState.EmptyResult -> {
-                        EmptyMessageView(
+                        EmptyMessage(
                             message = "没有找到相关内容！",
                             modifier = Modifier
                                 .fillMaxSize()
@@ -319,7 +314,7 @@ fun SearchHistoryList(
         }
 
         if (history.isEmpty()) {
-            EmptyMessageView(
+            EmptyMessage(
                 message = "暂无搜索历史",
                 modifier = Modifier
                     .fillMaxSize()

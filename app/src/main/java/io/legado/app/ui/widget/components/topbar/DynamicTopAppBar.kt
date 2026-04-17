@@ -75,7 +75,7 @@ fun <T> DynamicTopAppBar(
             if (!isSelecting) {
                 TopBarActionButton(
                     onClick = { onSearchToggle(!state.isSearch) },
-                    imageVector = Icons.Default.Search,
+                    imageVector = AppIcons.Search,
                     contentDescription = "搜索"
                 )
 

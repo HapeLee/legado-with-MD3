@@ -18,11 +18,11 @@ data class SearchScope(private var scope: String) {
     constructor(groups: List<String>) : this(groups.joinToString(","))
 
     constructor(source: BookSource) : this(
-        "${source.bookSourceName.replace(":", "")}::${source.bookSourceUrl}"
+        encodeSourceToken(source.bookSourceName, source.bookSourceUrl)
     )
 
     constructor(source: BookSourcePart) : this(
-        "${source.bookSourceName.replace(":", "")}::${source.bookSourceUrl}"
+        encodeSourceToken(source.bookSourceName, source.bookSourceUrl)
     )
 
     override fun toString(): String {
@@ -44,19 +44,35 @@ data class SearchScope(private var scope: String) {
     }
 
     fun update(source: BookSource) {
-        scope = "${source.bookSourceName}::${source.bookSourceUrl}"
+        scope = encodeSourceToken(source.bookSourceName, source.bookSourceUrl)
+        stateLiveData.postValue(scope)
+        save()
+    }
+
+    fun update(source: BookSourcePart) {
+        scope = encodeSourceToken(source.bookSourceName, source.bookSourceUrl)
+        stateLiveData.postValue(scope)
+        save()
+    }
+
+    fun updateSources(sources: List<BookSourcePart>) {
+        scope = encodeSourceScope(sources)
         stateLiveData.postValue(scope)
         save()
     }
 
     fun isSource(): Boolean {
-        return scope.contains("::")
+        val items = scopeItems()
+        if (items.isEmpty()) return false
+        return parseSourceItems(items).size == items.size
     }
 
     val display: String
         get() {
-            if (scope.contains("::")) {
-                return scope.substringBefore("::")
+            if (isSource()) {
+                val sourceNames = parseSourceItems().map { it.name }
+                if (sourceNames.isEmpty()) return appCtx.getString(R.string.all_source)
+                return sourceNames.joinToString(",")
             }
             if (scope.isEmpty()) {
                 return appCtx.getString(R.string.all_source)
@@ -70,22 +86,30 @@ data class SearchScope(private var scope: String) {
     val displayNames: List<String>
         get() {
             val list = arrayListOf<String>()
-            if (scope.contains("::")) {
-                list.add(scope.substringBefore("::"))
+            if (isSource()) {
+                parseSourceItems().forEach {
+                    list.add(it.name)
+                }
             } else {
-                scope.splitNotBlank(",").forEach {
+                scopeItems().forEach {
                     list.add(it)
                 }
             }
             return list
         }
 
+    val sourceUrls: List<String>
+        get() = parseSourceItems().map { it.url }
+
     fun remove(scope: String) {
         if (isSource()) {
-            this.scope = ""
+            val sourceItems = parseSourceItems().filterNot {
+                it.name == scope || it.url == scope
+            }
+            this.scope = sourceItems.joinToString(",") { "${it.name}::${it.url}" }
         } else {
             val stringBuilder = StringBuilder()
-            this.scope.split(",").forEach {
+            scopeItems().forEach {
                 if (it != scope) {
                     if (stringBuilder.isNotEmpty()) {
                         stringBuilder.append(",")
@@ -106,14 +130,14 @@ data class SearchScope(private var scope: String) {
         if (scope.isEmpty()) {
             list.addAll(appDb.bookSourceDao.allEnabledPart)
         } else {
-            if (scope.contains("::")) {
-                scope.substringAfter("::").let {
-                    appDb.bookSourceDao.getBookSourcePart(it)?.let { source ->
+            if (isSource()) {
+                parseSourceItems().forEach { sourceItem ->
+                    appDb.bookSourceDao.getBookSourcePart(sourceItem.url)?.let { source ->
                         list.add(source)
                     }
                 }
             } else {
-                val oldScope = scope.splitNotBlank(",")
+                val oldScope = scopeItems()
                 val newScope = oldScope.filter {
                     val bookSources = appDb.bookSourceDao.getEnabledPartByGroup(it)
                     list.addAll(bookSources)
@@ -147,6 +171,45 @@ data class SearchScope(private var scope: String) {
             AppConfig.searchGroup = ""
         } else {
             AppConfig.searchGroup = scope
+        }
+    }
+
+    private fun scopeItems(): List<String> = scope.splitNotBlank(",").toList()
+
+    private fun parseSourceItems(
+        items: List<String> = scopeItems()
+    ): List<ScopeSourceItem> {
+        return items.mapNotNull { item ->
+            val splitIndex = item.indexOf("::")
+            if (splitIndex <= 0 || splitIndex >= item.lastIndex) {
+                null
+            } else {
+                ScopeSourceItem(
+                    name = item.substring(0, splitIndex),
+                    url = item.substring(splitIndex + 2)
+                )
+            }
+        }
+    }
+
+    private data class ScopeSourceItem(
+        val name: String,
+        val url: String,
+    )
+
+    companion object {
+        private fun sanitizeSourceName(name: String): String {
+            return name.replace(":", "").replace(",", "")
+        }
+
+        private fun encodeSourceToken(name: String, url: String): String {
+            return "${sanitizeSourceName(name)}::${url}"
+        }
+
+        private fun encodeSourceScope(sources: List<BookSourcePart>): String {
+            return sources.joinToString(",") { source ->
+                encodeSourceToken(source.bookSourceName, source.bookSourceUrl)
+            }
         }
     }
 

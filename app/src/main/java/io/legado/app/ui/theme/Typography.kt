@@ -49,3 +49,33 @@ fun miuixStylesToM3Typography(miuixStyles: TextStyles): Typography {
         labelSmallEmphasized = miuixStyles.footnote2.copy(fontWeight = FontWeight.Medium)
     )
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+fun Typography.toLegadoTypography(): LegadoTypography {
+    return LegadoTypography(
+        headlineLarge = headlineLarge,
+        headlineLargeEmphasized = headlineLargeEmphasized,
+        headlineMedium = headlineMedium,
+        headlineMediumEmphasized = headlineMediumEmphasized,
+        headlineSmall = headlineSmall,
+        headlineSmallEmphasized = headlineSmallEmphasized,
+        titleLarge = titleLarge,
+        titleLargeEmphasized = titleLargeEmphasized,
+        titleMedium = titleMedium,
+        titleMediumEmphasized = titleMediumEmphasized,
+        titleSmall = titleSmall,
+        titleSmallEmphasized = titleSmallEmphasized,
+        bodyLarge = bodyLarge,
+        bodyLargeEmphasized = bodyLargeEmphasized,
+        bodyMedium = bodyMedium,
+        bodyMediumEmphasized = bodyMediumEmphasized,
+        bodySmall = bodySmall,
+        bodySmallEmphasized = bodySmallEmphasized,
+        labelLarge = labelLarge,
+        labelLargeEmphasized = labelLargeEmphasized,
+        labelMedium = labelMedium,
+        labelMediumEmphasized = labelMediumEmphasized,
+        labelSmall = labelSmall,
+        labelSmallEmphasized = labelSmallEmphasized
+    )
+}

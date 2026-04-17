@@ -1,13 +1,19 @@
 package io.legado.app.ui.widget.components.button
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -15,9 +21,11 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Button as MiuixButton
 import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
+import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 
 @Composable
 fun SmallTextButton(
@@ -27,14 +35,31 @@ fun SmallTextButton(
     onClick: () -> Unit
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixButton(
+        Card(
             onClick = onClick,
             modifier = modifier,
-            colors = MiuixButtonDefaults.buttonColors()
-        ) {
-            MiuixText(
-                text = text
+            showIndication = true,
+            colors = CardDefaults.defaultColors(
+                color = LegadoTheme.colorScheme.surfaceVariant,
+                contentColor = LegadoTheme.colorScheme.onSurfaceVariant
             )
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MiuixIcon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                AppText(
+                    text = text,
+                    style = LegadoTheme.typography.labelMedium
+                )
+            }
         }
     } else {
         TextButton(

@@ -28,7 +28,7 @@ import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun EmptyMessageView(
+fun EmptyMessage(
     message: String,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -81,7 +81,7 @@ fun EmptyMessageView(
 }
 
 @Composable
-fun EmptyMessageView(
+fun EmptyMessage(
     @StringRes messageResId: Int,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
@@ -93,7 +93,7 @@ fun EmptyMessageView(
     onFaceClick: (() -> Unit)? = null
 ) {
     val message = stringResource(id = messageResId)
-    EmptyMessageView(
+    EmptyMessage(
         message = message,
         modifier = modifier,
         isLoading = isLoading,

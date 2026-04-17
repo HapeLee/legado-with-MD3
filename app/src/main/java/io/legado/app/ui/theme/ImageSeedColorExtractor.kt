@@ -14,14 +14,15 @@ import androidx.core.graphics.scale
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import coil.size.Size
 import com.materialkolor.quantize.QuantizerCelebi
 import com.materialkolor.score.Score
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-private const val IMAGE_COLOR_EXTRACT_SIZE_PX = 256
-private const val IMAGE_QUANTIZE_BITMAP_MAX_SIZE = 128
-private const val IMAGE_MAX_QUANTIZE_COLORS = 128
+private const val IMAGE_COLOR_EXTRACT_SIZE_PX = 128
+private const val IMAGE_QUANTIZE_BITMAP_MAX_SIZE = 64
+private const val IMAGE_MAX_QUANTIZE_COLORS = 64
 private const val IMAGE_FALLBACK_SEED_COLOR = 0xFF4285F4.toInt()
 
 suspend fun ImageLoader.extractSeedColor(
@@ -32,6 +33,7 @@ suspend fun ImageLoader.extractSeedColor(
     val request = ImageRequest.Builder(context)
         .data(data)
         .allowHardware(false)
+        .size(Size(IMAGE_COLOR_EXTRACT_SIZE_PX, IMAGE_COLOR_EXTRACT_SIZE_PX))
         .apply(configureRequest)
         .build()
 

@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
@@ -68,35 +70,31 @@ fun BackgroundImageManageSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.background_image),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            AppText(
-                text = stringResource(R.string.background_image),
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp)
-            )
 
             if (currentPath.isNullOrBlank()) {
                 Surface(
                     onClick = { showFilePicker = true },
                     shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    color = LegadoTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
                         .padding(16.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
+                        AppIcon(
                             imageVector = Icons.Default.Add,
                             contentDescription = "Add",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = LegadoTheme.colorScheme.primary
                         )
                     }
                 }
@@ -119,24 +117,14 @@ fun BackgroundImageManageSheet(
                             contentScale = ContentScale.Crop
                         )
                     }
-                    IconButton(
+                    SmallTonalIconButton(
                         onClick = { viewModel.removeBackground(isDarkTheme) },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
-                            .size(32.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Remove",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                            .size(32.dp),
+                        imageVector = Icons.Default.Close
+                    )
                 }
             }
         }

@@ -73,7 +73,8 @@ data class LegadoColorScheme(
     val onTertiaryFixedVariant: Color,
 
     val cardContainer: Color,
-    val onCardContainer: Color
+    val onCardContainer: Color,
+    val onSheetContent: Color
 )
 
 data class LegadoTypography(

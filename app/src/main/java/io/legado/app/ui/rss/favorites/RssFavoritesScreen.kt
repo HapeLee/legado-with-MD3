@@ -34,7 +34,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.RssStar
 import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.widget.components.ActionItem
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SourceIcon
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -186,7 +186,7 @@ fun RssFavoritesScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                EmptyMessageView(
+                EmptyMessage(
                     message = "还没有收藏订阅！",
                     isLoading = state.isLoading
                 )
@@ -203,7 +203,7 @@ fun RssFavoritesScreen(
                     SelectionItemCard(
                         title = rssStar.title,
                         subtitle = if (rssStar.group.isNotBlank()) {
-                            "${rssStar.group} �?${rssStar.pubDate ?: ""}"
+                            "${rssStar.group} �?${rssStar.pubDate ?: ""}"
                         } else {
                             rssStar.pubDate
                         },

@@ -50,10 +50,9 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBarSection
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -212,7 +211,7 @@ fun AllBookmarkScreen(
             ) { state ->
                 when (state) {
                     "LOADING" -> {
-                        EmptyMessageView(
+                        EmptyMessage(
                             message = "加载中...",
                             isLoading = true,
                             modifier = Modifier
@@ -225,7 +224,7 @@ fun AllBookmarkScreen(
                     }
 
                     "EMPTY" -> {
-                        EmptyMessageView(
+                        EmptyMessage(
                             message = "没有书签！",
                             modifier = Modifier
                                 .fillMaxSize()

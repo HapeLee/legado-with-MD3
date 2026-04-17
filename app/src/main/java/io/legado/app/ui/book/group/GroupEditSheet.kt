@@ -8,18 +8,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -34,12 +32,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.lib.dialogs.alert
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.cover.BookCover
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.SelectImageContract
@@ -58,10 +60,35 @@ fun GroupEditSheet(
     onDismissRequest: () -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
-    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
+    var coverPath by remember(group) { mutableStateOf(group?.cover) }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        startAction = if (group != null && (group.groupId > 0 || group.groupId == Long.MIN_VALUE)) {
+            {
+                GroupDeleteAction(
+                    group = group,
+                    onDismissRequest = onDismissRequest,
+                    viewModel = viewModel
+                )
+            }
+        } else {
+            null
+        },
+        endAction = {
+            GroupResetCoverAction(
+                group = group,
+                onCoverPathChange = { coverPath = it },
+                viewModel = viewModel
+            )
+        }
+    ) {
         GroupEditContent(
             group = group,
             onDismissRequest = onDismissRequest,
+            coverPath = coverPath,
+            onCoverPathChange = { coverPath = it },
             viewModel = viewModel
         )
     }
@@ -71,11 +98,12 @@ fun GroupEditSheet(
 fun GroupEditContent(
     group: BookGroup? = null,
     onDismissRequest: () -> Unit,
+    coverPath: String?,
+    onCoverPathChange: (String?) -> Unit,
     viewModel: GroupViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     var groupName by remember(group) { mutableStateOf(group?.groupName ?: "") }
-    var coverPath by remember(group) { mutableStateOf(group?.cover) }
     var enableRefresh by remember(group) { mutableStateOf(group?.enableRefresh ?: true) }
     var selectedSortIndex by remember(group) { mutableIntStateOf(group?.bookSort ?: -1) }
 
@@ -96,7 +124,7 @@ fun GroupEditContent(
                     FileOutputStream(file).use { output ->
                         context.contentResolver.openInputStream(uri)?.use { it.copyTo(output) }
                     }
-                    coverPath = file.absolutePath
+                    onCoverPathChange(file.absolutePath)
                 }
             } catch (e: Exception) {
                 appCtx.toastOnUi(e.localizedMessage)
@@ -107,6 +135,7 @@ fun GroupEditContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(bottom = 16.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -129,23 +158,29 @@ fun GroupEditContent(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedTextField(
+                AppTextField(
                     value = groupName,
                     onValueChange = { groupName = it },
-                    label = { AppText(stringResource(R.string.group_name)) },
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
+                    label = stringResource(R.string.group_name),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
-                CompactDropdownSettingItem(
-                    title = stringResource(R.string.sort),
-                    selectedValue = selectedSortIndex.toString(),
-                    displayEntries = sortOptions,
-                    entryValues = sortEntryValues,
-                    onValueChange = {
-                        selectedSortIndex = it.toInt()
-                    }
-                )
+                GlassCard(
+                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                ) {
+                    CompactDropdownSettingItem(
+                        title = stringResource(R.string.sort),
+                        selectedValue = selectedSortIndex.toString(),
+                        color = LegadoTheme.colorScheme.onSheetContent,
+                        displayEntries = sortOptions,
+                        entryValues = sortEntryValues,
+                        onValueChange = {
+                            selectedSortIndex = it.toInt()
+                        }
+                    )
+                }
             }
         }
 
@@ -159,79 +194,91 @@ fun GroupEditContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(
+        ConfirmDismissButtonsRow(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (group != null && (group.groupId > 0 || group.groupId == Long.MIN_VALUE)) {
-                    OutlinedIconButton(onClick = {
-                        context.alert(R.string.delete, R.string.sure_del) {
-                            yesButton {
-                                viewModel.delGroup(group) {
-                                    onDismissRequest()
-                                }
-                            }
-                            noButton()
-                        }
-                    }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.delete)
-                        )
-                    }
-                }
-
-                OutlinedIconButton(onClick = {
-                    if (group != null) {
-                        viewModel.clearCover(group) {
-                            coverPath = null
-                            appCtx.toastOnUi("封面已重置")
+            onDismiss = onDismissRequest,
+            onConfirm = {
+                if (groupName.isEmpty()) {
+                    appCtx.toastOnUi("分组名称不能为空")
+                } else {
+                    if (group != null && group.groupId != 0b1L) {
+                        viewModel.upGroup(
+                            group.copy(
+                                groupName = groupName,
+                                cover = coverPath,
+                                bookSort = selectedSortIndex,
+                                enableRefresh = enableRefresh
+                            )
+                        ) {
+                            onDismissRequest()
                         }
                     } else {
-                        coverPath = null
-                    }
-                }) {
-                    Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.reset))
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onDismissRequest) {
-                    AppText(stringResource(R.string.cancel))
-                }
-                Button(onClick = {
-                    if (groupName.isEmpty()) {
-                        appCtx.toastOnUi("分组名称不能为空")
-                    } else {
-                        if (group != null) {
-                            viewModel.upGroup(
-                                group.copy(
-                                    groupName = groupName,
-                                    cover = coverPath,
-                                    bookSort = selectedSortIndex,
-                                    enableRefresh = enableRefresh
-                                )
-                            ) {
-                                onDismissRequest()
-                            }
-                        } else {
-                            viewModel.addGroup(
-                                groupName,
-                                selectedSortIndex,
-                                enableRefresh,
-                                coverPath
-                            ) {
-                                onDismissRequest()
-                            }
+                        viewModel.addGroup(
+                            groupName,
+                            selectedSortIndex,
+                            enableRefresh,
+                            coverPath
+                        ) {
+                            onDismissRequest()
                         }
                     }
-                }) {
-                    AppText(stringResource(R.string.ok))
                 }
-            }
-        }
+            },
+            dismissText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.ok)
+        )
     }
+}
+
+@Composable
+fun GroupDeleteAction(
+    group: BookGroup,
+    onDismissRequest: () -> Unit,
+    viewModel: GroupViewModel = koinViewModel()
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    MediumIconButton(
+        onClick = {
+            showDeleteDialog = true
+        },
+        imageVector = Icons.Default.Delete
+    )
+
+    AppAlertDialog(
+        show = showDeleteDialog,
+        onDismissRequest = { showDeleteDialog = false },
+        title = stringResource(R.string.delete),
+        text = stringResource(R.string.sure_del),
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            showDeleteDialog = false
+            viewModel.delGroup(group) {
+                onDismissRequest()
+            }
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { showDeleteDialog = false }
+    )
+}
+
+@Composable
+fun GroupResetCoverAction(
+    group: BookGroup? = null,
+    onCoverPathChange: (String?) -> Unit,
+    viewModel: GroupViewModel = koinViewModel()
+) {
+    MediumIconButton(
+        onClick = {
+            if (group != null) {
+                viewModel.clearCover(group) {
+                    onCoverPathChange(null)
+                    appCtx.toastOnUi("封面已重置")
+                }
+            } else {
+                onCoverPathChange(null)
+            }
+        },
+        imageVector = Icons.Default.Restore
+    )
 }

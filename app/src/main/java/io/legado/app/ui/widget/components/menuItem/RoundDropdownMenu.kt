@@ -45,7 +45,7 @@ fun RoundDropdownMenu(
 
     if (isMiuix) {
         val popupContentColor = LegadoTheme.colorScheme.onSurface
-        OverlayListPopup(
+        WindowListPopup(
             show = expanded,
             onDismissRequest = onDismissRequest,
             popupModifier = modifier

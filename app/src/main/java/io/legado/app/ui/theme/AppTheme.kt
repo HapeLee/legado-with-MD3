@@ -11,9 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LegadoTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
 
@@ -194,8 +196,10 @@ fun AppTheme(
                         onTertiaryFixed = miuixColorScheme.onTertiaryContainer,
                         onTertiaryFixedVariant = miuixColorScheme.onTertiaryContainer,
 
-                        cardContainer = miuixColorScheme.disabledPrimary,
-                        onCardContainer = miuixColorScheme.primary
+                        cardContainer = miuixColorScheme.primaryContainer.copy(alpha = 0.32f)
+                            .compositeOver(miuixColorScheme.surfaceContainer),
+                        onCardContainer = miuixColorScheme.primary,
+                        onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f),
                     )
                 }
 
@@ -228,33 +232,4 @@ fun AppTheme(
             }
         }
     }
-}
-
-private fun Typography.toLegadoTypography(): LegadoTypography {
-    return LegadoTypography(
-        headlineLarge = headlineLarge,
-        headlineLargeEmphasized = headlineLargeEmphasized,
-        headlineMedium = headlineMedium,
-        headlineMediumEmphasized = headlineMediumEmphasized,
-        headlineSmall = headlineSmall,
-        headlineSmallEmphasized = headlineSmallEmphasized,
-        titleLarge = titleLarge,
-        titleLargeEmphasized = titleLargeEmphasized,
-        titleMedium = titleMedium,
-        titleMediumEmphasized = titleMediumEmphasized,
-        titleSmall = titleSmall,
-        titleSmallEmphasized = titleSmallEmphasized,
-        bodyLarge = bodyLarge,
-        bodyLargeEmphasized = bodyLargeEmphasized,
-        bodyMedium = bodyMedium,
-        bodyMediumEmphasized = bodyMediumEmphasized,
-        bodySmall = bodySmall,
-        bodySmallEmphasized = bodySmallEmphasized,
-        labelLarge = labelLarge,
-        labelLargeEmphasized = labelLargeEmphasized,
-        labelMedium = labelMedium,
-        labelMediumEmphasized = labelMediumEmphasized,
-        labelSmall = labelSmall,
-        labelSmallEmphasized = labelSmallEmphasized
-    )
 }

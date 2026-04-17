@@ -39,9 +39,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.NormalCard
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
@@ -81,86 +82,93 @@ fun BookCover(
         isFinalPathLoaded = false
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .aspectRatio(5f / 7f)
-            .then(
-                if (CoverConfig.coverShowShadow) {
-                    Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
-                } else Modifier
-            )
-            .clip(RoundedCornerShape(4.dp))
-            .then(
-                if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                    Modifier.background(LegadoTheme.colorScheme.surfaceContainer)
-                } else Modifier
-            )
-    ) {
-        val density = LocalDensity.current
-        val iconSizeDp = with(density) {
-            (minOf(maxWidth, maxHeight).toPx() / 3f).toDp()
-        }
+    NormalCard(
+        cornerRadius = 4.dp
+    ){
+        BoxWithConstraints(
+            modifier = modifier
+                .aspectRatio(5f / 7f)
+                .then(
+                    if (CoverConfig.coverShowShadow) {
+                        Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
+                    } else Modifier
+                )
+                .then(
+                    if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                        Modifier.background(LegadoTheme.colorScheme.surfaceContainer)
+                    } else Modifier
+                )
+        ) {
+            val density = LocalDensity.current
+            val iconSizeDp = with(density) {
+                (minOf(maxWidth, maxHeight).toPx() / 3f).toDp()
+            }
 
-        if (hasCustomDefault && !isFinalPathLoaded) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(randomPath)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                imageLoader = koinInject(),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+            if (hasCustomDefault && !isFinalPathLoaded) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = randomPath,
+                        sourceOrigin = null,
+                        loadOnlyWifi = false,
+                        crossfade = true,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
-        if (finalPath != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(finalPath)
-                    .crossfade(true)
-                    .setParameter("sourceOrigin", sourceOrigin)
-                    .setParameter("loadOnlyWifi", CoverConfig.loadCoverOnlyWifi)
-                    .build(),
-                contentDescription = null,
-                imageLoader = koinInject(),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                onSuccess = {
-                    isOnlineCoverLoaded = true
-                    isFinalPathLoaded = true
-                    onLoadFinish?.invoke()
-                },
-                onError = {
-                    isOnlineCoverLoaded = false
+            if (finalPath != null) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = finalPath,
+                        sourceOrigin = sourceOrigin,
+                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                        crossfade = true,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = {
+                        isOnlineCoverLoaded = true
+                        isFinalPathLoaded = true
+                        onLoadFinish?.invoke()
+                    },
+                    onError = {
+                        isOnlineCoverLoaded = false
+                        onLoadFinish?.invoke()
+                    }
+                )
+            } else {
+                LaunchedEffect(Unit) {
                     onLoadFinish?.invoke()
                 }
-            )
-        } else {
-            LaunchedEffect(Unit) {
-                onLoadFinish?.invoke()
             }
-        }
 
-        if (!hasCustomDefault && !isOnlineCoverLoaded) {
-            Icon(
-                Icons.Default.Book,
-                contentDescription = null,
-                tint = LegadoTheme.colorScheme.secondary,
-                modifier = Modifier
-                    .size(iconSizeDp)
-                    .align(Alignment.Center)
-            )
-        }
+            if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                Icon(
+                    Icons.Default.Book,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .size(iconSizeDp)
+                        .align(Alignment.Center)
+                )
+            }
 
-        if (!isOnlineCoverLoaded) {
-            CoverTextOverlay(
-                name = name,
-                author = author,
-                isNight = isNight
-            )
-        }
+            if (!isOnlineCoverLoaded) {
+                CoverTextOverlay(
+                    name = name,
+                    author = author,
+                    isNight = isNight
+                )
+            }
 
+        }
     }
 }
 

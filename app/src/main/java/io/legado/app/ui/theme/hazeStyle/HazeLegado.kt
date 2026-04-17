@@ -16,6 +16,16 @@ object HazeLegado {
 
     @Composable
     @ReadOnlyComposable
+    fun ultraThinPlus(
+        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
+    ): HazeStyle = hazeLegado(
+        containerColor = containerColor,
+        lightAlpha = 0.0f,
+        darkAlpha = 0.0f,
+    )
+
+    @Composable
+    @ReadOnlyComposable
     fun ultraThin(
         containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
     ): HazeStyle = hazeLegado(

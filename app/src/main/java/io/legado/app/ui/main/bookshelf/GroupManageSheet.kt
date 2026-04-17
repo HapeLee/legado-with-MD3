@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.book.group.GroupEditContent
+import io.legado.app.ui.book.group.GroupDeleteAction
+import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -48,6 +50,7 @@ fun GroupManageSheet(
     val groups by bookshelfViewModel.allGroupsFlow.collectAsState()
     var editingGroup by remember { mutableStateOf<BookGroup?>(null) }
     var isEditing by remember { mutableStateOf(false) }
+    var coverPath by remember(editingGroup) { mutableStateOf(editingGroup?.cover) }
 
     var listData by remember { mutableStateOf(groups) }
     val listState = rememberLazyListState()
@@ -76,14 +79,35 @@ fun GroupManageSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = if (!isEditing) stringResource(R.string.group_manage) else stringResource(R.string.group_edit),
+        startAction = editingGroup?.takeIf {
+            isEditing && (it.groupId > 0 || it.groupId == Long.MIN_VALUE)
+        }?.let { group ->
+            {
+                GroupDeleteAction(
+                    group = group,
+                    onDismissRequest = {
+                        editingGroup = null
+                        isEditing = false
+                    },
+                    viewModel = viewModel
+                )
+            }
+        },
         endAction = {
             if (!isEditing) {
                 SmallIconButton(
                     onClick = {
                         editingGroup = null
+                        coverPath = null
                         isEditing = true
                     },
                     imageVector = Icons.Default.Add
+                )
+            } else {
+                GroupResetCoverAction(
+                    group = editingGroup,
+                    onCoverPathChange = { coverPath = it },
+                    viewModel = viewModel
                 )
             }
         }
@@ -98,7 +122,12 @@ fun GroupManageSheet(
             if (editing) {
                 GroupEditContent(
                     group = editingGroup,
-                    onDismissRequest = { isEditing = false },
+                    onDismissRequest = {
+                        editingGroup = null
+                        isEditing = false
+                    },
+                    coverPath = coverPath,
+                    onCoverPathChange = { coverPath = it },
                     viewModel = viewModel
                 )
             } else {
@@ -115,12 +144,13 @@ fun GroupManageSheet(
                             title = group.groupName.ifBlank { manageNameInfo.suffix.orEmpty() },
                             subtitle = if (group.groupName.isNotBlank()) manageNameInfo.suffix else null,
                             isEnabled = group.show,
-                            containerColor = LegadoTheme.colorScheme.surface,
+                            containerColor = LegadoTheme.colorScheme.onSheetContent,
                             onEnabledChange = { isChecked ->
                                 viewModel.upGroup(group.copy(show = isChecked))
                             },
                             onClickEdit = {
                                 editingGroup = group
+                                coverPath = group.cover
                                 isEditing = true
                             }
                         )

@@ -2,6 +2,7 @@
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -41,7 +43,6 @@ import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
 @Composable
 fun SliderSettingItem(
     title: String,
-    color: Color? = null,
     value: Float,
     defaultValue: Float,
     valueRange: ClosedFloatingPointRange<Float>,
@@ -56,7 +57,10 @@ fun SliderSettingItem(
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
 
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
             BasicComponent(
                 title = title,
                 summary = description,
@@ -143,7 +147,7 @@ fun SliderSettingItem(
     } else {
         SettingItem(
             title = title,
-            color = color ?: MaterialTheme.colorScheme.surfaceContainerLow,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
             option = description,
             expanded = expanded,
             onExpandChange = { expanded = it },

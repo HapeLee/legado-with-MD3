@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,15 +40,24 @@ private fun BaseCard(
             color = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer.copy(alpha)),
             contentColor = contentColor ?: LegadoTheme.colorScheme.onSurface
         )
-        MiuixCard(
-            modifier = modifier,
-            cornerRadius = cornerRadius,
-            pressFeedbackType = pressFeedbackType,
-            showIndication = true,
-            onClick = onClick,
-            content = content,
-            colors = colors
-        )
+        if (onClick != null) {
+            MiuixCard(
+                modifier = modifier,
+                cornerRadius = cornerRadius,
+                pressFeedbackType = pressFeedbackType,
+                showIndication = true,
+                onClick = onClick,
+                content = content,
+                colors = colors
+            )
+        } else {
+            MiuixCard(
+                modifier = modifier,
+                cornerRadius = cornerRadius,
+                content = content,
+                colors = colors
+            )
+        }
     } else {
         val colors = CardDefaults.cardColors(
             containerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer).copy(
@@ -60,7 +70,7 @@ private fun BaseCard(
         if (onClick != null) {
             Card(
                 modifier = modifier,
-                shape = shape,
+                shape = RoundedCornerShape(cornerRadius),
                 colors = colors,
                 elevation = elevation,
                 border = border,
@@ -70,7 +80,7 @@ private fun BaseCard(
         } else {
             Card(
                 modifier = modifier,
-                shape = shape,
+                shape = RoundedCornerShape(cornerRadius),
                 colors = colors,
                 elevation = elevation,
                 border = border,

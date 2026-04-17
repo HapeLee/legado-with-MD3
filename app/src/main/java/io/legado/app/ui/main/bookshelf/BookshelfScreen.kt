@@ -74,6 +74,8 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -197,20 +199,18 @@ fun BookshelfScreen(
     }
 
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
-    // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视�?
+    // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图
     var isInFolderRoot by remember(bookGroupStyle) { mutableStateOf(bookGroupStyle == 2) }
-    val baseTitle = when {
-        bookGroupStyle == 1 -> {
+    val baseTitle = when (bookGroupStyle) {
+        1 -> {
             uiState.groups.getOrNull(pagerState.currentPage)?.groupName
                 ?: stringResource(R.string.bookshelf)
         }
-
-        bookGroupStyle == 2 && uiState.groups.isNotEmpty() -> {
+        2 if uiState.groups.isNotEmpty() -> {
             if (isInFolderRoot) stringResource(R.string.bookshelf)
             else uiState.groups.getOrNull(pagerState.currentPage)?.groupName
                 ?: stringResource(R.string.bookshelf)
         }
-
         else -> stringResource(R.string.bookshelf)
     }
     val title = if (uiState.upBooksCount > 0) {
@@ -329,7 +329,7 @@ fun BookshelfScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .adaptiveHorizontalPadding(),
+                            .adaptiveHorizontalPaddingTab(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         val tabTitles = remember(uiState.groups) {
@@ -600,6 +600,19 @@ fun BookshelfPage(
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit
 ) {
+    if (books.isEmpty()) {
+        EmptyMessage(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding()
+                ),
+            messageResId = R.string.bookshelf_empty
+        )
+        return
+    }
+
     val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
     val isGridMode = bookshelfLayoutMode != 0
     val totalHorizontalPadding =
@@ -623,6 +636,7 @@ fun BookshelfPage(
         items(books, key = { it.bookUrl }) { book ->
             BookItem(
                 book = book,
+                modifier = Modifier.animateItem(),
                 layoutMode = bookshelfLayoutMode,
                 gridStyle = BookshelfConfig.bookshelfGridLayout,
                 isCompact = BookshelfConfig.bookshelfLayoutCompact,

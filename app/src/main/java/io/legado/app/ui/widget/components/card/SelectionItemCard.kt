@@ -44,6 +44,8 @@ import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.checkBox.AppCheckbox
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
@@ -70,8 +72,6 @@ fun SelectionItemCard(
     containerColor: Color? = null,
     selectedContainerColor: Color? = null
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
     val composeEngine = ThemeResolver.isMiuixEngine(composeEngine)
     val animatedContainerColor by animateColorAsState(
         targetValue = if (isSelected)
@@ -92,48 +92,104 @@ fun SelectionItemCard(
         containerColor = animatedContainerColor,
         elevation = CardDefaults.cardElevation(defaultElevation = elevation)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .animateContentSize(),
-            verticalAlignment = Alignment.CenterVertically
+        SelectionItemCardContent(
+            title = title,
+            subtitle = subtitle,
+            supportingContent = supportingContent,
+            isEnabled = isEnabled,
+            isSelected = isSelected,
+            inSelectionMode = inSelectionMode,
+            leadingContent = leadingContent,
+            onEnabledChange = onEnabledChange,
+            onClickEdit = onClickEdit,
+            trailingAction = trailingAction,
+            dropdownContent = dropdownContent
+        )
+    }
+}
+
+@Composable
+fun SelectionItemCardContent(
+    title: String,
+    subtitle: String? = null,
+    supportingContent: @Composable (() -> Unit)? = null,
+    isEnabled: Boolean = true,
+    isSelected: Boolean = false,
+    inSelectionMode: Boolean = false,
+    leadingContent: @Composable (() -> Unit)? = null,
+    onEnabledChange: ((Boolean) -> Unit)? = null,
+    onClickEdit: (() -> Unit)? = null,
+    trailingAction: @Composable (RowScope.() -> Unit)? = null,
+    dropdownContent: @Composable (ColumnScope.(onDismiss: () -> Unit) -> Unit)? = null
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AnimatedVisibility(
+            visible = inSelectionMode || leadingContent != null
         ) {
-            AnimatedVisibility(
-                visible = inSelectionMode || leadingContent != null
+            Box(
+                modifier = Modifier.padding(start = 12.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier.padding(start = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedContent(
-                        targetState = inSelectionMode,
-                        label = "LeadingContent"
-                    ) { selectionMode ->
-                        if (selectionMode) {
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = null
-                            )
-                        } else {
-                            leadingContent?.invoke()
-                        }
+                AnimatedContent(
+                    targetState = inSelectionMode,
+                    label = "LeadingContent"
+                ) { selectionMode ->
+                    if (selectionMode) {
+                        AppCheckbox(
+                            checked = isSelected,
+                            onCheckedChange = null
+                        )
+                    } else {
+                        leadingContent?.invoke()
                     }
                 }
             }
+        }
 
-            if (composeEngine) {
-                BasicComponent(
-                    modifier = Modifier.weight(1f)
-                ) {
+        if (ThemeResolver.isMiuixEngine(composeEngine)) {
+            BasicComponent(
+                modifier = Modifier.weight(1f)
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                when {
+                    supportingContent != null -> supportingContent()
+                    !subtitle.isNullOrBlank() -> {
+                        AppText(
+                            text = subtitle,
+                            style = LegadoTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        } else {
+            ListItem(
+                modifier = Modifier.weight(1f),
+                headlineContent = {
                     AppText(
                         text = title,
                         style = LegadoTheme.typography.titleSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    when {
-                        supportingContent != null -> supportingContent()
-                        !subtitle.isNullOrBlank() -> {
+                },
+                supportingContent = when {
+                    supportingContent != null -> supportingContent
+                    !subtitle.isNullOrBlank() -> {
+                        {
                             AppText(
                                 text = subtitle,
                                 style = LegadoTheme.typography.bodySmall,
@@ -142,75 +198,50 @@ fun SelectionItemCard(
                             )
                         }
                     }
-                }
-            } else {
-                ListItem(
-                    modifier = Modifier.weight(1f),
-                    headlineContent = {
-                        AppText(
-                            text = title,
-                            style = LegadoTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    supportingContent = when {
-                        supportingContent != null -> supportingContent
-                        !subtitle.isNullOrBlank() -> {
-                            {
-                                AppText(
-                                    text = subtitle,
-                                    style = LegadoTheme.typography.bodySmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        else -> null
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    else -> null
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+            )
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .padding(end = 8.dp)
+        ) {
+            onEnabledChange?.let {
+                AdaptiveSwitch(
+                    modifier = Modifier.scale(0.8f),
+                    checked = isEnabled,
+                    onCheckedChange = it
                 )
             }
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .padding(end = 8.dp)
-            ) {
-                onEnabledChange?.let {
-                    AdaptiveSwitch(
-                        modifier = Modifier.scale(0.8f),
-                        checked = isEnabled,
-                        onCheckedChange = it
-                    )
-                }
+            if (onClickEdit != null) {
+                SmallIconButton(
+                    onClick = onClickEdit,
+                    imageVector = AppIcons.Edit,
+                    contentDescription = "Edit"
+                )
+            }
 
-                if (onClickEdit != null) {
+            if (trailingAction != null) {
+                trailingAction()
+            }
+
+            if (dropdownContent != null) {
+                Box {
                     SmallIconButton(
-                        onClick = onClickEdit,
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit"
+                        onClick = { showMenu = true },
+                        imageVector = AppIcons.MoreVert,
+                        contentDescription = "More"
                     )
-                }
-
-                if (trailingAction != null) {
-                    trailingAction()
-                }
-
-                if (dropdownContent != null) {
-                    Box {
-                        SmallIconButton(
-                            onClick = { showMenu = true },
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More"
-                        )
-                        RoundDropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            dropdownContent { showMenu = false }
-                        }
+                    RoundDropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        dropdownContent { showMenu = false }
                     }
                 }
             }

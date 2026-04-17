@@ -68,7 +68,8 @@ fun ColorScheme.toLegadoColorScheme(): LegadoColorScheme {
         onTertiaryFixed = onTertiaryFixed,
         onTertiaryFixedVariant = onTertiaryFixedVariant,
         cardContainer = primaryContainer.copy(alpha = 0.5f),
-        onCardContainer = primary
+        onCardContainer = primary,
+        onSheetContent = surface
     )
 }
 

@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -35,24 +37,22 @@ fun PageKeySheet(
     var prevKeys by remember { mutableStateOf(ReadConfig.prevKeys) }
     var nextKeys by remember { mutableStateOf(ReadConfig.nextKeys) }
 
-    AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.custom_page_key)
+    ) {
         Column(
-            modifier = Modifier.Companion
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            AppText(
-                text = stringResource(R.string.custom_page_key),
-                style = LegadoTheme.typography.titleLarge,
-                fontWeight = FontWeight.Companion.Bold
-            )
-
-            OutlinedTextField(
+            AppTextField(
                 value = prevKeys,
                 onValueChange = { prevKeys = it },
-                label = { AppText(stringResource(R.string.prev_page_key)) },
-                modifier = Modifier.Companion
+                label = stringResource(R.string.prev_page_key),
+                modifier = Modifier
                     .fillMaxWidth()
                     .onPreviewKeyEvent { event ->
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
@@ -71,10 +71,10 @@ fun PageKeySheet(
                 singleLine = true
             )
 
-            OutlinedTextField(
+            AppTextField(
                 value = nextKeys,
                 onValueChange = { nextKeys = it },
-                label = { AppText(stringResource(R.string.next_page_key)) },
+                label = stringResource(R.string.next_page_key),
                 modifier = Modifier.Companion
                     .fillMaxWidth()
                     .onPreviewKeyEvent { event ->
@@ -96,35 +96,23 @@ fun PageKeySheet(
 
             AppText(
                 text = stringResource(R.string.page_key_set_help),
-                style = LegadoTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = LegadoTheme.typography.bodyMedium
             )
 
-            Row(
-                modifier = Modifier.Companion.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        prevKeys = ""
-                        nextKeys = ""
-                    },
-                    modifier = Modifier.Companion.weight(1f)
-                ) {
-                    AppText(stringResource(R.string.reset))
-                }
-
-                Button(
-                    onClick = {
-                        ReadConfig.prevKeys = prevKeys
-                        ReadConfig.nextKeys = nextKeys
-                        onDismissRequest()
-                    },
-                    modifier = Modifier.Companion.weight(1f)
-                ) {
-                    AppText(stringResource(R.string.ok))
-                }
-            }
+            ConfirmDismissButtonsRow(
+                modifier = Modifier.fillMaxWidth(),
+                onDismiss = {
+                    prevKeys = ""
+                    nextKeys = ""
+                },
+                onConfirm = {
+                    ReadConfig.prevKeys = prevKeys
+                    ReadConfig.nextKeys = nextKeys
+                    onDismissRequest()
+                },
+                dismissText = stringResource(R.string.reset),
+                confirmText = stringResource(R.string.ok)
+            )
         }
     }
 }

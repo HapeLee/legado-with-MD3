@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.card.TextCard
 
 @Composable
@@ -42,6 +43,7 @@ fun BookshelfCover(
             TextCard(
                 text = badgeText,
                 icon = if (showBadgeDot) Icons.Default.Update else null,
+                iconSize = 12.dp,
                 backgroundColor = LegadoTheme.colorScheme.cardContainer,
                 contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
@@ -49,7 +51,7 @@ fun BookshelfCover(
                     .padding(2.dp),
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
-                verticalPadding = 0.dp
+                verticalPadding = 2.dp
             )
         }
 
@@ -63,20 +65,17 @@ fun BookshelfCover(
                     .padding(2.dp),
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
-                verticalPadding = 0.dp
+                verticalPadding = 2.dp
             )
         }
 
         if (isUpdating) {
-            LinearProgressIndicator(
+            AppLinearProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 6.dp)
-                    .height(3.dp),
-                color = LegadoTheme.colorScheme.primary,
-                trackColor = LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
-                strokeCap = StrokeCap.Round
+                    .height(3.dp)
             )
         }
     }

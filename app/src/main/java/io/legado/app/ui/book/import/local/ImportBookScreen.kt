@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.import.local
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,23 +51,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.AppConst
-import io.legado.app.constant.AppPattern
-import io.legado.app.data.appDb
-import io.legado.app.data.entities.Book
 import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
-import io.legado.app.lib.permission.Permissions
-import io.legado.app.lib.permission.PermissionsCompat
-import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.ActionItem
-import io.legado.app.ui.widget.components.EmptyMessageView
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -83,15 +73,9 @@ import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.ConvertUtils
-import io.legado.app.utils.ArchiveUtils
-import io.legado.app.utils.FileDoc
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.isUri
 import io.legado.app.utils.startActivityForBook
-import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -222,7 +206,7 @@ private fun ImportBookContent(
                 }
 
                 state.items.isEmpty() -> {
-                    EmptyMessageView(
+                    EmptyMessage(
                         modifier = Modifier.fillMaxSize(),
                         message = stringResource(R.string.empty_msg_import_book)
                     )

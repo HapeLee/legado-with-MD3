@@ -55,6 +55,7 @@ fun ProvideThemeOverride(
     content: @Composable () -> Unit,
 ) {
     var appliedTheme by remember { mutableStateOf<ThemeOverrideState?>(null) }
+    val baseTheme = LocalLegadoThemeColors.current
 
     LaunchedEffect(theme) {
         if (theme == null) {
@@ -66,15 +67,16 @@ fun ProvideThemeOverride(
     }
 
     val currentTheme = appliedTheme
-    if (currentTheme == null) {
-        content()
-    } else {
-        ProvideColorSchemeOverride(
-            colorScheme = currentTheme.colorScheme,
-            seedColor = currentTheme.seedColor,
-            content = content
+        ?: ThemeOverrideState(
+            seedColor = baseTheme.seedColor,
+            colorScheme = baseTheme.colorScheme
         )
-    }
+
+    ProvideColorSchemeOverride(
+        colorScheme = currentTheme.colorScheme,
+        seedColor = currentTheme.seedColor,
+        content = content
+    )
 }
 
 @Composable

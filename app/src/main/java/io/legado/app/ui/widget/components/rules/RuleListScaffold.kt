@@ -76,7 +76,7 @@ fun <T> RuleListScaffold(
         show = showDeleteConfirmDialog,
         onDismissRequest = { showDeleteConfirmDialog = false },
         title = stringResource(R.string.delete),
-        text = stringResource(R.string.del_msg),
+        text = stringResource(R.string.sure_del),
         confirmText = stringResource(R.string.ok),
         onConfirm = {
             onDeleteSelected(state.selectedIds)

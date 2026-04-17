@@ -67,6 +67,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
@@ -159,6 +160,19 @@ fun ExploreScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
+            if (uiState.items.isEmpty()) {
+                EmptyMessage(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            top = paddingValues.calculateTopPadding(),
+                            bottom = paddingValues.calculateBottomPadding()
+                        ),
+                    messageResId = R.string.explore_empty
+                )
+                return@Box
+            }
+
             FastScrollLazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
