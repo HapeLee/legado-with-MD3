@@ -4,6 +4,7 @@ import android.net.Uri
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 
 data class BookInfoUiState(
     val book: Book? = null,
@@ -12,6 +13,8 @@ data class BookInfoUiState(
     val kindLabels: List<String> = emptyList(),
     val groupNames: String? = null,
     val hasCustomGroup: Boolean = false,
+    val readRecordTotalTime: Long = 0L,
+    val readRecordTimelineDays: List<ReadRecordTimelineDay> = emptyList(),
     val inBookshelf: Boolean = false,
     val bookSource: BookSource? = null,
     val isTocLoading: Boolean = true,
@@ -26,6 +29,7 @@ sealed interface BookInfoSheet {
     data object CoverPicker : BookInfoSheet
     data object GroupPicker : BookInfoSheet
     data object SourcePicker : BookInfoSheet
+    data object ReadRecord : BookInfoSheet
     data class WebFiles(val openAfterImport: Boolean) : BookInfoSheet
     data class ArchiveEntries(
         val archiveUri: Uri,
@@ -68,6 +72,7 @@ sealed interface BookInfoIntent {
     data object CoverLongClick : BookInfoIntent
     data object GroupClick : BookInfoIntent
     data object ChangeSourceClick : BookInfoIntent
+    data object ReadRecordClick : BookInfoIntent
     data object RemarkClick : BookInfoIntent
     data object ConfirmBackAddToShelf : BookInfoIntent
     data class ConfirmDelete(val deleteOriginal: Boolean) : BookInfoIntent
@@ -141,6 +146,7 @@ enum class BookInfoMenuAction {
     Upload,
     SyncRemote,
     Refresh,
+    ReadRecord,
     Login,
     Top,
     SetSourceVariable,

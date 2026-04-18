@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Edit
@@ -41,9 +40,8 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material.icons.outlined.Bookmark
-import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
@@ -265,12 +263,12 @@ private fun BookInfoScreenContent(
                                     .padding(bottom = 24.dp)
                             ) {
                                 BookInfoActions(
-                                    hasCustomGroup = state.hasCustomGroup,
                                     inBookshelf = state.inBookshelf,
                                     onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
                                     onTocClick = { onIntent(BookInfoIntent.TocClick) },
                                     onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
                                     onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
+                                    onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
                                 )
                                 BookInfoSummary(
                                     book = book,
@@ -325,6 +323,12 @@ private fun BookInfoScreenContent(
                 },
             )
         }
+        BookInfoSheet.ReadRecord -> BookReadRecordSheet(
+            show = currentSheet == BookInfoSheet.ReadRecord,
+            totalReadTime = state.readRecordTotalTime,
+            timelineDays = state.readRecordTimelineDays,
+            onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
+        )
         is BookInfoSheet.WebFiles -> WebFileSheet(
             show = currentSheet is BookInfoSheet.WebFiles,
             files = state.webFiles,
@@ -551,6 +555,10 @@ private fun BookInfoOverflowMenu(
             text = stringResource(R.string.refresh),
             onClick = { onMenuAction(BookInfoMenuAction.Refresh) }
         )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.read_record),
+            onClick = { onMenuAction(BookInfoMenuAction.ReadRecord) }
+        )
         if (book?.isLocal == true) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.re_sync_webdav),
@@ -736,31 +744,38 @@ private fun BookInfoHeader(
 
 @Composable
 private fun BookInfoActions(
-    hasCustomGroup: Boolean,
     inBookshelf: Boolean,
     onShelfClick: () -> Unit,
     onTocClick: () -> Unit,
     onGroupClick: () -> Unit,
     onSourceClick: () -> Unit,
+    onReadRecordClick: () -> Unit,
 ) {
     var awaitingShelfAddition by rememberSaveable { mutableStateOf(false) }
     var showShelfRemoveHint by rememberSaveable { mutableStateOf(false) }
+    var showLongPressGroupHint by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(inBookshelf, awaitingShelfAddition) {
+    LaunchedEffect(inBookshelf) {
         if (awaitingShelfAddition && inBookshelf) {
             awaitingShelfAddition = false
             showShelfRemoveHint = true
             delay(1000)
             showShelfRemoveHint = false
+            showLongPressGroupHint = true
+            delay(1000)
+            showLongPressGroupHint = false
         } else if (!inBookshelf) {
+            awaitingShelfAddition = false
             showShelfRemoveHint = false
+            showLongPressGroupHint = false
         }
     }
 
     val shelfLabel = when {
-        !inBookshelf -> stringResource(R.string.add_to_bookshelf)
         showShelfRemoveHint -> stringResource(R.string.click_to_remove)
-        else -> stringResource(R.string.remove_from_bookshelf)
+        showLongPressGroupHint -> stringResource(R.string.long_press_group)
+        inBookshelf -> stringResource(R.string.already_in_bookshelf)
+        else -> stringResource(R.string.add_to_bookshelf)
     }
 
     Row(
@@ -774,12 +789,14 @@ private fun BookInfoActions(
             modifier = Modifier.weight(1f),
             icon = if (inBookshelf) Icons.Outlined.Book else Icons.Default.BookmarkAdd,
             label = shelfLabel,
+            onLongClick = onGroupClick,
             onClick = {
                 if (!inBookshelf) {
                     awaitingShelfAddition = true
                 } else {
                     awaitingShelfAddition = false
                     showShelfRemoveHint = false
+                    showLongPressGroupHint = false
                 }
                 onShelfClick()
             },
@@ -792,15 +809,15 @@ private fun BookInfoActions(
         )
         BookInfoActionCard(
             modifier = Modifier.weight(1f),
-            icon = if (hasCustomGroup) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
-            label = stringResource(R.string.change_group),
-            onClick = onGroupClick
-        )
-        BookInfoActionCard(
-            modifier = Modifier.weight(1f),
             icon = Icons.Default.Code,
             label = stringResource(R.string.book_source),
             onClick = onSourceClick
+        )
+        BookInfoActionCard(
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.Timeline,
+            label = stringResource(R.string.read_record),
+            onClick = onReadRecordClick
         )
     }
 }
@@ -810,12 +827,14 @@ private fun BookInfoActionCard(
     modifier: Modifier = Modifier,
     icon: ImageVector,
     label: String,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     GlassCard(
         modifier = modifier,
+        onLongClick = onLongClick,
         onClick = onClick,
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.2f),
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
         contentColor = LegadoTheme.colorScheme.onSurface,
     ) {
         Column(

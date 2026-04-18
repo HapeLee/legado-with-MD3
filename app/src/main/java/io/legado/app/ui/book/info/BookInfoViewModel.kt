@@ -15,6 +15,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
@@ -48,15 +50,20 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class BookInfoViewModel(
     application: Application,
-    private val remoteBookRepository: RemoteBookRepository
+    private val remoteBookRepository: RemoteBookRepository,
+    private val readRecordRepository: ReadRecordRepository
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(BookInfoUiState())
@@ -66,11 +73,18 @@ class BookInfoViewModel(
     val effects = _effects.asSharedFlow()
 
     private var currentBook: Book? = null
+        set(value) {
+            field = value
+            observeReadRecordIfNeeded(value)
+        }
     private var currentChapterList: List<BookChapter> = emptyList()
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
     private var currentKindLabels: List<String> = emptyList()
     private var currentGroupNames: String? = null
     private var currentHasCustomGroup = false
+    private var currentReadRecordTotalTime = 0L
+    private var currentReadRecordTimelineDays: List<ReadRecordTimelineDay> = emptyList()
+    private var observingReadRecordKey: String? = null
     private var chapterChanged = false
 
     var inBookshelf = false
@@ -79,6 +93,7 @@ class BookInfoViewModel(
         private set
 
     private var changeSourceCoroutine: Coroutine<*>? = null
+    private var readRecordObserveJob: Job? = null
 
     fun initData(intent: Intent) {
         if (currentBook != null) return
@@ -123,6 +138,7 @@ class BookInfoViewModel(
 
             BookInfoIntent.GroupClick -> setSheet(BookInfoSheet.GroupPicker)
             BookInfoIntent.ChangeSourceClick -> setSheet(BookInfoSheet.SourcePicker)
+            BookInfoIntent.ReadRecordClick -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoIntent.RemarkClick -> showDialog(BookInfoDialog.EditRemark(currentBook?.remark))
             BookInfoIntent.ConfirmBackAddToShelf -> {
                 dismissDialog()
@@ -924,6 +940,7 @@ class BookInfoViewModel(
             }
             BookInfoMenuAction.SyncRemote -> syncFromRemote()
             BookInfoMenuAction.Refresh -> refreshCurrentBook()
+            BookInfoMenuAction.ReadRecord -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoMenuAction.Login -> bookSource?.let {
                 emitEffect(BookInfoEffect.OpenSourceLogin(it.bookSourceUrl))
             }
@@ -1081,6 +1098,42 @@ class BookInfoViewModel(
         }
     }
 
+    private fun observeReadRecordIfNeeded(book: Book?) {
+        if (book == null) {
+            clearReadRecordObserve()
+            return
+        }
+        val key = "${book.name}|||${book.author}"
+        if (observingReadRecordKey == key && readRecordObserveJob?.isActive == true) return
+        observingReadRecordKey = key
+        readRecordObserveJob?.cancel()
+        readRecordObserveJob = viewModelScope.launch {
+            combine(
+                readRecordRepository.getBookReadTime(book.name, book.author),
+                readRecordRepository.getBookTimelineDays(book.name, book.author)
+            ) { totalTime, timelineDays ->
+                totalTime to timelineDays
+            }.collectLatest { (totalTime, timelineDays) ->
+                currentReadRecordTotalTime = totalTime
+                currentReadRecordTimelineDays = timelineDays
+                _uiState.update {
+                    it.copy(
+                        readRecordTotalTime = currentReadRecordTotalTime,
+                        readRecordTimelineDays = currentReadRecordTimelineDays
+                    )
+                }
+            }
+        }
+    }
+
+    private fun clearReadRecordObserve() {
+        readRecordObserveJob?.cancel()
+        readRecordObserveJob = null
+        observingReadRecordKey = null
+        currentReadRecordTotalTime = 0L
+        currentReadRecordTimelineDays = emptyList()
+    }
+
     private fun dismissSheet() {
         setSheet(BookInfoSheet.None)
     }
@@ -1110,6 +1163,8 @@ class BookInfoViewModel(
                 kindLabels = currentKindLabels,
                 groupNames = currentGroupNames,
                 hasCustomGroup = currentHasCustomGroup,
+                readRecordTotalTime = currentReadRecordTotalTime,
+                readRecordTimelineDays = currentReadRecordTimelineDays,
                 inBookshelf = inBookshelf,
                 bookSource = bookSource,
                 isTocLoading = isTocLoading,

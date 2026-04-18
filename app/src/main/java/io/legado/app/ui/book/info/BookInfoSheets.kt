@@ -398,8 +398,8 @@ fun ChangeSourceSheet(
                 }.collectAsStateWithLifecycle()
                 SelectionItemCard(
                     title = item.originName,
-                    containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                    selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                    selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
                     leadingContent = {
                         MediumIconButton(
                             onClick = {
@@ -503,15 +503,35 @@ fun ChangeSourceSheet(
         })
     }
 
-    if (mismatchBook != null) {
-        AppAlertDialog(show = true, onDismissRequest = { mismatchBook = null }, title = stringResource(R.string.book_type_different), text = stringResource(R.string.soure_change_source), confirmText = stringResource(android.R.string.ok), onConfirm = { actionBook = mismatchBook; mismatchBook = null }, dismissText = stringResource(android.R.string.cancel), onDismiss = { mismatchBook = null })
-    }
-    actionBook?.let { searchBook ->
-        AppAlertDialog(show = true, onDismissRequest = { actionBook = null }, title = stringResource(R.string.change_source_option_title), dismissText = stringResource(R.string.add_as_new_book), onDismiss = { performAction(searchBook, false) }, confirmText = stringResource(R.string.replace_current_book), onConfirm = { performAction(searchBook, true) })
-    }
-    if (loadingAction) {
-        AppAlertDialog(show = true, onDismissRequest = {}, content = {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-        })
-    }
+    AppAlertDialog(
+        data = mismatchBook,
+        onDismissRequest = { mismatchBook = null },
+        title = stringResource(R.string.book_type_different),
+        text = stringResource(R.string.soure_change_source),
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = { searchBook ->
+            actionBook = searchBook
+            mismatchBook = null
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { mismatchBook = null }
+    )
+    AppAlertDialog(
+        data = actionBook,
+        onDismissRequest = { actionBook = null },
+        title = stringResource(R.string.change_source_option_title),
+        dismissText = stringResource(R.string.add_as_new_book),
+        onDismiss = { actionBook?.let { performAction(it, false) } },
+        confirmText = stringResource(R.string.replace_current_book),
+        onConfirm = { performAction(it, true) }
+    )
+    AppAlertDialog(
+        show = loadingAction,
+        onDismissRequest = {},
+        content = {
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+    )
 }
