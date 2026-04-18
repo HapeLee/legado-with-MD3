@@ -32,6 +32,7 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -80,10 +81,10 @@ fun BackgroundImageManageSheet(
         ) {
 
             if (currentPath.isNullOrBlank()) {
-                Surface(
+                NormalCard(
                     onClick = { showFilePicker = true },
-                    shape = MaterialTheme.shapes.medium,
-                    color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    cornerRadius = 12.dp,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(16f / 9f)
@@ -104,9 +105,8 @@ fun BackgroundImageManageSheet(
                         .fillMaxWidth()
                         .padding(16.dp)
                 ) {
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        tonalElevation = 2.dp
+                    NormalCard(
+                        cornerRadius = 12.dp,
                     ) {
                         AsyncImage(
                             model = currentPath,

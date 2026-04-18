@@ -315,7 +315,6 @@ fun MainScreen(
                         AppNavigationBar(
                             modifier = Modifier
                                 .regularHazeEffect(state = hazeState)
-                                .height(if (isUnlabeled) 64.dp else 80.dp)
                         ) {
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index

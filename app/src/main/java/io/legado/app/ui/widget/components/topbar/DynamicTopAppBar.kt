@@ -21,7 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -107,7 +107,7 @@ fun <T> DynamicTopAppBar(
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                SearchBarSection(
+                SearchBar(
                     query = state.searchKey,
                     onQueryChange = onSearchQueryChange,
                     placeholder = searchPlaceholder,

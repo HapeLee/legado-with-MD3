@@ -17,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -59,7 +61,7 @@ fun SearchBookListItem(
         BookShelfState.SAME_NAME_AUTHOR -> {
             {
                 androidx.compose.material3.Icon(
-                    imageVector = Icons.Default.Warning,
+                    imageVector = Icons.Default.Shuffle,
                     contentDescription = "同名书籍",
                     modifier = Modifier.size(12.dp),
                 )

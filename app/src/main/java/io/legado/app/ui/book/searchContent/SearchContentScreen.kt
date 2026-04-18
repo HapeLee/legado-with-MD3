@@ -59,7 +59,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.MediumOutlinedButton
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -167,7 +167,7 @@ fun SearchContentScreen(
                 Box(
                     modifier = Modifier.adaptiveHorizontalPadding()
                 ) {
-                    SearchBarSection(
+                    SearchBar(
                         query = searchQuery,
                         scrollState = listState,
                         onQueryChange = { viewModel.onQueryChange(it) }

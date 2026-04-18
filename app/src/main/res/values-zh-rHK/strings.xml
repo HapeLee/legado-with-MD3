@@ -223,6 +223,7 @@
     <string name="threads_num_title">更新/搜尋線程數，太多會卡頓</string>
     <string name="change_icon">切換圖標</string>
     <string name="remove_from_bookshelf">刪除書輯</string>
+    <string name="already_in_bookshelf">已在書架</string>
     <string name="start_read">開始閲讀</string>
     <string name="data_loading">數據載入中…</string>
     <string name="load_error_retry">載入失敗，點擊重試</string>

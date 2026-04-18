@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -26,10 +28,11 @@ import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchBarSection(
+fun SearchBar(
     modifier: Modifier = Modifier,
     query: String,
     onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit = {},
     placeholder: String = "搜索...",
     leadingIcon: @Composable (() -> Unit)? = {
         AppIcon(
@@ -79,10 +82,15 @@ fun SearchBarSection(
             placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            onKeyboardAction = {
+                onSearch(textFieldState.text.toString())
+            },
             lineLimits = TextFieldLineLimits.SingleLine,
             backgroundColor = resolvedBackgroundColor,
             miuixUseSearchBarInputField = true,
-            miuixSearchBarLabel = placeholder
+            miuixSearchBarLabel = placeholder,
+            miuixOnSearch = onSearch,
         )
     } else {
         Surface(
@@ -98,6 +106,10 @@ fun SearchBarSection(
                 placeholder = { AppText(placeholder) },
                 leadingIcon = leadingIcon,
                 trailingIcon = trailingIcon,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                onKeyboardAction = {
+                    onSearch(textFieldState.text.toString())
+                },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 backgroundColor = Color.Transparent
             )

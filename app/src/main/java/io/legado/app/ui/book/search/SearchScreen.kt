@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.search
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -68,15 +70,15 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
-import io.legado.app.ui.widget.components.AppSearchBar
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
-import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.button.ToggleChip
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarAnimatedActionButton
@@ -84,6 +86,7 @@ import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toastOnUi
@@ -104,8 +107,8 @@ fun SearchScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
-    var searchExpanded by rememberSaveable { mutableStateOf(false) }
     var scopeSheetTab by rememberSaveable { mutableStateOf(0) }
+    val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -149,15 +152,13 @@ fun SearchScreen(
         state.hasMore,
         state.isManualStop,
         state.showSuggestions,
-        searchExpanded,
     ) {
         if (
             shouldLoadMore &&
             !state.isSearching &&
             state.hasMore &&
             !state.isManualStop &&
-            !state.showSuggestions &&
-            !searchExpanded
+            !state.showSuggestions
         ) {
             viewModel.onIntent(SearchIntent.LoadMore)
         }
@@ -203,104 +204,60 @@ fun SearchScreen(
                         )
                     },
                     actions = {
-                        if (!searchExpanded) {
-                            TopBarActionButton(
-                                onClick = {
-                                    viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
-                                },
-                                imageVector = AppIcons.Filter
-                            )
-                            TopBarActionButton(
-                                onClick = {
-                                    viewModel.onIntent(SearchIntent.OpenSourceManage)
-                                },
-                                imageVector = AppIcons.Settings,
-                            )
-                        }
+                        TopBarAnimatedActionButton(
+                            checked = state.isPrecisionSearch,
+                            onCheckedChange = { checked ->
+                                viewModel.onIntent(SearchIntent.TogglePrecision(checked))
+                            },
+                            iconChecked = AppIcons.PrecisionSearch,
+                            iconUnchecked = AppIcons.UnPrecisionSearch,
+                            activeText = stringResource(R.string.precision_search),
+                            inactiveText = stringResource(R.string.search),
+                        )
+                        TopBarActionButton(
+                            onClick = {
+                                viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
+                            },
+                            imageVector = AppIcons.Filter
+                        )
+                        TopBarActionButton(
+                            onClick = {
+                                viewModel.onIntent(SearchIntent.OpenSourceManage)
+                            },
+                            imageVector = AppIcons.Settings,
+                        )
                     },
                     scrollBehavior = scrollBehavior
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
-                AppSearchBar(
-                    modifier = Modifier.fillMaxWidth(),
-                    query = queryInput,
-                    onQueryChange = { queryInput = it },
-                    onSearch = submitSearch,
-                    expanded = searchExpanded,
-                    onExpandedChange = { searchExpanded = it },
-                    label = searchLabel,
-                    placeholder = { Text(text = searchLabel) },
-                    leadingIcon = {
-                        TopBarActionButton(
-                            onClick = {
-                                if (searchExpanded) {
-                                    searchExpanded = false
-                                }
-                            },
-                            imageVector = if (searchExpanded) AppIcons.Back else AppIcons.Search,
-                            contentDescription = if (searchExpanded) stringResource(R.string.search) else stringResource(
-                                R.string.search
-                            )
-                        )
-                    },
-                    trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (queryInput.isNotEmpty()) {
-                                TopBarActionButton(
-                                    onClick = {
-                                        queryInput = ""
-                                        viewModel.onIntent(SearchIntent.UpdateQuery(""))
-                                    },
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.clear)
-                                )
-                            }
-                            TopBarAnimatedActionButton(
-                                checked = state.isPrecisionSearch,
-                                onCheckedChange = { checked ->
-                                    viewModel.onIntent(SearchIntent.TogglePrecision(checked))
-                                },
-                                iconChecked = AppIcons.PrecisionSearch,
-                                iconUnchecked = AppIcons.UnPrecisionSearch,
-                                activeText = stringResource(R.string.precision_search),
-                                inactiveText = stringResource(R.string.search),
-                            )
-                            if (searchExpanded) {
-                                TopBarActionButton(
-                                    onClick = {
-                                        viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
-                                    },
-                                    imageVector = AppIcons.Filter,
-                                    contentDescription = stringResource(R.string.search_select_group)
-                                )
-                                TopBarActionButton(
-                                    onClick = {
-                                        viewModel.onIntent(SearchIntent.OpenSourceManage)
-                                    },
-                                    imageVector = AppIcons.Settings,
-                                    contentDescription = stringResource(R.string.book_source_manage)
-                                )
-                            }
-                        }
-                    },
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .adaptiveHorizontalPadding()
                 ) {
-                    SearchSuggestionPanel(
-                        state = state,
-                        onUseHistory = { keyword ->
-                            queryInput = keyword
-                            viewModel.onIntent(SearchIntent.UseHistoryKeyword(keyword))
-                            searchExpanded = false
+                    SearchBar(
+                        query = queryInput,
+                        onQueryChange = { queryInput = it },
+                        onSearch = submitSearch,
+                        placeholder = searchLabel,
+                        trailingIcon = {
+                            Row(
+                                modifier = Modifier.padding(end = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (queryInput.isNotEmpty()) {
+                                    TopBarActionButton(
+                                        onClick = {
+                                            queryInput = ""
+                                            viewModel.onIntent(SearchIntent.UpdateQuery(""))
+                                        },
+                                        imageVector = AppIcons.Close,
+                                        contentDescription = stringResource(R.string.clear)
+                                    )
+                                }
+                            }
                         },
-                        onDeleteHistory = { viewModel.onIntent(SearchIntent.DeleteHistory(it)) },
-                        onOpenBook = {
-                            viewModel.onIntent(SearchIntent.OpenBookshelfBook(it))
-                            searchExpanded = false
-                        },
-                        onClearHistory = {
-                            viewModel.onIntent(SearchIntent.SetClearHistoryDialogVisible(true))
-                        },
-                        modifier = Modifier.fillMaxSize(),
                     )
                 }
             }
@@ -330,73 +287,113 @@ fun SearchScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (showResultCountCard || showSourceProgressCard) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 36.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (showResultCountCard) {
-                        TextCard(
-                            modifier = Modifier.weight(1f),
-                            icon = AppIcons.Search,
-                            text = "搜索结果 ${state.results.size}"
-                        )
-                    }
-                    if (showSourceProgressCard) {
-                        TextCard(
-                            modifier = Modifier.weight(1f),
-                            icon = AppIcons.Filter,
-                            text = "已检索源 ${state.processedSources}/${state.totalSources}"
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (state.results.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    SearchResultFooter(
-                        isSearching = state.isSearching,
-                        hasMore = state.hasMore,
-                        hasResult = false,
-                        committedQuery = state.committedQuery,
-                        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+            AnimatedContent(
+                targetState = showSuggestionPanel,
+                label = "SearchBodyTransition",
+                modifier = Modifier.fillMaxSize()
+            ) { isSuggestionVisible ->
+                if (isSuggestionVisible) {
+                    SearchSuggestionPanel(
+                        state = state,
+                        onUseHistory = { keyword ->
+                            queryInput = keyword
+                            viewModel.onIntent(SearchIntent.UseHistoryKeyword(keyword))
+                        },
+                        onDeleteHistory = { viewModel.onIntent(SearchIntent.DeleteHistory(it)) },
+                        onOpenBook = {
+                            viewModel.onIntent(SearchIntent.OpenBookshelfBook(it))
+                        },
+                        onClearHistory = {
+                            viewModel.onIntent(SearchIntent.SetClearHistoryDialogVisible(true))
+                        },
+                        modifier = Modifier.fillMaxSize(),
                     )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(items = state.results, key = { it.bookUrl }) { book ->
-                        val shelfStateFlow = remember(book.bookUrl) {
-                            viewModel.getBookShelfStateFlow(book)
-                        }
-                        SearchBookListItem(
-                            book = book,
-                            shelfState = shelfStateFlow,
-                            onClick = {
-                                viewModel.onIntent(SearchIntent.OpenSearchBook(book))
-                            }
-                        )
-                    }
+                } else {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                    item {
-                        SearchResultFooter(
-                            isSearching = state.isSearching,
-                            hasMore = state.hasMore,
-                            hasResult = true,
-                            committedQuery = state.committedQuery,
-                            onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
-                        )
+                            if (state.results.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SearchResultFooter(
+                                        isSearching = state.isSearching,
+                                        hasMore = state.hasMore,
+                                        hasResult = false,
+                                        committedQuery = state.committedQuery,
+                                        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                    )
+                                }
+                            }
+                        }
+
+                        if (state.results.isNotEmpty()) {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                state = listState,
+                                contentPadding = adaptiveContentPaddingOnlyVertical(
+                                    top = 48.dp,
+                                    bottom = 8.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                items(items = state.results, key = { it.bookUrl }) { book ->
+                                    val shelfStateFlow = remember(book.bookUrl) {
+                                        viewModel.getBookShelfStateFlow(book)
+                                    }
+                                    SearchBookListItem(
+                                        book = book,
+                                        shelfState = shelfStateFlow,
+                                        onClick = {
+                                            viewModel.onIntent(SearchIntent.OpenSearchBook(book))
+                                        }
+                                    )
+                                }
+
+                                item {
+                                    SearchResultFooter(
+                                        isSearching = state.isSearching,
+                                        hasMore = state.hasMore,
+                                        hasResult = true,
+                                        committedQuery = state.committedQuery,
+                                        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                    )
+                                }
+                            }
+                        }
+
+                        TopFloatingStickyItem(
+                            item = if (showResultCountCard || showSourceProgressCard) {
+                                SearchFloatingSummary(
+                                    resultText = if (showResultCountCard) "结果 ${state.results.size}" else null,
+                                    sourceText = if (showSourceProgressCard) " · 进度 ${state.processedSources}/${state.totalSources}" else null,
+                                )
+                            } else {
+                                null
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 6.dp),
+                        ) { summary ->
+                            NormalCard(
+                                cornerRadius = 16.dp,
+                                containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                                contentColor = LegadoTheme.colorScheme.onCardContainer
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                ) {
+                                    summary.resultText?.let { text ->
+                                        AppText(text = text, style = LegadoTheme.typography.labelSmallEmphasized)
+                                    }
+                                    summary.sourceText?.let { text ->
+                                        AppText(text = text, style = LegadoTheme.typography.labelSmallEmphasized)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -520,6 +517,11 @@ fun SearchScreen(
     }
 }
 
+private data class SearchFloatingSummary(
+    val resultText: String?,
+    val sourceText: String?,
+)
+
 @Composable
 private fun SearchSuggestionPanel(
     state: SearchUiState,
@@ -565,7 +567,10 @@ private fun SearchSuggestionPanel(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     AppIcon(AppIcons.History, contentDescription = null)
                     Spacer(modifier = Modifier.width(6.dp))
                     AppText(
@@ -636,9 +641,16 @@ private fun SearchResultFooter(
     ) {
         when {
             isSearching -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.width(18.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
+                        modifier = Modifier.size(18.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                     AppText(text = stringResource(R.string.is_loading))
                 }
             }

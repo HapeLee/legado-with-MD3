@@ -39,7 +39,7 @@ fun CollapsibleHeader(
         modifier = modifier
             .fillMaxWidth()
             .adaptiveHorizontalPadding(vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
+        cornerRadius = 12.dp,
         containerColor = LegadoTheme.colorScheme.surfaceContainer,
         onClick = onToggle
     ) {

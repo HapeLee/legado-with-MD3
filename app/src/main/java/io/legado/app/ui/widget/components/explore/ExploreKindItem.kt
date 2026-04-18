@@ -36,12 +36,12 @@ fun ExploreKindItem(
         LocalMinimumInteractiveComponentSize provides Dp.Unspecified
     ) {
 
-        val shape = MaterialTheme.shapes.medium
+        val cornerRadius = 12.dp
 
         if (isClickable) {
             GlassCard(
                 onClick = onClick,
-                shape = shape,
+                cornerRadius = cornerRadius,
                 containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.onSurface,
                 modifier = modifier
@@ -54,7 +54,7 @@ fun ExploreKindItem(
             }
         } else {
             GlassCard(
-                shape = shape,
+                cornerRadius = cornerRadius,
                 containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.primary,
                 modifier = modifier,

@@ -564,7 +564,7 @@ private fun PathNavigationBar(
         GlassCard(
             modifier = Modifier.weight(1f),
             containerColor = LegadoTheme.colorScheme.surfaceContainer,
-            shape = MaterialTheme.shapes.medium
+            cornerRadius = 12.dp,
         ) {
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),

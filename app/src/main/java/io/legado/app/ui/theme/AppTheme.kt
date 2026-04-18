@@ -180,7 +180,8 @@ fun AppTheme(
                         surfaceContainer = miuixColorScheme.surfaceContainer,
                         surfaceContainerHigh = miuixColorScheme.surfaceContainerHigh,
                         surfaceContainerHighest = miuixColorScheme.surfaceContainerHighest,
-                        surfaceContainerLow = miuixColorScheme.secondaryContainer,
+                        surfaceContainerLow = miuixColorScheme.secondaryContainer.copy(alpha = 0.32f)
+                            .compositeOver(miuixColorScheme.surface),
                         surfaceContainerLowest = miuixColorScheme.background,
 
                         primaryFixed = miuixColorScheme.primaryContainer,

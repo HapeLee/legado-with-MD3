@@ -249,6 +249,7 @@
     <string name="threads_num_title">Number of concurrent tasks</string>
     <string name="change_icon">Change icon</string>
     <string name="remove_from_bookshelf">In library</string>
+    <string name="already_in_bookshelf">Already in Bookshelf</string>
     <string name="start_read">Start reading</string>
     <string name="data_loading">Loading…</string>
     <string name="load_error_retry">Load failed, tap to retry</string>
@@ -398,6 +399,7 @@
     <string name="imm_navigation_bar_s">The navigation bar becomes transparent</string>
     <string name="add_to_bookshelf">Add to Bookshelf</string>
     <string name="click_to_remove">Tap to remove</string>
+    <string name="long_press_group">Long press to group</string>
     <string name="continue_read">Continue reading</string>
     <string name="cover_path">Cover path</string>
     <string name="page_anim_cover">Cover</string>

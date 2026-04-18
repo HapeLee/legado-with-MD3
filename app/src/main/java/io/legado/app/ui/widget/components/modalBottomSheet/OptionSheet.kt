@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -58,14 +59,14 @@ fun RowScope.OptionCard(
     text: String,
     onClick: () -> Unit
 ) {
-    Surface(
+    NormalCard(
         onClick = onClick,
         modifier = Modifier
             .weight(1f)
             .height(100.dp),
-        shape = MaterialTheme.shapes.medium,
-        color = LegadoTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 2.dp
+        cornerRadius = 12.dp,
+        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        elevation = 2.dp
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),

@@ -77,6 +77,7 @@ import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
@@ -568,9 +569,9 @@ fun BookshelfScreen(
 
     if (uiState.isLoading) {
         Dialog(onDismissRequest = {}) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            NormalCard(
+                cornerRadius = 12.dp,
+                containerColor = LegadoTheme.colorScheme.surfaceContainerHigh
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),

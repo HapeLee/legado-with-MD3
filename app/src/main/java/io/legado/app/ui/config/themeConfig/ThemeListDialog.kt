@@ -92,7 +92,7 @@ fun ThemeListDialog(
                         },
                         modifier = Modifier
                             .fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
+                        cornerRadius = 20.dp,
                         containerColor = if (item.primaryColor.toColorInt() == context.primaryColor) {
                             MaterialTheme.colorScheme.secondaryContainer
                         } else {

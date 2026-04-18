@@ -7,6 +7,7 @@ import io.legado.app.data.dao.ReadRecordDao
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.Date
@@ -49,6 +50,27 @@ class ReadRecordRepository(
 
     fun getAllSessions(): Flow<List<ReadRecordSession>> {
         return dao.getAllSessions(getCurrentDeviceId())
+    }
+
+    fun getBookSessions(bookName: String, bookAuthor: String): Flow<List<ReadRecordSession>> {
+        return dao.getSessionsByBookFlow(getCurrentDeviceId(), bookName, bookAuthor)
+    }
+
+    fun getBookTimelineDays(bookName: String, bookAuthor: String): Flow<List<ReadRecordTimelineDay>> {
+        return getBookSessions(bookName, bookAuthor).map { sessions ->
+            sessions.groupBy { DateUtil.format(Date(it.startTime), "yyyy-MM-dd") }
+                .toSortedMap(compareByDescending { it })
+                .map { (date, daySessions) ->
+                    ReadRecordTimelineDay(
+                        date = date,
+                        sessions = daySessions.sortedByDescending { it.startTime }
+                    )
+                }
+        }
+    }
+
+    fun getBookReadTime(bookName: String, bookAuthor: String): Flow<Long> {
+        return dao.getReadTimeFlow(getCurrentDeviceId(), bookName, bookAuthor).map { it ?: 0L }
     }
 
     suspend fun getMergeCandidates(targetRecord: ReadRecord): List<ReadRecord> {

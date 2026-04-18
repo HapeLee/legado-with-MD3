@@ -53,7 +53,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.SearchBarSection
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
 import io.legado.app.ui.widget.components.button.TopBarActionButton
@@ -190,7 +190,7 @@ fun AllBookmarkScreen(
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
-                    SearchBarSection(
+                    SearchBar(
                         query = searchText,
                         onQueryChange = { viewModel.onSearchQueryChanged(it) },
                         placeholder = "搜索...",
@@ -258,7 +258,7 @@ fun AllBookmarkScreen(
                                             .animateItem()
                                             .fillMaxWidth()
                                             .padding(vertical = 4.dp),
-                                        shape = MaterialTheme.shapes.medium,
+                                        cornerRadius = 12.dp,
                                         containerColor = LegadoTheme.colorScheme.surfaceContainer
                                     ) {
                                         BookmarkGroupHeaderContent(

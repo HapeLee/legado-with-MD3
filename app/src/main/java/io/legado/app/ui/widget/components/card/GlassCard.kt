@@ -1,17 +1,20 @@
 package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CardElevation
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -25,12 +28,12 @@ import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
 private fun BaseCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    shape: Shape = CardDefaults.shape,
+    onLongClick: (() -> Unit)? = null,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
     pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
-    elevation: CardElevation = CardDefaults.cardElevation(),
+    elevation: Dp = 0.dp,
     border: BorderStroke? = null,
     alpha: Float = 1f,
     content: @Composable ColumnScope.() -> Unit
@@ -47,6 +50,7 @@ private fun BaseCard(
                 pressFeedbackType = pressFeedbackType,
                 showIndication = true,
                 onClick = onClick,
+                onLongPress = onLongClick,
                 content = content,
                 colors = colors
             )
@@ -67,25 +71,26 @@ private fun BaseCard(
             disabledContainerColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f),
             disabledContentColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f)
         )
-        if (onClick != null) {
-            Card(
-                modifier = modifier,
-                shape = RoundedCornerShape(cornerRadius),
-                colors = colors,
-                elevation = elevation,
-                border = border,
-                onClick = onClick,
-                content = content
-            )
+        val clickableModifier = if (onClick != null || onLongClick != null) {
+            modifier
+                .clip(RoundedCornerShape(cornerRadius))
+                .combinedClickable(
+                    onClick = { onClick?.invoke() },
+                    onLongClick = onLongClick
+                )
         } else {
-            Card(
-                modifier = modifier,
-                shape = RoundedCornerShape(cornerRadius),
-                colors = colors,
-                elevation = elevation,
-                border = border,
-                content = content
-            )
+            modifier
+        }
+        Surface(
+            modifier = clickableModifier,
+            shape = RoundedCornerShape(cornerRadius),
+            color = colors.containerColor,
+            contentColor = colors.contentColor,
+            tonalElevation = 0.dp,
+            shadowElevation = elevation,
+            border = border
+        ) {
+            Column(content = content)
         }
     }
 }
@@ -95,19 +100,19 @@ private fun BaseCard(
 fun GlassCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    shape: Shape = CardDefaults.shape,
+    onLongClick: (() -> Unit)? = null,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
     pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
-    elevation: CardElevation = CardDefaults.cardElevation(),
+    elevation: Dp = 0.dp,
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     BaseCard(
         modifier = modifier,
         onClick = onClick,
-        shape = shape,
+        onLongClick = onLongClick,
         cornerRadius = cornerRadius,
         pressFeedbackType = pressFeedbackType,
         containerColor = containerColor,
@@ -124,19 +129,19 @@ fun GlassCard(
 fun NormalCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    shape: Shape = CardDefaults.shape,
+    onLongClick: (() -> Unit)? = null,
     cornerRadius: Dp = MiuixCardDefaults.CornerRadius,
     pressFeedbackType: PressFeedbackType = PressFeedbackType.None,
     containerColor: Color? = null,
     contentColor: Color? = null,
-    elevation: CardElevation = CardDefaults.cardElevation(),
+    elevation: Dp = 0.dp,
     border: BorderStroke? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
     BaseCard(
         modifier = modifier,
         onClick = onClick,
-        shape = shape,
+        onLongClick = onLongClick,
         cornerRadius = cornerRadius,
         pressFeedbackType = pressFeedbackType,
         containerColor = containerColor,

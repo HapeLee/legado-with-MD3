@@ -36,7 +36,9 @@ import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -87,9 +89,8 @@ fun CoverManageSheet(
             ) {
                 items(coverList) { path ->
                     Box {
-                        Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            tonalElevation = 2.dp
+                        NormalCard(
+                            cornerRadius = 12.dp
                         ) {
                             AsyncImage(
                                 model = path,
@@ -122,16 +123,16 @@ fun CoverManageSheet(
                 }
 
                 item {
-                    Surface(
+                    NormalCard(
                         onClick = { showFilePicker = true },
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        cornerRadius = 12.dp,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(0.7f)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(
+                            AppIcon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add",
                                 modifier = Modifier.size(32.dp),

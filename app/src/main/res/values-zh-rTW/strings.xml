@@ -225,6 +225,7 @@
     <string name="threads_num_title">更新和搜尋執行緒數，太多會卡頓</string>
     <string name="change_icon">切換圖示</string>
     <string name="remove_from_bookshelf">刪除書籍</string>
+    <string name="already_in_bookshelf">已在書架</string>
     <string name="start_read">開始閱讀</string>
     <string name="data_loading">載入資料中…</string>
     <string name="load_error_retry">載入失敗，點擊重試</string>
@@ -373,6 +374,7 @@
     <string name="imm_navigation_bar_s">導航欄顏色透明</string>
     <string name="add_to_bookshelf">放入書架</string>
     <string name="click_to_remove">點擊刪除</string>
+    <string name="long_press_group">長按分組</string>
     <string name="continue_read">繼續閱讀</string>
     <string name="cover_path">封面地址</string>
     <string name="page_anim_cover">覆蓋</string>

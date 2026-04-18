@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -88,9 +87,9 @@ fun SelectionItemCard(
         onClick = onToggleSelection,
         modifier = modifier
             .fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
+        cornerRadius = 12.dp,
         containerColor = animatedContainerColor,
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        elevation = elevation
     ) {
         SelectionItemCardContent(
             title = title,

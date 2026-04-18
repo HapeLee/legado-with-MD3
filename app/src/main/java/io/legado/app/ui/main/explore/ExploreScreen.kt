@@ -345,7 +345,7 @@ fun ExploreSourceHeader(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        shape = MaterialTheme.shapes.medium,
+        cornerRadius = 12.dp,
         containerColor = containerColor
     ) {
         ListItem(
