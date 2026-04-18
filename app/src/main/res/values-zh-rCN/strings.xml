@@ -1434,4 +1434,5 @@
 	<string name="subtitle_scale">次行缩放</string>
 	<string name="subtitle_margin">次行距离</string>
 	<string name="heading_spacing">标题段距</string>
+    <string name="follow_read_background">跟随阅读背景</string>
 </resources>

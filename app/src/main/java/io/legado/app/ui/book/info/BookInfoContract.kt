@@ -11,6 +11,7 @@ data class BookInfoUiState(
     val webFiles: List<BookInfoWebFile> = emptyList(),
     val kindLabels: List<String> = emptyList(),
     val groupNames: String? = null,
+    val hasCustomGroup: Boolean = false,
     val inBookshelf: Boolean = false,
     val bookSource: BookSource? = null,
     val isTocLoading: Boolean = true,

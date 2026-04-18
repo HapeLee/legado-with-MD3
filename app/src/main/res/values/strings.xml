@@ -1388,21 +1388,6 @@
     <string name="read_change_all_s">Otherwise, Only Change Single-Chapter Source.</string>
     <string name="show_tip">显示书籍类型</string>
     <string name="show_book_count">显示分组书籍数量</string>
-    <string name="is_reading">在读</string>
-    <string name="is_unread">未读</string>
-    <string name="is_read_finished">已读</string>
-    <string name="manga">漫画</string>
-    <string name="noval">小说</string>
-    <string name="cover_show_shadow">显示字体阴影</string>
-    <string name="cover_show_stroke">显示字体描边</string>
-    <string name="default_color">使用默认字体颜色</string>
-    <string name="enable_slider_vibrator">滑动进度条时震动</string>
-    <string name="edit_remark">编辑备注</string>
-    <string name="book_remark">书籍备注</string>
-    <string name="save_to_local">保存至本地</string>
-    <string name="select_operation">选择操作</string>
-    <string name="text_accent_color">强调</string>
-    <string name="read_color">颜色样式</string>
     <string name="is_reading">Reading</string>
     <string name="is_unread">Unread</string>
     <string name="is_read_finished">Finished</string>
@@ -1453,5 +1438,5 @@
 	<string name="subtitle_scale">Subtitle scale</string>
 	<string name="subtitle_margin">Subtitle margin</string>
 	<string name="heading_spacing">Heading spacing</string>
-	<string name="follow_background">Follow Background</string>
+	<string name="follow_read_background">Follow Background</string>
 </resources>

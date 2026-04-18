@@ -138,7 +138,7 @@ fun GroupSelectSheet(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             LazyColumn(
-                modifier = Modifier.heightIn(max = 600.dp),
+                modifier = Modifier.heightIn(max = 560.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(groups, key = { it.groupId }) { group ->

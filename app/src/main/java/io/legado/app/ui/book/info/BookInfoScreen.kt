@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
@@ -264,7 +265,7 @@ private fun BookInfoScreenContent(
                                     .padding(bottom = 24.dp)
                             ) {
                                 BookInfoActions(
-                                    book = book,
+                                    hasCustomGroup = state.hasCustomGroup,
                                     inBookshelf = state.inBookshelf,
                                     onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
                                     onTocClick = { onIntent(BookInfoIntent.TocClick) },
@@ -735,7 +736,7 @@ private fun BookInfoHeader(
 
 @Composable
 private fun BookInfoActions(
-    book: Book,
+    hasCustomGroup: Boolean,
     inBookshelf: Boolean,
     onShelfClick: () -> Unit,
     onTocClick: () -> Unit,
@@ -791,7 +792,7 @@ private fun BookInfoActions(
         )
         BookInfoActionCard(
             modifier = Modifier.weight(1f),
-            icon = if (book.group > 0) Icons.Default.Bookmark else Icons.Outlined.Bookmark,
+            icon = if (hasCustomGroup) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
             label = stringResource(R.string.change_group),
             onClick = onGroupClick
         )

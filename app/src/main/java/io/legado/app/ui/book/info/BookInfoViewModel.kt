@@ -70,6 +70,7 @@ class BookInfoViewModel(
     private var currentWebFiles: List<BookInfoWebFile> = emptyList()
     private var currentKindLabels: List<String> = emptyList()
     private var currentGroupNames: String? = null
+    private var currentHasCustomGroup = false
     private var chapterChanged = false
 
     var inBookshelf = false
@@ -602,6 +603,7 @@ class BookInfoViewModel(
             currentBook = it
             currentChapterList = toc
             currentGroupNames = null
+            currentHasCustomGroup = false
             currentKindLabels = emptyList()
             syncUiState(isTocLoading = false)
             refreshMeta(it)
@@ -616,6 +618,7 @@ class BookInfoViewModel(
         currentWebFiles = emptyList()
         currentKindLabels = emptyList()
         currentGroupNames = null
+        currentHasCustomGroup = false
         syncUiState(isTocLoading = true)
         refreshMeta(book)
         upCoverByRule(book)
@@ -668,11 +671,16 @@ class BookInfoViewModel(
                     kinds.add(ConvertUtils.formatFileSize(size))
                 }
             }
+            val userGroupIds = appDb.bookGroupDao.idsSum
+            val groupAnd = userGroupIds and book.group
+            val hasCustomGroup = book.group > 0L && groupAnd != 0L
             val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
-            kinds.toList() to groupNames.ifBlank { null }
+            val normalizedGroupNames = groupNames.ifBlank { null }
+            Triple(kinds.toList(), normalizedGroupNames, hasCustomGroup)
         }.onSuccess {
             currentKindLabels = it.first
             currentGroupNames = it.second
+            currentHasCustomGroup = it.third
             syncUiState()
         }
     }
@@ -803,6 +811,7 @@ class BookInfoViewModel(
         currentBook?.let { book ->
             book.group = groupId
             currentGroupNames = null
+            currentHasCustomGroup = false
             refreshMeta(book)
             if (inBookshelf) {
                 saveBook(book)
@@ -1100,6 +1109,7 @@ class BookInfoViewModel(
                 webFiles = currentWebFiles,
                 kindLabels = currentKindLabels,
                 groupNames = currentGroupNames,
+                hasCustomGroup = currentHasCustomGroup,
                 inBookshelf = inBookshelf,
                 bookSource = bookSource,
                 isTocLoading = isTocLoading,

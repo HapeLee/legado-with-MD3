@@ -226,7 +226,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
-                android:text="@string/follow_background" />
+                android:text="@string/follow_read_background" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/bottom_mode3"
