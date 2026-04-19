@@ -115,6 +115,7 @@ fun ThemeConfigScreen(
     var useMiuixMonet by remember { mutableStateOf(ThemeConfig.useMiuixMonet) }
     var showRestartDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
+    var pickNightSeedColor by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
     var showThemeListDialog by remember { mutableStateOf(false) }
     var saveThemeKey by remember { mutableStateOf<String?>(null) }
@@ -122,6 +123,7 @@ fun ThemeConfigScreen(
 
     val fontScaleValue = remember { mutableFloatStateOf(ThemeConfig.fontScale.toFloat()) }
     val primaryColorValue = remember { mutableIntStateOf(ThemeConfig.cPrimary) }
+    val nightPrimaryColorValue = remember { mutableIntStateOf(ThemeConfig.cNPrimary) }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -163,7 +165,9 @@ fun ThemeConfigScreen(
                         value = selectedTheme,
                         isDark = isDarkTheme,
                         isAmoled = ThemeConfig.isPureBlack,
-                        paletteStyle = ThemeConfig.paletteStyle
+                        paletteStyle = ThemeConfig.paletteStyle,
+                        customLightSeedColor = primaryColorValue.intValue,
+                        customNightSeedColor = nightPrimaryColorValue.intValue
                     )
                 }
             }
@@ -255,6 +259,8 @@ fun ThemeConfigScreen(
                         isDark = isDarkTheme,
                         isAmoled = ThemeConfig.isPureBlack,
                         paletteStyle = ThemeConfig.paletteStyle,
+                        customLightSeedColor = primaryColorValue.intValue,
+                        customNightSeedColor = nightPrimaryColorValue.intValue,
                         onThemeSelected = { theme ->
                             if (theme == "13") {
                                 val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
@@ -326,27 +332,25 @@ fun ThemeConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.custom_theme)) {
                     ClickableSettingItem(
                         title = stringResource(R.string.seed_color),
-                        option = if (primaryColorValue.intValue != 0) "#${
-                            Integer.toHexString(
-                                primaryColorValue.intValue
-                            ).uppercase()
-                        }" else stringResource(R.string.click_to_select),
-                        onClick = { showColorPicker = true },
-                        trailingContent = {
-                            if (primaryColorValue.intValue != 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(primaryColorValue.intValue))
-                                        .border(
-                                            1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
-                                            CircleShape
-                                        )
-                                )
-                            }
-                        }
+                        description = stringResource(R.string.day),
+                        option = formatColorOption(primaryColorValue.intValue)
+                            ?: stringResource(R.string.click_to_select),
+                        onClick = {
+                            pickNightSeedColor = false
+                            showColorPicker = true
+                        },
+                        trailingContent = { ColorSwatch(colorValue = primaryColorValue.intValue) }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.seed_color),
+                        description = stringResource(R.string.night),
+                        option = formatColorOption(nightPrimaryColorValue.intValue)
+                            ?: stringResource(R.string.click_to_select),
+                        onClick = {
+                            pickNightSeedColor = true
+                            showColorPicker = true
+                        },
+                        trailingContent = { ColorSwatch(colorValue = nightPrimaryColorValue.intValue) }
                     )
                     DropdownListSettingItem(
                         title = stringResource(R.string.palette_style),
@@ -609,20 +613,29 @@ fun ThemeConfigScreen(
 
     ColorPickerSheet(
         show = showColorPicker,
-        initialColor = primaryColorValue.value,
+        initialColor = if (pickNightSeedColor) {
+            nightPrimaryColorValue.value
+        } else {
+            primaryColorValue.value
+        },
         onDismissRequest = { showColorPicker = false },
         onColorSelected = { color ->
-            primaryColorValue.value = color
-            ThemeConfig.cPrimary = color
-            ThemeStore.editTheme(context)
-                .primaryColor(color)
-                .apply()
-            DynamicColors.applyToActivitiesIfAvailable(
-                context.applicationContext as android.app.Application,
-                DynamicColorsOptions.Builder()
-                    .setContentBasedSource(context.primaryColor)
-                    .build()
-            )
+            if (pickNightSeedColor) {
+                nightPrimaryColorValue.value = color
+                ThemeConfig.cNPrimary = color
+            } else {
+                primaryColorValue.value = color
+                ThemeConfig.cPrimary = color
+                ThemeStore.editTheme(context)
+                    .primaryColor(color)
+                    .apply()
+                DynamicColors.applyToActivitiesIfAvailable(
+                    context.applicationContext as android.app.Application,
+                    DynamicColorsOptions.Builder()
+                        .setContentBasedSource(context.primaryColor)
+                        .build()
+                )
+            }
         }
     )
 
@@ -727,6 +740,8 @@ fun ThemeColorSelector(
     isDark: Boolean,
     isAmoled: Boolean,
     paletteStyle: String?,
+    customLightSeedColor: Int,
+    customNightSeedColor: Int,
     onThemeSelected: (String) -> Unit
 ) {
     LazyRow(
@@ -742,6 +757,8 @@ fun ThemeColorSelector(
                 isDark = isDark,
                 isAmoled = isAmoled,
                 paletteStyle = paletteStyle,
+                customLightSeedColor = customLightSeedColor,
+                customNightSeedColor = customNightSeedColor,
                 onClick = { onThemeSelected(value) }
             )
         }
@@ -758,9 +775,19 @@ fun ThemeColorButton(
     isDark: Boolean,
     isAmoled: Boolean,
     paletteStyle: String?,
+    customLightSeedColor: Int,
+    customNightSeedColor: Int,
     onClick: () -> Unit
 ) {
-    val colors = getThemeColorPalette(context, value, isDark, isAmoled, paletteStyle)
+    val colors = getThemeColorPalette(
+        context = context,
+        value = value,
+        isDark = isDark,
+        isAmoled = isAmoled,
+        paletteStyle = paletteStyle,
+        customLightSeedColor = customLightSeedColor,
+        customNightSeedColor = customNightSeedColor
+    )
     val borderWidth by animateDpAsState(
         targetValue = if (isSelected) 2.dp else 0.dp,
         label = "borderWidth"
@@ -849,9 +876,19 @@ fun ThemeCard(
     value: String,
     isDark: Boolean,
     isAmoled: Boolean,
-    paletteStyle: String?
+    paletteStyle: String?,
+    customLightSeedColor: Int,
+    customNightSeedColor: Int
 ) {
-    val colors = getThemeColors(context, value, isDark, isAmoled, paletteStyle)
+    val colors = getThemeColors(
+        context = context,
+        value = value,
+        isDark = isDark,
+        isAmoled = isAmoled,
+        paletteStyle = paletteStyle,
+        customLightSeedColor = customLightSeedColor,
+        customNightSeedColor = customNightSeedColor
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
@@ -924,6 +961,27 @@ fun ThemeCard(
     }
 }
 
+private fun formatColorOption(colorValue: Int): String? {
+    if (colorValue == 0) return null
+    return "#${Integer.toHexString(colorValue).uppercase()}"
+}
+
+@Composable
+private fun ColorSwatch(colorValue: Int) {
+    if (colorValue == 0) return
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(Color(colorValue))
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant,
+                CircleShape
+            )
+    )
+}
+
 data class ThemeColorPalette(
     val primary: Color,
     val secondary: Color,
@@ -949,16 +1007,20 @@ private fun getThemeColorPalette(
     isDark: Boolean,
     isAmoled: Boolean,
     paletteStyle: String?,
-    materialVersion: String? = null
+    materialVersion: String? = null,
+    customLightSeedColor: Int = 0,
+    customNightSeedColor: Int = 0
 ): ThemeColorPalette {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
+    val customSeedColor = if (isDark) customNightSeedColor else customLightSeedColor
     val colorScheme = ThemeEngine.getColorScheme(
         context = context,
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,
         paletteStyle = paletteStyle,
-        materialVersion = materialVersion
+        materialVersion = materialVersion,
+        customSeedColor = customSeedColor
     )
 
     return ThemeColorPalette(
@@ -976,16 +1038,20 @@ private fun getThemeColors(
     isDark: Boolean,
     isAmoled: Boolean,
     paletteStyle: String?,
-    materialVersion: String? = null
+    materialVersion: String? = null,
+    customLightSeedColor: Int = 0,
+    customNightSeedColor: Int = 0
 ): ThemeColors {
     val appThemeMode = ThemeResolver.resolveThemeMode(value)
+    val customSeedColor = if (isDark) customNightSeedColor else customLightSeedColor
     val colorScheme = ThemeEngine.getColorScheme(
         context = context,
         mode = appThemeMode,
         darkTheme = isDark,
         isAmoled = isAmoled,
         paletteStyle = paletteStyle,
-        materialVersion = materialVersion
+        materialVersion = materialVersion,
+        customSeedColor = customSeedColor
     )
 
     return ThemeColors(

@@ -45,7 +45,8 @@ object ThemeEngine {
         isAmoled: Boolean,
         paletteStyle: String?,
         materialVersion: String? = null,
-        forceOpaque: Boolean = false
+        forceOpaque: Boolean = false,
+        customSeedColor: Int? = null
     ): ColorScheme {
         val resolvedMode = resolveMode(mode = mode, forceOpaque = forceOpaque)
         val baseColorScheme = resolveBaseColorScheme(
@@ -53,7 +54,8 @@ object ThemeEngine {
             mode = resolvedMode,
             darkTheme = darkTheme,
             paletteStyle = paletteStyle,
-            materialVersion = materialVersion
+            materialVersion = materialVersion,
+            customSeedColor = customSeedColor
         )
 
         return baseColorScheme
@@ -77,14 +79,15 @@ object ThemeEngine {
         mode: AppThemeMode,
         darkTheme: Boolean,
         paletteStyle: String?,
-        materialVersion: String?
+        materialVersion: String?,
+        customSeedColor: Int?
     ): ColorScheme {
         if (mode == AppThemeMode.Dynamic) {
             return resolveDynamicColorScheme(context = context, darkTheme = darkTheme)
         }
         if (mode == AppThemeMode.Custom) {
             return resolveCustomColorScheme(
-                seedColor = context.primaryColor,
+                seedColor = customSeedColor ?: context.primaryColor,
                 darkTheme = darkTheme,
                 paletteStyle = paletteStyle,
                 materialVersion = materialVersion

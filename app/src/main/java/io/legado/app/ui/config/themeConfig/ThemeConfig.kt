@@ -60,6 +60,10 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, "")
     }
 
+    var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
+
     var customContrast by prefDelegate(PreferKey.customContrast, "Default") {
         postEvent(EventBus.RECREATE, "")
     }
