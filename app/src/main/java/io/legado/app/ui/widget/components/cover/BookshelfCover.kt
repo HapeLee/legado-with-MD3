@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Update
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppLinearProgressIndicator
@@ -30,7 +28,7 @@ fun BookshelfCover(
     onLoadFinish: (() -> Unit)? = null
 ) {
     Box(modifier = modifier) {
-        BookCover(
+        CoilBookCover(
             name = name,
             author = author,
             path = path,

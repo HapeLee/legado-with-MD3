@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -41,13 +40,12 @@ import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
 @Composable
-fun BookCover(
+fun CoilBookCover(
     name: String?,
     author: String?,
     path: String?,

@@ -47,7 +47,7 @@ import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.button.TopBarButtonVariant
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
-import io.legado.app.ui.widget.components.cover.BookCover
+import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
@@ -127,7 +127,7 @@ fun BookInfoEditContent(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            BookCover(
+            CoilBookCover(
                 name = uiState.name,
                 author = uiState.author,
                 path = uiState.coverUrl,

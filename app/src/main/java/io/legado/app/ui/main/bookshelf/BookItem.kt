@@ -36,7 +36,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.cover.BookCover
+import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toTimeAgo
@@ -213,7 +213,7 @@ fun BookGroupCover(
             .background(LegadoTheme.colorScheme.surfaceContainer)
     ) {
         if (!coverPath.isNullOrBlank()) {
-            BookCover(
+            CoilBookCover(
                 name = null,
                 author = null,
                 path = coverPath,
@@ -229,7 +229,7 @@ fun BookGroupCover(
                             .padding(1.dp)
                     ) {
                         books.getOrNull(0)?.let {
-                            BookCover(
+                            CoilBookCover(
                                 name = it.name,
                                 author = it.author,
                                 path = it.getDisplayCover(),
@@ -244,7 +244,7 @@ fun BookGroupCover(
                             .padding(1.dp)
                     ) {
                         books.getOrNull(1)?.let {
-                            BookCover(
+                            CoilBookCover(
                                 name = it.name,
                                 author = it.author,
                                 path = it.getDisplayCover(),
@@ -261,7 +261,7 @@ fun BookGroupCover(
                             .padding(1.dp)
                     ) {
                         books.getOrNull(2)?.let {
-                            BookCover(
+                            CoilBookCover(
                                 name = it.name,
                                 author = it.author,
                                 path = it.getDisplayCover(),
@@ -276,7 +276,7 @@ fun BookGroupCover(
                             .padding(1.dp)
                     ) {
                         books.getOrNull(3)?.let {
-                            BookCover(
+                            CoilBookCover(
                                 name = it.name,
                                 author = it.author,
                                 path = it.getDisplayCover(),
