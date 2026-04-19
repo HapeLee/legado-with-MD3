@@ -34,6 +34,7 @@ fun AppTheme(
     val composeEngine = ThemeConfig.composeEngine
     val useMiuixMonet = ThemeConfig.useMiuixMonet
     val customPrimary = ThemeConfig.cPrimary
+    val customNightPrimary = ThemeConfig.cNPrimary
     val colorSchemeMode = ThemeResolver.resolveColorSchemeMode(themeModeValue)
     val miuixColorSchemeMode = remember(themeModeValue, useMiuixMonet) {
         ThemeResolver.resolveMiuixColorSchemeMode(themeModeValue, useMiuixMonet)
@@ -47,21 +48,31 @@ fun AppTheme(
             appThemeMode,
             darkTheme,
             isPureBlack,
+            customPrimary,
+            customNightPrimary,
             paletteStyleValue,
             materialVersion
         ) {
+            val customSeedColor = if (darkTheme) customNightPrimary else customPrimary
             ThemeEngine.getColorScheme(
                 context = context,
                 mode = appThemeMode,
                 darkTheme = darkTheme,
                 isAmoled = isPureBlack,
                 paletteStyle = paletteStyleValue,
-                materialVersion = materialVersion
+                materialVersion = materialVersion,
+                customSeedColor = customSeedColor
             )
         }
 
-    val customSeedColor = remember(customPrimary, colorScheme.primary) {
-        if (customPrimary != 0) Color(customPrimary) else colorScheme.primary
+    val customSeedColor = remember(
+        darkTheme,
+        customPrimary,
+        customNightPrimary,
+        colorScheme.primary
+    ) {
+        val seed = if (darkTheme) customNightPrimary else customPrimary
+        if (seed != 0) Color(seed) else colorScheme.primary
     }
     val themeSeedColor = remember(appThemeMode, customSeedColor, colorScheme.primary) {
         if (appThemeMode == AppThemeMode.Custom) customSeedColor else colorScheme.primary

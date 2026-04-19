@@ -20,6 +20,7 @@ import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.remote.RemoteBook
 import io.legado.app.model.remote.RemoteBookWebDav
+import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -68,7 +69,7 @@ data class RemoteBookUiState(
     val sortKey: RemoteBookSort = RemoteBookSort.Default,
     val sortAscending: Boolean = false,
     val servers: List<Server> = emptyList(),
-    val selectedServerId: Long = AppConfig.remoteServerId
+    val selectedServerId: Long = ImportBookConfig.remoteServerId
 ) : ListUiState<RemoteBookItemUi> {
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
@@ -122,7 +123,7 @@ class RemoteBookViewModel(
         val selectedIds: Set<String> = emptySet(),
         val remoteBookWebDav: RemoteBookWebDav? = null,
         val isDefaultWebdav: Boolean = false,
-        val selectedServerId: Long = AppConfig.remoteServerId
+        val selectedServerId: Long = ImportBookConfig.remoteServerId
     )
 
     private val _state = MutableStateFlow(InternalState())
@@ -212,13 +213,13 @@ class RemoteBookViewModel(
     fun initData(onSuccess: () -> Unit) {
         viewModelScope.launch {
             try {
-                val webDav = repository.createWebDav(AppConfig.remoteServerId)
+                val webDav = repository.createWebDav(ImportBookConfig.remoteServerId)
                 if (webDav != null) {
                     _state.update {
                         it.copy(
                             remoteBookWebDav = webDav,
                             isDefaultWebdav = false,
-                            selectedServerId = AppConfig.remoteServerId
+                            selectedServerId = ImportBookConfig.remoteServerId
                         )
                     }
                     onSuccess()
@@ -498,7 +499,7 @@ class RemoteBookViewModel(
         execute {
             appDb.serverDao.insert(server)
         }.onSuccess {
-            if (AppConfig.remoteServerId == server.id) {
+            if (ImportBookConfig.remoteServerId == server.id) {
                 initData { loadRemoteBookList() }
             }
         }
@@ -511,7 +512,7 @@ class RemoteBookViewModel(
     }
 
     fun selectServer(serverId: Long) {
-        AppConfig.remoteServerId = serverId
+        ImportBookConfig.remoteServerId = serverId
         _state.update { it.copy(selectedServerId = serverId, dirList = emptyList()) }
         initData { loadRemoteBookList() }
     }

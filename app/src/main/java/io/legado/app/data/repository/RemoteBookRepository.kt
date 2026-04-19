@@ -8,7 +8,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.getRemoteUrl
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.lib.webdav.Authorization
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.CustomUrl
@@ -32,7 +32,7 @@ class RemoteBookRepository(
             }
         }
 
-        val currentServerId = AppConfig.remoteServerId
+        val currentServerId = ImportBookConfig.remoteServerId
         if (currentServerId != AppConst.DEFAULT_WEBDAV_ID) {
             appDb.serverDao.get(currentServerId)?.getWebDavConfig()?.let {
                 return RemoteBookWebDav(it.url, Authorization(it), currentServerId)

@@ -24,4 +24,9 @@ object ImportBookConfig {
         PreferKey.localBookImportSort,
         0
     )
+
+    var remoteServerId by prefDelegate(
+        PreferKey.remoteServerId,
+        0L
+    )
 }
