@@ -48,9 +48,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.article.RssSortActivity
+import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.rss.favorites.RssFavoritesActivity
-import io.legado.app.ui.rss.read.ReadRssActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
 import io.legado.app.ui.rss.subscription.RuleSubActivity
@@ -73,7 +72,8 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RssScreen(
-    viewModel: RssViewModel = koinViewModel()
+    viewModel: RssViewModel = koinViewModel(),
+    onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -83,18 +83,19 @@ fun RssScreen(
         if (rssSource.singleUrl) {
             viewModel.getSingleUrl(rssSource) { url ->
                 if (url.startsWith("http", true)) {
-                    context.startActivity<ReadRssActivity> {
-                        putExtra("title", rssSource.sourceName)
-                        putExtra("origin", url)
-                    }
+                    context.startActivity(
+                        RssMainNavContract.createRssReadIntent(
+                            context = context,
+                            title = rssSource.sourceName,
+                            origin = url
+                        )
+                    )
                 } else {
                     context.openUrl(url)
                 }
             }
         } else {
-            context.startActivity<RssSortActivity> {
-                putExtra("url", rssSource.sourceUrl)
-            }
+            onOpenSort(rssSource.sourceUrl, null, null)
         }
     }
 

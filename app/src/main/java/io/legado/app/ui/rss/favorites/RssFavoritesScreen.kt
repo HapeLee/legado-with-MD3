@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.R
 import io.legado.app.data.entities.RssStar
-import io.legado.app.ui.rss.read.ReadRssActivity
+import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SourceIcon
@@ -224,11 +224,14 @@ fun RssFavoritesScreen(
                         } else null,
                         trailingAction = {
                             val openAction = {
-                                context.startActivity<ReadRssActivity> {
-                                    putExtra("title", rssStar.title)
-                                    putExtra("origin", rssStar.origin)
-                                    putExtra("link", rssStar.link)
-                                }
+                                context.startActivity(
+                                    RssMainNavContract.createRssReadIntent(
+                                        context = context,
+                                        title = rssStar.title,
+                                        origin = rssStar.origin,
+                                        link = rssStar.link
+                                    )
+                                )
                             }
                             SmallIconButton(
                                 onClick = openAction,

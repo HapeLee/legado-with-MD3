@@ -91,7 +91,8 @@ fun MainScreen(
     useRail: Boolean,
     onOpenSettings: () -> Unit,
     onNavigateToRemoteImport: () -> Unit,
-    onNavigateToLocalImport: () -> Unit
+    onNavigateToLocalImport: () -> Unit,
+    onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -380,7 +381,11 @@ fun MainScreen(
                         )
 
                         MainDestination.Explore -> ExploreScreen()
-                        MainDestination.Rss -> RssScreen()
+                        MainDestination.Rss -> RssScreen(
+                            onOpenSort = { sourceUrl, sortUrl, key ->
+                                onNavigateToRssSort(sourceUrl, sortUrl, key)
+                            }
+                        )
                         MainDestination.My -> MyScreen(
                             viewModel = koinViewModel(),
                             onOpenSettings = onOpenSettings,

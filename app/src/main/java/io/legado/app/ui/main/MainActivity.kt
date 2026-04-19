@@ -48,6 +48,11 @@ import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
+import io.legado.app.ui.rss.article.MainRouteRssSort
+import io.legado.app.ui.rss.navigation.RssMainNavContract
+import io.legado.app.ui.rss.article.RssSortRouteScreen
+import io.legado.app.ui.rss.read.MainRouteRssRead
+import io.legado.app.ui.rss.read.RssReadRouteScreen
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.getPrefBoolean
@@ -98,7 +103,7 @@ open class MainActivity : BaseComposeActivity() {
     }
 
     private val viewModel by viewModel<MainViewModel>()
-    private val routeEvents = MutableSharedFlow<MainRoute>(extraBufferCapacity = 1)
+    private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
 
     @Serializable
     private sealed interface MainRoute : NavKey
@@ -276,6 +281,16 @@ open class MainActivity : BaseComposeActivity() {
                         },
                         onNavigateToLocalImport = {
                             navigateToRoute(backStack, MainRouteImportLocal)
+                        },
+                        onNavigateToRssSort = { sourceUrl, sortUrl, key ->
+                            navigateToRoute(
+                                backStack,
+                                MainRouteRssSort(
+                                    sourceUrl = sourceUrl,
+                                    sortUrl = sortUrl,
+                                    key = key
+                                )
+                            )
                         }
                     )
                 }
@@ -322,11 +337,29 @@ open class MainActivity : BaseComposeActivity() {
                         onBackClick = { navigateBack(backStack) }
                     )
                 }
+
+                entry<MainRouteRssSort> { route ->
+                    RssSortRouteScreen(
+                        sourceUrl = route.sourceUrl,
+                        initialSortUrl = route.sortUrl,
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
+
+                entry<MainRouteRssRead> { route ->
+                    RssReadRouteScreen(
+                        title = route.title,
+                        origin = route.origin,
+                        link = route.link,
+                        openUrl = route.openUrl,
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
             }
         )
     }
 
-    private fun navigateToRoute(backStack: MutableList<NavKey>, route: MainRoute) {
+    private fun navigateToRoute(backStack: MutableList<NavKey>, route: NavKey) {
         val currentRoute = backStack.lastOrNull()
         if (currentRoute == route) return
 
@@ -359,6 +392,26 @@ open class MainActivity : BaseComposeActivity() {
 
             MainRouteImportLocal,
             MainRouteImportRemote -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            is MainRouteRssSort -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            is MainRouteRssRead -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
                 } else {
@@ -488,8 +541,10 @@ open class MainActivity : BaseComposeActivity() {
         }
     }
 
-    private fun resolveStartRoute(intent: Intent?): MainRoute {
-        return resolveStartRoute(intent?.getStringExtra(EXTRA_START_ROUTE))
+    private fun resolveStartRoute(intent: Intent?): NavKey {
+        val route = intent?.getStringExtra(EXTRA_START_ROUTE)
+        RssMainNavContract.resolveStartRoute(route, intent)?.let { return it }
+        return resolveStartRoute(route)
     }
 
     private fun resolveStartRoute(route: String?): MainRoute {

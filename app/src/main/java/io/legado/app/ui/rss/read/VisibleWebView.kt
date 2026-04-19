@@ -6,10 +6,13 @@ import android.util.AttributeSet
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
 import io.legado.app.ui.dict.DictDialog
 import io.legado.app.utils.toastOnUi
@@ -19,6 +22,8 @@ class VisibleWebView(
     context: Context,
     attrs: AttributeSet? = null
 ) : WebView(context, attrs) {
+
+    private var lastSelectedText: String = ""
 
     init {
         settings.javaScriptEnabled = true
@@ -32,30 +37,26 @@ class VisibleWebView(
         }, "TextSelectionBridge")
 
         val js = """
-        document.addEventListener('selectionchange', function() {
-            const text = window.getSelection().toString();
-            if (text) {
-                TextSelectionBridge.onTextSelected(text);
-            }
-        });
-    """
+            document.addEventListener('selectionchange', function() {
+                const text = window.getSelection().toString();
+                if (text) {
+                    TextSelectionBridge.onTextSelected(text);
+                }
+            });
+        """.trimIndent()
         evaluateJavascript(js, null)
     }
-
-    private var lastSelectedText: String = ""
 
     override fun onWindowVisibilityChanged(visibility: Int) {
         super.onWindowVisibilityChanged(VISIBLE)
     }
 
     override fun startActionMode(callback: ActionMode.Callback?): ActionMode {
-        val wrappedCallback = createWrappedCallback(callback)
-        return super.startActionMode(wrappedCallback)
+        return super.startActionMode(createWrappedCallback(callback))
     }
 
     override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode {
-        val wrappedCallback = createWrappedCallback(callback)
-        return super.startActionMode(wrappedCallback, type)
+        return super.startActionMode(createWrappedCallback(callback), type)
     }
 
     private fun createWrappedCallback(original: ActionMode.Callback?): ActionMode.Callback {
@@ -63,7 +64,7 @@ class VisibleWebView(
             override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean {
                 val result = original?.onCreateActionMode(mode, menu) ?: false
                 menu.add(Menu.NONE, MENU_ID_DICT, 0, R.string.dict)
-                getSelectedText { /* 触发缓存*/ }
+                getSelectedText { }
                 return result
             }
 
@@ -73,7 +74,7 @@ class VisibleWebView(
             }
 
             override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
-                when (item.itemId) {
+                return when (item.itemId) {
                     MENU_ID_DICT -> {
                         postDelayed({
                             getSelectedText { selectedText ->
@@ -85,12 +86,12 @@ class VisibleWebView(
                             }
                         }, 200)
                         mode.finish()
-                        return true
+                        true
                     }
-                    else -> return original?.onActionItemClicked(mode, item) ?: false
+
+                    else -> original?.onActionItemClicked(mode, item) ?: false
                 }
             }
-
 
             override fun onDestroyActionMode(mode: ActionMode) {
                 original?.onDestroyActionMode(mode)
@@ -120,17 +121,42 @@ class VisibleWebView(
     }
 
     private fun showDictDialog(selectedText: String) {
-        val activity = context as? AppCompatActivity
-        activity?.let {
-            val dialog = DictDialog(selectedText)
-            it.supportFragmentManager.beginTransaction()
-                .add(dialog, "DictDialog")
-                .commitAllowingStateLoss()
-        }
+        val activity = context as? AppCompatActivity ?: return
+        val dialog = DictDialog(selectedText)
+        activity.supportFragmentManager.beginTransaction()
+            .add(dialog, "DictDialog")
+            .commitAllowingStateLoss()
     }
 
     companion object {
         private const val MENU_ID_DICT = 1001
     }
+}
 
+@Composable
+fun VisibleWebViewCompose(
+    modifier: Modifier = Modifier,
+    onCreated: (VisibleWebView) -> Unit,
+    onDestroyed: (() -> Unit)? = null
+) {
+    var webViewRef: VisibleWebView? = null
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            VisibleWebView(context).also {
+                webViewRef = it
+                onCreated(it)
+            }
+        },
+        update = {
+            webViewRef = it
+        }
+    )
+    DisposableEffect(Unit) {
+        onDispose {
+            onDestroyed?.invoke()
+            webViewRef?.destroy()
+            webViewRef = null
+        }
+    }
 }

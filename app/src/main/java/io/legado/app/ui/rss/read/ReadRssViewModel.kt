@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Intent
 import android.util.Base64
 import android.webkit.URLUtil
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
@@ -21,59 +20,94 @@ import io.legado.app.model.rss.Rss
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 
+data class ReadRssArgs(
+    val title: String? = null,
+    val origin: String,
+    val link: String? = null,
+    val openUrl: String? = null
+)
 
 class ReadRssViewModel(application: Application) : BaseViewModel(application) {
     var rssSource: RssSource? = null
     var rssArticle: RssArticle? = null
     var tts: TTS? = null
-    val contentLiveData = MutableLiveData<String>()
-    val urlLiveData = MutableLiveData<AnalyzeUrl>()
-    var rssStar: RssStar? = null
-    val upTtsMenuData = MutableLiveData<Boolean>()
-    val upStarMenuData = MutableLiveData<Boolean>()
     var headerMap: Map<String, String> = emptyMap()
 
+    private val _contentState = MutableStateFlow<String?>(null)
+    val contentState: StateFlow<String?> = _contentState.asStateFlow()
+
+    private val _urlState = MutableStateFlow<AnalyzeUrl?>(null)
+    val urlState: StateFlow<AnalyzeUrl?> = _urlState.asStateFlow()
+
+    private val _isSpeakingState = MutableStateFlow(false)
+    val isSpeakingState: StateFlow<Boolean> = _isSpeakingState.asStateFlow()
+
+    private val _rssStarState = MutableStateFlow<RssStar?>(null)
+    val rssStarState: StateFlow<RssStar?> = _rssStarState.asStateFlow()
+
     fun initData(intent: Intent) {
+        val origin = intent.getStringExtra("origin") ?: return
+        initData(
+            ReadRssArgs(
+                title = intent.getStringExtra("title"),
+                origin = origin,
+                link = intent.getStringExtra("link"),
+                openUrl = intent.getStringExtra("openUrl")
+            )
+        )
+    }
+
+    fun initData(args: ReadRssArgs) {
         execute {
-            val origin = intent.getStringExtra("origin") ?: return@execute
-            val link = intent.getStringExtra("link")
-            rssSource = appDb.rssSourceDao.getByKey(origin)
+            rssSource = appDb.rssSourceDao.getByKey(args.origin)
             headerMap = runScriptWithContext {
                 rssSource?.getHeaderMap() ?: emptyMap()
             }
-            if (link != null) {
-                rssStar = appDb.rssStarDao.get(origin, link)
-                rssArticle = rssStar?.toRssArticle() ?: appDb.rssArticleDao.getByLink(origin, link)
-                val rssArticle = rssArticle ?: return@execute
-                if (!rssArticle.description.isNullOrBlank()) {
-                    contentLiveData.postValue(rssArticle.description!!)
+
+            val link = args.link
+            if (!link.isNullOrBlank()) {
+                _rssStarState.value = appDb.rssStarDao.get(args.origin, link)
+                rssArticle = _rssStarState.value?.toRssArticle() ?: appDb.rssArticleDao.getByLink(args.origin, link)
+                val article = rssArticle ?: return@execute
+                if (!article.description.isNullOrBlank()) {
+                    _contentState.value = article.description!!
                 } else {
                     rssSource?.let {
                         val ruleContent = it.ruleContent
                         if (!ruleContent.isNullOrBlank()) {
-                            loadContent(rssArticle, ruleContent)
+                            loadContent(article, ruleContent)
                         } else {
-                            loadUrl(rssArticle.link, rssArticle.origin)
+                            loadUrl(article.link, article.origin)
                         }
-                    } ?: loadUrl(rssArticle.link, rssArticle.origin)
+                    } ?: loadUrl(article.link, article.origin)
                 }
-            } else {
-                val ruleContent = rssSource?.ruleContent
-                if (ruleContent.isNullOrBlank()) {
-                    loadUrl(origin, origin)
-                } else {
-                    val rssArticle = RssArticle()
-                    rssArticle.origin = origin
-                    rssArticle.link = origin
-                    rssArticle.title = rssSource!!.sourceName
-                    loadContent(rssArticle, ruleContent)
-                }
+                return@execute
             }
-        }.onFinally {
-            upStarMenuData.postValue(true)
+
+            val openUrl = args.openUrl
+            if (!openUrl.isNullOrBlank()) {
+                loadUrl(openUrl, args.origin)
+                return@execute
+            }
+
+            val ruleContent = rssSource?.ruleContent
+            if (ruleContent.isNullOrBlank()) {
+                loadUrl(args.origin, args.origin)
+            } else {
+                val article = RssArticle().apply {
+                    origin = args.origin
+                    this.link = args.origin
+                    title = rssSource!!.sourceName
+                }
+                rssArticle = article
+                loadContent(article, ruleContent)
+            }
         }
     }
 
@@ -85,7 +119,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             coroutineContext = coroutineContext,
             hasLoginHeader = false
         )
-        urlLiveData.postValue(analyzeUrl)
+        _urlState.value = analyzeUrl
     }
 
     private fun loadContent(rssArticle: RssArticle, ruleContent: String) {
@@ -94,22 +128,22 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             .onSuccess(IO) { body ->
                 rssArticle.description = body
                 appDb.rssArticleDao.insert(rssArticle)
-                rssStar?.let {
+                _rssStarState.value?.let {
                     it.description = body
                     appDb.rssStarDao.insert(it)
                 }
-                contentLiveData.postValue(body)
+                _contentState.value = body
             }.onError {
-                contentLiveData.postValue("加载正文失败\n${it.stackTraceToString()}")
+                _contentState.value = "加载正文失败\n${it.stackTraceToString()}"
             }
     }
 
     fun refresh(finish: () -> Unit) {
-        rssArticle?.let { rssArticle ->
+        rssArticle?.let { article ->
             rssSource?.let {
                 val ruleContent = it.ruleContent
                 if (!ruleContent.isNullOrBlank()) {
-                    loadContent(rssArticle, ruleContent)
+                    loadContent(article, ruleContent)
                 } else {
                     finish.invoke()
                 }
@@ -120,50 +154,38 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         } ?: finish.invoke()
     }
 
-    fun favorite() {
-        execute {
-            rssStar?.let {
-                appDb.rssStarDao.delete(it.origin, it.link)
-                rssStar = null
-            } ?: rssArticle?.toStar()?.let {
-                appDb.rssStarDao.insert(it)
-                rssStar = it
-            }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
-        }
-    }
-
     fun addFavorite() {
         execute {
-            rssStar ?: rssArticle?.toStar()?.let {
+            _rssStarState.value ?: rssArticle?.toStar()?.let {
                 appDb.rssStarDao.insert(it)
-                rssStar = it
+                _rssStarState.value = it
             }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
         }
     }
 
-    fun updateFavorite() {
+    fun updateFavorite(title: String?, group: String?) {
+        rssArticle?.let { article ->
+            if (!title.isNullOrBlank()) {
+                article.title = title
+            }
+            group?.let {
+                article.group = it
+            }
+        }
         execute {
             rssArticle?.toStar()?.let {
                 appDb.rssStarDao.update(it)
-                rssStar = it
+                _rssStarState.value = it
             }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
         }
     }
 
     fun delFavorite() {
         execute {
-            rssStar?.let {
+            _rssStarState.value?.let {
                 appDb.rssStarDao.delete(it.origin, it.link)
-                rssStar = null
+                _rssStarState.value = null
             }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
         }
     }
 
@@ -171,11 +193,10 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         webPic ?: return
         execute {
             val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("NULL")
-
             val success = ImageSaveUtils.saveImageToGallery(
                 context,
                 byteArray,
-                folderName = "Legado" // 可以自定义相册子目录
+                folderName = "Legado"
             )
             if (!success) throw NoStackTraceException("保存到相册失败")
         }.onError {
@@ -184,7 +205,6 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             context.toastOnUi("已保存到相册")
         }
     }
-
 
     private suspend fun webData2bitmap(data: String): ByteArray? {
         return if (URLUtil.isValidUrl(data)) {
@@ -230,16 +250,21 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             tts = TTS().apply {
                 setSpeakStateListener(object : TTS.SpeakStateListener {
                     override fun onStart() {
-                        upTtsMenuData.postValue(true)
+                        _isSpeakingState.value = true
                     }
 
                     override fun onDone() {
-                        upTtsMenuData.postValue(false)
+                        _isSpeakingState.value = false
                     }
                 })
             }
         }
         tts?.speak(text)
+    }
+
+    fun stopReadAloud() {
+        tts?.stop()
+        _isSpeakingState.value = false
     }
 
     fun updateRssSourceRedirectPolicy(sourceUrl: String, redirectPolicy: String) {
@@ -255,5 +280,4 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         super.onCleared()
         tts?.clearTts()
     }
-
 }

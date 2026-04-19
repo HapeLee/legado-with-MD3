@@ -51,6 +51,9 @@ import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleViewModel
 import io.legado.app.ui.replace.edit.ReplaceEditViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
+import io.legado.app.ui.rss.article.RssArticlesViewModel
+import io.legado.app.ui.rss.article.RssSortViewModel
+import io.legado.app.ui.rss.read.ReadRssViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -92,6 +95,9 @@ val appModule = module {
 
     viewModelOf(::DictRuleViewModel)
     viewModelOf(::RssSourceViewModel)
+    viewModelOf(::RssSortViewModel)
+    viewModelOf(::RssArticlesViewModel)
+    viewModelOf(::ReadRssViewModel)
     viewModelOf(::ReadRecordViewModel)
     viewModelOf(::ExploreShowViewModel)
     viewModelOf(::MyViewModel)
@@ -127,3 +133,4 @@ val appModule = module {
 
     viewModelOf(::SearchContentViewModel)
 }
+

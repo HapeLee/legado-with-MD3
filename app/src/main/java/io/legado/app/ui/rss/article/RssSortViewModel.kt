@@ -9,9 +9,9 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.removeSortCache
+import io.legado.app.help.source.sortUrls
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
-
 
 class RssSortViewModel(application: Application) : BaseViewModel(application) {
     var url: String? = null
@@ -22,20 +22,30 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
     val isWaterLayout get() = rssSource?.articleStyle == 3
 
     fun initData(intent: Intent, finally: () -> Unit) {
+        initData(intent.getStringExtra("url") ?: intent.getStringExtra("sourceUrl"), finally)
+    }
+
+    fun initData(sourceUrl: String?, finally: () -> Unit) {
         execute {
-            url = intent.getStringExtra("url")
-            url?.let { url ->
-                rssSource = appDb.rssSourceDao.getByKey(url)
+            url = sourceUrl
+            url?.let { sourceUrl ->
+                rssSource = appDb.rssSourceDao.getByKey(sourceUrl)
                 rssSource?.let {
                     titleLiveData.postValue(it.sourceName)
                 } ?: let {
-                    rssSource = RssSource(sourceUrl = url)
+                    rssSource = RssSource(sourceUrl = sourceUrl)
                 }
             }
         }.onFinally {
             finally()
         }
     }
+
+    suspend fun loadSorts(): List<Pair<String, String>> {
+        return rssSource?.sortUrls().orEmpty()
+    }
+
+    fun currentArticleStyle(): Int = rssSource?.articleStyle ?: 0
 
     fun switchLayout() {
         rssSource?.let {
@@ -67,8 +77,6 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
                 appDb.rssArticleDao.delete(it)
             }
             order = System.currentTimeMillis()
-        }.onSuccess {
-
         }
     }
 
@@ -84,7 +92,7 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
         return appDb.rssReadRecordDao.getRecords()
     }
 
-    fun countRecords() : Int {
+    fun countRecords(): Int {
         return appDb.rssReadRecordDao.countRecords
     }
 
@@ -102,5 +110,4 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
             appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
         }
     }
-
 }

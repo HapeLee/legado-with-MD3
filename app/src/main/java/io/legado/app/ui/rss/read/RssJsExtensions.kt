@@ -13,7 +13,7 @@ import io.legado.app.ui.association.AddToBookshelfDialog
 import io.legado.app.ui.book.explore.ExploreShowActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.article.RssSortActivity
+import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.showDialogFragment
@@ -127,7 +127,13 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
                     }
                     val sourceUrl = toSource.sourceUrl
                     withContext(Main) {
-                        RssSortActivity.start(activity, sortUrl, sourceUrl)
+                        activity.startActivity(
+                            RssMainNavContract.createRssSortIntent(
+                                context = activity,
+                                sourceUrl = sourceUrl,
+                                sortUrl = sortUrl
+                            )
+                        )
                     }
                 }
 
@@ -148,7 +154,14 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
                     )
                     appDb.rssReadRecordDao.insertRecord(rssReadRecord) //留下历史记录
                     withContext(Main) {
-                        ReadRssActivity.start(activity, title, url, sourceUrl)
+                        activity.startActivity(
+                            RssMainNavContract.createRssReadIntent(
+                                context = activity,
+                                title = title,
+                                origin = sourceUrl,
+                                openUrl = link
+                            )
+                        )
                     }
                 }
 

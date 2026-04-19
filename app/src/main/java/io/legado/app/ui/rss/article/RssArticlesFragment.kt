@@ -1,40 +1,21 @@
 package io.legado.app.ui.rss.article
 
-
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.StaggeredGridLayoutManager
-import io.legado.app.R
-import io.legado.app.base.VMBaseFragment
-import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
+import android.view.ViewGroup
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
 import io.legado.app.data.entities.RssArticle
-import io.legado.app.databinding.FragmentRssArticlesBinding
-import io.legado.app.databinding.ViewLoadMoreBinding
-//import io.legado.app.lib.theme.accentColor
-//import io.legado.app.lib.theme.primaryColor
-import io.legado.app.ui.rss.read.ReadRssActivity
-import io.legado.app.ui.widget.recycler.LoadMoreView
-import io.legado.app.utils.applyNavigationBarPadding
+import io.legado.app.ui.rss.navigation.RssMainNavContract
+import io.legado.app.ui.theme.AppTheme
 import io.legado.app.utils.startActivity
-import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.activityViewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class RssArticlesFragment() : VMBaseFragment<RssArticlesViewModel>(R.layout.fragment_rss_articles),
-    BaseRssArticlesAdapter.CallBack {
+class RssArticlesFragment() : Fragment() {
 
     constructor(sortName: String, sortUrl: String) : this() {
         arguments = Bundle().apply {
@@ -43,118 +24,49 @@ class RssArticlesFragment() : VMBaseFragment<RssArticlesViewModel>(R.layout.frag
         }
     }
 
-    private val binding by viewBinding(FragmentRssArticlesBinding::bind)
-    private val activityViewModel by activityViewModels<RssSortViewModel>()
-    override val viewModel by viewModels<RssArticlesViewModel>()
-    private val adapter: BaseRssArticlesAdapter<*> by lazy {
-        when (activityViewModel.rssSource?.articleStyle) {
-            1 -> RssArticlesAdapter1(requireContext(), this@RssArticlesFragment)
-            2 -> RssArticlesAdapter2(requireContext(), this@RssArticlesFragment)
-            3 -> RssArticlesAdapter3(requireContext(), this@RssArticlesFragment)
-            else -> RssArticlesAdapter(requireContext(), this@RssArticlesFragment)
-        }
-    }
-    private val loadMoreView: LoadMoreView by lazy {
-        LoadMoreView(requireContext())
-    }
-    private var articlesFlowJob: Job? = null
-    override val isGridLayout: Boolean
-        get() = activityViewModel.isGridLayout
+    private val activityViewModel: RssSortViewModel by activityViewModel()
+    private val viewModel: RssArticlesViewModel by viewModel()
 
-    override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        viewModel.init(arguments)
-        initView()
-        initData()
-    }
-
-    private fun initView() = binding.run {
-//        refreshLayout.setColorSchemeColors(accentColor)
-//        recyclerView.setEdgeEffectColor(primaryColor)
-        recyclerView.applyNavigationBarPadding()
-        loadMoreView.setOnClickListener {
-            if (!loadMoreView.isLoading) {
-                scrollToBottom(true)
-            }
-        }
-        val layoutManager = if (activityViewModel.isWaterLayout) {
-            recyclerView.itemAnimator = null
-            StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
-        } else if (activityViewModel.isGridLayout) {
-            GridLayoutManager(requireContext(), 2)
-        } else {
-            LinearLayoutManager(requireContext())
-        }
-        recyclerView.layoutManager = layoutManager
-        recyclerView.adapter = adapter
-        adapter.addFooterView {
-            ViewLoadMoreBinding.bind(loadMoreView)
-        }
-        refreshLayout.setOnRefreshListener {
-            loadArticles()
-        }
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                if (!recyclerView.canScrollVertically(1)) {
-                    scrollToBottom()
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                AppTheme {
+                    Content()
                 }
             }
-        })
-        viewLifecycleOwner.lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                refreshLayout.isRefreshing = true
-                loadArticles()
-                this@launch.cancel()
-            }
         }
     }
 
-    private fun initData() {
-        val rssUrl = activityViewModel.url ?: return
-        articlesFlowJob?.cancel()
-        articlesFlowJob = viewLifecycleOwner.lifecycleScope.launch {
-            appDb.rssArticleDao.flowByOriginSort(rssUrl, viewModel.sortName).catch {
-                AppLog.put("订阅文章界面获取数据失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).collect {
-                adapter.setItems(it)
-            }
-        }
+    @Composable
+    private fun Content() {
+        val sortName = arguments?.getString("sortName").orEmpty()
+        val sortUrl = arguments?.getString("sortUrl").orEmpty()
+
+        RssArticlesPage(
+            sortName = sortName,
+            sortUrl = sortUrl,
+            articleStyle = activityViewModel.currentArticleStyle(),
+            rssUrl = activityViewModel.url,
+            rssSource = activityViewModel.rssSource,
+            viewModel = viewModel,
+            onRead = ::readRss
+        )
     }
 
-    private fun loadArticles() {
-        activityViewModel.rssSource?.let {
-            viewModel.loadArticles(it)
-        }
-    }
-
-    private fun scrollToBottom(forceLoad: Boolean = false) {
-        if (viewModel.isLoading) return
-        if ((loadMoreView.hasMore && adapter.getActualItemCount() > 0) || forceLoad) {
-            loadMoreView.hasMore()
-            activityViewModel.rssSource?.let {
-                viewModel.loadMore(it)
-            }
-        }
-    }
-
-    override fun observeLiveBus() {
-        viewModel.loadErrorLiveData.observe(viewLifecycleOwner) {
-            loadMoreView.error(it)
-        }
-        viewModel.loadFinallyLiveData.observe(viewLifecycleOwner) { hasMore ->
-            binding.refreshLayout.isRefreshing = false
-            if (!hasMore) {
-                loadMoreView.noMore()
-            }
-        }
-    }
-
-    override fun readRss(rssArticle: RssArticle) {
+    private fun readRss(rssArticle: RssArticle) {
         activityViewModel.read(rssArticle)
-        startActivity<ReadRssActivity> {
-            putExtra("title", rssArticle.title)
-            putExtra("origin", rssArticle.origin)
-            putExtra("link", rssArticle.link)
-        }
+        requireContext().startActivity(
+            RssMainNavContract.createRssReadIntent(
+                context = requireContext(),
+                title = rssArticle.title,
+                origin = rssArticle.origin,
+                link = rssArticle.link
+            )
+        )
     }
 }
