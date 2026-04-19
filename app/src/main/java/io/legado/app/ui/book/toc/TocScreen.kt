@@ -953,11 +953,7 @@ private fun StatusIcon(
             "SUCCESS_WORD_COUNT" -> {
                 NormalCard(
                     cornerRadius = 12.dp,
-                    border = BorderStroke(
-                        1.dp,
-                        LegadoTheme.colorScheme.outlineVariant
-                    ),
-                    containerColor = Color.Transparent
+                    containerColor = LegadoTheme.colorScheme.surfaceContainer
                 ) {
                     if (wordCount != null) {
                         AppText(
