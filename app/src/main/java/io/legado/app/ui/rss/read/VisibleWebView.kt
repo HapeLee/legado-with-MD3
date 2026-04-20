@@ -51,6 +51,10 @@ class VisibleWebView(
         super.onWindowVisibilityChanged(VISIBLE)
     }
 
+    override fun performClick(): Boolean {
+        return super.performClick()
+    }
+
     override fun startActionMode(callback: ActionMode.Callback?): ActionMode {
         return super.startActionMode(createWrappedCallback(callback))
     }

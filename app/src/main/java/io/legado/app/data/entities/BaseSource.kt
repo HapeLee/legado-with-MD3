@@ -105,15 +105,12 @@ interface BaseSource : JsExtensions {
         header?.let {
             try {
                 val json = when {
-                    it.startsWith("@js:", true) -> evalJS(it.substring(4))?.toString().orEmpty()
+                    it.startsWith("@js:", true) -> evalJS(it.substring(4)).toString()
                     it.startsWith("<js>", true) -> evalJS(
                         it.substring(4, it.lastIndexOf("<"))
-                    )?.toString().orEmpty()
+                    ).toString()
 
                     else -> it
-                }
-                if (json.isBlank()) {
-                    return@let
                 }
                 GSONStrict.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
                     putAll(map)
@@ -122,12 +119,7 @@ interface BaseSource : JsExtensions {
                     putAll(map)
                 }
             } catch (e: Exception) {
-                val isEmptyJsonNoise = e.message?.contains("Empty JSON string", ignoreCase = true) == true ||
-                    e.toString().contains("Empty JSON string", ignoreCase = true) ||
-                    e.stackTraceToString().contains("Empty JSON string", ignoreCase = true)
-                if (!isEmptyJsonNoise) {
-                    AppLog.put("执行请求头规则出错\n$e", e)
-                }
+                AppLog.put("执行请求头规则出错\n$e", e)
             }
         }
         if (!has(AppConst.UA_NAME, true)) {

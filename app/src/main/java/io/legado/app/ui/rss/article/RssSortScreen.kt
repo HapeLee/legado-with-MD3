@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -48,12 +49,14 @@ import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.read.title
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
+import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -119,172 +122,178 @@ fun RssSortScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        GlassMediumFlexibleTopAppBar(
-            title = title,
-            scrollBehavior = scrollBehavior,
-            navigationIcon = {
-                TopBarNavigationButton(onClick = onBackClick, imageVector = Icons.AutoMirrored.Filled.ArrowBack)
-            },
-            actions = {
-                TopBarActionButton(
-                    onClick = { showMainMenu = true },
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Menu"
-                )
-                RoundDropdownMenu(
-                    expanded = showMainMenu,
-                    onDismissRequest = { showMainMenu = false }
-                ) { dismiss ->
-                    if (hasLogin) {
+    AppScaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            GlassMediumFlexibleTopAppBar(
+                title = title,
+                scrollBehavior = scrollBehavior,
+                navigationIcon = {
+                    TopBarNavigationButton(onClick = onBackClick, imageVector = AppIcons.Back)
+                },
+                actions = {
+                    TopBarActionButton(
+                        onClick = { showMainMenu = true },
+                        imageVector = AppIcons.MoreVert,
+                        contentDescription = "Menu"
+                    )
+                    RoundDropdownMenu(
+                        expanded = showMainMenu,
+                        onDismissRequest = { showMainMenu = false }
+                    ) { dismiss ->
+                        if (hasLogin) {
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.login),
+                                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                onClick = {
+                                    dismiss()
+                                    onLogin()
+                                }
+                            )
+                        }
                         RoundDropdownMenuItem(
-                            text = stringResource(R.string.login),
-                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                            text = stringResource(R.string.refresh_sort),
+                            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
                             onClick = {
                                 dismiss()
-                                onLogin()
+                                onRefreshSort()
                             }
                         )
-                    }
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.refresh_sort),
-                        leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                        onClick = {
-                            dismiss()
-                            onRefreshSort()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.set_source_variable),
-                        leadingIcon = { MenuItemIcon(Icons.Default.Dataset) },
-                        onClick = {
-                            dismiss()
-                            onSetSourceVariable()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.edit_source),
-                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                        onClick = {
-                            dismiss()
-                            onEditSource()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.switchLayout),
-                        leadingIcon = { MenuItemIcon(Icons.Default.Style) },
-                        onClick = {
-                            dismiss()
-                            onSwitchLayout()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.read_record),
-                        leadingIcon = { MenuItemIcon(Icons.Default.History) },
-                        onClick = {
-                            dismiss()
-                            onReadRecord()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.clear),
-                        leadingIcon = { MenuItemIcon(Icons.Default.CleaningServices) },
-                        onClick = {
-                            dismiss()
-                            onClearArticles()
-                        }
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.redirect_policy),
-                        onClick = { showRedirectMenu = true }
-                    )
-                }
-
-                RoundDropdownMenu(
-                    expanded = showRedirectMenu,
-                    onDismissRequest = { showRedirectMenu = false },
-                    modifier = Modifier.width(280.dp)
-                ) { dismiss ->
-                    RedirectPolicy.entries.forEach { policy ->
                         RoundDropdownMenuItem(
-                            text = policy.title(),
-                            isSelected = policy == redirectPolicy,
+                            text = stringResource(R.string.set_source_variable),
+                            leadingIcon = { MenuItemIcon(Icons.Default.Dataset) },
                             onClick = {
                                 dismiss()
-                                showMainMenu = false
-                                onRedirectPolicyChanged(policy)
+                                onSetSourceVariable()
                             }
                         )
-                    }
-                }
-            },
-            bottomContent = {
-                if (sortList.size > 1) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .adaptiveHorizontalPaddingTab(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppTabRow(
-                            tabTitles = tabTitles,
-                            selectedTabIndex = selectedTabIndex,
-                            onTabSelected = { index ->
-                                scope.launch { pagerState.animateScrollToPage(index) }
-                            },
-                            modifier = Modifier.weight(1f)
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.edit_source),
+                            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                            onClick = {
+                                dismiss()
+                                onEditSource()
+                            }
                         )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.switchLayout),
+                            leadingIcon = { MenuItemIcon(Icons.Default.Style) },
+                            onClick = {
+                                dismiss()
+                                onSwitchLayout()
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.read_record),
+                            leadingIcon = { MenuItemIcon(Icons.Default.History) },
+                            onClick = {
+                                dismiss()
+                                onReadRecord()
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.clear),
+                            leadingIcon = { MenuItemIcon(Icons.Default.CleaningServices) },
+                            onClick = {
+                                dismiss()
+                                onClearArticles()
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.redirect_policy),
+                            onClick = { showRedirectMenu = true }
+                        )
+                    }
 
-                        if (BookshelfConfig.shouldShowExpandButton) {
-                            Box {
-                                SmallOutlinedIconToggleButton(
-                                    checked = showGroupMenu,
-                                    onCheckedChange = { showGroupMenu = it },
-                                    imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                    contentDescription = stringResource(R.string.group_manage)
-                                )
-                                RoundDropdownMenu(
-                                    expanded = showGroupMenu,
-                                    onDismissRequest = { showGroupMenu = false }
-                                ) { dismiss ->
-                                    sortList.forEachIndexed { index, group ->
-                                        RoundDropdownMenuItem(
-                                            text = group.first,
-                                            onClick = {
-                                                scope.launch { pagerState.animateScrollToPage(index) }
-                                                dismiss()
-                                            },
-                                            trailingIcon = {
-                                                if (selectedTabIndex == index) {
-                                                    Icon(
-                                                        Icons.Default.Check,
-                                                        null,
-                                                        modifier = Modifier.size(18.dp)
-                                                    )
+                    RoundDropdownMenu(
+                        expanded = showRedirectMenu,
+                        onDismissRequest = { showRedirectMenu = false },
+                        modifier = Modifier.width(280.dp)
+                    ) { dismiss ->
+                        RedirectPolicy.entries.forEach { policy ->
+                            RoundDropdownMenuItem(
+                                text = policy.title(),
+                                isSelected = policy == redirectPolicy,
+                                onClick = {
+                                    dismiss()
+                                    showMainMenu = false
+                                    onRedirectPolicyChanged(policy)
+                                }
+                            )
+                        }
+                    }
+                },
+                bottomContent = {
+                    if (sortList.size > 1) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .adaptiveHorizontalPaddingTab(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AppTabRow(
+                                tabTitles = tabTitles,
+                                selectedTabIndex = selectedTabIndex,
+                                onTabSelected = { index ->
+                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            if (BookshelfConfig.shouldShowExpandButton) {
+                                Box {
+                                    SmallOutlinedIconToggleButton(
+                                        checked = showGroupMenu,
+                                        onCheckedChange = { showGroupMenu = it },
+                                        imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                        contentDescription = stringResource(R.string.group_manage)
+                                    )
+                                    RoundDropdownMenu(
+                                        expanded = showGroupMenu,
+                                        onDismissRequest = { showGroupMenu = false }
+                                    ) { dismiss ->
+                                        sortList.forEachIndexed { index, group ->
+                                            RoundDropdownMenuItem(
+                                                text = group.first,
+                                                onClick = {
+                                                    scope.launch { pagerState.animateScrollToPage(index) }
+                                                    dismiss()
+                                                },
+                                                trailingIcon = {
+                                                    if (selectedTabIndex == index) {
+                                                        Icon(
+                                                            Icons.Default.Check,
+                                                            null,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
                                                 }
-                                            }
-                                        )
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
                 }
-            }
-        )
-
+            )
+        }
+    ) { paddingValues ->
         if (sortList.isEmpty()) {
             EmptyMessage(
                 message = stringResource(R.string.empty),
                 modifier = Modifier
                     .fillMaxSize()
+                    .padding(paddingValues)
                     .padding(24.dp)
             )
         } else {
             HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(bottom = 0.dp),
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) { page ->
                 val item = sortList.getOrNull(page) ?: return@HorizontalPager
                 pagerContent(page, item)

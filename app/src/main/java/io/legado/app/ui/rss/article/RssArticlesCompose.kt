@@ -59,6 +59,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
 import io.legado.app.utils.toastOnUi
@@ -295,21 +296,21 @@ private fun LoadMoreFooter(
         state.errorMessage != null -> "加载失败，点击重试"
         else -> "上拉加载更多"
     }
+    val contentModifier = if (state.errorMessage != null) {
+        Modifier.clickable(onClick = onRetry)
+    } else {
+        Modifier
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = LegadoTheme.typography.bodySmall,
-            color = LegadoTheme.colorScheme.onSurfaceVariant,
-            modifier = if (state.errorMessage != null) {
-                Modifier.clickable(onClick = onRetry)
-            } else {
-                Modifier
-            }
+        EmptyMessage(
+            message = text,
+            isLoading = state.isLoadingMore,
+            modifier = contentModifier
         )
     }
 }

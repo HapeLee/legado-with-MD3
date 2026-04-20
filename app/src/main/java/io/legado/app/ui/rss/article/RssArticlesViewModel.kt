@@ -102,6 +102,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
             loadMoreSuccess(it.first)
         }.onError {
             AppLog.put("rss获取内容失败", it)
+            if (page > 1) page--
             _loadState.value = _loadState.value.copy(
                 isLoadingMore = false,
                 errorMessage = it.stackTraceStr
@@ -138,7 +139,8 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
 
         _loadState.value = _loadState.value.copy(
             isLoadingMore = false,
-            hasMore = !nextPageUrl.isNullOrBlank()
+            hasMore = !nextPageUrl.isNullOrBlank(),
+            errorMessage = null
         )
     }
 }
@@ -150,5 +152,5 @@ data class RssArticlesLoadState(
     val errorMessage: String? = null
 ) {
     val canLoadMore: Boolean
-        get() = hasMore && !isRefreshing && !isLoadingMore
+        get() = hasMore && !isRefreshing && !isLoadingMore && errorMessage == null
 }
