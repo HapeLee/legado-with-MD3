@@ -363,6 +363,34 @@ class BookshelfViewModel(
         refreshTrigger.value++
     }
 
+    fun moveBooksToGroup(bookUrls: Set<String>, groupId: Long) {
+        updateBooksGroup(bookUrls) { groupId }
+    }
+
+    private fun updateBooksGroup(
+        bookUrls: Set<String>,
+        transform: (Long) -> Long
+    ) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            val updateBooks = bookUrls.mapNotNull { url ->
+                appDb.bookDao.getBook(url)?.let { book ->
+                    val targetGroup = transform(book.group)
+                    if (targetGroup != book.group) {
+                        book.copy(group = targetGroup)
+                    } else {
+                        null
+                    }
+                }
+            }
+            if (updateBooks.isNotEmpty()) {
+                appDb.bookDao.update(*updateBooks.toTypedArray())
+            }
+        }.onError {
+            context.toastOnUi("更新分组失败\n${it.localizedMessage}")
+        }
+    }
+
     fun gotoTop() {
         scrollTrigger.tryEmit(Unit)
     }

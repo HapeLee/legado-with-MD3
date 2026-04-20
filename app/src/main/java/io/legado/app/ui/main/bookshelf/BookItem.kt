@@ -54,6 +54,7 @@ fun BookshelfItem(
     cover: @Composable (Modifier) -> Unit,
     title: String,
     modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
     subTitle: String? = null,
     desc: String? = null,
     extra: @Composable (RowScope.() -> Unit)? = null,
@@ -64,10 +65,16 @@ fun BookshelfItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
+    val selectedColor = if (isSelected) {
+        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+    } else {
+        Color.Transparent
+    }
     if (isGrid) {
         Box(
             modifier = modifier
                 .clip(MaterialTheme.shapes.small)
+                .background(selectedColor)
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick
@@ -138,6 +145,8 @@ fun BookshelfItem(
             Row(
                 modifier = modifier
                     .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.small)
+                    .background(selectedColor)
                     .combinedClickable(
                         onClick = onClick,
                         onLongClick = onLongClick
@@ -377,6 +386,7 @@ fun BookItem(
     book: BookShelfItem,
     layoutMode: Int,
     modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
     gridStyle: Int = 0,
     isCompact: Boolean = false,
     isUpdating: Boolean = false,
@@ -404,6 +414,7 @@ fun BookItem(
         isGrid = layoutMode != 0,
         gridStyle = gridStyle,
         isCompact = isCompact,
+        isSelected = isSelected,
         modifier = modifier,
         cover = { modifier ->
             BookshelfCover(
