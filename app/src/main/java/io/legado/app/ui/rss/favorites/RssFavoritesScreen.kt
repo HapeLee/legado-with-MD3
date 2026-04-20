@@ -26,13 +26,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.R
 import io.legado.app.data.entities.RssStar
-import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SourceIcon
@@ -42,15 +40,14 @@ import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
-import io.legado.app.utils.startActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RssFavoritesScreen(
     onBackClick: () -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     viewModel: RssFavoritesViewModel = viewModel()
 ) {
-    val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val groups by viewModel.groups.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -224,14 +221,7 @@ fun RssFavoritesScreen(
                         } else null,
                         trailingAction = {
                             val openAction = {
-                                context.startActivity(
-                                    RssMainNavContract.createRssReadIntent(
-                                        context = context,
-                                        title = rssStar.title,
-                                        origin = rssStar.origin,
-                                        link = rssStar.link
-                                    )
-                                )
+                                onOpenRead(rssStar.title, rssStar.origin, rssStar.link, null)
                             }
                             SmallIconButton(
                                 onClick = openAction,

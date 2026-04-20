@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.rss.favorites.RssFavoritesActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
@@ -73,7 +72,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun RssScreen(
     viewModel: RssViewModel = koinViewModel(),
-    onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit
+    onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -83,12 +83,11 @@ fun RssScreen(
         if (rssSource.singleUrl) {
             viewModel.getSingleUrl(rssSource) { url ->
                 if (url.startsWith("http", true)) {
-                    context.startActivity(
-                        RssMainNavContract.createRssReadIntent(
-                            context = context,
-                            title = rssSource.sourceName,
-                            origin = url
-                        )
+                    onOpenRead(
+                        rssSource.sourceName,
+                        url,
+                        null,
+                        null
                     )
                 } else {
                     context.openUrl(url)

@@ -37,6 +37,8 @@ fun <T> DynamicTopAppBar(
     state: ListUiState<T>,
     scrollBehavior: GlassTopAppBarScrollBehavior,
     onBackClick: (() -> Unit)? = null,
+    backNavigationIcon: ImageVector = AppIcons.Back,
+    showSearchAction: Boolean = true,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String,
@@ -66,18 +68,20 @@ fun <T> DynamicTopAppBar(
             if (isSelecting || onBackClick != null) {
                 TopBarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
-                    imageVector = if (isSelecting) AppIcons.Close else AppIcons.Back,
+                    imageVector = if (isSelecting) AppIcons.Close else backNavigationIcon,
                     contentDescription = if (isSelecting) "取消选择" else "返回"
                 )
             }
         },
         actions = {
             if (!isSelecting) {
-                TopBarActionButton(
-                    onClick = { onSearchToggle(!state.isSearch) },
-                    imageVector = AppIcons.Search,
-                    contentDescription = "搜索"
-                )
+                if (showSearchAction) {
+                    TopBarActionButton(
+                        onClick = { onSearchToggle(!state.isSearch) },
+                        imageVector = AppIcons.Search,
+                        contentDescription = "搜索"
+                    )
+                }
 
                 topBarActions()
 

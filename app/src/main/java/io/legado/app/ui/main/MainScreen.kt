@@ -92,7 +92,8 @@ fun MainScreen(
     onOpenSettings: () -> Unit,
     onNavigateToRemoteImport: () -> Unit,
     onNavigateToLocalImport: () -> Unit,
-    onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit
+    onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
+    onNavigateToRssRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -384,6 +385,9 @@ fun MainScreen(
                         MainDestination.Rss -> RssScreen(
                             onOpenSort = { sourceUrl, sortUrl, key ->
                                 onNavigateToRssSort(sourceUrl, sortUrl, key)
+                            },
+                            onOpenRead = { title, origin, link, openUrl ->
+                                onNavigateToRssRead(title, origin, link, openUrl)
                             }
                         )
                         MainDestination.My -> MyScreen(

@@ -17,7 +17,6 @@ import androidx.appcompat.app.AppCompatActivity
 import io.legado.app.R
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.navigation.RssMainNavContract
 import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
@@ -36,6 +35,7 @@ fun RssSortRouteScreen(
     sourceUrl: String?,
     initialSortUrl: String?,
     onBackClick: () -> Unit,
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     viewModel: RssSortViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
@@ -143,14 +143,7 @@ fun RssSortRouteScreen(
             if (openOrigin.isBlank()) {
                 context.toastOnUi(context.getString(R.string.error))
             } else {
-                context.startActivity(
-                    RssMainNavContract.createRssReadIntent(
-                        context = context,
-                        title = record.title,
-                        origin = openOrigin,
-                        openUrl = record.record
-                    )
-                )
+                onOpenRead(record.title, openOrigin, null, record.record)
             }
         },
         onClearArticles = { viewModel.clearArticles() },
@@ -174,14 +167,7 @@ fun RssSortRouteScreen(
                 viewModel = pageViewModel,
                 onRead = { article ->
                     viewModel.read(article)
-                    context.startActivity(
-                        RssMainNavContract.createRssReadIntent(
-                            context = context,
-                            title = article.title,
-                            origin = article.origin,
-                            link = article.link
-                        )
-                    )
+                    onOpenRead(article.title, article.origin, article.link, null)
                 }
             )
         }

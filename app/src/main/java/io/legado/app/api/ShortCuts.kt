@@ -19,7 +19,9 @@ object ShortCuts {
     }
 
     private fun buildBookShelfShortCutInfo(context: Context): ShortcutInfoCompat {
-        val bookShelfIntent = buildIntent<MainActivity>(context)
+        val bookShelfIntent = MainActivity.createHomeIntent(context).apply {
+            action = Intent.ACTION_VIEW
+        }
         return ShortcutInfoCompat.Builder(context, "bookshelf")
             .setShortLabel(context.getString(R.string.bookshelf))
             .setLongLabel(context.getString(R.string.bookshelf))
@@ -29,7 +31,9 @@ object ShortCuts {
     }
 
     private fun buildReadBookShortCutInfo(context: Context): ShortcutInfoCompat {
-        val bookShelfIntent = buildIntent<MainActivity>(context)
+        val bookShelfIntent = MainActivity.createHomeIntent(context).apply {
+            action = Intent.ACTION_VIEW
+        }
         val readBookIntent = buildIntent<ReadBookActivity>(context)
         return ShortcutInfoCompat.Builder(context, "lastRead")
             .setShortLabel(context.getString(R.string.last_read))

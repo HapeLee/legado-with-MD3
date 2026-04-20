@@ -9,7 +9,6 @@ import io.legado.app.base.BaseActivity
 import io.legado.app.databinding.ActivityWelcomeBinding
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.ui.main.MainActivity
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
@@ -98,7 +97,7 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
     }
 
     private fun finishSetup() {
-        startActivity<MainActivity>()
+        startActivity(MainActivity.createHomeIntent(this))
         finish()
     }
 }

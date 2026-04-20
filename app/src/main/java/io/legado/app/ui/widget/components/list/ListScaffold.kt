@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -31,6 +32,7 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.SelectionBottomBar
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.topbar.DynamicTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
@@ -42,6 +44,8 @@ fun <T> ListScaffold(
     state: ListUiState<T>,
     subtitle: String? = null,
     onBackClick: (() -> Unit)? = null,
+    backNavigationIcon: ImageVector = AppIcons.Back,
+    showSearchAction: Boolean = true,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     searchPlaceholder: String = "搜索...",
@@ -85,6 +89,8 @@ fun <T> ListScaffold(
                 state = state,
                 scrollBehavior = scrollBehavior,
                 onBackClick = onBackClick,
+                backNavigationIcon = backNavigationIcon,
+                showSearchAction = showSearchAction,
                 onSearchToggle = onSearchToggle,
                 onSearchQueryChange = onSearchQueryChange,
                 searchPlaceholder = searchPlaceholder,
