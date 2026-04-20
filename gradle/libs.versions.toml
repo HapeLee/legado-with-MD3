@@ -33,7 +33,7 @@ hutool = "5.8.22"
 
 libarchive = "1.1.6"
 lifecycle = "2.10.0"
-glide = "5.0.5"
+glide = "5.0.7"
 gson = "2.13.2"
 jsonPath = "2.10.0"
 # issue #3811，不要更新版本，新版引入了一个破坏性变更（详见https://github.com/jhy/jsoup/pull/2017）
