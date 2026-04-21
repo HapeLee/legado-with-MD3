@@ -66,6 +66,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
+import io.legado.app.data.appDb
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.cache.CacheActivity
 import io.legado.app.ui.book.info.GroupSelectSheet
@@ -94,6 +96,7 @@ import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -205,6 +208,17 @@ fun BookshelfScreen(
             }
     }
 
+    val currentGroupId =
+        uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroup.IdAll
+    val currentGroupBookCountFlow = remember(currentGroupId) {
+        appDb.bookDao.flowBookShelfByGroup(currentGroupId).map { it.size }
+    }
+    val currentGroupBookCount by currentGroupBookCountFlow.collectAsState(initial = 0)
+    val allGroupsBookCountFlow = remember {
+        appDb.bookDao.flowBookShelfByGroup(BookGroup.IdAll).map { it.size }
+    }
+    val allGroupsBookCount by allGroupsBookCountFlow.collectAsState(initial = 0)
+
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
     // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图
     var isInFolderRoot by remember(bookGroupStyle) { mutableStateOf(bookGroupStyle == 2) }
@@ -265,10 +279,17 @@ fun BookshelfScreen(
 
         else -> stringResource(R.string.bookshelf)
     }
-    val title = if (uiState.upBooksCount > 0) {
+    val title = if (isEditMode) {
+        "$baseTitle • ${selectedBookUrls.size} / $currentGroupBookCount"
+    } else if (uiState.upBooksCount > 0) {
         "$baseTitle (${uiState.upBooksCount})"
     } else {
         baseTitle
+    }
+    val subtitle = if (isEditMode) {
+        "${stringResource(R.string.all)} • ${stringResource(R.string.book_count, allGroupsBookCount)}"
+    } else {
+        null
     }
 
     if (bookGroupStyle == 2 && !isInFolderRoot && !isEditMode) {
@@ -292,6 +313,7 @@ fun BookshelfScreen(
 
     ListScaffold(
         title = title,
+        subtitle = subtitle,
         state = uiState,
         onBackClick = if (isEditMode) exitEditMode else null,
         backNavigationIcon = if (isEditMode) AppIcons.Close else AppIcons.Back,
