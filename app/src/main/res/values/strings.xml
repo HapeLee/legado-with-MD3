@@ -862,7 +862,7 @@
     <string name="test_sync_d">Test WebDAV Service Status</string>
     <string name="test_sync_loading_text">Testing…</string>
     <string name="test_sync_status_success">WebDAV service config success</string>
-    <string name="test_sync_status_fail">WebDAV service config fail</string>
+    <string name="test_sync_status_fail">WebDAV service config failure</string>
     <string name="sync_book_progress_t">Synchronous Reading Progress</string>
     <string name="sync_book_progress_s">Synchronize reading progress when entering / exiting the reading interface</string>
     <string name="sync_book_progress_plus_t">Sync Enhancement</string>
@@ -1127,7 +1127,7 @@
     <string name="same_title_removed">Remove Duplicate Title</string>
     <string name="update_book_fail">Update failed</string>
     <string name="notification_permission_rationale">Reading requires sending notifications to show reading control and download progress</string>
-    <string name="webdav_after_local_restore_confirm">The WebDAV book source is newer than the local one, whether to restore it or not</string>
+    <string name="webdav_after_local_restore_confirm">The WebDAV book source is newer than the local one. Do you want to restore it?</string>
     <string name="c_whitelist">白名单(contentWhitelist)</string>
     <string name="c_blacklist">黑名单(contentBlacklist)</string>
     <string name="confirm">Confirm</string>
