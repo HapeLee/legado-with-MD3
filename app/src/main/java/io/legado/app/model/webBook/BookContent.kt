@@ -19,6 +19,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setNextChapterUrl
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.mapAsync
@@ -105,7 +106,7 @@ object BookContent {
                 for (urlStr in contentData.second) {
                     emit(urlStr)
                 }
-            }.mapAsync(AppConfig.threadCount) { urlStr ->
+            }.mapAsync(OtherConfig.threadCount) { urlStr ->
                 val analyzeUrl = AnalyzeUrl(
                     mUrl = urlStr,
                     source = bookSource,

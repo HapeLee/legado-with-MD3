@@ -394,6 +394,8 @@ fun BookItem(
     titleCenter: Boolean = true,
     titleMaxLines: Int = 2,
     coverShadow: Boolean = false,
+    isSearchMode: Boolean = false,
+    searchKey: String = "",
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -406,6 +408,15 @@ fun BookItem(
             book.isLocal -> stringResource(R.string.local)
             else -> stringResource(R.string.noval)
         }
+    } else {
+        null
+    }
+    val matchedSourceLabel = if (
+        isSearchMode &&
+        searchKey.isNotBlank() &&
+        book.originName.contains(searchKey, ignoreCase = true)
+    ) {
+        book.originName
     } else {
         null
     }
@@ -425,7 +436,7 @@ fun BookItem(
                 modifier = modifier,
                 badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
                 showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
-                leftBottomText = bookTypeLabel
+                leftBottomText = matchedSourceLabel ?: bookTypeLabel
             )
         },
         title = book.name,

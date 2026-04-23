@@ -69,9 +69,7 @@ import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.about.AppLogSheet
-import io.legado.app.ui.book.cache.CacheActivity
 import io.legado.app.ui.book.info.GroupSelectSheet
-import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -82,6 +80,7 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
@@ -92,7 +91,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.readText
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -109,8 +107,10 @@ fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit,
+    onNavigateToSearch: (String) -> Unit,
     onNavigateToRemoteImport: () -> Unit,
-    onNavigateToLocalImport: () -> Unit
+    onNavigateToLocalImport: () -> Unit,
+    onNavigateToCache: (Long) -> Unit
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
@@ -182,8 +182,8 @@ fun BookshelfScreen(
         pageCount = { uiState.groups.size }
     )
 
-    LaunchedEffect(uiState.groups) {
-        if (uiState.groups.isNotEmpty()) {
+    LaunchedEffect(uiState.groups, uiState.isSearch) {
+        if (!uiState.isSearch && uiState.groups.isNotEmpty()) {
             val savedGroupId = BookshelfConfig.saveTabPosition
             val savedGroupIndex = uiState.groups.indexOfFirst { it.groupId == savedGroupId }
             if (savedGroupIndex >= 0 && savedGroupIndex != pagerState.currentPage) {
@@ -208,8 +208,16 @@ fun BookshelfScreen(
             }
     }
 
-    val currentGroupId =
+    val currentTabGroupId =
         uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroup.IdAll
+    val searchGroupExists = uiState.allGroups.any { it.groupId == uiState.selectedGroupId }
+    val currentGroupId = if (uiState.isSearch && searchGroupExists) {
+        uiState.selectedGroupId
+    } else {
+        currentTabGroupId
+    }
+    val isUsingStandaloneSearchGroup = uiState.isSearch &&
+            uiState.groups.none { it.groupId == currentGroupId }
     val currentGroupBookCountFlow = remember(currentGroupId) {
         appDb.bookDao.flowBookShelfByGroup(currentGroupId).map { it.size }
     }
@@ -266,28 +274,33 @@ fun BookshelfScreen(
         }
     }
 
-    val baseTitle = when (bookGroupStyle) {
-        1 -> {
-            uiState.groups.getOrNull(pagerState.currentPage)?.groupName
-                ?: stringResource(R.string.bookshelf)
-        }
-        2 if uiState.groups.isNotEmpty() -> {
+    val currentGroupName = uiState.allGroups.firstOrNull { it.groupId == currentGroupId }?.groupName
+        ?: uiState.groups.getOrNull(pagerState.currentPage)?.groupName
+
+    val baseTitle = when {
+        uiState.isSearch && bookGroupStyle == 0 -> stringResource(R.string.bookshelf)
+        uiState.isSearch -> currentGroupName ?: stringResource(R.string.bookshelf)
+        bookGroupStyle == 1 -> currentGroupName ?: stringResource(R.string.bookshelf)
+        bookGroupStyle == 2 && uiState.groups.isNotEmpty() -> {
             if (isInFolderRoot) stringResource(R.string.bookshelf)
-            else uiState.groups.getOrNull(pagerState.currentPage)?.groupName
-                ?: stringResource(R.string.bookshelf)
+            else currentGroupName ?: stringResource(R.string.bookshelf)
         }
 
         else -> stringResource(R.string.bookshelf)
     }
     val title = if (isEditMode) {
-        "$baseTitle • ${selectedBookUrls.size} / $currentGroupBookCount"
+        "$currentGroupBookCount · ${selectedBookUrls.size} 本"
     } else if (uiState.upBooksCount > 0) {
         "$baseTitle (${uiState.upBooksCount})"
     } else {
         baseTitle
     }
     val subtitle = if (isEditMode) {
-        "${stringResource(R.string.all)} • ${stringResource(R.string.book_count, allGroupsBookCount)}"
+        if (bookGroupStyle == 0) {
+            "共${allGroupsBookCount}本"
+        } else {
+            "${currentGroupName ?: stringResource(R.string.bookshelf)} · 共${allGroupsBookCount}本"
+        }
     } else {
         null
     }
@@ -317,9 +330,28 @@ fun BookshelfScreen(
         state = uiState,
         onBackClick = if (isEditMode) exitEditMode else null,
         backNavigationIcon = if (isEditMode) AppIcons.Close else AppIcons.Back,
-        showSearchAction = !isEditMode,
-        onSearchToggle = { context.startActivity<SearchActivity>() },
+        showSearchAction = true,
+        onSearchToggle = { active ->
+            viewModel.setSearchMode(active)
+            if (!active && uiState.selectedGroupId != currentTabGroupId) {
+                viewModel.changeGroup(currentTabGroupId)
+            }
+        },
         onSearchQueryChange = { viewModel.setSearchKey(it) },
+        onSearchSubmit = { rawQuery ->
+            rawQuery.trim()
+                .takeIf { it.isNotEmpty() }
+                ?.let(onNavigateToSearch)
+        },
+        searchTrailingIcon = {
+            if (uiState.searchKey.isNotEmpty()) {
+                TopBarActionButton(
+                    onClick = { viewModel.setSearchKey("") },
+                    imageVector = AppIcons.Close,
+                    contentDescription = stringResource(R.string.clear)
+                )
+            }
+        },
         topBarActions = {
             if (isEditMode) {
                 TopBarActionButton(
@@ -393,9 +425,7 @@ fun BookshelfScreen(
                     onClick = {
                         val groupId =
                             uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
-                        context.startActivity<CacheActivity> {
-                            putExtra("groupId", groupId)
-                        }
+                        onNavigateToCache(groupId)
                         dismiss()
                     },
                     leadingIcon = { Icon(Icons.Default.Download, null) }
@@ -463,11 +493,19 @@ fun BookshelfScreen(
                                         RoundDropdownMenuItem(
                                             text = group.groupName,
                                             onClick = {
+                                                if (uiState.isSearch) {
+                                                    viewModel.changeGroup(group.groupId)
+                                                }
                                                 scope.launch { pagerState.animateScrollToPage(index) }
                                                 dismiss()
                                             },
                                             trailingIcon = {
-                                                if (selectedTabIndex == index) {
+                                                val isSelected = if (uiState.isSearch) {
+                                                    uiState.selectedGroupId == group.groupId
+                                                } else {
+                                                    selectedTabIndex == index
+                                                }
+                                                if (isSelected) {
                                                     Icon(
                                                         Icons.Default.Check,
                                                         null,
@@ -476,6 +514,59 @@ fun BookshelfScreen(
                                                 }
                                             }
                                         )
+                                    }
+
+                                    if (uiState.isSearch) {
+                                        val allGroup = uiState.allGroups.firstOrNull {
+                                            it.groupId == BookGroup.IdAll
+                                        }
+                                        val hiddenGroups = uiState.allGroups.filter {
+                                            !it.show && it.groupId != BookGroup.IdAll
+                                        }
+
+                                        if (allGroup != null || hiddenGroups.isNotEmpty()) {
+                                            PillHeaderDivider(
+                                                title = "${stringResource(R.string.all)} / ${stringResource(R.string.hide)}"
+                                            )
+
+                                            allGroup?.let { group ->
+                                                RoundDropdownMenuItem(
+                                                    text = group.groupName,
+                                                    onClick = {
+                                                        viewModel.changeGroup(group.groupId)
+                                                        dismiss()
+                                                    },
+                                                    trailingIcon = {
+                                                        if (uiState.selectedGroupId == group.groupId) {
+                                                            Icon(
+                                                                Icons.Default.Check,
+                                                                null,
+                                                                modifier = Modifier.size(18.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+
+                                            hiddenGroups.forEach { group ->
+                                                RoundDropdownMenuItem(
+                                                    text = group.groupName,
+                                                    onClick = {
+                                                        viewModel.changeGroup(group.groupId)
+                                                        dismiss()
+                                                    },
+                                                    trailingIcon = {
+                                                        if (uiState.selectedGroupId == group.groupId) {
+                                                            Icon(
+                                                                Icons.Default.Check,
+                                                                null,
+                                                                modifier = Modifier.size(18.dp)
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -487,7 +578,11 @@ fun BookshelfScreen(
     ) { paddingValues ->
         var isRefreshing by remember { mutableStateOf(false) }
         val pullToRefreshState = rememberPullToRefreshState()
-        val currentGroup = uiState.groups.getOrNull(pagerState.currentPage)
+        val currentGroup = if (uiState.isSearch) {
+            uiState.allGroups.firstOrNull { it.groupId == currentGroupId }
+        } else {
+            uiState.groups.getOrNull(pagerState.currentPage)
+        }
         val pullToRefreshEnabled = (currentGroup?.enableRefresh ?: true) && !isEditMode
 
         Box(
@@ -511,7 +606,7 @@ fun BookshelfScreen(
                 targetState = isInFolderRoot,
                 label = "FolderTransition"
             ) { isRoot ->
-                if (bookGroupStyle == 2 && isRoot) {
+                if (bookGroupStyle == 2 && isRoot && !isUsingStandaloneSearchGroup) {
                     val folderColumns =
                         if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
                     val isGridMode = bookshelfLayoutMode != 0
@@ -576,31 +671,49 @@ fun BookshelfScreen(
                         }
                     }
                 } else {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxSize(),
-                        beyondViewportPageCount = 3,
-                        key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
-                    ) { pageIndex ->
-                        val group = uiState.groups.getOrNull(pageIndex)
-                        if (group != null) {
-                            val booksFlow = remember(group.groupId) {
-                                viewModel.getBooksFlow(group.groupId)
-                            }
-                            val books by booksFlow.collectAsState(emptyList())
-                            BookshelfPage(
-                                paddingValues = paddingValues,
-                                books = books,
-                                uiState = uiState,
-                                bookshelfLayoutMode = bookshelfLayoutMode,
-                                bookshelfLayoutGrid = bookshelfLayoutGrid,
+                    if (isUsingStandaloneSearchGroup) {
+                        BookshelfPage(
+                            paddingValues = paddingValues,
+                            books = uiState.items,
+                            uiState = uiState,
+                            bookshelfLayoutMode = bookshelfLayoutMode,
+                            bookshelfLayoutGrid = bookshelfLayoutGrid,
+                            bookshelfLayoutList = bookshelfLayoutList,
+                            isEditMode = isEditMode,
+                            selectedBookUrls = selectedBookUrls,
+                            onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                            onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
+                            onBookClick = onBookClick,
+                            onBookLongClick = onBookLongClick
+                        )
+                    } else {
+                        HorizontalPager(
+                            state = pagerState,
+                            modifier = Modifier.fillMaxSize(),
+                            beyondViewportPageCount = 3,
+                            key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
+                        ) { pageIndex ->
+                            val group = uiState.groups.getOrNull(pageIndex)
+                            if (group != null) {
+                                val booksFlow = remember(group.groupId) {
+                                    viewModel.getBooksFlow(group.groupId)
+                                }
+                                val books by booksFlow.collectAsState(emptyList())
+                                BookshelfPage(
+                                    paddingValues = paddingValues,
+                                    books = books,
+                                    uiState = uiState,
+                                    bookshelfLayoutMode = bookshelfLayoutMode,
+                                    bookshelfLayoutGrid = bookshelfLayoutGrid,
                                 bookshelfLayoutList = bookshelfLayoutList,
                                 isEditMode = isEditMode,
                                 selectedBookUrls = selectedBookUrls,
                                 onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                                onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                                 onBookClick = onBookClick,
                                 onBookLongClick = onBookLongClick
                             )
+                        }
                         }
                     }
                 }
@@ -716,19 +829,34 @@ fun BookshelfPage(
     isEditMode: Boolean,
     selectedBookUrls: Set<String>,
     onToggleBookSelection: (BookShelfItem) -> Unit,
+    onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit
 ) {
     if (books.isEmpty()) {
-        EmptyMessage(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding()
-                ),
-            messageResId = R.string.bookshelf_empty
-        )
+        if (uiState.isSearch) {
+            EmptyMessage(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding()
+                    ),
+                message = "没有书籍，尝试全局搜索",
+                buttonText = "全局搜索",
+                onButtonClick = onGlobalSearch
+            )
+        } else {
+            EmptyMessage(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding()
+                    ),
+                messageResId = R.string.bookshelf_empty
+            )
+        }
         return
     }
 
@@ -766,6 +894,8 @@ fun BookshelfPage(
                 titleCenter = BookshelfConfig.bookshelfTitleCenter,
                 titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
                 coverShadow = BookshelfConfig.bookshelfCoverShadow,
+                isSearchMode = uiState.isSearch,
+                searchKey = uiState.searchKey,
                 onClick = {
                     if (isEditMode) {
                         onToggleBookSelection(book)

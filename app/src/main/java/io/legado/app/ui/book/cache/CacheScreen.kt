@@ -241,7 +241,7 @@ private fun CacheScreen(
                         ) { dismiss ->
                             state.groupList.forEach { group ->
                                 RoundDropdownMenuItem(
-                                    text = "${stringResource(R.string.group)}: ${group.groupName}",
+                                    text = "${group.groupName}",
                                     isSelected = group.groupId == state.groupId,
                                     onClick = {
                                         dismiss()

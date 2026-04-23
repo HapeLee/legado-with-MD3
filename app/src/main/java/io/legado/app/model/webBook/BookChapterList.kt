@@ -19,6 +19,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapAsync
 import kotlinx.coroutines.ensureActive
@@ -96,7 +97,7 @@ object BookChapterList {
                     for (urlStr in chapterData.second) {
                         emit(urlStr)
                     }
-                }.mapAsync(AppConfig.threadCount) { urlStr ->
+                }.mapAsync(OtherConfig.threadCount) { urlStr ->
                     val analyzeUrl = AnalyzeUrl(
                         mUrl = urlStr,
                         source = bookSource,

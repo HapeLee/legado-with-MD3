@@ -13,6 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.localBook.TextFile
@@ -274,7 +275,7 @@ object BookHelp {
         book: Book,
         bookChapter: BookChapter,
         content: String,
-        concurrency: Int = AppConfig.threadCount
+        concurrency: Int = OtherConfig.threadCount
     ) = coroutineScope {
         flowImages(bookChapter, content).onEachParallel(concurrency) { mSrc ->
             saveImage(bookSource, book, mSrc, bookChapter)

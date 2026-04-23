@@ -9,6 +9,7 @@ data class BookShelfItem(
     val bookUrl: String,
     val name: String,
     val author: String,
+    val originName: String,
     val coverUrl: String?,
     val customCoverUrl: String?,
     val durChapterTitle: String?,

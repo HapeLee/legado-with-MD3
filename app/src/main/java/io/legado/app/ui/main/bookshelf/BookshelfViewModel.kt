@@ -97,6 +97,7 @@ class BookshelfViewModel(
 
     private val groupIdFlow = MutableStateFlow(BookshelfConfig.saveTabPosition)
     private val searchKeyFlow = MutableStateFlow("")
+    private val searchModeFlow = MutableStateFlow(false)
     private val refreshTrigger = MutableStateFlow(0)
     private val loadingTextFlow = MutableStateFlow<String?>(null)
 
@@ -207,19 +208,27 @@ class BookshelfViewModel(
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
-    private val internalStateFlow = combine(
+    private val coreInternalStateFlow = combine(
         groupIdFlow,
         searchKeyFlow,
+        searchModeFlow,
         loadingTextFlow,
-        updatingBooksFlow,
+        updatingBooksFlow
+    ) { groupId, searchKey, isSearchMode, loadingText, updatingBooks ->
+        InternalState(groupId, searchKey, isSearchMode, loadingText, updatingBooks, 0)
+    }
+
+    private val internalStateFlow = combine(
+        coreInternalStateFlow,
         upBooksCountFlow
-    ) { groupId, searchKey, loadingText, updatingBooks, upBooksCount ->
-        InternalState(groupId, searchKey, loadingText, updatingBooks, upBooksCount)
+    ) { core, upBooksCount ->
+        core.copy(upBooksCount = upBooksCount)
     }
 
     data class InternalState(
         val groupId: Long,
         val searchKey: String,
+        val isSearchMode: Boolean,
         val loadingText: String?,
         val updatingBooks: Set<String>,
         val upBooksCount: Int
@@ -228,29 +237,27 @@ class BookshelfViewModel(
     val uiState: StateFlow<BookshelfUiState> = combine(
         booksFlow,
         groupsFlow,
+        allGroupsFlow,
         groupPreviewsFlow,
         internalStateFlow
-    ) { books, groups, previews, internal ->
-        val filteredBooks = if (internal.searchKey.isEmpty()) {
+    ) { books, groups, allGroups, previews, internal ->
+        val filteredBooks = if (!internal.isSearchMode || internal.searchKey.isBlank()) {
             books
         } else {
-            books.filter {
-                it.name.contains(
-                    internal.searchKey,
-                    true
-                ) || it.author.contains(internal.searchKey, true)
-            }
+            books.filter { it.matchesSearchKey(internal.searchKey) }
         }
 
         BookshelfUiState(
             items = filteredBooks,
             groups = groups,
+            allGroups = allGroups,
             groupPreviews = previews.previews,
             groupBookCounts = previews.counts,
             selectedGroupIndex = groups.indexOfFirst { it.groupId == internal.groupId }
                 .coerceAtLeast(0),
+            selectedGroupId = internal.groupId,
             searchKey = internal.searchKey,
-            isSearch = internal.searchKey.isNotEmpty(),
+            isSearch = internal.isSearchMode,
             isLoading = internal.loadingText != null,
             loadingText = internal.loadingText,
             upBooksCount = internal.upBooksCount,
@@ -333,16 +340,15 @@ class BookshelfViewModel(
         return combine(
             appDb.bookDao.flowBookShelfByGroup(groupId),
             searchKeyFlow,
+            searchModeFlow,
             groupsFlow,
             refreshTrigger
-        ) { books, searchKey, groups, _ ->
+        ) { books, searchKey, isSearchMode, groups, _ ->
             val group = groups.find { it.groupId == groupId }
-            val filtered = if (searchKey.isEmpty()) {
+            val filtered = if (!isSearchMode || searchKey.isBlank()) {
                 books
             } else {
-                books.filter {
-                    it.name.contains(searchKey, true) || it.author.contains(searchKey, true)
-                }
+                books.filter { it.matchesSearchKey(searchKey) }
             }
             sortBooks(filtered, group)
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
@@ -357,6 +363,13 @@ class BookshelfViewModel(
 
     fun setSearchKey(key: String) {
         searchKeyFlow.value = key
+    }
+
+    fun setSearchMode(active: Boolean) {
+        searchModeFlow.value = active
+        if (!active) {
+            searchKeyFlow.value = ""
+        }
     }
 
     fun refresh() {
@@ -762,6 +775,12 @@ class BookshelfViewModel(
             loadingTextFlow.value = null
             context.toastOnUi(R.string.success)
         }
+    }
+
+    private fun BookShelfItem.matchesSearchKey(searchKey: String): Boolean {
+        return name.contains(searchKey, true) ||
+                author.contains(searchKey, true) ||
+                originName.contains(searchKey, true)
     }
 
 }

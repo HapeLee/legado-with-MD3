@@ -75,6 +75,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -107,6 +108,7 @@ interface BookDao {
         bookUrl,
         name,
         author,
+        originName,
         coverUrl,
         customCoverUrl,
         durChapterTitle,
@@ -136,6 +138,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -165,6 +168,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -199,6 +203,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -234,6 +239,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -264,6 +270,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -284,7 +291,9 @@ interface BookDao {
     )
     fun flowBookShelfByUserGroup(group: Long): Flow<List<BookShelfItem>>
 
-    @Query("SELECT * FROM books WHERE name like '%'||:key||'%' or author like '%'||:key||'%'")
+    @Query(
+        "SELECT * FROM books WHERE name like '%'||:key||'%' or author like '%'||:key||'%' or originName like '%'||:key||'%'"
+    )
     fun flowSearch(key: String): Flow<List<Book>>
 
     @Query(
@@ -293,6 +302,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -308,7 +318,7 @@ interface BookDao {
             `order`,
             canUpdate
         FROM books 
-        WHERE name like '%'||:key||'%' or author like '%'||:key||'%'
+        WHERE name like '%'||:key||'%' or author like '%'||:key||'%' or originName like '%'||:key||'%'
         """
     )
     fun flowBookShelfSearch(key: String): Flow<List<BookShelfItem>>
@@ -322,6 +332,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -352,6 +363,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -381,6 +393,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -410,6 +423,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -439,6 +453,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
@@ -468,6 +483,7 @@ interface BookDao {
             bookUrl,
             name,
             author,
+            originName,
             coverUrl,
             customCoverUrl,
             durChapterTitle,
