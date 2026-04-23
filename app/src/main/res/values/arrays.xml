@@ -196,7 +196,7 @@
 	<string-array name="tabletInterface">
 		<item>Auto</item>
 		<item>Always</item>
-		<item>In_Landscape_Mode</item>
+		<item>Landscape Mode</item>
 		<item>Off</item>
 	</string-array>
 
