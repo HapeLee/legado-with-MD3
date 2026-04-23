@@ -25,6 +25,7 @@ import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.internString
 import io.legado.app.utils.mapParallel
 import io.legado.app.utils.mapParallelSafe
@@ -59,7 +60,7 @@ import kotlin.math.min
 
 @Suppress("MemberVisibilityCanBePrivate")
 open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(application) {
-    private val threadCount = AppConfig.threadCount
+    private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     val searchStateData = MutableLiveData<Boolean>()
     private val _isSearching = MutableStateFlow(false)

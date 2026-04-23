@@ -31,6 +31,7 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.searchContent.SearchResult
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
@@ -307,7 +308,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
                 }
             }.onStart {
                 ReadBook.upMsg(context.getString(R.string.source_auto_changing))
-            }.mapParallelSafe(AppConfig.threadCount) { source ->
+        }.mapParallelSafe(OtherConfig.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
                     WebBook.getBookInfoAwait(source, book)

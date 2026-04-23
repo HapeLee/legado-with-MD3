@@ -11,11 +11,11 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.ConcurrentException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.CacheBookService
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.startService
@@ -44,79 +44,111 @@ import kotlin.coroutines.CoroutineContext
 
 object CacheBook {
 
+    private data class QueueStats(
+        val waitingCount: Int,
+        val downloadingCount: Int
+    )
+
+    private class CacheBookCoordinator {
+        val taskMap = ConcurrentHashMap<String, CacheBookModel>()
+        private val processMutex = Mutex()
+        private val workingState = MutableStateFlow(true)
+
+        fun setWorkingState(value: Boolean) {
+            workingState.value = value
+        }
+
+        suspend fun startProcessJob(context: CoroutineContext) = processMutex.withLock {
+            setWorkingState(true)
+            flow {
+                while (currentCoroutineContext().isActive && taskMap.isNotEmpty()) {
+                    if (!workingState.value) {
+                        workingState.first { it }
+                    }
+                    var emitted = false
+                    taskMap.forEach { (_, model) ->
+                        if (!model.isLoading()) {
+                            emit(model)
+                            emitted = true
+                        }
+                    }
+                    if (!emitted) delay(800)
+                }
+            }.onStart {
+                postEvent(EventBus.UP_DOWNLOAD_STATE, "")
+                updateSummary()
+            }.onEachParallel(OtherConfig.threadCount.coerceAtLeast(1)) {
+                coroutineScope {
+                    it.download(this, context)
+                }
+            }.onCompletion {
+                postEvent(EventBus.UP_DOWNLOAD_STATE, "")
+                updateSummary()
+            }.collect()
+        }
+    }
+
+    private val coordinator = CacheBookCoordinator()
+
     private val _cacheSuccessFlow = MutableSharedFlow<BookChapter>(extraBufferCapacity = 64)
     val cacheSuccessFlow = _cacheSuccessFlow.asSharedFlow()
 
     private val _downloadSummaryFlow = MutableStateFlow("")
-
     val downloadSummaryFlow = _downloadSummaryFlow.asStateFlow()
 
     private val _downloadingIndicesFlow =
         MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
-
     val downloadingIndicesFlow = _downloadingIndicesFlow.asStateFlow()
 
     private val _downloadErrorFlow =
         MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
-
     val downloadErrorFlow = _downloadErrorFlow.asStateFlow()
+
+    val successDownloadSet = ConcurrentHashMap.newKeySet<String>()
+    val errorDownloadMap = ConcurrentHashMap<String, Int>()
+    private val errorIndexMap = ConcurrentHashMap<String, MutableSet<Int>>()
+
+    val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
+        get() = coordinator.taskMap
+
+    private fun collectQueueStats(): QueueStats {
+        var waiting = 0
+        var downloading = 0
+        cacheBookMap.forEach { (_, model) ->
+            val (w, d) = model.queueCounts()
+            waiting += w
+            downloading += d
+        }
+        return QueueStats(waiting, downloading)
+    }
 
     private fun updateSummary() {
         _downloadSummaryFlow.value = downloadSummary
     }
 
-    val cacheBookMap = ConcurrentHashMap<String, CacheBookModel>()
-    private val workingState = MutableStateFlow(true)
-    private val mutex = Mutex()
-    val totalCount: Int
-        get() {
-            var total = 0
-            cacheBookMap.forEach { (_, model) ->
-                total += model.waitCount + model.onDownloadCount
-            }
-            total += successDownloadSet.size
-            total += errorDownloadMap.size
-            return total
-        }
-
-    val completedCount: Int
-        get() = successDownloadSet.size + errorDownloadMap.size
-
     @Synchronized
     fun getOrCreate(bookUrl: String): CacheBookModel? {
         val book = appDb.bookDao.getBook(bookUrl) ?: return null
-        val bookSource = appDb.bookSourceDao.getBookSource(book.origin) ?: return null
-        updateBookSource(bookSource)
-        var cacheBook = cacheBookMap[bookUrl]
-        if (cacheBook != null) {
-            //存在时更新,书源可能会变化,必须更新
-            cacheBook.bookSource = bookSource
-            cacheBook.book = book
-            return cacheBook
-        }
-        cacheBook = CacheBookModel(bookSource, book)
-        cacheBookMap[bookUrl] = cacheBook
-        return cacheBook
+        val source = appDb.bookSourceDao.getBookSource(book.origin) ?: return null
+        return getOrCreate(source, book)
     }
 
     @Synchronized
     fun getOrCreate(bookSource: BookSource, book: Book): CacheBookModel {
         updateBookSource(bookSource)
-        var cacheBook = cacheBookMap[book.bookUrl]
-        if (cacheBook != null) {
-            //存在时更新,书源可能会变化,必须更新
-            cacheBook.bookSource = bookSource
-            cacheBook.book = book
-            return cacheBook
+        cacheBookMap[book.bookUrl]?.let { model ->
+            model.bookSource = bookSource
+            model.book = book
+            return model
         }
-        cacheBook = CacheBookModel(bookSource, book)
-        cacheBookMap[book.bookUrl] = cacheBook
-        return cacheBook
+        val model = CacheBookModel(bookSource, book)
+        cacheBookMap[book.bookUrl] = model
+        updateSummary()
+        return model
     }
 
     private fun updateBookSource(newBookSource: BookSource) {
-        cacheBookMap.forEach {
-            val model = it.value
+        cacheBookMap.forEach { (_, model) ->
             if (model.bookSource.bookSourceUrl == newBookSource.bookSourceUrl) {
                 model.bookSource = newBookSource
             }
@@ -149,100 +181,60 @@ object CacheBook {
     }
 
     fun close() {
-        cacheBookMap.forEach { it.value.stop() }
+        cacheBookMap.forEach { (_, model) -> model.stop() }
         cacheBookMap.clear()
         successDownloadSet.clear()
         errorDownloadMap.clear()
+        errorIndexMap.clear()
+        updateSummary()
     }
 
     fun setWorkingState(value: Boolean) {
-        workingState.value = value
+        coordinator.setWorkingState(value)
     }
 
-    suspend fun startProcessJob(context: CoroutineContext) = mutex.withLock {
-        setWorkingState(true)
-        flow {
-            while (currentCoroutineContext().isActive && cacheBookMap.isNotEmpty()) {
-                var emitted = false
-
-                cacheBookMap.forEach { (_, model) ->
-                    if (!model.isLoading()) {
-                        emit(model)
-                        emitted = true
-                    }
-                    workingState.first { it }
-                }
-
-                if (!emitted) {
-                    delay(1000)
-                }
-            }
-        }.onStart {
-            postEvent(EventBus.UP_DOWNLOAD_STATE, "")
-            updateSummary()
-        }.onEachParallel(AppConfig.threadCount) {
-            coroutineScope {
-                it.download(this, context)
-            }
-        }.onCompletion {
-            postEvent(EventBus.UP_DOWNLOAD_STATE, "")
-            updateSummary()
-        }.collect()
+    suspend fun startProcessJob(context: CoroutineContext) {
+        coordinator.startProcessJob(context)
     }
+
+    val totalCount: Int
+        get() {
+            val stats = collectQueueStats()
+            return stats.waitingCount + stats.downloadingCount + successDownloadSet.size + errorDownloadMap.size
+        }
+
+    val completedCount: Int
+        get() = successDownloadSet.size + errorDownloadMap.size
 
     val downloadSummary: String
         get() {
-            return "正在下载:${onDownloadCount}|等待中:${waitCount}|失败:${errorDownloadMap.count()}|成功:${successDownloadSet.size}"
+            val stats = collectQueueStats()
+            return "正在下载:${stats.downloadingCount}|等待中:${stats.waitingCount}|失败:${errorDownloadMap.size}|成功:${successDownloadSet.size}"
         }
 
     val isRun: Boolean
         get() {
-            cacheBookMap.forEach {
-                if (it.value.isRun()) {
-                    return true
-                }
+            cacheBookMap.forEach { (_, model) ->
+                if (model.isRun()) return true
             }
             return false
         }
 
-    private val waitCount: Int
-        get() {
-            var count = 0
-            cacheBookMap.forEach {
-                count += it.value.waitCount
-            }
-            return count
-        }
+    private fun onTaskQueuesChanged(bookUrl: String) {
+        updateSummary()
+        postEvent(EventBus.UP_DOWNLOAD, bookUrl)
+    }
 
-    val onDownloadCount: Int
-        get() {
-            var count = 0
-            cacheBookMap.forEach {
-                count += it.value.onDownloadCount
-            }
-            return count
-        }
+    private fun onTaskRemoved(bookUrl: String) {
+        cacheBookMap.remove(bookUrl)
+        updateSummary()
+        postEvent(EventBus.UP_DOWNLOAD, bookUrl)
+    }
 
-    val successDownloadSet = linkedSetOf<String>()
-    val errorDownloadMap = hashMapOf<String, Int>()
-
-    class CacheBookModel(var bookSource: BookSource, var book: Book) {
-
-        private fun notifyDownloadSetChanged() {
-            _downloadingIndicesFlow.tryEmit(book.bookUrl to onDownloadSet.toSet())
-        }
-
-        private fun notifyErrorChanged() {
-            val errorIndices = errorDownloadMap
-                .filterKeys { it.startsWith(book.bookUrl) }
-                .mapNotNull {
-                    val chapterIndex = it.key.substringAfterLast("_").toIntOrNull()
-                    chapterIndex
-                }
-                .toSet()
-
-            _downloadErrorFlow.tryEmit(book.bookUrl to errorIndices)
-        }
+    class CacheBookModel(
+        @Volatile var bookSource: BookSource,
+        @Volatile var book: Book
+    ) {
 
         private val waitDownloadSet = linkedSetOf<Int>()
         private val onDownloadSet = linkedSetOf<Int>()
@@ -251,12 +243,21 @@ object CacheBook {
         private var waitingRetry = false
         private var isLoading = false
 
-        val waitCount get() = waitDownloadSet.size
-        val onDownloadCount get() = onDownloadSet.size
-
         init {
             postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
         }
+
+        private fun notifyDownloadSetChanged() {
+            _downloadingIndicesFlow.tryEmit(book.bookUrl to onDownloadSet.toSet())
+        }
+
+        private fun notifyErrorChanged() {
+            val errors = errorIndexMap[book.bookUrl]?.toSet() ?: emptySet()
+            _downloadErrorFlow.tryEmit(book.bookUrl to errors)
+        }
+
+        @Synchronized
+        fun queueCounts(): Pair<Int, Int> = waitDownloadSet.size to onDownloadSet.size
 
         @Synchronized
         fun isRun(): Boolean {
@@ -269,13 +270,12 @@ object CacheBook {
         }
 
         @Synchronized
-        fun isLoading(): Boolean {
-            return isLoading
-        }
+        fun isLoading(): Boolean = isLoading
 
         @Synchronized
         fun setLoading() {
             isLoading = true
+            CacheBook.onTaskQueuesChanged(book.bookUrl)
         }
 
         @Synchronized
@@ -284,7 +284,9 @@ object CacheBook {
             tasks.clear()
             isStopped = true
             isLoading = false
-            postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+            onDownloadSet.clear()
+            notifyDownloadSetChanged()
+            CacheBook.onTaskQueuesChanged(book.bookUrl)
         }
 
         @Synchronized
@@ -297,7 +299,8 @@ object CacheBook {
             }
             cacheBookMap[book.bookUrl] = this
             isLoading = false
-            postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+            notifyDownloadSetChanged()
+            CacheBook.onTaskQueuesChanged(book.bookUrl)
         }
 
         fun addDownload(index: Int) {
@@ -309,7 +312,9 @@ object CacheBook {
             onDownloadSet.remove(chapter.index)
             successDownloadSet.add(chapter.primaryStr())
             errorDownloadMap.remove(chapter.primaryStr())
+            errorIndexMap[book.bookUrl]?.remove(chapter.index)
             notifyDownloadSetChanged()
+            notifyErrorChanged()
             _cacheSuccessFlow.tryEmit(chapter)
         }
 
@@ -317,22 +322,20 @@ object CacheBook {
         private fun onPreError(chapter: BookChapter, error: Throwable) {
             waitingRetry = true
             if (error !is ConcurrentException) {
-                errorDownloadMap[chapter.primaryStr()] =
-                    (errorDownloadMap[chapter.primaryStr()] ?: 0) + 1
+                errorDownloadMap.merge(chapter.primaryStr(), 1) { old, inc -> old + inc }
+                errorIndexMap.getOrPut(book.bookUrl) { ConcurrentHashMap.newKeySet() }
+                    .add(chapter.index)
             }
             onDownloadSet.remove(chapter.index)
         }
 
         @Synchronized
         private fun onPostError(chapter: BookChapter, error: Throwable) {
-            //重试3次
-            if ((errorDownloadMap[chapter.primaryStr()] ?: 0) < 3 && !isStopped) {
+            val retryCount = errorDownloadMap[chapter.primaryStr()] ?: 0
+            if (retryCount < 3 && !isStopped) {
                 waitDownloadSet.add(chapter.index)
             } else {
-                AppLog.put(
-                    "下载${book.name}-${chapter.title}失败\n${error.localizedMessage}",
-                    error
-                )
+                AppLog.put("下载${book.name}-${chapter.title}失败\n${error.localizedMessage}", error)
             }
             waitingRetry = false
         }
@@ -354,12 +357,13 @@ object CacheBook {
 
         @Synchronized
         private fun onFinally() {
+            val bookUrl = book.bookUrl
             if (waitDownloadSet.isEmpty() && onDownloadSet.isEmpty()) {
-                cacheBookMap.remove(book.bookUrl)
+                CacheBook.onTaskRemoved(bookUrl)
+            } else {
+                CacheBook.onTaskQueuesChanged(bookUrl)
             }
-            postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
             notifyDownloadSetChanged()
-            updateSummary()
         }
 
         /**
@@ -370,7 +374,7 @@ object CacheBook {
             val chapterIndex = waitDownloadSet.firstOrNull()
             if (chapterIndex == null) {
                 if (!isLoading && onDownloadSet.isEmpty()) {
-                    cacheBookMap.remove(book.bookUrl)
+                    CacheBook.onTaskRemoved(book.bookUrl)
                 }
                 return
             }
@@ -378,12 +382,11 @@ object CacheBook {
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: let {
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: run {
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
             if (chapter.isVolume) {
-                /** 修正下载计数 */
                 postEvent(EventBus.SAVE_CONTENT, Pair(book, chapter))
                 _cacheSuccessFlow.tryEmit(chapter)
                 waitDownloadSet.remove(chapterIndex)
@@ -393,9 +396,11 @@ object CacheBook {
                 waitDownloadSet.remove(chapterIndex)
                 return
             }
+
             waitDownloadSet.remove(chapterIndex)
             onDownloadSet.add(chapterIndex)
             notifyDownloadSetChanged()
+
             if (BookHelp.hasContent(book, chapter)) {
                 Coroutine.async(scope, context, executeContext = context) {
                     BookHelp.getContent(book, chapter)?.let {
@@ -405,7 +410,6 @@ object CacheBook {
                     onSuccess(chapter)
                 }.onError {
                     onPreError(chapter, it)
-                    //出现错误等待一秒后重新加入待下载列表
                     delay(1000)
                     onPostError(chapter, it)
                 }.onCancel {
@@ -415,6 +419,7 @@ object CacheBook {
                 }
                 return
             }
+
             WebBook.getContent(
                 scope,
                 bookSource,
@@ -428,7 +433,6 @@ object CacheBook {
                 downloadFinish(chapter, content)
             }.onError {
                 onPreError(chapter, it)
-                //出现错误等待一秒后重新加入待下载列表
                 delay(1000)
                 onPostError(chapter, it)
                 downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}")
@@ -445,6 +449,7 @@ object CacheBook {
             synchronized(this) {
                 onDownloadSet.add(chapter.index)
                 waitDownloadSet.remove(chapter.index)
+                notifyDownloadSetChanged()
             }
             try {
                 val content = WebBook.getContentAwait(bookSource, book, chapter)
@@ -453,15 +458,13 @@ object CacheBook {
                 ReadBook.downloadFailChapters.remove(chapter.index)
                 return content
             } catch (e: Exception) {
-                if (e is CancellationException) {
-                    onCancel(chapter.index)
-                }
+                if (e is CancellationException) onCancel(chapter.index)
                 onError(chapter, e)
                 ReadBook.downloadFailChapters[chapter.index] =
                     (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
                 return "获取正文失败\n${e.localizedMessage}"
             } finally {
-                postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+                CacheBook.onTaskQueuesChanged(book.bookUrl)
             }
         }
 
@@ -472,11 +475,11 @@ object CacheBook {
             semaphore: Semaphore?,
             resetPageOffset: Boolean = false
         ) {
-            if (onDownloadSet.contains(chapter.index)) {
-                return
-            }
+            if (onDownloadSet.contains(chapter.index)) return
             onDownloadSet.add(chapter.index)
             waitDownloadSet.remove(chapter.index)
+            notifyDownloadSetChanged()
+
             WebBook.getContent(
                 scope,
                 bookSource,
@@ -499,7 +502,7 @@ object CacheBook {
                 onCancel(chapter.index)
                 downloadFinish(chapter, "download canceled", resetPageOffset, true)
             }.onFinally {
-                postEvent(EventBus.UP_DOWNLOAD, book.bookUrl)
+                CacheBook.onTaskQueuesChanged(book.bookUrl)
             }.start()
         }
 
@@ -511,13 +514,13 @@ object CacheBook {
         ) {
             if (ReadBook.book?.bookUrl == book.bookUrl) {
                 ReadBook.contentLoadFinish(
-                    book, chapter, content,
+                    book = book,
+                    chapter = chapter,
+                    content = content,
                     resetPageOffset = resetPageOffset,
                     canceled = canceled
                 )
             }
         }
-
     }
-
 }

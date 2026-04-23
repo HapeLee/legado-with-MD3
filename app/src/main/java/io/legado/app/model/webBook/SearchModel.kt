@@ -7,7 +7,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.mapParallelSafe
@@ -33,7 +33,7 @@ import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 
 class SearchModel(private val scope: CoroutineScope, private val callBack: CallBack) {
-    val threadCount = AppConfig.threadCount
+    val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var mSearchId = 0L
     private var searchPage = 1

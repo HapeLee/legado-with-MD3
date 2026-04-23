@@ -13,9 +13,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -37,8 +41,14 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
+import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.import.local.ImportBookScreen
 import io.legado.app.ui.book.import.remote.RemoteBookScreen
+import io.legado.app.ui.book.search.SearchIntent
+import io.legado.app.ui.book.search.SearchScreen
+import io.legado.app.ui.book.search.SearchViewModel
+import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.book.cache.CacheRouteScreen
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ConfigTag
@@ -62,6 +72,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import org.koin.androidx.compose.koinViewModel
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -82,8 +93,13 @@ open class MainActivity : BaseComposeActivity() {
         private const val ROUTE_SETTINGS_BACKUP = "settings/backup"
         private const val ROUTE_IMPORT_LOCAL = "import/local"
         private const val ROUTE_IMPORT_REMOTE = "import/remote"
+        private const val ROUTE_CACHE = "cache"
+        private const val ROUTE_SEARCH = "search"
         private const val ROUTE_RSS_SORT = "rss/sort"
         private const val ROUTE_RSS_READ = "rss/read"
+        private const val EXTRA_CACHE_GROUP_ID = "extra_cache_group_id"
+        private const val EXTRA_SEARCH_KEY = "extra_search_key"
+        private const val EXTRA_SEARCH_SCOPE = "extra_search_scope"
 
         private const val EXTRA_RSS_SOURCE_URL = "extra_rss_source_url"
         private const val EXTRA_RSS_SORT_URL = "extra_rss_sort_url"
@@ -146,6 +162,28 @@ open class MainActivity : BaseComposeActivity() {
             }
         }
 
+        fun createCacheIntent(
+            context: Context,
+            groupId: Long = -1L
+        ): Intent {
+            return createLauncherIntent(context).apply {
+                putExtra(EXTRA_START_ROUTE, ROUTE_CACHE)
+                putExtra(EXTRA_CACHE_GROUP_ID, groupId)
+            }
+        }
+
+        fun createSearchIntent(
+            context: Context,
+            key: String? = null,
+            scopeRaw: String? = null
+        ): Intent {
+            return createLauncherIntent(context).apply {
+                putExtra(EXTRA_START_ROUTE, ROUTE_SEARCH)
+                putExtra(EXTRA_SEARCH_KEY, key)
+                putExtra(EXTRA_SEARCH_SCOPE, scopeRaw)
+            }
+        }
+
         private fun routeForConfigTag(configTag: String?): String {
             return when (configTag) {
                 ConfigTag.OTHER_CONFIG -> ROUTE_SETTINGS_OTHER
@@ -190,6 +228,15 @@ open class MainActivity : BaseComposeActivity() {
 
     @Serializable
     private data object MainRouteImportRemote : MainRoute
+
+    @Serializable
+    private data class MainRouteCache(val groupId: Long) : MainRoute
+
+    @Serializable
+    private data class MainRouteSearch(
+        val key: String?,
+        val scopeRaw: String? = null
+    ) : MainRoute
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -332,11 +379,22 @@ open class MainActivity : BaseComposeActivity() {
                         onOpenSettings = {
                             navigateToRoute(backStack, MainRouteSettings)
                         },
+                        onNavigateToSearch = { key ->
+                            navigateToRoute(
+                                backStack,
+                                MainRouteSearch(
+                                    key = key?.trim()?.takeIf { it.isNotEmpty() }
+                                )
+                            )
+                        },
                         onNavigateToRemoteImport = {
                             navigateToRoute(backStack, MainRouteImportRemote)
                         },
                         onNavigateToLocalImport = {
                             navigateToRoute(backStack, MainRouteImportLocal)
+                        },
+                        onNavigateToCache = { groupId ->
+                            navigateToRoute(backStack, MainRouteCache(groupId))
                         },
                         onNavigateToRssSort = { sourceUrl, sortUrl, key ->
                             navigateToRoute(
@@ -405,6 +463,64 @@ open class MainActivity : BaseComposeActivity() {
                     )
                 }
 
+                entry<MainRouteCache> { route ->
+                    CacheRouteScreen(
+                        groupId = route.groupId,
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
+
+                entry<MainRouteSearch> { route ->
+                    val searchViewModel = koinViewModel<SearchViewModel>()
+                    val lifecycleOwner = LocalLifecycleOwner.current
+
+                    LaunchedEffect(route.key, route.scopeRaw, searchViewModel) {
+                        searchViewModel.onIntent(
+                            SearchIntent.Initialize(
+                                key = route.key,
+                                scopeRaw = route.scopeRaw
+                            )
+                        )
+                    }
+
+                    DisposableEffect(lifecycleOwner, searchViewModel) {
+                        searchViewModel.onIntent(SearchIntent.ResumeEngine)
+                        val observer = LifecycleEventObserver { _, event ->
+                            when (event) {
+                                Lifecycle.Event.ON_RESUME -> {
+                                    searchViewModel.onIntent(SearchIntent.ResumeEngine)
+                                }
+
+                                Lifecycle.Event.ON_PAUSE -> {
+                                    searchViewModel.onIntent(SearchIntent.PauseEngine)
+                                }
+
+                                else -> Unit
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                            searchViewModel.onIntent(SearchIntent.PauseEngine)
+                        }
+                    }
+
+                    SearchScreen(
+                        viewModel = searchViewModel,
+                        onBack = { navigateBack(backStack) },
+                        onOpenBookInfo = { name, author, bookUrl ->
+                            this@MainActivity.startActivity<BookInfoActivity> {
+                                putExtra("name", name)
+                                putExtra("author", author)
+                                putExtra("bookUrl", bookUrl)
+                            }
+                        },
+                        onOpenSourceManage = {
+                            this@MainActivity.startActivity<BookSourceActivity>()
+                        }
+                    )
+                }
+
                 entry<MainRouteRssSort> { route ->
                     RssSortRouteScreen(
                         sourceUrl = route.sourceUrl,
@@ -469,7 +585,18 @@ open class MainActivity : BaseComposeActivity() {
             }
 
             MainRouteImportLocal,
-            MainRouteImportRemote -> {
+            MainRouteImportRemote,
+            is MainRouteCache -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
+            is MainRouteSearch -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
                 } else {
@@ -660,15 +787,20 @@ open class MainActivity : BaseComposeActivity() {
 
     private fun resolveStartRoute(route: String?): MainRoute {
         return when (route) {
-            "main" -> MainRouteHome
-            "settings" -> MainRouteSettings
-            "settings/other" -> MainRouteSettingsOther
-            "settings/read" -> MainRouteSettingsRead
-            "settings/cover" -> MainRouteSettingsCover
-            "settings/theme" -> MainRouteSettingsTheme
-            "settings/backup" -> MainRouteSettingsBackup
-            "import/local" -> MainRouteImportLocal
-            "import/remote" -> MainRouteImportRemote
+            ROUTE_MAIN -> MainRouteHome
+            ROUTE_SETTINGS -> MainRouteSettings
+            ROUTE_SETTINGS_OTHER -> MainRouteSettingsOther
+            ROUTE_SETTINGS_READ -> MainRouteSettingsRead
+            ROUTE_SETTINGS_COVER -> MainRouteSettingsCover
+            ROUTE_SETTINGS_THEME -> MainRouteSettingsTheme
+            ROUTE_SETTINGS_BACKUP -> MainRouteSettingsBackup
+            ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
+            ROUTE_IMPORT_REMOTE -> MainRouteImportRemote
+            ROUTE_CACHE -> MainRouteCache(intent?.getLongExtra(EXTRA_CACHE_GROUP_ID, -1L) ?: -1L)
+            ROUTE_SEARCH -> MainRouteSearch(
+                key = intent?.getStringExtra(EXTRA_SEARCH_KEY),
+                scopeRaw = intent?.getStringExtra(EXTRA_SEARCH_SCOPE)
+            )
             else -> MainRouteHome
         }
     }

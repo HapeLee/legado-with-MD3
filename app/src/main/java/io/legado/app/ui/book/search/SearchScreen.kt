@@ -242,20 +242,15 @@ fun SearchScreen(
                         onSearch = submitSearch,
                         placeholder = searchLabel,
                         trailingIcon = {
-                            Row(
-                                modifier = Modifier.padding(end = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (queryInput.isNotEmpty()) {
-                                    TopBarActionButton(
-                                        onClick = {
-                                            queryInput = ""
-                                            viewModel.onIntent(SearchIntent.UpdateQuery(""))
-                                        },
-                                        imageVector = AppIcons.Close,
-                                        contentDescription = stringResource(R.string.clear)
-                                    )
-                                }
+                            if (queryInput.isNotEmpty()) {
+                                TopBarActionButton(
+                                    onClick = {
+                                        queryInput = ""
+                                        viewModel.onIntent(SearchIntent.UpdateQuery(""))
+                                    },
+                                    imageVector = AppIcons.Close,
+                                    contentDescription = stringResource(R.string.clear)
+                                )
                             }
                         },
                     )

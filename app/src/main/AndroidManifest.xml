@@ -283,11 +283,6 @@
             android:name=".ui.book.bookmark.AllBookmarkActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- 缓存界面 -->
-        <activity
-            android:name=".ui.book.cache.CacheActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- WebView界面 -->
         <activity
             android:name=".ui.browser.WebViewActivity"

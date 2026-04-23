@@ -26,6 +26,7 @@ import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceViewModel
+import io.legado.app.ui.book.cache.CacheViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.book.import.local.ImportBookViewModel
@@ -37,6 +38,7 @@ import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
+import io.legado.app.ui.config.cacheConfig.CacheConfig
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
@@ -72,6 +74,7 @@ val appModule = module {
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::ExploreKindUiUseCase)
+    singleOf(::CacheConfig)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
@@ -122,6 +125,7 @@ val appModule = module {
     viewModelOf(::ExploreViewModel)
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)
+    viewModelOf(::CacheViewModel)
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(

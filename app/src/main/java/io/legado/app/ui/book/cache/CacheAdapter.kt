@@ -1,8 +1,6 @@
 package io.legado.app.ui.book.cache
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -15,7 +13,6 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.Book
 import io.legado.app.databinding.ItemDownloadBinding
 import io.legado.app.help.book.isLocal
-import io.legado.app.model.CacheBook
 import io.legado.app.utils.gone
 import io.legado.app.utils.visible
 
@@ -72,8 +69,7 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
                 } else {
                     val cacheSize = callBack.cacheChapters[item.bookUrl]?.size ?: 0
                     tvDownload.text = context.getString(R.string.download_count, cacheSize, item.totalChapterNum)
-                    val cacheTask = CacheBook.cacheBookMap[item.bookUrl]
-                    if (cacheTask != null && !cacheTask.isStop()) {
+                    if (callBack.isBookDownloading(item.bookUrl)) {
                         val progress = if (item.totalChapterNum > 0) cacheSize * 100 / item.totalChapterNum else 0
                         progressDownload.progress = progress
                         progressDownload.visible()
@@ -90,17 +86,7 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
         binding.run {
             ivDownload.setOnClickListener {
                 getItem(holder.layoutPosition)?.let { book ->
-                    CacheBook.cacheBookMap[book.bookUrl]?.let {
-                        if (!it.isStop()) {
-                            CacheBook.remove(context, book.bookUrl)
-                        } else {
-                            val indices = (0..book.lastChapterIndex).toList()
-                            CacheBook.start(context, book, indices)
-                        }
-                    } ?: let {
-                        val indices = (0..book.lastChapterIndex).toList()
-                        CacheBook.start(context, book, indices)
-                    }
+                    callBack.toggleBookDownload(book)
                 }
             }
             tvExport.setOnClickListener {
@@ -108,18 +94,7 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
             }
             ivDelete.setOnClickListener {
                 getItem(holder.layoutPosition)?.let { book ->
-                    CacheBook.cacheBookMap[book.bookUrl]?.let {
-                        if (!it.isStop()) {
-                            CacheBook.remove(context, book.bookUrl)
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                callBack.deleteDownload(book)
-                            }, 10)
-                        } else {
-                            callBack.deleteDownload(book)
-                        }
-                    } ?: run {
-                        callBack.deleteDownload(book)
-                    }
+                    callBack.deleteDownload(book)
                 }
             }
 
@@ -131,15 +106,12 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
             button.gone()
         } else {
             button.visible()
-            CacheBook.cacheBookMap[book.bookUrl]?.let {
-                if (!it.isStop()) {
-                    button.icon = ContextCompat.getDrawable(context, R.drawable.ic_stop_black_24dp)
-                } else {
-                    button.icon = ContextCompat.getDrawable(context, R.drawable.ic_play)
-                }
-            } ?: run {
-                button.icon = ContextCompat.getDrawable(context, R.drawable.ic_play)
+            val iconRes = if (callBack.isBookDownloading(book.bookUrl)) {
+                R.drawable.ic_stop_black_24dp
+            } else {
+                R.drawable.ic_play
             }
+            button.icon = ContextCompat.getDrawable(context, iconRes)
         }
     }
 
@@ -162,7 +134,9 @@ class CacheAdapter(context: Context, private val callBack: CallBack) :
     }
 
     interface CallBack {
-        val cacheChapters: HashMap<String, HashSet<String>>
+        val cacheChapters: Map<String, Set<String>>
+        fun isBookDownloading(bookUrl: String): Boolean
+        fun toggleBookDownload(book: Book)
         fun export(position: Int)
         fun exportProgress(bookUrl: String): Int?
         fun exportMsg(bookUrl: String): String?

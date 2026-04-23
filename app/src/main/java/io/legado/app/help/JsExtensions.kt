@@ -29,6 +29,7 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.association.OpenUrlConfirmActivity
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.EncoderUtils
@@ -130,7 +131,7 @@ interface JsExtensions : JsEncodeUtils {
     }
     fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean): Array<StrResponse> {
         return runBlocking(context) {
-            urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
+            urlList.asFlow().mapAsync(OtherConfig.threadCount) { url ->
                 val analyzeUrl = AnalyzeUrl(
                     url,
                     source = getSource(),
@@ -153,7 +154,7 @@ interface JsExtensions : JsEncodeUtils {
         skipRateLimit: Boolean
     ): Array<StrResponse> {
         return runBlocking(context) {
-            urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
+            urlList.asFlow().mapAsync(OtherConfig.threadCount) { url ->
                 val analyzeUrl = AnalyzeUrl(
                     url,
                     source = getSource(),

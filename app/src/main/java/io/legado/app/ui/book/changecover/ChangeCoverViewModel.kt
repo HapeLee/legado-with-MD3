@@ -12,8 +12,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.mapParallelSafe
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
@@ -36,7 +36,7 @@ import java.util.concurrent.Executors
 import kotlin.math.min
 
 class ChangeCoverViewModel(application: Application) : BaseViewModel(application) {
-    private val threadCount = AppConfig.threadCount
+    private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var searchSuccess: ((SearchBook) -> Unit)? = null
     private var upAdapter: (() -> Unit)? = null

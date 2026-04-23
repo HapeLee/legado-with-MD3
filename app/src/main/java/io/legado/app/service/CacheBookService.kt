@@ -12,10 +12,10 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
 import io.legado.app.help.book.update
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.webBook.WebBook
-import io.legado.app.ui.book.cache.CacheActivity
+import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.activityPendingIntent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.servicePendingIntent
@@ -41,7 +41,7 @@ class CacheBookService : BaseService() {
             private set
     }
 
-    private val threadCount = AppConfig.threadCount
+    private val threadCount = OtherConfig.threadCount
     private var cachePool =
         Executors.newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
     private var downloadJob: Job? = null
@@ -53,7 +53,12 @@ class CacheBookService : BaseService() {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentTitle(getString(R.string.offline_cache))
-            .setContentIntent(activityPendingIntent<CacheActivity>("cacheActivity"))
+            .setContentIntent(
+                activityPendingIntent(
+                    MainActivity.createCacheIntent(this),
+                    "cacheActivity"
+                )
+            )
         builder.addAction(
             R.drawable.ic_stop_black_24dp,
             getString(R.string.cancel),
