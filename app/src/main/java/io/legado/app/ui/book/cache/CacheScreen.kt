@@ -1,36 +1,58 @@
 package io.legado.app.ui.book.cache
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuOpen
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
+import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -39,31 +61,27 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.tryParesExportFileName
-import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.about.AppLogSheet
-import io.legado.app.ui.file.HandleFileContract
+import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppLinearProgressIndicator
-import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
-import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.list.ListScaffold
+import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
 import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.ACache
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.checkWrite
@@ -71,7 +89,23 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.startService
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.verificationField
+import io.legado.app.help.config.LocalConfig
+import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import org.koin.androidx.compose.koinViewModel
+
+data class CacheFabAction(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val label: String,
+    val action: () -> Unit
+)
+
+private data class CacheListState(
+    override val items: List<Book> = emptyList(),
+    override val selectedIds: Set<Any> = emptySet(),
+    override val searchKey: String = "",
+    override val isSearch: Boolean = false,
+    override val isLoading: Boolean = false
+) : ListUiState<Book>
 
 @Composable
 fun CacheRouteScreen(
@@ -85,6 +119,7 @@ fun CacheRouteScreen(
     CacheScreen(viewModel = viewModel, onBackClick = onBackClick)
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CacheScreen(
     viewModel: CacheViewModel,
@@ -92,18 +127,25 @@ private fun CacheScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
     var showGroupMenu by remember { mutableStateOf(false) }
     var showFilePickerSheet by remember { mutableStateOf(false) }
-    var showDownloadConfirmDialog by remember { mutableStateOf(false) }
     var showDownloadAllConfirmDialog by remember { mutableStateOf(false) }
+    var showBatchDownloadConfirmDialog by remember { mutableStateOf(false) }
     var showExportTypeDialog by remember { mutableStateOf(false) }
     var showExportFileNameDialog by remember { mutableStateOf(false) }
     var showCharsetDialog by remember { mutableStateOf(false) }
     var showLogSheet by remember { mutableStateOf(false) }
+    var showGroupSelectSheet by remember { mutableStateOf(false) }
+    var showDeleteBookConfirmDialog by remember { mutableStateOf(false) }
     var showCustomExportDialog by remember { mutableStateOf(false) }
+    var pendingMoveGroupBookUrl by remember { mutableStateOf<String?>(null) }
+    var groupPickerCurrentGroupId by remember { mutableLongStateOf(0L) }
+    var moreMenuBookUrl by remember { mutableStateOf<String?>(null) }
+    var pendingDeleteBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
     var pendingExportBookUrl by remember { mutableStateOf<String?>(null) }
     var pendingExportAll by remember { mutableStateOf(false) }
+    var pendingExportSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
     var customExportPath by remember { mutableStateOf("") }
     var customExportBook by remember { mutableStateOf<Book?>(null) }
     var customExportAllChapter by remember { mutableStateOf(false) }
@@ -113,9 +155,13 @@ private fun CacheScreen(
     var customEpisodeExportNameInput by remember { mutableStateOf(state.exportConfig.episodeExportFileName) }
     var exportFileNameInput by remember { mutableStateOf(state.exportConfig.bookExportFileName.orEmpty()) }
     var exportCharsetInput by remember { mutableStateOf(state.exportConfig.exportCharset) }
+    var isSearchMode by remember { mutableStateOf(false) }
+    var searchKey by remember { mutableStateOf("") }
+    var selectedBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var deleteOriginalBookFile by remember { mutableStateOf(LocalConfig.deleteBookOriginal) }
     val exportBookPathKey = remember { "exportBookPath" }
     val exportTypes = remember { arrayListOf("txt", "epub") }
-    val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val focusRequester = remember { FocusRequester() }
     val exportFolderText = stringResource(R.string.export_folder)
     val exportAllText = stringResource(R.string.export_all)
     val exportChapterIndexText = stringResource(R.string.export_chapter_index)
@@ -135,11 +181,72 @@ private fun CacheScreen(
 书名：《{name}》-作者：{author}_备注
 输出：书名：《三体》-作者：刘慈欣_备注
     """.trimIndent()
+    val booksByUrl = remember(state.books) { state.books.associateBy { it.bookUrl } }
+    val userGroups = remember(state.groupList) { state.groupList.filter { it.groupId > 0L } }
 
-    val exportDir = rememberLauncherForActivityResult(HandleFileContract()) { result ->
+    val groupNameResolver: (Book) -> String = remember(userGroups, context) {
+        { book ->
+            if (book.group <= 0L) {
+                context.getString(R.string.no_group)
+            } else {
+                val groups = userGroups.filter {
+                    (book.group and it.groupId) > 0L
+                }
+                if (groups.isEmpty()) context.getString(R.string.no_group)
+                else groups.joinToString("、") { it.groupName }
+            }
+        }
+    }
+    val filteredBooks = remember(state.books, searchKey, isSearchMode, groupNameResolver) {
+        if (!isSearchMode || searchKey.isBlank()) {
+            state.books
+        } else {
+            val key = searchKey.trim()
+            state.books.filter { book ->
+                book.name.contains(key, true) ||
+                        book.getRealAuthor().contains(key, true) ||
+                        book.originName.contains(key, true) ||
+                        groupNameResolver(book).contains(key, true)
+            }
+        }
+    }
+    val listUiState = remember(filteredBooks, selectedBookUrls, searchKey, isSearchMode) {
+        CacheListState(
+            items = filteredBooks,
+            selectedIds = selectedBookUrls.mapTo(linkedSetOf()) { it as Any },
+            searchKey = searchKey,
+            isSearch = isSearchMode,
+            isLoading = false
+        )
+    }
+    val inSelectionMode = selectedBookUrls.isNotEmpty()
+    val hasLocalBookInDeleteTarget = remember(state.books, pendingDeleteBookUrls) {
+        state.books.any { pendingDeleteBookUrls.contains(it.bookUrl) && it.isLocal }
+    }
+    val clearSelection = {
+        selectedBookUrls = emptySet()
+    }
+    val toggleBookSelection: (Book) -> Unit = { book ->
+        selectedBookUrls = if (selectedBookUrls.contains(book.bookUrl)) {
+            selectedBookUrls - book.bookUrl
+        } else {
+            selectedBookUrls + book.bookUrl
+        }
+    }
+
+    BackHandler(enabled = selectedBookUrls.isNotEmpty()) {
+        clearSelection()
+    }
+
+    LaunchedEffect(state.books) {
+        val visibleBookUrls = booksByUrl.keys
+        selectedBookUrls = selectedBookUrls.intersect(visibleBookUrls)
+    }
+
+    val exportDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         var isReadyPath = false
         var dirPath = ""
-        result.uri?.let { uri ->
+        uri?.let {
             if (uri.isContentScheme()) {
                 ACache.get().put(exportBookPathKey, uri.toString())
                 dirPath = uri.toString()
@@ -153,6 +260,14 @@ private fun CacheScreen(
             }
         }
         if (!isReadyPath) return@rememberLauncherForActivityResult
+        if (pendingExportSelection.isNotEmpty()) {
+            pendingExportSelection.forEach { bookUrl ->
+                booksByUrl[bookUrl]?.let { book ->
+                    startExport(context, dirPath, book, state.exportConfig.exportType)
+                }
+            }
+            return@rememberLauncherForActivityResult
+        }
         if (pendingExportAll) {
             state.books.forEach { book ->
                 startExport(context, dirPath, book, state.exportConfig.exportType)
@@ -160,7 +275,7 @@ private fun CacheScreen(
             return@rememberLauncherForActivityResult
         }
         val bookUrl = pendingExportBookUrl ?: return@rememberLauncherForActivityResult
-        val book = state.books.firstOrNull { it.bookUrl == bookUrl } ?: return@rememberLauncherForActivityResult
+        val book = booksByUrl[bookUrl] ?: return@rememberLauncherForActivityResult
         if (state.exportConfig.enableCustomExport) {
             customExportPath = dirPath
             customExportBook = book
@@ -184,9 +299,14 @@ private fun CacheScreen(
         }
     }
 
-    fun selectExportFolder(bookUrl: String? = null, forAll: Boolean = false) {
+    fun selectExportFolder(
+        bookUrl: String? = null,
+        forAll: Boolean = false,
+        selection: Set<String> = emptySet()
+    ) {
         pendingExportBookUrl = bookUrl
         pendingExportAll = forAll
+        pendingExportSelection = selection
         showFilePickerSheet = true
     }
 
@@ -219,182 +339,280 @@ private fun CacheScreen(
         }
     }
 
-    AppScaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            GlassMediumFlexibleTopAppBar(
-                title = state.groupName ?: stringResource(R.string.offline_cache),
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    TopBarNavigationButton(onClick = onBackClick)
-                },
-                actions = {
-                    if (state.groupList.isNotEmpty()) {
-                        TopBarActionButton(
-                            onClick = { showGroupMenu = true },
-                            imageVector = AppIcons.Filter,
-                            contentDescription = null
-                        )
-                        RoundDropdownMenu(
-                            expanded = showGroupMenu,
-                            onDismissRequest = { showGroupMenu = false }
-                        ) { dismiss ->
-                            state.groupList.forEach { group ->
-                                RoundDropdownMenuItem(
-                                    text = "${group.groupName}",
-                                    isSelected = group.groupId == state.groupId,
-                                    onClick = {
-                                        dismiss()
-                                        viewModel.dispatch(CacheIntent.ChangeGroup(group.groupId))
-                                    }
-                                )
+    fun exportSelected() {
+        if (selectedBookUrls.isEmpty()) return
+        val path = ACache.get().getAsString(exportBookPathKey)
+        if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
+            selectExportFolder(selection = selectedBookUrls)
+        } else {
+            selectedBookUrls.forEach { bookUrl ->
+                booksByUrl[bookUrl]?.let { book ->
+                    startExport(context, path, book, state.exportConfig.exportType)
+                }
+            }
+        }
+    }
+    fun resolveSelectionGroupMask(): Long {
+        val targetBooks = selectedBookUrls.mapNotNull { booksByUrl[it] }
+        if (targetBooks.isEmpty()) return 0L
+        val firstGroup = targetBooks.first().group.coerceAtLeast(0L)
+        return if (targetBooks.all { it.group == firstGroup }) firstGroup else 0L
+    }
+    val fabItems = listOf(
+        CacheFabAction(
+            Icons.Default.SelectAll,
+            stringResource(R.string.select_all)
+        ) {
+            selectedBookUrls = state.books.mapTo(hashSetOf()) { it.bookUrl }
+        },
+        CacheFabAction(
+            Icons.Default.Refresh,
+            stringResource(R.string.revert_selection)
+        ) {
+            val visibleBookUrls = booksByUrl.keys
+            selectedBookUrls = visibleBookUrls - selectedBookUrls
+        },
+        CacheFabAction(
+            Icons.Default.Download,
+            "缓存选中"
+        ) {
+            if (selectedBookUrls.isNotEmpty()) {
+                showBatchDownloadConfirmDialog = true
+            }
+        },
+        CacheFabAction(
+            Icons.Default.Bookmarks,
+            stringResource(R.string.move_to_group)
+        ) {
+            if (selectedBookUrls.isNotEmpty()) {
+                groupPickerCurrentGroupId = resolveSelectionGroupMask()
+                pendingMoveGroupBookUrl = null
+                showGroupSelectSheet = true
+            }
+        },
+        CacheFabAction(
+            Icons.Default.Upload,
+            "导出选中"
+        ) {
+            exportSelected()
+        },
+        CacheFabAction(
+            Icons.Default.Delete,
+            stringResource(R.string.clear_cache)
+        ) {
+            viewModel.dispatch(CacheIntent.ClearCachesForBooks(selectedBookUrls))
+            clearSelection()
+        },
+        CacheFabAction(
+            Icons.Default.Delete,
+            stringResource(R.string.delete)
+        ) {
+            if (selectedBookUrls.isNotEmpty()) {
+                pendingDeleteBookUrls = selectedBookUrls
+                deleteOriginalBookFile = LocalConfig.deleteBookOriginal
+                showDeleteBookConfirmDialog = true
+            }
+        }
+    )
+    val listState = rememberLazyListState()
+    ListScaffold(
+        title = if (inSelectionMode) {
+            "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
+        } else {
+            state.groupName ?: stringResource(R.string.offline_cache)
+        },
+        state = listUiState,
+        onBackClick = onBackClick,
+        onSearchToggle = { active ->
+            isSearchMode = active
+            if (!active) {
+                searchKey = ""
+            }
+        },
+        onSearchQueryChange = { searchKey = it },
+        searchPlaceholder = "筛选书名/作者/书源/分组",
+        topBarActions = {
+            if (state.groupList.isNotEmpty()) {
+                TopBarActionButton(
+                    onClick = { showGroupMenu = true },
+                    imageVector = AppIcons.Filter,
+                    contentDescription = null
+                )
+                RoundDropdownMenu(
+                    expanded = showGroupMenu,
+                    onDismissRequest = { showGroupMenu = false }
+                ) { dismiss ->
+                    state.groupList.forEach { group ->
+                        RoundDropdownMenuItem(
+                            text = group.groupName,
+                            isSelected = group.groupId == state.groupId,
+                            onClick = {
+                                dismiss()
+                                viewModel.dispatch(CacheIntent.ChangeGroup(group.groupId))
                             }
-                        }
+                        )
                     }
-                    TopBarActionButton(
-                        onClick = { showMenu = true },
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = null
+                }
+            }
+        },
+        dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.download_all),
+                onClick = {
+                    dismiss()
+                    if (state.isDownloadRunning) {
+                        viewModel.dispatch(CacheIntent.StopDownload)
+                    } else {
+                        showDownloadAllConfirmDialog = true
+                    }
+                }
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.export_all),
+                onClick = { dismiss(); exportAll() }
+            )
+            PillDivider()
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.export_folder),
+                onClick = { dismiss(); selectExportFolder() }
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.export_file_name),
+                onClick = {
+                    dismiss()
+                    exportFileNameInput = state.exportConfig.bookExportFileName.orEmpty()
+                    showExportFileNameDialog = true
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "${stringResource(R.string.export_type)} (${exportTypes.getOrElse(state.exportConfig.exportType) { exportTypes[0] }})",
+                onClick = {
+                    dismiss()
+                    showExportTypeDialog = true
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
+                onClick = {
+                    dismiss()
+                    exportCharsetInput = state.exportConfig.exportCharset
+                    showCharsetDialog = true
+                }
+            )
+            PillDivider()
+            RoundDropdownMenuItem(
+                text = "替换净化",
+                isSelected = state.exportConfig.exportUseReplace,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetExportUseReplace(!state.exportConfig.exportUseReplace)
                     )
-                    RoundDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.download_all),
-                            onClick = {
-                                showMenu = false
-                                if (state.isDownloadRunning) {
-                                    viewModel.dispatch(CacheIntent.StopDownload)
-                                } else {
-                                    showDownloadAllConfirmDialog = true
-                                }
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.export_all),
-                            onClick = { showMenu = false; exportAll() }
-                        )
-                        PillDivider()
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.export_folder),
-                            onClick = { showMenu = false; selectExportFolder() }
-                        )
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.export_file_name),
-                            onClick = {
-                                showMenu = false
-                                exportFileNameInput = state.exportConfig.bookExportFileName.orEmpty()
-                                showExportFileNameDialog = true
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "${stringResource(R.string.export_type)} (${exportTypes.getOrElse(state.exportConfig.exportType) { exportTypes[0] }})",
-                            onClick = {
-                                showMenu = false
-                                showExportTypeDialog = true
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
-                            onClick = {
-                                showMenu = false
-                                exportCharsetInput = state.exportConfig.exportCharset
-                                showCharsetDialog = true
-                            }
-                        )
-                        PillDivider()
-                        RoundDropdownMenuItem(
-                            text = "替换净化",
-                            isSelected = state.exportConfig.exportUseReplace,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetExportUseReplace(!state.exportConfig.exportUseReplace)
-                                )
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "自定义导出",
-                            isSelected = state.exportConfig.enableCustomExport,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetEnableCustomExport(!state.exportConfig.enableCustomExport)
-                                )
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "导出包含章节名",
-                            isSelected = !state.exportConfig.exportNoChapterName,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
-                                )
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "导出到WebDav",
-                            isSelected = state.exportConfig.exportToWebDav,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
-                                )
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "导出插图文件",
-                            isSelected = state.exportConfig.exportPictureFile,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetExportPictureFile(!state.exportConfig.exportPictureFile)
-                                )
-                            }
-                        )
-                        RoundDropdownMenuItem(
-                            text = "并行导出",
-                            isSelected = state.exportConfig.parallelExportBook,
-                            onClick = {
-                                showMenu = false
-                                viewModel.dispatch(
-                                    CacheIntent.SetParallelExportBook(!state.exportConfig.parallelExportBook)
-                                )
-                            }
-                        )
-                        PillDivider()
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.log),
-                            onClick = {
-                                showMenu = false
-                                showLogSheet = true
-                            }
-                        )
-                    }
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "自定义导出",
+                isSelected = state.exportConfig.enableCustomExport,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetEnableCustomExport(!state.exportConfig.enableCustomExport)
+                    )
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "导出包含章节名",
+                isSelected = !state.exportConfig.exportNoChapterName,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
+                    )
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "导出到WebDav",
+                isSelected = state.exportConfig.exportToWebDav,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
+                    )
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "导出插图文件",
+                isSelected = state.exportConfig.exportPictureFile,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetExportPictureFile(!state.exportConfig.exportPictureFile)
+                    )
+                }
+            )
+            RoundDropdownMenuItem(
+                text = "并行导出",
+                isSelected = state.exportConfig.parallelExportBook,
+                onClick = {
+                    dismiss()
+                    viewModel.dispatch(
+                        CacheIntent.SetParallelExportBook(!state.exportConfig.parallelExportBook)
+                    )
+                }
+            )
+            PillDivider()
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.log),
+                onClick = {
+                    dismiss()
+                    showLogSheet = true
                 }
             )
         },
         floatingActionButton = {
-            AppFloatingActionButton(
-                onClick = {
-                    if (state.isDownloadRunning) {
-                        viewModel.dispatch(CacheIntent.StopDownload)
-                    } else {
-                        showDownloadConfirmDialog = true
+            FloatingActionButtonMenu(
+                modifier = Modifier.offset(x = 16.dp, y = 16.dp),
+                expanded = fabMenuExpanded,
+                button = {
+                    ToggleFloatingActionButton(
+                        modifier = Modifier
+                            .animateFloatingActionButton(
+                                visible = true,
+                                alignment = Alignment.BottomEnd,
+                            )
+                            .focusRequester(focusRequester),
+                        checked = fabMenuExpanded,
+                        onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                    ) {
+                        val imageVector by remember {
+                            derivedStateOf {
+                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.AutoMirrored.Filled.MenuOpen
+                            }
+                        }
+                        Icon(
+                            imageVector = imageVector,
+                            contentDescription = "Menu",
+                            modifier = Modifier.animateIcon({ checkedProgress }),
+                        )
                     }
                 }
             ) {
-                Icon(
-                    imageVector = if (state.isDownloadRunning) Icons.Default.Stop else Icons.Default.Download,
-                    contentDescription = null
-                )
+                fabItems.forEach { (icon, label, action) ->
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            action()
+                            fabMenuExpanded = false
+                        },
+                        icon = { Icon(icon, contentDescription = null) },
+                        text = { Text(text = label) }
+                    )
+                }
             }
         }
     ) { paddingValues ->
         val renderVersion by rememberUpdatedState(state.cacheVersion)
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 12.dp,
@@ -404,93 +622,125 @@ private fun CacheScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(state.books, key = { it.bookUrl }) { book ->
+            items(filteredBooks, key = { it.bookUrl }) { book ->
                 val cacheCount = remember(renderVersion, book.bookUrl) {
                     viewModel.getCacheChapters(book.bookUrl)?.size ?: 0
                 }
                 val isDownloading = remember(renderVersion, book.bookUrl) {
                     viewModel.isBookDownloading(book.bookUrl)
                 }
+                val isSelected = selectedBookUrls.contains(book.bookUrl)
                 val exportMsg = remember(renderVersion, book.bookUrl) {
                     ExportBookService.exportMsg[book.bookUrl]
                 }
-                val exportProgress = remember(renderVersion, book.bookUrl) {
-                    ExportBookService.exportProgress[book.bookUrl]
-                }
-                GlassCard(
-                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow
+                NormalCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { toggleBookSelection(book) },
+                    onLongClick = { toggleBookSelection(book) },
+                    containerColor = if (isSelected) {
+                        LegadoTheme.colorScheme.secondaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surfaceContainerLow
+                    }
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(12.dp)
+                            .adaptiveHorizontalPadding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            AppText(
-                                text = book.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            TextCard(text = stringResource(R.string.download_count, cacheCount, book.totalChapterNum))
-                        }
-                        AppText(
-                            text = stringResource(R.string.author_show, book.getRealAuthor()),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        AppText(
-                            text = if (book.isLocal) {
-                                stringResource(R.string.local_book)
-                            } else {
-                                stringResource(R.string.download_count, cacheCount, book.totalChapterNum)
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                AppText(
+                                    text = book.name,
+                                    style = LegadoTheme.typography.titleSmallEmphasized,
+                                    maxLines = 1
+                                )
+                                AppText(
+                                    text = book.getRealAuthor(),
+                                    style = LegadoTheme.typography.bodySmall
+                                )
+                                AppText(
+                                    text = "${groupNameResolver(book)} | ${book.originName.ifBlank { book.origin }}",
+                                    style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.primary)
+                                )
+                                if (exportMsg != null) {
+                                    AppText(text = exportMsg, modifier = Modifier.padding(top = 2.dp))
+                                }
                             }
-                        )
-                        if (isDownloading && book.totalChapterNum > 0) {
-                            AppLinearProgressIndicator(
-                                progress = (cacheCount.toFloat() / book.totalChapterNum.toFloat()).coerceIn(0f, 1f),
-                                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                            )
-                        }
-                        if (exportMsg != null) {
-                            AppText(text = exportMsg, modifier = Modifier.padding(top = 6.dp))
-                        } else if (exportProgress != null && book.totalChapterNum > 0) {
-                            AppLinearProgressIndicator(
-                                progress = (exportProgress.toFloat() / book.totalChapterNum.toFloat()).coerceIn(0f, 1f),
-                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+                            TextCard(
+                                text = if (book.isLocal) {
+                                    stringResource(R.string.local_book)
+                                } else {
+                                    stringResource(
+                                        R.string.download_count,
+                                        cacheCount,
+                                        book.totalChapterNum
+                                    )
+                                }
                             )
                         }
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
-                            SmallTonalIconButton(
-                                onClick = {
-                                    if (!book.isLocal) {
-                                        viewModel.dispatch(CacheIntent.ToggleBookDownload(book))
-                                    }
-                                },
-                                imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
-                                contentDescription = null
-                            )
-                            SmallTonalIconButton(
-                                onClick = { exportBook(book) },
-                                modifier = Modifier.padding(start = 8.dp),
-                                imageVector = Icons.Default.Upload,
-                                contentDescription = null
-                            )
-                            SmallTonalIconButton(
-                                onClick = {
-                                    viewModel.dispatch(CacheIntent.DeleteBookDownload(book.bookUrl))
-                                    viewModel.dispatch(CacheIntent.ClearBookCache(book))
-                                },
-                                modifier = Modifier.padding(start = 8.dp),
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                SmallTonalIconButton(
+                                    onClick = {
+                                        if (!book.isLocal) {
+                                            viewModel.dispatch(CacheIntent.ToggleBookDownload(book))
+                                        }
+                                    },
+                                    imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
+                                    contentDescription = "download"
+                                )
+                                SmallTonalIconButton(
+                                    onClick = { exportBook(book) },
+                                    imageVector = Icons.Default.Upload,
+                                    contentDescription = "upload"
+                                )
+                                SmallTonalIconButton(
+                                    onClick = {
+                                        pendingMoveGroupBookUrl = book.bookUrl
+                                        groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
+                                        showGroupSelectSheet = true
+                                    },
+                                    imageVector = Icons.Default.Bookmarks,
+                                    contentDescription = "group"
+                                )
+                                SmallTonalIconButton(
+                                    onClick = { moreMenuBookUrl = book.bookUrl },
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "more"
+                                )
+                                RoundDropdownMenu(
+                                    expanded = moreMenuBookUrl == book.bookUrl,
+                                    onDismissRequest = { moreMenuBookUrl = null }
+                                ) { dismiss ->
+                                    RoundDropdownMenuItem(
+                                        text = "删除书籍",
+                                        onClick = {
+                                            pendingDeleteBookUrls = setOf(book.bookUrl)
+                                            deleteOriginalBookFile = LocalConfig.deleteBookOriginal
+                                            showDeleteBookConfirmDialog = true
+                                            dismiss()
+                                        }
+                                    )
+                                    RoundDropdownMenuItem(
+                                        text = "删除缓存",
+                                        onClick = {
+                                            viewModel.dispatch(CacheIntent.ClearCachesForBooks(setOf(book.bookUrl)))
+                                            dismiss()
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -504,35 +754,90 @@ private fun CacheScreen(
         title = exportFolderText,
         onSelectSysDir = {
             showFilePickerSheet = false
-            val default = arrayListOf<SelectItem<Int>>()
-            val path = ACache.get().getAsString(exportBookPathKey)
-            if (!path.isNullOrEmpty()) default.add(SelectItem(path, -1))
-            exportDir.launch {
-                mode = HandleFileContract.DIR_SYS
-                title = exportFolderText
-                otherActions = default
-                requestCode = 0
-            }
+            exportDir.launch(null)
         }
     )
 
     AppAlertDialog(
-        show = showDownloadConfirmDialog,
-        onDismissRequest = { showDownloadConfirmDialog = false },
+        show = showBatchDownloadConfirmDialog,
+        onDismissRequest = { showBatchDownloadConfirmDialog = false },
         title = stringResource(R.string.draw),
         text = stringResource(R.string.sure_cache_book),
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
-            showDownloadConfirmDialog = false
+            showBatchDownloadConfirmDialog = false
             viewModel.dispatch(
-                CacheIntent.StartDownloadForVisibleBooks(
-                    books = state.books,
+                CacheIntent.DownloadBooks(
+                    bookUrls = selectedBookUrls,
                     downloadAllChapters = false
                 )
             )
         },
         dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { showDownloadConfirmDialog = false }
+        onDismiss = { showBatchDownloadConfirmDialog = false }
+    )
+
+    AppAlertDialog(
+        show = showDeleteBookConfirmDialog,
+        onDismissRequest = { showDeleteBookConfirmDialog = false },
+        title = stringResource(R.string.draw),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppText(text = stringResource(R.string.sure_del))
+                if (hasLocalBookInDeleteTarget) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Checkbox(
+                            checked = deleteOriginalBookFile,
+                            onCheckedChange = { checked ->
+                                deleteOriginalBookFile = checked
+                            }
+                        )
+                        AppText(
+                            text = stringResource(R.string.delete_book_file),
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            showDeleteBookConfirmDialog = false
+            LocalConfig.deleteBookOriginal = deleteOriginalBookFile
+            viewModel.dispatch(
+                CacheIntent.DeleteBooks(
+                    bookUrls = pendingDeleteBookUrls,
+                    deleteOriginal = deleteOriginalBookFile
+                )
+            )
+            pendingDeleteBookUrls = emptySet()
+            clearSelection()
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { showDeleteBookConfirmDialog = false }
+    )
+
+    GroupSelectSheet(
+        show = showGroupSelectSheet,
+        currentGroupId = groupPickerCurrentGroupId,
+        onDismissRequest = { showGroupSelectSheet = false },
+        onConfirm = { groupId ->
+            val moveSet = pendingMoveGroupBookUrl?.let { setOf(it) } ?: selectedBookUrls
+            val targetGroupId = groupId.coerceAtLeast(0L)
+            viewModel.dispatch(
+                CacheIntent.MoveBooksToGroup(
+                    bookUrls = moveSet,
+                    groupId = targetGroupId
+                )
+            )
+            pendingMoveGroupBookUrl = null
+            groupPickerCurrentGroupId = 0L
+            showGroupSelectSheet = false
+            clearSelection()
+        }
     )
 
     AppAlertDialog(

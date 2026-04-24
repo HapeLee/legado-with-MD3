@@ -9,6 +9,10 @@ import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.ClearBookCacheUseCase
+import io.legado.app.domain.usecase.DeleteBooksUseCase
+import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
@@ -61,6 +65,10 @@ sealed interface CacheIntent {
     data class ToggleBookDownload(val book: Book) : CacheIntent
     data class DeleteBookDownload(val bookUrl: String) : CacheIntent
     data class ClearBookCache(val book: Book) : CacheIntent
+    data class MoveBooksToGroup(val bookUrls: Set<String>, val groupId: Long) : CacheIntent
+    data class DeleteBooks(val bookUrls: Set<String>, val deleteOriginal: Boolean) : CacheIntent
+    data class ClearCachesForBooks(val bookUrls: Set<String>) : CacheIntent
+    data class DownloadBooks(val bookUrls: Set<String>, val downloadAllChapters: Boolean) : CacheIntent
     data class SetExportUseReplace(val enabled: Boolean) : CacheIntent
     data class SetEnableCustomExport(val enabled: Boolean) : CacheIntent
     data class SetExportNoChapterName(val enabled: Boolean) : CacheIntent
@@ -83,7 +91,11 @@ class CacheViewModel(
     private val bookDao: BookDao,
     private val bookGroupDao: BookGroupDao,
     private val bookChapterDao: BookChapterDao,
-    val cacheConfig: CacheConfig
+    val cacheConfig: CacheConfig,
+    private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
+    private val clearBookCacheUseCase: ClearBookCacheUseCase,
+    private val deleteBooksUseCase: DeleteBooksUseCase,
+    private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(CacheUiState())
@@ -110,6 +122,10 @@ class CacheViewModel(
             is CacheIntent.ToggleBookDownload -> toggleBookDownload(intent.book)
             is CacheIntent.DeleteBookDownload -> CacheBook.remove(context, intent.bookUrl)
             is CacheIntent.ClearBookCache -> clearCacheForBook(intent.book)
+            is CacheIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
+            is CacheIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
+            is CacheIntent.ClearCachesForBooks -> clearCachesForBooks(intent.bookUrls)
+            is CacheIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.downloadAllChapters)
             is CacheIntent.SetExportUseReplace -> {
                 cacheConfig.exportUseReplace = intent.enabled
                 syncExportConfig()
@@ -317,15 +333,16 @@ class CacheViewModel(
     }
 
     private fun startDownloadForVisibleBooks(books: List<Book>, downloadAllChapters: Boolean) {
-        books.forEach { book ->
-            val indices = if (downloadAllChapters) {
-                (0..book.lastChapterIndex).toList()
-            } else {
-                (book.durChapterIndex..book.lastChapterIndex).toList()
-            }
-            CacheBook.start(context, book, indices)
+        execute {
+            batchCacheDownloadUseCase.execute(
+                context = context,
+                books = books,
+                downloadAllChapters = downloadAllChapters,
+                skipAudioBooks = true
+            )
+        }.onFinally {
+            syncDownloadRunning()
         }
-        syncDownloadRunning()
     }
 
     private fun toggleBookDownload(book: Book) {
@@ -338,10 +355,68 @@ class CacheViewModel(
         syncDownloadRunning()
     }
 
+    private fun moveBooksToGroup(bookUrls: Set<String>, groupId: Long) {
+        if (bookUrls.isEmpty()) return
+        val safeGroupId = groupId.coerceAtLeast(0L)
+        execute {
+            updateBooksGroupUseCase.replaceGroup(bookUrls, safeGroupId)
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("移动分组失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun deleteBooks(bookUrls: Set<String>, deleteOriginal: Boolean) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            deleteBooksUseCase.execute(bookUrls, deleteOriginal)
+        }.onSuccess { deletedBookUrls ->
+            deletedBookUrls.forEach { cacheChapters.remove(it) }
+            _effects.tryEmit(CacheEffect.ShowMessage("删除成功"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun clearCachesForBooks(bookUrls: Set<String>) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            clearBookCacheUseCase.execute(bookUrls)
+        }.onSuccess { clearedBookUrls ->
+            clearedBookUrls.forEach { bookUrl ->
+                cacheChapters[bookUrl] = hashSetOf()
+                emitBookChanged(bookUrl)
+            }
+            _effects.tryEmit(CacheEffect.ShowMessage("缓存已清理"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("清理缓存失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun downloadBooks(bookUrls: Set<String>, downloadAllChapters: Boolean) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            batchCacheDownloadUseCase.execute(
+                context = context,
+                bookUrls = bookUrls,
+                downloadAllChapters = downloadAllChapters,
+                skipAudioBooks = true
+            )
+        }.onSuccess { count ->
+            if (count > 0) {
+                _effects.tryEmit(CacheEffect.ShowMessage("已加入缓存队列: $count 本"))
+            } else {
+                _effects.tryEmit(CacheEffect.ShowMessage("没有可缓存的书籍"))
+            }
+            syncDownloadRunning()
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
+        }
+    }
+
     private fun clearCacheForBook(book: Book) {
-        BookHelp.clearCache(book)
-        cacheChapters[book.bookUrl] = hashSetOf()
-        emitBookChanged(book.bookUrl)
+        val bookUrl = clearBookCacheUseCase.execute(book)
+        cacheChapters[bookUrl] = hashSetOf()
+        emitBookChanged(bookUrl)
     }
 
     private fun emitBookChanged(bookUrl: String) {

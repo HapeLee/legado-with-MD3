@@ -6,16 +6,20 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -79,13 +83,16 @@ import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyVerticalGrid
 import io.legado.app.ui.widget.components.list.ListScaffold
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
@@ -124,6 +131,7 @@ fun BookshelfScreen(
     var showLogSheet by remember { mutableStateOf(false) }
     var showGroupMenu by remember { mutableStateOf(false) }
     var showGroupSelectSheet by remember { mutableStateOf(false) }
+    var showBatchDownloadConfirmDialog by remember { mutableStateOf(false) }
     var isEditMode by remember { mutableStateOf(false) }
     var selectedBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
 
@@ -289,18 +297,14 @@ fun BookshelfScreen(
         else -> stringResource(R.string.bookshelf)
     }
     val title = if (isEditMode) {
-        "$currentGroupBookCount · ${selectedBookUrls.size} 本"
+        stringResource(R.string.bookshelf)
     } else if (uiState.upBooksCount > 0) {
         "$baseTitle (${uiState.upBooksCount})"
     } else {
         baseTitle
     }
     val subtitle = if (isEditMode) {
-        if (bookGroupStyle == 0) {
-            "共${allGroupsBookCount}本"
-        } else {
-            "${currentGroupName ?: stringResource(R.string.bookshelf)} · 共${allGroupsBookCount}本"
-        }
+        "共${allGroupsBookCount}本"
     } else {
         null
     }
@@ -323,13 +327,22 @@ fun BookshelfScreen(
         if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
     val gridContentHorizontalPadding = totalHorizontalPadding / 2
     val gridInnerHorizontalPadding = totalHorizontalPadding / 2
+    val currentMenuGroupId = if (uiState.isSearch) uiState.selectedGroupId else currentTabGroupId
+    val editStickySummary = if (isEditMode) {
+        BookshelfEditStickySummary(
+            selectedCount = selectedBookUrls.size,
+            currentGroupTotalCount = currentGroupBookCount,
+            groupName = currentGroupName,
+            showGroupName = bookGroupStyle != 0
+        )
+    } else {
+        null
+    }
 
     ListScaffold(
         title = title,
         subtitle = subtitle,
         state = uiState,
-        onBackClick = if (isEditMode) exitEditMode else null,
-        backNavigationIcon = if (isEditMode) AppIcons.Close else AppIcons.Back,
         showSearchAction = true,
         onSearchToggle = { active ->
             viewModel.setSearchMode(active)
@@ -353,7 +366,7 @@ fun BookshelfScreen(
             }
         },
         topBarActions = {
-            if (isEditMode) {
+            AnimatedVisibility(visible = isEditMode) {
                 TopBarActionButton(
                     onClick = {
                         selectedBookUrls = uiState.items.mapTo(hashSetOf()) { it.bookUrl }
@@ -361,6 +374,8 @@ fun BookshelfScreen(
                     imageVector = Icons.Default.SelectAll,
                     contentDescription = stringResource(R.string.select_all)
                 )
+            }
+            AnimatedVisibility(visible = isEditMode) {
                 TopBarActionButton(
                     onClick = {
                         val visibleBookUrls = uiState.items.mapTo(hashSetOf()) { it.bookUrl }
@@ -369,6 +384,19 @@ fun BookshelfScreen(
                     imageVector = Icons.Default.Refresh,
                     contentDescription = stringResource(R.string.revert_selection)
                 )
+            }
+            AnimatedVisibility(visible = isEditMode) {
+                TopBarActionButton(
+                    onClick = {
+                        if (selectedBookUrls.isNotEmpty()) {
+                            showBatchDownloadConfirmDialog = true
+                        }
+                    },
+                    imageVector = Icons.Default.Download,
+                    contentDescription = stringResource(R.string.action_download)
+                )
+            }
+            AnimatedVisibility(visible = isEditMode) {
                 TopBarActionButton(
                     onClick = {
                         if (selectedBookUrls.isNotEmpty()) {
@@ -719,6 +747,97 @@ fun BookshelfScreen(
                 }
             }
 
+            TopFloatingStickyItem(
+                item = editStickySummary,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = paddingValues.calculateTopPadding() + 6.dp),
+            ) { summary ->
+                Box {
+                    NormalCard(
+                        cornerRadius = 32.dp,
+                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                        contentColor = LegadoTheme.colorScheme.onCardContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(all = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextCard(
+                                icon = AppIcons.Close,
+                                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHighest,
+                                cornerRadius = 16.dp,
+                                verticalPadding = 8.dp,
+                                horizontalPadding = 8.dp,
+                                onClick = exitEditMode
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            AppText(
+                                text = "已选${summary.selectedCount}本",
+                                style = LegadoTheme.typography.labelSmallEmphasized
+                            )
+                            AppText(
+                                text = " · 共${summary.currentGroupTotalCount}本",
+                                style = LegadoTheme.typography.labelSmallEmphasized
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            if (summary.showGroupName && !summary.groupName.isNullOrBlank()) {
+                                TextCard(
+                                    text = summary.groupName,
+                                    textStyle = LegadoTheme.typography.labelSmallEmphasized,
+                                    backgroundColor = LegadoTheme.colorScheme.surfaceContainerHighest,
+                                    cornerRadius = 16.dp,
+                                    verticalPadding = 8.dp,
+                                    horizontalPadding = 12.dp,
+                                    onClick = { showGroupMenu = true }
+                                )
+                            }
+                        }
+                    }
+                    
+
+                    if (summary.showGroupName) {
+                        RoundDropdownMenu(
+                            expanded = showGroupMenu,
+                            onDismissRequest = { showGroupMenu = false }
+                        ) { dismiss ->
+                            uiState.groups.forEach { group ->
+                                RoundDropdownMenuItem(
+                                    text = group.groupName,
+                                    onClick = {
+                                        val targetIndex =
+                                            uiState.groups.indexOfFirst { it.groupId == group.groupId }
+                                        if (targetIndex >= 0) {
+                                            scope.launch {
+                                                if (pagerState.currentPage != targetIndex) {
+                                                    pagerState.animateScrollToPage(targetIndex)
+                                                }
+                                            }
+                                        }
+                                        if (uiState.isSearch || uiState.selectedGroupId != group.groupId) {
+                                            viewModel.changeGroup(group.groupId)
+                                        }
+                                        if (bookGroupStyle == 2) {
+                                            isInFolderRoot = false
+                                        }
+                                        dismiss()
+                                    },
+                                    trailingIcon = {
+                                        if (currentMenuGroupId == group.groupId) {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             PullToRefreshDefaults.LoadingIndicator(
                 state = pullToRefreshState,
                 isRefreshing = isRefreshing,
@@ -794,6 +913,20 @@ fun BookshelfScreen(
         onDismissRequest = { showLogSheet = false }
     )
 
+    AppAlertDialog(
+        show = showBatchDownloadConfirmDialog,
+        onDismissRequest = { showBatchDownloadConfirmDialog = false },
+        title = stringResource(R.string.draw),
+        text = stringResource(R.string.sure_cache_book),
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            showBatchDownloadConfirmDialog = false
+            viewModel.downloadBooks(selectedBookUrls)
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { showBatchDownloadConfirmDialog = false }
+    )
+
     if (uiState.isLoading) {
         Dialog(onDismissRequest = {}) {
             NormalCard(
@@ -817,6 +950,13 @@ fun BookshelfScreen(
         }
     }
 }
+
+private data class BookshelfEditStickySummary(
+    val selectedCount: Int,
+    val currentGroupTotalCount: Int,
+    val groupName: String?,
+    val showGroupName: Boolean,
+)
 
 @Composable
 fun BookshelfPage(

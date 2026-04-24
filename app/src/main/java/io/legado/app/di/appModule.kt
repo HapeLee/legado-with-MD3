@@ -17,7 +17,11 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.ClearBookCacheUseCase
+import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
@@ -67,6 +71,7 @@ val appModule = module {
     single { get<AppDatabase>().bookDao }
     single { get<AppDatabase>().bookChapterDao }
     single { get<AppDatabase>().bookGroupDao }
+    single { get<AppDatabase>().bookSourceDao }
 
     singleOf(::ReadRecordRepository)
     singleOf(::BookRepository)
@@ -74,6 +79,10 @@ val appModule = module {
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::ExploreKindUiUseCase)
+    singleOf(::BatchCacheDownloadUseCase)
+    singleOf(::ClearBookCacheUseCase)
+    singleOf(::DeleteBooksUseCase)
+    singleOf(::UpdateBooksGroupUseCase)
     singleOf(::CacheConfig)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
@@ -125,7 +134,19 @@ val appModule = module {
     viewModelOf(::ExploreViewModel)
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)
-    viewModelOf(::CacheViewModel)
+    viewModel {
+        CacheViewModel(
+            application = get(),
+            bookDao = get(),
+            bookGroupDao = get(),
+            bookChapterDao = get(),
+            cacheConfig = get(),
+            batchCacheDownloadUseCase = get(),
+            clearBookCacheUseCase = get(),
+            deleteBooksUseCase = get(),
+            updateBooksGroupUseCase = get()
+        )
+    }
 
     viewModel { (route: ReplaceEditRoute) ->
         ReplaceEditViewModel(

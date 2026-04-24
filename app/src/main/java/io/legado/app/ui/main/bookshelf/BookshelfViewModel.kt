@@ -19,6 +19,8 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.addType
@@ -91,7 +93,9 @@ import kotlin.math.min
 class BookshelfViewModel(
     application: Application,
     private val bookGroupRepository: BookGroupRepository,
-    private val uploadRepository: UploadRepository
+    private val uploadRepository: UploadRepository,
+    private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
+    private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
 ) : BaseViewModel(application) {
     var addBookJob: Coroutine<*>? = null
 
@@ -377,30 +381,31 @@ class BookshelfViewModel(
     }
 
     fun moveBooksToGroup(bookUrls: Set<String>, groupId: Long) {
-        updateBooksGroup(bookUrls) { groupId }
-    }
-
-    private fun updateBooksGroup(
-        bookUrls: Set<String>,
-        transform: (Long) -> Long
-    ) {
         if (bookUrls.isEmpty()) return
         execute {
-            val updateBooks = bookUrls.mapNotNull { url ->
-                appDb.bookDao.getBook(url)?.let { book ->
-                    val targetGroup = transform(book.group)
-                    if (targetGroup != book.group) {
-                        book.copy(group = targetGroup)
-                    } else {
-                        null
-                    }
-                }
-            }
-            if (updateBooks.isNotEmpty()) {
-                appDb.bookDao.update(*updateBooks.toTypedArray())
-            }
+            updateBooksGroupUseCase.replaceGroup(bookUrls, groupId)
         }.onError {
             context.toastOnUi("更新分组失败\n${it.localizedMessage}")
+        }
+    }
+
+    fun downloadBooks(bookUrls: Set<String>, downloadAllChapters: Boolean = false) {
+        if (bookUrls.isEmpty()) return
+        execute {
+            batchCacheDownloadUseCase.execute(
+                context = context,
+                bookUrls = bookUrls,
+                downloadAllChapters = downloadAllChapters,
+                skipAudioBooks = true
+            )
+        }.onSuccess { count ->
+            if (count > 0) {
+                context.toastOnUi("已加入缓存队列: $count 本")
+            } else {
+                context.toastOnUi(R.string.no_download)
+            }
+        }.onError {
+            context.toastOnUi("批量缓存失败\n${it.localizedMessage}")
         }
     }
 

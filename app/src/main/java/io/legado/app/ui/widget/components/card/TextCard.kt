@@ -25,7 +25,7 @@ import io.legado.app.ui.widget.components.text.AnimatedTextLine
 @Composable
 fun TextCard(
     modifier: Modifier = Modifier,
-    text: String,
+    text: String? = null,
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
     backgroundColor: Color? = null,
@@ -65,16 +65,20 @@ fun TextCard(
                     tint = finalContentColor,
                     modifier = Modifier.size(iconSize)
                 )
-                Spacer(modifier = Modifier.width(spacing))
             }
 
-            AnimatedTextLine(
-                text = text,
-                style = textStyle,
-                color = finalContentColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            if (icon != null && text != null)
+                Spacer(modifier = Modifier.width(spacing))
+
+            text?.let {
+                AnimatedTextLine(
+                    text = it,
+                    style = textStyle,
+                    color = finalContentColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
