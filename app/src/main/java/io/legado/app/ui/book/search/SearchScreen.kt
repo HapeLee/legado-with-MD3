@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -334,7 +335,10 @@ fun SearchScreen(
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                items(items = state.results, key = { it.bookUrl }) { book ->
+                                itemsIndexed(
+                                    items = state.results,
+                                    key = { index, book -> "${book.origin}:${book.bookUrl}:$index" }
+                                ) { _, book ->
                                     val shelfStateFlow = remember(book.bookUrl) {
                                         viewModel.getBookShelfStateFlow(book)
                                     }
