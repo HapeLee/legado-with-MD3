@@ -428,26 +428,85 @@ object BookHelp {
         var ret = true
         val op = BitmapFactory.Options()
         op.inJustDecodeBounds = true
-        getContent(book, bookChapter)?.let {
-            val matcher = AppPattern.imgPattern.matcher(it)
-            while (matcher.find()) {
-                val src = matcher.group(1)!!
-                val image = getImage(book, src)
-                if (!image.exists()) {
-                    ret = false
-                    continue
+        forEachImageSrc(book, bookChapter) { src ->
+            val image = getImage(book, src)
+            if (!image.exists()) {
+                ret = false
+                return@forEachImageSrc
+            }
+            BitmapFactory.decodeFile(image.absolutePath, op)
+            if (op.outWidth < 1 && op.outHeight < 1) {
+                if (SvgUtils.getSize(image.absolutePath) != null) {
+                    return@forEachImageSrc
                 }
-                BitmapFactory.decodeFile(image.absolutePath, op)
-                if (op.outWidth < 1 && op.outHeight < 1) {
-                    if (SvgUtils.getSize(image.absolutePath) != null) {
-                        continue
-                    }
-                    ret = false
-                    image.delete()
-                }
+                ret = false
+                image.delete()
             }
         }
         return ret
+    }
+
+    private inline fun forEachImageSrc(
+        book: Book,
+        bookChapter: BookChapter,
+        action: (String) -> Unit
+    ) {
+        val file = downloadDir.getFile(
+            cacheFolderName,
+            book.getFolderName(),
+            bookChapter.getFileName()
+        )
+        if (file.exists()) {
+            forEachImageSrc(file, action)
+            return
+        }
+        getContent(book, bookChapter)?.let { content ->
+            val matcher = AppPattern.imgPattern.matcher(content)
+            while (matcher.find()) {
+                action(matcher.group(1) ?: continue)
+            }
+        }
+    }
+
+    private inline fun forEachImageSrc(file: File, action: (String) -> Unit) {
+        val chars = CharArray(8192)
+        val buffer = StringBuilder()
+        file.bufferedReader().use { reader ->
+            while (true) {
+                val readSize = reader.read(chars)
+                if (readSize < 0) break
+                buffer.append(chars, 0, readSize)
+                consumeImageSrcMatches(buffer, action)
+                trimImageScanBuffer(buffer)
+            }
+            consumeImageSrcMatches(buffer, action)
+        }
+    }
+
+    private inline fun consumeImageSrcMatches(
+        buffer: StringBuilder,
+        action: (String) -> Unit
+    ) {
+        val matcher = AppPattern.imgPattern.matcher(buffer)
+        var lastEnd = 0
+        while (matcher.find()) {
+            action(matcher.group(1) ?: continue)
+            lastEnd = matcher.end()
+        }
+        if (lastEnd > 0) {
+            buffer.delete(0, lastEnd)
+        }
+    }
+
+    private fun trimImageScanBuffer(buffer: StringBuilder) {
+        val maxBufferSize = 16 * 1024
+        if (buffer.length <= maxBufferSize) return
+        val partialImgStart = buffer.lastIndexOf("<img")
+        val keepFrom = when {
+            partialImgStart >= 0 -> partialImgStart
+            else -> max(buffer.length - 1024, 0)
+        }
+        buffer.delete(0, keepFrom)
     }
 
     private fun checkImage(bytes: ByteArray): Boolean {

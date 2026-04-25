@@ -21,6 +21,7 @@ import io.legado.app.model.CacheBook
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.cacheConfig.CacheConfig
+import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -219,8 +220,8 @@ class CacheViewModel(
     private fun observeBooks(groupId: Long) {
         booksJob?.cancel()
         booksJob = viewModelScope.launch {
-            bookDao.flowByGroup(groupId).map { books ->
-                val booksDownload = books.filter { !it.isAudio }
+            bookDao.flowBookShelfByGroup(groupId).map { books ->
+                val booksDownload = books.filter { !it.isAudio }.map { it.toLightBook() }
                 when (cacheConfig.getBookSortByGroupId(groupId)) {
                     1 -> booksDownload.sortedByDescending { it.latestChapterTime }
                     2 -> booksDownload.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }

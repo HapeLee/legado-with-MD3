@@ -4,7 +4,6 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.Dispatchers
@@ -26,9 +25,19 @@ class ExploreRepositoryImpl(
 ) : ExploreRepository {
 
     override fun getBookshelfItems(): Flow<List<SearchBook>> {
-        return appDb.bookDao.flowAll().map { books ->
+        return appDb.bookDao.flowBookShelf().map { books ->
             books.filterNot { it.isNotShelf }
-                .map { it.toSearchBook() }
+                .map {
+                    SearchBook(
+                        bookUrl = it.bookUrl,
+                        name = it.name,
+                        author = it.author,
+                        originName = it.originName,
+                        type = it.type,
+                        coverUrl = it.coverUrl,
+                        latestChapterTitle = it.latestChapterTitle
+                    )
+                }
         }
     }
 

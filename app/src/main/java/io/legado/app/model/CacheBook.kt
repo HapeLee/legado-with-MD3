@@ -103,6 +103,8 @@ object CacheBook {
     private val _downloadErrorFlow =
         MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
     val downloadErrorFlow = _downloadErrorFlow.asStateFlow()
+    @Volatile
+    private var lastQueueStats = QueueStats(0, 0)
 
     val successDownloadSet = ConcurrentHashMap.newKeySet<String>()
     val errorDownloadMap = ConcurrentHashMap<String, Int>()
@@ -123,7 +125,10 @@ object CacheBook {
     }
 
     private fun updateSummary() {
-        _downloadSummaryFlow.value = downloadSummary
+        val stats = collectQueueStats()
+        lastQueueStats = stats
+        _downloadSummaryFlow.value =
+            "正在下载:${stats.downloadingCount}|等待中:${stats.waitingCount}|失败:${errorDownloadMap.size}|成功:${successDownloadSet.size}"
     }
 
     @Synchronized
@@ -213,12 +218,7 @@ object CacheBook {
         }
 
     val isRun: Boolean
-        get() {
-            cacheBookMap.forEach { (_, model) ->
-                if (model.isRun()) return true
-            }
-            return false
-        }
+        get() = lastQueueStats.waitingCount > 0 || lastQueueStats.downloadingCount > 0
 
     private fun onTaskQueuesChanged(bookUrl: String) {
         updateSummary()
