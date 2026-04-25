@@ -5,11 +5,6 @@ import io.legado.app.ui.config.prefDelegate
 
 object ImportBookConfig {
 
-    var defaultBookTreeUri by prefDelegate(
-        PreferKey.defaultBookTreeUri,
-        null as String?
-    )
-
     var importBookPath by prefDelegate(
         PreferKey.importBookPath,
         null as String?

@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.cache
 
+import androidx.compose.ui.focus.focusRequester
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,7 +51,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -89,7 +89,6 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.startService
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.verificationField
-import io.legado.app.help.config.LocalConfig
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import org.koin.androidx.compose.koinViewModel
 
@@ -158,7 +157,7 @@ private fun CacheScreen(
     var isSearchMode by remember { mutableStateOf(false) }
     var searchKey by remember { mutableStateOf("") }
     var selectedBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var deleteOriginalBookFile by remember { mutableStateOf(LocalConfig.deleteBookOriginal) }
+    var deleteOriginalBookFile by remember { mutableStateOf(state.deleteBookOriginal) }
     val exportBookPathKey = remember { "exportBookPath" }
     val exportTypes = remember { arrayListOf("txt", "epub") }
     val focusRequester = remember { FocusRequester() }
@@ -409,7 +408,7 @@ private fun CacheScreen(
         ) {
             if (selectedBookUrls.isNotEmpty()) {
                 pendingDeleteBookUrls = selectedBookUrls
-                deleteOriginalBookFile = LocalConfig.deleteBookOriginal
+            deleteOriginalBookFile = state.deleteBookOriginal
                 showDeleteBookConfirmDialog = true
             }
         }
@@ -638,7 +637,7 @@ private fun CacheScreen(
                     onClick = { toggleBookSelection(book) },
                     onLongClick = { toggleBookSelection(book) },
                     containerColor = if (isSelected) {
-                        LegadoTheme.colorScheme.secondaryContainer
+                        LegadoTheme.colorScheme.surfaceContainerHigh
                     } else {
                         LegadoTheme.colorScheme.surfaceContainerLow
                     }
@@ -727,7 +726,7 @@ private fun CacheScreen(
                                         text = "删除书籍",
                                         onClick = {
                                             pendingDeleteBookUrls = setOf(book.bookUrl)
-                                            deleteOriginalBookFile = LocalConfig.deleteBookOriginal
+                                            deleteOriginalBookFile = state.deleteBookOriginal
                                             showDeleteBookConfirmDialog = true
                                             dismiss()
                                         }
@@ -806,7 +805,6 @@ private fun CacheScreen(
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
             showDeleteBookConfirmDialog = false
-            LocalConfig.deleteBookOriginal = deleteOriginalBookFile
             viewModel.dispatch(
                 CacheIntent.DeleteBooks(
                     bookUrls = pendingDeleteBookUrls,

@@ -19,6 +19,8 @@ data class BookInfoUiState(
     val bookSource: BookSource? = null,
     val isTocLoading: Boolean = true,
     val isBusy: Boolean = false,
+    val deleteAlertEnabled: Boolean = true,
+    val deleteOriginal: Boolean = false,
     val showAppLogSheet: Boolean = false,
     val sheet: BookInfoSheet = BookInfoSheet.None,
     val dialog: BookInfoDialog? = null,

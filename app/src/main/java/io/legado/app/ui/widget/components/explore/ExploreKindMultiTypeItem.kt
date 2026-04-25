@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.legado.app.App
 import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem

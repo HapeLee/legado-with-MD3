@@ -7,13 +7,13 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchSessionEvent
+import io.legado.app.domain.usecase.BookShelfKey
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.help.config.AppConfig
-import io.legado.app.model.BookShelfState
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.putPrefBoolean
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -29,6 +29,7 @@ import splitties.init.appCtx
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
     private val repository: SearchRepository,
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -46,7 +47,7 @@ class SearchViewModel(
     val effects = _effects.asSharedFlow()
 
     private val queryFlow = MutableStateFlow("")
-    private val bookshelfKeys = MutableStateFlow<Set<BookKey>>(emptySet())
+    private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val searchScope = SearchScope(AppConfig.searchScope)
     private val searchSession = repository.createSearchSession { searchScope }
 
@@ -142,12 +143,6 @@ class SearchViewModel(
         }
     }
 
-    fun getBookShelfStateFlow(item: SearchBook): Flow<BookShelfState> {
-        return bookshelfKeys
-            .map { keys -> resolveBookShelfState(item, keys) }
-            .distinctUntilChanged()
-    }
-
     override fun onCleared() {
         super.onCleared()
         searchSession.close()
@@ -194,6 +189,9 @@ class SearchViewModel(
                 .catch { emit(emptySet()) }
                 .collect { keys ->
                     bookshelfKeys.value = keys
+                    _uiState.update { state ->
+                        state.copy(results = state.results.withShelfState(keys))
+                    }
                 }
         }
     }
@@ -233,9 +231,10 @@ class SearchViewModel(
                     }
 
                     is SearchSessionEvent.Progress -> {
+                        val shelf = bookshelfKeys.value
                         _uiState.update {
                             it.copy(
-                                results = event.books,
+                                results = event.books.toSearchResultItems(shelf),
                                 processedSources = event.processedSources,
                                 totalSources = event.totalSources,
                             )
@@ -403,18 +402,35 @@ class SearchViewModel(
         }
     }
 
-    private fun resolveBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {
-        val exactMatch = shelf.any {
-            it.name == item.name && it.author == item.author && it.url == item.bookUrl
+    private fun List<SearchBook>.toSearchResultItems(
+        shelf: Set<BookShelfKey>
+    ): List<SearchResultItemUi> {
+        return map { book ->
+            SearchResultItemUi(
+                book = book,
+                shelfState = resolveBookShelfStateUseCase.execute(
+                    name = book.name,
+                    author = book.author,
+                    url = book.bookUrl,
+                    shelf = shelf
+                )
+            )
         }
-        if (exactMatch) return BookShelfState.IN_SHELF
+    }
 
-        val sameNameAuthor = shelf.any {
-            it.name == item.name && it.author == item.author && it.url != item.bookUrl
+    private fun List<SearchResultItemUi>.withShelfState(
+        shelf: Set<BookShelfKey>
+    ): List<SearchResultItemUi> {
+        return map { item ->
+            item.copy(
+                shelfState = resolveBookShelfStateUseCase.execute(
+                    name = item.book.name,
+                    author = item.book.author,
+                    url = item.book.bookUrl,
+                    shelf = shelf
+                )
+            )
         }
-        if (sameNameAuthor) return BookShelfState.SAME_NAME_AUTHOR
-
-        return BookShelfState.NOT_IN_SHELF
     }
 
     private fun emitEffect(effect: SearchEffect) {

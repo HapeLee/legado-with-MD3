@@ -2,13 +2,14 @@ package io.legado.app.ui.book.group
 
 import android.app.Application
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 
 class GroupViewModel(
     application: Application,
-    private val bookGroupRepository: BookGroupRepository
+    private val bookGroupRepository: BookGroupRepository,
+    private val removeBookGroupAssignmentUseCase: RemoveBookGroupAssignmentUseCase
 ) : BaseViewModel(application) {
 
     fun upGroup(vararg bookGroup: BookGroup, finally: (() -> Unit)? = null) {
@@ -36,7 +37,7 @@ class GroupViewModel(
                 enableRefresh = enableRefresh,
                 order = bookGroupRepository.getMaxOrder().plus(1)
             )
-            bookGroupRepository.getByID(groupId) ?: appDb.bookDao.removeGroup(groupId)
+            bookGroupRepository.getByID(groupId) ?: removeBookGroupAssignmentUseCase.execute(groupId)
             bookGroupRepository.insert(bookGroup)
         }.onFinally {
             finally()
@@ -46,7 +47,7 @@ class GroupViewModel(
     fun delGroup(bookGroup: BookGroup, finally: () -> Unit) {
         execute {
             bookGroupRepository.delete(bookGroup)
-            appDb.bookDao.removeGroup(bookGroup.groupId)
+            removeBookGroupAssignmentUseCase.execute(bookGroup.groupId)
         }.onFinally {
             finally()
         }

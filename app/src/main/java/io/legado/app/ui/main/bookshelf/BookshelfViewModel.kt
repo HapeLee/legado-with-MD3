@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.bookshelf
 
+import kotlinx.coroutines.flow.flow
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.snapshotFlow
@@ -69,7 +70,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onCompletion
@@ -134,7 +134,8 @@ class BookshelfViewModel(
 
     private data class GroupPreviewState(
         val previews: Map<Long, List<BookShelfItem>>,
-        val counts: Map<Long, Int>
+        val counts: Map<Long, Int>,
+        val allBookCount: Int
     )
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -206,9 +207,9 @@ class BookshelfViewModel(
                     }
                     previews[group.groupId] = result
                 }
-                GroupPreviewState(previews, counts)
+                GroupPreviewState(previews, counts, allBooks.size)
             } else {
-                GroupPreviewState(emptyMap(), emptyMap())
+                GroupPreviewState(emptyMap(), emptyMap(), allBooks.size)
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
@@ -257,6 +258,8 @@ class BookshelfViewModel(
             allGroups = allGroups,
             groupPreviews = previews.previews,
             groupBookCounts = previews.counts,
+            currentGroupBookCount = books.size,
+            allBooksCount = previews.allBookCount,
             selectedGroupIndex = groups.indexOfFirst { it.groupId == internal.groupId }
                 .coerceAtLeast(0),
             selectedGroupId = internal.groupId,
@@ -393,7 +396,6 @@ class BookshelfViewModel(
         if (bookUrls.isEmpty()) return
         execute {
             batchCacheDownloadUseCase.execute(
-                context = context,
                 bookUrls = bookUrls,
                 downloadAllChapters = downloadAllChapters,
                 skipAudioBooks = true

@@ -1,5 +1,6 @@
 package io.legado.app.ui.association
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.viewModels
@@ -11,7 +12,6 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ActivityTranslucenceBinding
 import io.legado.app.exception.InvalidBooksDirException
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
@@ -43,7 +43,7 @@ class FileAssociationActivity :
     private val localBookTreeSelect = registerForActivityResult(HandleFileContract()) {
         intent.data?.let { uri ->
             it.uri?.let { treeUri ->
-                AppConfig.defaultBookTreeUri = treeUri.toString()
+                OtherConfig.defaultBookTreeUri = treeUri.toString()
                 importBook(treeUri, uri)
             } ?: let {
                 val storageHelp = String(assets.open("storageHelp.md").readBytes())
@@ -134,7 +134,7 @@ class FileAssociationActivity :
 
     private fun importBook(uri: Uri) {
         if (uri.isContentScheme()) {
-            val treeUriStr = AppConfig.defaultBookTreeUri
+            val treeUriStr = OtherConfig.defaultBookTreeUri
             if (treeUriStr.isNullOrEmpty()) {
                 localBookTreeSelect.launch {
                     title = getString(R.string.select_book_folder)

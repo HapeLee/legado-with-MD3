@@ -51,7 +51,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.ui.book.explore.ExploreShowActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope

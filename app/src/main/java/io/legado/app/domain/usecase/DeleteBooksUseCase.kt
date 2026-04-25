@@ -1,33 +1,27 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.data.dao.BookChapterDao
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.dao.BookSourceDao
-import io.legado.app.help.book.isLocal
-import io.legado.app.model.SourceCallBack
-import io.legado.app.model.localBook.LocalBook
+import io.legado.app.domain.gateway.BookSourceCallbackGateway
+import io.legado.app.domain.gateway.LocalBookGateway
+import io.legado.app.domain.repository.BookDomainRepository
 
 class DeleteBooksUseCase(
-    private val bookDao: BookDao,
-    private val bookChapterDao: BookChapterDao,
-    private val bookSourceDao: BookSourceDao
+    private val bookRepository: BookDomainRepository,
+    private val localBookGateway: LocalBookGateway,
+    private val bookSourceCallbackGateway: BookSourceCallbackGateway
 ) {
 
     suspend fun execute(bookUrls: Set<String>, deleteOriginal: Boolean): List<String> {
         if (bookUrls.isEmpty()) return emptyList()
-        val books = bookUrls.mapNotNull { bookDao.getBook(it) }
+        val books = bookRepository.getDeletableBooks(bookUrls)
         books.forEach { book ->
             if (book.isLocal) {
-                LocalBook.deleteBook(book, deleteOriginal)
+                localBookGateway.deleteBook(book.bookUrl, deleteOriginal)
             } else {
-                val source = bookSourceDao.getBookSource(book.origin)
-                SourceCallBack.callBackBook(SourceCallBack.DEL_BOOK_SHELF, source, book)
+                bookSourceCallbackGateway.onDeleteFromShelf(book.bookUrl)
             }
-            bookChapterDao.delByBook(book.bookUrl)
+            bookRepository.deleteChaptersByBook(book.bookUrl)
         }
-        if (books.isNotEmpty()) {
-            bookDao.delete(*books.toTypedArray())
-        }
+        bookRepository.deleteBooks(books.map { it.bookUrl }.toSet())
         return books.map { it.bookUrl }
     }
 }

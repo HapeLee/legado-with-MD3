@@ -3,12 +3,18 @@ package io.legado.app.ui.book.search
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookshelf.BookShelfItem
+
+data class SearchResultItemUi(
+    val book: SearchBook,
+    val shelfState: BookShelfState = BookShelfState.NOT_IN_SHELF,
+)
 
 data class SearchUiState(
     val query: String = "",
     val committedQuery: String = "",
-    val results: List<SearchBook> = emptyList(),
+    val results: List<SearchResultItemUi> = emptyList(),
     val history: List<SearchKeyword> = emptyList(),
     val bookshelfHints: List<BookShelfItem> = emptyList(),
     val enabledGroups: List<String> = emptyList(),

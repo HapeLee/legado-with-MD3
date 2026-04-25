@@ -10,6 +10,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
@@ -17,6 +18,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.CacheBook
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.cacheConfig.CacheConfig
 import io.legado.app.utils.cnCompare
@@ -51,6 +53,7 @@ data class CacheUiState(
     val books: List<Book> = emptyList(),
     val isDownloadRunning: Boolean = false,
     val cacheVersion: Long = 0,
+    val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
     val exportConfig: CacheExportConfig = CacheExportConfig()
 )
 
@@ -93,6 +96,7 @@ class CacheViewModel(
     private val bookChapterDao: BookChapterDao,
     val cacheConfig: CacheConfig,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
+    private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val deleteBooksUseCase: DeleteBooksUseCase,
     private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
@@ -335,8 +339,7 @@ class CacheViewModel(
     private fun startDownloadForVisibleBooks(books: List<Book>, downloadAllChapters: Boolean) {
         execute {
             batchCacheDownloadUseCase.execute(
-                context = context,
-                books = books,
+                bookUrls = books.map { it.bookUrl }.toSet(),
                 downloadAllChapters = downloadAllChapters,
                 skipAudioBooks = true
             )
@@ -349,10 +352,14 @@ class CacheViewModel(
         if (book.isLocal) return
         if (isBookDownloading(book.bookUrl)) {
             CacheBook.remove(context, book.bookUrl)
+            syncDownloadRunning()
         } else {
-            CacheBook.start(context, book, (0..book.lastChapterIndex).toList())
+            execute {
+                cacheBookChaptersUseCase.execute(book.bookUrl, 0..book.lastChapterIndex)
+            }.onFinally {
+                syncDownloadRunning()
+            }
         }
-        syncDownloadRunning()
     }
 
     private fun moveBooksToGroup(bookUrls: Set<String>, groupId: Long) {
@@ -368,8 +375,10 @@ class CacheViewModel(
     private fun deleteBooks(bookUrls: Set<String>, deleteOriginal: Boolean) {
         if (bookUrls.isEmpty()) return
         execute {
+            LocalConfig.deleteBookOriginal = deleteOriginal
             deleteBooksUseCase.execute(bookUrls, deleteOriginal)
         }.onSuccess { deletedBookUrls ->
+            _uiState.update { it.copy(deleteBookOriginal = deleteOriginal) }
             deletedBookUrls.forEach { cacheChapters.remove(it) }
             _effects.tryEmit(CacheEffect.ShowMessage("删除成功"))
         }.onError {
@@ -396,7 +405,6 @@ class CacheViewModel(
         if (bookUrls.isEmpty()) return
         execute {
             batchCacheDownloadUseCase.execute(
-                context = context,
                 bookUrls = bookUrls,
                 downloadAllChapters = downloadAllChapters,
                 skipAudioBooks = true
@@ -414,9 +422,13 @@ class CacheViewModel(
     }
 
     private fun clearCacheForBook(book: Book) {
-        val bookUrl = clearBookCacheUseCase.execute(book)
-        cacheChapters[bookUrl] = hashSetOf()
-        emitBookChanged(bookUrl)
+        execute {
+            clearBookCacheUseCase.execute(book.bookUrl)
+        }.onSuccess { bookUrl ->
+            bookUrl ?: return@onSuccess
+            cacheChapters[bookUrl] = hashSetOf()
+            emitBookChanged(bookUrl)
+        }
     }
 
     private fun emitBookChanged(bookUrl: String) {

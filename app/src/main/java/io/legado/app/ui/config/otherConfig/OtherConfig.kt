@@ -48,7 +48,7 @@ object OtherConfig {
 
     var defaultBookTreeUri by prefDelegate(
         PreferKey.defaultBookTreeUri,
-        ""
+        null as String?
     )
 
     var antiAlias by prefDelegate(

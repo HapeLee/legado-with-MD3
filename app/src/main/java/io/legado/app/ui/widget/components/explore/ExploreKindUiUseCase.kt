@@ -1,4 +1,4 @@
-package io.legado.app.domain.usecase
+package io.legado.app.ui.widget.components.explore
 
 import androidx.appcompat.app.AppCompatActivity
 import com.script.rhino.runScriptWithContext

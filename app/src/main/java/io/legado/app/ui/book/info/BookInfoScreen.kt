@@ -573,7 +573,7 @@ private fun BookInfoOverflowMenu(
         RoundDropdownMenuItem(
             text = stringResource(R.string.delete_alert),
             onClick = { onMenuAction(BookInfoMenuAction.ToggleDeleteAlert) },
-            isSelected = io.legado.app.help.config.LocalConfig.bookInfoDeleteAlert
+            isSelected = state.deleteAlertEnabled
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.clear_cache),
@@ -894,7 +894,7 @@ private fun BookInfoDialogs(
     onBack: () -> Unit,
 ) {
     val dialog = state.dialog
-    var deleteOriginal by remember(dialog) { mutableStateOf(io.legado.app.help.config.LocalConfig.deleteBookOriginal) }
+    var deleteOriginal by remember(dialog, state.deleteOriginal) { mutableStateOf(state.deleteOriginal) }
     var remarkText by remember(dialog) { mutableStateOf((dialog as? BookInfoDialog.EditRemark)?.remark.orEmpty()) }
 
     if (dialog is BookInfoDialog.AddToShelfOnBack) {
@@ -918,7 +918,6 @@ private fun BookInfoDialogs(
             text = stringResource(R.string.sure_del),
             confirmText = stringResource(android.R.string.ok),
             onConfirm = {
-                io.legado.app.help.config.LocalConfig.deleteBookOriginal = deleteOriginal
                 onIntent(BookInfoIntent.ConfirmDelete(deleteOriginal))
             },
             dismissText = stringResource(android.R.string.cancel),

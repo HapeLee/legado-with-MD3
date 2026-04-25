@@ -2,11 +2,14 @@ package io.legado.app.ui.book.import.remote
 
 import android.app.Application
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Server
+import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.utils.toastOnUi
 
-class ServerConfigViewModel(application: Application): BaseViewModel(application) {
+class ServerConfigViewModel(
+    application: Application,
+    private val remoteBookRepository: RemoteBookRepository
+) : BaseViewModel(application) {
 
     var mServer: Server? = null
 
@@ -15,7 +18,7 @@ class ServerConfigViewModel(application: Application): BaseViewModel(application
         if (mServer != null) return
         execute {
             mServer = if (id != null) {
-                appDb.serverDao.get(id)
+                remoteBookRepository.getServer(id)
             } else {
                 Server()
             }
@@ -27,10 +30,10 @@ class ServerConfigViewModel(application: Application): BaseViewModel(application
     fun save(server: Server, onSuccess: () -> Unit) {
         execute {
             mServer?.let {
-                appDb.serverDao.delete(it)
+                remoteBookRepository.deleteServer(it)
             }
             mServer = server
-            appDb.serverDao.insert(server)
+            remoteBookRepository.saveServer(server)
         }.onSuccess {
             onSuccess.invoke()
         }.onError {

@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.info
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -41,7 +42,7 @@ class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
     }
     private val localBookTreeSelect = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { treeUri ->
-            AppConfig.defaultBookTreeUri = treeUri.toString()
+            OtherConfig.defaultBookTreeUri = treeUri.toString()
         }
     }
     private val infoEditResult = registerForActivityResult(

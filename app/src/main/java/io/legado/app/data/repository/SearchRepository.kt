@@ -4,9 +4,9 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.help.book.isNotShelf
 import io.legado.app.model.webBook.SearchModel
-import io.legado.app.ui.book.search.BookKey
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.CoroutineScope
@@ -23,7 +23,7 @@ import kotlinx.coroutines.withContext
 interface SearchRepository {
     val enabledGroups: Flow<List<String>>
     val enabledSources: Flow<List<BookSourcePart>>
-    val bookshelfKeys: Flow<Set<BookKey>>
+    val bookshelfKeys: Flow<Set<BookShelfKey>>
 
     fun searchBookshelf(query: String): Flow<List<BookShelfItem>>
     fun searchHistory(query: String): Flow<List<SearchKeyword>>
@@ -68,9 +68,9 @@ class SearchRepositoryImpl(
     override val enabledGroups: Flow<List<String>> = appDb.bookSourceDao.flowEnabledGroups()
     override val enabledSources: Flow<List<BookSourcePart>> = appDb.bookSourceDao.flowEnabled()
 
-    override val bookshelfKeys: Flow<Set<BookKey>> = appDb.bookDao.flowBookShelf().map { books ->
+    override val bookshelfKeys: Flow<Set<BookShelfKey>> = appDb.bookDao.flowBookShelf().map { books ->
         books.filterNot { it.isNotShelf }
-            .map { book -> BookKey(book.name, book.author, book.bookUrl) }
+            .map { book -> BookShelfKey(book.name, book.author, book.bookUrl) }
             .toSet()
     }
 

@@ -2,17 +2,20 @@ package io.legado.app.ui.dict
 
 import android.app.Application
 import io.legado.app.base.BaseViewModel
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.DictRule
+import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.help.coroutine.Coroutine
 
-class DictViewModel(application: Application) : BaseViewModel(application) {
+class DictViewModel(
+    application: Application,
+    private val dictRuleRepository: DictRuleRepository
+) : BaseViewModel(application) {
 
     private var dictJob: Coroutine<String>? = null
 
     fun initData(onSuccess: (List<DictRule>) -> Unit) {
         execute {
-            appDb.dictRuleDao.enabled
+            dictRuleRepository.getEnabled()
         }.onSuccess {
             onSuccess.invoke(it)
         }

@@ -15,8 +15,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
@@ -47,7 +48,10 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
 
-class ReadMangaViewModel(application: Application) : BaseViewModel(application) {
+class ReadMangaViewModel(
+    application: Application,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase
+) : BaseViewModel(application) {
 
     private var changeSourceCoroutine: Coroutine<*>? = null
 
@@ -243,7 +247,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
     ) {
         if (!AppConfig.syncBookProgress) return
         execute {
-            AppWebDav.getBookProgress(book)
+            getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
             AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
@@ -259,6 +263,15 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             }
         }
     }
+
+    private fun ReadingProgress.toBookProgress() = BookProgress(
+        name = name,
+        author = author,
+        durChapterIndex = durChapterIndex,
+        durChapterPos = durChapterPos,
+        durChapterTime = durChapterTime,
+        durChapterTitle = durChapterTitle
+    )
 
     /**
      * 换源

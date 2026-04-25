@@ -1,22 +1,21 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.entities.Book
-import io.legado.app.help.book.BookHelp
+import io.legado.app.domain.gateway.BookCacheCleanupGateway
 
 class ClearBookCacheUseCase(
-    private val bookDao: BookDao
+    private val bookCacheCleanupGateway: BookCacheCleanupGateway
 ) {
 
-    fun execute(book: Book): String {
-        BookHelp.clearCache(book)
-        return book.bookUrl
+    fun executeAll() {
+        bookCacheCleanupGateway.clearAll()
+    }
+
+    suspend fun execute(bookUrl: String): String? {
+        return if (bookCacheCleanupGateway.clear(bookUrl)) bookUrl else null
     }
 
     suspend fun execute(bookUrls: Set<String>): List<String> {
         if (bookUrls.isEmpty()) return emptyList()
-        return bookUrls.mapNotNull { bookUrl ->
-            bookDao.getBook(bookUrl)?.let { execute(it) }
-        }
+        return bookUrls.mapNotNull { execute(it) }
     }
 }

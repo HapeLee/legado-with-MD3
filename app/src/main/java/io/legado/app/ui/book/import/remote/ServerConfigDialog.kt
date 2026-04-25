@@ -6,7 +6,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.viewModels
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.data.entities.Server
@@ -18,6 +17,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import org.json.JSONObject
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class ServerConfigDialog() : BaseDialogFragment(R.layout.dialog_webdav_server, true),
     Toolbar.OnMenuItemClickListener {
@@ -29,7 +29,7 @@ class ServerConfigDialog() : BaseDialogFragment(R.layout.dialog_webdav_server, t
     }
 
     private val binding by viewBinding(DialogWebdavServerBinding::bind)
-    private val viewModel by viewModels<ServerConfigViewModel>()
+    private val viewModel by viewModel<ServerConfigViewModel>()
 
     private val webDavServerUi = listOf(
         RowUi("url"),

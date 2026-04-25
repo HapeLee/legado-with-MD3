@@ -1,5 +1,6 @@
 package io.legado.app.model.localBook
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import android.util.Base64
 import androidx.core.net.toUri
@@ -401,7 +402,7 @@ object LocalBook {
         fileName: String,
         source: BaseSource? = null,
     ): Uri {
-        AppConfig.defaultBookTreeUri
+        OtherConfig.defaultBookTreeUri
             ?: throw NoBooksDirException()
         val inputStream = when {
             str.isAbsUrl() -> AnalyzeUrl(
@@ -427,7 +428,7 @@ object LocalBook {
         fileName: String
     ): Uri {
         inputStream.use {
-            val defaultBookTreeUri = AppConfig.defaultBookTreeUri
+            val defaultBookTreeUri = OtherConfig.defaultBookTreeUri
             if (defaultBookTreeUri.isNullOrBlank()) throw NoBooksDirException()
             val treeUri = defaultBookTreeUri.toUri()
             return if (treeUri.isContentScheme()) {
@@ -481,7 +482,7 @@ object LocalBook {
         val webDavUrl = localBook.getRemoteUrl()
         if (webDavUrl.isNullOrBlank()) throw NoStackTraceException("Book file is not webDav File")
         try {
-            AppConfig.defaultBookTreeUri
+            OtherConfig.defaultBookTreeUri
                 ?: throw NoBooksDirException()
             // 兼容旧版链接
             val webdav: WebDav = kotlin.runCatching {

@@ -67,7 +67,6 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieManager
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector

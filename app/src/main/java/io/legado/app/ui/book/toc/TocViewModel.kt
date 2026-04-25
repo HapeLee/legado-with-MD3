@@ -13,6 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -113,7 +114,8 @@ data class FabAction(val icon: ImageVector, val label: String, val action: () ->
 @OptIn(ExperimentalCoroutinesApi::class)
 class TocViewModel(
     application: Application,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val cacheBookChaptersUseCase: CacheBookChaptersUseCase
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
@@ -524,15 +526,21 @@ class TocViewModel(
         val book = bookState.value ?: return
         val indices = uiState.value.selectedIds.toList()
         if (indices.isEmpty()) return
-        CacheBook.start(getApplication(), book, indices)
-        getApplication<Application>().toastOnUi("开始下载 ${indices.size} 个章节")
-        clearSelection()
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, indices)
+        }.onSuccess { count ->
+            getApplication<Application>().toastOnUi("开始下载 $count 个章节")
+            clearSelection()
+        }
     }
 
     fun downloadChapter(index: Int) {
         val book = bookState.value ?: return
-        CacheBook.start(getApplication(), book, listOf(index))
-        getApplication<Application>().toastOnUi("开始下载章节")
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
+        }.onSuccess {
+            getApplication<Application>().toastOnUi("开始下载章节")
+        }
     }
 
     fun downloadAll() {
@@ -546,8 +554,11 @@ class TocViewModel(
             return
         }
 
-        CacheBook.start(getApplication(), book, targetIndices)
-        getApplication<Application>().toastOnUi("开始下载剩余 ${targetIndices.size} 个章节")
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
+        }.onSuccess { count ->
+            getApplication<Application>().toastOnUi("开始下载剩余 $count 个章节")
+        }
     }
 
     private fun List<BookChapter>.groupAndReverseVolumes(): List<BookChapter> {

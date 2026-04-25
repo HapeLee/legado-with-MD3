@@ -61,8 +61,8 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.domain.usecase.ExploreKindUiUseCase
-import io.legado.app.model.BookShelfState
+import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
@@ -84,7 +84,6 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -444,12 +443,12 @@ fun ExploreShowScreen(
                     ) {
                         items(
                             items = books,
-                            key = { it.bookUrl }
-                        ) { book ->
+                            key = { it.book.bookUrl }
+                        ) { item ->
                             ExploreBookGridItem(
-                                book = book,
-                                shelfState = viewModel.getBookShelfStateFlow(book),
-                                onClick = { onBookClick(book) },
+                                book = item.book,
+                                shelfState = item.shelfState,
+                                onClick = { onBookClick(item.book) },
                                 modifier = Modifier.animateItem()
                             )
                         }
@@ -476,12 +475,12 @@ fun ExploreShowScreen(
                     ) {
                         items(
                             items = books,
-                            key = { it.bookUrl }
-                        ) { book ->
+                            key = { it.book.bookUrl }
+                        ) { item ->
                             ExploreBookItem(
-                                book = book,
-                                shelfState = viewModel.getBookShelfStateFlow(book),
-                                onClick = { onBookClick(book) },
+                                book = item.book,
+                                shelfState = item.shelfState,
+                                onClick = { onBookClick(item.book) },
                                 modifier = Modifier.animateItem()
                             )
                         }
@@ -505,7 +504,7 @@ fun ExploreShowScreen(
 @Composable
 fun ExploreBookItem(
     book: SearchBook,
-    shelfState: Flow<BookShelfState>,
+    shelfState: BookShelfState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -521,7 +520,7 @@ fun ExploreBookItem(
 fun ExploreBookGridItem(
     book: SearchBook,
     onClick: () -> Unit,
-    shelfState: Flow<BookShelfState>,
+    shelfState: BookShelfState,
     modifier: Modifier = Modifier
 ) {
     SearchBookGridItem(

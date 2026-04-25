@@ -1,4 +1,4 @@
-package io.legado.app.model
+package io.legado.app.domain.model
 
 enum class BookShelfState {
     IN_SHELF,

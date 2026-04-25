@@ -4,6 +4,7 @@ import io.legado.app.constant.AppConst
 import io.legado.app.constant.BookType
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.Server
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.getRemoteUrl
@@ -90,6 +91,10 @@ class RemoteBookRepository(
             }
     }
 
+    fun getDefaultBookWebDav(): RemoteBookWebDav? {
+        return AppWebDav.defaultBookWebDav
+    }
+
     suspend fun loadBooks(
         webDav: RemoteBookWebDav,
         path: String?
@@ -118,6 +123,22 @@ class RemoteBookRepository(
 
     fun flowLocalBooks(): Flow<List<Book>> {
         return appDb.bookDao.flowLocal()
+    }
+
+    fun flowServers(): Flow<List<Server>> {
+        return appDb.serverDao.observeAll()
+    }
+
+    suspend fun getServer(id: Long): Server? {
+        return appDb.serverDao.get(id)
+    }
+
+    suspend fun saveServer(server: Server) {
+        appDb.serverDao.insert(server)
+    }
+
+    suspend fun deleteServer(server: Server) {
+        appDb.serverDao.delete(server)
     }
 
 }

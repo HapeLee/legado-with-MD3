@@ -5,14 +5,17 @@ import android.content.Context
 import android.content.Intent
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
-import io.legado.app.data.appDb
-import io.legado.app.help.AppWebDav
-import io.legado.app.help.DefaultData
+import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
+import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.sendToClip
 
-class MainViewModel(application: Application) : BaseViewModel(application) {
+class MainViewModel(
+    application: Application,
+    private val appStartupMaintenanceUseCase: AppStartupMaintenanceUseCase,
+    private val webDavBackupUseCase: WebDavBackupUseCase
+) : BaseViewModel(application) {
 
     init {
         deleteNotShelfBook()
@@ -24,23 +27,21 @@ class MainViewModel(application: Application) : BaseViewModel(application) {
 
     fun postLoad() {
         execute {
-            if (appDb.httpTTSDao.count == 0) {
-                DefaultData.httpTTS.let {
-                    appDb.httpTTSDao.insert(*it.toTypedArray())
-                }
-            }
+            appStartupMaintenanceUseCase.ensureDefaultHttpTts()
         }
     }
 
     fun restoreWebDav(name: String) {
         execute {
-            AppWebDav.restoreWebDav(name)
+            webDavBackupUseCase.restore(name)
         }
     }
 
+    suspend fun getLatestWebDavBackup() = webDavBackupUseCase.getLatestBackup()
+
     private fun deleteNotShelfBook() {
         execute {
-            appDb.bookDao.deleteNotShelfBook()
+            appStartupMaintenanceUseCase.deleteNotShelfBooks()
         }
     }
 

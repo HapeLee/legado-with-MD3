@@ -18,6 +18,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
+import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
@@ -63,7 +64,8 @@ import kotlinx.coroutines.launch
 class BookInfoViewModel(
     application: Application,
     private val remoteBookRepository: RemoteBookRepository,
-    private val readRecordRepository: ReadRecordRepository
+    private val readRecordRepository: ReadRecordRepository,
+    private val clearBookCacheUseCase: ClearBookCacheUseCase
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(BookInfoUiState())
@@ -400,7 +402,7 @@ class BookInfoViewModel(
     fun clearCache() {
         currentBook?.let { book ->
             execute {
-                BookHelp.clearCache(book)
+                clearBookCacheUseCase.execute(book.bookUrl)
                 if (ReadBook.book?.bookUrl == book.bookUrl) {
                     ReadBook.clearTextChapter()
                 }
@@ -851,6 +853,8 @@ class BookInfoViewModel(
     }
     private fun deleteBook(deleteOriginal: Boolean) {
         currentBook?.let { book ->
+            LocalConfig.deleteBookOriginal = deleteOriginal
+            _uiState.update { it.copy(deleteOriginal = deleteOriginal) }
             SourceCallBack.callBackBook(SourceCallBack.DEL_BOOK_SHELF, bookSource, book)
             delBook(deleteOriginal) {
                 emitEffect(BookInfoEffect.Finish(resultCode = RESULT_OK))
@@ -1168,6 +1172,8 @@ class BookInfoViewModel(
                 inBookshelf = inBookshelf,
                 bookSource = bookSource,
                 isTocLoading = isTocLoading,
+                deleteAlertEnabled = LocalConfig.bookInfoDeleteAlert,
+                deleteOriginal = LocalConfig.deleteBookOriginal,
             )
         }
     }

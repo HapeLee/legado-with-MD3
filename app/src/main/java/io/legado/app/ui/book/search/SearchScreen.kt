@@ -337,16 +337,13 @@ fun SearchScreen(
                             ) {
                                 itemsIndexed(
                                     items = state.results,
-                                    key = { index, book -> "${book.origin}:${book.bookUrl}:$index" }
-                                ) { _, book ->
-                                    val shelfStateFlow = remember(book.bookUrl) {
-                                        viewModel.getBookShelfStateFlow(book)
-                                    }
+                                    key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
+                                ) { _, item ->
                                     SearchBookListItem(
-                                        book = book,
-                                        shelfState = shelfStateFlow,
+                                        book = item.book,
+                                        shelfState = item.shelfState,
                                         onClick = {
-                                            viewModel.onIntent(SearchIntent.OpenSearchBook(book))
+                                            viewModel.onIntent(SearchIntent.OpenSearchBook(item.book))
                                         }
                                     )
                                 }

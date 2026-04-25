@@ -70,7 +70,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
@@ -101,7 +100,6 @@ import io.legado.app.utils.readText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -226,14 +224,8 @@ fun BookshelfScreen(
     }
     val isUsingStandaloneSearchGroup = uiState.isSearch &&
             uiState.groups.none { it.groupId == currentGroupId }
-    val currentGroupBookCountFlow = remember(currentGroupId) {
-        appDb.bookDao.flowBookShelfByGroup(currentGroupId).map { it.size }
-    }
-    val currentGroupBookCount by currentGroupBookCountFlow.collectAsState(initial = 0)
-    val allGroupsBookCountFlow = remember {
-        appDb.bookDao.flowBookShelfByGroup(BookGroup.IdAll).map { it.size }
-    }
-    val allGroupsBookCount by allGroupsBookCountFlow.collectAsState(initial = 0)
+    val currentGroupBookCount = uiState.currentGroupBookCount
+    val allGroupsBookCount = uiState.allBooksCount
 
     val bookGroupStyle = BookshelfConfig.bookGroupStyle
     // 控制是否处于“文件夹列表”根视图，还是“文件夹内部”书籍视图

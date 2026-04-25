@@ -303,17 +303,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             }
         }
 
-    // 书籍保存位置
-    var defaultBookTreeUri: String?
-        get() = appCtx.getPrefString(PreferKey.defaultBookTreeUri)
-        set(value) {
-            if (value.isNullOrEmpty()) {
-                appCtx.removePref(PreferKey.defaultBookTreeUri)
-            } else {
-                appCtx.putPrefString(PreferKey.defaultBookTreeUri, value)
-            }
-        }
-
     val showDiscovery: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showDiscovery, true)
 

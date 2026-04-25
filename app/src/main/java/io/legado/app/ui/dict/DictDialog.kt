@@ -3,7 +3,6 @@ package io.legado.app.ui.dict
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.View
-import androidx.fragment.app.viewModels
 import com.google.android.material.tabs.TabLayout
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
@@ -15,6 +14,7 @@ import io.legado.app.utils.setHtml
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * 词典
@@ -27,7 +27,7 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
         }
     }
 
-    private val viewModel by viewModels<DictViewModel>()
+    private val viewModel by viewModel<DictViewModel>()
     private val binding by viewBinding(DialogDictBinding::bind)
     private var word: String? = null
     private var glideImageGetter: GlideImageGetter? = null
