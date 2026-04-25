@@ -5,6 +5,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 
 data class BookInfoUiState(
     val book: Book? = null,
@@ -85,6 +86,7 @@ sealed interface BookInfoIntent {
         val source: BookSource,
         val book: Book,
         val toc: List<BookChapter>,
+        val options: ChangeSourceMigrationOptions,
     ) : BookInfoIntent
     data class AddSourceAsNewBook(
         val book: Book,

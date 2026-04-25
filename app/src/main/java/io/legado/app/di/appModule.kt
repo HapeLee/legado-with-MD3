@@ -39,6 +39,7 @@ import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
@@ -113,6 +114,7 @@ val appModule = module {
     singleOf(::AppStartupMaintenanceUseCase)
     singleOf(::BatchCacheDownloadUseCase)
     singleOf(::CacheBookChaptersUseCase)
+    singleOf(::ChangeBookSourceUseCase)
     singleOf(::ClearBookCacheUseCase)
     singleOf(::DeleteBooksUseCase)
     singleOf(::GetReadingProgressUseCase)
@@ -194,6 +196,7 @@ val appModule = module {
             cacheConfig = get(),
             batchCacheDownloadUseCase = get(),
             cacheBookChaptersUseCase = get(),
+            changeBookSourceUseCase = get(),
             clearBookCacheUseCase = get(),
             deleteBooksUseCase = get(),
             updateBooksGroupUseCase = get()

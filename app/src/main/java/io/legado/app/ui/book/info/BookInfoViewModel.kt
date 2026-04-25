@@ -16,6 +16,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
@@ -65,6 +67,7 @@ class BookInfoViewModel(
     application: Application,
     private val remoteBookRepository: RemoteBookRepository,
     private val readRecordRepository: ReadRecordRepository,
+    private val changeBookSourceUseCase: ChangeBookSourceUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase
 ) : BaseViewModel(application) {
 
@@ -171,7 +174,7 @@ class BookInfoViewModel(
 
             is BookInfoIntent.ReplaceWithSource -> {
                 dismissSheet()
-                changeTo(intent.source, intent.book, intent.toc)
+                changeTo(intent.source, intent.book, intent.toc, intent.options)
             }
 
             is BookInfoIntent.AddSourceAsNewBook -> {
@@ -605,16 +608,20 @@ class BookInfoViewModel(
                 }
         }
     }
-    fun changeTo(source: BookSource, book: Book, toc: List<BookChapter>) {
+    fun changeTo(
+        source: BookSource,
+        book: Book,
+        toc: List<BookChapter>,
+        options: ChangeSourceMigrationOptions,
+    ) {
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
+            val oldBook = currentBook ?: return@execute book
             bookSource = source
-            currentBook?.migrateTo(book, toc)
             if (inBookshelf) {
-                book.removeType(BookType.updateError)
-                currentBook?.delete()
-                appDb.bookDao.insert(book)
-                appDb.bookChapterDao.insert(*toc.toTypedArray())
+                changeBookSourceUseCase.changeTo(oldBook, book, toc, options)
+            } else {
+                changeBookSourceUseCase.applyMigration(oldBook, book, toc, options)
             }
             book
         }.onSuccess {

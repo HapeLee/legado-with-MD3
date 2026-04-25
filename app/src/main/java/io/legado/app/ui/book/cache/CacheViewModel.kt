@@ -6,21 +6,31 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.dao.BookGroupDao
+import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
+import io.legado.app.data.entities.BookSource
+import io.legado.app.constant.BookType
+import io.legado.app.domain.usecase.BatchChangeSourceCandidate
+import io.legado.app.domain.usecase.BatchChangeSourcePreviewItem
+import io.legado.app.domain.usecase.BatchChangeSourcePreviewStatus
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.removeType
 import io.legado.app.model.CacheBook
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.cacheConfig.CacheConfig
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.utils.cnCompare
 import kotlinx.coroutines.Job
@@ -53,6 +63,12 @@ data class CacheUiState(
     val groupList: List<BookGroup> = emptyList(),
     val books: List<Book> = emptyList(),
     val isDownloadRunning: Boolean = false,
+    val isChangingSource: Boolean = false,
+    val changeSourceProgress: String? = null,
+    val changeSourceMessage: String? = null,
+    val changeSourceError: String? = null,
+    val batchChangePreviewItems: List<BatchChangeSourcePreviewItem> = emptyList(),
+    val batchChangeOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     val cacheVersion: Long = 0,
     val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
     val exportConfig: CacheExportConfig = CacheExportConfig()
@@ -73,6 +89,32 @@ sealed interface CacheIntent {
     data class DeleteBooks(val bookUrls: Set<String>, val deleteOriginal: Boolean) : CacheIntent
     data class ClearCachesForBooks(val bookUrls: Set<String>) : CacheIntent
     data class DownloadBooks(val bookUrls: Set<String>, val downloadAllChapters: Boolean) : CacheIntent
+    data class ChangeBookSource(
+        val oldBookUrl: String,
+        val source: BookSource,
+        val book: Book,
+        val chapters: List<BookChapter>,
+        val options: ChangeSourceMigrationOptions,
+    ) : CacheIntent
+    data class BatchChangeBookSource(
+        val bookUrls: Set<String>,
+        val sources: List<BookSource>,
+        val options: ChangeSourceMigrationOptions,
+    ) : CacheIntent
+    data class MigratePreviewItem(val oldBookUrl: String) : CacheIntent
+    data class SkipPreviewItem(val oldBookUrl: String) : CacheIntent
+    data class SelectPreviewCandidate(val oldBookUrl: String, val candidateIndex: Int) : CacheIntent
+    data class UpdatePreviewItem(
+        val oldBookUrl: String,
+        val source: BookSource,
+        val book: Book,
+        val chapters: List<BookChapter>,
+    ) : CacheIntent
+    data class AddPreviewItemToShelf(val oldBookUrl: String) : CacheIntent
+    data class OpenBookInfoPreview(val book: Book, val inBookshelf: Boolean) : CacheIntent
+    data object MigrateAllPreviewItems : CacheIntent
+    data object DismissChangeSourceStatus : CacheIntent
+    data object DismissBatchChangePreview : CacheIntent
     data class SetExportUseReplace(val enabled: Boolean) : CacheIntent
     data class SetEnableCustomExport(val enabled: Boolean) : CacheIntent
     data class SetExportNoChapterName(val enabled: Boolean) : CacheIntent
@@ -88,6 +130,7 @@ sealed interface CacheIntent {
 sealed interface CacheEffect {
     data class NotifyBookChanged(val bookUrl: String) : CacheEffect
     data class ShowMessage(val message: String) : CacheEffect
+    data class OpenBookInfo(val bookUrl: String, val name: String, val author: String) : CacheEffect
 }
 
 class CacheViewModel(
@@ -98,6 +141,7 @@ class CacheViewModel(
     val cacheConfig: CacheConfig,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
+    private val changeBookSourceUseCase: ChangeBookSourceUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val deleteBooksUseCase: DeleteBooksUseCase,
     private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
@@ -131,6 +175,56 @@ class CacheViewModel(
             is CacheIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
             is CacheIntent.ClearCachesForBooks -> clearCachesForBooks(intent.bookUrls)
             is CacheIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.downloadAllChapters)
+            is CacheIntent.ChangeBookSource -> changeBookSource(
+                intent.oldBookUrl,
+                intent.source,
+                intent.book,
+                intent.chapters,
+                intent.options
+            )
+
+            is CacheIntent.BatchChangeBookSource -> batchChangeBookSource(
+                intent.bookUrls,
+                intent.sources,
+                intent.options
+            )
+
+            is CacheIntent.MigratePreviewItem -> migratePreviewItem(intent.oldBookUrl)
+            is CacheIntent.SkipPreviewItem -> skipPreviewItem(intent.oldBookUrl)
+            is CacheIntent.SelectPreviewCandidate -> selectPreviewCandidate(
+                intent.oldBookUrl,
+                intent.candidateIndex
+            )
+
+            is CacheIntent.UpdatePreviewItem -> updatePreviewItem(
+                intent.oldBookUrl,
+                intent.source,
+                intent.book,
+                intent.chapters
+            )
+
+            is CacheIntent.AddPreviewItemToShelf -> addPreviewItemToShelf(intent.oldBookUrl)
+            is CacheIntent.OpenBookInfoPreview -> openBookInfoPreview(
+                intent.book,
+                intent.inBookshelf
+            )
+
+            CacheIntent.MigrateAllPreviewItems -> migrateAllPreviewItems()
+
+            CacheIntent.DismissChangeSourceStatus -> {
+                _uiState.update {
+                    it.copy(
+                        changeSourceProgress = null,
+                        changeSourceMessage = null,
+                        changeSourceError = null,
+                    )
+                }
+            }
+
+            CacheIntent.DismissBatchChangePreview -> {
+                _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
+            }
+
             is CacheIntent.SetExportUseReplace -> {
                 cacheConfig.exportUseReplace = intent.enabled
                 syncExportConfig()
@@ -419,6 +513,259 @@ class CacheViewModel(
             syncDownloadRunning()
         }.onError {
             _effects.tryEmit(CacheEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun changeBookSource(
+        oldBookUrl: String,
+        source: BookSource,
+        book: Book,
+        chapters: List<BookChapter>,
+        options: ChangeSourceMigrationOptions,
+    ) {
+        execute {
+            val oldBook = bookDao.getBook(oldBookUrl) ?: return@execute null
+            changeBookSourceUseCase.changeTo(oldBook, book, chapters, options)
+        }.onSuccess { result ->
+            result ?: return@onSuccess
+            cacheChapters.remove(result.oldBookUrl)
+            cacheChapters[result.book.bookUrl] = hashSetOf()
+            emitBookChanged(result.book.bookUrl)
+            _effects.tryEmit(CacheEffect.ShowMessage("换源完成"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("换源失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun batchChangeBookSource(
+        bookUrls: Set<String>,
+        sources: List<BookSource>,
+        options: ChangeSourceMigrationOptions,
+    ) {
+        if (bookUrls.isEmpty()) {
+            _uiState.update { it.copy(changeSourceError = "未选择书籍") }
+            return
+        }
+        if (sources.isEmpty()) {
+            _uiState.update { it.copy(changeSourceError = "未选择书源") }
+            return
+        }
+        execute {
+            val concurrency = OtherConfig.threadCount.coerceIn(1, 4)
+            _uiState.update {
+                it.copy(
+                    isChangingSource = true,
+                    changeSourceProgress = "0 / ${bookUrls.size}",
+                    changeSourceMessage = "开始查找：${bookUrls.size} 本，${sources.size} 个书源，并发 $concurrency",
+                    changeSourceError = null,
+                    batchChangeOptions = options,
+                    batchChangePreviewItems = emptyList()
+                )
+            }
+            val books = bookUrls.mapNotNull { bookDao.getBook(it) }
+            changeBookSourceUseCase.prepareBatchChange(
+                books = books,
+                sources = sources,
+                concurrency = concurrency,
+            ) { current, total, bookName ->
+                _uiState.update {
+                    it.copy(changeSourceProgress = "$current / $total  $bookName")
+                }
+            }
+        }.onSuccess { previewItems ->
+            _uiState.update {
+                it.copy(
+                    batchChangePreviewItems = previewItems,
+                    isChangingSource = false,
+                    changeSourceProgress = null
+                )
+            }
+            val matchedCount = previewItems.count { it.canMigrate }
+            val skippedCount = previewItems.count {
+                it.status == BatchChangeSourcePreviewStatus.Skipped
+            }
+            val notFoundCount = previewItems.size - matchedCount - skippedCount
+            _uiState.update {
+                it.copy(
+                    changeSourceMessage = "查找完成：可迁移 $matchedCount 本，未找到 $notFoundCount 本，跳过 $skippedCount 本",
+                    changeSourceError = null
+                )
+            }
+        }.onError {
+            val progress = uiState.value.changeSourceProgress.orEmpty()
+            _uiState.update { state ->
+                state.copy(
+                    changeSourceError = "批量换源查找失败${if (progress.isBlank()) "" else "\n进度：$progress"}\n${it.localizedMessage}"
+                )
+            }
+        }.onFinally {
+            _uiState.update {
+                it.copy(
+                    isChangingSource = false,
+                    changeSourceProgress = null
+                )
+            }
+        }
+    }
+
+    private fun migratePreviewItem(oldBookUrl: String) {
+        val item = uiState.value.batchChangePreviewItems.firstOrNull {
+            it.oldBook.bookUrl == oldBookUrl
+        } ?: return
+        val candidate = item.selectedCandidate ?: return
+        execute {
+            val oldBook = bookDao.getBook(oldBookUrl) ?: item.oldBook
+            changeBookSourceUseCase.changeTo(
+                oldBook = oldBook,
+                newBook = candidate.book,
+                chapters = candidate.chapters,
+                options = uiState.value.batchChangeOptions,
+            )
+        }.onSuccess { result ->
+            cacheChapters.remove(result.oldBookUrl)
+            cacheChapters[result.book.bookUrl] = hashSetOf()
+            removePreviewItem(oldBookUrl)
+            emitBookChanged(result.book.bookUrl)
+            _effects.tryEmit(CacheEffect.ShowMessage("迁移完成"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("迁移失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun skipPreviewItem(oldBookUrl: String) {
+        _uiState.update { state ->
+            state.copy(
+                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        item.copy(status = BatchChangeSourcePreviewStatus.Skipped)
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
+    }
+
+    private fun selectPreviewCandidate(oldBookUrl: String, candidateIndex: Int) {
+        _uiState.update { state ->
+            state.copy(
+                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        item.copy(
+                            selectedCandidateIndex = candidateIndex.coerceIn(
+                                0,
+                                (item.candidates.size - 1).coerceAtLeast(0)
+                            ),
+                            status = BatchChangeSourcePreviewStatus.Matched
+                        )
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
+    }
+
+    private fun updatePreviewItem(
+        oldBookUrl: String,
+        source: BookSource,
+        book: Book,
+        chapters: List<BookChapter>,
+    ) {
+        _uiState.update { state ->
+            state.copy(
+                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        item.copy(
+                            candidates = listOf(BatchChangeSourceCandidate(source, book, chapters)) +
+                                    item.candidates,
+                            selectedCandidateIndex = 0,
+                            status = BatchChangeSourcePreviewStatus.Matched
+                        )
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
+    }
+
+    private fun addPreviewItemToShelf(oldBookUrl: String) {
+        val item = uiState.value.batchChangePreviewItems.firstOrNull {
+            it.oldBook.bookUrl == oldBookUrl
+        } ?: return
+        val candidate = item.selectedCandidate ?: return
+        execute {
+            candidate.book.removeType(BookType.notShelf)
+            if (candidate.book.order == 0) {
+                candidate.book.order = bookDao.minOrder - 1
+            }
+            bookDao.insert(candidate.book)
+            bookChapterDao.insert(*candidate.chapters.toTypedArray())
+            candidate.book
+        }.onSuccess {
+            _effects.tryEmit(CacheEffect.ShowMessage("已添加到书架"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("添加书籍失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun openBookInfoPreview(book: Book, inBookshelf: Boolean) {
+        execute {
+            if (!inBookshelf) {
+                appDb.searchBookDao.insert(book.toSearchBook())
+            }
+            book
+        }.onSuccess {
+            _effects.tryEmit(CacheEffect.OpenBookInfo(it.bookUrl, it.name, it.author))
+        }
+    }
+
+    private fun removePreviewItem(oldBookUrl: String) {
+        _uiState.update {
+            it.copy(
+                batchChangePreviewItems = it.batchChangePreviewItems.filterNot { item ->
+                    item.oldBook.bookUrl == oldBookUrl
+                },
+                cacheVersion = it.cacheVersion + 1
+            )
+        }
+    }
+
+    private fun migrateAllPreviewItems() {
+        val items = uiState.value.batchChangePreviewItems.filter { it.canMigrate }
+        if (items.isEmpty()) return
+        execute {
+            _uiState.update {
+                it.copy(isChangingSource = true, changeSourceProgress = "0 / ${items.size}")
+            }
+            items.forEachIndexed { index, item ->
+                _uiState.update {
+                    it.copy(changeSourceProgress = "${index + 1} / ${items.size}  ${item.oldBook.name}")
+                }
+                val candidate = item.selectedCandidate ?: return@forEachIndexed
+                val oldBook = bookDao.getBook(item.oldBook.bookUrl) ?: item.oldBook
+                changeBookSourceUseCase.changeTo(
+                    oldBook = oldBook,
+                    newBook = candidate.book,
+                    chapters = candidate.chapters,
+                    options = uiState.value.batchChangeOptions,
+                )
+            }
+        }.onSuccess {
+            cacheChapters.clear()
+            _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
+            _effects.tryEmit(CacheEffect.ShowMessage("批量迁移完成"))
+        }.onError {
+            _effects.tryEmit(CacheEffect.ShowMessage("批量迁移失败\n${it.localizedMessage}"))
+        }.onFinally {
+            _uiState.update {
+                it.copy(
+                    isChangingSource = false,
+                    changeSourceProgress = null,
+                    cacheVersion = it.cacheVersion + 1
+                )
+            }
         }
     }
 

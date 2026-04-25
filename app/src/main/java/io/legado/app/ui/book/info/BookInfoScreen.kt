@@ -274,8 +274,8 @@ private fun BookInfoScreenContent(
                 show = currentSheet == BookInfoSheet.SourcePicker,
                 oldBook = book,
                 onDismissRequest = { onIntent(BookInfoIntent.DismissSheet) },
-                onReplace = { source, newBook, toc ->
-                    onIntent(BookInfoIntent.ReplaceWithSource(source, newBook, toc))
+                onReplace = { source, newBook, toc, options ->
+                    onIntent(BookInfoIntent.ReplaceWithSource(source, newBook, toc, options))
                 },
                 onAddAsNew = { newBook, toc ->
                     onIntent(BookInfoIntent.AddSourceAsNewBook(newBook, toc))
