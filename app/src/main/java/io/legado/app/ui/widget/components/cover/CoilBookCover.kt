@@ -81,7 +81,11 @@ fun CoilBookCover(
     }
 
     NormalCard(
-        cornerRadius = 4.dp
+        cornerRadius = 4.dp,
+        containerColor = if (!hasCustomDefault && !isOnlineCoverLoaded) {
+            LegadoTheme.colorScheme.surfaceContainerLow
+        } else
+            LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0f)
     ){
         BoxWithConstraints(
             modifier = modifier
@@ -89,11 +93,6 @@ fun CoilBookCover(
                 .then(
                     if (CoverConfig.coverShowShadow) {
                         Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
-                    } else Modifier
-                )
-                .then(
-                    if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                        Modifier.background(LegadoTheme.colorScheme.surfaceContainer)
                     } else Modifier
                 )
         ) {
