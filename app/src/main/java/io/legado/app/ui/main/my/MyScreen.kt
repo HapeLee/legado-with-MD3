@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.filled.Rule
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
@@ -171,6 +172,13 @@ fun MyScreen(
                         imageVector = Icons.Default.History,
                         onClick = {
                             onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = "缓存管理",
+                        imageVector = Icons.Default.Download,
+                        onClick = {
+                            onNavigate(PrefClickEvent.OpenBookCacheManage)
                         }
                     )
                     ClickableSettingItem(

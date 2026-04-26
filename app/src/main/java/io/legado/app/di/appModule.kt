@@ -55,6 +55,7 @@ import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
+import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceViewModel
@@ -189,6 +190,7 @@ val appModule = module {
     viewModelOf(::ExploreViewModel)
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)
+    viewModelOf(::BookCacheManageViewModel)
     viewModel {
         BookshelfManageScreenViewModel(
             application = get(),

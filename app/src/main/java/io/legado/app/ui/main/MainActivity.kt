@@ -40,6 +40,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
+import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.import.local.ImportBookScreen
 import io.legado.app.ui.book.import.remote.RemoteBookScreen
@@ -93,6 +94,7 @@ open class MainActivity : BaseComposeActivity() {
         private const val ROUTE_IMPORT_LOCAL = "import/local"
         private const val ROUTE_IMPORT_REMOTE = "import/remote"
         private const val ROUTE_CACHE = "cache"
+        private const val ROUTE_BOOK_CACHE_MANAGE = "book/cache/manage"
         private const val ROUTE_SEARCH = "search"
         private const val ROUTE_RSS_SORT = "rss/sort"
         private const val ROUTE_RSS_READ = "rss/read"
@@ -176,6 +178,12 @@ open class MainActivity : BaseComposeActivity() {
             groupId: Long = -1L
         ): Intent = createBookshelfManageScreenIntent(context, groupId)
 
+        fun createBookCacheManageIntent(context: Context): Intent {
+            return createLauncherIntent(context).apply {
+                putExtra(EXTRA_START_ROUTE, ROUTE_BOOK_CACHE_MANAGE)
+            }
+        }
+
         fun createSearchIntent(
             context: Context,
             key: String? = null,
@@ -235,6 +243,9 @@ open class MainActivity : BaseComposeActivity() {
 
     @Serializable
     private data class MainRouteCache(val groupId: Long) : MainRoute
+
+    @Serializable
+    private data object MainRouteBookCacheManage : MainRoute
 
     @Serializable
     private data class MainRouteSearch(
@@ -400,6 +411,9 @@ open class MainActivity : BaseComposeActivity() {
                         onNavigateToCache = { groupId ->
                             navigateToRoute(backStack, MainRouteCache(groupId))
                         },
+                        onNavigateToBookCacheManage = {
+                            navigateToRoute(backStack, MainRouteBookCacheManage)
+                        },
                         onNavigateToRssSort = { sourceUrl, sortUrl, key ->
                             navigateToRoute(
                                 backStack,
@@ -470,6 +484,12 @@ open class MainActivity : BaseComposeActivity() {
                 entry<MainRouteCache> { route ->
                     BookshelfManageRouteScreen(
                         groupId = route.groupId,
+                        onBackClick = { navigateBack(backStack) }
+                    )
+                }
+
+                entry<MainRouteBookCacheManage> {
+                    BookCacheManageRouteScreen(
                         onBackClick = { navigateBack(backStack) }
                     )
                 }
@@ -590,7 +610,8 @@ open class MainActivity : BaseComposeActivity() {
 
             MainRouteImportLocal,
             MainRouteImportRemote,
-            is MainRouteCache -> {
+            is MainRouteCache,
+            MainRouteBookCacheManage -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
                 } else {
@@ -801,6 +822,7 @@ open class MainActivity : BaseComposeActivity() {
             ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
             ROUTE_IMPORT_REMOTE -> MainRouteImportRemote
             ROUTE_CACHE -> MainRouteCache(intent?.getLongExtra(EXTRA_CACHE_GROUP_ID, -1L) ?: -1L)
+            ROUTE_BOOK_CACHE_MANAGE -> MainRouteBookCacheManage
             ROUTE_SEARCH -> MainRouteSearch(
                 key = intent?.getStringExtra(EXTRA_SEARCH_KEY),
                 scopeRaw = intent?.getStringExtra(EXTRA_SEARCH_SCOPE)

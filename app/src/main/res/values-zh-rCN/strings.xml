@@ -245,6 +245,8 @@
     <string name="download_count">%1$d/%2$d</string>
     <string name="import_select_book">导入选择书籍</string>
     <string name="threads_num_title">更新和搜索线程数</string>
+    <string name="cache_book_threads_num_title">书籍缓存下载线程数</string>
+    <string name="cache_book_threads_num_summary">控制离线缓存章节下载的并发数量</string>
     <string name="change_icon">切换图标</string>
     <string name="remove_from_bookshelf">已在书架</string>
     <string name="already_in_bookshelf">已在书架</string>

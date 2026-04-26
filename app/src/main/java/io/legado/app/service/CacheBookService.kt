@@ -41,7 +41,7 @@ class CacheBookService : BaseService() {
             private set
     }
 
-    private val threadCount = OtherConfig.threadCount
+    private val threadCount = OtherConfig.cacheBookThreadCount
     private var cachePool =
         Executors.newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
     private var downloadJob: Job? = null

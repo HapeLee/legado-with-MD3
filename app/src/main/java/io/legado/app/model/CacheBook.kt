@@ -77,7 +77,7 @@ object CacheBook {
             }.onStart {
                 postEvent(EventBus.UP_DOWNLOAD_STATE, "")
                 updateSummary()
-            }.onEachParallel(OtherConfig.threadCount.coerceAtLeast(1)) {
+            }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceAtLeast(1)) {
                 coroutineScope {
                     it.download(this, context)
                 }
@@ -214,7 +214,7 @@ object CacheBook {
     val downloadSummary: String
         get() {
             val stats = collectQueueStats()
-            return "正在下载:${stats.downloadingCount}|等待中:${stats.waitingCount}|失败:${errorDownloadMap.size}|成功:${successDownloadSet.size}"
+            return "正在下载:${stats.downloadingCount} | 等待中:${stats.waitingCount} | 失败:${errorDownloadMap.size} | 成功:${successDownloadSet.size}"
         }
 
     val isRun: Boolean
@@ -258,6 +258,12 @@ object CacheBook {
 
         @Synchronized
         fun queueCounts(): Pair<Int, Int> = waitDownloadSet.size to onDownloadSet.size
+
+        @Synchronized
+        fun waitingIndices(): Set<Int> = waitDownloadSet.toSet()
+
+        @Synchronized
+        fun downloadingIndices(): Set<Int> = onDownloadSet.toSet()
 
         @Synchronized
         fun isRun(): Boolean {

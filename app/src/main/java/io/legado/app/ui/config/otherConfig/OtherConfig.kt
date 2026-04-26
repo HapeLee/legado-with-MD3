@@ -160,6 +160,11 @@ object OtherConfig {
         16
     )
 
+    var cacheBookThreadCount by prefDelegate(
+        PreferKey.cacheBookThreadCount,
+        16
+    )
+
     var processText by prefDelegate(
         PreferKey.processText,
         true

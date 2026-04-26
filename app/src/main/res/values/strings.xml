@@ -248,6 +248,8 @@
     <string name="download_count">Downloaded %1$d/%2$d</string>
     <string name="import_select_book">Import selected book(s)</string>
     <string name="threads_num_title">Number of Concurrent Tasks</string>
+    <string name="cache_book_threads_num_title">Cache Download Threads</string>
+    <string name="cache_book_threads_num_summary">Controls concurrent chapter downloads for offline book cache</string>
     <string name="change_icon">Change Icon</string>
     <string name="remove_from_bookshelf">In library</string>
     <string name="already_in_bookshelf">Already in Bookshelf</string>

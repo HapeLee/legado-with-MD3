@@ -372,6 +372,15 @@ fun OtherConfigScreen(
                     onValueChange = { OtherConfig.threadCount = it.toInt() }
                 )
 
+                SliderSettingItem(
+                    title = stringResource(R.string.cache_book_threads_num_title),
+                    description = stringResource(R.string.cache_book_threads_num_summary),
+                    value = OtherConfig.cacheBookThreadCount.toFloat(),
+                    defaultValue = 16f,
+                    valueRange = 1f..256f,
+                    onValueChange = { OtherConfig.cacheBookThreadCount = it.toInt() }
+                )
+
                 SwitchSettingItem(
                     title = stringResource(R.string.add_to_text_context_menu_t),
                     description = stringResource(R.string.add_to_text_context_menu_s),
