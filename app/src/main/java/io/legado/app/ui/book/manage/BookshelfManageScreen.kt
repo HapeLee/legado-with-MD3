@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.cache
+package io.legado.app.ui.book.manage
 
 import androidx.compose.ui.focus.focusRequester
 import androidx.activity.compose.BackHandler
@@ -120,15 +120,16 @@ import io.legado.app.utils.verificationField
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import org.koin.androidx.compose.koinViewModel
+import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-data class CacheFabAction(
+data class BookshelfManageFabAction(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
     val label: String,
     val action: () -> Unit
 )
 
-private data class CacheListState(
+private data class BookshelfManageListState(
     override val items: List<Book> = emptyList(),
     override val selectedIds: Set<Any> = emptySet(),
     override val searchKey: String = "",
@@ -137,21 +138,21 @@ private data class CacheListState(
 ) : ListUiState<Book>
 
 @Composable
-fun CacheRouteScreen(
+fun BookshelfManageRouteScreen(
     groupId: Long,
     onBackClick: () -> Unit,
-    viewModel: CacheViewModel = koinViewModel()
+    viewModel: BookshelfManageScreenViewModel = koinViewModel()
 ) {
     LaunchedEffect(groupId) {
-        viewModel.dispatch(CacheIntent.Initialize(groupId))
+        viewModel.dispatch(BookshelfManageScreenIntent.Initialize(groupId))
     }
-    CacheScreen(viewModel = viewModel, onBackClick = onBackClick)
+    BookshelfManageScreen(viewModel = viewModel, onBackClick = onBackClick)
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CacheScreen(
-    viewModel: CacheViewModel,
+private fun BookshelfManageScreen(
+    viewModel: BookshelfManageScreenViewModel,
     onBackClick: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -203,6 +204,7 @@ private fun CacheScreen(
     val exportFileNameText = stringResource(R.string.export_file_name)
     val resultAnalyzedText = stringResource(R.string.result_analyzed)
     val errorScopeInputText = stringResource(R.string.error_scope_input)
+    val noGroupText = stringResource(R.string.no_group)
     val exportFileNameHintText = "书名：《{name}》 作者：{author}"
     val exportFileNameHelpText = """
 支持变量：{name}（书名）、{author}（作者）、{group}（分组）、{source}（书源）、{remark}（备注）。
@@ -218,15 +220,15 @@ private fun CacheScreen(
     val booksByUrl = remember(state.books) { state.books.associateBy { it.bookUrl } }
     val userGroups = remember(state.groupList) { state.groupList.filter { it.groupId > 0L } }
 
-    val groupNameResolver: (Book) -> String = remember(userGroups, context) {
+    val groupNameResolver: (Book) -> String = remember(userGroups, noGroupText) {
         { book ->
             if (book.group <= 0L) {
-                context.getString(R.string.no_group)
+                noGroupText
             } else {
                 val groups = userGroups.filter {
                     (book.group and it.groupId) > 0L
                 }
-                if (groups.isEmpty()) context.getString(R.string.no_group)
+                if (groups.isEmpty()) noGroupText
                 else groups.joinToString("、") { it.groupName }
             }
         }
@@ -245,7 +247,7 @@ private fun CacheScreen(
         }
     }
     val listUiState = remember(filteredBooks, selectedBookUrls, searchKey, isSearchMode) {
-        CacheListState(
+        BookshelfManageListState(
             items = filteredBooks,
             selectedIds = selectedBookUrls.mapTo(linkedSetOf()) { it as Any },
             searchKey = searchKey,
@@ -327,9 +329,9 @@ private fun CacheScreen(
     LaunchedEffect(Unit) {
         viewModel.effects.collect { effect ->
             when (effect) {
-                is CacheEffect.ShowMessage -> context.toastOnUi(effect.message)
-                is CacheEffect.NotifyBookChanged -> Unit
-                is CacheEffect.OpenBookInfo -> context.startActivity<BookInfoActivity> {
+                is BookshelfManageScreenEffect.ShowMessage -> context.toastOnUi(effect.message)
+                is BookshelfManageScreenEffect.NotifyBookChanged -> Unit
+                is BookshelfManageScreenEffect.OpenBookInfo -> context.startActivity<BookInfoActivity> {
                     putExtra("name", effect.name)
                     putExtra("author", effect.author)
                     putExtra("bookUrl", effect.bookUrl)
@@ -398,20 +400,20 @@ private fun CacheScreen(
         return if (targetBooks.all { it.group == firstGroup }) firstGroup else 0L
     }
     val fabItems = listOf(
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.SelectAll,
             stringResource(R.string.select_all)
         ) {
             selectedBookUrls = state.books.mapTo(hashSetOf()) { it.bookUrl }
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Refresh,
             stringResource(R.string.revert_selection)
         ) {
             val visibleBookUrls = booksByUrl.keys
             selectedBookUrls = visibleBookUrls - selectedBookUrls
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Download,
             "缓存选中"
         ) {
@@ -419,7 +421,7 @@ private fun CacheScreen(
                 showBatchDownloadConfirmDialog = true
             }
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Refresh,
             "批量换源"
         ) {
@@ -427,7 +429,7 @@ private fun CacheScreen(
                 showBatchSourcePickerSheet = true
             }
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Bookmarks,
             stringResource(R.string.move_to_group)
         ) {
@@ -437,20 +439,20 @@ private fun CacheScreen(
                 showGroupSelectSheet = true
             }
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Upload,
             "导出选中"
         ) {
             exportSelected()
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Delete,
             stringResource(R.string.clear_cache)
         ) {
-            viewModel.dispatch(CacheIntent.ClearCachesForBooks(selectedBookUrls))
+            viewModel.dispatch(BookshelfManageScreenIntent.ClearCachesForBooks(selectedBookUrls))
             clearSelection()
         },
-        CacheFabAction(
+        BookshelfManageFabAction(
             Icons.Default.Delete,
             stringResource(R.string.delete)
         ) {
@@ -462,6 +464,17 @@ private fun CacheScreen(
         }
     )
     val listState = rememberLazyListState()
+    val canReorderBooks = state.bookSort == 3 && !isSearchMode && selectedBookUrls.isEmpty()
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        if (canReorderBooks) {
+            viewModel.dispatch(
+                BookshelfManageScreenIntent.MoveBookOrder(
+                    fromIndex = from.index,
+                    toIndex = to.index
+                )
+            )
+        }
+    }
     ListScaffold(
         title = if (inSelectionMode) {
             "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
@@ -495,7 +508,7 @@ private fun CacheScreen(
                             isSelected = group.groupId == state.groupId,
                             onClick = {
                                 dismiss()
-                                viewModel.dispatch(CacheIntent.ChangeGroup(group.groupId))
+                                viewModel.dispatch(BookshelfManageScreenIntent.ChangeGroup(group.groupId))
                             }
                         )
                     }
@@ -508,7 +521,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     if (state.isDownloadRunning) {
-                        viewModel.dispatch(CacheIntent.StopDownload)
+                        viewModel.dispatch(BookshelfManageScreenIntent.StopDownload)
                     } else {
                         showDownloadAllConfirmDialog = true
                     }
@@ -553,7 +566,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetExportUseReplace(!state.exportConfig.exportUseReplace)
+                        BookshelfManageScreenIntent.SetExportUseReplace(!state.exportConfig.exportUseReplace)
                     )
                 }
             )
@@ -563,7 +576,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetEnableCustomExport(!state.exportConfig.enableCustomExport)
+                        BookshelfManageScreenIntent.SetEnableCustomExport(!state.exportConfig.enableCustomExport)
                     )
                 }
             )
@@ -573,7 +586,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
+                        BookshelfManageScreenIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
                     )
                 }
             )
@@ -583,7 +596,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
+                        BookshelfManageScreenIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
                     )
                 }
             )
@@ -593,7 +606,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetExportPictureFile(!state.exportConfig.exportPictureFile)
+                        BookshelfManageScreenIntent.SetExportPictureFile(!state.exportConfig.exportPictureFile)
                     )
                 }
             )
@@ -603,7 +616,7 @@ private fun CacheScreen(
                 onClick = {
                     dismiss()
                     viewModel.dispatch(
-                        CacheIntent.SetParallelExportBook(!state.exportConfig.parallelExportBook)
+                        BookshelfManageScreenIntent.SetParallelExportBook(!state.exportConfig.parallelExportBook)
                     )
                 }
             )
@@ -680,119 +693,137 @@ private fun CacheScreen(
                 val exportMsg = remember(renderVersion, book.bookUrl) {
                     ExportBookService.exportMsg[book.bookUrl]
                 }
-                NormalCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { toggleBookSelection(book) },
-                    onLongClick = { toggleBookSelection(book) },
-                    containerColor = if (isSelected) {
-                        LegadoTheme.colorScheme.surfaceContainerHigh
-                    } else {
-                        LegadoTheme.colorScheme.surfaceContainerLow
-                    }
+                ReorderableItem(
+                    state = reorderableState,
+                    key = book.bookUrl,
+                    enabled = canReorderBooks
                 ) {
-                    Column(
+                    NormalCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .adaptiveHorizontalPadding(vertical = 12.dp),
-                        verticalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                AppText(
-                                    text = book.name,
-                                    style = LegadoTheme.typography.titleSmallEmphasized,
-                                    maxLines = 1
-                                )
-                                AppText(
-                                    text = book.getRealAuthor(),
-                                    style = LegadoTheme.typography.bodySmall
-                                )
-                                AppText(
-                                    text = "${groupNameResolver(book)} | ${book.originName.ifBlank { book.origin }}",
-                                    style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.primary)
-                                )
-                                if (exportMsg != null) {
-                                    AppText(text = exportMsg, modifier = Modifier.padding(top = 2.dp))
-                                }
-                            }
-                            TextCard(
-                                text = if (book.isLocal) {
-                                    stringResource(R.string.local_book)
+                            .then(
+                                if (canReorderBooks) {
+                                    Modifier.longPressDraggableHandle()
                                 } else {
-                                    stringResource(
-                                        R.string.download_count,
-                                        cacheCount,
-                                        book.totalChapterNum
-                                    )
+                                    Modifier
                                 }
-                            )
+                            ),
+                        onClick = { toggleBookSelection(book) },
+                        onLongClick = { toggleBookSelection(book) },
+                        containerColor = if (isSelected) {
+                            LegadoTheme.colorScheme.surfaceContainerHigh
+                        } else {
+                            LegadoTheme.colorScheme.surfaceContainerLow
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .adaptiveHorizontalPadding(vertical = 12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                SmallTonalIconButton(
-                                    onClick = {
-                                        if (!book.isLocal) {
-                                            viewModel.dispatch(CacheIntent.ToggleBookDownload(book))
-                                        }
-                                    },
-                                    imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
-                                    contentDescription = "download"
-                                )
-                                SmallTonalIconButton(
-                                    onClick = { exportBook(book) },
-                                    imageVector = Icons.Default.Upload,
-                                    contentDescription = "upload"
-                                )
-                                SmallTonalIconButton(
-                                    onClick = {
-                                        pendingMoveGroupBookUrl = book.bookUrl
-                                        groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
-                                        showGroupSelectSheet = true
-                                    },
-                                    imageVector = Icons.Default.Bookmarks,
-                                    contentDescription = "group"
-                                )
-                                SmallTonalIconButton(
-                                    onClick = { moreMenuBookUrl = book.bookUrl },
-                                    imageVector = Icons.Default.MoreVert,
-                                    contentDescription = "more"
-                                )
-                                RoundDropdownMenu(
-                                    expanded = moreMenuBookUrl == book.bookUrl,
-                                    onDismissRequest = { moreMenuBookUrl = null }
-                                ) { dismiss ->
-                                    RoundDropdownMenuItem(
-                                        text = "换源",
-                                        onClick = {
-                                            singleChangeSourceBook = book
-                                            dismiss()
-                                        }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    AppText(
+                                        text = book.name,
+                                        style = LegadoTheme.typography.titleSmallEmphasized,
+                                        maxLines = 1
                                     )
-                                    RoundDropdownMenuItem(
-                                        text = "删除书籍",
-                                        onClick = {
-                                            pendingDeleteBookUrls = setOf(book.bookUrl)
-                                            deleteOriginalBookFile = state.deleteBookOriginal
-                                            showDeleteBookConfirmDialog = true
-                                            dismiss()
-                                        }
+                                    AppText(
+                                        text = book.getRealAuthor(),
+                                        style = LegadoTheme.typography.bodySmall
                                     )
-                                    RoundDropdownMenuItem(
-                                        text = "删除缓存",
-                                        onClick = {
-                                            viewModel.dispatch(CacheIntent.ClearCachesForBooks(setOf(book.bookUrl)))
-                                            dismiss()
-                                        }
+                                    AppText(
+                                        text = "${groupNameResolver(book)} | ${book.originName.ifBlank { book.origin }}",
+                                        style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.primary)
                                     )
+                                    if (exportMsg != null) {
+                                        AppText(text = exportMsg, modifier = Modifier.padding(top = 2.dp))
+                                    }
+                                }
+                                TextCard(
+                                    text = if (book.isLocal) {
+                                        stringResource(R.string.local_book)
+                                    } else {
+                                        stringResource(
+                                            R.string.download_count,
+                                            cacheCount,
+                                            book.totalChapterNum
+                                        )
+                                    }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    SmallTonalIconButton(
+                                        onClick = {
+                                            if (!book.isLocal) {
+                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                                            }
+                                        },
+                                        imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
+                                        contentDescription = "download"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = { exportBook(book) },
+                                        imageVector = Icons.Default.Upload,
+                                        contentDescription = "upload"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = {
+                                            pendingMoveGroupBookUrl = book.bookUrl
+                                            groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
+                                            showGroupSelectSheet = true
+                                        },
+                                        imageVector = Icons.Default.Bookmarks,
+                                        contentDescription = "group"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = { moreMenuBookUrl = book.bookUrl },
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "more"
+                                    )
+                                    RoundDropdownMenu(
+                                        expanded = moreMenuBookUrl == book.bookUrl,
+                                        onDismissRequest = { moreMenuBookUrl = null }
+                                    ) { dismiss ->
+                                        RoundDropdownMenuItem(
+                                            text = "换源",
+                                            onClick = {
+                                                singleChangeSourceBook = book
+                                                dismiss()
+                                            }
+                                        )
+                                        RoundDropdownMenuItem(
+                                            text = "删除书籍",
+                                            onClick = {
+                                                pendingDeleteBookUrls = setOf(book.bookUrl)
+                                                deleteOriginalBookFile = state.deleteBookOriginal
+                                                showDeleteBookConfirmDialog = true
+                                                dismiss()
+                                            }
+                                        )
+                                        RoundDropdownMenuItem(
+                                            text = "删除缓存",
+                                            onClick = {
+                                                viewModel.dispatch(
+                                                    BookshelfManageScreenIntent.ClearCachesForBooks(
+                                                        setOf(book.bookUrl)
+                                                    )
+                                                )
+                                                dismiss()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -809,7 +840,7 @@ private fun CacheScreen(
             onDismissRequest = { singleChangeSourceBook = null },
             onReplace = { source, newBook, toc, options ->
                 viewModel.dispatch(
-                    CacheIntent.ChangeBookSource(
+                    BookshelfManageScreenIntent.ChangeBookSource(
                         oldBookUrl = book.bookUrl,
                         source = source,
                         book = newBook,
@@ -842,7 +873,7 @@ private fun CacheScreen(
         onDismissRequest = { pendingBatchSources = emptyList() },
         onConfirm = { options ->
             viewModel.dispatch(
-                CacheIntent.BatchChangeBookSource(
+                BookshelfManageScreenIntent.BatchChangeBookSource(
                     bookUrls = selectedBookUrls,
                     sources = pendingBatchSources,
                     options = options,
@@ -856,18 +887,18 @@ private fun CacheScreen(
     BatchChangePreviewSheet(
         show = state.batchChangePreviewItems.isNotEmpty(),
         items = state.batchChangePreviewItems,
-        onDismissRequest = { viewModel.dispatch(CacheIntent.DismissBatchChangePreview) },
+        onDismissRequest = { viewModel.dispatch(BookshelfManageScreenIntent.DismissBatchChangePreview) },
         onOpenBook = { book, inBookshelf ->
-            viewModel.dispatch(CacheIntent.OpenBookInfoPreview(book, inBookshelf))
+            viewModel.dispatch(BookshelfManageScreenIntent.OpenBookInfoPreview(book, inBookshelf))
         },
         onManualSearch = { book -> manualSearchPreviewBook = book },
-        onSkip = { bookUrl -> viewModel.dispatch(CacheIntent.SkipPreviewItem(bookUrl)) },
-        onMigrate = { bookUrl -> viewModel.dispatch(CacheIntent.MigratePreviewItem(bookUrl)) },
+        onSkip = { bookUrl -> viewModel.dispatch(BookshelfManageScreenIntent.SkipPreviewItem(bookUrl)) },
+        onMigrate = { bookUrl -> viewModel.dispatch(BookshelfManageScreenIntent.MigratePreviewItem(bookUrl)) },
         onAddToShelf = { bookUrl ->
-            viewModel.dispatch(CacheIntent.AddPreviewItemToShelf(bookUrl))
+            viewModel.dispatch(BookshelfManageScreenIntent.AddPreviewItemToShelf(bookUrl))
         },
         onShowOtherSources = { item -> otherSourcePreviewItem = item },
-        onMigrateAll = { viewModel.dispatch(CacheIntent.MigrateAllPreviewItems) },
+        onMigrateAll = { viewModel.dispatch(BookshelfManageScreenIntent.MigrateAllPreviewItems) },
     )
 
     manualSearchPreviewBook?.let { book ->
@@ -877,7 +908,7 @@ private fun CacheScreen(
             onDismissRequest = { manualSearchPreviewBook = null },
             onReplace = { source, newBook, toc, _ ->
                 viewModel.dispatch(
-                    CacheIntent.UpdatePreviewItem(
+                    BookshelfManageScreenIntent.UpdatePreviewItem(
                         oldBookUrl = book.bookUrl,
                         source = source,
                         book = newBook,
@@ -896,11 +927,11 @@ private fun CacheScreen(
         item = otherSourcePreviewItem,
         onDismissRequest = { otherSourcePreviewItem = null },
         onSelect = { oldBookUrl, index ->
-            viewModel.dispatch(CacheIntent.SelectPreviewCandidate(oldBookUrl, index))
+            viewModel.dispatch(BookshelfManageScreenIntent.SelectPreviewCandidate(oldBookUrl, index))
             otherSourcePreviewItem = null
         },
         onOpenBook = { book ->
-            viewModel.dispatch(CacheIntent.OpenBookInfoPreview(book, false))
+            viewModel.dispatch(BookshelfManageScreenIntent.OpenBookInfoPreview(book, false))
         }
     )
 
@@ -908,7 +939,7 @@ private fun CacheScreen(
         show = state.isChangingSource || state.changeSourceError != null,
         onDismissRequest = {
             if (!state.isChangingSource) {
-                viewModel.dispatch(CacheIntent.DismissChangeSourceStatus)
+                viewModel.dispatch(BookshelfManageScreenIntent.DismissChangeSourceStatus)
             }
         },
         title = stringResource(R.string.change_source_batch),
@@ -936,7 +967,7 @@ private fun CacheScreen(
         onConfirm = if (state.isChangingSource) {
             null
         } else {
-            { viewModel.dispatch(CacheIntent.DismissChangeSourceStatus) }
+            { viewModel.dispatch(BookshelfManageScreenIntent.DismissChangeSourceStatus) }
         },
     )
 
@@ -959,7 +990,7 @@ private fun CacheScreen(
         onConfirm = {
             showBatchDownloadConfirmDialog = false
             viewModel.dispatch(
-                CacheIntent.DownloadBooks(
+                BookshelfManageScreenIntent.DownloadBooks(
                     bookUrls = selectedBookUrls,
                     downloadAllChapters = false
                 )
@@ -999,7 +1030,7 @@ private fun CacheScreen(
         onConfirm = {
             showDeleteBookConfirmDialog = false
             viewModel.dispatch(
-                CacheIntent.DeleteBooks(
+                BookshelfManageScreenIntent.DeleteBooks(
                     bookUrls = pendingDeleteBookUrls,
                     deleteOriginal = deleteOriginalBookFile
                 )
@@ -1019,7 +1050,7 @@ private fun CacheScreen(
             val moveSet = pendingMoveGroupBookUrl?.let { setOf(it) } ?: selectedBookUrls
             val targetGroupId = groupId.coerceAtLeast(0L)
             viewModel.dispatch(
-                CacheIntent.MoveBooksToGroup(
+                BookshelfManageScreenIntent.MoveBooksToGroup(
                     bookUrls = moveSet,
                     groupId = targetGroupId
                 )
@@ -1040,7 +1071,7 @@ private fun CacheScreen(
         onConfirm = {
             showDownloadAllConfirmDialog = false
             viewModel.dispatch(
-                CacheIntent.StartDownloadForVisibleBooks(
+                BookshelfManageScreenIntent.StartDownloadForVisibleBooks(
                     books = state.books,
                     downloadAllChapters = true
                 )
@@ -1060,7 +1091,7 @@ private fun CacheScreen(
                 icon = if (type == "epub") Icons.Default.Upload else Icons.Default.Download,
                 text = type,
                 onClick = {
-                    viewModel.dispatch(CacheIntent.SetExportType(index))
+                    viewModel.dispatch(BookshelfManageScreenIntent.SetExportType(index))
                     showExportTypeDialog = false
                 }
             )
@@ -1085,7 +1116,7 @@ private fun CacheScreen(
         },
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
-            viewModel.dispatch(CacheIntent.SetBookExportFileName(exportFileNameInput))
+            viewModel.dispatch(BookshelfManageScreenIntent.SetBookExportFileName(exportFileNameInput))
             showExportFileNameDialog = false
         },
         dismissText = stringResource(android.R.string.cancel),
@@ -1107,7 +1138,7 @@ private fun CacheScreen(
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
             viewModel.dispatch(
-                CacheIntent.SetExportCharset(
+                BookshelfManageScreenIntent.SetExportCharset(
                     exportCharsetInput.ifBlank { "UTF-8" }
                 )
             )
@@ -1228,7 +1259,7 @@ private fun CacheScreen(
                     customEpisodeExportNameInput
                 )
             ) {
-                viewModel.dispatch(CacheIntent.SetEpisodeExportFileName(customEpisodeExportNameInput))
+                viewModel.dispatch(BookshelfManageScreenIntent.SetEpisodeExportFileName(customEpisodeExportNameInput))
             }
             val epubSize = customEpubSizeInput.toIntOrNull()?.coerceAtLeast(1) ?: 1
             context.startService<ExportBookService> {

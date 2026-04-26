@@ -58,7 +58,7 @@ import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceViewModel
-import io.legado.app.ui.book.cache.CacheViewModel
+import io.legado.app.ui.book.manage.BookshelfManageScreenViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.book.import.local.ImportBookViewModel
@@ -72,7 +72,7 @@ import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
 import io.legado.app.ui.config.backupConfig.BackupConfigViewModel
-import io.legado.app.ui.config.cacheConfig.CacheConfig
+import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.coverConfig.CoverConfigViewModel
 import io.legado.app.ui.config.otherConfig.OtherConfigViewModel
 import io.legado.app.ui.config.readConfig.ReadConfigViewModel
@@ -124,7 +124,7 @@ val appModule = module {
     singleOf(::ResolveBookShelfStateUseCase)
     singleOf(::ShrinkDatabaseUseCase)
     singleOf(::WebDavBackupUseCase)
-    singleOf(::CacheConfig)
+    singleOf(::BookshelfManageScreenConfig)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
     single<AppStartupGateway> { AppStartupRepository(get()) }
@@ -188,12 +188,12 @@ val appModule = module {
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)
     viewModel {
-        CacheViewModel(
+        BookshelfManageScreenViewModel(
             application = get(),
             bookDao = get(),
             bookGroupDao = get(),
             bookChapterDao = get(),
-            cacheConfig = get(),
+            bookshelfManageScreenConfig = get(),
             batchCacheDownloadUseCase = get(),
             cacheBookChaptersUseCase = get(),
             changeBookSourceUseCase = get(),

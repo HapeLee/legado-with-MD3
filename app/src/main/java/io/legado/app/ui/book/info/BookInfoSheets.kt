@@ -260,6 +260,7 @@ fun ChangeSourceSheet(
     var loadingAction by remember { mutableStateOf(false) }
     var showOptionsMenu by rememberSaveable { mutableStateOf(false) }
     var showFilterMenu by rememberSaveable { mutableStateOf(false) }
+    val bookAddedToShelfText = stringResource(R.string.book_added_to_shelf)
 
     val editSourceResult = rememberLauncherForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
         val origin = it.data?.getStringExtra("origin") ?: return@rememberLauncherForActivityResult
@@ -490,7 +491,7 @@ fun ChangeSourceSheet(
                 pendingMigration = PendingSourceMigration(source, book, toc)
             } else {
                 onAddAsNew(book, toc)
-                context.toastOnUi(context.getString(R.string.book_added_to_shelf))
+                context.toastOnUi(bookAddedToShelfText)
             }
             actionBook = null
         }, {

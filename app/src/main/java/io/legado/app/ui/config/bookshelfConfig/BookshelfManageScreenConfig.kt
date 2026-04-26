@@ -1,10 +1,10 @@
-package io.legado.app.ui.config.cacheConfig
+package io.legado.app.ui.config.bookshelfConfig
 
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.dao.BookGroupDao
 import io.legado.app.ui.config.prefDelegate
 
-class CacheConfig(
+class BookshelfManageScreenConfig(
     private val bookGroupDao: BookGroupDao
 ) {
 
@@ -28,9 +28,10 @@ class CacheConfig(
 
     var parallelExportBook by prefDelegate(PreferKey.parallelExportBook, false)
 
-    var bookshelfSort by prefDelegate(PreferKey.bookshelfSort, 0)
-
     fun getBookSortByGroupId(groupId: Long): Int {
-        return bookGroupDao.getByID(groupId)?.getRealBookSort() ?: bookshelfSort
+        return bookGroupDao.getByID(groupId)?.getRealBookSort() ?: BookshelfConfig.bookshelfSort
     }
+
+    val bookshelfSortOrder: Int
+        get() = BookshelfConfig.bookshelfSortOrder
 }

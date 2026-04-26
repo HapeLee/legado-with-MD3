@@ -279,7 +279,7 @@ fun VerticalGridFastScroller(
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
     thumbAllowed: () -> Boolean = { true },
-    thumbColor: Color = MaterialTheme.colorScheme.primary,
+    thumbColor: Color = LegadoTheme.colorScheme.primary,
     topContentPadding: Dp = Dp.Hairline,
     bottomContentPadding: Dp = Dp.Hairline,
     endContentPadding: Dp = Dp.Hairline,

@@ -35,6 +35,7 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
@@ -55,6 +56,7 @@ fun BookshelfItem(
     title: String,
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
+    titleEnd: @Composable (() -> Unit)? = null,
     subTitle: String? = null,
     desc: String? = null,
     extra: @Composable (RowScope.() -> Unit)? = null,
@@ -63,12 +65,12 @@ fun BookshelfItem(
     titleMaxLines: Int = 2,
     coverShadow: Boolean = false,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (() -> Unit)?
 ) {
     val selectedColor = if (isSelected) {
-        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f)
+        LegadoTheme.colorScheme.secondaryContainer
     } else {
-        Color.Transparent
+        LegadoTheme.colorScheme.surface
     }
     if (isGrid) {
         Box(
@@ -142,59 +144,66 @@ fun BookshelfItem(
     } else {
         // 列表布局
         Column {
-            Row(
+            GlassCard(
                 modifier = modifier
                     .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.small)
-                    .background(selectedColor)
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = onLongClick
-                    )
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(all = 4.dp),
+                cornerRadius = 8.dp,
+                containerColor = selectedColor,
+                onClick = onClick,
+                onLongClick = onLongClick
             ) {
-                cover(
-                    Modifier
-                        .width(if (!isCompact) 80.dp else 56.dp)
-                        .padding(end = 12.dp)
-                )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.Center
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(all = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AppText(
-                        text = title,
-                        style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        maxLines = if (!isCompact) 2 else 1,
-                        overflow = TextOverflow.Ellipsis
+                    cover(
+                        Modifier
+                            .width(if (!isCompact) 80.dp else 56.dp)
+                            .padding(end = 12.dp)
                     )
-                    subTitle?.let {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         AppText(
-                            text = it,
-                            style = LegadoTheme.typography.bodySmall,
+                            text = title,
+                            style = LegadoTheme.typography.titleMediumEmphasized,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp)
+                            modifier = Modifier.weight(1f)
                         )
+                        titleEnd?.invoke()
                     }
-                    if (!isCompact) {
-                        desc?.let {
+                        subTitle?.let {
                             AppText(
                                 text = it,
                                 style = LegadoTheme.typography.bodySmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 2.dp)
                             )
                         }
-                    }
-                    extra?.let {
-                        Row(
-                            modifier = Modifier.padding(top = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            content = it
-                        )
+                        if (!isCompact) {
+                            desc?.let {
+                                AppText(
+                                    text = it,
+                                    style = LegadoTheme.typography.labelSmallEmphasized,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        extra?.let {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                content = it
+                            )
+                        }
                     }
                 }
             }
@@ -325,7 +334,7 @@ fun BookGroupItemGrid(
     coverShadow: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (() -> Unit)?
 ) {
     BookshelfItem(
         isGrid = true,
@@ -362,7 +371,7 @@ fun BookGroupItemList(
     coverShadow: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (() -> Unit)?
 ) {
     BookshelfItem(
         isGrid = false,
@@ -397,9 +406,10 @@ fun BookItem(
     isSearchMode: Boolean = false,
     searchKey: String = "",
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (() -> Unit)?
 ) {
     val unreadCount = book.getUnreadChapterNum()
+    val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
     val bookTypeLabel = if (BookshelfConfig.showTip) {
         when {
             book.isAudio -> stringResource(R.string.audio)
@@ -427,6 +437,16 @@ fun BookItem(
         isCompact = isCompact,
         isSelected = isSelected,
         modifier = modifier,
+        titleEnd = if (layoutMode == 0 && unreadText != null) {
+            {
+                TextCard(
+                    text = unreadText,
+                    cornerRadius = 4.dp,
+                    horizontalPadding = 4.dp,
+                    verticalPadding = 0.dp
+                )
+            }
+        } else null,
         cover = { modifier ->
             BookshelfCover(
                 name = book.name,
@@ -434,7 +454,7 @@ fun BookItem(
                 path = book.getDisplayCover(),
                 isUpdating = isUpdating,
                 modifier = modifier,
-                badgeText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null,
+                badgeText = if (layoutMode != 0) unreadText else null,
                 showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
                 leftBottomText = matchedSourceLabel ?: bookTypeLabel
             )
@@ -445,19 +465,19 @@ fun BookItem(
         } else {
             book.author
         },
-        desc = stringResource(R.string.read_dur_progress, book.durChapterTitle ?: ""),
+        desc = book.durChapterTitle ?: "",
         extra = {
             if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
                 AppText(
                     text = book.latestChapterTime.toTimeAgo(),
-                    style = LegadoTheme.typography.bodySmall,
-                    color = if (layoutMode != 0 || !isCompact) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    style = LegadoTheme.typography.labelSmallEmphasized,
+                    color = if (layoutMode != 0 || !isCompact) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
             AppText(
                 text = book.latestChapterTitle ?: "",
-                style = LegadoTheme.typography.bodySmall,
+                style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.outline),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)

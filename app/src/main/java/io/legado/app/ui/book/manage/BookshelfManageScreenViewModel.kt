@@ -1,4 +1,4 @@
-package io.legado.app.ui.book.cache
+package io.legado.app.ui.book.manage
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
@@ -29,10 +29,12 @@ import io.legado.app.help.book.removeType
 import io.legado.app.model.CacheBook
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
-import io.legado.app.ui.config.cacheConfig.CacheConfig
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.config.bookshelfConfig.BookshelfManageScreenConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.utils.cnCompare
+import io.legado.app.utils.move
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,7 +46,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-data class CacheExportConfig(
+data class BookshelfManageScreenExportConfig(
     val exportUseReplace: Boolean = true,
     val enableCustomExport: Boolean = false,
     val exportNoChapterName: Boolean = false,
@@ -57,11 +59,13 @@ data class CacheExportConfig(
     val episodeExportFileName: String = ""
 )
 
-data class CacheUiState(
+data class BookshelfManageScreenUiState(
     val groupId: Long = -1,
     val groupName: String? = null,
     val groupList: List<BookGroup> = emptyList(),
     val books: List<Book> = emptyList(),
+    val bookSort: Int = BookshelfConfig.bookshelfSort,
+    val bookSortOrder: Int = BookshelfConfig.bookshelfSortOrder,
     val isDownloadRunning: Boolean = false,
     val isChangingSource: Boolean = false,
     val changeSourceProgress: String? = null,
@@ -71,74 +75,75 @@ data class CacheUiState(
     val batchChangeOptions: ChangeSourceMigrationOptions = ChangeSourceMigrationOptions(),
     val cacheVersion: Long = 0,
     val deleteBookOriginal: Boolean = LocalConfig.deleteBookOriginal,
-    val exportConfig: CacheExportConfig = CacheExportConfig()
+    val exportConfig: BookshelfManageScreenExportConfig = BookshelfManageScreenExportConfig()
 )
 
-sealed interface CacheIntent {
-    data class Initialize(val groupId: Long) : CacheIntent
-    data class ChangeGroup(val groupId: Long) : CacheIntent
+sealed interface BookshelfManageScreenIntent {
+    data class Initialize(val groupId: Long) : BookshelfManageScreenIntent
+    data class ChangeGroup(val groupId: Long) : BookshelfManageScreenIntent
     data class StartDownloadForVisibleBooks(
         val books: List<Book>,
         val downloadAllChapters: Boolean
-    ) : CacheIntent
-    data object StopDownload : CacheIntent
-    data class ToggleBookDownload(val book: Book) : CacheIntent
-    data class DeleteBookDownload(val bookUrl: String) : CacheIntent
-    data class ClearBookCache(val book: Book) : CacheIntent
-    data class MoveBooksToGroup(val bookUrls: Set<String>, val groupId: Long) : CacheIntent
-    data class DeleteBooks(val bookUrls: Set<String>, val deleteOriginal: Boolean) : CacheIntent
-    data class ClearCachesForBooks(val bookUrls: Set<String>) : CacheIntent
-    data class DownloadBooks(val bookUrls: Set<String>, val downloadAllChapters: Boolean) : CacheIntent
+    ) : BookshelfManageScreenIntent
+    data object StopDownload : BookshelfManageScreenIntent
+    data class ToggleBookDownload(val book: Book) : BookshelfManageScreenIntent
+    data class DeleteBookDownload(val bookUrl: String) : BookshelfManageScreenIntent
+    data class ClearBookCache(val book: Book) : BookshelfManageScreenIntent
+    data class MoveBooksToGroup(val bookUrls: Set<String>, val groupId: Long) : BookshelfManageScreenIntent
+    data class DeleteBooks(val bookUrls: Set<String>, val deleteOriginal: Boolean) : BookshelfManageScreenIntent
+    data class ClearCachesForBooks(val bookUrls: Set<String>) : BookshelfManageScreenIntent
+    data class MoveBookOrder(val fromIndex: Int, val toIndex: Int) : BookshelfManageScreenIntent
+    data class DownloadBooks(val bookUrls: Set<String>, val downloadAllChapters: Boolean) : BookshelfManageScreenIntent
     data class ChangeBookSource(
         val oldBookUrl: String,
         val source: BookSource,
         val book: Book,
         val chapters: List<BookChapter>,
         val options: ChangeSourceMigrationOptions,
-    ) : CacheIntent
+    ) : BookshelfManageScreenIntent
     data class BatchChangeBookSource(
         val bookUrls: Set<String>,
         val sources: List<BookSource>,
         val options: ChangeSourceMigrationOptions,
-    ) : CacheIntent
-    data class MigratePreviewItem(val oldBookUrl: String) : CacheIntent
-    data class SkipPreviewItem(val oldBookUrl: String) : CacheIntent
-    data class SelectPreviewCandidate(val oldBookUrl: String, val candidateIndex: Int) : CacheIntent
+    ) : BookshelfManageScreenIntent
+    data class MigratePreviewItem(val oldBookUrl: String) : BookshelfManageScreenIntent
+    data class SkipPreviewItem(val oldBookUrl: String) : BookshelfManageScreenIntent
+    data class SelectPreviewCandidate(val oldBookUrl: String, val candidateIndex: Int) : BookshelfManageScreenIntent
     data class UpdatePreviewItem(
         val oldBookUrl: String,
         val source: BookSource,
         val book: Book,
         val chapters: List<BookChapter>,
-    ) : CacheIntent
-    data class AddPreviewItemToShelf(val oldBookUrl: String) : CacheIntent
-    data class OpenBookInfoPreview(val book: Book, val inBookshelf: Boolean) : CacheIntent
-    data object MigrateAllPreviewItems : CacheIntent
-    data object DismissChangeSourceStatus : CacheIntent
-    data object DismissBatchChangePreview : CacheIntent
-    data class SetExportUseReplace(val enabled: Boolean) : CacheIntent
-    data class SetEnableCustomExport(val enabled: Boolean) : CacheIntent
-    data class SetExportNoChapterName(val enabled: Boolean) : CacheIntent
-    data class SetExportToWebDav(val enabled: Boolean) : CacheIntent
-    data class SetExportPictureFile(val enabled: Boolean) : CacheIntent
-    data class SetParallelExportBook(val enabled: Boolean) : CacheIntent
-    data class SetExportType(val type: Int) : CacheIntent
-    data class SetExportCharset(val charset: String) : CacheIntent
-    data class SetBookExportFileName(val fileName: String?) : CacheIntent
-    data class SetEpisodeExportFileName(val fileName: String) : CacheIntent
+    ) : BookshelfManageScreenIntent
+    data class AddPreviewItemToShelf(val oldBookUrl: String) : BookshelfManageScreenIntent
+    data class OpenBookInfoPreview(val book: Book, val inBookshelf: Boolean) : BookshelfManageScreenIntent
+    data object MigrateAllPreviewItems : BookshelfManageScreenIntent
+    data object DismissChangeSourceStatus : BookshelfManageScreenIntent
+    data object DismissBatchChangePreview : BookshelfManageScreenIntent
+    data class SetExportUseReplace(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetEnableCustomExport(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetExportNoChapterName(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetExportToWebDav(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetExportPictureFile(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetParallelExportBook(val enabled: Boolean) : BookshelfManageScreenIntent
+    data class SetExportType(val type: Int) : BookshelfManageScreenIntent
+    data class SetExportCharset(val charset: String) : BookshelfManageScreenIntent
+    data class SetBookExportFileName(val fileName: String?) : BookshelfManageScreenIntent
+    data class SetEpisodeExportFileName(val fileName: String) : BookshelfManageScreenIntent
 }
 
-sealed interface CacheEffect {
-    data class NotifyBookChanged(val bookUrl: String) : CacheEffect
-    data class ShowMessage(val message: String) : CacheEffect
-    data class OpenBookInfo(val bookUrl: String, val name: String, val author: String) : CacheEffect
+sealed interface BookshelfManageScreenEffect {
+    data class NotifyBookChanged(val bookUrl: String) : BookshelfManageScreenEffect
+    data class ShowMessage(val message: String) : BookshelfManageScreenEffect
+    data class OpenBookInfo(val bookUrl: String, val name: String, val author: String) : BookshelfManageScreenEffect
 }
 
-class CacheViewModel(
+class BookshelfManageScreenViewModel(
     application: Application,
     private val bookDao: BookDao,
     private val bookGroupDao: BookGroupDao,
     private val bookChapterDao: BookChapterDao,
-    val cacheConfig: CacheConfig,
+    val bookshelfManageScreenConfig: BookshelfManageScreenConfig,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,
@@ -147,10 +152,10 @@ class CacheViewModel(
     private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
 ) : BaseViewModel(application) {
 
-    private val _uiState = MutableStateFlow(CacheUiState())
+    private val _uiState = MutableStateFlow(BookshelfManageScreenUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _effects = MutableSharedFlow<CacheEffect>(extraBufferCapacity = 32)
+    private val _effects = MutableSharedFlow<BookshelfManageScreenEffect>(extraBufferCapacity = 32)
     val effects = _effects.asSharedFlow()
 
     private val cacheChapters = hashMapOf<String, HashSet<String>>()
@@ -158,24 +163,25 @@ class CacheViewModel(
     private var groupsJob: Job? = null
     private var observersStarted = false
 
-    fun dispatch(intent: CacheIntent) {
+    fun dispatch(intent: BookshelfManageScreenIntent) {
         when (intent) {
-            is CacheIntent.Initialize -> initialize(intent.groupId)
-            is CacheIntent.ChangeGroup -> changeGroup(intent.groupId)
-            is CacheIntent.StartDownloadForVisibleBooks -> startDownloadForVisibleBooks(
+            is BookshelfManageScreenIntent.Initialize -> initialize(intent.groupId)
+            is BookshelfManageScreenIntent.ChangeGroup -> changeGroup(intent.groupId)
+            is BookshelfManageScreenIntent.StartDownloadForVisibleBooks -> startDownloadForVisibleBooks(
                 intent.books,
                 intent.downloadAllChapters
             )
 
-            CacheIntent.StopDownload -> CacheBook.stop(context)
-            is CacheIntent.ToggleBookDownload -> toggleBookDownload(intent.book)
-            is CacheIntent.DeleteBookDownload -> CacheBook.remove(context, intent.bookUrl)
-            is CacheIntent.ClearBookCache -> clearCacheForBook(intent.book)
-            is CacheIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
-            is CacheIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
-            is CacheIntent.ClearCachesForBooks -> clearCachesForBooks(intent.bookUrls)
-            is CacheIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.downloadAllChapters)
-            is CacheIntent.ChangeBookSource -> changeBookSource(
+            BookshelfManageScreenIntent.StopDownload -> CacheBook.stop(context)
+            is BookshelfManageScreenIntent.ToggleBookDownload -> toggleBookDownload(intent.book)
+            is BookshelfManageScreenIntent.DeleteBookDownload -> CacheBook.remove(context, intent.bookUrl)
+            is BookshelfManageScreenIntent.ClearBookCache -> clearCacheForBook(intent.book)
+            is BookshelfManageScreenIntent.MoveBooksToGroup -> moveBooksToGroup(intent.bookUrls, intent.groupId)
+            is BookshelfManageScreenIntent.DeleteBooks -> deleteBooks(intent.bookUrls, intent.deleteOriginal)
+            is BookshelfManageScreenIntent.ClearCachesForBooks -> clearCachesForBooks(intent.bookUrls)
+            is BookshelfManageScreenIntent.MoveBookOrder -> moveBookOrder(intent.fromIndex, intent.toIndex)
+            is BookshelfManageScreenIntent.DownloadBooks -> downloadBooks(intent.bookUrls, intent.downloadAllChapters)
+            is BookshelfManageScreenIntent.ChangeBookSource -> changeBookSource(
                 intent.oldBookUrl,
                 intent.source,
                 intent.book,
@@ -183,35 +189,35 @@ class CacheViewModel(
                 intent.options
             )
 
-            is CacheIntent.BatchChangeBookSource -> batchChangeBookSource(
+            is BookshelfManageScreenIntent.BatchChangeBookSource -> batchChangeBookSource(
                 intent.bookUrls,
                 intent.sources,
                 intent.options
             )
 
-            is CacheIntent.MigratePreviewItem -> migratePreviewItem(intent.oldBookUrl)
-            is CacheIntent.SkipPreviewItem -> skipPreviewItem(intent.oldBookUrl)
-            is CacheIntent.SelectPreviewCandidate -> selectPreviewCandidate(
+            is BookshelfManageScreenIntent.MigratePreviewItem -> migratePreviewItem(intent.oldBookUrl)
+            is BookshelfManageScreenIntent.SkipPreviewItem -> skipPreviewItem(intent.oldBookUrl)
+            is BookshelfManageScreenIntent.SelectPreviewCandidate -> selectPreviewCandidate(
                 intent.oldBookUrl,
                 intent.candidateIndex
             )
 
-            is CacheIntent.UpdatePreviewItem -> updatePreviewItem(
+            is BookshelfManageScreenIntent.UpdatePreviewItem -> updatePreviewItem(
                 intent.oldBookUrl,
                 intent.source,
                 intent.book,
                 intent.chapters
             )
 
-            is CacheIntent.AddPreviewItemToShelf -> addPreviewItemToShelf(intent.oldBookUrl)
-            is CacheIntent.OpenBookInfoPreview -> openBookInfoPreview(
+            is BookshelfManageScreenIntent.AddPreviewItemToShelf -> addPreviewItemToShelf(intent.oldBookUrl)
+            is BookshelfManageScreenIntent.OpenBookInfoPreview -> openBookInfoPreview(
                 intent.book,
                 intent.inBookshelf
             )
 
-            CacheIntent.MigrateAllPreviewItems -> migrateAllPreviewItems()
+            BookshelfManageScreenIntent.MigrateAllPreviewItems -> migrateAllPreviewItems()
 
-            CacheIntent.DismissChangeSourceStatus -> {
+            BookshelfManageScreenIntent.DismissChangeSourceStatus -> {
                 _uiState.update {
                     it.copy(
                         changeSourceProgress = null,
@@ -221,59 +227,59 @@ class CacheViewModel(
                 }
             }
 
-            CacheIntent.DismissBatchChangePreview -> {
+            BookshelfManageScreenIntent.DismissBatchChangePreview -> {
                 _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
             }
 
-            is CacheIntent.SetExportUseReplace -> {
-                cacheConfig.exportUseReplace = intent.enabled
+            is BookshelfManageScreenIntent.SetExportUseReplace -> {
+                bookshelfManageScreenConfig.exportUseReplace = intent.enabled
                 syncExportConfig()
                 val msg = if (intent.enabled) "替换净化功能已开启" else "替换净化功能已关闭"
-                _effects.tryEmit(CacheEffect.ShowMessage(msg))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage(msg))
             }
 
-            is CacheIntent.SetEnableCustomExport -> {
-                cacheConfig.enableCustomExport = intent.enabled
+            is BookshelfManageScreenIntent.SetEnableCustomExport -> {
+                bookshelfManageScreenConfig.enableCustomExport = intent.enabled
                 syncExportConfig()
             }
 
-            is CacheIntent.SetExportNoChapterName -> {
-                cacheConfig.exportNoChapterName = intent.enabled
+            is BookshelfManageScreenIntent.SetExportNoChapterName -> {
+                bookshelfManageScreenConfig.exportNoChapterName = intent.enabled
                 syncExportConfig()
             }
 
-            is CacheIntent.SetExportToWebDav -> {
-                cacheConfig.exportToWebDav = intent.enabled
+            is BookshelfManageScreenIntent.SetExportToWebDav -> {
+                bookshelfManageScreenConfig.exportToWebDav = intent.enabled
                 syncExportConfig()
             }
 
-            is CacheIntent.SetExportPictureFile -> {
-                cacheConfig.exportPictureFile = intent.enabled
+            is BookshelfManageScreenIntent.SetExportPictureFile -> {
+                bookshelfManageScreenConfig.exportPictureFile = intent.enabled
                 syncExportConfig()
             }
 
-            is CacheIntent.SetParallelExportBook -> {
-                cacheConfig.parallelExportBook = intent.enabled
+            is BookshelfManageScreenIntent.SetParallelExportBook -> {
+                bookshelfManageScreenConfig.parallelExportBook = intent.enabled
                 syncExportConfig()
             }
 
-            is CacheIntent.SetExportType -> {
-                cacheConfig.exportType = intent.type
+            is BookshelfManageScreenIntent.SetExportType -> {
+                bookshelfManageScreenConfig.exportType = intent.type
                 syncExportConfig()
             }
 
-            is CacheIntent.SetExportCharset -> {
-                cacheConfig.exportCharset = intent.charset
+            is BookshelfManageScreenIntent.SetExportCharset -> {
+                bookshelfManageScreenConfig.exportCharset = intent.charset
                 syncExportConfig()
             }
 
-            is CacheIntent.SetBookExportFileName -> {
-                cacheConfig.bookExportFileName = intent.fileName
+            is BookshelfManageScreenIntent.SetBookExportFileName -> {
+                bookshelfManageScreenConfig.bookExportFileName = intent.fileName
                 syncExportConfig()
             }
 
-            is CacheIntent.SetEpisodeExportFileName -> {
-                cacheConfig.episodeExportFileName = intent.fileName
+            is BookshelfManageScreenIntent.SetEpisodeExportFileName -> {
+                bookshelfManageScreenConfig.episodeExportFileName = intent.fileName
                 syncExportConfig()
             }
         }
@@ -316,18 +322,38 @@ class CacheViewModel(
         booksJob = viewModelScope.launch {
             bookDao.flowBookShelfByGroup(groupId).map { books ->
                 val booksDownload = books.filter { !it.isAudio }.map { it.toLightBook() }
-                when (cacheConfig.getBookSortByGroupId(groupId)) {
-                    1 -> booksDownload.sortedByDescending { it.latestChapterTime }
-                    2 -> booksDownload.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
-                    3 -> booksDownload.sortedBy { it.order }
-                    4 -> booksDownload.sortedByDescending {
+                val bookSort = bookshelfManageScreenConfig.getBookSortByGroupId(groupId)
+                val isDescending = bookshelfManageScreenConfig.bookshelfSortOrder == 1
+                bookSort to when (bookSort) {
+                    1 -> if (isDescending) booksDownload.sortedByDescending { it.latestChapterTime }
+                    else booksDownload.sortedBy { it.latestChapterTime }
+
+                    2 -> if (isDescending) {
+                        booksDownload.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
+                    } else {
+                        booksDownload.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
+                    }
+
+                    3 -> if (isDescending) booksDownload.sortedByDescending { it.order }
+                    else booksDownload.sortedBy { it.order }
+
+                    4 -> if (isDescending) booksDownload.sortedByDescending {
+                        max(it.latestChapterTime, it.durChapterTime)
+                    } else booksDownload.sortedBy {
                         max(it.latestChapterTime, it.durChapterTime)
                     }
 
-                    else -> booksDownload.sortedByDescending { it.durChapterTime }
+                    else -> if (isDescending) booksDownload.sortedByDescending { it.durChapterTime }
+                    else booksDownload.sortedBy { it.durChapterTime }
                 }
-            }.collect { books ->
-                _uiState.update { it.copy(books = books) }
+            }.collect { (bookSort, books) ->
+                _uiState.update {
+                    it.copy(
+                        books = books,
+                        bookSort = bookSort,
+                        bookSortOrder = bookshelfManageScreenConfig.bookshelfSortOrder
+                    )
+                }
                 loadCacheFiles(books)
             }
         }
@@ -372,17 +398,17 @@ class CacheViewModel(
     private fun syncExportConfig() {
         _uiState.update {
             it.copy(
-                exportConfig = CacheExportConfig(
-                    exportUseReplace = cacheConfig.exportUseReplace,
-                    enableCustomExport = cacheConfig.enableCustomExport,
-                    exportNoChapterName = cacheConfig.exportNoChapterName,
-                    exportToWebDav = cacheConfig.exportToWebDav,
-                    exportPictureFile = cacheConfig.exportPictureFile,
-                    parallelExportBook = cacheConfig.parallelExportBook,
-                    exportType = cacheConfig.exportType,
-                    exportCharset = cacheConfig.exportCharset,
-                    bookExportFileName = cacheConfig.bookExportFileName,
-                    episodeExportFileName = cacheConfig.episodeExportFileName
+                exportConfig = BookshelfManageScreenExportConfig(
+                    exportUseReplace = bookshelfManageScreenConfig.exportUseReplace,
+                    enableCustomExport = bookshelfManageScreenConfig.enableCustomExport,
+                    exportNoChapterName = bookshelfManageScreenConfig.exportNoChapterName,
+                    exportToWebDav = bookshelfManageScreenConfig.exportToWebDav,
+                    exportPictureFile = bookshelfManageScreenConfig.exportPictureFile,
+                    parallelExportBook = bookshelfManageScreenConfig.parallelExportBook,
+                    exportType = bookshelfManageScreenConfig.exportType,
+                    exportCharset = bookshelfManageScreenConfig.exportCharset,
+                    bookExportFileName = bookshelfManageScreenConfig.bookExportFileName,
+                    episodeExportFileName = bookshelfManageScreenConfig.episodeExportFileName
                 )
             )
         }
@@ -463,7 +489,7 @@ class CacheViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, safeGroupId)
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("移动分组失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("移动分组失败\n${it.localizedMessage}"))
         }
     }
 
@@ -475,9 +501,9 @@ class CacheViewModel(
         }.onSuccess { deletedBookUrls ->
             _uiState.update { it.copy(deleteBookOriginal = deleteOriginal) }
             deletedBookUrls.forEach { cacheChapters.remove(it) }
-            _effects.tryEmit(CacheEffect.ShowMessage("删除成功"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除成功"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
         }
     }
 
@@ -490,9 +516,33 @@ class CacheViewModel(
                 cacheChapters[bookUrl] = hashSetOf()
                 emitBookChanged(bookUrl)
             }
-            _effects.tryEmit(CacheEffect.ShowMessage("缓存已清理"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存已清理"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("清理缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("清理缓存失败\n${it.localizedMessage}"))
+        }
+    }
+
+    private fun moveBookOrder(fromIndex: Int, toIndex: Int) {
+        val books = uiState.value.books
+        if (fromIndex !in books.indices || toIndex !in books.indices || fromIndex == toIndex) {
+            return
+        }
+        val reorderedBooks = books.toMutableList().apply { move(fromIndex, toIndex) }
+        val isDescending = uiState.value.bookSortOrder == 1
+        val maxOrder = reorderedBooks.size
+        reorderedBooks.forEachIndexed { index, book ->
+            book.order = if (isDescending) maxOrder - index else index + 1
+        }
+        _uiState.update {
+            it.copy(
+                books = reorderedBooks,
+                cacheVersion = it.cacheVersion + 1
+            )
+        }
+        execute {
+            bookDao.update(*reorderedBooks.toTypedArray())
+        }.onError {
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("排序保存失败\n${it.localizedMessage}"))
         }
     }
 
@@ -506,13 +556,13 @@ class CacheViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                _effects.tryEmit(CacheEffect.ShowMessage("已加入缓存队列: $count 本"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已加入缓存队列: $count 本"))
             } else {
-                _effects.tryEmit(CacheEffect.ShowMessage("没有可缓存的书籍"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的书籍"))
             }
             syncDownloadRunning()
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
         }
     }
 
@@ -531,9 +581,9 @@ class CacheViewModel(
             cacheChapters.remove(result.oldBookUrl)
             cacheChapters[result.book.bookUrl] = hashSetOf()
             emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(CacheEffect.ShowMessage("换源完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源完成"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("换源失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源失败\n${it.localizedMessage}"))
         }
     }
 
@@ -626,9 +676,9 @@ class CacheViewModel(
             cacheChapters[result.book.bookUrl] = hashSetOf()
             removePreviewItem(oldBookUrl)
             emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(CacheEffect.ShowMessage("迁移完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移完成"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("迁移失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移失败\n${it.localizedMessage}"))
         }
     }
 
@@ -704,9 +754,9 @@ class CacheViewModel(
             bookChapterDao.insert(*candidate.chapters.toTypedArray())
             candidate.book
         }.onSuccess {
-            _effects.tryEmit(CacheEffect.ShowMessage("已添加到书架"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已添加到书架"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("添加书籍失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("添加书籍失败\n${it.localizedMessage}"))
         }
     }
 
@@ -717,7 +767,7 @@ class CacheViewModel(
             }
             book
         }.onSuccess {
-            _effects.tryEmit(CacheEffect.OpenBookInfo(it.bookUrl, it.name, it.author))
+            _effects.tryEmit(BookshelfManageScreenEffect.OpenBookInfo(it.bookUrl, it.name, it.author))
         }
     }
 
@@ -755,9 +805,9 @@ class CacheViewModel(
         }.onSuccess {
             cacheChapters.clear()
             _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
-            _effects.tryEmit(CacheEffect.ShowMessage("批量迁移完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移完成"))
         }.onError {
-            _effects.tryEmit(CacheEffect.ShowMessage("批量迁移失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移失败\n${it.localizedMessage}"))
         }.onFinally {
             _uiState.update {
                 it.copy(
@@ -781,7 +831,7 @@ class CacheViewModel(
 
     private fun emitBookChanged(bookUrl: String) {
         _uiState.update { it.copy(cacheVersion = it.cacheVersion + 1) }
-        _effects.tryEmit(CacheEffect.NotifyBookChanged(bookUrl))
+        _effects.tryEmit(BookshelfManageScreenEffect.NotifyBookChanged(bookUrl))
     }
 
 }

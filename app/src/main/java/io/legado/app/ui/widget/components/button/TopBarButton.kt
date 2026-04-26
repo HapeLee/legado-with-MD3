@@ -136,27 +136,6 @@ fun TopBarNavigationButton(
     }
 }
 
-@Deprecated(
-    message = "Use TopBarNavigationButton for consistent TopBar naming.",
-    replaceWith = ReplaceWith("TopBarNavigationButton(onClick, modifier, imageVector, contentDescription, style)")
-)
-@Composable
-fun TopbarNavigationButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    imageVector: ImageVector = AppIcons.Back,
-    contentDescription: String? = stringResource(id = R.string.back),
-    style: TopBarButtonVariant = TopBarButtonVariant.Filled
-) {
-    TopBarNavigationButton(
-        onClick = onClick,
-        modifier = modifier,
-        imageVector = imageVector,
-        contentDescription = contentDescription,
-        style = style
-    )
-}
-
 @Composable
 fun TopBarActionButton(
     onClick: () -> Unit,

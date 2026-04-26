@@ -392,6 +392,24 @@ class BookshelfViewModel(
         }
     }
 
+    fun saveBookOrder(reorderedBooks: List<BookShelfItem>) {
+        if (reorderedBooks.isEmpty()) return
+        val isDescending = BookshelfConfig.bookshelfSortOrder == 1
+        val maxOrder = reorderedBooks.size
+        execute {
+            val updates = reorderedBooks.mapIndexedNotNull { index, book ->
+                appDb.bookDao.getBook(book.bookUrl)?.apply {
+                    order = if (isDescending) maxOrder - index else index + 1
+                }
+            }
+            if (updates.isNotEmpty()) {
+                appDb.bookDao.update(*updates.toTypedArray())
+            }
+        }.onError {
+            context.toastOnUi("排序保存失败\n${it.localizedMessage}")
+        }
+    }
+
     fun downloadBooks(bookUrls: Set<String>, downloadAllChapters: Boolean = false) {
         if (bookUrls.isEmpty()) return
         execute {

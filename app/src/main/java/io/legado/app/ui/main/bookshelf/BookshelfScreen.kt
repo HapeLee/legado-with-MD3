@@ -23,12 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,10 +64,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -77,6 +82,7 @@ import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -96,12 +102,15 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.move
 import io.legado.app.utils.readText
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyGridState
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
@@ -315,10 +324,6 @@ fun BookshelfScreen(
         if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
     val bookshelfLayoutList =
         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
-    val totalHorizontalPadding =
-        if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
-    val gridContentHorizontalPadding = totalHorizontalPadding / 2
-    val gridInnerHorizontalPadding = totalHorizontalPadding / 2
     val currentMenuGroupId = if (uiState.isSearch) uiState.selectedGroupId else currentTabGroupId
     val editStickySummary = if (isEditMode) {
         BookshelfEditStickySummary(
@@ -337,9 +342,13 @@ fun BookshelfScreen(
         state = uiState,
         showSearchAction = true,
         onSearchToggle = { active ->
-            viewModel.setSearchMode(active)
-            if (!active && uiState.selectedGroupId != currentTabGroupId) {
-                viewModel.changeGroup(currentTabGroupId)
+            if (BookshelfConfig.bookshelfSearchActionDirectToSearch) {
+                onNavigateToSearch(uiState.searchKey.trim())
+            } else {
+                viewModel.setSearchMode(active)
+                if (!active && uiState.selectedGroupId != currentTabGroupId) {
+                    viewModel.changeGroup(currentTabGroupId)
+                }
             }
         },
         onSearchQueryChange = { viewModel.setSearchKey(it) },
@@ -441,14 +450,14 @@ fun BookshelfScreen(
                     leadingIcon = { Icon(Icons.Default.Edit, null) }
                 )
                 RoundDropdownMenuItem(
-                    text = stringResource(R.string.cache_export),
+                    text = stringResource(R.string.bookshelf_management),
                     onClick = {
                         val groupId =
                             uiState.groups.getOrNull(uiState.selectedGroupIndex)?.groupId ?: -1L
                         onNavigateToCache(groupId)
                         dismiss()
                     },
-                    leadingIcon = { Icon(Icons.Default.Download, null) }
+                    leadingIcon = { Icon(Icons.Default.Bookmarks, null) }
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.export_bookshelf),
@@ -456,11 +465,12 @@ fun BookshelfScreen(
                         showExportSheet = true
                         dismiss()
                     },
-                    leadingIcon = { Icon(Icons.Default.ImportExport, null) }
+                    leadingIcon = { Icon(Icons.Default.UploadFile, null) }
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.import_bookshelf),
-                    onClick = { showImportSheet = true; dismiss() }
+                    onClick = { showImportSheet = true; dismiss() },
+                    leadingIcon = { Icon(Icons.Default.CloudDownload, null) }
                 )
                 RoundDropdownMenuItem(
                     text = stringResource(R.string.log),
@@ -633,12 +643,11 @@ fun BookshelfScreen(
                     FastScrollLazyVerticalGrid(
                         columns = GridCells.Fixed(folderColumns.coerceAtLeast(1)),
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = if (isGridMode) gridInnerHorizontalPadding else 0.dp),
-                        contentPadding = adaptiveContentPadding(
+                            .fillMaxSize(),
+                        contentPadding = adaptiveContentPaddingBookshelf(
                             top = paddingValues.calculateTopPadding(),
                             bottom = 120.dp,
-                            horizontal = if (isGridMode) gridContentHorizontalPadding else 0.dp
+                            horizontal = if (isGridMode) 8.dp else 4.dp
                         ),
                         verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
                         horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
@@ -701,7 +710,9 @@ fun BookshelfScreen(
                             bookshelfLayoutList = bookshelfLayoutList,
                             isEditMode = isEditMode,
                             selectedBookUrls = selectedBookUrls,
+                            canReorderBooks = false,
                             onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                            onSaveBookOrder = {},
                             onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                             onBookClick = onBookClick,
                             onBookLongClick = onBookLongClick
@@ -725,15 +736,21 @@ fun BookshelfScreen(
                                     uiState = uiState,
                                     bookshelfLayoutMode = bookshelfLayoutMode,
                                     bookshelfLayoutGrid = bookshelfLayoutGrid,
-                                bookshelfLayoutList = bookshelfLayoutList,
-                                isEditMode = isEditMode,
-                                selectedBookUrls = selectedBookUrls,
-                                onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
-                                onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
-                                onBookClick = onBookClick,
-                                onBookLongClick = onBookLongClick
-                            )
-                        }
+                                    bookshelfLayoutList = bookshelfLayoutList,
+                                    isEditMode = isEditMode,
+                                    selectedBookUrls = selectedBookUrls,
+                                    canReorderBooks = isEditMode &&
+                                            !uiState.isSearch &&
+                                            group.getRealBookSort() == 3,
+                                    onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                                    onSaveBookOrder = { reorderedBooks ->
+                                        viewModel.saveBookOrder(reorderedBooks)
+                                    },
+                                    onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
+                                    onBookClick = onBookClick,
+                                    onBookLongClick = onBookLongClick
+                                )
+                            }
                         }
                     }
                 }
@@ -960,7 +977,9 @@ fun BookshelfPage(
     bookshelfLayoutList: Int,
     isEditMode: Boolean,
     selectedBookUrls: Set<String>,
+    canReorderBooks: Boolean,
     onToggleBookSelection: (BookShelfItem) -> Unit,
+    onSaveBookOrder: (books: List<BookShelfItem>) -> Unit,
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit
@@ -998,51 +1017,112 @@ fun BookshelfPage(
         if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) 12.dp else 16.dp
     val gridContentHorizontalPadding = totalHorizontalPadding / 2
     val gridInnerHorizontalPadding = totalHorizontalPadding / 2
+    val hapticFeedback = LocalHapticFeedback.current
+    var draggingBooks by remember { mutableStateOf<List<BookShelfItem>?>(null) }
+    var pendingSavedBooks by remember { mutableStateOf<List<BookShelfItem>?>(null) }
+    val displayBooks = draggingBooks ?: pendingSavedBooks ?: books
+    LaunchedEffect(books, pendingSavedBooks, canReorderBooks) {
+        if (!canReorderBooks) {
+            draggingBooks = null
+            pendingSavedBooks = null
+            return@LaunchedEffect
+        }
+        val pending = pendingSavedBooks ?: return@LaunchedEffect
+        if (books.map { it.bookUrl } == pending.map { it.bookUrl }) {
+            pendingSavedBooks = null
+        }
+    }
+    val gridState = rememberLazyGridState()
+    val reorderableState = rememberReorderableLazyGridState(gridState) { from, to ->
+        if (canReorderBooks) {
+            draggingBooks = displayBooks.toMutableList().apply {
+                move(from.index, to.index)
+            }
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        }
+    }
+    LaunchedEffect(reorderableState.isAnyItemDragging) {
+        if (!reorderableState.isAnyItemDragging) {
+            draggingBooks?.let { reorderedBooks ->
+                pendingSavedBooks = reorderedBooks
+                onSaveBookOrder(reorderedBooks)
+                draggingBooks = null
+            }
+        }
+    }
     FastScrollLazyVerticalGrid(
         columns = GridCells.Fixed(columns.coerceAtLeast(1)),
+        state = gridState,
         modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = if (isGridMode) gridInnerHorizontalPadding else 0.dp),
-        contentPadding = adaptiveContentPadding(
+            .fillMaxSize(),
+        contentPadding = adaptiveContentPaddingBookshelf(
             top = paddingValues.calculateTopPadding(),
             bottom = 120.dp,
-            horizontal = if (isGridMode) gridContentHorizontalPadding else 0.dp
+            horizontal = if (isGridMode) 8.dp else 4.dp
         ),
         verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
         horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
         showFastScroll = BookshelfConfig.showBookshelfFastScroller
     ) {
-        items(books, key = { it.bookUrl }) { book ->
+        items(displayBooks, key = { it.bookUrl }) { book ->
             val isSelected = selectedBookUrls.contains(book.bookUrl)
-            BookItem(
-                book = book,
-                modifier = Modifier.animateItem(),
-                layoutMode = bookshelfLayoutMode,
-                isSelected = isSelected,
-                gridStyle = BookshelfConfig.bookshelfGridLayout,
-                isCompact = BookshelfConfig.bookshelfLayoutCompact,
-                isUpdating = uiState.updatingBooks.contains(book.bookUrl),
-                titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
-                titleCenter = BookshelfConfig.bookshelfTitleCenter,
-                titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
-                coverShadow = BookshelfConfig.bookshelfCoverShadow,
-                isSearchMode = uiState.isSearch,
-                searchKey = uiState.searchKey,
-                onClick = {
-                    if (isEditMode) {
-                        onToggleBookSelection(book)
+            ReorderableItem(
+                state = reorderableState,
+                key = book.bookUrl,
+                enabled = canReorderBooks
+            ) {
+                BookItem(
+                    book = book,
+                    modifier = Modifier.then(
+                        if (canReorderBooks) {
+                            Modifier.longPressDraggableHandle(
+                                onDragStarted = {
+                                    draggingBooks = displayBooks
+                                    hapticFeedback.performHapticFeedback(
+                                        HapticFeedbackType.GestureThresholdActivate
+                                    )
+                                },
+                                onDragStopped = {
+                                    hapticFeedback.performHapticFeedback(
+                                        HapticFeedbackType.GestureEnd
+                                    )
+                                }
+                            )
+                        } else {
+                            Modifier
+                        }
+                    ),
+                    layoutMode = bookshelfLayoutMode,
+                    isSelected = isSelected,
+                    gridStyle = BookshelfConfig.bookshelfGridLayout,
+                    isCompact = BookshelfConfig.bookshelfLayoutCompact,
+                    isUpdating = uiState.updatingBooks.contains(book.bookUrl),
+                    titleSmallFont = BookshelfConfig.bookshelfTitleSmallFont,
+                    titleCenter = BookshelfConfig.bookshelfTitleCenter,
+                    titleMaxLines = BookshelfConfig.bookshelfTitleMaxLines,
+                    coverShadow = BookshelfConfig.bookshelfCoverShadow,
+                    isSearchMode = uiState.isSearch,
+                    searchKey = uiState.searchKey,
+                    onClick = {
+                        if (isEditMode) {
+                            onToggleBookSelection(book)
+                        } else {
+                            onBookClick(book)
+                        }
+                    },
+                    onLongClick = if (canReorderBooks) {
+                        null
                     } else {
-                        onBookClick(book)
+                        {
+                            if (isEditMode) {
+                                onToggleBookSelection(book)
+                            } else {
+                                onBookLongClick(book)
+                            }
+                        }
                     }
-                },
-                onLongClick = {
-                    if (isEditMode) {
-                        onToggleBookSelection(book)
-                    } else {
-                        onBookLongClick(book)
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }

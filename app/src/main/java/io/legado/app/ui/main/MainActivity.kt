@@ -47,7 +47,7 @@ import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchScreen
 import io.legado.app.ui.book.search.SearchViewModel
 import io.legado.app.ui.book.source.manage.BookSourceActivity
-import io.legado.app.ui.book.cache.CacheRouteScreen
+import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.ConfigTag
@@ -161,7 +161,7 @@ open class MainActivity : BaseComposeActivity() {
             }
         }
 
-        fun createCacheIntent(
+        fun createBookshelfManageScreenIntent(
             context: Context,
             groupId: Long = -1L
         ): Intent {
@@ -170,6 +170,11 @@ open class MainActivity : BaseComposeActivity() {
                 putExtra(EXTRA_CACHE_GROUP_ID, groupId)
             }
         }
+
+        fun createCacheIntent(
+            context: Context,
+            groupId: Long = -1L
+        ): Intent = createBookshelfManageScreenIntent(context, groupId)
 
         fun createSearchIntent(
             context: Context,
@@ -463,7 +468,7 @@ open class MainActivity : BaseComposeActivity() {
                 }
 
                 entry<MainRouteCache> { route ->
-                    CacheRouteScreen(
+                    BookshelfManageRouteScreen(
                         groupId = route.groupId,
                         onBackClick = { navigateBack(backStack) }
                     )

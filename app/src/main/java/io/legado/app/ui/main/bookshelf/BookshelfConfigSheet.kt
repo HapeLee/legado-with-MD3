@@ -191,6 +191,13 @@ fun BookshelfConfigSheet(
                 onCheckedChange = { BookshelfConfig.bookshelfCoverShadow = it }
             )
 
+            CompactSwitchSettingItem(
+                title = "搜索按钮优先打开筛选栏",
+                checked = BookshelfConfig.bookshelfSearchActionDirectToSearch,
+                color = MaterialTheme.colorScheme.surface,
+                onCheckedChange = { BookshelfConfig.bookshelfSearchActionDirectToSearch = it }
+            )
+
             // Switches
             CompactSwitchSettingItem(
                 title = stringResource(R.string.show_unread),
