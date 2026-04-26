@@ -137,7 +137,7 @@ fun RssScreen(
                     context.startActivity<RssSourceActivity>()
                     dismiss()
                 },
-                text = "订阅源管理"
+                text = stringResource(R.string.rss_feed_management),
             )
             PillDivider()
             RoundDropdownMenuItem(

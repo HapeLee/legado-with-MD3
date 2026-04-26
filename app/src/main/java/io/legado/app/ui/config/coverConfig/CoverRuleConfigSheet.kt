@@ -82,13 +82,13 @@ fun CoverRuleConfigSheet(
             }
 
             InputSettingItem(
-                title = "搜索URL",
+                title = stringResource(R.string.search_via_url),
                 value = searchUrl,
                 onConfirm = { searchUrl = it }
             )
 
             InputSettingItem(
-                title = "封面规则",
+                title = stringResource(R.string.cover_rule_edit),
                 value = coverRule,
                 onConfirm = { coverRule = it }
             )
