@@ -36,6 +36,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
@@ -70,7 +71,7 @@ fun BookshelfItem(
     val selectedColor = if (isSelected) {
         LegadoTheme.colorScheme.secondaryContainer
     } else {
-        LegadoTheme.colorScheme.surface
+        LegadoTheme.colorScheme.surface.copy(alpha = 0f)
     }
     if (isGrid) {
         Box(
@@ -144,7 +145,7 @@ fun BookshelfItem(
     } else {
         // 列表布局
         Column {
-            GlassCard(
+            NormalCard(
                 modifier = modifier
                     .fillMaxWidth()
                     .padding(all = 4.dp),
