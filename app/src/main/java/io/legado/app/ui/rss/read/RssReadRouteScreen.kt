@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import android.net.http.SslError
 import android.os.SystemClock
-import android.view.MotionEvent
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
@@ -19,20 +18,14 @@ import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.appcompat.app.AlertDialog
-import androidx.compose.animation.animateContentSize
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
@@ -44,17 +37,18 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -74,20 +68,16 @@ import io.legado.app.model.Download
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
+import io.legado.app.ui.widget.components.button.TopBarNavigationButton
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.keepScreenOn
@@ -97,9 +87,6 @@ import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.share
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import java.net.URLDecoder
@@ -118,8 +105,7 @@ fun RssReadRouteScreen(
 ) {
     val context = LocalContext.current
     val activity = LocalActivity.current
-    val appCompatActivity = activity as? androidx.appcompat.app.AppCompatActivity
-    val scope = rememberCoroutineScope()
+    val appCompatActivity = activity as? AppCompatActivity
     val defaultTopBarTitle = stringResource(R.string.rss)
 
     var pageTitle by remember(title, defaultTopBarTitle) {
@@ -128,9 +114,6 @@ fun RssReadRouteScreen(
     var webProgress by remember { mutableIntStateOf(100) }
     var showMenu by remember { mutableStateOf(false) }
     var showRedirectMenu by remember { mutableStateOf(false) }
-    var showFloatingCard by remember { mutableStateOf(true) }
-    var showFloatingCardJob by remember { mutableStateOf<Job?>(null) }
-
     var webView by remember { mutableStateOf<WebView?>(null) }
 
     var redirectPolicy by remember { mutableStateOf(RedirectPolicy.ALLOW_ALL) }
@@ -189,102 +172,26 @@ fun RssReadRouteScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        VisibleWebViewCompose(
-            modifier = Modifier.fillMaxSize(),
-            onCreated = { createdWebView ->
-                webView = createdWebView
-                configureRssReadWebView(
-                    webView = createdWebView,
-                    context = context,
-                    activity = activity,
-                    appCompatActivity = appCompatActivity,
-                    viewModel = viewModel,
-                    initialTitle = title,
-                    redirectPolicyProvider = { redirectPolicy },
-                    callbacks = RssReadWebControllerCallbacks(
-                        onProgressChanged = { webProgress = it },
-                        onPageTitleResolved = { resolved ->
-                            pageTitle = resolved.ifBlank { defaultTopBarTitle }
-                        }
-                    )
-                )
-                createdWebView.setOnTouchListener { _, event ->
-                    when (event.actionMasked) {
-                        MotionEvent.ACTION_DOWN,
-                        MotionEvent.ACTION_MOVE -> {
-                            showFloatingCardJob?.cancel()
-                            showFloatingCard = false
-                        }
-
-                        MotionEvent.ACTION_UP,
-                        MotionEvent.ACTION_CANCEL -> {
-                            createdWebView.performClick()
-                            showFloatingCardJob?.cancel()
-                            showFloatingCardJob = scope.launch {
-                                delay(180L)
-                                showFloatingCard = true
-                            }
-                        }
-                    }
-                    false
-                }
-            }
-        )
-        if (webProgress in 0..99) {
-            LinearProgressIndicator(
-                progress = { webProgress / 100f },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        TopFloatingStickyItem(
-            item = if (showFloatingCard) {
-                RssReadFloatingSummary(
-                    titleText = pageTitle.ifBlank { defaultTopBarTitle },
-                    progressText = if (webProgress in 0..99) " · ${webProgress}%" else null
-                )
-            } else {
-                null
-            },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 6.dp),
-        ) { summary ->
-            NormalCard(
-                modifier = Modifier.animateContentSize(),
-                cornerRadius = 32.dp,
-                containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                contentColor = LegadoTheme.colorScheme.onCardContainer
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SmallTonalIconButton(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.back),
-                        onClick = onBackClick
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    AppText(
-                        text = summary.titleText,
-                        style = LegadoTheme.typography.labelSmallEmphasized,
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = pageTitle.ifBlank { defaultTopBarTitle },
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 12.dp)
+                        overflow = TextOverflow.Ellipsis
                     )
-                    summary.progressText?.let { text ->
-                        AppText(text = text, style = LegadoTheme.typography.labelMediumEmphasized)
-                        Spacer(modifier = Modifier.width(6.dp))
-                    }
-                    SmallTonalIconButton(
+                },
+                navigationIcon = {
+                    TopBarNavigationButton(onClick = onBackClick)
+                },
+                actions = {
+                    TopBarActionButton(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = stringResource(R.string.refresh),
                         onClick = { viewModel.refresh { webView?.reload() } }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    SmallTonalIconButton(
+                    TopBarActionButton(
                         imageVector = Icons.Default.Star,
                         contentDescription = stringResource(R.string.favorite),
                         onClick = {
@@ -294,9 +201,8 @@ fun RssReadRouteScreen(
                             showFavoriteSheet = true
                         }
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Box {
-                        SmallTonalIconButton(
+                        TopBarActionButton(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Menu",
                             onClick = { showMenu = true }
@@ -391,6 +297,40 @@ fun RssReadRouteScreen(
                         }
                     }
                 }
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            VisibleWebViewCompose(
+                modifier = Modifier.fillMaxSize(),
+                onCreated = { createdWebView ->
+                    webView = createdWebView
+                    configureRssReadWebView(
+                        webView = createdWebView,
+                        context = context,
+                        activity = activity,
+                        appCompatActivity = appCompatActivity,
+                        viewModel = viewModel,
+                        initialTitle = title,
+                        redirectPolicyProvider = { redirectPolicy },
+                        callbacks = RssReadWebControllerCallbacks(
+                            onProgressChanged = { webProgress = it },
+                            onPageTitleResolved = { resolved ->
+                                pageTitle = resolved.ifBlank { defaultTopBarTitle }
+                            }
+                        )
+                    )
+                }
+            )
+            if (webProgress in 0..99) {
+                LinearProgressIndicator(
+                    progress = { webProgress / 100f },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
@@ -412,11 +352,6 @@ fun RssReadRouteScreen(
         }
     )
 }
-
-private data class RssReadFloatingSummary(
-    val titleText: String,
-    val progressText: String?,
-)
 
 @Composable
 private fun FavoriteEditSheet(

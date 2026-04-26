@@ -11,6 +11,7 @@ import android.webkit.WebView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
@@ -45,10 +46,6 @@ class VisibleWebView(
             });
         """.trimIndent()
         evaluateJavascript(js, null)
-    }
-
-    override fun onWindowVisibilityChanged(visibility: Int) {
-        super.onWindowVisibilityChanged(VISIBLE)
     }
 
     override fun performClick(): Boolean {
@@ -143,24 +140,28 @@ fun VisibleWebViewCompose(
     onCreated: (VisibleWebView) -> Unit,
     onDestroyed: (() -> Unit)? = null
 ) {
-    var webViewRef: VisibleWebView? = null
+    val webViewHolder = remember { WebViewHolder() }
     AndroidView(
         modifier = modifier,
         factory = { context ->
             VisibleWebView(context).also {
-                webViewRef = it
+                webViewHolder.webView = it
                 onCreated(it)
             }
         },
         update = {
-            webViewRef = it
+            webViewHolder.webView = it
         }
     )
     DisposableEffect(Unit) {
         onDispose {
             onDestroyed?.invoke()
-            webViewRef?.destroy()
-            webViewRef = null
+            webViewHolder.webView?.destroy()
+            webViewHolder.webView = null
         }
     }
+}
+
+private class WebViewHolder {
+    var webView: VisibleWebView? = null
 }
