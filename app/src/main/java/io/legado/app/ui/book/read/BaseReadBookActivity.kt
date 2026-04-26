@@ -8,7 +8,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowManager
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnDetach
@@ -52,6 +51,7 @@ import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -64,7 +64,7 @@ abstract class BaseReadBookActivity :
     VMBaseActivity<ActivityBookReadBinding, ReadBookViewModel>(imageBg = false) {
 
     override val binding by viewBinding(ActivityBookReadBinding::inflate)
-    override val viewModel by viewModels<ReadBookViewModel>()
+    override val viewModel by viewModel<ReadBookViewModel>()
     protected val menuLayoutIsVisible
         get() = bottomDialog > 0 || binding.readMenu.isVisible || binding.searchMenu.bottomMenuVisible
 

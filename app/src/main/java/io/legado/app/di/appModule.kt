@@ -66,6 +66,7 @@ import io.legado.app.ui.book.import.remote.RemoteBookViewModel
 import io.legado.app.ui.book.import.remote.ServerConfigViewModel
 import io.legado.app.ui.book.import.remote.ServersViewModel
 import io.legado.app.ui.book.info.BookInfoViewModel
+import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.search.SearchViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
@@ -181,6 +182,7 @@ val appModule = module {
     viewModelOf(::ServerConfigViewModel)
     viewModelOf(::ServersViewModel)
     viewModelOf(::BookInfoViewModel)
+    viewModelOf(::ReadBookViewModel)
     viewModelOf(::ChangeCoverViewModel)
     viewModelOf(::ChangeBookSourceComposeViewModel)
     viewModelOf(::ChangeBookSourceViewModel)
