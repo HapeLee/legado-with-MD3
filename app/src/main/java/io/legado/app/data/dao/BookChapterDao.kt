@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.model.BookChapterCacheInfo
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -19,6 +20,9 @@ interface BookChapterDao {
 
     @Query("select * from chapters where bookUrl = :bookUrl order by `index`")
     fun getChapterList(bookUrl: String): List<BookChapter>
+
+    @Query("select url, title, isVolume, `index` from chapters where bookUrl = :bookUrl order by `index`")
+    fun getChapterCacheInfoList(bookUrl: String): List<BookChapterCacheInfo>
 
     @Query("select * from chapters where bookUrl = :bookUrl order by `index`")
     fun getChapterListFlow(bookUrl: String): Flow<List<BookChapter>>

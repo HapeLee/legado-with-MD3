@@ -98,8 +98,7 @@ class CacheBookService : BaseService() {
                 }
                 IntentAction.remove -> {
                     val bookUrl = intent.getStringExtra("bookUrl")
-                    CacheBook.cacheBookMap[bookUrl]?.stop()
-                    CacheBook.cacheBookMap.remove(bookUrl)
+                    bookUrl?.let { CacheBook.removeBook(it) }
                 }
                 IntentAction.stop -> stopSelf()
             }

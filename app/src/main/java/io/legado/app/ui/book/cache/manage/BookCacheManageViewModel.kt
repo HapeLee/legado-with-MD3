@@ -7,6 +7,7 @@ import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.model.BookChapterCacheInfo
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.help.book.BookHelp
@@ -33,12 +34,14 @@ data class BookCacheManageUiState(
     val notShelfBooks: List<BookCacheBookItem> = emptyList(),
     val expandedBookUrls: Set<String> = emptySet(),
     val chaptersByBookUrl: Map<String, List<BookCacheChapterItem>> = emptyMap(),
-    val downloadSummary: String = CacheBook.downloadSummary,
+    val downloadSummary: String = "",
     val version: Long = 0,
 )
 
 data class BookCacheBookItem(
-    val book: Book,
+    val bookUrl: String,
+    val name: String,
+    val author: String,
     val totalCount: Int,
     val cachedCount: Int,
     val waitingCount: Int,
@@ -51,7 +54,9 @@ data class BookCacheBookItem(
 }
 
 data class BookCacheChapterItem(
-    val chapter: BookChapter,
+    val chapterUrl: String,
+    val title: String,
+    val index: Int,
     val isCached: Boolean,
     val isWaiting: Boolean,
     val isDownloading: Boolean,
@@ -63,10 +68,18 @@ sealed interface BookCacheManageIntent {
     data object Refresh : BookCacheManageIntent
     data object StartAllDownloads : BookCacheManageIntent
     data object StopAllDownloads : BookCacheManageIntent
+    data class StartBookDownload(val bookUrl: String) : BookCacheManageIntent
+    data class StopBookDownload(val bookUrl: String) : BookCacheManageIntent
     data class ToggleBookExpanded(val bookUrl: String) : BookCacheManageIntent
     data class DeleteBookCache(val bookUrl: String) : BookCacheManageIntent
     data class DownloadChapter(val bookUrl: String, val chapterIndex: Int) : BookCacheManageIntent
-    data class DeleteChapterCache(val bookUrl: String, val chapterUrl: String) : BookCacheManageIntent
+    data class StopChapterDownload(val bookUrl: String, val chapterIndex: Int) : BookCacheManageIntent
+    data class DeleteChapterCache(
+        val bookUrl: String,
+        val chapterUrl: String,
+        val chapterTitle: String,
+        val chapterIndex: Int,
+    ) : BookCacheManageIntent
 }
 
 sealed interface BookCacheManageEffect {
@@ -97,15 +110,23 @@ class BookCacheManageViewModel(
             BookCacheManageIntent.Refresh -> reloadAll(forceDatabase = true)
             BookCacheManageIntent.StartAllDownloads -> startAllDownloads()
             BookCacheManageIntent.StopAllDownloads -> stopAllDownloads()
+            is BookCacheManageIntent.StartBookDownload -> startBookDownload(intent.bookUrl)
+            is BookCacheManageIntent.StopBookDownload -> stopBookDownload(intent.bookUrl)
             is BookCacheManageIntent.ToggleBookExpanded -> toggleBookExpanded(intent.bookUrl)
             is BookCacheManageIntent.DeleteBookCache -> deleteBookCache(intent.bookUrl)
             is BookCacheManageIntent.DownloadChapter -> downloadChapter(
                 intent.bookUrl,
                 intent.chapterIndex
             )
+            is BookCacheManageIntent.StopChapterDownload -> stopChapterDownload(
+                intent.bookUrl,
+                intent.chapterIndex,
+            )
             is BookCacheManageIntent.DeleteChapterCache -> deleteChapterCache(
                 intent.bookUrl,
-                intent.chapterUrl
+                intent.chapterUrl,
+                intent.chapterTitle,
+                intent.chapterIndex,
             )
         }
     }
@@ -138,9 +159,12 @@ class BookCacheManageViewModel(
             }
         }
         viewModelScope.launch {
-            CacheBook.downloadSummaryFlow.collect { summary ->
+            CacheBook.downloadSummaryFlow.collect {
                 _uiState.update {
-                    it.copy(downloadSummary = summary, version = it.version + 1)
+                    it.copy(
+                        downloadSummary = buildDownloadSummary(it.shelfBooks + it.notShelfBooks),
+                        version = it.version + 1,
+                    )
                 }
             }
         }
@@ -165,12 +189,12 @@ class BookCacheManageViewModel(
                             item.cachedCount > 0 || item.isDownloading || item.errorCount > 0
                         }
                 )
-                val booksByUrl = items.associateBy { it.book.bookUrl }
+                val booksByUrl = items.associateBy { it.bookUrl }
                 val retainedExpandedBookUrls = expandedBookUrls.filterTo(linkedSetOf()) {
                     booksByUrl.containsKey(it)
                 }
                 val chaptersByBookUrl = retainedExpandedBookUrls.associateWith { bookUrl ->
-                    buildChapterItems(booksByUrl.getValue(bookUrl).book)
+                    buildChapterItems(bookUrl)
                 }
                 LoadedCacheState(
                     items = items,
@@ -185,7 +209,7 @@ class BookCacheManageViewModel(
                     notShelfBooks = result.items.filter { item -> item.isNotShelf },
                     expandedBookUrls = result.expandedBookUrls,
                     chaptersByBookUrl = result.chaptersByBookUrl,
-                    downloadSummary = CacheBook.downloadSummary,
+                    downloadSummary = buildDownloadSummary(result.items),
                     version = state.version + 1,
                 )
             }
@@ -217,7 +241,7 @@ class BookCacheManageViewModel(
                     it.cachedCount > 0 || it.isDownloading || it.errorCount > 0
                 }
             val chapters = if (expanded && item != null) {
-                buildChapterItems(item.book)
+                buildChapterItems(item.bookUrl)
             } else {
                 null
             }
@@ -225,7 +249,7 @@ class BookCacheManageViewModel(
         }
         _uiState.update { state ->
             val combinedBooks = (state.shelfBooks + state.notShelfBooks)
-                .filterNot { it.book.bookUrl == bookUrl }
+                .filterNot { it.bookUrl == bookUrl }
                 .let { items ->
                     result.item?.let { items + it } ?: items
                 }
@@ -245,7 +269,7 @@ class BookCacheManageViewModel(
                 notShelfBooks = sortedBooks.filter { item -> item.isNotShelf },
                 expandedBookUrls = expandedBookUrls,
                 chaptersByBookUrl = chaptersByBookUrl,
-                downloadSummary = CacheBook.downloadSummary,
+                downloadSummary = buildDownloadSummary(sortedBooks),
                 version = state.version + 1,
             )
         }
@@ -264,7 +288,9 @@ class BookCacheManageViewModel(
             return null
         }
         return BookCacheBookItem(
-            book = book,
+            bookUrl = book.bookUrl,
+            name = book.name,
+            author = book.getRealAuthor(),
             totalCount = totalCount,
             cachedCount = cachedCount,
             waitingCount = waitingIndices.size,
@@ -274,16 +300,19 @@ class BookCacheManageViewModel(
         )
     }
 
-    private fun buildChapterItems(book: Book): List<BookCacheChapterItem> {
-        val chapters = bookChapterDao.getChapterList(book.bookUrl)
+    private fun buildChapterItems(bookUrl: String): List<BookCacheChapterItem> {
+        val book = bookDao.getBook(bookUrl) ?: return emptyList()
+        val chapters = bookChapterDao.getChapterCacheInfoList(bookUrl)
         val cacheFiles = BookHelp.getChapterFiles(book)
-        val model = CacheBook.cacheBookMap[book.bookUrl]
+        val model = CacheBook.cacheBookMap[bookUrl]
         val waitingIndices = model?.waitingIndices().orEmpty()
         val downloadingIndices = model?.downloadingIndices().orEmpty()
-        val errorIndices = errorIndices(book.bookUrl)
+        val errorIndices = errorIndices(bookUrl)
         return chapters.map { chapter ->
             BookCacheChapterItem(
-                chapter = chapter,
+                chapterUrl = chapter.url,
+                title = chapter.title,
+                index = chapter.index,
                 isCached = cacheFiles.contains(chapter.getFileName()) || chapter.isVolume,
                 isWaiting = waitingIndices.contains(chapter.index),
                 isDownloading = downloadingIndices.contains(chapter.index),
@@ -320,9 +349,8 @@ class BookCacheManageViewModel(
     private fun loadBookChapters(bookUrl: String) {
         viewModelScope.launch {
             val chapters = withContext(Dispatchers.IO) {
-                val book = findBook(bookUrl) ?: bookDao.getBook(bookUrl) ?: return@withContext null
-                buildChapterItems(book)
-            } ?: return@launch
+                buildChapterItems(bookUrl)
+            }
             _uiState.update { state ->
                 if (!state.expandedBookUrls.contains(bookUrl)) {
                     state
@@ -336,23 +364,22 @@ class BookCacheManageViewModel(
         }
     }
 
-    private fun findBook(bookUrl: String): Book? {
-        return (uiState.value.shelfBooks + uiState.value.notShelfBooks)
-            .firstOrNull { it.book.bookUrl == bookUrl }
-            ?.book
-    }
-
     private fun stopAllDownloads() {
         CacheBook.stop(context)
         reloadAll(forceDatabase = true)
+    }
+
+    private fun stopBookDownload(bookUrl: String) {
+        CacheBook.removeBook(bookUrl)
+        scheduleBookReload(bookUrl, debounceMillis = 0)
     }
 
     private fun startAllDownloads() {
         val items = uiState.value.shelfBooks + uiState.value.notShelfBooks
         execute {
             items.sumOf { item ->
-                val chapterIndices = downloadableChapterIndices(item.book)
-                cacheBookChaptersUseCase.execute(item.book.bookUrl, chapterIndices)
+                val chapterIndices = downloadableChapterIndices(item.bookUrl)
+                cacheBookChaptersUseCase.execute(item.bookUrl, chapterIndices)
             }
         }.onSuccess { count ->
             if (count > 0) {
@@ -367,12 +394,29 @@ class BookCacheManageViewModel(
         }
     }
 
-    private fun downloadableChapterIndices(book: Book): List<Int> {
+    private fun startBookDownload(bookUrl: String) {
+        execute {
+            cacheBookChaptersUseCase.execute(bookUrl, downloadableChapterIndices(bookUrl))
+        }.onSuccess { count ->
+            if (count > 0) {
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("已加入缓存队列: $count 章"))
+            } else {
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("没有可缓存的章节"))
+            }
+        }.onError {
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("加入缓存队列失败\n${it.localizedMessage}"))
+        }.onFinally {
+            scheduleBookReload(bookUrl, debounceMillis = 0)
+        }
+    }
+
+    private fun downloadableChapterIndices(bookUrl: String): List<Int> {
+        val book = bookDao.getBook(bookUrl) ?: return emptyList()
         val cacheFiles = BookHelp.getChapterFiles(book)
-        val model = CacheBook.cacheBookMap[book.bookUrl]
+        val model = CacheBook.cacheBookMap[bookUrl]
         val waitingIndices = model?.waitingIndices().orEmpty()
         val downloadingIndices = model?.downloadingIndices().orEmpty()
-        return bookChapterDao.getChapterList(book.bookUrl)
+        return bookChapterDao.getChapterCacheInfoList(bookUrl)
             .asSequence()
             .filterNot { chapter ->
                 chapter.isVolume ||
@@ -409,13 +453,25 @@ class BookCacheManageViewModel(
         }
     }
 
-    private fun deleteChapterCache(bookUrl: String, chapterUrl: String) {
-        val book = findBook(bookUrl) ?: bookDao.getBook(bookUrl) ?: return
-        val chapter = uiState.value.chaptersByBookUrl[bookUrl]
-            ?.firstOrNull { it.chapter.url == chapterUrl }
-            ?.chapter
-            ?: bookChapterDao.getChapterList(bookUrl).firstOrNull { it.url == chapterUrl }
-            ?: return
+    private fun stopChapterDownload(bookUrl: String, chapterIndex: Int) {
+        if (CacheBook.removeChapter(bookUrl, chapterIndex)) {
+            scheduleBookReload(bookUrl, debounceMillis = 0)
+        }
+    }
+
+    private fun deleteChapterCache(
+        bookUrl: String,
+        chapterUrl: String,
+        chapterTitle: String,
+        chapterIndex: Int,
+    ) {
+        val book = bookDao.getBook(bookUrl) ?: return
+        val chapter = BookChapter(
+            url = chapterUrl,
+            title = chapterTitle,
+            bookUrl = bookUrl,
+            index = chapterIndex,
+        )
         execute {
             BookHelp.delContent(book, chapter)
         }.onSuccess {
@@ -430,7 +486,16 @@ class BookCacheManageViewModel(
     private fun sortItems(items: List<BookCacheBookItem>): List<BookCacheBookItem> {
         return items.sortedWith(compareByDescending<BookCacheBookItem> { it.isDownloading }
             .thenByDescending { it.cachedCount }
-            .thenBy { it.book.name })
+            .thenBy { it.name })
+    }
+
+    private fun buildDownloadSummary(items: List<BookCacheBookItem>): String {
+        if (items.isEmpty()) return ""
+        val downloadingCount = items.sumOf { it.downloadingCount }
+        val waitingCount = items.sumOf { it.waitingCount }
+        val errorCount = items.sumOf { it.errorCount }
+        val cachedCount = items.sumOf { it.cachedCount }
+        return "正在下载:$downloadingCount | 等待中:$waitingCount | 失败:$errorCount | 成功:$cachedCount"
     }
 
     private data class LoadedCacheState(
@@ -443,4 +508,13 @@ class BookCacheManageViewModel(
         val item: BookCacheBookItem?,
         val chapters: List<BookCacheChapterItem>?,
     )
+}
+
+private fun BookChapterCacheInfo.getFileName(): String {
+    return BookChapter(
+        url = url,
+        title = title,
+        isVolume = isVolume,
+        index = index,
+    ).getFileName()
 }
