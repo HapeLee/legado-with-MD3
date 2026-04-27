@@ -42,8 +42,6 @@ fun BookshelfCover(
                 text = badgeText,
                 icon = if (showBadgeDot) Icons.Default.Update else null,
                 iconSize = 12.dp,
-                backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),

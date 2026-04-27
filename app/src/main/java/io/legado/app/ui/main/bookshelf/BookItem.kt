@@ -310,8 +310,6 @@ fun BookGroupCover(
         if (!leftBottomText.isNullOrEmpty()) {
             TextCard(
                 text = leftBottomText,
-                backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(2.dp),
