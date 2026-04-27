@@ -33,15 +33,22 @@ import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 
 class SearchModel(private val scope: CoroutineScope, private val callBack: CallBack) {
+    private companion object {
+        const val MAX_RETAINED_SEARCH_RESULTS = 1000
+    }
+
     val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var mSearchId = 0L
     private var searchPage = 1
     private var searchKey: String = ""
     private var bookSourceParts = emptyList<BookSourcePart>()
-    private var searchBooks = arrayListOf<SearchBook>()
+    private val equalBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+    private val containsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+    private val otherBooks = LinkedHashMap<SearchBookKey, SearchBook>()
     private var searchJob: Job? = null
     private var workingState = MutableStateFlow(true)
+    private var resultLimitReached = false
 
     private fun initSearchPool() {
         searchPool?.close()
@@ -58,7 +65,7 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
             if (mSearchId != 0L) {
                 close()
             }
-            searchBooks.clear()
+            clearSearchBooks()
             bookSourceParts = callBack.getSearchScope().getBookSourceParts()
             if (bookSourceParts.isEmpty()) {
                 callBack.onSearchCancel(NoStackTraceException("启用书源为空"))
@@ -102,84 +109,100 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
                     book.releaseHtmlData()
                 }
                 hasMore = hasMore || items.isNotEmpty()
-                appDb.searchBookDao.insert(*items.toTypedArray())
-                mergeItems(items, precision)
+                if (items.isNotEmpty()) {
+                    appDb.searchBookDao.insert(items)
+                }
+                val change = mergeItems(items, precision)
                 currentCoroutineContext().ensureActive()
                 processedParts++
-                callBack.onSearchSuccess(searchBooks, processedParts, totalParts)
+                callBack.onSearchSuccess(
+                    upsertBooks = change.upsertBooks,
+                    removedBookUrls = change.removedBookUrls,
+                    resultCount = searchBookCount(),
+                    processedSources = processedParts,
+                    totalSources = totalParts,
+                )
             }.onCompletion {
-                if (it == null) callBack.onSearchFinish(searchBooks.isEmpty(), hasMore)
+                if (it == null) {
+                    callBack.onSearchFinish(
+                        isEmpty = searchBookCount() == 0,
+                        hasMore = hasMore && !resultLimitReached,
+                    )
+                }
             }.catch {
                 AppLog.put("书源搜索出错\n${it.localizedMessage}", it)
             }.collect()
         }
     }
 
-    private suspend fun mergeItems(newDataS: List<SearchBook>, precision: Boolean) {
-        if (newDataS.isNotEmpty()) {
-            val copyData = ArrayList(searchBooks)
-            val equalData = arrayListOf<SearchBook>()
-            val containsData = arrayListOf<SearchBook>()
-            val otherData = arrayListOf<SearchBook>()
-            copyData.forEach {
-                coroutineContext.ensureActive()
-                if (it.name == searchKey || it.author == searchKey) {
-                    equalData.add(it)
-                } else if (it.name.contains(searchKey) || it.author.contains(searchKey)) {
-                    containsData.add(it)
-                } else {
-                    otherData.add(it)
-                }
-            }
-            newDataS.forEach { nBook ->
-                coroutineContext.ensureActive()
-                if (nBook.name == searchKey || nBook.author == searchKey) {
-                    var hasSame = false
-                    equalData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        equalData.add(nBook)
-                    }
-                } else if (nBook.name.contains(searchKey) || nBook.author.contains(searchKey)) {
-                    var hasSame = false
-                    containsData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        containsData.add(nBook)
-                    }
-                } else if (!precision) {
-                    var hasSame = false
-                    otherData.forEach { pBook ->
-                        coroutineContext.ensureActive()
-                        if (pBook.name == nBook.name && pBook.author == nBook.author) {
-                            pBook.addOrigin(nBook.origin)
-                            hasSame = true
-                        }
-                    }
-                    if (!hasSame) {
-                        otherData.add(nBook)
-                    }
-                }
-            }
-            coroutineContext.ensureActive()
-            equalData.sortByDescending { it.origins.size }
-            equalData.addAll(containsData.sortedByDescending { it.origins.size })
-            if (!precision) {
-                equalData.addAll(otherData)
-            }
-            coroutineContext.ensureActive()
-            searchBooks = equalData
+    private suspend fun mergeItems(newDataS: List<SearchBook>, precision: Boolean): SearchBookChange {
+        if (newDataS.isEmpty()) {
+            return SearchBookChange()
         }
+
+        val upsertBooks = arrayListOf<SearchBook>()
+        val removedBookUrls = linkedSetOf<String>()
+        newDataS.forEach { nBook ->
+            coroutineContext.ensureActive()
+            val bucket = classifyBucket(nBook, precision) ?: return@forEach
+            val key = SearchBookKey(nBook.name, nBook.author)
+            val currentBook = bucket[key]
+            if (currentBook == null) {
+                bucket[key] = nBook
+                upsertBooks.add(nBook)
+            } else {
+                currentBook.addOrigin(nBook.origin)
+                upsertBooks.add(currentBook)
+            }
+            trimSearchBooks()?.let { removed ->
+                removedBookUrls.add(removed.bookUrl)
+                upsertBooks.removeAll { it.bookUrl == removed.bookUrl }
+            }
+        }
+        return SearchBookChange(upsertBooks, removedBookUrls.toList())
+    }
+
+    private fun classifyBucket(
+        book: SearchBook,
+        precision: Boolean,
+    ): LinkedHashMap<SearchBookKey, SearchBook>? {
+        return when {
+            book.name == searchKey || book.author == searchKey -> equalBooks
+            book.name.contains(searchKey) || book.author.contains(searchKey) -> containsBooks
+            !precision -> otherBooks
+            else -> null
+        }
+    }
+
+    private fun trimSearchBooks(): SearchBook? {
+        if (searchBookCount() <= MAX_RETAINED_SEARCH_RESULTS) {
+            return null
+        }
+        resultLimitReached = true
+        return removeLast(otherBooks)
+            ?: removeLowestOrigin(containsBooks)
+            ?: removeLowestOrigin(equalBooks)
+    }
+
+    private fun removeLast(bucket: LinkedHashMap<SearchBookKey, SearchBook>): SearchBook? {
+        val key = bucket.keys.lastOrNull() ?: return null
+        return bucket.remove(key)
+    }
+
+    private fun removeLowestOrigin(bucket: LinkedHashMap<SearchBookKey, SearchBook>): SearchBook? {
+        val key = bucket.entries.minByOrNull { it.value.origins.size }?.key ?: return null
+        return bucket.remove(key)
+    }
+
+    private fun searchBookCount(): Int {
+        return equalBooks.size + containsBooks.size + otherBooks.size
+    }
+
+    private fun clearSearchBooks() {
+        equalBooks.clear()
+        containsBooks.clear()
+        otherBooks.clear()
+        resultLimitReached = false
     }
 
     fun cancelSearch() {
@@ -204,10 +227,26 @@ class SearchModel(private val scope: CoroutineScope, private val callBack: CallB
 
     interface CallBack {
         fun getSearchScope(): SearchScope
-        fun onSearchStart()
-        fun onSearchSuccess(searchBooks: List<SearchBook>, processedSources: Int, totalSources: Int)
-        fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean)
+        suspend fun onSearchStart()
+        suspend fun onSearchSuccess(
+            upsertBooks: List<SearchBook>,
+            removedBookUrls: List<String>,
+            resultCount: Int,
+            processedSources: Int,
+            totalSources: Int,
+        )
+        suspend fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean)
         fun onSearchCancel(exception: Throwable? = null)
     }
+
+    private data class SearchBookKey(
+        val name: String,
+        val author: String,
+    )
+
+    private data class SearchBookChange(
+        val upsertBooks: List<SearchBook> = emptyList(),
+        val removedBookUrls: List<String> = emptyList(),
+    )
 
 }

@@ -44,7 +44,7 @@ data class BatchChangeBookSourceResult(
 data class BatchChangeSourceCandidate(
     val source: BookSource,
     val book: Book,
-    val chapters: List<BookChapter>,
+    val chapterCount: Int,
 )
 
 data class BatchChangeSourcePreviewItem(
@@ -172,14 +172,8 @@ class ChangeBookSourceUseCase(
                 } else {
                     val candidates = arrayListOf<BatchChangeSourceCandidate>()
                     sources.filterNot { it.bookSourceUrl == book.origin }.forEach { source ->
-                        findBookInSource(book, source)?.let { (newBook, chapters) ->
-                            candidates.add(
-                                BatchChangeSourceCandidate(
-                                    source = source,
-                                    book = newBook,
-                                    chapters = chapters,
-                                )
-                            )
+                        findBookInSource(book, source)?.let { candidate ->
+                            candidates.add(candidate)
                         }
                     }
                     if (candidates.isEmpty()) {
@@ -199,50 +193,40 @@ class ChangeBookSourceUseCase(
             .map { it.second }
     }
 
-    fun changePreviewItems(
-        items: List<BatchChangeSourcePreviewItem>,
-        options: ChangeSourceMigrationOptions,
-    ): BatchChangeBookSourceResult {
-        var changedCount = 0
-        var failedCount = 0
-        var skippedCount = 0
-        items.forEach { item ->
-            if (item.status == BatchChangeSourcePreviewStatus.Skipped) {
-                skippedCount++
-                return@forEach
-            }
-            val candidate = item.selectedCandidate
-            if (candidate == null) {
-                failedCount++
-                return@forEach
-            }
-            changeTo(item.oldBook, candidate.book, candidate.chapters, options)
-            changedCount++
-        }
-        return BatchChangeBookSourceResult(changedCount, failedCount, skippedCount)
-    }
-
     private suspend fun findBookInSource(
         oldBook: Book,
         source: BookSource,
-    ): Pair<Book, List<BookChapter>>? {
+    ): BatchChangeSourceCandidate? {
         val newBook = WebBook.preciseSearchAwait(source, oldBook.name, oldBook.author)
             .onFailure {
                 AppLog.put("搜索书籍出错\n${it.localizedMessage}", it, true)
             }.getOrNull() ?: return null
+        val chapters = loadCandidateChapters(source, newBook) ?: return null
+        return BatchChangeSourceCandidate(
+            source = source,
+            book = newBook,
+            chapterCount = chapters.size,
+        )
+    }
+
+    suspend fun loadCandidateChapters(
+        source: BookSource,
+        book: Book,
+    ): List<BookChapter>? {
         val infoLoaded = kotlin.runCatching {
-            if (newBook.tocUrl.isEmpty()) {
-                WebBook.getBookInfoAwait(source, newBook)
+            if (book.tocUrl.isEmpty()) {
+                WebBook.getBookInfoAwait(source, book)
             }
         }.onFailure {
             AppLog.put("获取书籍详情出错\n${it.localizedMessage}", it, true)
         }.isSuccess
         if (!infoLoaded) return null
-        val chapters = WebBook.getChapterListAwait(source, newBook)
+        val chapters = WebBook.getChapterListAwait(source, book)
             .onFailure {
                 AppLog.put("获取目录出错\n${it.localizedMessage}", it, true)
             }.getOrNull() ?: return null
-        return newBook to chapters
+        book.totalChapterNum = chapters.size
+        return chapters
     }
 
     private fun Book.applyMigrationTo(

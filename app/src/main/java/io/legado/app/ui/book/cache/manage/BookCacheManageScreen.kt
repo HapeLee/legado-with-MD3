@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -94,10 +93,9 @@ private fun BookCacheManageScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
-    var expandedBookUrls by rememberSaveable { mutableStateOf(emptySet<String>()) }
     val allBooks = state.shelfBooks + state.notShelfBooks
     val hasRunningDownload = allBooks.any { it.isDownloading }
-    val hasDownloadTarget = allBooks.any { it.chapters.any { chapter -> !chapter.isCached } }
+    val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -160,9 +158,10 @@ private fun BookCacheManageScreen(
                     title = "书架书籍",
                     emptyText = "没有书架内书籍缓存或下载任务",
                     books = state.shelfBooks,
-                    expandedBookUrls = expandedBookUrls,
+                    expandedBookUrls = state.expandedBookUrls,
+                    chaptersByBookUrl = state.chaptersByBookUrl,
                     onToggleExpanded = { bookUrl ->
-                        expandedBookUrls = expandedBookUrls.toggle(bookUrl)
+                        onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
                     onIntent = onIntent,
                     onDeleteBook = { pendingDeleteBook = it },
@@ -172,9 +171,10 @@ private fun BookCacheManageScreen(
                     title = "未在书架",
                     emptyText = "没有未在书架的书籍下载状态",
                     books = state.notShelfBooks,
-                    expandedBookUrls = expandedBookUrls,
+                    expandedBookUrls = state.expandedBookUrls,
+                    chaptersByBookUrl = state.chaptersByBookUrl,
                     onToggleExpanded = { bookUrl ->
-                        expandedBookUrls = expandedBookUrls.toggle(bookUrl)
+                        onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
                     onIntent = onIntent,
                     onDeleteBook = { pendingDeleteBook = it },
@@ -212,6 +212,7 @@ private fun LazyListScope.cacheSection(
     emptyText: String,
     books: List<BookCacheBookItem>,
     expandedBookUrls: Set<String>,
+    chaptersByBookUrl: Map<String, List<BookCacheChapterItem>>,
     onToggleExpanded: (String) -> Unit,
     onIntent: (BookCacheManageIntent) -> Unit,
     onDeleteBook: (BookCacheBookItem) -> Unit,
@@ -245,7 +246,7 @@ private fun LazyListScope.cacheSection(
             }
             if (expanded) {
                 items(
-                    items = item.chapters,
+                    items = chaptersByBookUrl[bookUrl].orEmpty(),
                     key = { chapter -> "$title-chapter-$bookUrl-${chapter.chapter.url}" }
                 ) { chapter ->
                     BookCacheChapterRow(
@@ -390,10 +391,6 @@ private fun BookCacheChapterRow(
             contentDescription = null
         )
     }
-}
-
-private fun Set<String>.toggle(value: String): Set<String> {
-    return if (contains(value)) this - value else this + value
 }
 
 private fun chapterStatusText(item: BookCacheChapterItem): String {

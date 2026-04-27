@@ -50,6 +50,7 @@ class SearchViewModel(
     private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val searchScope = SearchScope(AppConfig.searchScope)
     private val searchSession = repository.createSearchSession { searchScope }
+    private val searchResultBooks = LinkedHashMap<String, SearchBook>()
 
     private var currentSearchId = 0L
 
@@ -231,10 +232,15 @@ class SearchViewModel(
                     }
 
                     is SearchSessionEvent.Progress -> {
-                        val shelf = bookshelfKeys.value
+                        event.removedBookUrls.forEach { searchResultBooks.remove(it) }
+                        event.upsertBooks.forEach { book ->
+                            searchResultBooks[book.bookUrl] = book
+                        }
                         _uiState.update {
                             it.copy(
-                                results = event.books.toSearchResultItems(shelf),
+                                results = buildSearchResultItems(
+                                    shelf = bookshelfKeys.value,
+                                ),
                                 processedSources = event.processedSources,
                                 totalSources = event.totalSources,
                             )
@@ -292,6 +298,7 @@ class SearchViewModel(
         updateQuery(keyword, showSuggestions = false)
 
         currentSearchId = System.currentTimeMillis()
+        searchResultBooks.clear()
         _uiState.update {
             it.copy(
                 committedQuery = keyword,
@@ -416,6 +423,12 @@ class SearchViewModel(
                 )
             )
         }
+    }
+
+    private fun buildSearchResultItems(
+        shelf: Set<BookShelfKey>,
+    ): List<SearchResultItemUi> {
+        return searchResultBooks.values.toList().toSearchResultItems(shelf)
     }
 
     private fun List<SearchResultItemUi>.withShelfState(

@@ -163,10 +163,8 @@ class CacheBookService : BaseService() {
                 }
             }
 
-            //添加每一章到下载队列
-            indices.forEach { index ->
-                cacheBook.addDownload(index)
-            }
+            //添加章节到下载队列
+            cacheBook.addDownloads(indices)
 
             notificationContent = CacheBook.downloadSummary
             upCacheBookNotification()

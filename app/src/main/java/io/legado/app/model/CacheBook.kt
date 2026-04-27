@@ -100,6 +100,9 @@ object CacheBook {
         MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
     val downloadingIndicesFlow = _downloadingIndicesFlow.asStateFlow()
 
+    private val _queueChangedFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+    val queueChangedFlow = _queueChangedFlow.asSharedFlow()
+
     private val _downloadErrorFlow =
         MutableStateFlow<Pair<String, Set<Int>>>("" to emptySet())
     val downloadErrorFlow = _downloadErrorFlow.asStateFlow()
@@ -112,6 +115,10 @@ object CacheBook {
 
     val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
         get() = coordinator.taskMap
+
+    fun errorIndices(bookUrl: String): Set<Int> {
+        return errorIndexMap[bookUrl]?.toSet().orEmpty()
+    }
 
     private fun collectQueueStats(): QueueStats {
         var waiting = 0
@@ -222,6 +229,7 @@ object CacheBook {
 
     private fun onTaskQueuesChanged(bookUrl: String) {
         updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
         postEvent(EventBus.UP_DOWNLOAD, bookUrl)
     }
 
@@ -297,8 +305,13 @@ object CacheBook {
 
         @Synchronized
         fun addDownload(start: Int, end: Int) {
+            addDownloads(start..end)
+        }
+
+        @Synchronized
+        fun addDownloads(indices: Iterable<Int>) {
             isStopped = false
-            for (i in start..end) {
+            for (i in indices) {
                 if (!onDownloadSet.contains(i)) {
                     waitDownloadSet.add(i)
                 }

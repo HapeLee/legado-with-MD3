@@ -26,6 +26,7 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
 
     private val normalClosure = NanoWSD.WebSocketFrame.CloseCode.NormalClosure
     private val searchModel = SearchModel(this, this)
+    private val sentBookUrls = linkedSetOf<String>()
 
     private val SEARCH_FINISH = "Search finish"
 
@@ -66,6 +67,7 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                         close(normalClosure, SEARCH_FINISH, false)
                         return@launch
                     }
+                    sentBookUrls.clear()
                     searchModel.search(System.currentTimeMillis(), key)
                 }
             }
@@ -82,19 +84,24 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
 
     override fun getSearchScope(): SearchScope = SearchScope(AppConfig.searchScope)
 
-    override fun onSearchStart() {
+    override suspend fun onSearchStart() {
 
     }
 
-    override fun onSearchSuccess(
-        searchBooks: List<SearchBook>,
+    override suspend fun onSearchSuccess(
+        upsertBooks: List<SearchBook>,
+        removedBookUrls: List<String>,
+        resultCount: Int,
         processedSources: Int,
         totalSources: Int
     ) {
-        send(GSON.toJson(searchBooks))
+        val newBooks = upsertBooks.filter { sentBookUrls.add(it.bookUrl) }
+        if (newBooks.isNotEmpty()) {
+            send(GSON.toJson(newBooks))
+        }
     }
 
-    override fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) = close(normalClosure, SEARCH_FINISH, false)
+    override suspend fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) = close(normalClosure, SEARCH_FINISH, false)
 
     override fun onSearchCancel(exception: Throwable?) = close(normalClosure, exception?.toString() ?: SEARCH_FINISH, false)
 

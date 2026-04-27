@@ -684,7 +684,7 @@ private fun BookshelfManageScreen(
         ) {
             items(filteredBooks, key = { it.bookUrl }) { book ->
                 val cacheCount = remember(renderVersion, book.bookUrl) {
-                    viewModel.getCacheChapters(book.bookUrl)?.size ?: 0
+                    viewModel.getCacheCount(book.bookUrl) ?: 0
                 }
                 val isDownloading = remember(renderVersion, book.bookUrl) {
                     viewModel.isBookDownloading(book.bookUrl)
@@ -1512,7 +1512,7 @@ private fun BatchChangePreviewRow(
                     chapterCount = if (item.status == BatchChangeSourcePreviewStatus.Skipped) {
                         null
                     } else {
-                        candidate?.chapters?.size
+                        candidate?.chapterCount
                     },
                     onClick = {
                         candidate?.book?.let { onOpenBook(it, false) }
@@ -1624,7 +1624,7 @@ private fun OtherSourceOptionsSheet(
                     val candidate = currentItem.candidates[index]
                     SelectionItemCard(
                         title = candidate.source.bookSourceName,
-                        subtitle = "${candidate.book.name} · ${candidate.chapters.size}章",
+                        subtitle = "${candidate.book.name} · ${candidate.chapterCount}章",
                         supportingContent = {
                             AppText(
                                 text = candidate.book.getRealAuthor(),

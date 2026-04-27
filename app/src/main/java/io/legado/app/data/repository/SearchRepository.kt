@@ -39,7 +39,9 @@ sealed interface SearchSessionEvent {
     data object Started : SearchSessionEvent
 
     data class Progress(
-        val books: List<SearchBook>,
+        val upsertBooks: List<SearchBook>,
+        val removedBookUrls: List<String>,
+        val resultCount: Int,
         val processedSources: Int,
         val totalSources: Int,
     ) : SearchSessionEvent
@@ -120,32 +122,36 @@ class SearchRepositoryImpl(
     ) : SearchSession {
 
         private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        private val _events = MutableSharedFlow<SearchSessionEvent>(extraBufferCapacity = 64)
+        private val _events = MutableSharedFlow<SearchSessionEvent>(extraBufferCapacity = 8)
         override val events: Flow<SearchSessionEvent> = _events.asSharedFlow()
 
         private val searchModel = SearchModel(sessionScope, object : SearchModel.CallBack {
             override fun getSearchScope(): SearchScope = scopeProvider()
 
-            override fun onSearchStart() {
-                _events.tryEmit(SearchSessionEvent.Started)
+            override suspend fun onSearchStart() {
+                _events.emit(SearchSessionEvent.Started)
             }
 
-            override fun onSearchSuccess(
-                searchBooks: List<SearchBook>,
+            override suspend fun onSearchSuccess(
+                upsertBooks: List<SearchBook>,
+                removedBookUrls: List<String>,
+                resultCount: Int,
                 processedSources: Int,
                 totalSources: Int,
             ) {
-                _events.tryEmit(
+                _events.emit(
                     SearchSessionEvent.Progress(
-                        books = searchBooks.toList(),
+                        upsertBooks = upsertBooks,
+                        removedBookUrls = removedBookUrls,
+                        resultCount = resultCount,
                         processedSources = processedSources,
                         totalSources = totalSources,
                     )
                 )
             }
 
-            override fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) {
-                _events.tryEmit(SearchSessionEvent.Finished(isEmpty, hasMore))
+            override suspend fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) {
+                _events.emit(SearchSessionEvent.Finished(isEmpty, hasMore))
             }
 
             override fun onSearchCancel(exception: Throwable?) {
