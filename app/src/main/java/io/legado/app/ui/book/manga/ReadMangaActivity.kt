@@ -11,7 +11,6 @@ import android.view.MenuItem
 import android.view.WindowManager
 import android.view.animation.LinearInterpolator
 import androidx.activity.addCallback
-import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
@@ -99,6 +98,7 @@ import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.text.DecimalFormat
 import kotlin.math.ceil
 
@@ -185,7 +185,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             }
         }
     override val binding by viewBinding(ActivityMangaBinding::inflate)
-    override val viewModel by viewModels<ReadMangaViewModel>()
+    override val viewModel by viewModel<ReadMangaViewModel>()
     private val loadingViewVisible get() = binding.flLoading.isVisible
     private val df by lazy {
         DecimalFormat("0.0%")
