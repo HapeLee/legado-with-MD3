@@ -472,13 +472,14 @@ fun BookItem(
                 AppText(
                     text = book.latestChapterTime.toTimeAgo(),
                     style = LegadoTheme.typography.labelSmallEmphasized,
-                    color = if (layoutMode != 0 || !isCompact) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.outline,
+                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier.padding(end = 4.dp)
                 )
             }
             AppText(
                 text = book.latestChapterTitle ?: "",
-                style = LegadoTheme.typography.labelSmallEmphasized.copy(color = LegadoTheme.colorScheme.outline),
+                style = LegadoTheme.typography.labelSmallEmphasized,
+                color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
