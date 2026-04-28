@@ -246,10 +246,12 @@
     <string name="download_cancel">Download cancel</string>
     <string name="no_download">No download</string>
     <string name="download_count">Downloaded %1$d/%2$d</string>
+    <string name="cache_download_failed">Cache failed: %1$s</string>
     <string name="import_select_book">Import selected book(s)</string>
     <string name="threads_num_title">Number of Concurrent Tasks</string>
+    <string name="threads_num_summary">Controls concurrent download tasks. Higher values increase OOM risk</string>
     <string name="cache_book_threads_num_title">Cache Download Threads</string>
-    <string name="cache_book_threads_num_summary">Controls concurrent chapter downloads for offline book cache</string>
+    <string name="cache_book_threads_num_summary">Controls concurrent chapter downloads for offline book cache. Higher values increase OOM risk</string>
     <string name="change_icon">Change Icon</string>
     <string name="remove_from_bookshelf">In library</string>
     <string name="already_in_bookshelf">Already in Bookshelf</string>
@@ -919,6 +921,8 @@
     <string name="style">Style</string>
     <string name="group_style">Group style</string>
     <string name="export_file_name">Export file name</string>
+    <string name="export_file_name_template_hint">{name} - {author}</string>
+    <string name="export_file_name_template_help">Available variables: {name} title, {author} author, {group} group, {source} source, {remark} remark.\n\nExample: {name} - {author}\nResult: The Three-Body Problem - Liu Cixin\n\nYou can add fixed text before or after variables.</string>
     <string name="reset">Reset</string>
     <string name="null_url">Null URL</string>
     <string name="dict">dict</string>

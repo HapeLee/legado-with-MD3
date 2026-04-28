@@ -10,7 +10,6 @@ import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.JsExtensions
 import io.legado.app.ui.association.AddToBookshelfDialog
-import io.legado.app.ui.book.explore.ExploreShowActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.main.MainActivity
@@ -184,11 +183,14 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
                     } ?: (source as? BookSource) ?: return@launch
                     val sourceUrl = toSource.bookSourceUrl
                     withContext(Main) {
-                        activity.startActivity<ExploreShowActivity> {
-                            putExtra("exploreName", title)
-                            putExtra("sourceUrl", sourceUrl)
-                            putExtra("exploreUrl", url)
-                        }
+                        activity.startActivity(
+                            MainActivity.createExploreShowIntent(
+                                context = activity,
+                                exploreName = title,
+                                sourceUrl = sourceUrl,
+                                exploreUrl = url
+                            )
+                        )
                     }
                 }
             }

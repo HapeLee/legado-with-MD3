@@ -243,11 +243,6 @@
             android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop" />
-        <!-- 书籍管理 -->
-        <activity
-            android:name=".ui.book.manage.BookshelfManageActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 书源调试 -->
         <activity
             android:name=".ui.book.source.debug.BookSourceDebugActivity"
@@ -261,11 +256,6 @@
         <!-- 正文搜索 -->
         <activity
             android:name=".ui.book.searchContent.SearchContentActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
-        <!-- 发现界面 -->
-        <activity
-            android:name=".ui.book.explore.ExploreShowActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- 订阅源调试 -->

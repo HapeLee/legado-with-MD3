@@ -27,6 +27,7 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.model.CacheBook
+import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
@@ -72,6 +73,9 @@ data class BookshelfManageScreenUiState(
     val bookSort: Int = BookshelfConfig.bookshelfSort,
     val bookSortOrder: Int = BookshelfConfig.bookshelfSortOrder,
     val isDownloadRunning: Boolean = false,
+    val pendingDownloadBookUrls: Set<String> = emptySet(),
+    val downloadStates: Map<String, CacheBookDownloadState> = emptyMap(),
+    val downloadFailureMessages: Map<String, String> = emptyMap(),
     val isChangingSource: Boolean = false,
     val changeSourceProgress: String? = null,
     val changeSourceMessage: String? = null,
@@ -118,7 +122,7 @@ sealed interface BookshelfManageScreenIntent {
         val oldBookUrl: String,
         val source: BookSource,
         val book: Book,
-        val chapters: List<BookChapter>,
+        val chapterCount: Int,
     ) : BookshelfManageScreenIntent
     data class AddPreviewItemToShelf(val oldBookUrl: String) : BookshelfManageScreenIntent
     data class OpenBookInfoPreview(val book: Book, val inBookshelf: Boolean) : BookshelfManageScreenIntent
@@ -220,7 +224,7 @@ class BookshelfManageScreenViewModel(
                 intent.oldBookUrl,
                 intent.source,
                 intent.book,
-                intent.chapters
+                intent.chapterCount
             )
 
             is BookshelfManageScreenIntent.AddPreviewItemToShelf -> addPreviewItemToShelf(intent.oldBookUrl)
@@ -380,8 +384,33 @@ class BookshelfManageScreenViewModel(
             }
         }
         viewModelScope.launch {
-            CacheBook.downloadStateFlow.collect { state ->
-                state.books.keys.forEach { bookUrl ->
+            CacheBook.downloadStateFlow.collect { downloadState ->
+                _uiState.update { state ->
+                    val successfulBookUrls = downloadState.books
+                        .filterValues {
+                            it.successCount > 0 &&
+                                    it.failedIndices.isEmpty() &&
+                                    it.failureMessage == null
+                        }
+                        .keys
+                    val failureMessages = downloadState.books.mapNotNull { (bookUrl, bookState) ->
+                        val message = bookState.failureMessage ?: if (bookState.failedIndices.isNotEmpty()) {
+                            "${bookState.failedIndices.size} 章"
+                        } else {
+                            null
+                        }
+                        message?.let { bookUrl to it }
+                    }.toMap()
+                    state.copy(
+                        isDownloadRunning = downloadState.isRunning,
+                        pendingDownloadBookUrls = state.pendingDownloadBookUrls - downloadState.books.keys,
+                        downloadStates = downloadState.books,
+                        downloadFailureMessages = (
+                                state.downloadFailureMessages - successfulBookUrls
+                                ) + failureMessages,
+                    )
+                }
+                downloadState.books.keys.forEach { bookUrl ->
                     scheduleDownloadStatusRefresh(bookUrl)
                 }
                 scheduleDownloadStatusRefresh()
@@ -509,9 +538,13 @@ class BookshelfManageScreenViewModel(
     }
 
     private fun startDownloadForVisibleBooks(books: List<Book>, downloadAllChapters: Boolean) {
+        val bookUrls = books.mapTo(hashSetOf()) { it.bookUrl }
+        _uiState.update {
+            it.copy(downloadFailureMessages = it.downloadFailureMessages - bookUrls)
+        }
         execute {
             batchCacheDownloadUseCase.execute(
-                bookUrls = books.map { it.bookUrl }.toSet(),
+                bookUrls = bookUrls,
                 downloadAllChapters = downloadAllChapters,
                 skipAudioBooks = true
             )
@@ -522,12 +555,41 @@ class BookshelfManageScreenViewModel(
 
     private fun toggleBookDownload(book: Book) {
         if (book.isLocal) return
-        if (isBookDownloading(book.bookUrl)) {
+        if (isBookDownloading(book.bookUrl) || uiState.value.pendingDownloadBookUrls.contains(book.bookUrl)) {
             CacheBook.remove(context, book.bookUrl)
+            _uiState.update {
+                it.copy(pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl)
+            }
             syncDownloadRunning()
         } else {
+            _uiState.update {
+                it.copy(
+                    pendingDownloadBookUrls = it.pendingDownloadBookUrls + book.bookUrl,
+                    downloadFailureMessages = it.downloadFailureMessages - book.bookUrl
+                )
+            }
             execute {
                 cacheBookChaptersUseCase.executeRange(book.bookUrl, 0, book.lastChapterIndex)
+            }.onSuccess { count ->
+                if (count <= 0) {
+                    _uiState.update {
+                        it.copy(
+                            pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl,
+                            downloadFailureMessages = it.downloadFailureMessages +
+                                    (book.bookUrl to "没有可缓存的章节")
+                        )
+                    }
+                    _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的章节"))
+                }
+            }.onError { error ->
+                _uiState.update {
+                    it.copy(
+                        pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl,
+                        downloadFailureMessages = it.downloadFailureMessages +
+                                (book.bookUrl to (error.localizedMessage ?: "未知错误"))
+                    )
+                }
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存失败\n${error.localizedMessage}"))
             }.onFinally {
                 syncDownloadRunning()
             }
@@ -599,6 +661,9 @@ class BookshelfManageScreenViewModel(
 
     private fun downloadBooks(bookUrls: Set<String>, downloadAllChapters: Boolean) {
         if (bookUrls.isEmpty()) return
+        _uiState.update {
+            it.copy(downloadFailureMessages = it.downloadFailureMessages - bookUrls)
+        }
         execute {
             batchCacheDownloadUseCase.execute(
                 bookUrls = bookUrls,
@@ -652,7 +717,7 @@ class BookshelfManageScreenViewModel(
             return
         }
         execute {
-            val concurrency = OtherConfig.threadCount.coerceIn(1, 4)
+            val concurrency = OtherConfig.threadCount.coerceAtLeast(1)
             _uiState.update {
                 it.copy(
                     isChangingSource = true,
@@ -775,19 +840,19 @@ class BookshelfManageScreenViewModel(
         oldBookUrl: String,
         source: BookSource,
         book: Book,
-        chapters: List<BookChapter>,
+        chapterCount: Int,
     ) {
         _uiState.update { state ->
             state.copy(
                 batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
                     if (item.oldBook.bookUrl == oldBookUrl) {
-                        book.totalChapterNum = chapters.size
+                        book.totalChapterNum = chapterCount
                         item.copy(
                             candidates = listOf(
                                 BatchChangeSourceCandidate(
                                     source = source,
                                     book = book,
-                                    chapterCount = chapters.size
+                                    chapterCount = chapterCount
                                 )
                             ) +
                                     item.candidates,

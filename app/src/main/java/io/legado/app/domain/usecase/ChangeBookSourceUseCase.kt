@@ -32,7 +32,6 @@ data class ChangeSourceMigrationOptions(
 data class ChangeBookSourceResult(
     val oldBookUrl: String,
     val book: Book,
-    val chapters: List<BookChapter>,
 )
 
 data class BatchChangeBookSourceResult(
@@ -102,7 +101,7 @@ class ChangeBookSourceUseCase(
             bookChapterDao.insert(*chapters.toTypedArray())
             ReadBook.onChapterListUpdated(newBook)
         }
-        return ChangeBookSourceResult(oldBookUrl, newBook, chapters)
+        return ChangeBookSourceResult(oldBookUrl, newBook)
     }
 
     suspend fun batchChangeTo(

@@ -107,7 +107,7 @@ class BookshelfViewModel(
 
     // 更新相关
     private var threadCount = AppConfig.threadCount
-    private var poolSize = min(threadCount, AppConst.MAX_THREAD)
+    private var poolSize = threadCount
     private var upTocPool = Executors.newFixedThreadPool(poolSize).asCoroutineDispatcher()
     private val waitUpTocBooks = LinkedList<String>()
     private val onUpTocBooks = ConcurrentHashMap.newKeySet<String>()
@@ -495,7 +495,7 @@ class BookshelfViewModel(
 
     private fun upPool() {
         threadCount = AppConfig.threadCount
-        val newPoolSize = min(threadCount, AppConst.MAX_THREAD)
+        val newPoolSize = threadCount
         if (poolSize == newPoolSize) return
         poolSize = newPoolSize
         upTocPool.close()

@@ -42,7 +42,7 @@ class CacheBookService : BaseService() {
             private set
     }
 
-    private val threadCount = OtherConfig.cacheBookThreadCount
+    private val threadCount = OtherConfig.cacheBookThreadCount.coerceIn(1, CacheBook.maxDownloadConcurrency)
     private var cachePool =
         Executors.newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
     private var downloadJob: Job? = null
@@ -84,11 +84,16 @@ class CacheBookService : BaseService() {
         intent?.action?.let { action ->
             when (action) {
                 IntentAction.start -> {
-                    val bookUrl = intent.getStringExtra("bookUrl") ?: return@let
-                    val indices = intent.getIntegerArrayListExtra("indices")
-                    if (indices != null && indices.isNotEmpty()) {
-                        addDownloadData(bookUrl, indices)
+                    val requestId = intent.getLongExtra("requestId", -1L)
+                    val request = if (requestId >= 0) {
+                        CacheBook.takePendingRequest(requestId)
                     } else {
+                        null
+                    }
+                    if (request != null) {
+                        addDownloadRequest(request)
+                    } else {
+                        val bookUrl = intent.getStringExtra("bookUrl") ?: return@let
                         addDownloadData(
                             bookUrl,
                             intent.getIntExtra("start", 0),
@@ -113,19 +118,6 @@ class CacheBookService : BaseService() {
         super.onDestroy()
     }
 
-    private fun addDownloadData(bookUrl: String?, indices: Iterable<Int>) {
-        bookUrl ?: return
-        val values = indices.toSet()
-        if (values.isEmpty()) return
-        addDownloadRequest(
-            CacheDownloadRequest(
-                bookUrl = bookUrl,
-                selection = ChapterSelection.Indices(values),
-                source = CacheDownloadSource.Manual,
-            )
-        )
-    }
-
     private fun addDownloadData(bookUrl: String?, start: Int, end: Int) {
         bookUrl ?: return
         if (end < start) return
@@ -140,7 +132,10 @@ class CacheBookService : BaseService() {
 
     private fun addDownloadRequest(request: CacheDownloadRequest) {
         execute {
-            val cacheBook = CacheBook.getOrCreate(request.bookUrl) ?: return@execute
+            val cacheBook = CacheBook.getOrCreate(request.bookUrl) ?: run {
+                CacheBook.markBookFailed(request.bookUrl, getString(R.string.error_no_source))
+                return@execute
+            }
 
             val book = cacheBook.book
             val chapterCount = appDb.bookChapterDao.getChapterCount(request.bookUrl)
@@ -154,6 +149,10 @@ class CacheBookService : BaseService() {
                             WebBook.getBookInfoAwait(cacheBook.bookSource, book)
                         }.onFailure {
                             removeDownload(request.bookUrl)
+                            CacheBook.markBookFailed(
+                                request.bookUrl,
+                                getString(R.string.error_get_book_info)
+                            )
                             AppLog.put(
                                 "《$name》目录为空且加载详情页失败\n${it.localizedMessage}",
                                 it,
@@ -169,6 +168,10 @@ class CacheBookService : BaseService() {
                             book.update()
                         }
                         removeDownload(request.bookUrl)
+                        CacheBook.markBookFailed(
+                            request.bookUrl,
+                            getString(R.string.error_get_chapter_list)
+                        )
                         AppLog.put(
                             "《$name》目录为空且加载目录失败\n${it.localizedMessage}",
                             it,

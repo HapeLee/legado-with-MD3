@@ -243,10 +243,12 @@
     <string name="download_cancel">取消下载</string>
     <string name="no_download">暂无任务</string>
     <string name="download_count">%1$d/%2$d</string>
+    <string name="cache_download_failed">缓存失败：%1$s</string>
     <string name="import_select_book">导入选择书籍</string>
-    <string name="threads_num_title">更新和搜索线程数</string>
-    <string name="cache_book_threads_num_title">书籍缓存下载线程数</string>
-    <string name="cache_book_threads_num_summary">控制离线缓存章节下载的并发数量</string>
+    <string name="threads_num_title">更新和搜索线程</string>
+    <string name="threads_num_summary">控制更新和搜索线程的并发数量。数值越高越不稳定</string>
+    <string name="cache_book_threads_num_title">书籍缓存下载线程</string>
+    <string name="cache_book_threads_num_summary">控制离线缓存章节下载的并发数量。数值越高越不稳定</string>
     <string name="change_icon">切换图标</string>
     <string name="remove_from_bookshelf">已在书架</string>
     <string name="already_in_bookshelf">已在书架</string>
@@ -910,6 +912,8 @@
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
     <string name="export_file_name">导出文件名</string>
+    <string name="export_file_name_template_hint">{name} - {author}</string>
+    <string name="export_file_name_template_help">可用变量：{name} 书名、{author} 作者、{group} 分组、{source} 书源、{remark} 备注。\n\n示例：{name} - {author}\n输出：三体 - 刘慈欣\n\n变量前后可以添加固定文字。</string>
     <string name="reset">重置</string>
     <string name="null_url">URL 为空</string>
     <string name="dict">字典</string>

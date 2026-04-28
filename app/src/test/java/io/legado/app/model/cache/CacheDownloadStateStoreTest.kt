@@ -2,6 +2,7 @@ package io.legado.app.model.cache
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -37,17 +38,6 @@ class CacheDownloadStateStoreTest {
     }
 
     @Test
-    fun duplicateSuccessDoesNotInflateCount() {
-        val store = CacheDownloadStateStore()
-
-        store.markSuccess("a", 1)
-        store.markSuccess("a", 1)
-
-        assertEquals(1, store.state.books.getValue("a").successCount)
-        assertEquals(1, store.state.totalSuccess)
-    }
-
-    @Test
     fun removeBookRecalculatesRunningState() {
         val store = CacheDownloadStateStore()
 
@@ -57,5 +47,20 @@ class CacheDownloadStateStoreTest {
         assertFalse(store.state.isRunning)
         assertEquals(0, store.state.totalWaiting)
         assertEquals(emptyMap<String, CacheBookDownloadState>(), store.state.books)
+    }
+
+    @Test
+    fun bookFailureIsVisibleUntilQueueStartsAgain() {
+        val store = CacheDownloadStateStore()
+
+        store.markBookFailed("a", "source unavailable")
+
+        assertEquals("source unavailable", store.state.books.getValue("a").failureMessage)
+        assertEquals(1, store.state.totalFailure)
+
+        store.updateBookQueue("a", waitingCount = 1, runningIndices = emptySet())
+
+        assertNull(store.state.books.getValue("a").failureMessage)
+        assertEquals(0, store.state.totalFailure)
     }
 }

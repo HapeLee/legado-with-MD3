@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
@@ -33,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import java.util.concurrent.Executors
-import kotlin.math.min
 
 class ChangeCoverViewModel(application: Application) : BaseViewModel(application) {
     private val threadCount = OtherConfig.threadCount
@@ -105,7 +103,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
 
     private fun initSearchPool() {
         searchPool = Executors
-            .newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
+            .newFixedThreadPool(threadCount).asCoroutineDispatcher()
     }
 
     private fun startSearch() {

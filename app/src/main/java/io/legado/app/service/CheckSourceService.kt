@@ -45,7 +45,6 @@ import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.util.concurrent.Executors
 import kotlin.coroutines.coroutineContext
-import kotlin.math.min
 
 /**
  * 校验书源
@@ -53,7 +52,7 @@ import kotlin.math.min
 class CheckSourceService : BaseService() {
     private var threadCount = OtherConfig.threadCount
     private var searchCoroutine =
-        Executors.newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
+        Executors.newFixedThreadPool(threadCount).asCoroutineDispatcher()
     private var notificationMsg = appCtx.getString(R.string.service_starting)
     private var checkJob: Job? = null
     private var originSize = 0

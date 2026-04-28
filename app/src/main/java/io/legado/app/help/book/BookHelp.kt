@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
 import org.apache.commons.text.similarity.JaccardSimilarity
 import splitties.init.appCtx
@@ -48,6 +49,7 @@ import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.Pattern
 import java.util.zip.ZipFile
@@ -62,6 +64,8 @@ object BookHelp {
     private const val cacheImageFolderName = "images"
     private const val cacheEpubFolderName = "epub"
     private val downloadImages = ConcurrentHashMap<String, Mutex>()
+    private val imageDownloadSlots = Semaphore(2)
+    private val imageDecodeSlots = Semaphore(1)
 
     val cachePath = FileUtils.getPath(downloadDir, cacheFolderName)
 
@@ -299,23 +303,39 @@ object BookHelp {
             if (isImageExist(book, src)) {
                 return
             }
-            val analyzeUrl = AnalyzeUrl(
-                src, source = bookSource, coroutineContext = currentCoroutineContext()
-            )
-            val bytes = analyzeUrl.getByteArrayAwait()
-            //某些图片被加密，需要进一步解密
-            runScriptWithContext {
-                ImageUtils.decode(
-                    src, bytes, isCover = false, bookSource, book
+            imageDownloadSlots.acquire()
+            try {
+                val analyzeUrl = AnalyzeUrl(
+                    src, source = bookSource, coroutineContext = currentCoroutineContext()
                 )
-            }?.let {
-                if (!checkImage(it)) {
-                    // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
-                    // 所以无论如何都要将数据写入到文件里
-                    // throw NoStackTraceException("数据异常")
-                    AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
+                if (ImageUtils.skipDecode(bookSource, isCover = false)) {
+                    analyzeUrl.getInputStreamAwait().use {
+                        writeImage(book, src, it)
+                    }
+                } else {
+                    imageDecodeSlots.acquire()
+                    try {
+                        val bytes = analyzeUrl.getByteArrayAwait()
+                        //某些图片被加密，需要进一步解密
+                        runScriptWithContext {
+                            ImageUtils.decode(
+                                src, bytes, isCover = false, bookSource, book
+                            )
+                        }?.let {
+                            if (!checkImage(it)) {
+                                // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
+                                // 所以无论如何都要将数据写入到文件里
+                                // throw NoStackTraceException("数据异常")
+                                AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
+                            }
+                            writeImage(book, src, it)
+                        }
+                    } finally {
+                        imageDecodeSlots.release()
+                    }
                 }
-                writeImage(book, src, it)
+            } finally {
+                imageDownloadSlots.release()
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
@@ -339,6 +359,35 @@ object BookHelp {
     @Synchronized
     fun writeImage(book: Book, src: String, bytes: ByteArray) {
         getImage(book, src).createFileIfNotExist().writeBytes(bytes)
+    }
+
+    private fun writeImage(book: Book, src: String, inputStream: InputStream) {
+        val image = getImage(book, src)
+        val parent = image.parentFile ?: return
+        parent.mkdirs()
+        val temp = File(parent, "${image.name}.${System.nanoTime()}.tmp")
+        try {
+            FileOutputStream(temp).use { output ->
+                inputStream.copyTo(output, 16 * 1024)
+            }
+            if (!checkImage(temp)) {
+                AppLog.put("${book.name} 图片 $src 下载错误 数据异常")
+            }
+            if (image.exists()) {
+                image.delete()
+            }
+            if (!temp.renameTo(image)) {
+                image.createFileIfNotExist().outputStream().use { output ->
+                    temp.inputStream().use { input ->
+                        input.copyTo(output, 16 * 1024)
+                    }
+                }
+                temp.delete()
+            }
+        } catch (e: Exception) {
+            temp.delete()
+            throw e
+        }
     }
 
     @Synchronized
@@ -515,6 +564,16 @@ object BookHelp {
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, op)
         if (op.outWidth < 1 && op.outHeight < 1) {
             return SvgUtils.getSize(ByteArrayInputStream(bytes)) != null
+        }
+        return true
+    }
+
+    private fun checkImage(file: File): Boolean {
+        val op = BitmapFactory.Options()
+        op.inJustDecodeBounds = true
+        BitmapFactory.decodeFile(file.absolutePath, op)
+        if (op.outWidth < 1 && op.outHeight < 1) {
+            return SvgUtils.getSize(file.absolutePath) != null
         }
         return true
     }

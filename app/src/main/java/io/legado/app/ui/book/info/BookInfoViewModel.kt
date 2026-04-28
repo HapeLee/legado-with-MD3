@@ -101,9 +101,23 @@ class BookInfoViewModel(
     private var readRecordObserveJob: Job? = null
 
     fun initData(intent: Intent) {
-        if (currentBook != null) return
+        initData(intent.getStringExtra("bookUrl") ?: "")
+    }
+
+    fun initData(bookUrl: String) {
+        if (currentBook?.bookUrl == bookUrl) return
+        currentBook = null
+        currentChapterList = emptyList()
+        currentWebFiles = emptyList()
+        currentKindLabels = emptyList()
+        currentGroupNames = null
+        currentHasCustomGroup = false
+        inBookshelf = false
+        bookSource = null
+        chapterChanged = false
+        clearReadRecordObserve()
+        _uiState.value = BookInfoUiState()
         execute {
-            val bookUrl = intent.getStringExtra("bookUrl") ?: ""
             appDb.bookDao.getBook(bookUrl)?.let {
                 inBookshelf = !it.isNotShelf
                 return@execute it

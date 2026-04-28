@@ -82,7 +82,6 @@ import io.legado.app.help.book.tryParesExportFileName
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.info.ChangeSourceSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
@@ -141,19 +140,25 @@ private data class BookshelfManageListState(
 fun BookshelfManageRouteScreen(
     groupId: Long,
     onBackClick: () -> Unit,
+    onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     viewModel: BookshelfManageScreenViewModel = koinViewModel()
 ) {
     LaunchedEffect(groupId) {
         viewModel.dispatch(BookshelfManageScreenIntent.Initialize(groupId))
     }
-    BookshelfManageScreen(viewModel = viewModel, onBackClick = onBackClick)
+    BookshelfManageScreen(
+        viewModel = viewModel,
+        onBackClick = onBackClick,
+        onOpenBookInfo = onOpenBookInfo
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BookshelfManageScreen(
     viewModel: BookshelfManageScreenViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -205,18 +210,8 @@ private fun BookshelfManageScreen(
     val resultAnalyzedText = stringResource(R.string.result_analyzed)
     val errorScopeInputText = stringResource(R.string.error_scope_input)
     val noGroupText = stringResource(R.string.no_group)
-    val exportFileNameHintText = "书名：《{name}》 作者：{author}"
-    val exportFileNameHelpText = """
-支持变量：{name}（书名）、{author}（作者）、{group}（分组）、{source}（书源）、{remark}（备注）。
-可以在字段前后加任意字符。
-
-示例：
-书名：《{name}》 作者：{author}
-输出：书名：《三体》 作者：刘慈欣
-
-书名：《{name}》-作者：{author}_备注
-输出：书名：《三体》-作者：刘慈欣_备注
-    """.trimIndent()
+    val exportFileNameHintText = stringResource(R.string.export_file_name_template_hint)
+    val exportFileNameHelpText = stringResource(R.string.export_file_name_template_help)
     val booksByUrl = remember(state.books) { state.books.associateBy { it.bookUrl } }
     val userGroups = remember(state.groupList) { state.groupList.filter { it.groupId > 0L } }
 
@@ -331,10 +326,8 @@ private fun BookshelfManageScreen(
             when (effect) {
                 is BookshelfManageScreenEffect.ShowMessage -> context.toastOnUi(effect.message)
                 is BookshelfManageScreenEffect.NotifyBookChanged -> Unit
-                is BookshelfManageScreenEffect.OpenBookInfo -> context.startActivity<BookInfoActivity> {
-                    putExtra("name", effect.name)
-                    putExtra("author", effect.author)
-                    putExtra("bookUrl", effect.bookUrl)
+                is BookshelfManageScreenEffect.OpenBookInfo -> {
+                    onOpenBookInfo(effect.name, effect.author, effect.bookUrl)
                 }
             }
         }
@@ -686,8 +679,17 @@ private fun BookshelfManageScreen(
                 val cacheCount = remember(renderVersion, book.bookUrl) {
                     viewModel.getCacheCount(book.bookUrl) ?: 0
                 }
-                val isDownloading = remember(renderVersion, book.bookUrl) {
-                    viewModel.isBookDownloading(book.bookUrl)
+                val downloadState = state.downloadStates[book.bookUrl]
+                val isPreparingDownload = state.pendingDownloadBookUrls.contains(book.bookUrl)
+                val waitingDownloadCount = downloadState?.waitingCount ?: 0
+                val runningDownloadCount = downloadState?.runningIndices?.size ?: 0
+                val isDownloadingInCacheModel = viewModel.isBookDownloading(book.bookUrl)
+                val isDownloading = isPreparingDownload ||
+                        waitingDownloadCount > 0 ||
+                        runningDownloadCount > 0 ||
+                        isDownloadingInCacheModel
+                val downloadFailureText = state.downloadFailureMessages[book.bookUrl]?.let {
+                    stringResource(R.string.cache_download_failed, it)
                 }
                 val isSelected = selectedBookUrls.contains(book.bookUrl)
                 val exportMsg = remember(renderVersion, book.bookUrl) {
@@ -761,8 +763,20 @@ private fun BookshelfManageScreen(
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                if (downloadFailureText != null) {
+                                    AppText(
+                                        text = downloadFailureText,
+                                        modifier = Modifier.weight(1f),
+                                        style = LegadoTheme.typography.labelSmall,
+                                        color = LegadoTheme.colorScheme.error,
+                                        maxLines = 1
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     SmallTonalIconButton(
                                         onClick = {
@@ -912,7 +926,7 @@ private fun BookshelfManageScreen(
                         oldBookUrl = book.bookUrl,
                         source = source,
                         book = newBook,
-                        chapters = toc,
+                        chapterCount = toc.size,
                     )
                 )
                 manualSearchPreviewBook = null

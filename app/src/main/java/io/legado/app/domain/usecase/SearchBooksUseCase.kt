@@ -1,6 +1,5 @@
 package io.legado.app.domain.usecase
 
-import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.coroutineContext
-import kotlin.math.min
 
 data class BookSearchRequest(
     val keyword: String,
@@ -83,7 +81,7 @@ class SearchBooksUseCase(
         }
 
         val merger = SearchResultMerger(keyword, request.precision)
-        val concurrency = min(request.concurrency.coerceAtLeast(1), AppConst.MAX_THREAD)
+        val concurrency = request.concurrency.coerceAtLeast(1)
         var hasMore = false
         var processedSources = 0
 

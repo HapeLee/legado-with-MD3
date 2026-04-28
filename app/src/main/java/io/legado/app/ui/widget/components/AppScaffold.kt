@@ -38,13 +38,15 @@ fun AppScaffold(
     floatingActionButtonPosition: FabPosition = FabPosition.End,
     contentColor: Color = contentColorFor(MiuixTheme.colorScheme.surface),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
+    alwaysDrawBehindBars: Boolean = false,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
     val hasImageBg = ThemeConfig.hasImageBg(isDark)
     val hazeState = remember { HazeState() }
     val composeEngine = LegadoTheme.composeEngine
-    val contentDrawsBehindBars = ThemeConfig.enableBlur || ThemeConfig.enableProgressiveBlur
+    val contentDrawsBehindBars =
+        alwaysDrawBehindBars || ThemeConfig.enableBlur || ThemeConfig.enableProgressiveBlur
 
     val containerColor = if (hasImageBg) {
         Color.Transparent

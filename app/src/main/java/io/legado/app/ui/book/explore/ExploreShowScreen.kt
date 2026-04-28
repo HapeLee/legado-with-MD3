@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.explore
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -95,14 +94,15 @@ import org.koin.compose.koinInject
 @Composable
 fun ExploreShowScreen(
     title: String,
-    intent: Intent,
+    sourceUrl: String?,
+    exploreUrl: String?,
     onBack: () -> Unit,
     onBookClick: (SearchBook) -> Unit,
     viewModel: ExploreShowViewModel = koinViewModel()
 ) {
 
-    LaunchedEffect(Unit) {
-        viewModel.initData(intent)
+    LaunchedEffect(sourceUrl, exploreUrl, viewModel) {
+        viewModel.initData(sourceUrl, exploreUrl)
     }
 
     val books by viewModel.uiBooks.collectAsState()
@@ -124,7 +124,6 @@ fun ExploreShowScreen(
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
-    val sourceUrl = remember(intent) { intent.getStringExtra("sourceUrl") }
     val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
 
     LaunchedEffect(sourceUrl) {

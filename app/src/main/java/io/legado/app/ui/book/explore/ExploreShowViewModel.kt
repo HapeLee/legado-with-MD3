@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.explore
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSource
@@ -124,10 +123,18 @@ class ExploreShowViewModel(
         }
     }
 
-    fun initData(intent: Intent) {
-        val incomingSourceUrl = intent.getStringExtra("sourceUrl")
+    fun initData(incomingSourceUrl: String?, incomingExploreUrl: String?) {
+        if (sourceUrl == incomingSourceUrl && exploreUrl == incomingExploreUrl && bookSource != null) {
+            return
+        }
         sourceUrl = incomingSourceUrl
-        exploreUrl = intent.getStringExtra("exploreUrl")
+        exploreUrl = incomingExploreUrl
+        page = 1
+        bookSource = null
+        _rawBooks.value = emptyList()
+        _isEndStateFlow.value = false
+        _errorMsg.value = null
+        _selectedKindTitle.value = null
 
         viewModelScope.launch {
             if (bookSource == null && incomingSourceUrl != null) {

@@ -163,6 +163,7 @@ private fun BookInfoScreenContent(
                 text = { Text(stringResource(R.string.reading)) },
             )
         },
+        alwaysDrawBehindBars = true,
     ) { paddingValues ->
         val book = state.book
         if (book == null) {
@@ -826,7 +827,7 @@ private fun BookInfoSummary(
         modifier = Modifier
             .fillMaxWidth()
             .background(LegadoTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         AppText(

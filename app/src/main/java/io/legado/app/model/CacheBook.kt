@@ -44,13 +44,21 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.CoroutineContext
 
 object CacheBook {
 
+    const val maxDownloadConcurrency = 8
+
     private data class QueueStats(
         val waitingCount: Int,
         val downloadingCount: Int
+    )
+
+    private data class ChapterKey(
+        val bookUrl: String,
+        val index: Int,
     )
 
     private class CacheBookCoordinator {
@@ -80,7 +88,7 @@ object CacheBook {
                 }
             }.onStart {
                 updateSummary()
-            }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceAtLeast(1)) {
+            }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceIn(1, maxDownloadConcurrency)) {
                 coroutineScope {
                     it.download(this, context)
                 }
@@ -92,6 +100,8 @@ object CacheBook {
 
     private val coordinator = CacheBookCoordinator()
     private val stateStore = CacheDownloadStateStore()
+    private val pendingRequests = ConcurrentHashMap<Long, CacheDownloadRequest>()
+    private val pendingRequestId = AtomicLong(0)
     val downloadStateFlow = stateStore.stateFlow
 
     private val _cacheSuccessFlow = MutableSharedFlow<BookChapter>(extraBufferCapacity = 64)
@@ -113,15 +123,21 @@ object CacheBook {
     @Volatile
     private var lastQueueStats = QueueStats(0, 0)
 
-    val successDownloadSet = ConcurrentHashMap.newKeySet<String>()
-    val errorDownloadMap = ConcurrentHashMap<String, Int>()
-    private val errorIndexMap = ConcurrentHashMap<String, MutableSet<Int>>()
+    @Volatile
+    private var successDownloadCount = 0
+    private val errorRetryMap = ConcurrentHashMap<ChapterKey, Int>()
 
     val cacheBookMap: ConcurrentHashMap<String, CacheBookModel>
         get() = coordinator.taskMap
 
     fun errorIndices(bookUrl: String): Set<Int> {
         return stateStore.bookState(bookUrl)?.failedIndices.orEmpty()
+    }
+
+    fun markBookFailed(bookUrl: String, message: String) {
+        stateStore.markBookFailed(bookUrl, message)
+        updateSummary()
+        _queueChangedFlow.tryEmit(bookUrl)
     }
 
     private fun collectQueueStats(): QueueStats {
@@ -139,7 +155,7 @@ object CacheBook {
         val stats = collectQueueStats()
         lastQueueStats = stats
         _downloadSummaryFlow.value =
-            "正在下载:${stats.downloadingCount}|等待中:${stats.waitingCount}|失败:${errorDownloadMap.size}|成功:${successDownloadSet.size}"
+            "正在下载:${stats.downloadingCount}|等待中:${stats.waitingCount}|失败:${stateStore.state.totalFailure}|成功:$successDownloadCount"
     }
 
     @Synchronized
@@ -204,8 +220,11 @@ object CacheBook {
             }
             is ChapterSelection.Single -> Unit
         }
+        val requestId = pendingRequestId.incrementAndGet()
+        pendingRequests[requestId] = request
         context.startService<CacheBookService> {
             action = IntentAction.start
+            putExtra("requestId", requestId)
             putExtra("bookUrl", request.bookUrl)
             putExtra("source", request.source.name)
             when (val selection = request.selection) {
@@ -213,15 +232,17 @@ object CacheBook {
                     putExtra("start", selection.start)
                     putExtra("end", selection.end)
                 }
-                is ChapterSelection.Indices -> {
-                    putIntegerArrayListExtra("indices", ArrayList(selection.values))
-                }
+                is ChapterSelection.Indices -> Unit
                 is ChapterSelection.Single -> {
                     putExtra("start", selection.index)
                     putExtra("end", selection.index)
                 }
             }
         }
+    }
+
+    fun takePendingRequest(requestId: Long): CacheDownloadRequest? {
+        return pendingRequests.remove(requestId)
     }
 
     fun remove(context: Context, bookUrl: String) {
@@ -232,12 +253,12 @@ object CacheBook {
     }
 
     fun removeBook(bookUrl: String): Boolean {
-        val model = cacheBookMap.remove(bookUrl) ?: return false
-        model.stop()
+        val model = cacheBookMap.remove(bookUrl)
+        model?.stop()
         stateStore.removeBook(bookUrl)
         updateSummary()
         _queueChangedFlow.tryEmit(bookUrl)
-        return true
+        return model != null
     }
 
     fun removeChapter(bookUrl: String, chapterIndex: Int): Boolean {
@@ -255,9 +276,9 @@ object CacheBook {
     fun close() {
         cacheBookMap.forEach { (_, model) -> model.stop() }
         cacheBookMap.clear()
-        successDownloadSet.clear()
-        errorDownloadMap.clear()
-        errorIndexMap.clear()
+        successDownloadCount = 0
+        errorRetryMap.clear()
+        pendingRequests.clear()
         stateStore.clear()
         updateSummary()
     }
@@ -273,16 +294,16 @@ object CacheBook {
     val totalCount: Int
         get() {
             val stats = collectQueueStats()
-            return stats.waitingCount + stats.downloadingCount + successDownloadSet.size + errorDownloadMap.size
+            return stats.waitingCount + stats.downloadingCount + successDownloadCount + stateStore.state.totalFailure
         }
 
     val completedCount: Int
-        get() = successDownloadSet.size + errorDownloadMap.size
+        get() = successDownloadCount + stateStore.state.totalFailure
 
     val downloadSummary: String
         get() {
             val stats = collectQueueStats()
-            return "正在下载:${stats.downloadingCount} | 等待中:${stats.waitingCount} | 失败:${errorDownloadMap.size} | 成功:${successDownloadSet.size}"
+            return "正在下载:${stats.downloadingCount} | 等待中:${stats.waitingCount} | 失败:${stateStore.state.totalFailure} | 成功:$successDownloadCount"
         }
 
     val isRun: Boolean
@@ -350,9 +371,6 @@ object CacheBook {
 
         @Synchronized
         fun isDownloading(index: Int): Boolean = onDownloadSet.contains(index)
-
-        @Synchronized
-        fun waitingIndices(): Set<Int> = queue.waitingIndices()
 
         @Synchronized
         fun downloadingIndices(): Set<Int> = onDownloadSet.toSet()
@@ -438,9 +456,9 @@ object CacheBook {
         private fun onSuccess(chapter: BookChapter) {
             onDownloadSet.remove(chapter.index)
             chapterTasks.remove(chapter.index)
-            successDownloadSet.add(chapter.primaryStr())
-            errorDownloadMap.remove(chapter.primaryStr())
-            errorIndexMap[book.bookUrl]?.remove(chapter.index)
+            val chapterKey = ChapterKey(book.bookUrl, chapter.index)
+            successDownloadCount++
+            errorRetryMap.remove(chapterKey)
             stateStore.markSuccess(book.bookUrl, chapter.index)
             notifyDownloadSetChanged()
             notifyErrorChanged()
@@ -451,9 +469,7 @@ object CacheBook {
         private fun onPreError(chapter: BookChapter, error: Throwable) {
             waitingRetry = true
             if (error !is ConcurrentException) {
-                errorDownloadMap.merge(chapter.primaryStr(), 1) { old, inc -> old + inc }
-                errorIndexMap.getOrPut(book.bookUrl) { ConcurrentHashMap.newKeySet() }
-                    .add(chapter.index)
+                errorRetryMap.merge(ChapterKey(book.bookUrl, chapter.index), 1) { old, inc -> old + inc }
                 stateStore.markFailed(book.bookUrl, chapter.index)
             }
             onDownloadSet.remove(chapter.index)
@@ -462,7 +478,7 @@ object CacheBook {
 
         @Synchronized
         private fun onPostError(chapter: BookChapter, error: Throwable) {
-            val retryCount = errorDownloadMap[chapter.primaryStr()] ?: 0
+            val retryCount = errorRetryMap[ChapterKey(book.bookUrl, chapter.index)] ?: 0
             if (retryCount < 3 && !isStopped) {
                 queue.enqueue(ChapterSelection.Single(chapter.index))
             } else {

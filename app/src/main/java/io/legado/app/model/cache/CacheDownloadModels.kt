@@ -41,6 +41,6 @@ data class CacheBookDownloadState(
     val waitingCount: Int = 0,
     val runningIndices: Set<Int> = emptySet(),
     val failedIndices: Set<Int> = emptySet(),
-    val successIndices: Set<Int> = emptySet(),
     val successCount: Int = 0,
+    val failureMessage: String? = null,
 )

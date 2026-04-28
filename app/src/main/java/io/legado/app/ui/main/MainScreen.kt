@@ -56,7 +56,6 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
@@ -76,7 +75,6 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -95,6 +93,8 @@ fun MainScreen(
     onNavigateToLocalImport: () -> Unit,
     onNavigateToCache: (Long) -> Unit,
     onNavigateToBookCacheManage: () -> Unit,
+    onNavigateToBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
+    onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
     onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
     onNavigateToRssRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
 ) {
@@ -374,11 +374,7 @@ fun MainScreen(
                                 context.startActivityForBook(book)
                             },
                             onBookLongClick = { book ->
-                                context.startActivity<BookInfoActivity> {
-                                    putExtra("name", book.name)
-                                    putExtra("author", book.author)
-                                    putExtra("bookUrl", book.bookUrl)
-                                }
+                                onNavigateToBookInfo(book.name, book.author, book.bookUrl)
                             },
                             onNavigateToSearch = { query -> onNavigateToSearch(query) },
                             onNavigateToRemoteImport = onNavigateToRemoteImport,
@@ -386,7 +382,9 @@ fun MainScreen(
                             onNavigateToCache = onNavigateToCache
                         )
 
-                        MainDestination.Explore -> ExploreScreen()
+                        MainDestination.Explore -> ExploreScreen(
+                            onOpenExploreShow = onNavigateToExploreShow
+                        )
                         MainDestination.Rss -> RssScreen(
                             onOpenSort = { sourceUrl, sortUrl, key ->
                                 onNavigateToRssSort(sourceUrl, sortUrl, key)

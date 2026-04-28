@@ -47,6 +47,7 @@ data class BookCacheBookItem(
     val author: String,
     val totalCount: Int,
     val cachedCount: Int,
+    val cachedFileCount: Int,
     val waitingCount: Int,
     val downloadingCount: Int,
     val errorCount: Int,
@@ -188,9 +189,7 @@ class BookCacheManageViewModel(
                     sourceBooks
                         .filterNot { it.isLocal || it.isAudio }
                         .mapNotNull { book -> buildBookItem(book) }
-                        .filter { item ->
-                            item.cachedCount > 0 || item.isDownloading || item.errorCount > 0
-                        }
+                        .filter(::shouldShowItem)
                 )
                 val booksByUrl = items.associateBy { it.bookUrl }
                 val retainedExpandedBookUrls = expandedBookUrls.filterTo(linkedSetOf()) {
@@ -265,9 +264,7 @@ class BookCacheManageViewModel(
             val item = book
                 ?.takeUnless { it.isLocal || it.isAudio }
                 ?.let { buildBookItem(it) }
-                ?.takeIf {
-                    it.cachedCount > 0 || it.isDownloading || it.errorCount > 0
-                }
+                ?.takeIf(::shouldShowItem)
             val chapters = if (expanded && item != null) {
                 buildChapterItems(item.bookUrl)
             } else {
@@ -320,11 +317,16 @@ class BookCacheManageViewModel(
             author = book.getRealAuthor(),
             totalCount = totalCount,
             cachedCount = cachedCount,
+            cachedFileCount = cachedFileCount,
             waitingCount = waitingCount,
             downloadingCount = downloadingCount,
             errorCount = errorIndices.size,
             isNotShelf = book.isNotShelf,
         )
+    }
+
+    private fun shouldShowItem(item: BookCacheBookItem): Boolean {
+        return item.cachedFileCount > 0 || item.isDownloading || item.errorCount > 0
     }
 
     private fun buildChapterItems(bookUrl: String): List<BookCacheChapterItem> {
@@ -472,7 +474,7 @@ class BookCacheManageViewModel(
     }
 
     private fun deleteBookCache(bookUrl: String) {
-        CacheBook.remove(context, bookUrl)
+        CacheBook.removeBook(bookUrl)
         execute {
             clearBookCacheUseCase.execute(bookUrl)
         }.onSuccess {

@@ -21,18 +21,22 @@ class CacheDownloadStateStore {
             current.copy(
                 waitingCount = waitingCount,
                 runningIndices = runningIndices,
+                failureMessage = if (waitingCount > 0 || runningIndices.isNotEmpty()) {
+                    null
+                } else {
+                    current.failureMessage
+                },
             )
         }
     }
 
     fun markSuccess(bookUrl: String, chapterIndex: Int) {
         updateBook(bookUrl) { current ->
-            val successIndices = current.successIndices + chapterIndex
             current.copy(
                 runningIndices = current.runningIndices - chapterIndex,
                 failedIndices = current.failedIndices - chapterIndex,
-                successIndices = successIndices,
-                successCount = successIndices.size,
+                successCount = current.successCount + 1,
+                failureMessage = null,
             )
         }
     }
@@ -42,6 +46,16 @@ class CacheDownloadStateStore {
             current.copy(
                 runningIndices = current.runningIndices - chapterIndex,
                 failedIndices = current.failedIndices + chapterIndex,
+            )
+        }
+    }
+
+    fun markBookFailed(bookUrl: String, message: String) {
+        updateBook(bookUrl) { current ->
+            current.copy(
+                waitingCount = 0,
+                runningIndices = emptySet(),
+                failureMessage = message,
             )
         }
     }
@@ -79,7 +93,8 @@ class CacheDownloadStateStore {
     private fun CacheDownloadState.recalculate(): CacheDownloadState {
         val totalWaiting = books.values.sumOf { it.waitingCount }
         val totalRunning = books.values.sumOf { it.runningIndices.size }
-        val totalFailure = books.values.sumOf { it.failedIndices.size }
+        val totalFailure = books.values.sumOf { it.failedIndices.size } +
+                books.values.count { it.failureMessage != null }
         val totalSuccess = books.values.sumOf { it.successCount }
         return copy(
             isRunning = totalWaiting > 0 || totalRunning > 0,
