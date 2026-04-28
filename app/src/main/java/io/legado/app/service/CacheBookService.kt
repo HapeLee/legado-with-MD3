@@ -7,17 +7,18 @@ import io.legado.app.R
 import io.legado.app.base.BaseService
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
 import io.legado.app.help.book.update
 import io.legado.app.model.CacheBook
+import io.legado.app.model.cache.CacheDownloadRequest
+import io.legado.app.model.cache.CacheDownloadSource
+import io.legado.app.model.cache.ChapterSelection
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.activityPendingIntent
-import io.legado.app.utils.postEvent
 import io.legado.app.utils.servicePendingIntent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -75,7 +76,6 @@ class CacheBookService : BaseService() {
                 delay(1000)
                 notificationContent = CacheBook.downloadSummary
                 upCacheBookNotification()
-                postEvent(EventBus.UP_DOWNLOAD, "")
             }
         }
     }
@@ -111,18 +111,39 @@ class CacheBookService : BaseService() {
         cachePool.close()
         CacheBook.close()
         super.onDestroy()
-        postEvent(EventBus.UP_DOWNLOAD, "")
     }
 
-    private fun addDownloadData(bookUrl: String?, indices: List<Int>) {
+    private fun addDownloadData(bookUrl: String?, indices: Iterable<Int>) {
         bookUrl ?: return
-        if (indices.isEmpty()) return
+        val values = indices.toSet()
+        if (values.isEmpty()) return
+        addDownloadRequest(
+            CacheDownloadRequest(
+                bookUrl = bookUrl,
+                selection = ChapterSelection.Indices(values),
+                source = CacheDownloadSource.Manual,
+            )
+        )
+    }
 
+    private fun addDownloadData(bookUrl: String?, start: Int, end: Int) {
+        bookUrl ?: return
+        if (end < start) return
+        addDownloadRequest(
+            CacheDownloadRequest(
+                bookUrl = bookUrl,
+                selection = ChapterSelection.Range(start, end),
+                source = CacheDownloadSource.Manual,
+            )
+        )
+    }
+
+    private fun addDownloadRequest(request: CacheDownloadRequest) {
         execute {
-            val cacheBook = CacheBook.getOrCreate(bookUrl) ?: return@execute
+            val cacheBook = CacheBook.getOrCreate(request.bookUrl) ?: return@execute
 
             val book = cacheBook.book
-            val chapterCount = appDb.bookChapterDao.getChapterCount(bookUrl)
+            val chapterCount = appDb.bookChapterDao.getChapterCount(request.bookUrl)
 
             if (chapterCount == 0) {
                 cacheBook.setLoading()
@@ -132,7 +153,7 @@ class CacheBookService : BaseService() {
                         kotlin.runCatching {
                             WebBook.getBookInfoAwait(cacheBook.bookSource, book)
                         }.onFailure {
-                            removeDownload(bookUrl)
+                            removeDownload(request.bookUrl)
                             AppLog.put(
                                 "《$name》目录为空且加载详情页失败\n${it.localizedMessage}",
                                 it,
@@ -147,7 +168,7 @@ class CacheBookService : BaseService() {
                             book.totalChapterNum = 0
                             book.update()
                         }
-                        removeDownload(bookUrl)
+                        removeDownload(request.bookUrl)
                         AppLog.put(
                             "《$name》目录为空且加载目录失败\n${it.localizedMessage}",
                             it,
@@ -163,7 +184,7 @@ class CacheBookService : BaseService() {
             }
 
             //添加章节到下载队列
-            cacheBook.addDownloads(indices)
+            cacheBook.addRequest(request)
 
             notificationContent = CacheBook.downloadSummary
             upCacheBookNotification()
@@ -174,14 +195,9 @@ class CacheBookService : BaseService() {
         }
     }
 
-    private fun addDownloadData(bookUrl: String?, start: Int, end: Int) {
-        addDownloadData(bookUrl, (start..end).toList())
-    }
-
 
     private fun removeDownload(bookUrl: String?) {
         CacheBook.cacheBookMap[bookUrl]?.stop()
-        postEvent(EventBus.UP_DOWNLOAD, "")
         if (downloadJob == null && CacheBook.isRun) {
             download()
             return

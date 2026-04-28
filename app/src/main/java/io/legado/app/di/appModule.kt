@@ -30,6 +30,7 @@ import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.domain.gateway.BookCacheCleanupGateway
 import io.legado.app.domain.gateway.AppStartupGateway
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
+import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
 import io.legado.app.domain.gateway.LocalBookGateway
@@ -46,6 +47,7 @@ import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
@@ -140,7 +142,12 @@ val appModule = module {
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
-    single<SearchRepository> { SearchRepositoryImpl(get()) }
+    single {
+        SearchRepositoryImpl(get())
+    }
+    single<SearchRepository> { get<SearchRepositoryImpl>() }
+    single<BookSearchGateway> { get<SearchRepositoryImpl>() }
+    singleOf(::SearchBooksUseCase)
 
     single<ImageLoader> {
         ImageLoader.Builder(get())

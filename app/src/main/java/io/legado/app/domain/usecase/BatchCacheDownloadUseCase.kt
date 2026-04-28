@@ -3,6 +3,9 @@ package io.legado.app.domain.usecase
 import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.model.CacheableBook
 import io.legado.app.domain.repository.BookDomainRepository
+import io.legado.app.model.cache.CacheDownloadRequest
+import io.legado.app.model.cache.CacheDownloadSource
+import io.legado.app.model.cache.ChapterSelection
 
 class BatchCacheDownloadUseCase(
     private val bookRepository: BookDomainRepository,
@@ -31,13 +34,16 @@ class BatchCacheDownloadUseCase(
     ): Boolean {
         if (book.isLocal) return false
         if (skipAudioBooks && book.isAudio) return false
-        val indices = if (downloadAllChapters) {
-            (0..book.lastChapterIndex).toList()
-        } else {
-            (book.durChapterIndex..book.lastChapterIndex).toList()
-        }
-        if (indices.isEmpty()) return false
-        bookCacheDownloadGateway.start(book.bookUrl, indices)
+        val startIndex = if (downloadAllChapters) 0 else book.durChapterIndex
+        val endIndex = book.lastChapterIndex
+        if (endIndex < startIndex) return false
+        bookCacheDownloadGateway.start(
+            CacheDownloadRequest(
+                bookUrl = book.bookUrl,
+                selection = ChapterSelection.Range(startIndex, endIndex),
+                source = CacheDownloadSource.Batch,
+            )
+        )
         return true
     }
 }

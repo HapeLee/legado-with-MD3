@@ -21,6 +21,7 @@ import io.legado.app.help.bookmark.BookmarkExporter
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -89,8 +90,7 @@ data class TocDomainItem(
 )
 
 private data class DownloadContext(
-    val downloadingPair: Pair<String, Set<Int>>,
-    val errorPair: Pair<String, Set<Int>>,
+    val downloadState: CacheBookDownloadState?,
     val cachedFiles: Set<String>
 )
 
@@ -206,11 +206,11 @@ class TocViewModel(
             .distinctUntilChanged()
 
     private val downloadContextFlow = combine(
-        CacheBook.downloadingIndicesFlow,
-        CacheBook.downloadErrorFlow,
+        bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged(),
+        CacheBook.downloadStateFlow,
         _cacheFileNames
-    ) { downloading, errors, cached ->
-        DownloadContext(downloading, errors, cached)
+    ) { bookUrl, state, cached ->
+        DownloadContext(state.books[bookUrl], cached)
     }
 
     private val uiConfigFlow = combine(
@@ -263,15 +263,13 @@ class TocViewModel(
             }
         }
 
-        val (downloadingPair, errorPair, cachedFiles) = downloadCtx
-        val downloadingIndices =
-            if (downloadingPair.first == book.bookUrl) downloadingPair.second else emptySet()
-        val errorIndices =
-            if (errorPair.first == book.bookUrl) errorPair.second else emptySet()
+        val runningIndices = downloadCtx.downloadState?.runningIndices.orEmpty()
+        val errorIndices = downloadCtx.downloadState?.failedIndices.orEmpty()
+        val cachedFiles = downloadCtx.cachedFiles
 
         processedChapters.map { chapter ->
             val downloadState = when {
-                chapter.index in downloadingIndices -> DownloadState.DOWNLOADING
+                chapter.index in runningIndices -> DownloadState.DOWNLOADING
                 chapter.index in errorIndices -> DownloadState.ERROR
                 chapter.getFileName() in cachedFiles -> DownloadState.SUCCESS
                 else -> DownloadState.NONE

@@ -37,7 +37,9 @@ import io.legado.app.utils.cnCompare
 import io.legado.app.utils.move
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -155,6 +157,10 @@ class BookshelfManageScreenViewModel(
     private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
 ) : BaseViewModel(application) {
 
+    private companion object {
+        const val DOWNLOAD_STATUS_REFRESH_INTERVAL_MILLIS = 2_000L
+    }
+
     private val _uiState = MutableStateFlow(BookshelfManageScreenUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -165,8 +171,11 @@ class BookshelfManageScreenViewModel(
     private var booksJob: Job? = null
     private var groupsJob: Job? = null
     private var cacheLoadJob: Job? = null
-    private val cacheCountJobs = ConcurrentHashMap<String, Job>()
     private var observersStarted = false
+    private val pendingDownloadStatusBookUrls = ConcurrentHashMap.newKeySet<String>()
+    private val pendingCacheCountRefreshBookUrls = ConcurrentHashMap.newKeySet<String>()
+    @Volatile
+    private var pendingDownloadRunningRefresh = false
 
     fun dispatch(intent: BookshelfManageScreenIntent) {
         when (intent) {
@@ -367,28 +376,26 @@ class BookshelfManageScreenViewModel(
         observersStarted = true
         viewModelScope.launch {
             CacheBook.cacheSuccessFlow.collect { chapter ->
-                onChapterCached(chapter)
+                scheduleCacheCountRefresh(chapter.bookUrl)
             }
         }
         viewModelScope.launch {
-            CacheBook.downloadingIndicesFlow.collect { (bookUrl, _) ->
-                syncDownloadRunning()
-                if (bookUrl.isNotEmpty()) {
-                    emitBookChanged(bookUrl)
+            CacheBook.downloadStateFlow.collect { state ->
+                state.books.keys.forEach { bookUrl ->
+                    scheduleDownloadStatusRefresh(bookUrl)
                 }
+                scheduleDownloadStatusRefresh()
             }
         }
         viewModelScope.launch {
-            CacheBook.downloadErrorFlow.collect { (bookUrl, _) ->
-                syncDownloadRunning()
-                if (bookUrl.isNotEmpty()) {
-                    emitBookChanged(bookUrl)
-                }
+            CacheBook.queueChangedFlow.collect { bookUrl ->
+                scheduleDownloadStatusRefresh(bookUrl)
             }
         }
-        viewModelScope.launch {
-            CacheBook.downloadSummaryFlow.collect {
-                syncDownloadRunning()
+        viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(DOWNLOAD_STATUS_REFRESH_INTERVAL_MILLIS)
+                flushDownloadStatusRefresh()
             }
         }
         viewModelScope.launch {
@@ -432,8 +439,6 @@ class BookshelfManageScreenViewModel(
 
     private fun loadCacheCounts(books: List<Book>) {
         cacheLoadJob?.cancel()
-        cacheCountJobs.values.forEach { it.cancel() }
-        cacheCountJobs.clear()
         cacheLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val visibleBookUrls = books.mapTo(hashSetOf()) { it.bookUrl }
             cacheCounts.keys.toList().forEach { bookUrl ->
@@ -451,22 +456,48 @@ class BookshelfManageScreenViewModel(
         }
     }
 
-    private fun onChapterCached(chapter: BookChapter) {
-        val bookUrl = chapter.bookUrl
-        scheduleCacheCountRefresh(bookUrl)
+    private fun scheduleCacheCountRefresh(bookUrl: String) {
+        if (bookUrl.isNotBlank()) {
+            pendingCacheCountRefreshBookUrls.add(bookUrl)
+        }
+        pendingDownloadRunningRefresh = true
     }
 
-    private fun scheduleCacheCountRefresh(bookUrl: String) {
-        cacheCountJobs.remove(bookUrl)?.cancel()
-        cacheCountJobs[bookUrl] = viewModelScope.launch(Dispatchers.IO) {
-            val book = bookDao.getBook(bookUrl) ?: return@launch
-            if (!uiState.value.books.any { it.bookUrl == bookUrl }) {
-                return@launch
-            }
-            cacheCounts[bookUrl] = calculateCacheCount(book)
-            emitBookChanged(bookUrl)
-            cacheCountJobs.remove(bookUrl)
+    private fun scheduleDownloadStatusRefresh(bookUrl: String = "") {
+        if (bookUrl.isNotBlank()) {
+            pendingDownloadStatusBookUrls.add(bookUrl)
         }
+        pendingDownloadRunningRefresh = true
+    }
+
+    private suspend fun flushDownloadStatusRefresh() {
+        val cacheRefreshBookUrls = pendingCacheCountRefreshBookUrls.toList()
+        cacheRefreshBookUrls.forEach { pendingCacheCountRefreshBookUrls.remove(it) }
+        val statusBookUrls = pendingDownloadStatusBookUrls.toList()
+        statusBookUrls.forEach { pendingDownloadStatusBookUrls.remove(it) }
+        val shouldSyncDownloadRunning = pendingDownloadRunningRefresh ||
+            cacheRefreshBookUrls.isNotEmpty() ||
+            statusBookUrls.isNotEmpty()
+        pendingDownloadRunningRefresh = false
+        val changedBookUrls = linkedSetOf<String>()
+        val visibleBookUrls = uiState.value.books.mapTo(hashSetOf()) { it.bookUrl }
+        cacheRefreshBookUrls.forEach { bookUrl ->
+            if (visibleBookUrls.contains(bookUrl)) {
+                bookDao.getBook(bookUrl)?.let { book ->
+                    cacheCounts[bookUrl] = calculateCacheCount(book)
+                    changedBookUrls.add(bookUrl)
+                }
+            }
+        }
+        statusBookUrls.forEach { bookUrl ->
+            if (visibleBookUrls.contains(bookUrl)) {
+                changedBookUrls.add(bookUrl)
+            }
+        }
+        if (shouldSyncDownloadRunning) {
+            syncDownloadRunning()
+        }
+        emitBooksChanged(changedBookUrls)
     }
 
     private fun calculateCacheCount(book: Book): Int {
@@ -496,7 +527,7 @@ class BookshelfManageScreenViewModel(
             syncDownloadRunning()
         } else {
             execute {
-                cacheBookChaptersUseCase.execute(book.bookUrl, 0..book.lastChapterIndex)
+                cacheBookChaptersUseCase.executeRange(book.bookUrl, 0, book.lastChapterIndex)
             }.onFinally {
                 syncDownloadRunning()
             }
@@ -871,6 +902,14 @@ class BookshelfManageScreenViewModel(
     private fun emitBookChanged(bookUrl: String) {
         _uiState.update { it.copy(cacheVersion = it.cacheVersion + 1) }
         _effects.tryEmit(BookshelfManageScreenEffect.NotifyBookChanged(bookUrl))
+    }
+
+    private fun emitBooksChanged(bookUrls: Set<String>) {
+        if (bookUrls.isEmpty()) return
+        _uiState.update { it.copy(cacheVersion = it.cacheVersion + 1) }
+        bookUrls.forEach { bookUrl ->
+            _effects.tryEmit(BookshelfManageScreenEffect.NotifyBookChanged(bookUrl))
+        }
     }
 
 }

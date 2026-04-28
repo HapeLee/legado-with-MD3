@@ -26,6 +26,8 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.localBook.TextFile
+import io.legado.app.model.cache.ReadingCacheEvent
+import io.legado.app.model.cache.ReadingCacheEvents
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
@@ -87,6 +89,26 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
+
+    init {
+        launch {
+            ReadingCacheEvents.events.collect { event ->
+                when (event) {
+                    is ReadingCacheEvent.ContentReady -> {
+                        if (book?.bookUrl == event.book.bookUrl) {
+                            contentLoadFinish(
+                                book = event.book,
+                                chapter = event.chapter,
+                                content = event.content,
+                                resetPageOffset = event.resetPageOffset,
+                                canceled = event.canceled,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
