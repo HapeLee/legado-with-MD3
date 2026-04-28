@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Scaffold
@@ -15,6 +16,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -42,6 +44,7 @@ fun AppScaffold(
     val hasImageBg = ThemeConfig.hasImageBg(isDark)
     val hazeState = remember { HazeState() }
     val composeEngine = LegadoTheme.composeEngine
+    val contentDrawsBehindBars = ThemeConfig.enableBlur || ThemeConfig.enableProgressiveBlur
 
     val containerColor = if (hasImageBg) {
         Color.Transparent
@@ -81,8 +84,15 @@ fun AppScaffold(
                         modifier = Modifier
                             .fillMaxSize()
                             .responsiveHazeSource(hazeState)
+                            .then(
+                                if (contentDrawsBehindBars) Modifier
+                                else Modifier.padding(paddingValues)
+                            )
                     ) {
-                        content(paddingValues)
+                        content(
+                            if (contentDrawsBehindBars) paddingValues
+                            else PaddingValues(0.dp)
+                        )
                     }
                 }
             }
@@ -105,8 +115,15 @@ fun AppScaffold(
                         modifier = Modifier
                             .fillMaxSize()
                             .responsiveHazeSource(hazeState)
+                            .then(
+                                if (contentDrawsBehindBars) Modifier
+                                else Modifier.padding(paddingValues)
+                            )
                     ) {
-                        content(paddingValues)
+                        content(
+                            if (contentDrawsBehindBars) paddingValues
+                            else PaddingValues(0.dp)
+                        )
                     }
                 }
             }
