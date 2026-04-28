@@ -730,7 +730,7 @@ private fun BookshelfManageScreen(
                             ) {
                                 Column(
                                     modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     AppText(
                                         text = book.name,
@@ -762,7 +762,9 @@ private fun BookshelfManageScreen(
                                 )
                             }
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -777,35 +779,9 @@ private fun BookshelfManageScreen(
                                 } else {
                                     Spacer(modifier = Modifier.weight(1f))
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    SmallTonalIconButton(
-                                        onClick = {
-                                            if (!book.isLocal) {
-                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
-                                            }
-                                        },
-                                        imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
-                                        contentDescription = "download"
-                                    )
-                                    SmallTonalIconButton(
-                                        onClick = { exportBook(book) },
-                                        imageVector = Icons.Default.Upload,
-                                        contentDescription = "upload"
-                                    )
-                                    SmallTonalIconButton(
-                                        onClick = {
-                                            pendingMoveGroupBookUrl = book.bookUrl
-                                            groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
-                                            showGroupSelectSheet = true
-                                        },
-                                        imageVector = Icons.Default.Bookmarks,
-                                        contentDescription = "group"
-                                    )
-                                    SmallTonalIconButton(
-                                        onClick = { moreMenuBookUrl = book.bookUrl },
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "more"
-                                    )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     RoundDropdownMenu(
                                         expanded = moreMenuBookUrl == book.bookUrl,
                                         onDismissRequest = { moreMenuBookUrl = null }
@@ -838,6 +814,34 @@ private fun BookshelfManageScreen(
                                             }
                                         )
                                     }
+                                    SmallTonalIconButton(
+                                        onClick = {
+                                            if (!book.isLocal) {
+                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                                            }
+                                        },
+                                        imageVector = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
+                                        contentDescription = "download"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = { exportBook(book) },
+                                        imageVector = Icons.Default.Upload,
+                                        contentDescription = "upload"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = {
+                                            pendingMoveGroupBookUrl = book.bookUrl
+                                            groupPickerCurrentGroupId = book.group.coerceAtLeast(0L)
+                                            showGroupSelectSheet = true
+                                        },
+                                        imageVector = Icons.Default.Bookmarks,
+                                        contentDescription = "group"
+                                    )
+                                    SmallTonalIconButton(
+                                        onClick = { moreMenuBookUrl = book.bookUrl },
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "more"
+                                    )
                                 }
                             }
                         }
