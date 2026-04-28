@@ -80,7 +80,7 @@ import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
-import io.legado.app.ui.widget.components.button.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -259,7 +259,8 @@ fun RemoteBookScreen(
         topBarActions = {
             TopBarActionButton(
                 onClick = { showSheet = RemoteBookSheet.Servers },
-                imageVector = Icons.Default.Storage
+                imageVector = Icons.Default.Storage,
+                contentDescription = "服务器"
             )
         },
         dropDownMenuContent = { dismiss ->

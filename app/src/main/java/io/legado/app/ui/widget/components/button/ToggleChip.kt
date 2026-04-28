@@ -16,6 +16,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
@@ -31,12 +37,26 @@ fun ToggleChip(
     selected: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    checkedContentDescription: String = "已选择"
+    checkedContentDescription: String = "已选择",
+    uncheckedContentDescription: String = "未选择"
 ) {
+    val isSelected = selected
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixIconButton(
             onClick = onToggle,
-            modifier = modifier,
+            modifier = modifier.semantics {
+                role = Role.Checkbox
+                toggleableState = if (isSelected) {
+                    ToggleableState.On
+                } else {
+                    ToggleableState.Off
+                }
+                stateDescription = if (isSelected) {
+                    checkedContentDescription
+                } else {
+                    uncheckedContentDescription
+                }
+            },
             backgroundColor = if (selected) {
                 MiuixTheme.colorScheme.primaryContainer
             } else {

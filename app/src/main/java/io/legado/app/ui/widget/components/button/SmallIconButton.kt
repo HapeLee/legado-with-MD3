@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components.button
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -23,19 +22,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TonalToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
-import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
@@ -65,11 +61,15 @@ private fun SmallNoMinTouchTarget(content: @Composable () -> Unit) {
 fun SmallIconButton(
     onClick: () -> Unit,
     imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     contentDescription: String? = null
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixIconButton(
-            onClick = onClick
+            onClick = onClick,
+            modifier = modifier,
+            enabled = enabled
         ) {
             MiuixIcon(
                 imageVector = imageVector,
@@ -81,7 +81,8 @@ fun SmallIconButton(
         SmallNoMinTouchTarget {
             IconButton(
                 onClick = onClick,
-                modifier = Modifier.size(smallContainerSize()),
+                modifier = modifier.size(smallContainerSize()),
+                enabled = enabled,
                 shape = IconButtonDefaults.extraSmallRoundShape,
             ) {
                 Icon(
@@ -100,13 +101,14 @@ fun SmallOutlinedIconButton(
     onClick: () -> Unit,
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     contentDescription: String? = null
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
-    if (isMiuix) {
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixIconButton(
             onClick = onClick,
             modifier = modifier.size(SmallMiuixButtonSize),
+            enabled = enabled,
             backgroundColor = LegadoTheme.colorScheme.surfaceContainer
         ) {
             MiuixIcon(
@@ -119,7 +121,8 @@ fun SmallOutlinedIconButton(
         SmallNoMinTouchTarget {
             OutlinedIconButton(
                 onClick = onClick,
-                modifier = Modifier.size(smallContainerSize()),
+                modifier = modifier.size(smallContainerSize()),
+                enabled = enabled,
                 shapes = IconButtonDefaults.shapes(),
                 border = ButtonDefaults.outlinedButtonBorder()
             ) {
@@ -139,14 +142,14 @@ fun SmallTonalIconButton(
     onClick: () -> Unit,
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     contentDescription: String? = null
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
-
-    if (isMiuix) {
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixIconButton(
             onClick = onClick,
             modifier = modifier.size(SmallMiuixButtonSize),
+            enabled = enabled,
             backgroundColor = LegadoTheme.colorScheme.surfaceContainer
         ) {
             MiuixIcon(
@@ -160,6 +163,7 @@ fun SmallTonalIconButton(
             FilledTonalIconButton(
                 onClick = onClick,
                 modifier = modifier.size(smallContainerSize()),
+                enabled = enabled,
                 shapes = IconButtonDefaults.shapes(),
                 colors = IconButtonDefaults.filledTonalIconButtonColors()
             ) {
@@ -180,12 +184,10 @@ fun SmallOutlinedIconToggleButton(
     onCheckedChange: (Boolean) -> Unit,
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     contentDescription: String? = null
 ) {
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
-
-    if (isMiuix) {
-
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
         val containerColor by animateColorAsState(
             targetValue = if (checked) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
             animationSpec = tween(150),
@@ -200,8 +202,8 @@ fun SmallOutlinedIconToggleButton(
 
         MiuixIconButton(
             onClick = { onCheckedChange(!checked) },
-            modifier = modifier
-                .size(SmallMiuixButtonSize),
+            modifier = modifier.size(SmallMiuixButtonSize),
+            enabled = enabled,
             backgroundColor = containerColor
         ) {
             MiuixIcon(
@@ -211,7 +213,6 @@ fun SmallOutlinedIconToggleButton(
                 modifier = Modifier.size(SmallMiuixIconSize)
             )
         }
-
     } else {
         val defaultShape = IconButtonDefaults.extraSmallRoundShape
         val pressedShape = IconButtonDefaults.extraSmallPressedShape
@@ -225,11 +226,12 @@ fun SmallOutlinedIconToggleButton(
             )
         }
 
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        SmallNoMinTouchTarget {
             OutlinedIconToggleButton(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 modifier = modifier.size(smallContainerSize()),
+                enabled = enabled,
                 shapes = toggleShapes
             ) {
                 Icon(
@@ -253,91 +255,102 @@ fun SmallAnimatedActionButton(
     inactiveText: String,
     modifier: Modifier = Modifier
 ) {
-    var showText by remember { mutableStateOf(false) }
-    var lastCheckedState by remember { mutableStateOf(checked) }
-
-    LaunchedEffect(showText) {
-        if (showText) {
-            delay(1000)
-            showText = false
-        }
-    }
-
-    val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
-
-    if (isMiuix) {
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
         val containerColor by animateColorAsState(
             targetValue = if (checked) MiuixTheme.colorScheme.primaryContainer else MiuixTheme.colorScheme.surfaceContainer,
             animationSpec = tween(150),
             label = "MiuixActionButtonContainer"
         )
 
-        MiuixIconButton(
-            onClick = {
-                lastCheckedState = !checked
-                onCheckedChange(!checked)
-                showText = true
-            },
-            backgroundColor = containerColor
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                MiuixIcon(
-                    imageVector = if (checked) iconChecked else iconUnchecked,
-                    contentDescription = null
-                )
-
-                AnimatedVisibility(
-                    visible = showText
+        AnimatedActionButtonCore(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            iconChecked = iconChecked,
+            iconUnchecked = iconUnchecked,
+            activeText = activeText,
+            inactiveText = inactiveText,
+            modifier = modifier,
+            iconSize = 18.dp,
+            textStyle = LegadoTheme.typography.labelSmall,
+            textStartPadding = 6.dp,
+            button = { buttonModifier, onToggle, content ->
+                MiuixIconButton(
+                    onClick = { onToggle(!checked) },
+                    modifier = buttonModifier,
+                    backgroundColor = containerColor
                 ) {
-                    MiuixText(
-                        text = if (lastCheckedState) activeText else inactiveText,
-                        style = LegadoTheme.typography.labelSmall,
-                        modifier = Modifier.padding(start = 6.dp),
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        content = content
+                    )
+                }
+            },
+            icon = { imageVector, iconModifier, tint ->
+                MiuixIcon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    modifier = iconModifier,
+                    tint = tint ?: Color.Unspecified
+                )
+            },
+            text = { label, textModifier, style, color ->
+                MiuixText(
+                    text = label,
+                    style = style,
+                    color = color ?: Color.Unspecified,
+                    modifier = textModifier,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        )
+    } else {
+        SmallNoMinTouchTarget {
+            AnimatedActionButtonCore(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                iconChecked = iconChecked,
+                iconUnchecked = iconUnchecked,
+                activeText = activeText,
+                inactiveText = inactiveText,
+                modifier = modifier.height(36.dp),
+                iconSize = 16.dp,
+                textStyle = LegadoTheme.typography.labelSmall,
+                textStartPadding = 6.dp,
+                button = { buttonModifier, onToggle, content ->
+                    TonalToggleButton(
+                        checked = checked,
+                        onCheckedChange = onToggle,
+                        modifier = buttonModifier,
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            content = content
+                        )
+                    }
+                },
+                icon = { imageVector, iconModifier, _ ->
+                    AnimatedIcon(
+                        imageVector = imageVector,
+                        contentDescription = null,
+                        modifier = iconModifier
+                    )
+                },
+                text = { label, textModifier, style, color ->
+                    Text(
+                        text = label,
+                        style = style,
+                        color = color ?: Color.Unspecified,
+                        modifier = textModifier,
                         maxLines = 1,
                         softWrap = false
                     )
                 }
-            }
-        }
-    } else {
-        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-            TonalToggleButton(
-                checked = checked,
-                onCheckedChange = {
-                    lastCheckedState = it
-                    onCheckedChange(it)
-                    showText = true
-                },
-                modifier = modifier.height(36.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    AnimatedIcon(
-                        modifier = Modifier.size(16.dp),
-                        imageVector = if (checked) iconChecked else iconUnchecked,
-                        contentDescription = null
-                    )
-
-                    AnimatedVisibility(
-                        visible = showText
-                    ) {
-                        Text(
-                            text = if (lastCheckedState) activeText else inactiveText,
-                            style = LegadoTheme.typography.labelSmall,
-                            modifier = Modifier.padding(start = 6.dp),
-                            maxLines = 1,
-                            softWrap = false
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }

@@ -4,80 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
-import top.yukonga.miuix.kmp.basic.Button as MiuixButton
-import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
-
-@Composable
-fun PrimaryButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    text: String
-) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = MiuixButtonDefaults.buttonColorsPrimary()
-        ) {
-            MiuixText(
-                text = text
-            )
-        }
-    } else {
-        Button(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-        ) {
-            Text(
-                text = text,
-            )
-        }
-    }
-}
-
-@Composable
-fun SecondaryButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    text: String
-) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
-        MiuixButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-            colors = MiuixButtonDefaults.buttonColors()
-        ) {
-            MiuixText(
-                text = text
-            )
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            modifier = modifier,
-            enabled = enabled,
-        ) {
-            Text(
-                text = text
-            )
-        }
-    }
-}
 
 @Composable
 fun ConfirmDismissButtonsRow(

@@ -272,8 +272,6 @@ fun ExploreScreen(
                 TextCard(
                     text = item.bookSourceName,
                     textStyle = LegadoTheme.typography.labelMediumEmphasized,
-                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                    contentColor = LegadoTheme.colorScheme.onCardContainer,
                     cornerRadius = 12.dp,
                     horizontalPadding = 12.dp,
                     verticalPadding = 8.dp,

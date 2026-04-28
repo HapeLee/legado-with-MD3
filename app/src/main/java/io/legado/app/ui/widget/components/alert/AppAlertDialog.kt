@@ -7,11 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,8 +20,8 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.button.MiuixPrimaryButton
-import io.legado.app.ui.widget.components.button.MiuixSecondaryButton
+import io.legado.app.ui.widget.components.button.PrimaryButton
+import io.legado.app.ui.widget.components.button.SecondaryButton
 import top.yukonga.miuix.kmp.window.WindowDialog
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -67,7 +64,7 @@ fun AppAlertDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (onDismiss != null) {
-                        MiuixSecondaryButton(
+                        SecondaryButton(
                             text = dismissText,
                             modifier = Modifier.weight(1f),
                             onClick = {
@@ -78,7 +75,7 @@ fun AppAlertDialog(
                     }
 
                     if (onConfirm != null) {
-                        MiuixPrimaryButton(
+                        PrimaryButton(
                             text = confirmText,
                             modifier = Modifier.weight(1f),
                             onClick = {
@@ -115,29 +112,21 @@ fun AppAlertDialog(
                 },
                 confirmButton = {
                     if (onConfirm != null) {
-                        OutlinedButton(
+                        PrimaryButton(
                             onClick = onConfirm,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = LegadoTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(text = confirmText)
-                        }
+                            text = confirmText
+                        )
                     }
                 },
                 dismissButton = {
                     if (onDismiss != null) {
-                        TextButton(
+                        SecondaryButton(
                             onClick = {
                                 onDismiss()
                                 onDismissRequest()
                             },
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = LegadoTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(text = dismissText)
-                        }
+                            text = dismissText
+                        )
                     }
                 }
             )
