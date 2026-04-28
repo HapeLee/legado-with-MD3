@@ -73,9 +73,6 @@ data class BookshelfManageScreenUiState(
     val bookSort: Int = BookshelfConfig.bookshelfSort,
     val bookSortOrder: Int = BookshelfConfig.bookshelfSortOrder,
     val isDownloadRunning: Boolean = false,
-    val pendingDownloadBookUrls: Set<String> = emptySet(),
-    val downloadStates: Map<String, CacheBookDownloadState> = emptyMap(),
-    val downloadFailureMessages: Map<String, String> = emptyMap(),
     val isChangingSource: Boolean = false,
     val changeSourceProgress: String? = null,
     val changeSourceMessage: String? = null,
@@ -172,6 +169,9 @@ class BookshelfManageScreenViewModel(
     val effects = _effects.asSharedFlow()
 
     private val cacheCounts = ConcurrentHashMap<String, Int>()
+    private val downloadStates = ConcurrentHashMap<String, CacheBookDownloadState>()
+    private val pendingDownloadBookUrls = ConcurrentHashMap.newKeySet<String>()
+    private val downloadFailureMessages = ConcurrentHashMap<String, String>()
     private var booksJob: Job? = null
     private var groupsJob: Job? = null
     private var cacheLoadJob: Job? = null
@@ -309,6 +309,18 @@ class BookshelfManageScreenViewModel(
         return CacheBook.cacheBookMap[bookUrl]?.isStop() == false
     }
 
+    fun getBookDownloadState(bookUrl: String): CacheBookDownloadState? {
+        return downloadStates[bookUrl]
+    }
+
+    fun getDownloadFailureMessage(bookUrl: String): String? {
+        return downloadFailureMessages[bookUrl]
+    }
+
+    fun isBookPreparingDownload(bookUrl: String): Boolean {
+        return pendingDownloadBookUrls.contains(bookUrl)
+    }
+
     private fun initialize(groupId: Long) {
         _uiState.update { it.copy(groupId = groupId) }
         syncExportConfig()
@@ -385,31 +397,27 @@ class BookshelfManageScreenViewModel(
         }
         viewModelScope.launch {
             CacheBook.downloadStateFlow.collect { downloadState ->
-                _uiState.update { state ->
-                    val successfulBookUrls = downloadState.books
-                        .filterValues {
-                            it.successCount > 0 &&
-                                    it.failedIndices.isEmpty() &&
-                                    it.failureMessage == null
-                        }
-                        .keys
-                    val failureMessages = downloadState.books.mapNotNull { (bookUrl, bookState) ->
-                        val message = bookState.failureMessage ?: if (bookState.failedIndices.isNotEmpty()) {
-                            "${bookState.failedIndices.size} 章"
-                        } else {
-                            null
-                        }
-                        message?.let { bookUrl to it }
-                    }.toMap()
-                    state.copy(
-                        isDownloadRunning = downloadState.isRunning,
-                        pendingDownloadBookUrls = state.pendingDownloadBookUrls - downloadState.books.keys,
-                        downloadStates = downloadState.books,
-                        downloadFailureMessages = (
-                                state.downloadFailureMessages - successfulBookUrls
-                                ) + failureMessages,
-                    )
-                }
+                val successfulBookUrls = downloadState.books
+                    .filterValues {
+                        it.successCount > 0 &&
+                                it.failedIndices.isEmpty() &&
+                                it.failureMessage == null
+                    }
+                    .keys
+                val failureMsgs = downloadState.books.mapNotNull { (bookUrl, bookState) ->
+                    val message = bookState.failureMessage ?: if (bookState.failedIndices.isNotEmpty()) {
+                        "${bookState.failedIndices.size} 章"
+                    } else {
+                        null
+                    }
+                    message?.let { bookUrl to it }
+                }.toMap()
+                pendingDownloadBookUrls.removeAll(downloadState.books.keys)
+                downloadStates.clear()
+                downloadStates.putAll(downloadState.books)
+                successfulBookUrls.forEach { downloadFailureMessages.remove(it) }
+                downloadFailureMessages.putAll(failureMsgs)
+                _uiState.update { it.copy(isDownloadRunning = downloadState.isRunning) }
                 downloadState.books.keys.forEach { bookUrl ->
                     scheduleDownloadStatusRefresh(bookUrl)
                 }
@@ -475,12 +483,16 @@ class BookshelfManageScreenViewModel(
                     cacheCounts.remove(bookUrl)
                 }
             }
+            val changedBookUrls = linkedSetOf<String>()
             books.forEach { book ->
                 if (!book.isLocal && !cacheCounts.containsKey(book.bookUrl)) {
                     cacheCounts[book.bookUrl] = calculateCacheCount(book)
-                    emitBookChanged(book.bookUrl)
+                    changedBookUrls.add(book.bookUrl)
                 }
                 ensureActive()
+            }
+            if (changedBookUrls.isNotEmpty()) {
+                _uiState.update { it.copy(cacheVersion = it.cacheVersion + 1) }
             }
         }
     }
@@ -539,9 +551,7 @@ class BookshelfManageScreenViewModel(
 
     private fun startDownloadForVisibleBooks(books: List<Book>, downloadAllChapters: Boolean) {
         val bookUrls = books.mapTo(hashSetOf()) { it.bookUrl }
-        _uiState.update {
-            it.copy(downloadFailureMessages = it.downloadFailureMessages - bookUrls)
-        }
+        bookUrls.forEach { downloadFailureMessages.remove(it) }
         execute {
             batchCacheDownloadUseCase.execute(
                 bookUrls = bookUrls,
@@ -555,40 +565,28 @@ class BookshelfManageScreenViewModel(
 
     private fun toggleBookDownload(book: Book) {
         if (book.isLocal) return
-        if (isBookDownloading(book.bookUrl) || uiState.value.pendingDownloadBookUrls.contains(book.bookUrl)) {
+        if (isBookDownloading(book.bookUrl) || pendingDownloadBookUrls.contains(book.bookUrl)) {
             CacheBook.remove(context, book.bookUrl)
-            _uiState.update {
-                it.copy(pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl)
-            }
+            pendingDownloadBookUrls.remove(book.bookUrl)
+            emitBookChanged(book.bookUrl)
             syncDownloadRunning()
         } else {
-            _uiState.update {
-                it.copy(
-                    pendingDownloadBookUrls = it.pendingDownloadBookUrls + book.bookUrl,
-                    downloadFailureMessages = it.downloadFailureMessages - book.bookUrl
-                )
-            }
+            pendingDownloadBookUrls.add(book.bookUrl)
+            downloadFailureMessages.remove(book.bookUrl)
+            emitBookChanged(book.bookUrl)
             execute {
                 cacheBookChaptersUseCase.executeRange(book.bookUrl, 0, book.lastChapterIndex)
             }.onSuccess { count ->
                 if (count <= 0) {
-                    _uiState.update {
-                        it.copy(
-                            pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl,
-                            downloadFailureMessages = it.downloadFailureMessages +
-                                    (book.bookUrl to "没有可缓存的章节")
-                        )
-                    }
+                    pendingDownloadBookUrls.remove(book.bookUrl)
+                    downloadFailureMessages[book.bookUrl] = "没有可缓存的章节"
+                    emitBookChanged(book.bookUrl)
                     _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的章节"))
                 }
             }.onError { error ->
-                _uiState.update {
-                    it.copy(
-                        pendingDownloadBookUrls = it.pendingDownloadBookUrls - book.bookUrl,
-                        downloadFailureMessages = it.downloadFailureMessages +
-                                (book.bookUrl to (error.localizedMessage ?: "未知错误"))
-                    )
-                }
+                pendingDownloadBookUrls.remove(book.bookUrl)
+                downloadFailureMessages[book.bookUrl] = error.localizedMessage ?: "未知错误"
+                emitBookChanged(book.bookUrl)
                 _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存失败\n${error.localizedMessage}"))
             }.onFinally {
                 syncDownloadRunning()
@@ -661,9 +659,7 @@ class BookshelfManageScreenViewModel(
 
     private fun downloadBooks(bookUrls: Set<String>, downloadAllChapters: Boolean) {
         if (bookUrls.isEmpty()) return
-        _uiState.update {
-            it.copy(downloadFailureMessages = it.downloadFailureMessages - bookUrls)
-        }
+        bookUrls.forEach { downloadFailureMessages.remove(it) }
         execute {
             batchCacheDownloadUseCase.execute(
                 bookUrls = bookUrls,
@@ -972,9 +968,6 @@ class BookshelfManageScreenViewModel(
     private fun emitBooksChanged(bookUrls: Set<String>) {
         if (bookUrls.isEmpty()) return
         _uiState.update { it.copy(cacheVersion = it.cacheVersion + 1) }
-        bookUrls.forEach { bookUrl ->
-            _effects.tryEmit(BookshelfManageScreenEffect.NotifyBookChanged(bookUrl))
-        }
     }
 
 }
