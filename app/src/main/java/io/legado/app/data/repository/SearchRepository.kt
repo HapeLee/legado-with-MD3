@@ -4,18 +4,13 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.domain.gateway.BookSearchGateway
+import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.help.book.isNotShelf
-import io.legado.app.model.webBook.SearchModel
-import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.main.bookshelf.BookShelfItem
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -31,41 +26,11 @@ interface SearchRepository {
     suspend fun saveSearchKeyword(keyword: String)
     suspend fun deleteSearchKeyword(item: SearchKeyword)
     suspend fun clearSearchKeywords()
-
-    fun createSearchSession(scopeProvider: () -> SearchScope): SearchSession
-}
-
-sealed interface SearchSessionEvent {
-    data object Started : SearchSessionEvent
-
-    data class Progress(
-        val upsertBooks: List<SearchBook>,
-        val removedBookUrls: List<String>,
-        val resultCount: Int,
-        val processedSources: Int,
-        val totalSources: Int,
-    ) : SearchSessionEvent
-
-    data class Finished(
-        val isEmpty: Boolean,
-        val hasMore: Boolean,
-    ) : SearchSessionEvent
-
-    data class Canceled(val throwable: Throwable? = null) : SearchSessionEvent
-}
-
-interface SearchSession {
-    val events: Flow<SearchSessionEvent>
-    fun search(searchId: Long, keyword: String)
-    fun stop()
-    fun pause()
-    fun resume()
-    fun close()
 }
 
 class SearchRepositoryImpl(
     private val appDb: AppDatabase,
-) : SearchRepository {
+) : SearchRepository, BookSearchGateway {
 
     override val enabledGroups: Flow<List<String>> = appDb.bookSourceDao.flowEnabledGroups()
     override val enabledSources: Flow<List<BookSourcePart>> = appDb.bookSourceDao.flowEnabled()
@@ -113,71 +78,34 @@ class SearchRepositoryImpl(
         appDb.searchKeywordDao.deleteAll()
     }
 
-    override fun createSearchSession(scopeProvider: () -> SearchScope): SearchSession {
-        return SearchSessionImpl(scopeProvider)
+    override suspend fun getBookSourceParts(scope: BookSearchScope): List<BookSourcePart> =
+        withContext(Dispatchers.IO) {
+            val selectedSources = linkedSetOf<BookSourcePart>()
+            when {
+                scope.isAll -> selectedSources.addAll(appDb.bookSourceDao.allEnabledPart)
+                scope.isSource -> scope.sourceUrls.forEach { sourceUrl ->
+                    appDb.bookSourceDao.getBookSourcePart(sourceUrl)?.let { selectedSources.add(it) }
+                }
+
+                else -> scope.groupNames.forEach { groupName ->
+                    selectedSources.addAll(appDb.bookSourceDao.getEnabledPartByGroup(groupName))
+                }
+            }
+
+            if (selectedSources.isEmpty()) {
+                appDb.bookSourceDao.allEnabledPart
+            } else {
+                selectedSources.toList().sortedBy { it.customOrder }
+            }
+        }
+
+    override suspend fun getBookSource(sourceUrl: String) = withContext(Dispatchers.IO) {
+        appDb.bookSourceDao.getBookSource(sourceUrl)
     }
 
-    private class SearchSessionImpl(
-        scopeProvider: () -> SearchScope,
-    ) : SearchSession {
-
-        private val sessionScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        private val _events = MutableSharedFlow<SearchSessionEvent>(extraBufferCapacity = 8)
-        override val events: Flow<SearchSessionEvent> = _events.asSharedFlow()
-
-        private val searchModel = SearchModel(sessionScope, object : SearchModel.CallBack {
-            override fun getSearchScope(): SearchScope = scopeProvider()
-
-            override suspend fun onSearchStart() {
-                _events.emit(SearchSessionEvent.Started)
-            }
-
-            override suspend fun onSearchSuccess(
-                upsertBooks: List<SearchBook>,
-                removedBookUrls: List<String>,
-                resultCount: Int,
-                processedSources: Int,
-                totalSources: Int,
-            ) {
-                _events.emit(
-                    SearchSessionEvent.Progress(
-                        upsertBooks = upsertBooks,
-                        removedBookUrls = removedBookUrls,
-                        resultCount = resultCount,
-                        processedSources = processedSources,
-                        totalSources = totalSources,
-                    )
-                )
-            }
-
-            override suspend fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) {
-                _events.emit(SearchSessionEvent.Finished(isEmpty, hasMore))
-            }
-
-            override fun onSearchCancel(exception: Throwable?) {
-                _events.tryEmit(SearchSessionEvent.Canceled(exception))
-            }
-        })
-
-        override fun search(searchId: Long, keyword: String) {
-            searchModel.search(searchId, keyword)
-        }
-
-        override fun stop() {
-            searchModel.cancelSearch()
-        }
-
-        override fun pause() {
-            searchModel.pause()
-        }
-
-        override fun resume() {
-            searchModel.resume()
-        }
-
-        override fun close() {
-            searchModel.close()
-            sessionScope.cancel()
+    override suspend fun saveSearchBooks(books: List<SearchBook>) = withContext(Dispatchers.IO) {
+        if (books.isNotEmpty()) {
+            appDb.searchBookDao.insert(books)
         }
     }
 }

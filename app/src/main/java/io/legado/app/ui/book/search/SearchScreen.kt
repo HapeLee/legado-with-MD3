@@ -44,6 +44,7 @@ import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -175,6 +176,12 @@ fun SearchScreen(
                 SearchEffect.OpenSourceManage -> onOpenSourceManage()
                 is SearchEffect.ShowMessage -> context.toastOnUi(effect.message)
             }
+        }
+    }
+
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.onIntent(SearchIntent.StopSearch)
         }
     }
 
