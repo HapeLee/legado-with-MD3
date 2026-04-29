@@ -27,7 +27,6 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.model.CacheBook
-import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
@@ -169,7 +168,6 @@ class BookshelfManageScreenViewModel(
     val effects = _effects.asSharedFlow()
 
     private val cacheCounts = ConcurrentHashMap<String, Int>()
-    private val downloadStates = ConcurrentHashMap<String, CacheBookDownloadState>()
     private val pendingDownloadBookUrls = ConcurrentHashMap.newKeySet<String>()
     private val downloadFailureMessages = ConcurrentHashMap<String, String>()
     private var booksJob: Job? = null
@@ -309,10 +307,6 @@ class BookshelfManageScreenViewModel(
         return CacheBook.cacheBookMap[bookUrl]?.isStop() == false
     }
 
-    fun getBookDownloadState(bookUrl: String): CacheBookDownloadState? {
-        return downloadStates[bookUrl]
-    }
-
     fun getDownloadFailureMessage(bookUrl: String): String? {
         return downloadFailureMessages[bookUrl]
     }
@@ -413,8 +407,6 @@ class BookshelfManageScreenViewModel(
                     message?.let { bookUrl to it }
                 }.toMap()
                 pendingDownloadBookUrls.removeAll(downloadState.books.keys)
-                downloadStates.clear()
-                downloadStates.putAll(downloadState.books)
                 successfulBookUrls.forEach { downloadFailureMessages.remove(it) }
                 downloadFailureMessages.putAll(failureMsgs)
                 _uiState.update { it.copy(isDownloadRunning = downloadState.isRunning) }

@@ -592,7 +592,7 @@ object CacheBook {
                 return
             }
 
-            val task = repository.downloadContentTask(
+            val task = repository.cacheContentTask(
                 scope = scope,
                 bookSource = bookSource,
                 book = book,
@@ -600,14 +600,12 @@ object CacheBook {
                 context = context,
                 start = CoroutineStart.LAZY,
                 executeContext = context,
-            ).onSuccess { content ->
+            ).onSuccess {
                 onSuccess(chapter)
-                downloadFinish(chapter, content)
             }.onError {
                 onPreError(chapter, it)
                 delay(1000)
                 onPostError(chapter, it)
-                downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}")
             }.onCancel {
                 onCancel(chapterIndex)
             }.onFinally {

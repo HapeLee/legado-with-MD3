@@ -62,6 +62,25 @@ class CacheDownloadRepository {
         )
     }
 
+    fun cacheContentTask(
+        scope: CoroutineScope,
+        bookSource: BookSource,
+        book: Book,
+        chapter: BookChapter,
+        context: CoroutineContext,
+        start: CoroutineStart = CoroutineStart.LAZY,
+        executeContext: CoroutineContext = context,
+    ): Coroutine<Unit> {
+        return Coroutine.async(
+            scope = scope,
+            context = context,
+            start = start,
+            executeContext = executeContext,
+        ) {
+            WebBook.getContentAwait(bookSource, book, chapter)
+        }
+    }
+
     suspend fun downloadContentAwait(
         bookSource: BookSource,
         book: Book,

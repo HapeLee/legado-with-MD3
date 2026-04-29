@@ -679,15 +679,9 @@ private fun BookshelfManageScreen(
                 val cacheCount = remember(renderVersion, book.bookUrl) {
                     viewModel.getCacheCount(book.bookUrl) ?: 0
                 }
-                val downloadState = viewModel.getBookDownloadState(book.bookUrl)
                 val isPreparingDownload = viewModel.isBookPreparingDownload(book.bookUrl)
-                val waitingDownloadCount = downloadState?.waitingCount ?: 0
-                val runningDownloadCount = downloadState?.runningIndices?.size ?: 0
                 val isDownloadingInCacheModel = viewModel.isBookDownloading(book.bookUrl)
-                val isDownloading = isPreparingDownload ||
-                        waitingDownloadCount > 0 ||
-                        runningDownloadCount > 0 ||
-                        isDownloadingInCacheModel
+                val isDownloading = isPreparingDownload || isDownloadingInCacheModel
                 val downloadFailureText = viewModel.getDownloadFailureMessage(book.bookUrl)?.let {
                     stringResource(R.string.cache_download_failed, it)
                 }
