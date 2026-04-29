@@ -96,7 +96,7 @@ private fun BookCacheManageScreen(
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
     val allBooks = state.shelfBooks + state.notShelfBooks
-    val hasRunningDownload = allBooks.any { it.isDownloading }
+    val hasRunningDownload = allBooks.any { it.hasActiveDownload }
     val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
 
     AppScaffold(
@@ -351,22 +351,26 @@ private fun BookCacheBookCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = "下载中 ${item.downloadingCount} · 等待 ${item.waitingCount} · 失败 ${item.errorCount}",
+                    text = "下载中 ${item.downloadingCount} · 等待 ${item.waitingCount} · 暂停 ${item.pausedCount} · 失败 ${item.errorCount}",
                     modifier = Modifier.weight(1f),
                     style = LegadoTheme.typography.labelMediumEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
-                if (item.isDownloading || item.cachedCount < item.totalCount) {
+                if (item.hasDownloadTask || item.cachedCount < item.totalCount) {
                     SmallTonalIconButton(
                         onClick = {
-                            if (item.isDownloading) {
+                            if (item.hasActiveDownload) {
                                 onIntent(BookCacheManageIntent.StopBookDownload(item.bookUrl))
                             } else {
                                 onIntent(BookCacheManageIntent.StartBookDownload(item.bookUrl))
                             }
                         },
-                        imageVector = if (item.isDownloading) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = if (item.isDownloading) "暂停本书下载" else "开始本书下载"
+                        imageVector = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        contentDescription = when {
+                            item.hasActiveDownload -> "暂停本书下载"
+                            item.isPaused -> "继续本书下载"
+                            else -> "开始本书下载"
+                        }
                     )
                 }
                 SmallTonalIconButton(
@@ -423,11 +427,11 @@ private fun BookCacheChapterRow(
                 imageVector = Icons.Default.Stop,
                 contentDescription = "暂停章节下载"
             )
-        } else if (!item.isCached) {
+        } else if (item.isPaused || !item.isCached) {
             SmallTonalIconButton(
                 onClick = onDownload,
                 imageVector = Icons.Default.Download,
-                contentDescription = "下载章节"
+                contentDescription = if (item.isPaused) "继续章节下载" else "下载章节"
             )
         }
         SmallTonalIconButton(
@@ -442,6 +446,7 @@ private fun chapterStatusText(item: BookCacheChapterItem): String {
     return when {
         item.isDownloading -> "下载中"
         item.isWaiting -> "等待下载"
+        item.isPaused -> "已暂停"
         item.isError -> "下载失败"
         item.isCached -> "已缓存"
         else -> "未缓存"

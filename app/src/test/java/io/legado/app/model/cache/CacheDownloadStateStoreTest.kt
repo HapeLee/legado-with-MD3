@@ -63,4 +63,24 @@ class CacheDownloadStateStoreTest {
         assertNull(store.state.books.getValue("a").failureMessage)
         assertEquals(0, store.state.totalFailure)
     }
+
+    @Test
+    fun clearRuntimeStateKeepsOnlyVisibleFailures() {
+        val store = CacheDownloadStateStore()
+
+        store.updateBookQueue("running", waitingCount = 2, runningIndices = setOf(1))
+        store.updateBookQueue("failed", waitingCount = 1, runningIndices = setOf(2))
+        store.markFailed("failed", 2)
+        store.markBookFailed("bookFailure", "source unavailable")
+
+        store.clearRuntimeState()
+
+        assertFalse(store.state.isRunning)
+        assertEquals(setOf("failed", "bookFailure"), store.state.books.keys)
+        assertEquals(setOf(2), store.state.books.getValue("failed").failedIndices)
+        assertEquals("source unavailable", store.state.books.getValue("bookFailure").failureMessage)
+        assertEquals(2, store.state.totalFailure)
+        assertEquals(0, store.state.totalWaiting)
+        assertEquals(0, store.state.totalRunning)
+    }
 }

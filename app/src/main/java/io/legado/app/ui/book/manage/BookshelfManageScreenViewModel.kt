@@ -304,7 +304,9 @@ class BookshelfManageScreenViewModel(
     fun getCacheCount(bookUrl: String): Int? = cacheCounts[bookUrl]
 
     fun isBookDownloading(bookUrl: String): Boolean {
-        return CacheBook.cacheBookMap[bookUrl]?.isStop() == false
+        if (CacheBook.pendingAdmissionFlow.value[bookUrl].orZero() > 0) return true
+        val bookState = CacheBook.downloadStateFlow.value.books[bookUrl] ?: return false
+        return bookState.waitingCount > 0 || bookState.runningIndices.isNotEmpty()
     }
 
     fun getDownloadFailureMessage(bookUrl: String): String? {
@@ -409,8 +411,18 @@ class BookshelfManageScreenViewModel(
                 pendingDownloadBookUrls.removeAll(downloadState.books.keys)
                 successfulBookUrls.forEach { downloadFailureMessages.remove(it) }
                 downloadFailureMessages.putAll(failureMsgs)
-                _uiState.update { it.copy(isDownloadRunning = downloadState.isRunning) }
+                _uiState.update {
+                    it.copy(isDownloadRunning = downloadState.isRunning || CacheBook.pendingAdmissionFlow.value.isNotEmpty())
+                }
                 downloadState.books.keys.forEach { bookUrl ->
+                    scheduleDownloadStatusRefresh(bookUrl)
+                }
+                scheduleDownloadStatusRefresh()
+            }
+        }
+        viewModelScope.launch {
+            CacheBook.pendingAdmissionFlow.collect { pending ->
+                pending.keys.forEach { bookUrl ->
                     scheduleDownloadStatusRefresh(bookUrl)
                 }
                 scheduleDownloadStatusRefresh()
@@ -454,7 +466,9 @@ class BookshelfManageScreenViewModel(
     }
 
     private fun syncDownloadRunning() {
-        _uiState.update { it.copy(isDownloadRunning = CacheBook.isRun) }
+        _uiState.update {
+            it.copy(isDownloadRunning = CacheBook.isRun || CacheBook.pendingAdmissionFlow.value.isNotEmpty())
+        }
     }
 
     private fun refreshGroupName(groupId: Long) {
@@ -540,6 +554,8 @@ class BookshelfManageScreenViewModel(
         val cachedFileCount = cacheNames.count { it.endsWith(".nb") }
         return min(cachedFileCount + bookChapterDao.getVolumeCount(book.bookUrl), totalCount)
     }
+
+    private fun Int?.orZero(): Int = this ?: 0
 
     private fun startDownloadForVisibleBooks(books: List<Book>, downloadAllChapters: Boolean) {
         val bookUrls = books.mapTo(hashSetOf()) { it.bookUrl }

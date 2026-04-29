@@ -7,7 +7,6 @@ import io.legado.app.domain.model.BookGroupAssignment
 import io.legado.app.domain.model.CacheableBook
 import io.legado.app.domain.model.DeletableBook
 import io.legado.app.domain.repository.BookDomainRepository
-import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isLocal
 
 class BookDomainRepositoryImpl(
@@ -21,15 +20,8 @@ class BookDomainRepositoryImpl(
     }
 
     override suspend fun getCacheableBooks(bookUrls: Set<String>): List<CacheableBook> {
-        return getBooks(bookUrls).map { book ->
-            CacheableBook(
-                bookUrl = book.bookUrl,
-                isLocal = book.isLocal,
-                isAudio = book.isAudio,
-                durChapterIndex = book.durChapterIndex,
-                lastChapterIndex = book.lastChapterIndex
-            )
-        }
+        if (bookUrls.isEmpty()) return emptyList()
+        return bookDao.getCacheableBooks(bookUrls)
     }
 
     override suspend fun getDeletableBooks(bookUrls: Set<String>): List<DeletableBook> {

@@ -16,12 +16,14 @@ class CacheDownloadStateStore {
         bookUrl: String,
         waitingCount: Int,
         runningIndices: Set<Int>,
+        pausedIndices: Set<Int> = emptySet(),
     ) {
         updateBook(bookUrl) { current ->
             current.copy(
                 waitingCount = waitingCount,
                 runningIndices = runningIndices,
-                failureMessage = if (waitingCount > 0 || runningIndices.isNotEmpty()) {
+                pausedIndices = pausedIndices,
+                failureMessage = if (waitingCount > 0 || runningIndices.isNotEmpty() || pausedIndices.isNotEmpty()) {
                     null
                 } else {
                     current.failureMessage
@@ -34,6 +36,7 @@ class CacheDownloadStateStore {
         updateBook(bookUrl) { current ->
             current.copy(
                 runningIndices = current.runningIndices - chapterIndex,
+                pausedIndices = current.pausedIndices - chapterIndex,
                 failedIndices = current.failedIndices - chapterIndex,
                 successCount = current.successCount + 1,
                 failureMessage = null,
@@ -45,6 +48,7 @@ class CacheDownloadStateStore {
         updateBook(bookUrl) { current ->
             current.copy(
                 runningIndices = current.runningIndices - chapterIndex,
+                pausedIndices = current.pausedIndices - chapterIndex,
                 failedIndices = current.failedIndices + chapterIndex,
             )
         }
@@ -55,6 +59,8 @@ class CacheDownloadStateStore {
             current.copy(
                 waitingCount = 0,
                 runningIndices = emptySet(),
+                pausedIndices = emptySet(),
+                failedIndices = emptySet(),
                 failureMessage = message,
             )
         }
@@ -76,6 +82,25 @@ class CacheDownloadStateStore {
         _stateFlow.value = CacheDownloadState()
     }
 
+    fun clearRuntimeState() {
+        _stateFlow.update { state ->
+            val failureBooks = state.books
+                .mapValues { (_, bookState) ->
+                    bookState.copy(
+                        waitingCount = 0,
+                        runningIndices = emptySet(),
+                        successCount = 0,
+                    )
+                }
+                .filterValues { bookState ->
+                    bookState.pausedIndices.isNotEmpty() ||
+                            bookState.failedIndices.isNotEmpty() ||
+                            bookState.failureMessage != null
+                }
+            state.copy(books = failureBooks).recalculate()
+        }
+    }
+
     fun bookState(bookUrl: String): CacheBookDownloadState? {
         return state.books[bookUrl]
     }
@@ -93,13 +118,15 @@ class CacheDownloadStateStore {
     private fun CacheDownloadState.recalculate(): CacheDownloadState {
         val totalWaiting = books.values.sumOf { it.waitingCount }
         val totalRunning = books.values.sumOf { it.runningIndices.size }
+        val totalPaused = books.values.sumOf { it.pausedIndices.size }
         val totalFailure = books.values.sumOf { it.failedIndices.size } +
                 books.values.count { it.failureMessage != null }
         val totalSuccess = books.values.sumOf { it.successCount }
         return copy(
-            isRunning = totalWaiting > 0 || totalRunning > 0,
+            isRunning = totalWaiting > totalPaused || totalRunning > 0,
             totalWaiting = totalWaiting,
             totalRunning = totalRunning,
+            totalPaused = totalPaused,
             totalFailure = totalFailure,
             totalSuccess = totalSuccess,
         )

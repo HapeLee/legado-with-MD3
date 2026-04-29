@@ -17,6 +17,11 @@ class CacheBookDownloadRepository(
         CacheBook.start(appCtx, request, isLocal = book.isLocal)
     }
 
+    override suspend fun start(requests: List<CacheDownloadRequest>) {
+        if (requests.isEmpty()) return
+        CacheBook.start(appCtx, requests)
+    }
+
     override suspend fun start(bookUrl: String, chapterIndices: List<Int>) {
         start(
             CacheDownloadRequest(

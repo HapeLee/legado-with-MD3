@@ -32,8 +32,9 @@ class CacheDownloadRepository {
         bookSource: BookSource,
         book: Book,
         chapter: BookChapter,
+        start: CoroutineStart = CoroutineStart.LAZY,
     ): Coroutine<Unit> {
-        return Coroutine.async(scope, context, executeContext = context) {
+        return Coroutine.async(scope, context, start = start, executeContext = context) {
             BookHelp.getContent(book, chapter)?.let {
                 BookHelp.saveImages(bookSource, book, chapter, it, 1)
             }
