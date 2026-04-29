@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.RssSource
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
@@ -55,7 +56,6 @@ import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.rules.RuleListScaffold
-import io.legado.app.ui.widget.components.text.AppText
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -200,6 +200,7 @@ fun RssSourceScreen(
         onDismissRequest = { viewModel.cancelImport() },
         onToggleItem = { viewModel.toggleImportSelection(it) },
         onToggleAll = { viewModel.toggleImportAll(it) },
+        onUpdateItem = { index, source -> viewModel.updateImportItem(index, source) },
         onConfirm = { viewModel.saveImportedRules() },
         itemTitle = { rule -> rule.sourceName },
         itemSubtitle = { rule ->
@@ -344,9 +345,9 @@ fun RssSourceScreen(
             FastScrollLazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
-                contentPadding = PaddingValues(
-                    top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 80.dp
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 120.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

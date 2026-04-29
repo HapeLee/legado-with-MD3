@@ -7,6 +7,7 @@ import android.net.Uri
 import android.net.http.SslError
 import android.os.SystemClock
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
@@ -19,10 +20,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
@@ -43,17 +47,22 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -61,6 +70,7 @@ import com.script.rhino.runScriptWithContext
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieManager
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
@@ -69,6 +79,7 @@ import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.button.SmallIconButton
@@ -87,6 +98,7 @@ import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.share
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.toggleSystemBar
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
 import java.net.URLDecoder
@@ -115,6 +127,10 @@ fun RssReadRouteScreen(
     var showMenu by remember { mutableStateOf(false) }
     var showRedirectMenu by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+    var customView by remember { mutableStateOf<View?>(null) }
+    var customViewCallback by remember {
+        mutableStateOf<WebChromeClient.CustomViewCallback?>(null)
+    }
 
     var redirectPolicy by remember { mutableStateOf(RedirectPolicy.ALLOW_ALL) }
 
@@ -127,6 +143,15 @@ fun RssReadRouteScreen(
     val rssStar by viewModel.rssStarState.collectAsStateWithLifecycle()
     val isSpeaking by viewModel.isSpeakingState.collectAsStateWithLifecycle()
     val fallbackUserAgent = OtherConfig.userAgent
+
+    fun hideCustomView() {
+        val currentCustomView = customView ?: return
+        (currentCustomView.parent as? ViewGroup)?.removeView(currentCustomView)
+        customView = null
+        customViewCallback = null
+        activity?.keepScreenOn(false)
+        activity?.toggleSystemBar(AppConfig.showStatusBar)
+    }
 
     LaunchedEffect(origin, link, openUrl, title) {
         viewModel.initData(
@@ -167,169 +192,207 @@ fun RssReadRouteScreen(
 
     BackHandler {
         when {
+            customView != null -> customViewCallback?.onCustomViewHidden() ?: hideCustomView()
             webView?.canGoBack() == true && (webView?.copyBackForwardList()?.size ?: 0) > 1 -> webView?.goBack()
             else -> onBackClick()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = pageTitle.ifBlank { defaultTopBarTitle },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                navigationIcon = {
-                    TopBarNavigationButton(onClick = onBackClick)
-                },
-                actions = {
-                    TopBarActionButton(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.refresh),
-                        onClick = { viewModel.refresh { webView?.reload() } }
-                    )
-                    TopBarActionButton(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = stringResource(R.string.favorite),
-                        onClick = {
-                            viewModel.addFavorite()
-                            favoriteTitle = viewModel.rssArticle?.title.orEmpty()
-                            favoriteGroup = viewModel.rssArticle?.group.orEmpty()
-                            showFavoriteSheet = true
-                        }
-                    )
-                    Box {
-                        TopBarActionButton(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu",
-                            onClick = { showMenu = true }
+    DisposableEffect(Unit) {
+        onDispose {
+            customViewCallback?.onCustomViewHidden()
+            hideCustomView()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = pageTitle.ifBlank { defaultTopBarTitle },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        RoundDropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) { dismiss ->
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.share),
-                                leadingIcon = { MenuItemIcon(Icons.Default.Share) },
-                                onClick = {
-                                    dismiss()
-                                    webView?.url?.let {
-                                        context.share(it)
-                                    } ?: viewModel.rssArticle?.let {
-                                        context.share(it.link)
-                                    } ?: context.toastOnUi(R.string.null_url)
-                                }
+                    },
+                    navigationIcon = {
+                        TopBarNavigationButton(onClick = onBackClick)
+                    },
+                    actions = {
+                        TopBarActionButton(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = stringResource(R.string.refresh),
+                            onClick = { viewModel.refresh { webView?.reload() } }
+                        )
+                        TopBarActionButton(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = stringResource(R.string.favorite),
+                            onClick = {
+                                viewModel.addFavorite()
+                                favoriteTitle = viewModel.rssArticle?.title.orEmpty()
+                                favoriteGroup = viewModel.rssArticle?.group.orEmpty()
+                                showFavoriteSheet = true
+                            }
+                        )
+                        Box {
+                            TopBarActionButton(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "Menu",
+                                onClick = { showMenu = true }
                             )
-                            RoundDropdownMenuItem(
-                                text = if (isSpeaking) stringResource(R.string.aloud_stop) else stringResource(
-                                    R.string.read_aloud
-                                ),
-                                leadingIcon = {
-                                    MenuItemIcon(if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp)
-                                },
-                                onClick = {
-                                    dismiss()
-                                    if (isSpeaking) {
-                                        viewModel.stopReadAloud()
-                                    } else {
-                                        webView?.evaluateJavascript("document.documentElement.outerHTML") {
-                                            val html = StringEscapeUtils.unescapeJson(it)
-                                                .replace("^\"|\"$".toRegex(), "")
-                                            viewModel.readAloud(
-                                                Jsoup.parse(html).text()
-                                            )
-                                        }
-                                    }
-                                }
-                            )
-                            if (!viewModel.rssSource?.loginUrl.isNullOrBlank()) {
+                            RoundDropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) { dismiss ->
                                 RoundDropdownMenuItem(
-                                    text = stringResource(R.string.login),
-                                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                    text = stringResource(R.string.share),
+                                    leadingIcon = { MenuItemIcon(Icons.Default.Share) },
                                     onClick = {
                                         dismiss()
-                                        context.startActivity<SourceLoginActivity> {
-                                            putExtra("type", "rssSource")
-                                            putExtra("key", viewModel.rssSource?.sourceUrl)
+                                        webView?.url?.let {
+                                            context.share(it)
+                                        } ?: viewModel.rssArticle?.let {
+                                            context.share(it.link)
+                                        } ?: context.toastOnUi(R.string.null_url)
+                                    }
+                                )
+                                RoundDropdownMenuItem(
+                                    text = if (isSpeaking) stringResource(R.string.aloud_stop) else stringResource(
+                                        R.string.read_aloud
+                                    ),
+                                    leadingIcon = {
+                                        MenuItemIcon(if (isSpeaking) Icons.Default.Stop else Icons.Default.VolumeUp)
+                                    },
+                                    onClick = {
+                                        dismiss()
+                                        if (isSpeaking) {
+                                            viewModel.stopReadAloud()
+                                        } else {
+                                            webView?.evaluateJavascript("document.documentElement.outerHTML") {
+                                                val html = StringEscapeUtils.unescapeJson(it)
+                                                    .replace("^\"|\"$".toRegex(), "")
+                                                viewModel.readAloud(
+                                                    Jsoup.parse(html).text()
+                                                )
+                                            }
                                         }
+                                    }
+                                )
+                                if (!viewModel.rssSource?.loginUrl.isNullOrBlank()) {
+                                    RoundDropdownMenuItem(
+                                        text = stringResource(R.string.login),
+                                        leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                        onClick = {
+                                            dismiss()
+                                            context.startActivity<SourceLoginActivity> {
+                                                putExtra("type", "rssSource")
+                                                putExtra("key", viewModel.rssSource?.sourceUrl)
+                                            }
+                                        }
+                                    )
+                                }
+                                RoundDropdownMenuItem(
+                                    text = stringResource(R.string.redirect_policy),
+                                    onClick = { showRedirectMenu = true }
+                                )
+                                RoundDropdownMenuItem(
+                                    text = stringResource(R.string.open_in_browser),
+                                    leadingIcon = { MenuItemIcon(Icons.Default.OpenInBrowser) },
+                                    onClick = {
+                                        dismiss()
+                                        webView?.url?.let { context.openUrl(it) } ?: context.toastOnUi("url null")
                                     }
                                 )
                             }
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.redirect_policy),
-                                onClick = { showRedirectMenu = true }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.open_in_browser),
-                                leadingIcon = { MenuItemIcon(Icons.Default.OpenInBrowser) },
-                                onClick = {
-                                    dismiss()
-                                    webView?.url?.let { context.openUrl(it) } ?: context.toastOnUi("url null")
+                            RoundDropdownMenu(
+                                expanded = showRedirectMenu,
+                                onDismissRequest = { showRedirectMenu = false }
+                            ) { dismiss ->
+                                RedirectPolicy.entries.forEach { policy ->
+                                    RoundDropdownMenuItem(
+                                        text = policy.title(),
+                                        onClick = {
+                                            dismiss()
+                                            showMenu = false
+                                            viewModel.rssSource?.let { source ->
+                                                viewModel.updateRssSourceRedirectPolicy(source.sourceUrl, policy.name)
+                                                redirectPolicy = policy
+                                            }
+                                            context.toastOnUi("重定向策略已更新")
+                                        },
+                                        trailingIcon = {
+                                            if (policy == redirectPolicy) {
+                                                Icon(Icons.Default.Check, null)
+                                            }
+                                        }
+                                    )
                                 }
-                            )
-                        }
-                        RoundDropdownMenu(
-                            expanded = showRedirectMenu,
-                            onDismissRequest = { showRedirectMenu = false }
-                        ) { dismiss ->
-                            RedirectPolicy.entries.forEach { policy ->
-                                RoundDropdownMenuItem(
-                                    text = policy.title(),
-                                    onClick = {
-                                        dismiss()
-                                        showMenu = false
-                                        viewModel.rssSource?.let { source ->
-                                            viewModel.updateRssSourceRedirectPolicy(source.sourceUrl, policy.name)
-                                            redirectPolicy = policy
-                                        }
-                                        context.toastOnUi("重定向策略已更新")
-                                    },
-                                    trailingIcon = {
-                                        if (policy == redirectPolicy) {
-                                            Icon(Icons.Default.Check, null)
-                                        }
-                                    }
-                                )
                             }
                         }
                     }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            VisibleWebViewCompose(
-                modifier = Modifier.fillMaxSize(),
-                onCreated = { createdWebView ->
-                    webView = createdWebView
-                    configureRssReadWebView(
-                        webView = createdWebView,
-                        context = context,
-                        activity = activity,
-                        appCompatActivity = appCompatActivity,
-                        viewModel = viewModel,
-                        initialTitle = title,
-                        redirectPolicyProvider = { redirectPolicy },
-                        callbacks = RssReadWebControllerCallbacks(
-                            onProgressChanged = { webProgress = it },
-                            onPageTitleResolved = { resolved ->
-                                pageTitle = resolved.ifBlank { defaultTopBarTitle }
-                            }
+                )
+            }
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                VisibleWebViewCompose(
+                    modifier = Modifier.fillMaxSize(),
+                    onCreated = { createdWebView ->
+                        webView = createdWebView
+                        configureRssReadWebView(
+                            webView = createdWebView,
+                            context = context,
+                            activity = activity,
+                            appCompatActivity = appCompatActivity,
+                            viewModel = viewModel,
+                            initialTitle = title,
+                            redirectPolicyProvider = { redirectPolicy },
+                            callbacks = RssReadWebControllerCallbacks(
+                                onProgressChanged = { webProgress = it },
+                                onPageTitleResolved = { resolved ->
+                                    pageTitle = resolved.ifBlank { defaultTopBarTitle }
+                                },
+                                onShowCustomView = { view, callback ->
+                                    if (view == null) {
+                                        callback?.onCustomViewHidden()
+                                    } else if (customView != null) {
+                                        callback?.onCustomViewHidden()
+                                    } else {
+                                        customView = view
+                                        customViewCallback = callback
+                                        activity?.keepScreenOn(true)
+                                        activity?.toggleSystemBar(false)
+                                    }
+                                },
+                                onHideCustomView = { hideCustomView() }
+                            )
                         )
+                    }
+                )
+                if (webProgress in 0..99) {
+                    LinearProgressIndicator(
+                        progress = { webProgress / 100f },
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-            )
-            if (webProgress in 0..99) {
-                LinearProgressIndicator(
-                    progress = { webProgress / 100f },
-                    modifier = Modifier.fillMaxWidth()
+            }
+        }
+
+        customView?.let { view ->
+            key(view) {
+                AndroidView(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black)
+                        .zIndex(1f),
+                    factory = {
+                        (view.parent as? ViewGroup)?.removeView(view)
+                        view
+                    }
                 )
             }
         }
@@ -377,7 +440,7 @@ private fun FavoriteEditSheet(
         }
     ) {
 
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column {
             AppTextField(
                 value = titleValue,
                 onValueChange = onTitleChange,
@@ -396,11 +459,14 @@ private fun FavoriteEditSheet(
             )
         }
 
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.action_save),
-            leadingIcon = { MenuItemIcon(Icons.Default.Check) },
-            onClick = onSave,
-            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ConfirmDismissButtonsRow(
+            modifier = Modifier.fillMaxWidth(),
+            onDismiss = onDismissRequest,
+            onConfirm = onSave,
+            dismissText = stringResource(R.string.cancel),
+            confirmText = stringResource(R.string.action_save)
         )
     }
 }

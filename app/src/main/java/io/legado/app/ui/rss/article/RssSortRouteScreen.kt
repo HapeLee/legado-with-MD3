@@ -156,7 +156,7 @@ fun RssSortRouteScreen(
             }
             context.toastOnUi("重定向策略已更新")
         },
-        pagerContent = { _, sort ->
+        pagerContent = { _, sort, paddingValues ->
             val pageViewModel: RssArticlesViewModel = koinViewModel(
                 key = "rss_${viewModel.url}_${sort.first}_${sort.second}"
             )
@@ -167,6 +167,7 @@ fun RssSortRouteScreen(
                 rssUrl = viewModel.url,
                 rssSource = viewModel.rssSource,
                 viewModel = pageViewModel,
+                paddingValues = paddingValues,
                 onRead = { article ->
                     viewModel.read(article)
                     onOpenRead(article.title, article.origin, article.link, null)

@@ -6,8 +6,10 @@ import android.util.AttributeSet
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -144,19 +146,31 @@ fun VisibleWebViewCompose(
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            VisibleWebView(context).also {
-                webViewHolder.webView = it
-                onCreated(it)
+            FrameLayout(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                val webView = VisibleWebView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+                addView(webView)
+                webViewHolder.webView = webView
+                onCreated(webView)
             }
         },
-        update = {
-            webViewHolder.webView = it
+        update = { container ->
+            webViewHolder.webView = container.getChildAt(0) as? VisibleWebView
         }
     )
     DisposableEffect(Unit) {
         onDispose {
             onDestroyed?.invoke()
-            webViewHolder.webView?.destroy()
+            webViewHolder.webView?.let { webView ->
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.destroy()
+            }
             webViewHolder.webView = null
         }
     }

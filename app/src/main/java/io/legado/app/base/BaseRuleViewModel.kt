@@ -301,4 +301,15 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
         _importState.value = currentState.copy(items = newItems)
     }
 
+    fun updateImportItem(index: Int, data: Entity) {
+        val currentState = _importState.value as? BaseImportUiState.Success<Entity> ?: return
+        if (index !in currentState.items.indices) return
+        val newItems = currentState.items.toMutableList()
+        newItems[index] = newItems[index].copy(data = data)
+        _importState.value = currentState.copy(
+            items = newItems,
+            version = currentState.version + 1
+        )
+    }
+
 }

@@ -182,6 +182,7 @@ fun DictRuleScreen(
         onDismissRequest = { viewModel.cancelImport() },
         onToggleItem = { viewModel.toggleImportSelection(it) },
         onToggleAll = { viewModel.toggleImportAll(it) },
+        onUpdateItem = { index, rule -> viewModel.updateImportItem(index, rule) },
         onConfirm = { viewModel.saveImportedRules() },
         itemTitle = { rule -> rule.name },
         itemSubtitle = { rule ->

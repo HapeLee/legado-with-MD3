@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.importComponents
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,43 +18,38 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedToggleButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AnimatedText
+import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
-import kotlinx.coroutines.launch
+import io.legado.app.utils.GSON
 
 @Composable
 fun SourceInputDialog(
@@ -117,6 +113,7 @@ fun <T> BatchImportDialog(
     onToggleItem: (index: Int) -> Unit,
     onToggleAll: (isSelected: Boolean) -> Unit,
     onItemInfoClick: (index: Int) -> Unit = {},
+    onUpdateItem: (index: Int, data: T) -> Unit = { _, _ -> },
     topBarActions: @Composable RowScope.() -> Unit = {},
     itemTitle: (data: T) -> String,
     itemSubtitle: (data: T) -> String? = { null }
@@ -130,79 +127,185 @@ fun <T> BatchImportDialog(
 
     if (!show && cachedState == null) return
 
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-
     val currentState = cachedState!!
+    var editingIndex by remember(currentState.source) { mutableStateOf<Int?>(null) }
+    val editingItem = editingIndex?.let { currentState.items.getOrNull(it) }
+    val isEditing = editingItem != null
     val selectedCount = currentState.items.count { it.isSelected }
     val totalCount = currentState.items.size
+    val allSelected = selectedCount == totalCount
+    val sheetTitle = when {
+        isEditing -> itemTitle(editingItem.data)
+        selectedCount > 0 -> {
+            stringResource(
+                R.string.select_count,
+                selectedCount,
+                totalCount
+            )
+        }
+
+        else -> title
+    }
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
-    ) {
-        AppScaffold(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f),
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        AnimatedText(
-                            if (selectedCount > 0)
-                                stringResource(
-                                    R.string.select_count,
-                                    selectedCount,
-                                    totalCount
-                                )
-                            else
-                                title
-                        )
-                    },
-                    actions = topBarActions,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent
-                    )
-                )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                ImportBottomBar(
-                    selectedCount = selectedCount,
-                    totalCount = totalCount,
-                    onToggleSelectAll = onToggleAll,
-                    onConfirm = {
-                        val selectedData =
-                            currentState.items.filter { it.isSelected }.map { it.data }
-                        onConfirm(selectedData)
-                    },
-                    onCancel = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        modifier = Modifier.heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.8f),
+        title = sheetTitle,
+        startAction = if (isEditing) {
+            {
+                SmallIconButton(
+                    onClick = { editingIndex = null },
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "返回"
                 )
             }
-        ) { padding ->
-            LazyColumn(
-                modifier = Modifier.padding(padding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                itemsIndexed(
-                    currentState.items,
-                    key = { _, item -> item.data.hashCode() }) { index, itemWrapper ->
-                    ImportItemRow(
-                        title = itemTitle(itemWrapper.data),
-                        subtitle = itemSubtitle(itemWrapper.data),
-                        isSelected = itemWrapper.isSelected,
-                        status = itemWrapper.status,
-                        onClick = { onToggleItem(index) },
-                        onInfoClick = {
-                            scope.launch { snackbarHostState.showSnackbar("其实还没写桀桀桀") }
-                            onItemInfoClick(index)
-                        }
+        } else {
+            null
+        },
+        endAction = if (!isEditing) {
+            {
+                Row {
+                    topBarActions()
+                    SmallIconButton(
+                        onClick = { onToggleAll(!allSelected) },
+                        imageVector = Icons.Default.SelectAll,
+                        contentDescription = if (allSelected) "全不选" else "全选"
                     )
                 }
             }
+        } else {
+            null
+        }
+    ) {
+        if (isEditing) {
+            BatchImportJsonEditContent(
+                data = editingItem.data,
+                version = currentState.version
+            ) { data ->
+                editingIndex?.let { onUpdateItem(it, data) }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.58f)
+            ) {
+                LazyColumn(
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(
+                        currentState.items,
+                        key = { _, item -> item.data.hashCode() }
+                    ) { index, itemWrapper ->
+                        ImportItemRow(
+                            title = itemTitle(itemWrapper.data),
+                            subtitle = itemSubtitle(itemWrapper.data),
+                            isSelected = itemWrapper.isSelected,
+                            status = itemWrapper.status,
+                            onClick = { onToggleItem(index) },
+                            onInfoClick = {
+                                onItemInfoClick(index)
+                                editingIndex = index
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        ConfirmDismissButtonsRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 8.dp),
+            onDismiss = onDismissRequest,
+            onConfirm = {
+                val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
+                onConfirm(selectedData)
+            },
+            dismissText = "取消",
+            confirmText = "导入",
+            confirmEnabled = selectedCount > 0
+        )
+    }
+}
+
+@SuppressLint("ConfigurationScreenWidthHeight")
+@Composable
+private fun <T> BatchImportJsonEditContent(
+    data: T,
+    version: Int,
+    onDataChange: (T) -> Unit
+) {
+    val jsonObject = remember(version) { data.toImportJsonObject() }
+
+    if (jsonObject == null) {
+        AppText("不支持编辑")
+        return
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.58f),
+        contentPadding = PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(
+            items = jsonObject.entrySet().toList(),
+            key = { it.key }
+        ) { entry ->
+            BatchImportJsonField(
+                name = entry.key,
+                value = entry.value,
+                onValueChange = { value ->
+                    val updatedJsonObject = data.toImportJsonObject() ?: return@BatchImportJsonField
+                    updatedJsonObject.add(entry.key, value)
+                    updatedJsonObject.toImportDataLike(data)?.let(onDataChange)
+                }
+            )
         }
     }
+}
+
+@Composable
+private fun BatchImportJsonField(
+    name: String,
+    value: JsonElement,
+    onValueChange: (JsonElement) -> Unit
+) {
+    val primitive = value.takeIf { it.isJsonPrimitive }?.asJsonPrimitive
+    if (primitive?.isBoolean == true) {
+        GlassCard(
+            containerColor = LegadoTheme.colorScheme.onSheetContent
+        ) {
+            SwitchSettingItem(
+                title = name,
+                checked = primitive.asBoolean,
+                onCheckedChange = { onValueChange(JsonPrimitive(it)) }
+            )
+        }
+
+        return
+    }
+
+    val isJsonText = value.isJsonObject || value.isJsonArray
+    val initialText = value.toImportEditText()
+    var text by remember(name, initialText) { mutableStateOf(initialText) }
+
+    AppTextField(
+        value = text,
+        onValueChange = { newText ->
+            text = newText
+            newText.toImportJsonElement(value)?.let(onValueChange)
+        },
+        label = name,
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = !isJsonText,
+        maxLines = if (isJsonText) 8 else 1
+    )
 }
 
 @Composable
@@ -220,7 +323,7 @@ fun ImportItemRow(
         isSelected = isSelected,
         inSelectionMode = true,
         onToggleSelection = onClick,
-        modifier = Modifier.padding(vertical = 4.dp),
+        containerColor = LegadoTheme.colorScheme.onSheetContent,
         trailingAction = {
             AppText(
                 text = when (status) {
@@ -248,43 +351,49 @@ fun ImportItemRow(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun ImportBottomBar(
-    selectedCount: Int,
-    totalCount: Int,
-    onToggleSelectAll: (Boolean) -> Unit,
-    onConfirm: () -> Unit,
-    onCancel: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val allSelected = selectedCount == totalCount
-        OutlinedToggleButton(
-            checked = allSelected,
-            onCheckedChange = { checked ->
-                onToggleSelectAll(checked)
-            },
-        ) {
-            Icon(
-                imageVector = Icons.Default.SelectAll,
-                contentDescription = if (allSelected) "全不选" else "全选"
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onCancel) { AppText("取消") }
-            Button(
-                enabled = selectedCount > 0,
-                onClick = onConfirm
-            ) {
-                AppText("导入")
+private fun Any?.toImportJsonObject(): JsonObject? {
+    return GSON.toJsonTree(this).takeIf { it.isJsonObject }?.asJsonObject
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> JsonObject.toImportDataLike(data: T): T? {
+    val clazz = data?.let { it::class.java } ?: return null
+    return runCatching { GSON.fromJson(this, clazz) as T }.getOrNull()
+}
+
+private fun JsonElement.toImportEditText(): String {
+    return when {
+        this is JsonNull || isJsonNull -> ""
+        isJsonObject || isJsonArray -> GSON.toJson(this)
+        isJsonPrimitive -> asJsonPrimitive.asString
+        else -> toString()
+    }
+}
+
+private fun String.toImportJsonElement(oldValue: JsonElement): JsonElement? {
+    val text = trim()
+    if (oldValue.isJsonNull) {
+        return if (text.isEmpty()) JsonNull.INSTANCE else JsonPrimitive(this)
+    }
+
+    if (oldValue.isJsonObject || oldValue.isJsonArray) {
+        if (text.isEmpty()) return JsonNull.INSTANCE
+        return runCatching { JsonParser.parseString(this) }.getOrNull()
+    }
+
+    if (!oldValue.isJsonPrimitive) return JsonPrimitive(this)
+
+    val primitive = oldValue.asJsonPrimitive
+    return when {
+        primitive.isNumber -> {
+            if (text.isEmpty()) {
+                JsonNull.INSTANCE
+            } else {
+                text.toLongOrNull()?.let { JsonPrimitive(it) }
+                    ?: text.toDoubleOrNull()?.let { JsonPrimitive(it) }
             }
         }
+
+        else -> JsonPrimitive(this)
     }
 }
