@@ -1209,6 +1209,10 @@
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
+    <string name="crash_report">崩溃报告</string>
+    <string name="crash_report_message">应用发生崩溃。报告问题时，请复制以下错误信息。</string>
+    <string name="crash_report_empty">未找到崩溃信息。</string>
+    <string name="restart_app">重启应用</string>
     <string name="record_heap_dump_s">当应用发生OOM崩溃时保存堆转储</string>
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>

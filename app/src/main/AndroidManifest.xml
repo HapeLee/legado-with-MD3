@@ -222,6 +222,11 @@
             android:name=".ui.about.AboutActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
+        <activity
+            android:name=".ui.about.CrashReportActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
         <!-- 书源管理 -->
         <activity
             android:name=".ui.book.source.manage.BookSourceActivity"

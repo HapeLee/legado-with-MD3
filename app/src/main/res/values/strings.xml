@@ -1212,6 +1212,10 @@
     <string name="key_page_on_long_press">Press and Hold the Key to Turn Page</string>
     <string name="save_log">Save logs</string>
     <string name="create_heap_dump">Create Heap Dump</string>
+    <string name="crash_report">Crash report</string>
+    <string name="crash_report_message">The app crashed. Copy the error information below when reporting the issue.</string>
+    <string name="crash_report_empty">No crash information found.</string>
+    <string name="restart_app">Restart app</string>
     <string name="record_heap_dump_s">Saving a heap dump when the application crashes by OOM</string>
     <string name="record_heap_dump_t">Capture heap dump</string>
     <string name="font_weight_text">N/B/L</string>
