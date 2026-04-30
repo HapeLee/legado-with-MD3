@@ -1,6 +1,7 @@
 package io.legado.app.domain.usecase
 
 import io.legado.app.constant.AppLog
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.BookSearchGateway
@@ -100,7 +101,7 @@ class SearchBooksUseCase(
                 when (result) {
                     is SourceSearchResult.Found -> {
                         result.books.forEach { it.releaseHtmlData() }
-                        hasMore = hasMore || result.books.isNotEmpty()
+                        hasMore = hasMore || (result.supportsNextPage && result.books.isNotEmpty())
                         if (result.books.isNotEmpty()) {
                             gateway.saveSearchBooks(result.books)
                         }
@@ -148,6 +149,10 @@ class SearchBooksUseCase(
         return try {
             val source = gateway.getBookSource(sourcePart.bookSourceUrl)
                 ?: return SourceSearchResult.Found(emptyList())
+            val supportsSearchPage = source.supportsSearchPage()
+            if (page > 1 && !supportsSearchPage) {
+                return SourceSearchResult.Found(emptyList())
+            }
             val books = withTimeout(30000L) {
                 WebBook.searchBookAwait(
                     source,
@@ -158,7 +163,7 @@ class SearchBooksUseCase(
                     }
                 )
             }
-            SourceSearchResult.Found(books)
+            SourceSearchResult.Found(books, supportsSearchPage)
         } catch (exception: Throwable) {
             coroutineContext.ensureActive()
             if (exception is CancellationException) throw exception
@@ -167,7 +172,11 @@ class SearchBooksUseCase(
     }
 
     private sealed interface SourceSearchResult {
-        data class Found(val books: List<SearchBook>) : SourceSearchResult
+        data class Found(
+            val books: List<SearchBook>,
+            val supportsNextPage: Boolean = false,
+        ) : SourceSearchResult
+
         data class Failed(val throwable: Throwable) : SourceSearchResult
     }
 
@@ -251,3 +260,22 @@ class SearchBooksUseCase(
         val removedBookUrls: List<String> = emptyList(),
     )
 }
+
+internal fun BookSource.supportsSearchPage(): Boolean {
+    val url = searchUrl.orEmpty()
+    if (url.isBlank()) return false
+
+    if (searchPageScriptPattern.findAll(url).any { searchPageTokenPattern.containsMatchIn(it.value) }) {
+        return true
+    }
+
+    val staticUrl = searchPageScriptPattern.replace(url, "")
+    return searchPageGroupPattern.containsMatchIn(staticUrl)
+}
+
+private val searchPageScriptPattern = Regex(
+    pattern = """\{\{[\s\S]*?}}|<js>[\s\S]*?</js>|@js:[\s\S]*""",
+    option = RegexOption.IGNORE_CASE,
+)
+private val searchPageTokenPattern = Regex("""(?<![A-Za-z0-9_])page(?![A-Za-z0-9_])""")
+private val searchPageGroupPattern = Regex("""<[^<>]+>""")
