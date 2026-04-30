@@ -14,8 +14,6 @@ import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadSource
 import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
-import io.legado.app.model.cache.ReadingCacheEvent
-import io.legado.app.model.cache.ReadingCacheEvents
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -616,14 +614,14 @@ class CacheBookModel(
         resetPageOffset: Boolean = false,
         canceled: Boolean = false
     ) {
-        ReadingCacheEvents.emit(
-            ReadingCacheEvent.ContentReady(
+        if (ReadBook.book?.bookUrl == book.bookUrl) {
+            ReadBook.contentLoadFinish(
                 book = book,
                 chapter = chapter,
                 content = content,
                 resetPageOffset = resetPageOffset,
                 canceled = canceled,
             )
-        )
+        }
     }
 }

@@ -26,8 +26,6 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.localBook.TextFile
-import io.legado.app.model.cache.ReadingCacheEvent
-import io.legado.app.model.cache.ReadingCacheEvents
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
@@ -89,26 +87,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
-
-    init {
-        launch {
-            ReadingCacheEvents.events.collect { event ->
-                when (event) {
-                    is ReadingCacheEvent.ContentReady -> {
-                        if (book?.bookUrl == event.book.bookUrl) {
-                            contentLoadFinish(
-                                book = event.book,
-                                chapter = event.chapter,
-                                content = event.content,
-                                resetPageOffset = event.resetPageOffset,
-                                canceled = event.canceled,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
@@ -686,7 +664,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     ) {
         Coroutine.async {
             val book = book!!
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: return@async
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: run {
+                if (index == durChapterIndex) {
+                    upMsg("章节不存在")
+                }
+                return@async
+            }
             if (addLoading(index)) {
                 BookHelp.getContent(book, chapter)?.let {
                     contentLoadFinish(
@@ -704,7 +687,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 )
             }
         }.onError {
-            AppLog.put("加载正文出错\n${it.localizedMessage}")
+            removeLoading(index)
+            if (index == durChapterIndex) {
+                upMsg("加载正文出错\n${it.localizedMessage}")
+            }
+            AppLog.put("加载正文出错\n${it.localizedMessage}", it)
         }
     }
 
