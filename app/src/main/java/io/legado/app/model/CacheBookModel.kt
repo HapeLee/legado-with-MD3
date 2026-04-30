@@ -55,6 +55,7 @@ class CacheBookModel(
     private val onDownloadSet = linkedSetOf<Int>()
     private val canceledDownloadSet = hashSetOf<Int>()
     private val pausedChapterSet = linkedSetOf<Int>()
+    private val pendingReadRequestMap = hashMapOf<Int, Boolean>()
     private val chapterTasks = hashMapOf<Int, Coroutine<*>>()
     private val tasks = CompositeCoroutine()
     private val repository = CacheDownloadRepository()
@@ -197,6 +198,7 @@ class CacheBookModel(
         canceledDownloadSet.clear()
         pausedChapterSet.clear()
         chapterTasks.clear()
+        pendingReadRequestMap.clear()
         tasks.clear()
         retryCountMap.clear()
         isStopped = true
@@ -492,12 +494,17 @@ class CacheBookModel(
     ) {
         task.onSuccess {
             onSuccess(chapter)
+            (it as? String)?.let { content ->
+                emitPendingReadContent(chapter, content)
+            }
         }.onError {
             onPreError(chapter, it)
             delay(1000)
             onPostError(chapter, it)
+            emitPendingReadError(chapter, it)
         }.onCancel {
             onCancel(chapterIndex)
+            emitPendingReadCanceled(chapter)
         }.onFinally {
             chapterTasks.remove(chapterIndex)?.let { tasks.delete(it) }
             onFinally()
@@ -536,7 +543,10 @@ class CacheBookModel(
         semaphore: Semaphore?,
         resetPageOffset: Boolean = false
     ) {
-        if (!markChapterDownloadStarted(chapter.index)) return
+        if (!markChapterDownloadStarted(chapter.index)) {
+            markPendingReadRequest(chapter.index, resetPageOffset)
+            return
+        }
         repository.downloadContentTask(
             scope = scope,
             bookSource = bookSource,
@@ -551,11 +561,13 @@ class CacheBookModel(
             ReadBook.downloadedChapters.add(chapter.index)
             ReadBook.downloadFailChapters.remove(chapter.index)
             downloadFinish(chapter, content, resetPageOffset)
+            emitPendingReadContent(chapter, content)
         }.onError {
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
             downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}", resetPageOffset)
+            emitPendingReadError(chapter, it)
         }.onCancel {
             onCancel(chapter.index, requeue = false)
             downloadFinish(chapter, "download canceled", resetPageOffset, true)
@@ -571,6 +583,31 @@ class CacheBookModel(
         queue.removeChapter(index)
         notifyDownloadSetChanged()
         return true
+    }
+
+    @Synchronized
+    private fun markPendingReadRequest(index: Int, resetPageOffset: Boolean) {
+        pendingReadRequestMap[index] = pendingReadRequestMap[index] == true || resetPageOffset
+    }
+
+    @Synchronized
+    private fun consumePendingReadRequest(index: Int): Boolean? {
+        return pendingReadRequestMap.remove(index)
+    }
+
+    private fun emitPendingReadContent(chapter: BookChapter, content: String) {
+        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(chapter, content, resetPageOffset)
+    }
+
+    private fun emitPendingReadError(chapter: BookChapter, error: Throwable) {
+        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(chapter, "获取正文失败\n${error.localizedMessage}", resetPageOffset)
+    }
+
+    private fun emitPendingReadCanceled(chapter: BookChapter) {
+        val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
+        downloadFinish(chapter, "download canceled", resetPageOffset)
     }
 
     private fun downloadFinish(

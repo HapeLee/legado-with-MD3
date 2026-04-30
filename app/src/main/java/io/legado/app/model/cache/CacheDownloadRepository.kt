@@ -71,7 +71,7 @@ class CacheDownloadRepository {
         context: CoroutineContext,
         start: CoroutineStart = CoroutineStart.LAZY,
         executeContext: CoroutineContext = context,
-    ): Coroutine<Unit> {
+    ): Coroutine<String> {
         return Coroutine.async(
             scope = scope,
             context = context,

@@ -126,15 +126,17 @@ class SearchViewModel(
             }
 
             SearchIntent.SelectAllScope -> {
+                val oldScope = searchScope.toString()
                 searchScope.update("")
-                syncScopeState()
+                syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
             is SearchIntent.ToggleScopeGroup -> toggleScopeGroup(intent.groupName)
             is SearchIntent.ToggleScopeSource -> toggleScopeSource(intent.source)
             is SearchIntent.RemoveScopeItem -> {
+                val oldScope = searchScope.toString()
                 searchScope.remove(intent.scopeName)
-                syncScopeState()
+                syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
             is SearchIntent.TogglePrecision -> {
@@ -370,6 +372,7 @@ class SearchViewModel(
     }
 
     private fun toggleScopeGroup(groupName: String) {
+        val oldScope = searchScope.toString()
         if (searchScope.isSource()) {
             searchScope.update("")
         }
@@ -380,10 +383,11 @@ class SearchViewModel(
             selected.add(groupName)
         }
         searchScope.update(selected.toList())
-        syncScopeState()
+        syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
     private fun toggleScopeSource(source: BookSourcePart) {
+        val oldScope = searchScope.toString()
         val selectedUrls = if (searchScope.isSource()) {
             searchScope.sourceUrls.toMutableSet()
         } else {
@@ -404,7 +408,7 @@ class SearchViewModel(
             }
             searchScope.updateSources(selectedSources)
         }
-        syncScopeState()
+        syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
     private fun handleEmptyScopeActionConfirmed() {
@@ -429,7 +433,11 @@ class SearchViewModel(
         }
     }
 
-    private fun syncScopeState() {
+    private fun syncScopeState(
+        restartSearch: Boolean = false,
+        oldScope: String? = null,
+    ) {
+        val scopeChanged = oldScope == null || oldScope != searchScope.toString()
         _uiState.update {
             it.copy(
                 scopeDisplay = searchScope.display,
@@ -438,6 +446,9 @@ class SearchViewModel(
                 isAllScope = searchScope.isAll(),
                 isSourceScope = searchScope.isSource(),
             )
+        }
+        if (restartSearch && scopeChanged) {
+            restartCommittedSearchIfNeeded()
         }
     }
 
