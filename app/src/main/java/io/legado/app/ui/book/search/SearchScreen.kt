@@ -222,12 +222,15 @@ fun SearchScreen(
                             activeText = stringResource(R.string.precision_search),
                             inactiveText = stringResource(R.string.search),
                         )
-                        TopBarActionButton(
-                            onClick = {
+                        TopBarAnimatedActionButton(
+                            checked = !state.isAllScope,
+                            onCheckedChange = {
                                 viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
                             },
-                            imageVector = AppIcons.Filter,
-                            contentDescription = "筛选"
+                            iconChecked = AppIcons.Filter,
+                            iconUnchecked = AppIcons.Filter,
+                            activeText = stringResource(R.string.screen),
+                            inactiveText = stringResource(R.string.screen),
                         )
                         TopBarActionButton(
                             onClick = {
