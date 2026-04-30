@@ -55,7 +55,6 @@ import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,6 +72,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.data.entities.BookGroup
@@ -127,7 +127,7 @@ fun BookshelfScreen(
     onNavigateToCache: (Long) -> Unit
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     var showAddUrlDialog by remember { mutableStateOf(false) }
@@ -721,7 +721,7 @@ fun BookshelfScreen(
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            beyondViewportPageCount = 3,
+                            beyondViewportPageCount = 1,
                             key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
                         ) { pageIndex ->
                             val group = uiState.groups.getOrNull(pageIndex)
@@ -729,7 +729,7 @@ fun BookshelfScreen(
                                 val booksFlow = remember(group.groupId) {
                                     viewModel.getBooksFlow(group.groupId)
                                 }
-                                val books by booksFlow.collectAsState(emptyList())
+                                val books by booksFlow.collectAsStateWithLifecycle(emptyList())
                                 BookshelfPage(
                                     paddingValues = paddingValues,
                                     books = books,
