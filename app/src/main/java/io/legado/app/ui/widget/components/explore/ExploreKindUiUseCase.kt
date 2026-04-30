@@ -7,6 +7,7 @@ import io.legado.app.data.dao.BookSourceDao
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.utils.InfoMap
 import kotlinx.coroutines.Dispatchers.IO
@@ -41,6 +42,18 @@ class ExploreKindUiUseCase(
         }.getOrElse {
             "err"
         }
+    }
+
+    suspend fun executeAction(
+        action: String?,
+        title: String,
+        sourceUrl: String?,
+        activity: AppCompatActivity?,
+        onRefreshKinds: () -> Unit
+    ) {
+        val effectiveSourceUrl = sourceUrl ?: return
+        val infoMap = getExploreInfoMap(effectiveSourceUrl)
+        executeAction(action, title, effectiveSourceUrl, infoMap, activity, onRefreshKinds)
     }
 
     suspend fun executeAction(

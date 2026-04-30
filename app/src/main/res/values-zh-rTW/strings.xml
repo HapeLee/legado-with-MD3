@@ -1264,4 +1264,9 @@
 	<string name="subtitle_scale">次行縮放</string>
 	<string name="subtitle_margin">次行距離</string>
 	<string name="heading_spacing">標題段距</string>
+    <string name="bookshelf_total_count">共%1$d本</string>
+    <string name="bookshelf_selected_count">已選%1$d本</string>
+    <string name="bookshelf_empty_global_search">沒有書籍，嘗試全域搜尋</string>
+    <string name="global_search">全域搜尋</string>
+    <string name="cache_management">快取管理</string>
 </resources>

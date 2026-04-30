@@ -21,6 +21,7 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
+import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SearchContentRepository
@@ -142,6 +143,7 @@ val appModule = module {
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
     single<ExploreRepository> { ExploreRepositoryImpl(get()) }
+    singleOf(::RssRepository)
     single {
         SearchRepositoryImpl(get())
     }

@@ -1473,4 +1473,9 @@
     <string name="subtitle_margin">Subtitle Margin</string>
     <string name="heading_spacing">Heading Spacing</string>
     <string name="follow_read_background">Follow Background</string>
+    <string name="bookshelf_total_count">%1$d books</string>
+    <string name="bookshelf_selected_count">%1$d selected</string>
+    <string name="bookshelf_empty_global_search">No books here. Try global search.</string>
+    <string name="global_search">Global search</string>
+    <string name="cache_management">Cache management</string>
 </resources>

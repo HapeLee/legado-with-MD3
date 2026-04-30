@@ -56,7 +56,6 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
-import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
@@ -100,9 +99,10 @@ fun MainScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val mainUiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val bookshelfViewModel: BookshelfViewModel = koinViewModel()
-    val bookshelfUiState by bookshelfViewModel.uiState.collectAsStateWithLifecycle()
+    val bookshelfGroupState by bookshelfViewModel.groupSelectorState.collectAsStateWithLifecycle()
 
     val hazeState = remember { HazeState() }
     val floatingBarSurfaceColor = MaterialTheme.colorScheme.surface
@@ -110,45 +110,37 @@ fun MainScreen(
         drawRect(floatingBarSurfaceColor)
         drawContent()
     }
-    val destinations = remember(MainConfig.showDiscovery, MainConfig.showRSS) {
-        MainDestination.mainDestinations.filter {
-            when (it) {
-                MainDestination.Explore -> MainConfig.showDiscovery
-                MainDestination.Rss -> MainConfig.showRSS
-                else -> true
-            }
-        }
-    }
+    val destinations = mainUiState.destinations
 
-    val initialPage = remember(destinations) {
-        val index = destinations.indexOfFirst { it.route == MainConfig.defaultHomePage }
+    val initialPage = remember(destinations, mainUiState.defaultHomePage) {
+        val index = destinations.indexOfFirst { it.route == mainUiState.defaultHomePage }
         if (index != -1) index else 0
     }
     val pagerState = rememberPagerState(initialPage = initialPage) { destinations.size }
-    val labelVisibilityMode = MainConfig.labelVisibilityMode
+    LaunchedEffect(destinations) {
+        if (destinations.isNotEmpty() && pagerState.currentPage !in destinations.indices) {
+            pagerState.scrollToPage(destinations.lastIndex)
+        }
+    }
+    val labelVisibilityMode = mainUiState.labelVisibilityMode
     val isUnlabeled = labelVisibilityMode == "unlabeled"
     val useFloatingBottomBar =
-        !useRail && MainConfig.showBottomView && MainConfig.useFloatingBottomBar
+        !useRail && mainUiState.showBottomView && mainUiState.useFloatingBottomBar
     val useLiquidGlass = useFloatingBottomBar &&
-            MainConfig.useFloatingBottomBarLiquidGlass &&
+            mainUiState.useFloatingBottomBarLiquidGlass &&
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val alwaysShowLabel = labelVisibilityMode == "labeled"
     val showLabel = !isUnlabeled
 
     val navState = rememberWideNavigationRailState(
-        initialValue = if (MainConfig.navExtended)
+        initialValue = if (mainUiState.navExtended)
             WideNavigationRailValue.Expanded
         else
             WideNavigationRailValue.Collapsed
     )
 
-    LaunchedEffect(navState.currentValue) {
-        MainConfig.navExtended =
-            navState.currentValue == WideNavigationRailValue.Expanded
-    }
-
     Row(modifier = Modifier.fillMaxSize()) {
-        if (useRail && MainConfig.showBottomView) {
+        if (useRail && mainUiState.showBottomView) {
             WideNavigationRail(
                 state = navState,
                 header = {
@@ -159,8 +151,10 @@ fun MainScreen(
                             modifier = Modifier.padding(start = 24.dp),
                             onClick = {
                                 coroutineScope.launch {
-                                    if (expanded) navState.collapse()
-                                    else navState.expand()
+                                    val targetExpanded = !expanded
+                                    if (targetExpanded) navState.expand()
+                                    else navState.collapse()
+                                    viewModel.setNavExtended(targetExpanded)
                                 }
                             }
                         ) {
@@ -185,7 +179,6 @@ fun MainScreen(
                     }
                 }
             ) {
-                val labelVisibilityMode = MainConfig.labelVisibilityMode
                 destinations.forEachIndexed { index, destination ->
                     val selected = pagerState.targetPage == index
                     var showGroupMenu by remember { mutableStateOf(false) }
@@ -224,7 +217,7 @@ fun MainScreen(
                                         expanded = showGroupMenu,
                                         onDismissRequest = { showGroupMenu = false }
                                     ) { dismiss ->
-                                        bookshelfUiState.groups.forEachIndexed { groupIndex, group ->
+                                        bookshelfGroupState.groups.forEachIndexed { groupIndex, group ->
                                             RoundDropdownMenuItem(
                                                 text = group.groupName,
                                                 onClick = {
@@ -237,7 +230,7 @@ fun MainScreen(
                                                     }
                                                 },
                                                 trailingIcon = {
-                                                    if (bookshelfUiState.selectedGroupIndex == groupIndex) {
+                                                    if (bookshelfGroupState.selectedGroupIndex == groupIndex) {
                                                         Icon(
                                                             Icons.Default.Check,
                                                             null,
@@ -262,7 +255,7 @@ fun MainScreen(
         AppScaffold(
             modifier = Modifier.weight(1f),
             bottomBar = {
-                if (!useRail && MainConfig.showBottomView) {
+                if (!useRail && mainUiState.showBottomView) {
                     if (useFloatingBottomBar) {
                         Box(modifier = Modifier.fillMaxWidth()) {
                             FloatingBottomBar(
@@ -365,7 +358,7 @@ fun MainScreen(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
                     userScrollEnabled = true,
-                    beyondViewportPageCount = 3
+                    beyondViewportPageCount = 1
                 ) { page ->
                     val destination = destinations.getOrNull(page) ?: return@HorizontalPager
                     when (destination) {
@@ -394,7 +387,6 @@ fun MainScreen(
                             }
                         )
                         MainDestination.My -> MyScreen(
-                            viewModel = koinViewModel(),
                             onOpenSettings = onOpenSettings,
                             onNavigate = { event ->
                                 if (event == PrefClickEvent.OpenBookCacheManage) {

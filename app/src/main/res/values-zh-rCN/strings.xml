@@ -1466,4 +1466,9 @@
 	<string name="subtitle_margin">次行距离</string>
 	<string name="heading_spacing">标题段距</string>
     <string name="follow_read_background">跟随阅读背景</string>
+    <string name="bookshelf_total_count">共%1$d本</string>
+    <string name="bookshelf_selected_count">已选%1$d本</string>
+    <string name="bookshelf_empty_global_search">没有书籍，尝试全局搜索</string>
+    <string name="global_search">全局搜索</string>
+    <string name="cache_management">缓存管理</string>
 </resources>

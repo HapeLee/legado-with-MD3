@@ -32,7 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.login.SourceLoginActivity
@@ -66,6 +67,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
+import kotlinx.coroutines.flow.collectLatest
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,25 +78,24 @@ fun RssScreen(
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var sourceToDelete by remember { mutableStateOf<RssSource?>(null) }
 
-    val openRss: (RssSource) -> Unit = { rssSource ->
-        if (rssSource.singleUrl) {
-            viewModel.getSingleUrl(rssSource) { url ->
-                if (url.startsWith("http", true)) {
-                    onOpenRead(
-                        rssSource.sourceName,
-                        url,
-                        null,
-                        null
-                    )
-                } else {
-                    context.openUrl(url)
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                is RssEffect.OpenSort -> {
+                    onOpenSort(effect.sourceUrl, effect.sortUrl, effect.key)
+                }
+
+                is RssEffect.OpenRead -> {
+                    onOpenRead(effect.title, effect.origin, effect.link, effect.openUrl)
+                }
+
+                is RssEffect.OpenExternalUrl -> {
+                    context.openUrl(effect.url)
                 }
             }
-        } else {
-            onOpenSort(rssSource.sourceUrl, null, null)
         }
     }
 
@@ -114,7 +115,7 @@ fun RssScreen(
     ListScaffold(
         title = stringResource(R.string.rss),
         state = uiState,
-        subtitle = uiState.group.ifEmpty { "全部" },
+        subtitle = uiState.group.ifEmpty { stringResource(R.string.all) },
         onBackClick = null,
         onSearchToggle = { viewModel.toggleSearchVisible(it) },
         onSearchQueryChange = { viewModel.search(it) },
@@ -172,7 +173,7 @@ fun RssScreen(
                 RssSourceGridItem(
                     modifier = Modifier.animateItem(),
                     source = source,
-                    onClick = { openRss(source) },
+                    onClick = { viewModel.openSource(source) },
                     onTop = { viewModel.topSource(source) },
                     onEdit = { edit(source) },
                     onDelete = { sourceToDelete = source },

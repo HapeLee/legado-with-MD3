@@ -1261,4 +1261,9 @@
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
     <string name="miuix_monet">Miuix Monet</string>
     <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法生成配色。目前主題為動態主題且系統為 Android 12 或以上時，會優先使用系統取色；否則使用下方種子色。</string>
+    <string name="bookshelf_total_count">共%1$d本</string>
+    <string name="bookshelf_selected_count">已選%1$d本</string>
+    <string name="bookshelf_empty_global_search">沒有書籍，嘗試全局搜索</string>
+    <string name="global_search">全局搜索</string>
+    <string name="cache_management">緩存管理</string>
 </resources>
