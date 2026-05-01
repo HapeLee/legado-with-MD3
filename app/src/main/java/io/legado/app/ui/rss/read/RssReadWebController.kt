@@ -5,6 +5,7 @@ package io.legado.app.ui.rss.read
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
 import android.os.SystemClock
@@ -19,10 +20,12 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.createBitmap
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.script.rhino.runScriptWithContext
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.SelectItem
@@ -39,7 +42,9 @@ import java.net.URLDecoder
 
 internal data class RssReadWebControllerCallbacks(
     val onProgressChanged: (Int) -> Unit,
-    val onPageTitleResolved: (String) -> Unit
+    val onPageTitleResolved: (String) -> Unit,
+    val onShowCustomView: (View?, WebChromeClient.CustomViewCallback?) -> Unit,
+    val onHideCustomView: () -> Unit
 )
 
 @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
@@ -54,8 +59,20 @@ internal fun configureRssReadWebView(
     callbacks: RssReadWebControllerCallbacks
 ) {
     webView.webChromeClient = object : WebChromeClient() {
+        override fun getDefaultVideoPoster(): Bitmap {
+            return super.getDefaultVideoPoster() ?: createBitmap(100, 100)
+        }
+
         override fun onProgressChanged(view: WebView?, newProgress: Int) {
             callbacks.onProgressChanged(newProgress)
+        }
+
+        override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+            callbacks.onShowCustomView(view, callback)
+        }
+
+        override fun onHideCustomView() {
+            callbacks.onHideCustomView()
         }
     }
 
@@ -218,13 +235,17 @@ internal fun configureRssReadWebView(
     webView.settings.apply {
         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         domStorageEnabled = true
+        mediaPlaybackRequiresUserGesture = false
         allowContentAccess = true
         builtInZoomControls = true
         displayZoomControls = false
+        textZoom = 100
         setDarkeningAllowed(AppConfig.isNightTheme)
-        if (viewModel.rssSource?.enableJs == true) {
-            javaScriptEnabled = true
+        userAgentString = viewModel.headerMap[AppConst.UA_NAME] ?: AppConfig.userAgent
+        viewModel.rssSource?.let { source ->
+            javaScriptEnabled = source.enableJs
         }
+        cacheMode = WebSettings.LOAD_DEFAULT
     }
 
     webView.addJavascriptInterface(object {

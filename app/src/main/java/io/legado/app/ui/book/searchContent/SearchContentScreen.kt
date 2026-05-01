@@ -63,8 +63,8 @@ import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.MediumOutlinedButton
 import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.button.TopBarAnimatedActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn

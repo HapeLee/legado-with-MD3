@@ -78,3 +78,19 @@ fun adaptiveContentPadding(
         end = horizontal
     )
 }
+
+@Composable
+fun adaptiveContentPaddingBookshelf(
+    top: Dp,
+    bottom: Dp,
+    horizontal: Dp
+): PaddingValues {
+    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 8.dp
+    val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 12.dp + horizontal else 4.dp + horizontal
+    return PaddingValues(
+        top = adjustedTop,
+        bottom = bottom,
+        start = horizontal,
+        end = horizontal
+    )
+}

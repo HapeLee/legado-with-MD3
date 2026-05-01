@@ -169,7 +169,7 @@ fun RoundDropdownMenuItem(
                     Text(
                         modifier = Modifier.widthIn(max = 200.dp),
                         text = text,
-                        style = LegadoTheme.typography.bodyMediumEmphasized,
+                        style = LegadoTheme.typography.labelLargeEmphasized,
                         color = contentColor
                     )
                 }

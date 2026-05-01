@@ -49,7 +49,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -209,6 +209,7 @@ fun BackupConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
                     InputSettingItem(
                         title = stringResource(R.string.web_dav_url),
+                        description = stringResource(R.string.web_dav_url_s),
                         value = BackupConfig.webDavUrl,
                         defaultValue = "",
                         onConfirm = { BackupConfig.webDavUrl = it }
@@ -216,7 +217,7 @@ fun BackupConfigScreen(
 
                 ClickableSettingItem(
                     title = stringResource(R.string.web_dav_account),
-                    description = "设置 WebDAV 账号和密码",
+                    description = stringResource(R.string.web_dav_account_d),
                     onClick = {
                         tempAccount = viewModel.getWebDavAccount()
                         tempPassword = viewModel.getWebDavPassword()
@@ -239,18 +240,19 @@ fun BackupConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = "测试 WebDav 配置",
-                    description = "测试 WebDav 服务工作状态",
+                    title = stringResource(R.string.test_sync_t),
+                    description = stringResource(R.string.test_sync_d),
+                    
                     onClick = {
                         scope.launch {
                             showLoadingDialog = true
-                            loadingText = "测试中…"
+                            loadingText = context.getString(R.string.test_sync_loading_text)
                             val success = viewModel.testWebDav()
                             showLoadingDialog = false
                             if (success) {
-                                snackbarHostState.showSnackbar("WebDav 配置正确")
+                                snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_success))
                             } else {
-                                snackbarHostState.showSnackbar("WebDav 配置错误")
+                                snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_fail))
                             }
                         }
                     }

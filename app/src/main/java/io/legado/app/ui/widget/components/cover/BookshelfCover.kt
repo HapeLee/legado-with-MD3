@@ -20,21 +20,24 @@ fun BookshelfCover(
     author: String?,
     path: String?,
     modifier: Modifier = Modifier,
+    coverModifier: Modifier = Modifier.fillMaxWidth(),
     isUpdating: Boolean = false,
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
     sourceOrigin: String? = null,
-    onLoadFinish: (() -> Unit)? = null
+    onLoadFinish: (() -> Unit)? = null,
+    showLoadingPlaceholder: Boolean = true,
 ) {
     Box(modifier = modifier) {
         CoilBookCover(
             name = name,
             author = author,
             path = path,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = coverModifier,
             sourceOrigin = sourceOrigin,
-            onLoadFinish = onLoadFinish
+            onLoadFinish = onLoadFinish,
+            showLoadingPlaceholder = showLoadingPlaceholder,
         )
 
         if (!badgeText.isNullOrEmpty()) {
@@ -42,8 +45,6 @@ fun BookshelfCover(
                 text = badgeText,
                 icon = if (showBadgeDot) Icons.Default.Update else null,
                 iconSize = 12.dp,
-                backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp),

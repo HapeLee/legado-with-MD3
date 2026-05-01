@@ -5,8 +5,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
-import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.startActivity
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -41,11 +41,14 @@ class SearchActivity : BaseComposeActivity() {
             viewModel = viewModel,
             onBack = { finish() },
             onOpenBookInfo = { name, author, bookUrl ->
-                startActivity<BookInfoActivity> {
-                    putExtra("name", name)
-                    putExtra("author", author)
-                    putExtra("bookUrl", bookUrl)
-                }
+                startActivity(
+                    MainActivity.createBookInfoIntent(
+                        context = this,
+                        name = name,
+                        author = author,
+                        bookUrl = bookUrl
+                    )
+                )
             },
             onOpenSourceManage = {
                 startActivity<BookSourceActivity>()

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -67,24 +68,19 @@ fun CoverManageSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.default_cover)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            AppText(
-                text = stringResource(R.string.default_cover),
-                style = LegadoTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp)
-            )
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 items(coverList) { path ->
@@ -131,11 +127,14 @@ fun CoverManageSheet(
                             .fillMaxWidth()
                             .aspectRatio(0.7f)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             AppIcon(
+                                modifier = Modifier.size(32.dp),
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add",
-                                modifier = Modifier.size(32.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TextButton
@@ -67,6 +68,60 @@ fun SmallTextButton(
             modifier = modifier,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
             shape = MaterialTheme.shapes.small
+        ) {
+            Icon(
+                imageVector = imageVector,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            AppText(
+                text = text,
+                style = LegadoTheme.typography.labelMedium
+            )
+        }
+    }
+}
+
+@Composable
+fun SmallTonalTextButton(
+    text: String,
+    imageVector: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        Card(
+            onClick = onClick,
+            modifier = modifier,
+            showIndication = true,
+            colors = CardDefaults.defaultColors(
+                color = LegadoTheme.colorScheme.surfaceContainer,
+                contentColor = LegadoTheme.colorScheme.onSurfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MiuixIcon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                AppText(
+                    text = text,
+                    style = LegadoTheme.typography.labelMedium
+                )
+            }
+        }
+    } else {
+        FilledTonalButton(
+            onClick = onClick,
+            modifier = modifier,
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Icon(
                 imageVector = imageVector,

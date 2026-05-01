@@ -18,12 +18,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.button.SmallTonalTextButton
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -32,6 +35,9 @@ fun EmptyMessage(
     message: String,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    buttonText: String? = null,
+    buttonImageVector: ImageVector = AppIcons.Search,
+    onButtonClick: (() -> Unit)? = null,
     faces: List<String> = listOf(
         "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
         "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
@@ -77,6 +83,15 @@ fun EmptyMessage(
             softWrap = true,
             modifier = Modifier.widthIn(max = 240.dp)
         )
+
+        if (buttonText != null && onButtonClick != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            SmallTonalTextButton(
+                onClick = onButtonClick,
+                text = buttonText,
+                imageVector = buttonImageVector
+            )
+        }
     }
 }
 
@@ -85,6 +100,9 @@ fun EmptyMessage(
     @StringRes messageResId: Int,
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
+    buttonText: String? = null,
+    buttonImageVector: ImageVector = AppIcons.Search,
+    onButtonClick: (() -> Unit)? = null,
     faces: List<String> = listOf(
         "(；′⌒`)", "(つ﹏⊂)", "(•̀ᴗ•́)و", "(๑•́ ₃ •̀๑)",
         "(눈‸눈)", "(ಥ﹏ಥ)", "(｡•́︿•̀｡)"
@@ -97,6 +115,9 @@ fun EmptyMessage(
         message = message,
         modifier = modifier,
         isLoading = isLoading,
+        buttonText = buttonText,
+        buttonImageVector = buttonImageVector,
+        onButtonClick = onButtonClick,
         faces = faces,
         faceTextSize = faceTextSize,
         onFaceClick = onFaceClick

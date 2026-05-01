@@ -43,6 +43,7 @@
     <string name="out_favorites">未收藏</string>
     <string name="rss">訂閲</string>
     <string name="all">全部</string>
+    <string name="rss_feed_management">订阅源管理</string>
     <string name="recent_reading">最近閲讀</string>
     <string name="last_read">最後閲讀</string>
     <string name="update_log">更新日誌</string>
@@ -356,6 +357,17 @@
     <string name="sort_default">默認排序</string>
     <string name="sort_manual">手動排序</string>
     <string name="sort_by_name">名稱排序</string>
+	<string name="sort_order">排序方向</string>
+	<string name="layout_mode">佈局模式</string>
+	<string name="layout_mode_list">列表</string>
+	<string name="layout_mode_grid">網格</string>
+	<string name="grid_style">網格模式</string>
+	<string name="compact_title_font">標題小字體</string>
+	<string name="center_aligned_title">標題居中</string>
+	<string name="compact_mode">緊湊模式</string>
+	<string name="show_divider_line">顯示分隔線</string>
+	<string name="max_title_lines">標題最大行數</string>
+	<string name="cover_shadow">封面陰影</string>
     <string name="go_to_top">滾動到頂部</string>
     <string name="go_to_bottom">滾動到底部</string>
     <string name="read_y">已讀: %s</string>
@@ -594,7 +606,7 @@
     <string name="web_dav_url_s">輸入你的服務器地址</string>
     <string name="web_dav_url">WebDav 服務器地址</string>
     <string name="web_dav_account">WebDav 賬號</string>
-    <string name="web_dav_account_s">輸入你的 WebDav 賬號</string>
+    <string name="web_dav_account_d">輸入你的 WebDav 賬號</string>
     <string name="rss_source">訂閲源</string>
     <string name="rss_source_edit">編輯訂閲源</string>
     <string name="screen">篩選</string>
@@ -980,6 +992,8 @@
     <string name="only_wifi">仅WIFI</string>
     <string name="only_wifi_summary">仅在wifi下加载网络封面</string>
     <string name="cover_rule">封面规则</string>
+    <string name="search_via_url">搜索URL</string>
+	<string name="cover_rule_edit">封面规则</string>
     <string name="cover_rule_summary">进入详情页时使用封面规则重新获取封面</string>
     <string name="scroll_to_dur_source">定位到当前书源</string>
     <string name="sys_tts_config">系统tts设置</string>
@@ -1148,6 +1162,11 @@
     <string name="show_bookshelf_fast_scroller">显示快速滚动条</string>
     <string name="export_all_use_book_source">导出所有书的书源</string>
     <string name="cloud_progress_exceeds_current">雲端進度超過目前進度，是否同步？</string>
+    <string name="test_sync_t">測試 WebDav 配置</string>
+    <string name="test_sync_d">測試 WebDav 服務工作狀態</string>
+    <string name="test_sync_loading_text">測試中…</string>
+    <string name="test_sync_status_success">WebDav 配置正確</string>
+    <string name="test_sync_status_fail">WebDav 配置錯誤</string>
     <string name="keep_enable">保留启用状态</string>
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="screen_portrait_reversed">反向竖屏</string>
@@ -1159,6 +1178,10 @@
     <string name="key_page_on_long_press">按键长按翻页</string>
     <string name="save_log">保存日志</string>
     <string name="create_heap_dump">创建堆转储</string>
+    <string name="crash_report">崩潰報告</string>
+    <string name="crash_report_message">應用程式發生崩潰。回報問題時，請複製以下錯誤資訊。</string>
+    <string name="crash_report_empty">找不到崩潰資訊。</string>
+    <string name="restart_app">重新啟動應用程式</string>
     <string name="record_heap_dump_s">当应用发生OOM崩溃时保存堆转储</string>
     <string name="record_heap_dump_t">记录堆转储</string>
     <string name="font_weight_text">字重</string>
@@ -1238,4 +1261,9 @@
     <string name="input_value_range">輸入數值（%1$d-%2$d）</string>
     <string name="miuix_monet">Miuix Monet</string>
     <string name="miuix_monet_summary">為 Miuix 使用 Monet 演算法生成配色。目前主題為動態主題且系統為 Android 12 或以上時，會優先使用系統取色；否則使用下方種子色。</string>
+    <string name="bookshelf_total_count">共%1$d本</string>
+    <string name="bookshelf_selected_count">已選%1$d本</string>
+    <string name="bookshelf_empty_global_search">沒有書籍，嘗試全局搜索</string>
+    <string name="global_search">全局搜索</string>
+    <string name="cache_management">緩存管理</string>
 </resources>

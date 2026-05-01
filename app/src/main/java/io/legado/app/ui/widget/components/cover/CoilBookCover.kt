@@ -41,6 +41,7 @@ import coil.compose.AsyncImage
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
+import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
@@ -52,7 +53,8 @@ fun CoilBookCover(
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
-    ignoreUseDefaultCover: Boolean = false
+    ignoreUseDefaultCover: Boolean = false,
+    showLoadingPlaceholder: Boolean = true,
 ) {
     val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
@@ -75,13 +77,31 @@ fun CoilBookCover(
 
     var isOnlineCoverLoaded by remember(path) { mutableStateOf(false) }
     var isFinalPathLoaded by remember(path) { mutableStateOf(false) }
+    var isFinalPathLoadFinished by remember(path) { mutableStateOf(false) }
+    var isPlaceholderAllowed by remember(path, showLoadingPlaceholder) {
+        mutableStateOf(showLoadingPlaceholder)
+    }
     LaunchedEffect(finalPath) {
         isOnlineCoverLoaded = false
         isFinalPathLoaded = false
+        isFinalPathLoadFinished = finalPath == null
+    }
+    LaunchedEffect(finalPath, showLoadingPlaceholder) {
+        if (showLoadingPlaceholder) {
+            isPlaceholderAllowed = true
+        } else {
+            isPlaceholderAllowed = false
+            delay(600)
+            isPlaceholderAllowed = true
+        }
     }
 
     NormalCard(
-        cornerRadius = 4.dp
+        cornerRadius = 4.dp,
+        containerColor = if (!hasCustomDefault && !isOnlineCoverLoaded) {
+            LegadoTheme.colorScheme.surfaceContainerLow
+        } else
+            LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0f)
     ){
         BoxWithConstraints(
             modifier = modifier
@@ -89,11 +109,6 @@ fun CoilBookCover(
                 .then(
                     if (CoverConfig.coverShowShadow) {
                         Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
-                    } else Modifier
-                )
-                .then(
-                    if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                        Modifier.background(LegadoTheme.colorScheme.surfaceContainer)
                     } else Modifier
                 )
         ) {
@@ -134,10 +149,12 @@ fun CoilBookCover(
                     onSuccess = {
                         isOnlineCoverLoaded = true
                         isFinalPathLoaded = true
+                        isFinalPathLoadFinished = true
                         onLoadFinish?.invoke()
                     },
                     onError = {
                         isOnlineCoverLoaded = false
+                        isFinalPathLoadFinished = true
                         onLoadFinish?.invoke()
                     }
                 )
@@ -147,7 +164,9 @@ fun CoilBookCover(
                 }
             }
 
-            if (!hasCustomDefault && !isOnlineCoverLoaded) {
+            val showPlaceholder = isPlaceholderAllowed && (showLoadingPlaceholder || isFinalPathLoadFinished)
+
+            if (!hasCustomDefault && !isOnlineCoverLoaded && showPlaceholder) {
                 Icon(
                     Icons.Default.Book,
                     contentDescription = null,
@@ -158,7 +177,7 @@ fun CoilBookCover(
                 )
             }
 
-            if (!isOnlineCoverLoaded) {
+            if (!isOnlineCoverLoaded && showPlaceholder) {
                 CoverTextOverlay(
                     name = name,
                     author = author,

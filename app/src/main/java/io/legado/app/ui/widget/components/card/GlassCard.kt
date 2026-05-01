@@ -38,9 +38,11 @@ private fun BaseCard(
     alpha: Float = 1f,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer)
+        .let { it.copy(alpha = it.alpha * alpha) }
     if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         val colors = MiuixCardDefaults.defaultColors(
-            color = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer.copy(alpha)),
+            color = resolvedContainerColor,
             contentColor = contentColor ?: LegadoTheme.colorScheme.onSurface
         )
         if (onClick != null) {
@@ -64,9 +66,7 @@ private fun BaseCard(
         }
     } else {
         val colors = CardDefaults.cardColors(
-            containerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer).copy(
-                alpha = alpha
-            ),
+            containerColor = resolvedContainerColor,
             contentColor = contentColor ?: LegadoTheme.colorScheme.onSecondaryContainer,
             disabledContainerColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f),
             disabledContentColor = LegadoTheme.colorScheme.onSecondaryContainer.copy(alpha = alpha * 0.38f)

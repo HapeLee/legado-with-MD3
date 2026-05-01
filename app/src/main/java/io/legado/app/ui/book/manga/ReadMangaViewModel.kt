@@ -15,8 +15,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.domain.model.ReadingProgress
+import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
@@ -28,6 +29,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.postEvent
@@ -46,7 +48,10 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
 
-class ReadMangaViewModel(application: Application) : BaseViewModel(application) {
+class ReadMangaViewModel(
+    application: Application,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase
+) : BaseViewModel(application) {
 
     private var changeSourceCoroutine: Coroutine<*>? = null
 
@@ -201,7 +206,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             }.onStart {
                 // 自动换源
 
-            }.mapParallelSafe(AppConfig.threadCount) { source ->
+        }.mapParallelSafe(OtherConfig.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
                     WebBook.getBookInfoAwait(source, book)
@@ -242,7 +247,7 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
     ) {
         if (!AppConfig.syncBookProgress) return
         execute {
-            AppWebDav.getBookProgress(book)
+            getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
             AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
@@ -258,6 +263,15 @@ class ReadMangaViewModel(application: Application) : BaseViewModel(application) 
             }
         }
     }
+
+    private fun ReadingProgress.toBookProgress() = BookProgress(
+        name = name,
+        author = author,
+        durChapterIndex = durChapterIndex,
+        durChapterPos = durChapterPos,
+        durChapterTime = durChapterTime,
+        durChapterTitle = durChapterTitle
+    )
 
     /**
      * 换源

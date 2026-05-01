@@ -1,4 +1,4 @@
-﻿package io.legado.app.ui.replace.edit
+package io.legado.app.ui.replace.edit
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -71,11 +71,10 @@ import androidx.compose.ui.zIndex
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.AlertButton
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.ToggleChip
-import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu

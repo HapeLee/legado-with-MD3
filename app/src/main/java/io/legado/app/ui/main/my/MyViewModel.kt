@@ -1,8 +1,8 @@
 package io.legado.app.ui.main.my
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
 import io.legado.app.service.WebService
 import io.legado.app.utils.eventBus.FlowEventBus
@@ -22,13 +22,14 @@ sealed class PrefClickEvent {
     data class CopyUrl(val url: String) : PrefClickEvent()
     data class ShowMd(val title: String, val path: String) : PrefClickEvent()
     data class StartActivity(val destination: Class<*>, val configTag: String? = null) : PrefClickEvent()
+    object OpenBookCacheManage : PrefClickEvent()
     object ToggleWebService : PrefClickEvent()
     object ExitApp : PrefClickEvent()
 }
 
 class MyViewModel(
     application: Application
-) : AndroidViewModel(application) {
+) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(
         MyUiState(
@@ -58,9 +59,9 @@ class MyViewModel(
                 val currentIsRun = _uiState.value.isWebServiceRun
 
                 if (!currentIsRun) {
-                    WebService.start(getApplication())
+                    WebService.start(context)
                 } else {
-                    WebService.stop(getApplication())
+                    WebService.stop(context)
                     _uiState.update { it.copy(isWebServiceRun = false, webServiceAddress = "") }
                 }
 

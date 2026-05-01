@@ -18,12 +18,12 @@ import io.legado.app.exception.ContentEmptyException
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.exception.TocEmptyException
 import io.legado.app.help.IntentData
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.model.CheckSource
 import io.legado.app.model.Debug
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.book.source.manage.BookSourceActivity
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.activityPendingIntent
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
@@ -45,15 +45,14 @@ import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.util.concurrent.Executors
 import kotlin.coroutines.coroutineContext
-import kotlin.math.min
 
 /**
  * 校验书源
  */
 class CheckSourceService : BaseService() {
-    private var threadCount = AppConfig.threadCount
+    private var threadCount = OtherConfig.threadCount
     private var searchCoroutine =
-        Executors.newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
+        Executors.newFixedThreadPool(threadCount).asCoroutineDispatcher()
     private var notificationMsg = appCtx.getString(R.string.service_starting)
     private var checkJob: Job? = null
     private var originSize = 0

@@ -42,9 +42,9 @@ fun AppIconButton(
             enabled = enabled,
             holdDownState = holdDownState,
             backgroundColor = miuixBackgroundColor,
-            cornerRadius = MiuixIconButtonDefaults.CornerRadius,
-            minHeight = MiuixIconButtonDefaults.MinHeight,
-            minWidth = MiuixIconButtonDefaults.MinWidth,
+            cornerRadius = miuixCornerRadius ?: MiuixIconButtonDefaults.CornerRadius,
+            minHeight = miuixMinHeight ?: MiuixIconButtonDefaults.MinHeight,
+            minWidth = miuixMinWidth ?: MiuixIconButtonDefaults.MinWidth,
             content = content
         )
     } else {

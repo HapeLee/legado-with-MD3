@@ -7,7 +7,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.Toolbar
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
@@ -16,7 +15,6 @@ import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
 import io.legado.app.constant.AppConst.DEFAULT_WEBDAV_ID
 import io.legado.app.constant.AppLog
-import io.legado.app.data.appDb
 import io.legado.app.data.entities.Server
 import io.legado.app.databinding.DialogRecyclerViewBinding
 import io.legado.app.databinding.ItemServerSelectBinding
@@ -34,6 +32,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * 服务器配置
@@ -42,7 +41,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
     Toolbar.OnMenuItemClickListener {
 
     val binding by viewBinding(DialogRecyclerViewBinding::bind)
-    val viewModel by viewModels<ServersViewModel>()
+    val viewModel by viewModel<ServersViewModel>()
 
     private val callback get() = (activity as? Callback)
     private val adapter by lazy { ServersAdapter(requireContext()) }
@@ -86,7 +85,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private fun initData() {
         lifecycleScope.launch {
-            appDb.serverDao.observeAll().catch {
+            viewModel.flowServers().catch {
                 AppLog.put("服务器配置界面获取数据失败\n${it.localizedMessage}", it)
             }.flowOn(IO).collect {
                 adapter.setItems(it)

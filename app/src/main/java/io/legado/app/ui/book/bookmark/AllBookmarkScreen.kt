@@ -56,8 +56,8 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
-import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -308,8 +308,6 @@ fun AllBookmarkScreen(
                                 TextCard(
                                     text = group.bookName,
                                     textStyle = LegadoTheme.typography.labelLarge,
-                                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                                    contentColor = LegadoTheme.colorScheme.onCardContainer,
                                     cornerRadius = 8.dp,
                                     horizontalPadding = 8.dp,
                                     verticalPadding = 6.dp,

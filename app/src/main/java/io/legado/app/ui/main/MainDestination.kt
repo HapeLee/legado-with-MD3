@@ -2,6 +2,7 @@ package io.legado.app.ui.main
 
 import androidx.annotation.StringRes
 import io.legado.app.R
+import kotlinx.collections.immutable.persistentListOf
 
 sealed class MainDestination(
     val route: String,
@@ -28,6 +29,6 @@ sealed class MainDestination(
     )
 
     companion object {
-        val mainDestinations = listOf(Bookshelf, Explore, Rss, My)
+        val mainDestinations = persistentListOf<MainDestination>(Bookshelf, Explore, Rss, My)
     }
 }

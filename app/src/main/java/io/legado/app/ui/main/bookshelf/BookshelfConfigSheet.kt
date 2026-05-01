@@ -69,7 +69,7 @@ fun BookshelfConfigSheet(
 
             // Sort Order
             CompactDropdownSettingItem(
-                title = "排序方向",
+                title = stringResource(R.string.sort_order),
                 selectedValue = BookshelfConfig.bookshelfSortOrder.toString(),
                 displayEntries = arrayOf(
                     stringResource(R.string.ascending_order),
@@ -85,10 +85,10 @@ fun BookshelfConfigSheet(
                 else BookshelfConfig.bookshelfLayoutModePortrait
 
             CompactDropdownSettingItem(
-                title = "布局模式",
+                title = stringResource(R.string.layout_mode),
                 description = stringResource(if (isLandscape) R.string.screen_landscape else R.string.screen_portrait),
                 selectedValue = layoutMode.toString(),
-                displayEntries = arrayOf("列表", "网格"),
+                displayEntries = arrayOf(stringResource(R.string.layout_mode_list),stringResource(R.string.layout_mode_grid)),
                 entryValues = arrayOf("0", "1"),
                 onValueChange = {
                     if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape = it.toInt()
@@ -103,7 +103,7 @@ fun BookshelfConfigSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CompactDropdownSettingItem(
-                        title = "网格样式",
+                        title = stringResource(R.string.grid_style),
                         selectedValue = BookshelfConfig.bookshelfGridLayout.toString(),
                         displayEntries = stringArrayResource(R.array.bookshelf_grid_layout),
                         entryValues = Array(stringArrayResource(R.array.bookshelf_grid_layout).size) { it.toString() },
@@ -125,14 +125,14 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactSwitchSettingItem(
-                        title = "标题小字体",
+                        title = stringResource(R.string.compact_title_font),
                         checked = BookshelfConfig.bookshelfTitleSmallFont,
                         color = MaterialTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfTitleSmallFont = it }
                     )
 
                     CompactSwitchSettingItem(
-                        title = "标题居中",
+                        title = stringResource(R.string.center_aligned_title),
                         checked = BookshelfConfig.bookshelfTitleCenter,
                         color = MaterialTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
@@ -147,14 +147,14 @@ fun BookshelfConfigSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CompactSwitchSettingItem(
-                        title = "紧凑模式",
+                        title = stringResource(R.string.compact_mode),
                         checked = BookshelfConfig.bookshelfLayoutCompact,
                         color = MaterialTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
                     )
 
                     CompactSwitchSettingItem(
-                        title = "显示分隔线",
+                        title = stringResource(R.string.show_divider_line),
                         checked = BookshelfConfig.bookshelfShowDivider,
                         color = MaterialTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfShowDivider = it }
@@ -177,7 +177,7 @@ fun BookshelfConfigSheet(
             }
 
             CompactSliderSettingItem(
-                title = "标题最大行数",
+                title = stringResource(R.string.max_title_lines),
                 value = BookshelfConfig.bookshelfTitleMaxLines.toFloat(),
                 valueRange = 1f..5f,
                 steps = 4,
@@ -185,10 +185,17 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
-                title = "封面阴影",
+                title = stringResource(R.string.cover_shadow),
                 checked = BookshelfConfig.bookshelfCoverShadow,
                 color = MaterialTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.bookshelfCoverShadow = it }
+            )
+
+            CompactSwitchSettingItem(
+                title = "搜索按钮优先打开筛选栏",
+                checked = BookshelfConfig.bookshelfSearchActionDirectToSearch,
+                color = MaterialTheme.colorScheme.surface,
+                onCheckedChange = { BookshelfConfig.bookshelfSearchActionDirectToSearch = it }
             )
 
             // Switches
@@ -251,7 +258,7 @@ fun BookshelfConfigSheet(
             // Refresh Limit
             CompactSliderSettingItem(
                 title = stringResource(R.string.bookshelf_update_limit),
-                description = if (BookshelfConfig.bookshelfRefreshingLimit <= 0) "无限制" else "${BookshelfConfig.bookshelfRefreshingLimit} 本",
+                description = if (BookshelfConfig.bookshelfRefreshingLimit <= 0) stringResource(R.string.refresh_limit_unlimited) else stringResource(R.string.refresh_limit_books, BookshelfConfig.bookshelfRefreshingLimit),
                 value = BookshelfConfig.bookshelfRefreshingLimit.toFloat(),
                 valueRange = 0f..100f,
                 steps = 100,

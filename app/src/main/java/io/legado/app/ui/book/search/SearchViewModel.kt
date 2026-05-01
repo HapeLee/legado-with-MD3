@@ -6,14 +6,21 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
-import io.legado.app.data.repository.SearchSessionEvent
+import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.usecase.BookSearchControl
+import io.legado.app.domain.usecase.BookSearchRequest
+import io.legado.app.domain.usecase.BookShelfKey
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.SearchBooksUseCase
+import io.legado.app.domain.usecase.SearchRunEvent
 import io.legado.app.help.config.AppConfig
-import io.legado.app.model.BookShelfState
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.putPrefBoolean
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -29,6 +36,8 @@ import splitties.init.appCtx
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
     private val repository: SearchRepository,
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
+    private val searchBooksUseCase: SearchBooksUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -46,11 +55,13 @@ class SearchViewModel(
     val effects = _effects.asSharedFlow()
 
     private val queryFlow = MutableStateFlow("")
-    private val bookshelfKeys = MutableStateFlow<Set<BookKey>>(emptySet())
+    private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val searchScope = SearchScope(AppConfig.searchScope)
-    private val searchSession = repository.createSearchSession { searchScope }
+    private val searchControl = BookSearchControl()
+    private val searchResultBooks = LinkedHashMap<String, SearchBook>()
 
-    private var currentSearchId = 0L
+    private var searchJob: Job? = null
+    private var currentSearchPage = 1
 
     init {
         syncScopeState()
@@ -59,7 +70,6 @@ class SearchViewModel(
         observeBookshelf()
         observeQueryHistory()
         observeQueryBookshelfHints()
-        observeSearchSession()
     }
 
     fun onIntent(intent: SearchIntent) {
@@ -69,8 +79,8 @@ class SearchViewModel(
             SearchIntent.SubmitSearch -> submitSearch()
             SearchIntent.LoadMore -> loadMore()
             SearchIntent.StopSearch -> stopSearch()
-            SearchIntent.PauseEngine -> searchSession.pause()
-            SearchIntent.ResumeEngine -> searchSession.resume()
+            SearchIntent.PauseEngine -> searchControl.pause()
+            SearchIntent.ResumeEngine -> searchControl.resume()
             is SearchIntent.UseHistoryKeyword -> {
                 updateQuery(intent.keyword, showSuggestions = false)
                 submitSearch(intent.keyword)
@@ -116,15 +126,17 @@ class SearchViewModel(
             }
 
             SearchIntent.SelectAllScope -> {
+                val oldScope = searchScope.toString()
                 searchScope.update("")
-                syncScopeState()
+                syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
             is SearchIntent.ToggleScopeGroup -> toggleScopeGroup(intent.groupName)
             is SearchIntent.ToggleScopeSource -> toggleScopeSource(intent.source)
             is SearchIntent.RemoveScopeItem -> {
+                val oldScope = searchScope.toString()
                 searchScope.remove(intent.scopeName)
-                syncScopeState()
+                syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
             is SearchIntent.TogglePrecision -> {
@@ -142,15 +154,9 @@ class SearchViewModel(
         }
     }
 
-    fun getBookShelfStateFlow(item: SearchBook): Flow<BookShelfState> {
-        return bookshelfKeys
-            .map { keys -> resolveBookShelfState(item, keys) }
-            .distinctUntilChanged()
-    }
-
     override fun onCleared() {
+        stopSearch(manualStop = false)
         super.onCleared()
-        searchSession.close()
     }
 
     private fun initialize(key: String?, scopeRaw: String?) {
@@ -194,6 +200,9 @@ class SearchViewModel(
                 .catch { emit(emptySet()) }
                 .collect { keys ->
                     bookshelfKeys.value = keys
+                    _uiState.update { state ->
+                        state.copy(results = state.results.withShelfState(keys))
+                    }
                 }
         }
     }
@@ -224,56 +233,9 @@ class SearchViewModel(
         }
     }
 
-    private fun observeSearchSession() {
-        viewModelScope.launch {
-            searchSession.events.collect { event ->
-                when (event) {
-                    SearchSessionEvent.Started -> {
-                        _uiState.update { it.copy(isSearching = true) }
-                    }
-
-                    is SearchSessionEvent.Progress -> {
-                        _uiState.update {
-                            it.copy(
-                                results = event.books,
-                                processedSources = event.processedSources,
-                                totalSources = event.totalSources,
-                            )
-                        }
-                    }
-
-                    is SearchSessionEvent.Finished -> {
-                        _uiState.update { state ->
-                            val emptyAction = if (event.isEmpty && !searchScope.isAll()) {
-                                SearchEmptyScopeAction(
-                                    scopeDisplay = searchScope.display,
-                                    wasPrecisionSearch = state.isPrecisionSearch,
-                                )
-                            } else {
-                                null
-                            }
-                            state.copy(
-                                isSearching = false,
-                                hasMore = event.hasMore,
-                                emptyScopeAction = emptyAction,
-                            )
-                        }
-                    }
-
-                    is SearchSessionEvent.Canceled -> {
-                        _uiState.update { it.copy(isSearching = false) }
-                        event.throwable?.localizedMessage
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { emitEffect(SearchEffect.ShowMessage(it)) }
-                    }
-                }
-            }
-        }
-    }
-
     private fun updateQuery(query: String, showSuggestions: Boolean) {
         if (showSuggestions && _uiState.value.isSearching) {
-            searchSession.stop()
+            stopSearch(manualStop = false)
         }
         queryFlow.value = query
         _uiState.update {
@@ -292,7 +254,8 @@ class SearchViewModel(
 
         updateQuery(keyword, showSuggestions = false)
 
-        currentSearchId = System.currentTimeMillis()
+        currentSearchPage = 1
+        searchResultBooks.clear()
         _uiState.update {
             it.copy(
                 committedQuery = keyword,
@@ -308,7 +271,7 @@ class SearchViewModel(
         viewModelScope.launch {
             repository.saveSearchKeyword(keyword)
         }
-        searchSession.search(currentSearchId, keyword)
+        startSearch(keyword, currentSearchPage)
     }
 
     private fun loadMore() {
@@ -317,21 +280,99 @@ class SearchViewModel(
         if (state.committedQuery.isBlank()) return
         if (!state.hasMore) return
 
+        currentSearchPage += 1
         _uiState.update {
             it.copy(
                 isManualStop = false,
                 showSuggestions = false,
             )
         }
-        searchSession.search(currentSearchId, state.committedQuery)
+        startSearch(state.committedQuery, currentSearchPage)
     }
 
-    private fun stopSearch() {
-        _uiState.update { it.copy(isManualStop = true) }
-        searchSession.stop()
+    private fun startSearch(keyword: String, page: Int) {
+        searchJob?.cancel()
+        searchControl.resume()
+        searchJob = viewModelScope.launch {
+            try {
+                searchBooksUseCase
+                    .execute(
+                        BookSearchRequest(
+                            keyword = keyword,
+                            page = page,
+                            scope = BookSearchScope(searchScope.toString()),
+                            precision = _uiState.value.isPrecisionSearch,
+                            concurrency = OtherConfig.threadCount,
+                        ),
+                        searchControl
+                    )
+                    .collect { event -> handleSearchEvent(event) }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Throwable) {
+                _uiState.update { it.copy(isSearching = false) }
+                exception.localizedMessage
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { emitEffect(SearchEffect.ShowMessage(it)) }
+            }
+        }
+    }
+
+    private fun handleSearchEvent(event: SearchRunEvent) {
+        when (event) {
+            SearchRunEvent.Started -> {
+                _uiState.update { it.copy(isSearching = true) }
+            }
+
+            is SearchRunEvent.Progress -> {
+                event.removedBookUrls.forEach { searchResultBooks.remove(it) }
+                event.upsertBooks.forEach { book ->
+                    searchResultBooks[book.bookUrl] = book
+                }
+                _uiState.update {
+                    it.copy(
+                        results = buildSearchResultItems(
+                            shelf = bookshelfKeys.value,
+                        ),
+                        processedSources = event.processedSources,
+                        totalSources = event.totalSources,
+                    )
+                }
+            }
+
+            is SearchRunEvent.Finished -> {
+                _uiState.update { state ->
+                    val emptyAction = if (searchResultBooks.isEmpty() && event.isEmpty && !searchScope.isAll()) {
+                        SearchEmptyScopeAction(
+                            scopeDisplay = searchScope.display,
+                            wasPrecisionSearch = state.isPrecisionSearch,
+                        )
+                    } else {
+                        null
+                    }
+                    state.copy(
+                        isSearching = false,
+                        hasMore = event.hasMore,
+                        emptyScopeAction = emptyAction,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun stopSearch(manualStop: Boolean = true) {
+        searchJob?.cancel()
+        searchJob = null
+        _uiState.update {
+            it.copy(
+                isSearching = false,
+                isManualStop = manualStop || it.isManualStop,
+            )
+        }
     }
 
     private fun toggleScopeGroup(groupName: String) {
+        val oldScope = searchScope.toString()
         if (searchScope.isSource()) {
             searchScope.update("")
         }
@@ -342,10 +383,11 @@ class SearchViewModel(
             selected.add(groupName)
         }
         searchScope.update(selected.toList())
-        syncScopeState()
+        syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
     private fun toggleScopeSource(source: BookSourcePart) {
+        val oldScope = searchScope.toString()
         val selectedUrls = if (searchScope.isSource()) {
             searchScope.sourceUrls.toMutableSet()
         } else {
@@ -366,7 +408,7 @@ class SearchViewModel(
             }
             searchScope.updateSources(selectedSources)
         }
-        syncScopeState()
+        syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
     private fun handleEmptyScopeActionConfirmed() {
@@ -391,7 +433,11 @@ class SearchViewModel(
         }
     }
 
-    private fun syncScopeState() {
+    private fun syncScopeState(
+        restartSearch: Boolean = false,
+        oldScope: String? = null,
+    ) {
+        val scopeChanged = oldScope == null || oldScope != searchScope.toString()
         _uiState.update {
             it.copy(
                 scopeDisplay = searchScope.display,
@@ -401,20 +447,46 @@ class SearchViewModel(
                 isSourceScope = searchScope.isSource(),
             )
         }
+        if (restartSearch && scopeChanged) {
+            restartCommittedSearchIfNeeded()
+        }
     }
 
-    private fun resolveBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {
-        val exactMatch = shelf.any {
-            it.name == item.name && it.author == item.author && it.url == item.bookUrl
+    private fun List<SearchBook>.toSearchResultItems(
+        shelf: Set<BookShelfKey>
+    ): List<SearchResultItemUi> {
+        return map { book ->
+            SearchResultItemUi(
+                book = book,
+                shelfState = resolveBookShelfStateUseCase.execute(
+                    name = book.name,
+                    author = book.author,
+                    url = book.bookUrl,
+                    shelf = shelf
+                )
+            )
         }
-        if (exactMatch) return BookShelfState.IN_SHELF
+    }
 
-        val sameNameAuthor = shelf.any {
-            it.name == item.name && it.author == item.author && it.url != item.bookUrl
+    private fun buildSearchResultItems(
+        shelf: Set<BookShelfKey>,
+    ): List<SearchResultItemUi> {
+        return searchResultBooks.values.toList().toSearchResultItems(shelf)
+    }
+
+    private fun List<SearchResultItemUi>.withShelfState(
+        shelf: Set<BookShelfKey>
+    ): List<SearchResultItemUi> {
+        return map { item ->
+            item.copy(
+                shelfState = resolveBookShelfStateUseCase.execute(
+                    name = item.book.name,
+                    author = item.book.author,
+                    url = item.book.bookUrl,
+                    shelf = shelf
+                )
+            )
         }
-        if (sameNameAuthor) return BookShelfState.SAME_NAME_AUTHOR
-
-        return BookShelfState.NOT_IN_SHELF
     }
 
     private fun emitEffect(effect: SearchEffect) {

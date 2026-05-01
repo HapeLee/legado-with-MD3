@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -24,7 +25,7 @@ import io.legado.app.ui.widget.components.text.AnimatedTextLine
 @Composable
 fun TextCard(
     modifier: Modifier = Modifier,
-    text: String,
+    text: String? = null,
     icon: ImageVector? = null,
     onClick: (() -> Unit)? = null,
     backgroundColor: Color? = null,
@@ -64,14 +65,20 @@ fun TextCard(
                     tint = finalContentColor,
                     modifier = Modifier.size(iconSize)
                 )
-                Spacer(modifier = Modifier.width(spacing))
             }
 
-            AnimatedTextLine(
-                text = text,
-                style = textStyle,
-                color = finalContentColor
-            )
+            if (icon != null && text != null)
+                Spacer(modifier = Modifier.width(spacing))
+
+            text?.let {
+                AnimatedTextLine(
+                    text = it,
+                    style = textStyle,
+                    color = finalContentColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 
 package io.legado.app.help.book
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import androidx.core.net.toUri
 import com.script.buildScriptBindings
@@ -168,7 +169,7 @@ fun Book.getLocalUri(): Uri {
         return uri
     }
     //不同的设备书籍保存路径可能不一样, uri无效时尝试寻找当前保存路径下的文件
-    val defaultBookDir = AppConfig.defaultBookTreeUri
+    val defaultBookDir = OtherConfig.defaultBookTreeUri
     val importBookDir = AppConfig.importBookPath
 
     // 查找书籍保存目录
@@ -240,7 +241,7 @@ fun Book.getLocalUri(): Uri {
 
 
 fun Book.getArchiveUri(): Uri? {
-    val defaultBookDir = AppConfig.defaultBookTreeUri
+    val defaultBookDir = OtherConfig.defaultBookTreeUri
     return if (isArchive && !defaultBookDir.isNullOrBlank()) {
         FileDoc.fromUri(defaultBookDir.toUri(), true)
             .find(archiveName)?.uri

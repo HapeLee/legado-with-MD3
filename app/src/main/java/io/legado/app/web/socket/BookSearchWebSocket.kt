@@ -3,29 +3,39 @@ package io.legado.app.web.socket
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoWSD
 import io.legado.app.R
-import io.legado.app.data.entities.SearchBook
+import io.legado.app.constant.PreferKey
+import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.usecase.BookSearchControl
+import io.legado.app.domain.usecase.BookSearchRequest
+import io.legado.app.domain.usecase.SearchBooksUseCase
+import io.legado.app.domain.usecase.SearchRunEvent
 import io.legado.app.help.config.AppConfig
-import io.legado.app.model.webBook.SearchModel
-import io.legado.app.ui.book.search.SearchScope
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.isJson
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.IOException
 
 class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
     NanoWSD.WebSocket(handshakeRequest),
-    CoroutineScope by MainScope(),
-    SearchModel.CallBack {
+    CoroutineScope by MainScope() {
 
     private val normalClosure = NanoWSD.WebSocketFrame.CloseCode.NormalClosure
-    private val searchModel = SearchModel(this, this)
+    private val searchBooksUseCase: SearchBooksUseCase by lazy { GlobalContext.get().get() }
+    private val searchControl = BookSearchControl()
+    private val sentBookUrls = linkedSetOf<String>()
+    private var searchJob: Job? = null
 
     private val SEARCH_FINISH = "Search finish"
 
@@ -45,8 +55,8 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
         reason: String,
         initiatedByRemote: Boolean
     ) {
+        searchJob?.cancel()
         cancel()
-        searchModel.close()
     }
 
     override fun onMessage(message: NanoWSD.WebSocketFrame) {
@@ -60,13 +70,13 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                 val searchMap =
                     GSON.fromJsonObject<Map<String, String>>(message.textPayload).getOrNull()
                 if (searchMap != null) {
-                    val key = searchMap["key"]
+                    val key = searchMap["key"]?.trim()
                     if (key.isNullOrBlank()) {
                         send(appCtx.getString(R.string.cannot_empty))
                         close(normalClosure, SEARCH_FINISH, false)
                         return@launch
                     }
-                    searchModel.search(System.currentTimeMillis(), key)
+                    startSearch(key)
                 }
             }
         }
@@ -80,22 +90,41 @@ class BookSearchWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
 
     }
 
-    override fun getSearchScope(): SearchScope = SearchScope(AppConfig.searchScope)
+    private fun startSearch(key: String) {
+        searchJob?.cancel()
+        sentBookUrls.clear()
+        searchControl.resume()
+        searchJob = launch(IO) {
+            try {
+                searchBooksUseCase
+                    .execute(
+                        BookSearchRequest(
+                            keyword = key,
+                            page = 1,
+                            scope = BookSearchScope(AppConfig.searchScope),
+                            precision = appCtx.getPrefBoolean(PreferKey.precisionSearch),
+                            concurrency = OtherConfig.threadCount,
+                        ),
+                        searchControl
+                    )
+                    .collect { event ->
+                        when (event) {
+                            SearchRunEvent.Started -> Unit
+                            is SearchRunEvent.Progress -> {
+                                val newBooks = event.upsertBooks.filter { sentBookUrls.add(it.bookUrl) }
+                                if (newBooks.isNotEmpty()) {
+                                    send(GSON.toJson(newBooks))
+                                }
+                            }
 
-    override fun onSearchStart() {
-
+                            is SearchRunEvent.Finished -> close(normalClosure, SEARCH_FINISH, false)
+                        }
+                    }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Throwable) {
+                close(normalClosure, exception.toString(), false)
+            }
+        }
     }
-
-    override fun onSearchSuccess(
-        searchBooks: List<SearchBook>,
-        processedSources: Int,
-        totalSources: Int
-    ) {
-        send(GSON.toJson(searchBooks))
-    }
-
-    override fun onSearchFinish(isEmpty: Boolean, hasMore: Boolean) = close(normalClosure, SEARCH_FINISH, false)
-
-    override fun onSearchCancel(exception: Throwable?) = close(normalClosure, exception?.toString() ?: SEARCH_FINISH, false)
-
 }

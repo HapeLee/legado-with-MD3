@@ -222,6 +222,11 @@
             android:name=".ui.about.AboutActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
+        <activity
+            android:name=".ui.about.CrashReportActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
         <!-- 书源管理 -->
         <activity
             android:name=".ui.book.source.manage.BookSourceActivity"
@@ -243,11 +248,6 @@
             android:enableOnBackInvokedCallback="true"
             android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTop" />
-        <!-- 书籍管理 -->
-        <activity
-            android:name=".ui.book.manage.BookshelfManageActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 书源调试 -->
         <activity
             android:name=".ui.book.source.debug.BookSourceDebugActivity"
@@ -263,11 +263,6 @@
             android:name=".ui.book.searchContent.SearchContentActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- 发现界面 -->
-        <activity
-            android:name=".ui.book.explore.ExploreShowActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 订阅源调试 -->
         <activity
             android:name=".ui.rss.source.debug.RssSourceDebugActivity"
@@ -281,11 +276,6 @@
         <!-- 书签 -->
         <activity
             android:name=".ui.book.bookmark.AllBookmarkActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
-        <!-- 缓存界面 -->
-        <activity
-            android:name=".ui.book.cache.CacheActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
         <!-- WebView界面 -->

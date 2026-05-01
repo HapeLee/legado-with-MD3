@@ -5,15 +5,14 @@ import android.os.Bundle
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.mapParallelSafe
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
@@ -33,10 +32,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import java.util.concurrent.Executors
-import kotlin.math.min
 
 class ChangeCoverViewModel(application: Application) : BaseViewModel(application) {
-    private val threadCount = AppConfig.threadCount
+    private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var searchSuccess: ((SearchBook) -> Unit)? = null
     private var upAdapter: (() -> Unit)? = null
@@ -105,7 +103,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
 
     private fun initSearchPool() {
         searchPool = Executors
-            .newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
+            .newFixedThreadPool(threadCount).asCoroutineDispatcher()
     }
 
     private fun startSearch() {

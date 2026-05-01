@@ -9,9 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.appDb
+import io.legado.app.domain.usecase.ClearBookCacheUseCase
+import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.help.DirectLinkUpload
-import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.model.CheckSource
@@ -25,7 +25,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
 
-class OtherConfigViewModel : ViewModel() {
+class OtherConfigViewModel(
+    private val clearBookCacheUseCase: ClearBookCacheUseCase,
+    private val shrinkDatabaseUseCase: ShrinkDatabaseUseCase
+) : ViewModel() {
 
     private val packageManager = appCtx.packageManager
     private val componentName = ComponentName(
@@ -52,7 +55,7 @@ class OtherConfigViewModel : ViewModel() {
 
     fun clearCache(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            BookHelp.clearCache()
+            clearBookCacheUseCase.executeAll()
             FileUtils.delete(context.cacheDir.absolutePath)
             context.externalCacheDir?.deleteRecursively()
             context.cacheDir.deleteRecursively()
@@ -61,7 +64,7 @@ class OtherConfigViewModel : ViewModel() {
 
     fun shrinkDatabase() {
         viewModelScope.launch(Dispatchers.IO) {
-            appDb.openHelper.writableDatabase.execSQL("VACUUM")
+            shrinkDatabaseUseCase.execute()
         }
     }
 
@@ -90,7 +93,6 @@ class OtherConfigViewModel : ViewModel() {
 
     fun updateLocalBookDir(path: String) {
         OtherConfig.defaultBookTreeUri = path
-        AppConfig.defaultBookTreeUri = OtherConfig.defaultBookTreeUri
     }
 
     var checkSourceTimeout by mutableStateOf((CheckSource.timeout / 1000))

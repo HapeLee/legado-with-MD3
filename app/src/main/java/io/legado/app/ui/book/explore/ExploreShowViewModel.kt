@@ -1,24 +1,21 @@
 package io.legado.app.ui.book.explore
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
+import io.legado.app.domain.usecase.BookShelfKey
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.help.config.AppConfig
-import io.legado.app.model.BookShelfState
-import io.legado.app.ui.book.search.BookKey
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.utils.exploreLayoutGrid
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
@@ -46,8 +43,14 @@ sealed class UiState<out T> {
     data object Empty : UiState<Nothing>()
 }
 
+data class ExploreBookItemUi(
+    val book: SearchBook,
+    val shelfState: BookShelfState = BookShelfState.NOT_IN_SHELF,
+)
+
 class ExploreShowViewModel(
-    private val repository: ExploreRepository
+    private val repository: ExploreRepository,
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -60,7 +63,7 @@ class ExploreShowViewModel(
     private var exploreUrl: String? = null
     private var page = 1
     private val _isEndStateFlow = MutableStateFlow(false)
-    private val _bookshelf = MutableStateFlow<Set<BookKey>>(emptySet())
+    private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val _kinds = MutableStateFlow<List<ExploreKind>>(emptyList())
     val kinds = _kinds.asStateFlow()
     private val _selectedKindTitle = MutableStateFlow<String?>(null)
@@ -85,6 +88,16 @@ class ExploreShowViewModel(
     ) { books, filter, bookshelf ->
         books.filter { item ->
             isBookValid(item, filter, bookshelf)
+        }.map { item ->
+            ExploreBookItemUi(
+                book = item,
+                shelfState = resolveBookShelfStateUseCase.execute(
+                    name = item.name,
+                    author = item.author,
+                    url = item.bookUrl,
+                    shelf = bookshelf
+                )
+            )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -104,16 +117,24 @@ class ExploreShowViewModel(
     init {
         viewModelScope.launch {
             repository.getBookshelfItems().collect { list ->
-                val keys = list.map { BookKey(it.name, it.author, it.bookUrl) }.toSet()
+                val keys = list.map { BookShelfKey(it.name, it.author, it.bookUrl) }.toSet()
                 _bookshelf.value = keys
             }
         }
     }
 
-    fun initData(intent: Intent) {
-        val incomingSourceUrl = intent.getStringExtra("sourceUrl")
+    fun initData(incomingSourceUrl: String?, incomingExploreUrl: String?) {
+        if (sourceUrl == incomingSourceUrl && exploreUrl == incomingExploreUrl && bookSource != null) {
+            return
+        }
         sourceUrl = incomingSourceUrl
-        exploreUrl = intent.getStringExtra("exploreUrl")
+        exploreUrl = incomingExploreUrl
+        page = 1
+        bookSource = null
+        _rawBooks.value = emptyList()
+        _isEndStateFlow.value = false
+        _errorMsg.value = null
+        _selectedKindTitle.value = null
 
         viewModelScope.launch {
             if (bookSource == null && incomingSourceUrl != null) {
@@ -199,32 +220,30 @@ class ExploreShowViewModel(
     }
 
     fun getCurrentBookShelfState(item: SearchBook): BookShelfState {
-        return getBookShelfState(item, _bookshelf.value)
+        return resolveBookShelfStateUseCase.execute(
+            name = item.name,
+            author = item.author,
+            url = item.bookUrl,
+            shelf = _bookshelf.value
+        )
     }
 
-    private fun isBookValid(book: SearchBook, filter: BookFilterState, shelf: Set<BookKey>): Boolean {
-        val state = getBookShelfState(book, shelf)
+    private fun isBookValid(
+        book: SearchBook,
+        filter: BookFilterState,
+        shelf: Set<BookShelfKey>
+    ): Boolean {
+        val state = resolveBookShelfStateUseCase.execute(
+            name = book.name,
+            author = book.author,
+            url = book.bookUrl,
+            shelf = shelf
+        )
         return when (filter) {
             BookFilterState.SHOW_ALL -> true
             BookFilterState.HIDE_IN_SHELF -> state != BookShelfState.IN_SHELF
             BookFilterState.HIDE_SAME_NAME_AUTHOR -> state != BookShelfState.SAME_NAME_AUTHOR
             BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state == BookShelfState.NOT_IN_SHELF
         }
-    }
-
-    fun getBookShelfStateFlow(item: SearchBook): Flow<BookShelfState> {
-        return _bookshelf.map { shelf ->
-            getBookShelfState(item, shelf)
-        }.distinctUntilChanged()
-    }
-
-    private fun getBookShelfState(item: SearchBook, shelf: Set<BookKey>): BookShelfState {
-        val exactMatch = shelf.any { it.name == item.name && it.author == item.author && it.url == item.bookUrl }
-        if (exactMatch) return BookShelfState.IN_SHELF
-
-        val sameNameAuthor = shelf.any { it.name == item.name && it.author == item.author && it.url != item.bookUrl }
-        if (sameNameAuthor) return BookShelfState.SAME_NAME_AUTHOR
-
-        return BookShelfState.NOT_IN_SHELF
     }
 }

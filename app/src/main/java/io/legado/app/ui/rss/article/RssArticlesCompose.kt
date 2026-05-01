@@ -59,6 +59,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
@@ -92,6 +93,7 @@ fun RssArticlesPage(
     rssSource: RssSource?,
     viewModel: RssArticlesViewModel,
     onRead: (RssArticle) -> Unit,
+    paddingValues: PaddingValues = PaddingValues(0.dp),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -123,6 +125,10 @@ fun RssArticlesPage(
     }
 
     val refreshState = rememberPullToRefreshState()
+    val contentPadding = adaptiveContentPadding(
+        top = paddingValues.calculateTopPadding(),
+        bottom = 120.dp
+    )
 
     PullToRefreshBox(
         isRefreshing = loadState.isRefreshing,
@@ -141,7 +147,7 @@ fun RssArticlesPage(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 72.dp),
+                    contentPadding = contentPadding,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(
@@ -174,7 +180,7 @@ fun RssArticlesPage(
                     columns = GridCells.Fixed(2),
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 72.dp),
+                    contentPadding = contentPadding,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -208,7 +214,7 @@ fun RssArticlesPage(
                     columns = StaggeredGridCells.Fixed(2),
                     state = staggeredState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 72.dp),
+                    contentPadding = contentPadding,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalItemSpacing = 8.dp
                 ) {

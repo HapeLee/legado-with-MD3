@@ -16,9 +16,8 @@ import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.FragmentWebdavAuthBinding
+import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppWebDav
-import io.legado.app.help.AppWebDav.testWebDav
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Restore
@@ -35,11 +34,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.android.ext.android.inject
 import splitties.init.appCtx
 import kotlin.coroutines.coroutineContext
 
 class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
+    private val webDavBackupUseCase by inject<WebDavBackupUseCase>()
     private var _binding: FragmentWebdavAuthBinding? = null
     private val binding get() = _binding!!
     private var restoreJob: Job? = null
@@ -105,7 +106,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
             )
             saveWebDavConfig(config)
             lifecycleScope.launch {
-                testWebDav()
+                webDavBackupUseCase.test()
             }
         }
 
@@ -120,7 +121,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                     binding.progressRestore.visible()
                     binding.btnRestore.text = ""
                     saveWebDavConfig(config)
-                    AppWebDav.upConfig()
+                    webDavBackupUseCase.refreshConfig()
                     restore()
                 } finally {
                     binding.progressRestore.gone()
@@ -169,8 +170,8 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     private suspend fun showRestoreDialog(context: Context) {
-        val names = withContext(IO) { AppWebDav.getBackupNames() }
-        if (AppWebDav.isJianGuoYun && names.size > 700) {
+        val names = withContext(IO) { webDavBackupUseCase.getBackupNames() }
+        if (webDavBackupUseCase.isJianGuoYun && names.size > 700) {
             context.toastOnUi("由于坚果云限制列出文件数量，部分备份可能未显示，请及时清理旧备份")
         }
         if (names.isNotEmpty()) {
@@ -194,7 +195,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
         waitDialog.setText("恢复中…")
         waitDialog.show()
         val task = Coroutine.async {
-            AppWebDav.restoreWebDav(name)
+            webDavBackupUseCase.restore(name)
         }.onError {
             AppLog.put("WebDav恢复出错\n${it.localizedMessage}", it)
             appCtx.toastOnUi("WebDav恢复出错\n${it.localizedMessage}")

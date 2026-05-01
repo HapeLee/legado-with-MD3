@@ -22,6 +22,10 @@ class DictRuleRepository {
         return dao.all
     }
 
+    fun getEnabled(): List<DictRule> {
+        return dao.enabled
+    }
+
     suspend fun insert(vararg rule: DictRule) {
         withContext(Dispatchers.IO) {
             dao.insert(*rule)

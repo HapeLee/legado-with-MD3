@@ -25,7 +25,7 @@ import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.ui.book.cache.CacheActivity
+import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.HtmlFormatter
@@ -48,6 +48,8 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
@@ -79,6 +81,8 @@ class ExportBookService : BaseService() {
     companion object {
         val exportProgress = ConcurrentHashMap<String, Int>()
         val exportMsg = ConcurrentHashMap<String, String>()
+        private val _exportBookUpdateFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
+        val exportBookUpdateFlow = _exportBookUpdateFlow.asSharedFlow()
     }
 
     data class ExportConfig(
@@ -107,7 +111,7 @@ class ExportBookService : BaseService() {
                     )
                     waitExportBooks[bookUrl] = exportConfig
                     exportMsg[bookUrl] = getString(R.string.export_wait)
-                    postEvent(EventBus.EXPORT_BOOK, bookUrl)
+                    notifyExportBookChanged(bookUrl)
                     export()
                 }
             }.onFailure {
@@ -127,7 +131,7 @@ class ExportBookService : BaseService() {
         exportProgress.clear()
         exportMsg.clear()
         waitExportBooks.keys.forEach {
-            postEvent(EventBus.EXPORT_BOOK, it)
+            notifyExportBookChanged(it)
         }
     }
 
@@ -146,7 +150,12 @@ class ExportBookService : BaseService() {
         val notification = NotificationCompat.Builder(this, AppConst.channelIdDownload)
             .setSmallIcon(R.drawable.ic_export)
             .setSubText(getString(R.string.export_book))
-            .setContentIntent(activityPendingIntent<CacheActivity>("cacheActivity"))
+            .setContentIntent(
+                activityPendingIntent(
+                    MainActivity.createCacheIntent(this),
+                    "cacheActivity"
+                )
+            )
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentText(notificationContentText)
             .setDeleteIntent(servicePendingIntent<ExportBookService>(IntentAction.stop))
@@ -206,7 +215,7 @@ class ExportBookService : BaseService() {
                     AppLog.put("导出书籍<${book?.name ?: bookUrl}>出错", e)
                 } finally {
                     exportProgress.remove(bookUrl)
-                    postEvent(EventBus.EXPORT_BOOK, bookUrl)
+                    notifyExportBookChanged(bookUrl)
                 }
             }
         }
@@ -234,7 +243,7 @@ class ExportBookService : BaseService() {
 
     private suspend fun exportTxt(path: String, book: Book) {
         exportMsg.remove(book.bookUrl)
-        postEvent(EventBus.EXPORT_BOOK, book.bookUrl)
+        notifyExportBookChanged(book.bookUrl)
         val fileDoc = FileDoc.fromDir(path)
         exportTxt(fileDoc, book)
     }
@@ -296,11 +305,16 @@ class ExportBookService : BaseService() {
         }.mapAsync(threads) { chapter ->
             getExportData(book, chapter, contentProcessor, useReplace)
         }.collectIndexed { index, result ->
-            postEvent(EventBus.EXPORT_BOOK, book.bookUrl)
+            notifyExportBookChanged(book.bookUrl)
             exportProgress[book.bookUrl] = index
             append.invoke(result.first, result.second)
         }
 
+    }
+
+    private fun notifyExportBookChanged(bookUrl: String) {
+        postEvent(EventBus.EXPORT_BOOK, bookUrl)
+        _exportBookUpdateFlow.tryEmit(bookUrl)
     }
 
     private fun getExportData(

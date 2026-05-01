@@ -139,6 +139,14 @@ object BookshelfConfig {
     var bookshelfCoverShadow by prefDelegate(PreferKey.bookshelfCoverShadow, false)
 
     /**
+     * 书架搜索按钮是否直接跳转搜索页
+     */
+    var bookshelfSearchActionDirectToSearch by prefDelegate(
+        PreferKey.bookshelfSearchActionDirectToSearch,
+        true
+    )
+
+    /**
      * 启动时自动刷新书架
      */
     var autoRefreshBook by prefDelegate(PreferKey.autoRefresh, false)

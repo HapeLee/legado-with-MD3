@@ -13,6 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
@@ -20,6 +21,7 @@ import io.legado.app.help.bookmark.BookmarkExporter
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -88,8 +90,7 @@ data class TocDomainItem(
 )
 
 private data class DownloadContext(
-    val downloadingPair: Pair<String, Set<Int>>,
-    val errorPair: Pair<String, Set<Int>>,
+    val downloadState: CacheBookDownloadState?,
     val cachedFiles: Set<String>
 )
 
@@ -113,7 +114,8 @@ data class FabAction(val icon: ImageVector, val label: String, val action: () ->
 @OptIn(ExperimentalCoroutinesApi::class)
 class TocViewModel(
     application: Application,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val cacheBookChaptersUseCase: CacheBookChaptersUseCase
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
@@ -204,11 +206,11 @@ class TocViewModel(
             .distinctUntilChanged()
 
     private val downloadContextFlow = combine(
-        CacheBook.downloadingIndicesFlow,
-        CacheBook.downloadErrorFlow,
+        bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged(),
+        CacheBook.downloadStateFlow,
         _cacheFileNames
-    ) { downloading, errors, cached ->
-        DownloadContext(downloading, errors, cached)
+    ) { bookUrl, state, cached ->
+        DownloadContext(state.books[bookUrl], cached)
     }
 
     private val uiConfigFlow = combine(
@@ -261,15 +263,13 @@ class TocViewModel(
             }
         }
 
-        val (downloadingPair, errorPair, cachedFiles) = downloadCtx
-        val downloadingIndices =
-            if (downloadingPair.first == book.bookUrl) downloadingPair.second else emptySet()
-        val errorIndices =
-            if (errorPair.first == book.bookUrl) errorPair.second else emptySet()
+        val runningIndices = downloadCtx.downloadState?.runningIndices.orEmpty()
+        val errorIndices = downloadCtx.downloadState?.failedIndices.orEmpty()
+        val cachedFiles = downloadCtx.cachedFiles
 
         processedChapters.map { chapter ->
             val downloadState = when {
-                chapter.index in downloadingIndices -> DownloadState.DOWNLOADING
+                chapter.index in runningIndices -> DownloadState.DOWNLOADING
                 chapter.index in errorIndices -> DownloadState.ERROR
                 chapter.getFileName() in cachedFiles -> DownloadState.SUCCESS
                 else -> DownloadState.NONE
@@ -524,15 +524,21 @@ class TocViewModel(
         val book = bookState.value ?: return
         val indices = uiState.value.selectedIds.toList()
         if (indices.isEmpty()) return
-        CacheBook.start(getApplication(), book, indices)
-        getApplication<Application>().toastOnUi("开始下载 ${indices.size} 个章节")
-        clearSelection()
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, indices)
+        }.onSuccess { count ->
+            getApplication<Application>().toastOnUi("开始下载 $count 个章节")
+            clearSelection()
+        }
     }
 
     fun downloadChapter(index: Int) {
         val book = bookState.value ?: return
-        CacheBook.start(getApplication(), book, listOf(index))
-        getApplication<Application>().toastOnUi("开始下载章节")
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
+        }.onSuccess {
+            getApplication<Application>().toastOnUi("开始下载章节")
+        }
     }
 
     fun downloadAll() {
@@ -546,8 +552,11 @@ class TocViewModel(
             return
         }
 
-        CacheBook.start(getApplication(), book, targetIndices)
-        getApplication<Application>().toastOnUi("开始下载剩余 ${targetIndices.size} 个章节")
+        execute {
+            cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
+        }.onSuccess { count ->
+            getApplication<Application>().toastOnUi("开始下载剩余 $count 个章节")
+        }
     }
 
     private fun List<BookChapter>.groupAndReverseVolumes(): List<BookChapter> {

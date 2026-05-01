@@ -22,8 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -41,6 +42,7 @@ fun <T> DynamicTopAppBar(
     showSearchAction: Boolean = true,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onSearchSubmit: (String) -> Unit = {},
     searchPlaceholder: String,
     searchLeadingIcon: ImageVector = Icons.Default.Search,
     searchTrailingIcon: @Composable (() -> Unit)? = null,
@@ -114,7 +116,14 @@ fun <T> DynamicTopAppBar(
                 SearchBar(
                     query = state.searchKey,
                     onQueryChange = onSearchQueryChange,
+                    onSearch = onSearchSubmit,
                     placeholder = searchPlaceholder,
+                    leadingIcon = {
+                        AppIcon(
+                            imageVector = searchLeadingIcon,
+                            contentDescription = null
+                        )
+                    },
                     trailingIcon = searchTrailingIcon,
                     dropdownMenu = searchDropdownMenu
                 )

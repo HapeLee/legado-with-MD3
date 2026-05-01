@@ -188,6 +188,7 @@ fun ReplaceRuleScreen(
         onDismissRequest = { viewModel.cancelImport() },
         onToggleItem = { viewModel.toggleImportSelection(it) },
         onToggleAll = { viewModel.toggleImportAll(it) },
+        onUpdateItem = { index, rule -> viewModel.updateImportItem(index, rule) },
         onConfirm = { viewModel.saveImportedRules() },
         topBarActions = {},
         itemTitle = { rule -> rule.name },

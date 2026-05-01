@@ -48,7 +48,7 @@ object OtherConfig {
 
     var defaultBookTreeUri by prefDelegate(
         PreferKey.defaultBookTreeUri,
-        ""
+        null as String?
     )
 
     var antiAlias by prefDelegate(
@@ -157,6 +157,11 @@ object OtherConfig {
 
     var threadCount by prefDelegate(
         PreferKey.threadCount,
+        16
+    )
+
+    var cacheBookThreadCount by prefDelegate(
+        PreferKey.cacheBookThreadCount,
         16
     )
 

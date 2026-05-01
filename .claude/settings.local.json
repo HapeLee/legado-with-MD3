@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew compileAppDebugKotlin)",
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew :app:compileAppDebugUnitTestKotlin)",
+      "Bash(head -n 508 \"app/src/main/java/io/legado/app/model/CacheBook.kt\")",
+      "Bash(mv /tmp/cachebook_tmp.kt \"app/src/main/java/io/legado/app/model/CacheBook.kt\")",
+      "Bash(./gradlew :app:cleanCompileAppDebugKotlin)",
+      "Bash(./gradlew :app:compileAppDebugKotlin --rerun-tasks)",
+      "Bash(./gradlew :app:compileAppDebugKotlin)",
+      "Bash(./gradlew :app:cleanCompileAppDebugKotlin :app:compileAppDebugKotlin)",
+      "Bash(cp -r \"D:/AndroidPrj/legado-with-MD3/.codex/skills/legado-compose-review/SKILL.md\" \"D:/AndroidPrj/legado-with-MD3/.claude/skills/legado-compose-review/SKILL.md\")",
+      "Bash(cp -r \"D:/AndroidPrj/legado-with-MD3/.codex/skills/legado-compose-review/references\" \"D:/AndroidPrj/legado-with-MD3/.claude/skills/legado-compose-review/\")",
+      "WebSearch",
+      "Bash(./gradlew assembleAppDebug)",
+      "Bash(git checkout *)"
+    ]
+  }
+}

@@ -54,8 +54,11 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
+import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
+import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.group.GroupEditSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
@@ -236,7 +239,7 @@ fun ChangeSourceSheet(
     show: Boolean,
     oldBook: Book,
     onDismissRequest: () -> Unit,
-    onReplace: (BookSource, Book, List<BookChapter>) -> Unit,
+    onReplace: (BookSource, Book, List<BookChapter>, ChangeSourceMigrationOptions) -> Unit,
     onAddAsNew: (Book, List<BookChapter>) -> Unit,
     viewModel: ChangeBookSourceComposeViewModel = koinViewModel(key = "source-${oldBook.bookUrl}"),
 ) {
@@ -253,9 +256,11 @@ fun ChangeSourceSheet(
     val loadWordCount = viewModel.loadWordCount
     var actionBook by remember { mutableStateOf<SearchBook?>(null) }
     var mismatchBook by remember { mutableStateOf<SearchBook?>(null) }
+    var pendingMigration by remember { mutableStateOf<PendingSourceMigration?>(null) }
     var loadingAction by remember { mutableStateOf(false) }
     var showOptionsMenu by rememberSaveable { mutableStateOf(false) }
     var showFilterMenu by rememberSaveable { mutableStateOf(false) }
+    val bookAddedToShelfText = stringResource(R.string.book_added_to_shelf)
 
     val editSourceResult = rememberLauncherForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
         val origin = it.data?.getStringExtra("origin") ?: return@rememberLauncherForActivityResult
@@ -311,7 +316,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "字数对比",
+                            text = "显示更多信息",
                             isSelected = loadWordCount,
                             onClick = {
                                 viewModel.onLoadWordCountChange(!loadWordCount)
@@ -464,7 +469,7 @@ fun ChangeSourceSheet(
                                 viewModel.del(item)
                                 if (oldBook.bookUrl == item.bookUrl) {
                                     viewModel.autoChangeSource(oldBook.type) { book, toc, source ->
-                                        onReplace(source, book, toc)
+                                        pendingMigration = PendingSourceMigration(source, book, toc)
                                     }
                                 }
                                 onDismiss()
@@ -483,11 +488,10 @@ fun ChangeSourceSheet(
         viewModel.getToc(book, { toc, source ->
             loadingAction = false
             if (replace) {
-                onReplace(source, book, toc)
-                onDismissRequest()
+                pendingMigration = PendingSourceMigration(source, book, toc)
             } else {
                 onAddAsNew(book, toc)
-                context.toastOnUi(context.getString(R.string.book_added_to_shelf))
+                context.toastOnUi(bookAddedToShelfText)
             }
             actionBook = null
         }, {
@@ -527,4 +531,30 @@ fun ChangeSourceSheet(
             }
         }
     )
+    val migration = pendingMigration
+    ChangeSourceMigrationOptionsSheet(
+        show = migration != null,
+        title = "换源选项",
+        subtitle = migration?.let {
+            val sameNameAuthor = oldBook.isSameNameAuthor(it.book)
+            if (sameNameAuthor && oldBook.origin != it.book.origin) {
+                "检测到书名、作者相同但书源不同，可选择本次要迁移的数据。"
+            } else {
+                "选择本次替换当前书籍时要迁移的数据。"
+            }
+        },
+        onDismissRequest = { pendingMigration = null },
+        onConfirm = { options ->
+            val pending = pendingMigration ?: return@ChangeSourceMigrationOptionsSheet
+            onReplace(pending.source, pending.book, pending.toc, options)
+            pendingMigration = null
+            onDismissRequest()
+        }
+    )
 }
+
+private data class PendingSourceMigration(
+    val source: BookSource,
+    val book: Book,
+    val toc: List<BookChapter>,
+)

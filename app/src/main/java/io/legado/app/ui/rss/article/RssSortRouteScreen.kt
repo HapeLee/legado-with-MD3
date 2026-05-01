@@ -46,6 +46,8 @@ fun RssSortRouteScreen(
     var articleStyle by remember(sourceUrl) { mutableIntStateOf(0) }
     var redirectPolicy by remember(sourceUrl) { mutableStateOf(RedirectPolicy.ALLOW_ALL) }
     var screenTitle by remember(sourceUrl) { mutableStateOf("") }
+    val setSourceVariableText = stringResource(R.string.set_source_variable)
+    val errorText = stringResource(R.string.error)
 
     var showReadRecordSheet by remember { mutableStateOf(false) }
     var readRecords by remember { mutableStateOf<List<RssReadRecord>>(emptyList()) }
@@ -104,7 +106,7 @@ fun RssSortRouteScreen(
                 val variable = withContext(Dispatchers.IO) { source.getVariable() }
                 activity?.showDialogFragment(
                     VariableDialog(
-                        context.getString(R.string.set_source_variable),
+                        setSourceVariableText,
                         source.getKey(),
                         variable,
                         comment
@@ -141,7 +143,7 @@ fun RssSortRouteScreen(
                 viewModel.rssSource?.sourceUrl ?: sourceUrl.orEmpty()
             }
             if (openOrigin.isBlank()) {
-                context.toastOnUi(context.getString(R.string.error))
+                context.toastOnUi(errorText)
             } else {
                 onOpenRead(record.title, openOrigin, null, record.record)
             }
@@ -154,7 +156,7 @@ fun RssSortRouteScreen(
             }
             context.toastOnUi("重定向策略已更新")
         },
-        pagerContent = { _, sort ->
+        pagerContent = { _, sort, paddingValues ->
             val pageViewModel: RssArticlesViewModel = koinViewModel(
                 key = "rss_${viewModel.url}_${sort.first}_${sort.second}"
             )
@@ -165,6 +167,7 @@ fun RssSortRouteScreen(
                 rssUrl = viewModel.url,
                 rssSource = viewModel.rssSource,
                 viewModel = pageViewModel,
+                paddingValues = paddingValues,
                 onRead = { article ->
                     viewModel.read(article)
                     onOpenRead(article.title, article.origin, article.link, null)

@@ -53,8 +53,8 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
-import io.legado.app.ui.widget.components.button.TopBarActionButton
-import io.legado.app.ui.widget.components.button.TopBarNavigationButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
@@ -89,7 +89,7 @@ fun RssSortScreen(
     onOpenReadRecord: (RssReadRecord) -> Unit,
     onClearArticles: () -> Unit,
     onRedirectPolicyChanged: (RedirectPolicy) -> Unit,
-    pagerContent: @Composable (index: Int, item: Pair<String, String>) -> Unit
+    pagerContent: @Composable (index: Int, item: Pair<String, String>, paddingValues: PaddingValues) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -291,12 +291,10 @@ fun RssSortScreen(
             HorizontalPager(
                 state = pagerState,
                 contentPadding = PaddingValues(bottom = 0.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                modifier = Modifier.fillMaxSize()
             ) { page ->
                 val item = sortList.getOrNull(page) ?: return@HorizontalPager
-                pagerContent(page, item)
+                pagerContent(page, item, paddingValues)
             }
         }
     }
@@ -370,4 +368,3 @@ private fun RssReadRecordSheet(
         }
     }
 }
-

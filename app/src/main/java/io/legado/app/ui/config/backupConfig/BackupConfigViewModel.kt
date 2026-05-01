@@ -2,18 +2,20 @@ package io.legado.app.ui.config.backupConfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.help.AppWebDav
+import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.help.storage.Backup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 
-class BackupConfigViewModel : ViewModel() {
+class BackupConfigViewModel(
+    private val webDavBackupUseCase: WebDavBackupUseCase
+) : ViewModel() {
 
     private suspend fun syncWebDavConfig() {
         withContext(Dispatchers.IO) {
-            AppWebDav.upConfig()
+            webDavBackupUseCase.refreshConfig()
         }
     }
 
@@ -35,11 +37,9 @@ class BackupConfigViewModel : ViewModel() {
     }
 
     suspend fun testWebDav(): Boolean {
-        syncWebDavConfig()
         return withContext(Dispatchers.IO) {
             try {
-                AppWebDav.testWebDav()
-                true
+                webDavBackupUseCase.test()
             } catch (e: Exception) {
                 false
             }
@@ -62,17 +62,15 @@ class BackupConfigViewModel : ViewModel() {
     }
 
     suspend fun getBackupNames(): List<String> {
-        syncWebDavConfig()
         return withContext(Dispatchers.IO) {
-            AppWebDav.getBackupNames()
+            webDavBackupUseCase.getBackupNames()
         }
     }
 
     fun restoreWebDav(name: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                AppWebDav.upConfig()
-                AppWebDav.restoreWebDav(name)
+                webDavBackupUseCase.restore(name)
                 withContext(Dispatchers.Main) {
                     onSuccess()
                 }

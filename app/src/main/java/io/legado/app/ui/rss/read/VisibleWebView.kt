@@ -6,11 +6,14 @@ import android.util.AttributeSet
 import android.view.ActionMode
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
@@ -45,10 +48,6 @@ class VisibleWebView(
             });
         """.trimIndent()
         evaluateJavascript(js, null)
-    }
-
-    override fun onWindowVisibilityChanged(visibility: Int) {
-        super.onWindowVisibilityChanged(VISIBLE)
     }
 
     override fun performClick(): Boolean {
@@ -143,24 +142,40 @@ fun VisibleWebViewCompose(
     onCreated: (VisibleWebView) -> Unit,
     onDestroyed: (() -> Unit)? = null
 ) {
-    var webViewRef: VisibleWebView? = null
+    val webViewHolder = remember { WebViewHolder() }
     AndroidView(
         modifier = modifier,
         factory = { context ->
-            VisibleWebView(context).also {
-                webViewRef = it
-                onCreated(it)
+            FrameLayout(context).apply {
+                clipChildren = false
+                clipToPadding = false
+                val webView = VisibleWebView(context).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+                addView(webView)
+                webViewHolder.webView = webView
+                onCreated(webView)
             }
         },
-        update = {
-            webViewRef = it
+        update = { container ->
+            webViewHolder.webView = container.getChildAt(0) as? VisibleWebView
         }
     )
     DisposableEffect(Unit) {
         onDispose {
             onDestroyed?.invoke()
-            webViewRef?.destroy()
-            webViewRef = null
+            webViewHolder.webView?.let { webView ->
+                (webView.parent as? ViewGroup)?.removeView(webView)
+                webView.destroy()
+            }
+            webViewHolder.webView = null
         }
     }
+}
+
+private class WebViewHolder {
+    var webView: VisibleWebView? = null
 }

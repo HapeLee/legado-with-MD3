@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.model.BookShelfState
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.text.AppText
@@ -46,8 +46,22 @@ fun SearchBookListItem(
     modifier: Modifier = Modifier,
 ) {
     val currentShelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
+    SearchBookListItem(
+        book = book,
+        shelfState = currentShelfState,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
 
-    val badgeContent: (@Composable RowScope.() -> Unit)? = when (currentShelfState) {
+@Composable
+fun SearchBookListItem(
+    book: SearchBook,
+    shelfState: BookShelfState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val badgeContent: (@Composable RowScope.() -> Unit)? = when (shelfState) {
         BookShelfState.IN_SHELF -> {
             {
                 androidx.compose.material3.Icon(
@@ -158,8 +172,22 @@ fun SearchBookGridItem(
     modifier: Modifier = Modifier,
 ) {
     val currentShelfState by shelfState.collectAsState(initial = BookShelfState.NOT_IN_SHELF)
+    SearchBookGridItem(
+        book = book,
+        shelfState = currentShelfState,
+        onClick = onClick,
+        modifier = modifier,
+    )
+}
 
-    val badgeText: String? = when (currentShelfState) {
+@Composable
+fun SearchBookGridItem(
+    book: SearchBook,
+    shelfState: BookShelfState,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val badgeText: String? = when (shelfState) {
         BookShelfState.IN_SHELF -> "已在书架"
         BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
         BookShelfState.NOT_IN_SHELF -> null

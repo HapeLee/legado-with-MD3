@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.legado.app.App
 import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -57,32 +57,57 @@ import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 fun ExploreKindMultiTypeItem(
     kind: ExploreKind,
     sourceUrl: String?,
-    activity: AppCompatActivity?,
+    activity: AppCompatActivity? = null,
     onOpenUrl: (String) -> Unit,
-    onRefreshKinds: () -> Unit,
+    onRefreshKinds: () -> Unit = {},
     modifier: Modifier = Modifier,
     backgroundColor: Color = LegadoTheme.colorScheme.surfaceContainer,
     isMiuix: Boolean,
-    useCase: ExploreKindUiUseCase
+    displayNameOverride: String? = null,
+    valueOverride: String? = null,
+    onValueChange: ((String) -> Unit)? = null,
+    onRunAction: (() -> Unit)? = null,
+    useCase: ExploreKindUiUseCase? = null
 ) {
     val scope = rememberCoroutineScope()
-    val infoMap = remember(sourceUrl) { sourceUrl?.takeIf { it.isNotBlank() }?.let(::getExploreInfoMap) }
+    val infoMap = remember(sourceUrl, useCase) {
+        if (useCase == null) null else sourceUrl?.takeIf { it.isNotBlank() }?.let(::getExploreInfoMap)
+    }
     var displayName by remember(sourceUrl, kind.title, kind.viewName) { mutableStateOf(kind.title) }
 
-    LaunchedEffect(sourceUrl, kind.title, kind.viewName) {
-        displayName = useCase.resolveDisplayName(kind, sourceUrl, infoMap)
+    LaunchedEffect(displayNameOverride, sourceUrl, kind.title, kind.viewName, useCase) {
+        displayName = displayNameOverride
+            ?: useCase?.resolveDisplayName(kind, sourceUrl, infoMap)
+                    ?: kind.title
     }
 
     fun runAction(action: String?) {
-        scope.launch(IO) {
-            useCase.executeAction(
-                action = action,
-                title = kind.title,
-                sourceUrl = sourceUrl,
-                infoMap = infoMap,
-                activity = activity,
-                onRefreshKinds = onRefreshKinds
-            )
+        if (action.isNullOrBlank()) return
+        if (onRunAction != null) {
+            onRunAction()
+        } else {
+            val useCase = useCase ?: return
+            scope.launch(IO) {
+                useCase.executeAction(
+                    action = action,
+                    title = kind.title,
+                    sourceUrl = sourceUrl,
+                    infoMap = infoMap,
+                    activity = activity,
+                    onRefreshKinds = onRefreshKinds
+                )
+            }
+        }
+    }
+
+    fun updateValue(value: String) {
+        if (onValueChange != null) {
+            onValueChange(value)
+        } else {
+            infoMap?.let {
+                it[kind.title] = value
+                it.saveNow()
+            }
         }
     }
 
@@ -131,17 +156,19 @@ fun ExploreKindMultiTypeItem(
 
         ExploreKind.Type.text -> {
             var value by remember(sourceUrl, kind.title) {
-                mutableStateOf(infoMap?.get(kind.title).orEmpty())
+                mutableStateOf(valueOverride ?: infoMap?.get(kind.title).orEmpty())
+            }
+            LaunchedEffect(valueOverride) {
+                if (valueOverride != null) {
+                    value = valueOverride
+                }
             }
             var actionJob by remember(sourceUrl, kind.title) { mutableStateOf<Job?>(null) }
             ExploreKindCompactTextField(
                 value = value,
                 onValueChange = { newValue ->
                     value = newValue
-                    infoMap?.let {
-                        it[kind.title] = newValue
-                        it.saveNow()
-                    }
+                    updateValue(newValue)
                     if (!kind.action.isNullOrBlank()) {
                         actionJob?.cancel()
                         actionJob = scope.launch {
@@ -164,7 +191,8 @@ fun ExploreKindMultiTypeItem(
             val left = kind.style().layout_justifySelf != "right"
             var char by remember(sourceUrl, kind.title, kind.default, kind.chars) {
                 mutableStateOf(
-                    infoMap?.get(kind.title)
+                    valueOverride
+                        ?: infoMap?.get(kind.title)
                         ?.takeUnless { it.isEmpty() }
                         ?: (kind.default ?: chars.first()).also {
                             infoMap?.let { map ->
@@ -174,6 +202,11 @@ fun ExploreKindMultiTypeItem(
                         }
                 )
             }
+            LaunchedEffect(valueOverride) {
+                if (valueOverride != null) {
+                    char = valueOverride
+                }
+            }
             val text = if (left) "$char$displayName" else "$displayName$char"
             ExploreKindItem(
                 kind = kind,
@@ -182,10 +215,7 @@ fun ExploreKindMultiTypeItem(
                     val currentIndex = chars.indexOf(char)
                     val nextIndex = if (currentIndex < 0) 0 else (currentIndex + 1) % chars.size
                     char = chars.getOrElse(nextIndex) { "" }
-                    infoMap?.let { map ->
-                        map[kind.title] = char
-                        map.saveNow()
-                    }
+                    updateValue(char)
                     runAction(kind.action)
                 },
                 modifier = modifier,
@@ -209,7 +239,8 @@ fun ExploreKindMultiTypeItem(
             }
             var selected by remember(sourceUrl, kind.title, kind.default, kind.chars) {
                 mutableStateOf(
-                    infoMap?.get(kind.title)
+                    valueOverride
+                        ?: infoMap?.get(kind.title)
                         ?.takeUnless { it.isEmpty() }
                         ?: (kind.default ?: chars.first()).also {
                             infoMap?.let { map ->
@@ -218,6 +249,11 @@ fun ExploreKindMultiTypeItem(
                             }
                         }
                 )
+            }
+            LaunchedEffect(valueOverride) {
+                if (valueOverride != null) {
+                    selected = valueOverride
+                }
             }
             var showSelector by remember(sourceUrl, kind.title) { mutableStateOf(false) }
             Box(modifier = modifier) {
@@ -249,10 +285,7 @@ fun ExploreKindMultiTypeItem(
                                 showSelector = false
                                 if (selected != option) {
                                     selected = option
-                                    infoMap?.let { map ->
-                                        map[kind.title] = option
-                                        map.saveNow()
-                                    }
+                                    updateValue(option)
                                     runAction(kind.action)
                                 }
                             }

@@ -664,7 +664,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     ) {
         Coroutine.async {
             val book = book!!
-            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: return@async
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: run {
+                if (index == durChapterIndex) {
+                    upMsg("章节不存在")
+                }
+                return@async
+            }
             if (addLoading(index)) {
                 BookHelp.getContent(book, chapter)?.let {
                     contentLoadFinish(
@@ -682,7 +687,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 )
             }
         }.onError {
-            AppLog.put("加载正文出错\n${it.localizedMessage}")
+            removeLoading(index)
+            if (index == durChapterIndex) {
+                upMsg("加载正文出错\n${it.localizedMessage}")
+            }
+            AppLog.put("加载正文出错\n${it.localizedMessage}", it)
         }
     }
 

@@ -64,7 +64,7 @@ import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
-import io.legado.app.ui.widget.components.button.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet

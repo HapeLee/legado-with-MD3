@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.import.local
 
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.app.Application
 import android.net.Uri
 import android.provider.DocumentsContract
@@ -231,7 +232,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     fun hasRootDoc(): Boolean = _state.value.rootDoc != null
 
     private fun initialize() {
-        val defaultPath = ImportBookConfig.defaultBookTreeUri?.takeIf { it.isUri() }
+        val defaultPath = OtherConfig.defaultBookTreeUri?.takeIf { it.isUri() }
         val effectiveDefaultPath = defaultPath ?: firstPersistedTreeUri()?.toString()
         if (effectiveDefaultPath.isNullOrBlank()) {
             _effects.tryEmit(
@@ -239,8 +240,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             )
             return
         }
-        if (ImportBookConfig.defaultBookTreeUri != effectiveDefaultPath) {
-            ImportBookConfig.defaultBookTreeUri = effectiveDefaultPath
+        if (OtherConfig.defaultBookTreeUri != effectiveDefaultPath) {
+            OtherConfig.defaultBookTreeUri = effectiveDefaultPath
         }
         val importPath = ImportBookConfig.importBookPath
         if (importPath.isNullOrBlank() || !importPath.isUri()) {
@@ -255,16 +256,16 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         val pickedUri = persistFolderPermission(uri)
         when (target) {
             ImportFolderPickTarget.DEFAULT_BOOK -> {
-                ImportBookConfig.defaultBookTreeUri = pickedUri.toString()
+                OtherConfig.defaultBookTreeUri = pickedUri.toString()
                 if (ImportBookConfig.importBookPath.isNullOrBlank()) {
-                    ImportBookConfig.importBookPath = ImportBookConfig.defaultBookTreeUri
+                    ImportBookConfig.importBookPath = OtherConfig.defaultBookTreeUri
                 }
             }
 
             ImportFolderPickTarget.IMPORT_FOLDER -> {
                 ImportBookConfig.importBookPath = pickedUri.toString()
-                if (ImportBookConfig.defaultBookTreeUri.isNullOrBlank()) {
-                    ImportBookConfig.defaultBookTreeUri = pickedUri.toString()
+                if (OtherConfig.defaultBookTreeUri.isNullOrBlank()) {
+                    OtherConfig.defaultBookTreeUri = pickedUri.toString()
                 }
             }
         }
@@ -302,14 +303,14 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             ImportBookConfig.importBookPath
                 ?.takeIf { it.isNotBlank() && it.isUri() }
                 ?.let(::add)
-            ImportBookConfig.defaultBookTreeUri
+            OtherConfig.defaultBookTreeUri
                 ?.takeIf { it.isNotBlank() && it.isUri() }
                 ?.let(::add)
         }
         if (candidates.isEmpty()) {
             firstPersistedTreeUri()?.toString()?.let { persistedPath ->
                 if (trySetRootDoc(persistedPath)) {
-                    ImportBookConfig.defaultBookTreeUri = persistedPath
+                    OtherConfig.defaultBookTreeUri = persistedPath
                     ImportBookConfig.importBookPath = persistedPath
                     return
                 }
@@ -341,7 +342,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
 
         firstPersistedTreeUri()?.toString()?.let { persistedPath ->
             if (trySetRootDoc(persistedPath)) {
-                ImportBookConfig.defaultBookTreeUri = persistedPath
+                OtherConfig.defaultBookTreeUri = persistedPath
                 ImportBookConfig.importBookPath = persistedPath
                 return
             }

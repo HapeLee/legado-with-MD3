@@ -62,12 +62,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.data.entities.Server
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.model.remote.RemoteBook
@@ -82,7 +80,7 @@ import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
-import io.legado.app.ui.widget.components.button.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -91,7 +89,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.ConvertUtils
-import io.legado.app.utils.isUri
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
 import org.json.JSONObject
@@ -218,10 +215,7 @@ fun RemoteBookScreen(
             when (effect) {
                 is RemoteBookEffect.OpenBook -> context.startActivityForBook(effect.book)
                 is RemoteBookEffect.RequestBookFolderPicker -> {
-                    selectDocTree.launch(
-                        effect.initialUri
-                            ?: AppConfig.defaultBookTreeUri?.takeIf { it.isUri() }?.toUri()
-                    )
+                    selectDocTree.launch(effect.initialUri)
                 }
 
                 is RemoteBookEffect.ShowArchiveEntries -> {
@@ -265,7 +259,8 @@ fun RemoteBookScreen(
         topBarActions = {
             TopBarActionButton(
                 onClick = { showSheet = RemoteBookSheet.Servers },
-                imageVector = Icons.Default.Storage
+                imageVector = Icons.Default.Storage,
+                contentDescription = "服务器"
             )
         },
         dropDownMenuContent = { dismiss ->
