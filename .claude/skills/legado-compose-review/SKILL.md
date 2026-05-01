@@ -1,6 +1,6 @@
 ---
 name: legado-compose-review
-description: Review existing Legado Jetpack Compose code for architecture, behavior, maintainability, and project convention issues. Use when Codex is asked to audit, review, inspect, evaluate, or find problems in Legado Compose screens, routes, ViewModels, contracts, dialogs, sheets, navigation, or early Compose implementations, especially for MVI/UDF, StateFlow/SharedFlow, Clean Architecture, MainActivity navigation, legacy Activity compatibility, and View-era mixed-pattern drift.
+description: Review existing Legado Jetpack Compose code for architecture, behavior, maintainability, and project convention issues. Use when auditing, reviewing, inspecting, evaluating, or finding problems in Legado Compose screens, routes, ViewModels, contracts, dialogs, sheets, navigation, or early Compose implementations, especially for MVI/UDF, StateFlow/SharedFlow, Clean Architecture, MainActivity navigation, legacy Activity compatibility, edge-to-edge insets, @Stable stability annotations, predictive back, and View-era mixed-pattern drift.
 ---
 
 # Legado Compose Review
@@ -42,8 +42,8 @@ Read `references/review-checklist.md` for the project-specific checklist and sev
 
 ## Review Priorities
 
-- **P0/P1**: behavior breakage, lost navigation/result behavior, unsafe lifecycle collection, stale state, data corruption, crashes, or compatibility entry points that no longer work.
-- **P2**: architecture drift that will cause duplicated logic, hard-to-test behavior, recomposition bugs, or incorrect ownership of state/effects.
+- **P0/P1**: behavior breakage, lost navigation/result behavior, unsafe lifecycle collection, stale state, data corruption, crashes, compatibility entry points that no longer work, or content obscured by system bars (edge-to-edge breakage).
+- **P2**: architecture drift that will cause duplicated logic, hard-to-test behavior, recomposition bugs, incorrect ownership of state/effects, or missing `@Stable` annotations that cause measurable recomposition.
 - **P3**: convention drift, maintainability issues, weak naming, missing previews/tests, or small cleanup that should not block behavior.
 
 ## Boundaries
@@ -53,6 +53,8 @@ Read `references/review-checklist.md` for the project-specific checklist and sev
 - For new Compose-first code, expect standard Android architecture: `MainActivity` route ownership, ViewModel-owned state, UDF/MVI user actions, `StateFlow`/`SharedFlow`, repositories/usecases, and UI without business logic.
 - For migrated code, allow a thin retained Activity only for Android `Intent` compatibility with unreworked View callers.
 - Distinguish MVI `FeatureIntent` user actions from Android `Intent` launch/extras when both appear.
+- For edge-to-edge: expect new and migrated Compose screens to handle system bar insets correctly — `Scaffold` or `Modifier.windowInsetsPadding()`, not hardcoded padding or XML `fitsSystemWindows` hacks. Target SDK 37 enforces edge-to-edge on Android 15+.
+- For stability: expect `@Stable` on `UiState` data classes and UI model wrappers. Flag unannotated state classes that hold collections or entity types from non-Compose modules, as they cause unnecessary recomposition.
 
 ## Reference
 

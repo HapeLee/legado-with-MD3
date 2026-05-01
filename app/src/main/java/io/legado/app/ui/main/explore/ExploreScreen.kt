@@ -41,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -89,7 +90,10 @@ fun ExploreScreen(
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var sourceToDelete by remember { mutableStateOf<BookSourcePart?>(null) }
+    var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
+        uiState.items.firstOrNull { it.bookSourceUrl == sourceToDeleteUrl }
+    }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
@@ -195,7 +199,13 @@ fun ExploreScreen(
             ) {
                 items(
                     items = uiState.listItems,
-                    key = { it.key }
+                    key = { it.key },
+                    contentType = {
+                        when (it) {
+                            is ExploreListItem.Header -> "source-header"
+                            is ExploreListItem.KindRow -> "kind-row"
+                        }
+                    }
                 ) { listItem ->
                     when (listItem) {
                         is ExploreListItem.Header -> {
@@ -225,7 +235,7 @@ fun ExploreScreen(
                                 }
                             },
                             onRefresh = { viewModel.refreshExploreKinds(item) },
-                            onDelete = { sourceToDelete = item },
+                            onDelete = { sourceToDeleteUrl = item.bookSourceUrl },
                             isMiuix = composeEngine
                         )
                         }
@@ -297,15 +307,15 @@ fun ExploreScreen(
 
     AppAlertDialog(
         data = sourceToDelete,
-        onDismissRequest = { sourceToDelete = null },
+        onDismissRequest = { sourceToDeleteUrl = null },
         title = stringResource(R.string.sure_del),
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { source ->
             viewModel.deleteSource(source)
-            sourceToDelete = null
+            sourceToDeleteUrl = null
         },
         dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { sourceToDelete = null },
+        onDismiss = { sourceToDeleteUrl = null },
     )
 }
 

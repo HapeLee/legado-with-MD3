@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.info
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -109,6 +111,9 @@ fun BookInfoScreen(
     state: BookInfoUiState,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     val bookColorTheme = rememberBookInfoColorTheme(state.book)
 
@@ -117,16 +122,22 @@ fun BookInfoScreen(
             state = state,
             onIntent = onIntent,
             onBack = onBack,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey,
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 private fun BookInfoScreenContent(
     state: BookInfoUiState,
     onIntent: (BookInfoIntent) -> Unit,
     onBack: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+    sharedCoverKey: String?,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val scrollBehavior = if (isMiuix) {
@@ -138,8 +149,6 @@ private fun BookInfoScreenContent(
     val pullState = rememberPullToRefreshState()
     var showMenu by rememberSaveable { mutableStateOf(false) }
 
-    BackHandler { onIntent(BookInfoIntent.BackPressed) }
-
     AppScaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -150,7 +159,7 @@ private fun BookInfoScreenContent(
                 showMenu = showMenu,
                 onShowMenuChange = { showMenu = it },
                 onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
-                onBackPressed = { onIntent(BookInfoIntent.BackPressed) },
+                onBackPressed = onBack,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -211,6 +220,9 @@ private fun BookInfoScreenContent(
                                 onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
                                 onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
                                 onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                sharedCoverKey = sharedCoverKey,
                             )
                         }
                         item {
@@ -313,7 +325,7 @@ private fun BookInfoScreenContent(
         )
     }
 
-    BookInfoDialogs(state = state, onIntent = onIntent, onBack = onBack)
+    BookInfoDialogs(state = state, onIntent = onIntent)
 }
 
 @Composable
@@ -391,14 +403,27 @@ private fun BookInfoTransparentTopAppBar(
 @Composable
 private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
     val imageLoader = koinInject<ImageLoader>()
-    val coverPath = book?.getDisplayCover()
-    val sourceOrigin = book?.origin
+    var shouldExtractColor by remember(book?.bookUrl) { mutableStateOf(false) }
+
+    LaunchedEffect(book?.bookUrl) {
+        shouldExtractColor = false
+        if (book != null) {
+            delay(520)
+            shouldExtractColor = true
+        }
+    }
+
+    val coverPath = if (shouldExtractColor) book?.getDisplayCover() else null
+    val sourceOrigin = if (shouldExtractColor) book?.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
+    val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
+        listOf(coverPath, sourceOrigin, loadOnlyWifi)
+    }
 
     val seedColor = rememberImageSeedColor(
         imageLoader = imageLoader,
         data = coverPath,
-        requestKey = listOf(coverPath, sourceOrigin, loadOnlyWifi),
+        requestKey = requestKey,
     ) {
         setParameter("sourceOrigin", sourceOrigin)
         setParameter("loadOnlyWifi", loadOnlyWifi)
@@ -449,6 +474,16 @@ private fun BookInfoBackdrop(book: Book) {
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val context = LocalContext.current
     val imageLoader = koinInject<ImageLoader>()
+    var showBackdropImage by remember(cover) { mutableStateOf(false) }
+
+    LaunchedEffect(cover) {
+        showBackdropImage = false
+        if (!cover.isNullOrBlank()) {
+            delay(520)
+            showBackdropImage = true
+        }
+    }
+
     val backdropRequest = remember(cover, sourceOrigin, loadOnlyWifi, context) {
         buildCoverImageRequest(
             context = context,
@@ -464,14 +499,15 @@ private fun BookInfoBackdrop(book: Book) {
         0.42f
     )
     Box(modifier = Modifier.fillMaxSize()) {
-        if (!cover.isNullOrBlank()) {
+        if (!cover.isNullOrBlank() && showBackdropImage) {
             AsyncImage(
                 model = backdropRequest,
                 imageLoader = imageLoader,
                 contentDescription = null,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .blur(32.dp),
+                    .fillMaxWidth()
+                    .height(360.dp)
+                    .blur(24.dp),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -600,6 +636,9 @@ private fun BookInfoHeader(
     onAuthorClick: (Boolean) -> Unit,
     onBookNameClick: (Boolean) -> Unit,
     onOriginClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+    sharedCoverKey: String?,
 ) {
     Column(
         modifier = Modifier
@@ -631,12 +670,25 @@ private fun BookInfoHeader(
                         .width(112.dp)
                         .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
                 ) {
+                    val coverModifier = with(sharedTransitionScope) {
+                        if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                            Modifier
+                                .width(112.dp)
+                                .sharedElement(
+                                    sharedContentState = rememberSharedContentState(sharedCoverKey),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                )
+                        } else {
+                            Modifier.width(112.dp)
+                        }
+                    }
                     CoilBookCover(
                         name = book.name,
                         author = book.author,
                         path = book.getDisplayCover(),
                         sourceOrigin = book.origin,
-                        modifier = Modifier.width(112.dp)
+                        modifier = coverModifier,
+                        showLoadingPlaceholder = sharedCoverKey == null,
                     )
                 }
                 Column(
@@ -895,24 +947,10 @@ private fun BookInfoSummary(
 private fun BookInfoDialogs(
     state: BookInfoUiState,
     onIntent: (BookInfoIntent) -> Unit,
-    onBack: () -> Unit,
 ) {
     val dialog = state.dialog
     var deleteOriginal by remember(dialog, state.deleteOriginal) { mutableStateOf(state.deleteOriginal) }
     var remarkText by remember(dialog) { mutableStateOf((dialog as? BookInfoDialog.EditRemark)?.remark.orEmpty()) }
-
-    if (dialog is BookInfoDialog.AddToShelfOnBack) {
-        AppAlertDialog(
-            show = true,
-            onDismissRequest = { onIntent(BookInfoIntent.DismissDialog) },
-            title = stringResource(R.string.add_to_bookshelf),
-            text = stringResource(R.string.check_add_bookshelf, state.book?.name.orEmpty()),
-            confirmText = stringResource(android.R.string.ok),
-            onConfirm = { onIntent(BookInfoIntent.ConfirmBackAddToShelf) },
-            dismissText = stringResource(android.R.string.cancel),
-            onDismiss = onBack,
-        )
-    }
 
     if (dialog is BookInfoDialog.DeleteBook) {
         AppAlertDialog(

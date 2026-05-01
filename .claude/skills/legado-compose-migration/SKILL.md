@@ -1,6 +1,6 @@
 ---
 name: legado-compose-migration
-description: Guide Legado Android UI migration from XML/View/RecyclerView/DialogFragment screens to Jetpack Compose and Material 3, and guide new Compose-first screens using standard Android architecture. Use when Codex is asked to create, migrate, rewrite, review, or plan a Legado screen, Activity, Fragment, dialog, adapter, navigation destination, or settings page, especially when MainActivity navigation, MVI/UDF, StateFlow, Koin ViewModels, domain/usecase boundaries, or existing Compose component conventions matter.
+description: Guide Legado Android UI migration from XML/View/RecyclerView/DialogFragment screens to Jetpack Compose and Material 3, and guide new Compose-first screens using standard Android architecture. Use when creating, migrating, rewriting, reviewing, or planning a Legado screen, Activity, Fragment, dialog, adapter, navigation destination, or settings page, especially when MainActivity navigation, MVI/UDF, StateFlow/SharedFlow, Koin ViewModels, domain/usecase boundaries, edge-to-edge insets, predictive back, or existing Compose component conventions matter.
 ---
 
 # Legado Compose Migration
@@ -32,6 +32,7 @@ Before editing, inspect the target View implementation if one exists, `MainActiv
    - If an unreworked View screen still starts the migrated screen with `Intent`, keep the old Activity only as a compatibility host that parses legacy extras and delegates to the Compose screen or `MainActivity` route boundary.
    - Put renderable state in `UiState`, user actions in `Intent`, and one-shot navigation/framework work in `Effect`.
    - For new screens, use standard Android/Compose architecture: UDF/MVI-style state hoisting, lifecycle-aware Flow collection, ViewModel-owned state, repository/usecase boundaries, and UI free of business logic.
+   - Ensure the new screen handles edge-to-edge correctly: use `Scaffold` (which respects `WindowInsets` automatically) or apply `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)` on the outermost container. Do not carry over `fitsSystemWindows` / manual padding patterns from XML.
    - Use mixed legacy patterns only as an integration boundary for unreworked View screens or existing framework contracts.
    - Use existing repositories/usecases when they already fit; introduce new domain/usecase classes when a new screen needs clean business boundaries or when a migration would otherwise duplicate or entangle business logic.
 
@@ -58,10 +59,13 @@ Before editing, inspect the target View implementation if one exists, `MainActiv
 - Do not pass `Activity`, `View`, binding objects, or mutable domain entities deep into composables unless an existing local pattern requires it.
 - Prefer project theme/components: `LegadoTheme`, `AppScaffold`, `ListScaffold`, `AppAlertDialog`, `AppModalBottomSheet`, `RoundDropdownMenu`, top bar helpers, setting items, cover components, and list utilities.
 - Prefer `StateFlow`/`SharedFlow` over `LiveData` for newly migrated Compose surfaces.
+- Annotate `UiState` data classes and UI-facing model wrappers with `@Stable` when they hold collections or entity data passed to composables. Kotlin 2.x strong skipping is on by default, but explicit `@Stable` provides the strongest compiler guarantee and helps document contract boundaries.
 - When using `FeatureIntent` for MVI user actions, distinguish it from Android `Intent` extras and launch APIs in names, comments, and explanations where both appear.
 - For new Compose-first screens, do not copy View-era shortcuts such as UI logic in Activity/Fragment, direct binding-like mutable UI state, adapter-owned state, or Activity-context business operations.
 - Keep one-off Android actions out of `UiState`: navigation, file opening, clipboard, dialogs implemented as Android DialogFragments, result launchers, permission requests, and callbacks that require host context should be `Effect`s handled by `MainActivity` route handling or a compatibility Activity.
 - Prefer `MainActivity` navigation for new Compose destinations. Treat standalone Activities for migrated screens as legacy entry points only when existing View code still depends on `Intent` navigation.
+- For edge-to-edge: this project targets SDK 37, so edge-to-edge is enforced on Android 15+. Use Material 3 `Scaffold` insets or `WindowInsets.safeDrawing` / `safeContent` padding; ensure migrated screens draw behind system bars via `Modifier.windowInsetsPadding()` or top-level scaffold padding rather than manual hardcoded offsets. Migrated screens that relied on `fitsSystemWindows` in XML must be updated.
+- For predictive back: New Compose destinations should work with the predictive back gesture (enabled by default in Navigation 3). When a screen requires back confirmation (unsaved changes, selection mode), use `BackHandler` to intercept and route through `FeatureIntent.BackPressed`.
 - Keep existing Chinese string resources and localization behavior; add strings to resources when user-facing text is new.
 
 ## Reference

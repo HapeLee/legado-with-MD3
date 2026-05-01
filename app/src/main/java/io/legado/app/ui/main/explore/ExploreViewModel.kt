@@ -12,7 +12,17 @@ import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.list.ListUiState
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.ImmutableSet
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.persistentSetOf
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +30,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -39,7 +53,8 @@ class ExploreViewModel(
     private val _effects = MutableSharedFlow<ExploreEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
-    private var exploreJob: Job? = null
+    private val searchKeyFlow = MutableStateFlow("")
+    private val groupFlow = MutableStateFlow("")
     private var kindsJob: Job? = null
 
     init {
@@ -52,19 +67,19 @@ class ExploreViewModel(
             exploreRepository.getExploreGroups()
                 .flowOn(IO)
                 .collectLatest { groups ->
-                    _uiState.update { it.copy(groups = groups) }
+                    _uiState.update { it.copy(groups = groups.toImmutableList()) }
                 }
         }
     }
 
     fun search(key: String) {
+        searchKeyFlow.value = key
         _uiState.update { it.copy(searchKey = key, expandedId = null) }
-        observeExplore()
     }
 
     fun setGroup(group: String) {
+        groupFlow.value = group
         _uiState.update { it.copy(selectedGroup = group, expandedId = null) }
-        observeExplore()
     }
 
     fun toggleSearchVisible(visible: Boolean) {
@@ -74,17 +89,23 @@ class ExploreViewModel(
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private fun observeExplore() {
-        exploreJob?.cancel()
-        exploreJob = viewModelScope.launch {
-            val state = _uiState.value
-            val query = state.searchKey
-            val selectedGroup = state.selectedGroup
-
-            exploreRepository.getExploreSources(query, selectedGroup)
+        viewModelScope.launch {
+            combine(
+                searchKeyFlow
+                    .debounce(250)
+                    .distinctUntilChanged(),
+                groupFlow
+            ) { query, selectedGroup ->
+                query to selectedGroup
+            }
+                .flatMapLatest { (query, selectedGroup) ->
+                    exploreRepository.getExploreSources(query, selectedGroup)
+                }
                 .flowOn(IO)
                 .collectLatest { items ->
-                    _uiState.update { it.copy(items = items) }
+                    _uiState.update { it.copy(items = items.toImmutableList()) }
                 }
         }
     }
@@ -95,9 +116,9 @@ class ExploreViewModel(
         _uiState.update {
             it.copy(
                 expandedId = newExpandedId,
-                exploreKinds = emptyList(),
-                kindDisplayNames = emptyMap(),
-                kindValues = emptyMap(),
+                exploreKinds = persistentListOf(),
+                kindDisplayNames = persistentMapOf(),
+                kindValues = persistentMapOf(),
                 loadingKinds = newExpandedId != null
             )
         }
@@ -125,9 +146,9 @@ class ExploreViewModel(
                 _uiState.update {
                     if (it.expandedId == source.bookSourceUrl) {
                         it.copy(
-                            exploreKinds = kinds,
-                            kindDisplayNames = displayNames,
-                            kindValues = values,
+                            exploreKinds = kinds.toImmutableList(),
+                            kindDisplayNames = displayNames.toImmutableMap(),
+                            kindValues = values.toImmutableMap(),
                             loadingKinds = false
                         )
                     } else it
@@ -160,7 +181,7 @@ class ExploreViewModel(
 
     fun updateKindValue(sourceUrl: String, kind: ExploreKind, value: String) {
         _uiState.update { state ->
-            state.copy(kindValues = state.kindValues + (kind.title to value))
+            state.copy(kindValues = (state.kindValues + (kind.title to value)).toImmutableMap())
         }
         viewModelScope.launch(IO) {
             getExploreInfoMap(sourceUrl).apply {
@@ -181,23 +202,23 @@ class ExploreViewModel(
     }
 
     data class ExploreUiState(
-        override val items: List<BookSourcePart> = emptyList(),
-        override val selectedIds: Set<String> = emptySet(),
+        override val items: ImmutableList<BookSourcePart> = persistentListOf(),
+        override val selectedIds: ImmutableSet<String> = persistentSetOf(),
         override val searchKey: String = "",
         override val isSearch: Boolean = false,
         override val isLoading: Boolean = false,
-        val groups: List<String> = emptyList(),
+        val groups: ImmutableList<String> = persistentListOf(),
         val selectedGroup: String = "",
         val expandedId: String? = null,
-        val exploreKinds: List<ExploreKind> = emptyList(),
-        val kindDisplayNames: Map<String, String> = emptyMap(),
-        val kindValues: Map<String, String> = emptyMap(),
+        val exploreKinds: ImmutableList<ExploreKind> = persistentListOf(),
+        val kindDisplayNames: ImmutableMap<String, String> = persistentMapOf(),
+        val kindValues: ImmutableMap<String, String> = persistentMapOf(),
         val loadingKinds: Boolean = false,
-        val listItems: List<ExploreListItem> = emptyList()
+        val listItems: ImmutableList<ExploreListItem> = persistentListOf()
     ) : ListUiState<BookSourcePart>
 
-    private fun buildExploreListItems(state: ExploreUiState): List<ExploreListItem> {
-        if (state.items.isEmpty()) return emptyList()
+    private fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {
+        if (state.items.isEmpty()) return persistentListOf()
         val expandedId = state.expandedId
         val kindRows = if (expandedId != null) {
             calculateExploreKindRows(state.exploreKinds, 6)
@@ -213,13 +234,13 @@ class ExploreViewModel(
                             ExploreListItem.KindRow(
                                 sourceUrl = source.bookSourceUrl,
                                 rowIndex = index,
-                                rowItems = row
+                                rowItems = row.toImmutableList()
                             )
                         )
                     }
                 }
             }
-        }
+        }.toImmutableList()
     }
 
     private fun buildKindValues(
@@ -269,7 +290,7 @@ sealed interface ExploreListItem {
     data class KindRow(
         val sourceUrl: String,
         val rowIndex: Int,
-        val rowItems: List<Pair<ExploreKind, Int>>
+        val rowItems: ImmutableList<Pair<ExploreKind, Int>>
     ) : ExploreListItem {
         override val key: String = "${sourceUrl}_$rowIndex"
     }

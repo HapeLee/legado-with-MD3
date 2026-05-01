@@ -7,6 +7,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -77,6 +80,7 @@ import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -110,7 +114,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class
 )
 @Composable
 fun BookshelfScreen(
@@ -120,7 +124,9 @@ fun BookshelfScreen(
     onNavigateToSearch: (String) -> Unit,
     onNavigateToRemoteImport: () -> Unit,
     onNavigateToLocalImport: () -> Unit,
-    onNavigateToCache: (Long) -> Unit
+    onNavigateToCache: (Long) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -258,10 +264,6 @@ fun BookshelfScreen(
 
     LaunchedEffect(pagerState.currentPage, isInFolderRoot) {
         clearSelection()
-    }
-
-    LaunchedEffect(uiState.items) {
-        viewModel.pruneSelectionToVisible(uiState.items)
     }
 
     BackHandler(enabled = isEditMode) {
@@ -722,7 +724,9 @@ fun BookshelfScreen(
                             onSyncDragState = { _, _ -> },
                             onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                             onBookClick = onBookClick,
-                            onBookLongClick = onBookLongClick
+                            onBookLongClick = onBookLongClick,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                         )
                     } else {
                         HorizontalPager(
@@ -741,7 +745,8 @@ fun BookshelfScreen(
                                 }
                                 val canReorderBooks = isEditMode &&
                                         !uiState.isSearch &&
-                                        group.getRealBookSort() == 3 &&
+                                        (group.bookSort.takeIf { it >= 0 }
+                                            ?: uiState.bookshelfSort) == 3 &&
                                         isSelectedGroup
                                 BookshelfPage(
                                     paddingValues = paddingValues,
@@ -782,7 +787,9 @@ fun BookshelfScreen(
                                     },
                                     onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                                     onBookClick = onBookClick,
-                                    onBookLongClick = onBookLongClick
+                                    onBookLongClick = onBookLongClick,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
                                 )
                             }
                         }
@@ -1030,7 +1037,9 @@ fun BookshelfPage(
     onSyncDragState: (books: List<BookShelfItem>, canReorderBooks: Boolean) -> Unit,
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit
+    onBookLongClick: (BookShelfItem) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     if (books.isEmpty()) {
         if (uiState.isSearch) {
@@ -1135,6 +1144,9 @@ fun BookshelfPage(
                     coverShadow = BookshelfConfig.bookshelfCoverShadow,
                     isSearchMode = uiState.isSearch,
                     searchKey = uiState.searchKey,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    sharedCoverKey = bookCoverSharedElementKey(book.bookUrl),
                     onClick = {
                         if (isEditMode) {
                             onToggleBookSelection(book)

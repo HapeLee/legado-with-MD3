@@ -5,6 +5,9 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,6 +36,7 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookInfoRouteScreen(
     bookUrl: String,
@@ -40,6 +44,9 @@ fun BookInfoRouteScreen(
     onBack: () -> Unit,
     onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
     onOpenSearch: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
     onRegisterVariableSetter: (((String, String?) -> Unit)?) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -156,6 +163,9 @@ fun BookInfoRouteScreen(
         state = viewModel.uiState.collectAsStateWithLifecycle().value,
         onIntent = viewModel::onIntent,
         onBack = onBack,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = sharedCoverKey,
     )
 }
 

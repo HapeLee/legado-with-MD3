@@ -118,17 +118,22 @@ class BookInfoViewModel(
         clearReadRecordObserve()
         _uiState.value = BookInfoUiState()
         execute {
-            appDb.bookDao.getBook(bookUrl)?.let {
+            val book = appDb.bookDao.getBook(bookUrl)?.let {
                 inBookshelf = !it.isNotShelf
-                return@execute it
-            }
-            appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()?.let {
+                it
+            } ?: appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()?.let {
                 inBookshelf = false
-                return@execute it
+                it
+            } ?: throw NoStackTraceException("未找到书籍")
+
+            val source = if (book.isLocal) {
+                null
+            } else {
+                appDb.bookSourceDao.getBookSource(book.origin)
             }
-            throw NoStackTraceException("未找到书籍")
+            book to source
         }.onSuccess {
-            upBook(it)
+            upBook(it.first, it.second)
         }.onError {
             context.toastOnUi(it.localizedMessage ?: "未找到书籍")
             emitEffect(BookInfoEffect.Finish(afterTransition = true))
@@ -137,7 +142,6 @@ class BookInfoViewModel(
 
     fun onIntent(intent: BookInfoIntent) {
         when (intent) {
-            BookInfoIntent.BackPressed -> onBackPressed()
             BookInfoIntent.DismissSheet -> dismissSheet()
             BookInfoIntent.DismissDialog -> dismissDialog()
             is BookInfoIntent.MenuAction -> handleMenuAction(intent.action)
@@ -159,13 +163,6 @@ class BookInfoViewModel(
             BookInfoIntent.ChangeSourceClick -> setSheet(BookInfoSheet.SourcePicker)
             BookInfoIntent.ReadRecordClick -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoIntent.RemarkClick -> showDialog(BookInfoDialog.EditRemark(currentBook?.remark))
-            BookInfoIntent.ConfirmBackAddToShelf -> {
-                dismissDialog()
-                addToBookshelf {
-                    emitEffect(BookInfoEffect.Finish(afterTransition = true))
-                }
-            }
-
             is BookInfoIntent.ConfirmDelete -> {
                 dismissDialog()
                 deleteBook(intent.deleteOriginal)
@@ -246,7 +243,17 @@ class BookInfoViewModel(
 
     fun onInfoEdited() {
         currentBook?.bookUrl?.let { bookUrl ->
-            appDb.bookDao.getBook(bookUrl)?.let { upBook(it) }
+            execute {
+                val book = appDb.bookDao.getBook(bookUrl) ?: return@execute null
+                val source = if (book.isLocal) {
+                    null
+                } else {
+                    appDb.bookSourceDao.getBookSource(book.origin)
+                }
+                book to source
+            }.onSuccess {
+                it?.let { (book, source) -> upBook(book, source) }
+            }
         }
     }
 
@@ -651,18 +658,17 @@ class BookInfoViewModel(
         }
     }
 
-    private fun upBook(book: Book) {
+    private fun upBook(book: Book, source: BookSource?) {
         currentBook = book
         currentChapterList = emptyList()
         currentWebFiles = emptyList()
         currentKindLabels = emptyList()
         currentGroupNames = null
         currentHasCustomGroup = false
+        bookSource = source
         syncUiState(isTocLoading = true)
         refreshMeta(book)
         upCoverByRule(book)
-        bookSource = if (book.isLocal) null else appDb.bookSourceDao.getBookSource(book.origin)
-        syncUiState(isTocLoading = true)
         if (book.tocUrl.isEmpty() && !book.isLocal) {
             loadBookInfo(book, runPreUpdateJs = inBookshelf)
         } else {
@@ -798,14 +804,6 @@ class BookInfoViewModel(
             currentWebFiles = emptyList()
             context.toastOnUi("LoadWebFileError\n${it.localizedMessage}")
             syncUiState(isTocLoading = false)
-        }
-    }
-
-    private fun onBackPressed() {
-        if (!inBookshelf && AppConfig.showAddToShelfAlert && currentBook != null) {
-            showDialog(BookInfoDialog.AddToShelfOnBack)
-        } else {
-            emitEffect(BookInfoEffect.Finish(afterTransition = true))
         }
     }
 

@@ -7,6 +7,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,7 +44,7 @@ class RssViewModel(
             rssRepository.getEnabledGroups()
                 .flowOn(IO)
                 .collect { groups ->
-                    _uiState.update { state -> state.copy(groups = groups) }
+                    _uiState.update { state -> state.copy(groups = groups.toImmutableList()) }
                 }
         }
     }
@@ -61,7 +62,7 @@ class RssViewModel(
             }
             .flowOn(IO)
             .onEach { sources ->
-                _uiState.update { state -> state.copy(items = sources) }
+                _uiState.update { state -> state.copy(items = sources.toImmutableList()) }
             }
             .launchIn(viewModelScope)
     }

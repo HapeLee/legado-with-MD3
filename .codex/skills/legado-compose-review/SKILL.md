@@ -9,7 +9,7 @@ description: Review existing Legado Jetpack Compose code for architecture, behav
 
 Review existing Compose code before rewriting it. Focus on concrete defects, architectural drift, behavior risks, and missing verification, especially in early Compose screens that may predate the current MVI/UDF, Clean Architecture, and `MainActivity` navigation expectations.
 
-Read `references/review-checklist.md` for the project-specific checklist and severity guidance.
+Read `references/review-checklist.md` for the project-specific checklist, current Compose state/performance checks, and severity guidance.
 
 ## Workflow
 

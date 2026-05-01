@@ -10,6 +10,7 @@ data class BookShelfItem(
     val bookUrl: String,
     val name: String,
     val author: String,
+    val origin: String,
     val originName: String,
     val coverUrl: String?,
     val customCoverUrl: String?,
@@ -44,6 +45,7 @@ data class BookShelfItem(
 
 fun BookShelfItem.toLightBook() = Book(
     bookUrl = bookUrl,
+    origin = origin,
     originName = originName,
     name = name,
     author = author,

@@ -52,9 +52,10 @@ Use the smallest set of files. Do not split files just to match this shape.
 Use this shape for behavior-heavy screens:
 
 ```kotlin
+@Stable
 data class FeatureUiState(
     val isLoading: Boolean = false,
-    val items: List<Item> = emptyList(),
+    val items: ImmutableList<Item> = persistentListOf(),
     val dialog: FeatureDialog? = null,
     val sheet: FeatureSheet = FeatureSheet.None,
 )
@@ -80,6 +81,7 @@ ViewModel rules:
 - Use `_uiState.update { it.copy(...) }` for state changes.
 - Emit one-shot work through effects, not booleans in state.
 - Keep cached current entities private in the ViewModel when existing project behavior needs mutation or incremental sync, but publish immutable render state.
+- Annotate `UiState` data classes with `@Stable` to give the Compose compiler the strongest stability guarantee. This is especially important when `UiState` fields include collections or entity types that come from non-Compose modules.
 - For collection-heavy `UiState`, convert DAO/repository `List`/`Set`/`Map` values to `kotlinx.collections.immutable` at the ViewModel/UI-state boundary with `toImmutableList()`, `toImmutableSet()`, or `toImmutableMap()`. Do not force repository, DAO, or domain APIs to use persistent collections unless the domain contract truly benefits.
 - Keep internal flow pipelines free to use normal Kotlin collections for sorting, grouping, and persistence work; the immutable collection rule is primarily for values exposed to Compose.
 - Use existing `BaseViewModel.execute { ... }.onSuccess { ... }.onError { ... }` when the surrounding ViewModel already uses that pattern.
@@ -93,6 +95,7 @@ Activity rules:
 - In `Content()`, collect state with `collectAsStateWithLifecycle().value`.
 - Collect effects in `LaunchedEffect(Unit) { viewModel.effects.collectLatest { ... } }`.
 - Pass only `state` and callbacks into the screen.
+- Edge-to-edge: Since target SDK ≥ 35, edge-to-edge is enforced. In `BaseComposeActivity`, `enableEdgeToEdge()` is called before `setContent`. Ensure screen-level composables apply `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)` on the outermost non-scaffold container, or rely on Material 3 `Scaffold` (which handles `WindowInsets` automatically). Do not use manual `statusBarsPadding()` / `navigationBarsPadding()` on top of scaffold-level insets — double-padding is a common pitfall.
 
 Navigation rules:
 
@@ -100,6 +103,7 @@ Navigation rules:
 - Follow `MainActivity`'s current route style: serializable `NavKey` routes for in-process navigation and launcher `Intent` helper methods only when external or legacy callers need a stable entry point.
 - Keep legacy extra names stable when replacing an old Activity entry point.
 - When a compatibility Activity is retained, let it translate old `Intent` inputs/results; do not make it the source of truth for navigation or business behavior.
+- Predictive back: Navigation 3 enables predictive back by default on Android 14+. New composable destinations work with it automatically. When a screen needs back confirmation (unsaved changes, selection mode, add-to-shelf prompt), use `BackHandler(enabled = ...) { onIntent(FeatureIntent.BackPressed) }` to intercept and let the ViewModel decide — don't bypass ViewModel back logic.
 
 Screen rules:
 
@@ -115,9 +119,10 @@ Screen rules:
 
 ## Current Compose Performance Notes
 
-- Kotlin 2.x enables strong skipping by default, but ordinary Kotlin `List`, `Set`, and `Map` are still unstable to Compose. This means high-frequency screen state with normal collections can still widen recomposition work.
-- Use immutable collections for render state that crosses into Compose. Do not mechanically replace every temporary collection, Room query result, or internal mutable accumulator.
-- If data entities come from modules where the Compose compiler does not run, consider a stable UI model wrapper when the entity is passed deeply through composables and causes measurable recomposition cost.
+- Kotlin 2.x + Compose compiler plugin (`org.jetbrains.kotlin.plugin.compose`) enables **strong skipping by default**. This means composable functions with unstable parameters CAN still be skipped if their arguments are equal by `equals()`. However, ordinary Kotlin `List`, `Set`, and `Map` are still **unstable types** — passing them as parameters prevents the compiler from inferring stability, so changing a list reference still triggers recomposition of callers even with strong skipping.
+- Use `@Stable` on `UiState` data classes and UI model wrappers to give the Compose compiler the strongest stability guarantee. `@Stable` tells the compiler: "if `equals()` says two instances are the same, the UI hasn't changed." This is critical for data classes holding collections.
+- Use `kotlinx.collections.immutable` (`ImmutableList`, `ImmutableSet`, `ImmutableMap`) for render state that crosses into Compose. These are recognized as stable by the Compose compiler. Do not mechanically replace every temporary collection, Room query result, or internal mutable accumulator.
+- If data entities come from modules where the Compose compiler plugin is not applied, consider a `@Stable` UI model wrapper when the entity is passed deeply through composables and causes measurable recomposition cost.
 - Treat `SnapshotStateList` / `SnapshotStateMap` as UI-owned mutable state, not as a default ViewModel `UiState` transport type.
 
 ## Clean Architecture Boundaries
@@ -161,6 +166,7 @@ During editing:
 - Create/update `Contract`, then `ViewModel`, then `Screen`, then `MainActivity` route or compatibility host.
 - For new Compose destinations, wire navigation through `MainActivity` unless a legacy `Intent` caller must remain supported.
 - When retaining an Activity for compatibility, keep it small: parse legacy extras, collect effects, bridge result codes, and avoid placing feature business logic there.
+- Verify edge-to-edge: ensure the screen draws edge-to-edge without overlapping system bars. Use `Scaffold` or `Modifier.windowInsetsPadding(WindowInsets.safeDrawing)`. Remove any `fitsSystemWindows`-based margin hacks from the old layout.
 - Reuse existing string resources and add new resources for new user-facing text.
 - Register the ViewModel in `di/appModule.kt`.
 - Remove only resources made obsolete by this migration.
@@ -184,3 +190,5 @@ Verification:
 - Do not make a migrated screen's retained Activity the primary navigation model when `MainActivity` can own the Compose destination.
 - Do not bypass `BaseComposeActivity` unless the screen must remain inside a Fragment or legacy host.
 - Do not replace existing event bus or service interactions as part of a UI migration unless required for correctness.
+- Do not forget edge-to-edge: XML `fitsSystemWindows` does not carry over to Compose. Rely on `Scaffold` or `Modifier.windowInsetsPadding()` instead.
+- Do not forget `@Stable` on `UiState` data classes — missing annotations cause unnecessary recomposition, especially when state contains collections.

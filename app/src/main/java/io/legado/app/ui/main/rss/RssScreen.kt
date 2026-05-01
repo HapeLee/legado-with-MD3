@@ -36,7 +36,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,21 +81,27 @@ fun RssScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var sourceToDelete by remember { mutableStateOf<RssSource?>(null) }
+    var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
+        uiState.items.firstOrNull { it.sourceUrl == sourceToDeleteUrl }
+    }
+    val currentContext by rememberUpdatedState(context)
+    val currentOnOpenSort by rememberUpdatedState(onOpenSort)
+    val currentOnOpenRead by rememberUpdatedState(onOpenRead)
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
             when (effect) {
                 is RssEffect.OpenSort -> {
-                    onOpenSort(effect.sourceUrl, effect.sortUrl, effect.key)
+                    currentOnOpenSort(effect.sourceUrl, effect.sortUrl, effect.key)
                 }
 
                 is RssEffect.OpenRead -> {
-                    onOpenRead(effect.title, effect.origin, effect.link, effect.openUrl)
+                    currentOnOpenRead(effect.title, effect.origin, effect.link, effect.openUrl)
                 }
 
                 is RssEffect.OpenExternalUrl -> {
-                    context.openUrl(effect.url)
+                    currentContext.openUrl(effect.url)
                 }
             }
         }
@@ -176,7 +184,7 @@ fun RssScreen(
                     onClick = { viewModel.openSource(source) },
                     onTop = { viewModel.topSource(source) },
                     onEdit = { edit(source) },
-                    onDelete = { sourceToDelete = source },
+                    onDelete = { sourceToDeleteUrl = source.sourceUrl },
                     onDisable = { viewModel.disable(source) },
                     onLogin = { login(source) }
                 )
@@ -186,15 +194,15 @@ fun RssScreen(
 
     AppAlertDialog(
         data = sourceToDelete,
-        onDismissRequest = { sourceToDelete = null },
+        onDismissRequest = { sourceToDeleteUrl = null },
         title = stringResource(R.string.draw),
         confirmText = stringResource(R.string.yes),
         onConfirm = { source ->
             viewModel.del(source)
-            sourceToDelete = null
+            sourceToDeleteUrl = null
         },
         dismissText = stringResource(R.string.no),
-        onDismiss = { sourceToDelete = null }
+        onDismiss = { sourceToDeleteUrl = null }
     )
 }
 

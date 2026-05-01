@@ -1,6 +1,13 @@
 package io.legado.app.ui.main
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -74,13 +81,18 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.dialog.TextDialog
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivityForBook
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalFoundationApi::class
+    ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class
 )
 @Composable
 fun MainScreen(
@@ -95,14 +107,46 @@ fun MainScreen(
     onNavigateToBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
     onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
-    onNavigateToRssRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
+    onNavigateToRssRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val mainUiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val bookshelfViewModel: BookshelfViewModel = koinViewModel()
-    val bookshelfGroupState by bookshelfViewModel.groupSelectorState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel, context) {
+        viewModel.effects.collect { effect ->
+            when (effect) {
+                is MainEffect.OpenUrl -> {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(effect.url))
+                    )
+                }
+
+                is MainEffect.CopyUrl -> context.sendToClip(effect.url)
+                is MainEffect.ShowMarkdown -> {
+                    val activity = context as? AppCompatActivity ?: return@collect
+                    val title = effect.title.ifBlank { context.getString(R.string.help) }
+                    val mdText = withContext(Dispatchers.IO) {
+                        context.assets
+                            .open("web/help/md/${effect.path}.md")
+                            .bufferedReader()
+                            .use { it.readText() }
+                    }
+                    activity.showDialogFragment(TextDialog(title, mdText, TextDialog.Mode.MD))
+                }
+
+                is MainEffect.StartActivity -> {
+                    context.startActivity(Intent(context, effect.destination).apply {
+                        effect.configTag?.let { putExtra("configTag", it) }
+                    })
+                }
+
+                MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
+            }
+        }
+    }
 
     val hazeState = remember { HazeState() }
     val floatingBarSurfaceColor = MaterialTheme.colorScheme.surface
@@ -213,34 +257,15 @@ fun MainScreen(
                                 )
 
                                 if (destination == MainDestination.Bookshelf && showGroupMenu) {
-                                    RoundDropdownMenu(
+                                    BookshelfRailGroupMenu(
                                         expanded = showGroupMenu,
-                                        onDismissRequest = { showGroupMenu = false }
-                                    ) { dismiss ->
-                                        bookshelfGroupState.groups.forEachIndexed { groupIndex, group ->
-                                            RoundDropdownMenuItem(
-                                                text = group.groupName,
-                                                onClick = {
-                                                    coroutineScope.launch {
-                                                        if (pagerState.currentPage != index) {
-                                                            pagerState.scrollToPage(index)
-                                                        }
-                                                        bookshelfViewModel.changeGroup(group.groupId)
-                                                        dismiss()
-                                                    }
-                                                },
-                                                trailingIcon = {
-                                                    if (bookshelfGroupState.selectedGroupIndex == groupIndex) {
-                                                        Icon(
-                                                            Icons.Default.Check,
-                                                            null,
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            )
+                                        onDismissRequest = { showGroupMenu = false },
+                                        onBeforeSelectGroup = {
+                                            if (pagerState.currentPage != index) {
+                                                pagerState.scrollToPage(index)
+                                            }
                                         }
-                                    }
+                                    )
                                 }
                             }
                         },
@@ -372,7 +397,9 @@ fun MainScreen(
                             onNavigateToSearch = { query -> onNavigateToSearch(query) },
                             onNavigateToRemoteImport = onNavigateToRemoteImport,
                             onNavigateToLocalImport = onNavigateToLocalImport,
-                            onNavigateToCache = onNavigateToCache
+                            onNavigateToCache = onNavigateToCache,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
                         )
 
                         MainDestination.Explore -> ExploreScreen(
@@ -392,13 +419,51 @@ fun MainScreen(
                                 if (event == PrefClickEvent.OpenBookCacheManage) {
                                     onNavigateToBookCacheManage()
                                 } else {
-                                    viewModel.onPrefClickEvent(context, event)
+                                    viewModel.onPrefClickEvent(event)
                                 }
                             }
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BookshelfRailGroupMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onBeforeSelectGroup: suspend () -> Unit,
+    viewModel: BookshelfViewModel = koinViewModel()
+) {
+    val groupState by viewModel.groupSelectorState.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
+
+    RoundDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest
+    ) { dismiss ->
+        groupState.groups.forEachIndexed { groupIndex, group ->
+            RoundDropdownMenuItem(
+                text = group.groupName,
+                onClick = {
+                    coroutineScope.launch {
+                        onBeforeSelectGroup()
+                        viewModel.changeGroup(group.groupId)
+                        dismiss()
+                    }
+                },
+                trailingIcon = {
+                    if (groupState.selectedGroupIndex == groupIndex) {
+                        Icon(
+                            Icons.Default.Check,
+                            null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            )
         }
     }
 }

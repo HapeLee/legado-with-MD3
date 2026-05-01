@@ -39,11 +39,26 @@ Flag issues when:
 
 - `Screen` functions own business state instead of receiving `state` and callbacks.
 - `remember` / `rememberSaveable` stores source-of-truth data that should survive process or route recreation through ViewModel state.
+- User-driven transient state that should survive recreation, such as a pending delete-confirmation target, is held with plain `remember` instead of `rememberSaveable` or ViewModel state.
 - `LaunchedEffect` keys are unstable or cause repeated data loading, duplicate navigation, duplicate toasts, or repeated service calls.
+- A long-lived `LaunchedEffect` collector captures parent callbacks or context-dependent values that can change without using `rememberUpdatedState`, unless the effect is intentionally keyed to restart.
 - Flows are collected without lifecycle awareness in UI routes where `collectAsStateWithLifecycle()` should be used.
 - List items lack stable keys where mutation, selection, or animation can make state attach to the wrong row.
+- Heterogeneous lazy lists or grids provide `key` but omit `contentType`, reducing composition reuse quality when headers, rows, ads, loading items, or expanded content mix in the same lazy layout.
 - Selection, search query, sorting, filtering, loading, and error states are not represented in a single coherent `UiState`.
 - Derived values are recomputed expensively on every recomposition instead of living in ViewModel state or `remember(key)`.
+- UI effects write list-derived consistency back into the ViewModel, such as pruning selection from `LaunchedEffect(uiState.items)`. Prefer deriving this in the ViewModel with `combine(...)` or reducing it when the data flow updates.
+- State is hoisted higher than the lowest common owner, such as a top-level route collecting a child ViewModel flow only needed inside a conditional branch or one popup menu.
+
+## Compose Stability and Collection Checks
+
+Flag issues when:
+
+- Collection-heavy `UiState` exposed to Compose uses ordinary Kotlin `List`, `Set`, or `Map` in hot paths. Kotlin 2.x strong skipping is helpful but does not make standard Kotlin collections stable to Compose.
+- DAO or repository lists are passed directly through `UiState` to deep composables without conversion to `ImmutableList` / `ImmutableSet` / `ImmutableMap` or a stable UI model wrapper.
+- Review recommendations imply replacing every internal collection. Keep the finding scoped to Compose-facing render state; temporary accumulators, sorting inputs, Room DAO signatures, and domain APIs can remain normal collections unless they are the actual recomposition boundary.
+- Mutable collections such as `ArrayList`, `MutableList`, or mutable maps are stored in Compose state or ViewModel `UiState`.
+- Entity classes from non-Compose modules are passed deeply through composables and cause visible recomposition churn; prefer stable UI render models if measurement or code shape shows this matters.
 
 ## Navigation and Compatibility Checks
 
