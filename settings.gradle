@@ -47,12 +47,6 @@ dependencyResolutionManagement {
         //maven { url 'https://maven.aliyun.com/repository/public' }
         //maven { url 'https://repo.huaweicloud.com/repository/maven/' }
     }
-    
-    versionCatalogs {
-        libs {
-            from files("gradle/libs.versions.toml")
-        }
-    }
 }
 rootProject.name = 'legado'
 
