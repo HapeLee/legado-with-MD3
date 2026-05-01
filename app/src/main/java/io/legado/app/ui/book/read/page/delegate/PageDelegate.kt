@@ -70,12 +70,7 @@ abstract class PageDelegate(protected val readView: ReadView) {
     }
 
     protected fun startScroll(startX: Int, startY: Int, dx: Int, dy: Int, animationSpeed: Int) {
-        val duration = if (dx != 0) {
-            (animationSpeed * abs(dx)) / viewWidth
-        } else {
-            (animationSpeed * abs(dy)) / viewHeight
-        }
-        scroller.startScroll(startX, startY, dx, dy, duration)
+        scroller.startScroll(startX, startY, dx, dy, animationSpeed)
         isRunning = true
         isStarted = true
         readView.invalidate()

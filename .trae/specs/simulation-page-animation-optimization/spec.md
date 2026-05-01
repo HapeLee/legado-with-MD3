@@ -1,72 +1,60 @@
-# 仿真翻页动画优化 - 产品需求文档
+# 仿真翻页动画流畅度优化 Spec
 
-## 概述
-- **摘要**：优化Legado阅读器中的仿真翻页动画，解决动画不流畅和纸张效果丢失的问题
-- **目的**：提升用户阅读体验，使仿真翻页动画更加流畅自然，恢复纸张的真实效果
-- **目标用户**：Legado阅读器的用户
+## Why
+仿真翻页动画整体速度偏慢，且在页面右上和右下区域出现明显卡顿。当前 Kotlin 实现与 Java 参考实现 `SimulationPageAnim.java` 存在关键差异，导致动画性能和视觉体验下降。
 
-## 目标
-- 修复仿真翻页动画的流畅度问题
-- 恢复仿真翻页的纸张效果，解决透明问题
-- 基于原始Java实现进行优化，确保动画效果与原始实现一致
+## What Changes
+- 修复动画速度计算逻辑，与 Java 参考实现对齐
+- 减少热路径中的对象分配，降低 GC 压力
+- 优化 Canvas 绘制操作，减少不必要的 save/restore 和 clipPath 调用
+- 优化 Float↔Double 类型转换，减少数学运算开销
+- 针对右上/右下区域卡顿进行专项优化
 
-## 非目标（超出范围）
-- 不改变仿真翻页的基本交互逻辑
-- 不添加新的翻页动画类型
-- 不修改其他翻页模式的实现
+## Impact
+- Affected code: `SimulationPageDelegate.kt`（主要修改文件）
+- Affected code: `PageDelegate.kt`（动画速度计算逻辑）
+- Affected specs: 仿真翻页动画的视觉体验和性能
 
-## 背景与上下文
-- Legado阅读器使用仿真翻页动画模拟真实书籍的翻页效果
-- 当前的Kotlin实现存在动画不流畅和纸张效果丢失的问题
-- 原始的Java实现 `SimulationPageAnim.java` 提供了参考标准
+## ADDED Requirements
 
-## 功能需求
-- **FR-1**：修复仿真翻页动画的流畅度问题
-- **FR-2**：恢复仿真翻页的纸张效果，解决透明问题
-- **FR-3**：确保阴影效果正确显示
+### Requirement: 动画速度对齐 Java 参考实现
+系统 SHALL 在 `onAnimStart` 中直接将 `animationSpeed` 作为 Scroller 的 duration 传入，而非通过距离比例重新计算。
 
-## 非功能需求
-- **NFR-1**：动画帧率不低于60fps
-- **NFR-2**：内存使用不超过原始实现的120%
-- **NFR-3**：保持与原始Java实现的视觉效果一致
+#### Scenario: 翻页动画速度
+- **WHEN** 用户触发翻页动画
+- **THEN** 动画持续时间等于 `animationSpeed`，与 Java 参考实现 `SimulationPageAnim.startAnim()` 行为一致
 
-## 约束
-- **技术**：Kotlin语言，Android图形API
-- **依赖**：Legado阅读器现有代码结构
-- **平台**：Android 5.0及以上
+### Requirement: 减少热路径对象分配
+系统 SHALL 在每帧绘制过程中避免创建新的 `PointF` 对象，复用预分配的缓存对象。
 
-## 假设
-- 原始Java实现 `SimulationPageAnim.java` 的视觉效果是正确的
-- 问题出在Kotlin实现的优化过程中
-- 可以通过调整Kotlin实现来解决问题
+#### Scenario: getCross 方法零分配
+- **WHEN** `calcPoints()` 调用 `getCross()` 计算交点
+- **THEN** 使用预分配的 `crossPointF` 缓存对象存储结果，不创建新的 `PointF`
 
-## 验收标准
+### Requirement: 优化 Canvas 绘制操作
+系统 SHALL 减少不必要的 Canvas 状态保存/恢复操作，优化 clipPath 调用顺序。
 
-### AC-1：动画流畅度
-- **给定**：用户在阅读时使用仿真翻页模式
-- **当**：用户进行翻页操作时
-- **然后**：翻页动画流畅，无卡顿现象
-- **验证**：`human-judgment`
+#### Scenario: drawCurrentBackArea 绘制优化
+- **WHEN** 绘制翻页背面区域
+- **THEN** Canvas save/restore 与 clipPath 操作在同一 try 块内完成，避免 clipPath 失败后仍执行 drawBitmap
 
-### AC-2：纸张效果恢复
-- **给定**：用户在阅读时使用仿真翻页模式
-- **当**：用户进行翻页操作时
-- **然后**：翻页时显示纸张的质感，无透明现象
-- **验证**：`human-judgment`
+### Requirement: 右上/右下区域卡顿修复
+系统 SHALL 确保当 `mCornerX = viewWidth`（右侧翻页）时，贝塞尔曲线计算和绘制操作不会产生额外的性能开销。
 
-### AC-3：阴影效果正确
-- **给定**：用户在阅读时使用仿真翻页模式
-- **当**：用户进行翻页操作时
-- **然后**：翻页时显示正确的阴影效果，增强立体感
-- **验证**：`human-judgment`
+#### Scenario: 右侧翻页流畅度
+- **WHEN** 用户从屏幕右侧触发翻页
+- **THEN** 动画帧率与左侧翻页一致，无明显卡顿
 
-### AC-4：性能指标
-- **给定**：在标准Android设备上运行Legado阅读器
-- **当**：进行仿真翻页操作时
-- **然后**：动画帧率不低于60fps，内存使用合理
-- **验证**：`programmatic`
+## MODIFIED Requirements
 
-## 开放问题
-- [ ] 具体哪些计算逻辑导致了动画不流畅？
-- [ ] 纸张效果丢失的具体原因是什么？
-- [ ] 如何在保持流畅度的同时恢复纸张效果？
+### Requirement: startScroll 动画持续时间计算
+原实现：`duration = (animationSpeed * abs(dx)) / viewWidth`
+修改为：`duration = animationSpeed`（直接使用，与 Java 参考实现一致）
+
+### Requirement: getCross 交点计算
+原实现：每次调用创建新 `PointF` 对象
+修改为：复用预分配的 `crossPointF` 缓存对象，避免 GC 压力
+
+### Requirement: calcPoints 中的 PointF 创建
+原实现：`getCross(PointF(mTouchX, mTouchY), ...)` 每次创建临时对象
+修改为：使用 `tempPointF.set(mTouchX, mTouchY)` 复用缓存对象

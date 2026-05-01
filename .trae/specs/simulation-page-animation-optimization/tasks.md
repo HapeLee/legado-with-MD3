@@ -1,64 +1,30 @@
-# 仿真翻页动画优化 - 实现计划
+# Tasks
 
-## [ ] 任务1：分析纸张效果丢失问题
-- **优先级**：P0
-- **依赖**：None
-- **描述**：
-  - 对比Java和Kotlin实现的颜色设置
-  - 分析drawCurrentBackArea方法中的颜色处理逻辑
-  - 找出导致纸张效果透明的原因
-- **验收标准**：AC-2
-- **测试要求**：
-  - `human-judgment` TR-1.1：翻页时显示纸张的质感，无透明现象
-- **备注**：重点关注颜色矩阵和背景绘制逻辑
+- [x] Task 1: 修复动画速度计算逻辑
+  - [x] SubTask 1.1: 修改 `PageDelegate.startScroll()` 方法，将 `duration` 直接设为 `animationSpeed`，与 Java 参考实现 `SimulationPageAnim.startAnim()` 中 `mScroller.startScroll(..., animationSpeed)` 行为对齐
+  - [x] SubTask 1.2: 验证 `onAnimStart` 中的 `dx`/`dy` 计算与 Java 参考实现完全一致
 
-## [ ] 任务2：优化计算逻辑，提升动画流畅度
-- **优先级**：P0
-- **依赖**：任务1
-- **描述**：
-  - 分析calcPoints方法中的计算复杂度
-  - 优化贝塞尔曲线计算逻辑
-  - 减少重复计算，提高性能
-- **验收标准**：AC-1, AC-4
-- **测试要求**：
-  - `human-judgment` TR-2.1：翻页动画流畅，无卡顿现象
-  - `programmatic` TR-2.2：动画帧率不低于60fps
-- **备注**：重点优化数学计算和路径生成
+- [x] Task 2: 消除热路径对象分配
+  - [x] SubTask 2.1: 将 `getCross()` 方法改为复用预分配的 `crossPointF` 缓存对象，不再每次创建新 `PointF`
+  - [x] SubTask 2.2: 将 `calcPoints()` 中的 `PointF(mTouchX, mTouchY)` 改为 `tempPointF.set(mTouchX, mTouchY)` 复用缓存对象
+  - [x] SubTask 2.3: 将 `mBezierEnd1` 和 `mBezierEnd2` 的赋值改为直接写入现有对象而非替换引用
 
-## [ ] 任务3：修复阴影效果显示
-- **优先级**：P1
-- **依赖**：任务1, 任务2
-- **描述**：
-  - 分析drawCurrentPageShadow方法
-  - 确保阴影渐变drawable正确使用
-  - 优化阴影计算和绘制逻辑
-- **验收标准**：AC-3
-- **测试要求**：
-  - `human-judgment` TR-3.1：翻页时显示正确的阴影效果
-- **备注**：确保阴影效果与Java实现一致
+- [x] Task 3: 优化 Canvas 绘制操作
+  - [x] SubTask 3.1: 在 `drawCurrentBackArea` 中，将 clipPath 和 drawBitmap 放入同一 try 块，clipPath 异常时跳过 drawBitmap
+  - [x] SubTask 3.2: 在 `drawCurrentPageShadow` 中，将两个阴影绘制块的 clipPath 和 draw 操作合并到同一 try 块
+  - [x] SubTask 3.3: 在 `drawNextPageAreaAndShadow` 中，将 clipPath 和 drawBitmap 放入同一 try 块
 
-## [ ] 任务4：优化绘制操作
-- **优先级**：P1
-- **依赖**：任务1, 任务2, 任务3
-- **描述**：
-  - 分析绘制操作的性能瓶颈
-  - 优化canvas操作，减少绘制开销
-  - 确保绘制顺序合理，提高渲染效率
-- **验收标准**：AC-1, AC-4
-- **测试要求**：
-  - `human-judgment` TR-4.1：翻页动画流畅，无卡顿现象
-  - `programmatic` TR-4.2：内存使用合理
-- **备注**：重点关注canvas.save()和restore()操作
+- [x] Task 4: 优化数学运算减少类型转换
+  - [x] SubTask 4.1: 在 `drawCurrentPageShadow` 中，将 `25f * 1.414f * cos(degree)` 等计算改为直接使用 Double 运算，最后一次性转 Float
+  - [x] SubTask 4.2: 在 `drawNextPageAreaAndShadow` 中，将 `atan2` + `toDegrees` 合并为一次计算
+  - [x] SubTask 4.3: 在 `drawCurrentBackArea` 中，将 `hypot` 计算优化为直接使用 Float 运算
 
-## [ ] 任务5：验证优化效果
-- **优先级**：P2
-- **依赖**：任务1, 任务2, 任务3, 任务4
-- **描述**：
-  - 在真实设备上测试优化后的动画效果
-  - 对比优化前后的性能差异
-  - 确保所有功能需求都已满足
-- **验收标准**：AC-1, AC-2, AC-3, AC-4
-- **测试要求**：
-  - `human-judgment` TR-5.1：整体动画效果流畅自然
-  - `programmatic` TR-5.2：性能指标达到要求
-- **备注**：在不同设备上进行测试，确保兼容性
+- [x] Task 5: 编译验证
+  - [x] SubTask 5.1: 执行 `gradlew compileAppDebugKotlin` 确保无编译错误
+  - [x] SubTask 5.2: 执行 `gradlew compileAppReleaseKotlin` 确保 Release 构建通过
+
+# Task Dependencies
+- [Task 2] depends on [Task 1]（先修复速度逻辑，再优化性能）
+- [Task 3] depends on [Task 2]（先减少对象分配，再优化 Canvas 操作）
+- [Task 4] depends on [Task 2]（可与 Task 3 并行）
+- [Task 5] depends on [Task 1, Task 2, Task 3, Task 4]
