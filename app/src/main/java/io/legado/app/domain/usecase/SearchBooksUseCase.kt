@@ -11,6 +11,9 @@ import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -81,12 +84,16 @@ class SearchBooksUseCase(
             throw NoStackTraceException("启用书源为空")
         }
 
-        val searchableSources = sourceParts.mapNotNull { part ->
-            val source = gateway.getBookSource(part.bookSourceUrl) ?: return@mapNotNull null
-            if (source.bookSourceType != 0 || source.searchUrl.isNullOrBlank()) {
-                return@mapNotNull null
-            }
-            SearchableSource(part, source)
+        val searchableSources = coroutineScope {
+            sourceParts.map { part ->
+                async(Dispatchers.IO) {
+                    val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
+                    if (source.bookSourceType != 0 || source.searchUrl.isNullOrBlank()) {
+                        return@async null
+                    }
+                    SearchableSource(part, source)
+                }
+            }.awaitAll().filterNotNull()
         }
         if (searchableSources.isEmpty()) {
             throw NoStackTraceException("可搜索书源为空")
@@ -169,13 +176,11 @@ class SearchBooksUseCase(
         precision: Boolean,
     ): SourceSearchResult {
         return try {
-            val sourcePart = searchableSource.part
             val source = searchableSource.source
             val supportsSearchPage = source.supportsSearchPage()
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
             }
-            val normalizedKeyword = keyword.trim()
             val books = withTimeout(30000L) {
                 WebBook.searchBookAwait(
                     source,
@@ -183,8 +188,8 @@ class SearchBooksUseCase(
                     page,
                     filter = { name, author ->
                         !precision ||
-                            name.contains(normalizedKeyword, ignoreCase = true) ||
-                            author.contains(normalizedKeyword, ignoreCase = true)
+                            name.contains(keyword, ignoreCase = true) ||
+                            author.contains(keyword, ignoreCase = true)
                     }
                 )
             }
@@ -255,8 +260,10 @@ class SearchBooksUseCase(
 
         private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
             return when {
-                book.name == keyword || book.author == keyword -> equalBooks
-                book.name.contains(keyword) || book.author.contains(keyword) -> containsBooks
+                book.name.equals(keyword, ignoreCase = true) ||
+                    book.author.equals(keyword, ignoreCase = true) -> equalBooks
+                book.name.contains(keyword, ignoreCase = true) ||
+                    book.author.contains(keyword, ignoreCase = true) -> containsBooks
                 !precision -> otherBooks
                 else -> null
             }
