@@ -96,6 +96,8 @@ class SearchBooksUseCase(
         val concurrency = request.concurrency.coerceAtLeast(1)
         var hasMore = false
         var processedSources = 0
+        var failedSources = 0
+        var firstFailureMessage: String? = null
 
         emit(SearchRunEvent.Started)
 
@@ -129,6 +131,10 @@ class SearchBooksUseCase(
                     }
 
                     is SourceSearchResult.Failed -> {
+                        failedSources++
+                        if (firstFailureMessage.isNullOrBlank()) {
+                            firstFailureMessage = result.throwable.localizedMessage
+                        }
                         AppLog.put("书源搜索出错\n${result.throwable.localizedMessage}", result.throwable)
                         emit(
                             SearchRunEvent.Progress(
@@ -142,6 +148,11 @@ class SearchBooksUseCase(
                     }
                 }
             }
+
+        if (merger.count == 0 && failedSources == searchableSources.size) {
+            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "全部书源搜索失败"
+            throw NoStackTraceException(error)
+        }
 
         emit(
             SearchRunEvent.Finished(
