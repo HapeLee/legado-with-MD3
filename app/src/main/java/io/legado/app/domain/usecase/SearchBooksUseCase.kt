@@ -11,6 +11,9 @@ import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
@@ -81,18 +84,35 @@ class SearchBooksUseCase(
             throw NoStackTraceException("启用书源为空")
         }
 
+        val searchableSources = coroutineScope {
+            sourceParts.map { part ->
+                async(Dispatchers.IO) {
+                    val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
+                    if (source.bookSourceType != 0 || source.searchUrl.isNullOrBlank()) {
+                        return@async null
+                    }
+                    SearchableSource(part, source)
+                }
+            }.awaitAll().filterNotNull()
+        }
+        if (searchableSources.isEmpty()) {
+            throw NoStackTraceException("可搜索书源为空")
+        }
+
         val merger = SearchResultMerger(keyword, request.precision)
         val concurrency = request.concurrency.coerceAtLeast(1)
         var hasMore = false
         var processedSources = 0
+        var failedSources = 0
+        var firstFailureMessage: String? = null
 
         emit(SearchRunEvent.Started)
 
-        sourceParts.asFlow()
-            .flatMapMerge(concurrency) { sourcePart ->
+        searchableSources.asFlow()
+            .flatMapMerge(concurrency) { searchableSource ->
                 flow {
                     control.awaitResumed()
-                    emit(searchSource(sourcePart, keyword, request.page, request.precision))
+                    emit(searchSource(searchableSource, keyword, request.page, request.precision))
                 }.flowOn(Dispatchers.IO)
             }
             .collect { result ->
@@ -112,12 +132,16 @@ class SearchBooksUseCase(
                                 removedBookUrls = change.removedBookUrls,
                                 resultCount = merger.count,
                                 processedSources = processedSources,
-                                totalSources = sourceParts.size,
+                                totalSources = searchableSources.size,
                             )
                         )
                     }
 
                     is SourceSearchResult.Failed -> {
+                        failedSources++
+                        if (firstFailureMessage.isNullOrBlank()) {
+                            firstFailureMessage = result.throwable.localizedMessage
+                        }
                         AppLog.put("书源搜索出错\n${result.throwable.localizedMessage}", result.throwable)
                         emit(
                             SearchRunEvent.Progress(
@@ -125,12 +149,17 @@ class SearchBooksUseCase(
                                 removedBookUrls = emptyList(),
                                 resultCount = merger.count,
                                 processedSources = processedSources,
-                                totalSources = sourceParts.size,
+                                totalSources = searchableSources.size,
                             )
                         )
                     }
                 }
             }
+
+        if (merger.count == 0 && failedSources == searchableSources.size) {
+            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "全部书源搜索失败"
+            throw NoStackTraceException(error)
+        }
 
         emit(
             SearchRunEvent.Finished(
@@ -141,14 +170,13 @@ class SearchBooksUseCase(
     }.flowOn(Dispatchers.IO)
 
     private suspend fun searchSource(
-        sourcePart: BookSourcePart,
+        searchableSource: SearchableSource,
         keyword: String,
         page: Int,
         precision: Boolean,
     ): SourceSearchResult {
         return try {
-            val source = gateway.getBookSource(sourcePart.bookSourceUrl)
-                ?: return SourceSearchResult.Found(emptyList())
+            val source = searchableSource.source
             val supportsSearchPage = source.supportsSearchPage()
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
@@ -159,7 +187,9 @@ class SearchBooksUseCase(
                     keyword,
                     page,
                     filter = { name, author ->
-                        !precision || name.contains(keyword) || author.contains(keyword)
+                        !precision ||
+                            name.contains(keyword, ignoreCase = true) ||
+                            author.contains(keyword, ignoreCase = true)
                     }
                 )
             }
@@ -171,6 +201,12 @@ class SearchBooksUseCase(
         }
     }
 
+
+
+    private data class SearchableSource(
+        val part: BookSourcePart,
+        val source: BookSource,
+    )
     private sealed interface SourceSearchResult {
         data class Found(
             val books: List<SearchBook>,
@@ -224,8 +260,10 @@ class SearchBooksUseCase(
 
         private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
             return when {
-                book.name == keyword || book.author == keyword -> equalBooks
-                book.name.contains(keyword) || book.author.contains(keyword) -> containsBooks
+                book.name.equals(keyword, ignoreCase = true) ||
+                    book.author.equals(keyword, ignoreCase = true) -> equalBooks
+                book.name.contains(keyword, ignoreCase = true) ||
+                    book.author.contains(keyword, ignoreCase = true) -> containsBooks
                 !precision -> otherBooks
                 else -> null
             }

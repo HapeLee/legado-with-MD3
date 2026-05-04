@@ -95,7 +95,6 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 
 @OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -110,6 +109,7 @@ fun SearchScreen(
     val listState = rememberLazyListState()
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var scopeSheetTab by rememberSaveable { mutableStateOf(0) }
+    var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
@@ -142,9 +142,14 @@ fun SearchScreen(
         snapshotFlow { queryInput }
             .distinctUntilChanged()
             .debounce(200)
-            .filter { it != latestQuery }
             .collect { newQuery ->
-                viewModel.onIntent(SearchIntent.UpdateQuery(newQuery))
+                if (ignoreNextDebouncedQuery == newQuery) {
+                    ignoreNextDebouncedQuery = null
+                    return@collect
+                }
+                if (newQuery != latestQuery) {
+                    viewModel.onIntent(SearchIntent.UpdateQuery(newQuery))
+                }
             }
     }
 
@@ -188,6 +193,7 @@ fun SearchScreen(
     val submitSearch: (String) -> Unit = { rawQuery ->
         val normalized = rawQuery.trim()
         if (normalized.isNotBlank()) {
+            ignoreNextDebouncedQuery = normalized
             queryInput = normalized
             if (normalized != state.query) {
                 viewModel.onIntent(SearchIntent.UpdateQuery(normalized))
