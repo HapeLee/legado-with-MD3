@@ -81,6 +81,17 @@ class SearchBooksUseCase(
             throw NoStackTraceException("启用书源为空")
         }
 
+        val searchableSources = sourceParts.mapNotNull { part ->
+            val source = gateway.getBookSource(part.bookSourceUrl) ?: return@mapNotNull null
+            if (source.bookSourceType != 0 || source.searchUrl.isNullOrBlank()) {
+                return@mapNotNull null
+            }
+            SearchableSource(part, source)
+        }
+        if (searchableSources.isEmpty()) {
+            throw NoStackTraceException("可搜索书源为空")
+        }
+
         val merger = SearchResultMerger(keyword, request.precision)
         val concurrency = request.concurrency.coerceAtLeast(1)
         var hasMore = false
@@ -88,11 +99,11 @@ class SearchBooksUseCase(
 
         emit(SearchRunEvent.Started)
 
-        sourceParts.asFlow()
-            .flatMapMerge(concurrency) { sourcePart ->
+        searchableSources.asFlow()
+            .flatMapMerge(concurrency) { searchableSource ->
                 flow {
                     control.awaitResumed()
-                    emit(searchSource(sourcePart, keyword, request.page, request.precision))
+                    emit(searchSource(searchableSource, keyword, request.page, request.precision))
                 }.flowOn(Dispatchers.IO)
             }
             .collect { result ->
@@ -112,7 +123,7 @@ class SearchBooksUseCase(
                                 removedBookUrls = change.removedBookUrls,
                                 resultCount = merger.count,
                                 processedSources = processedSources,
-                                totalSources = sourceParts.size,
+                                totalSources = searchableSources.size,
                             )
                         )
                     }
@@ -125,7 +136,7 @@ class SearchBooksUseCase(
                                 removedBookUrls = emptyList(),
                                 resultCount = merger.count,
                                 processedSources = processedSources,
-                                totalSources = sourceParts.size,
+                                totalSources = searchableSources.size,
                             )
                         )
                     }
@@ -141,25 +152,28 @@ class SearchBooksUseCase(
     }.flowOn(Dispatchers.IO)
 
     private suspend fun searchSource(
-        sourcePart: BookSourcePart,
+        searchableSource: SearchableSource,
         keyword: String,
         page: Int,
         precision: Boolean,
     ): SourceSearchResult {
         return try {
-            val source = gateway.getBookSource(sourcePart.bookSourceUrl)
-                ?: return SourceSearchResult.Found(emptyList())
+            val sourcePart = searchableSource.part
+            val source = searchableSource.source
             val supportsSearchPage = source.supportsSearchPage()
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
             }
+            val normalizedKeyword = keyword.trim()
             val books = withTimeout(30000L) {
                 WebBook.searchBookAwait(
                     source,
                     keyword,
                     page,
                     filter = { name, author ->
-                        !precision || name.contains(keyword) || author.contains(keyword)
+                        !precision ||
+                            name.contains(normalizedKeyword, ignoreCase = true) ||
+                            author.contains(normalizedKeyword, ignoreCase = true)
                     }
                 )
             }
@@ -171,6 +185,12 @@ class SearchBooksUseCase(
         }
     }
 
+
+
+    private data class SearchableSource(
+        val part: BookSourcePart,
+        val source: BookSource,
+    )
     private sealed interface SourceSearchResult {
         data class Found(
             val books: List<SearchBook>,
