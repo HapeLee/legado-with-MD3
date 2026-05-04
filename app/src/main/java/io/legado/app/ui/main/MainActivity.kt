@@ -65,6 +65,7 @@ import io.legado.app.ui.config.personalizationConfig.FontSelectScreen
 import io.legado.app.ui.config.personalizationConfig.PersonalizationConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
+import io.legado.app.ui.config.themePack.ThemePackScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.read.MainRouteRssRead
@@ -287,6 +288,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     @Serializable
     private data object MainRouteSettingsPersonalizationFont : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsThemePack : MainRoute
 
     @Serializable
     private data object MainRouteImportLocal : MainRoute
@@ -537,7 +541,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                         onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
                         onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
                         onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
-                        onNavigateToPersonalization = { backStack.add(MainRouteSettingsPersonalization) }
+                        onNavigateToPersonalization = { backStack.add(MainRouteSettingsPersonalization) },
+                        onNavigateToThemePack = { backStack.add(MainRouteSettingsThemePack) }
                     )
                 }
 
@@ -570,6 +575,10 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
                 entry<MainRouteSettingsPersonalizationFont> {
                     FontSelectScreen(onBackClick = { navigateBack(backStack) })
+                }
+
+                entry<MainRouteSettingsThemePack> {
+                    ThemePackScreen(onBackClick = { navigateBack(backStack) })
                 }
 
                 entry<MainRouteImportLocal> {
@@ -768,7 +777,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             MainRouteSettingsTheme,
             MainRouteSettingsBackup,
             MainRouteSettingsPersonalization,
-            MainRouteSettingsPersonalizationFont -> {
+            MainRouteSettingsPersonalizationFont,
+            MainRouteSettingsThemePack -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
                 backStack.add(MainRouteSettings)

@@ -26,7 +26,8 @@ fun ConfigNavScreen(
     onNavigateToCover: () -> Unit,
     onNavigateToTheme: () -> Unit,
     onNavigateToBackup: () -> Unit,
-    onNavigateToPersonalization: () -> Unit
+    onNavigateToPersonalization: () -> Unit,
+    onNavigateToThemePack: () -> Unit = {}
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -74,6 +75,10 @@ fun ConfigNavScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.personalization_setting),
                         onClick = onNavigateToPersonalization
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_pack),
+                        onClick = onNavigateToThemePack
                     )
                 }
             }
