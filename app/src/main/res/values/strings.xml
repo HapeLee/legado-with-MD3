@@ -93,7 +93,7 @@
     <string name="theme_setting_s">Some settings related to interface or color</string>
     <string name="personalization_setting">深度个性化设置</string>
     <string name="personalization_setting_s">字体等深度个性化设置</string>
-    <string name="theme_pack">主题汇总</string>
+    <string name="theme_pack">主题管理</string>
     <string name="theme_pack_s">管理、导入导出完整主题包</string>
     <string name="font_setting">字体设置</string>
     <string name="font_setting_s">选择应用字体</string>
