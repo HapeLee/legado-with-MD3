@@ -312,7 +312,7 @@ internal fun BookSource.supportsSearchPage(): Boolean {
 }
 
 private val searchPageScriptPattern = Regex(
-    pattern = """\{\{[\s\S]*?}}|<js>[\s\S]*?</js>|@js:[\s\S]*""",
+    pattern = """\{\{[\s\S]*?\}\}|<js>[\s\S]*?</js>|@js:[\s\S]*""",
     option = RegexOption.IGNORE_CASE,
 )
 private val searchPageTokenPattern = Regex("""(?<![A-Za-z0-9_])page(?![A-Za-z0-9_])""")
