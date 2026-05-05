@@ -90,17 +90,22 @@ fun AppScaffold(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .responsiveHazeSource(hazeState)
-                            .then(
-                                if (contentDrawsBehindBars) Modifier
-                                else Modifier.padding(paddingValues)
-                            )
                     ) {
                         BackgroundImageContent(isDark = isDark, hazeState = hazeState)
-                        content(
-                            if (contentDrawsBehindBars) paddingValues
-                            else PaddingValues(0.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (contentDrawsBehindBars) Modifier
+                                    else Modifier.padding(paddingValues)
+                                )
+                        ) {
+                            content(
+                                if (contentDrawsBehindBars) paddingValues
+                                else PaddingValues(0.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -122,17 +127,22 @@ fun AppScaffold(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .responsiveHazeSource(hazeState)
-                            .then(
-                                if (contentDrawsBehindBars) Modifier
-                                else Modifier.padding(paddingValues)
-                            )
                     ) {
                         BackgroundImageContent(isDark = isDark, hazeState = hazeState)
-                        content(
-                            if (contentDrawsBehindBars) paddingValues
-                            else PaddingValues(0.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (contentDrawsBehindBars) Modifier
+                                    else Modifier.padding(paddingValues)
+                                )
+                        ) {
+                            content(
+                                if (contentDrawsBehindBars) paddingValues
+                                else PaddingValues(0.dp)
+                            )
+                        }
                     }
                 }
             }

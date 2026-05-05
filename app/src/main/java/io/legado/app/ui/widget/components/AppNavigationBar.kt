@@ -26,7 +26,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.theme.regularHazeEffect
 import top.yukonga.miuix.kmp.basic.NavigationBarDisplayMode
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
@@ -40,6 +42,12 @@ fun AppNavigationBar(
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
+    val hazeState = LocalHazeState.current
+    val hazeModifier = if (hazeState != null) {
+        Modifier.regularHazeEffect(hazeState)
+    } else {
+        Modifier
+    }
 
     if (isMiuix) {
         val baseColor = if (ThemeConfig.cMD3Secondary != 0) {
@@ -53,7 +61,7 @@ fun AppNavigationBar(
         val finalColor = baseColor.copy(alpha = (baseColor.alpha * opacity).coerceIn(0f, 1f))
 
         MiuixNavigationBar(
-            modifier = modifier,
+            modifier = modifier.then(hazeModifier),
             color = finalColor,
             mode = miuixMode,
             content = content
@@ -70,7 +78,7 @@ fun AppNavigationBar(
         val finalColor = baseColor.copy(alpha = (baseColor.alpha * opacity).coerceIn(0f, 1f))
 
         NavigationBar(
-            modifier = modifier,
+            modifier = modifier.then(hazeModifier),
             containerColor = finalColor,
             content = content
         )
@@ -91,8 +99,9 @@ fun RowScope.AppNavigationBarItem(
     useCustomIcon: Boolean = false,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val useCustomIconBox = useCustomIcon && ThemeConfig.useFloatingBottomBar
 
-    if (useCustomIcon) {
+    if (useCustomIconBox) {
         Box(
             modifier = modifier
                 .weight(1f)

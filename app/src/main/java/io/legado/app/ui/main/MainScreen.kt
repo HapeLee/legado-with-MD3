@@ -365,10 +365,7 @@ fun MainScreen(
                             }
                         }
                     } else {
-                        AppNavigationBar(
-                            modifier = Modifier
-                                .regularHazeEffect(state = hazeState)
-                        ) {
+                        AppNavigationBar() {
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index
                                 val customIconPath = when (destination) {
@@ -406,15 +403,15 @@ fun MainScreen(
             contentWindowInsets = WindowInsets(0)
         ) { _ ->
             Box(
-                modifier = Modifier
-                    .hazeSource(hazeState)
-                    .then(
-                        if (useFloatingBottomBar) {
-                            Modifier.layerBackdrop(floatingBarBackdrop)
-                        } else {
-                            Modifier
-                        }
-                    )
+                modifier = Modifier.then(
+                    if (useFloatingBottomBar) {
+                        Modifier
+                            .hazeSource(hazeState)
+                            .layerBackdrop(floatingBarBackdrop)
+                    } else {
+                        Modifier
+                    }
+                )
             ) {
                 HorizontalPager(
                     state = pagerState,
