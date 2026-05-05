@@ -259,7 +259,7 @@ fun FloatingBottomBar(
                         if (isBlurEnabled) {
                             vibrancy()
                             blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                            lens(ThemeConfig.bottomBarLensRadius.dp.toPx(), ThemeConfig.bottomBarLensRadius.dp.toPx())
                         }
                     },
                     highlight = {
@@ -316,7 +316,7 @@ fun FloatingBottomBar(
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
                                 blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
-                                lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
+                                lens(ThemeConfig.bottomBarLensRadius.dp.toPx() * progress, ThemeConfig.bottomBarLensRadius.dp.toPx() * progress)
                             }
                         },
                         highlight = {

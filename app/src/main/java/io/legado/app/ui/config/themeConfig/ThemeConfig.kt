@@ -34,6 +34,8 @@ object ThemeConfig {
 
     var bottomBarBlurAlpha by prefDelegate(PreferKey.bottomBarBlurAlpha, 40)
 
+    var bottomBarLensRadius by prefDelegate(PreferKey.bottomBarLensRadius, 24f)
+
     var useFlexibleTopAppBar by prefDelegate(PreferKey.useFlexibleTopAppBar, true)
 
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")

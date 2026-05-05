@@ -199,6 +199,7 @@ object PreferKey {
     const val bottomBarBlurRadius = "bottomBarBlurRadius"
     const val topBarBlurAlpha = "topBarBlurAlpha"
     const val bottomBarBlurAlpha = "bottomBarBlurAlpha"
+    const val bottomBarLensRadius = "bottomBarLensRadius"
     const val useFlexibleTopAppBar = "useFlexibleTopAppBar"
     const val cBackground = "colorBackground"
     const val cBBackground = "colorBottomBackground"

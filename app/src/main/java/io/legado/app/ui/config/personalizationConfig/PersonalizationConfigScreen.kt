@@ -136,6 +136,7 @@ fun PersonalizationConfigScreen(
     val bottomBarBlurRadius = ThemeConfig.bottomBarBlurRadius
     val topBarBlurAlpha = ThemeConfig.topBarBlurAlpha
     val bottomBarBlurAlpha = ThemeConfig.bottomBarBlurAlpha
+    val bottomBarLensRadius = ThemeConfig.bottomBarLensRadius
     val primaryColor = MaterialTheme.colorScheme.primary
 
     var editingNavIconDestination by remember { mutableStateOf<String?>(null) }
@@ -535,6 +536,15 @@ fun PersonalizationConfigScreen(
                             defaultValue = 40f,
                             valueRange = 0f..100f,
                             onValueChange = { ThemeConfig.bottomBarBlurAlpha = it.toInt() }
+                        )
+
+                        SliderSettingItem(
+                            title = "底栏液化强度",
+                            description = "控制液态玻璃的扭曲程度",
+                            value = bottomBarLensRadius,
+                            defaultValue = 24f,
+                            valueRange = 0f..50f,
+                            onValueChange = { ThemeConfig.bottomBarLensRadius = it }
                         )
                     }
                 }

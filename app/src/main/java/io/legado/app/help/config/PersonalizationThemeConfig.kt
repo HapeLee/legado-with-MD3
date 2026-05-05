@@ -196,6 +196,7 @@ object PersonalizationThemeConfig {
         ThemeConfig.bottomBarBlurRadius = config.bottomBarBlurRadius
         ThemeConfig.topBarBlurAlpha = config.topBarBlurAlpha
         ThemeConfig.bottomBarBlurAlpha = config.bottomBarBlurAlpha
+        ThemeConfig.bottomBarLensRadius = config.bottomBarLensRadius
     }
 
     fun savePersonalizationTheme(name: String): Config {
@@ -237,7 +238,8 @@ object PersonalizationThemeConfig {
             topBarBlurRadius = ThemeConfig.topBarBlurRadius,
             bottomBarBlurRadius = ThemeConfig.bottomBarBlurRadius,
             topBarBlurAlpha = ThemeConfig.topBarBlurAlpha,
-            bottomBarBlurAlpha = ThemeConfig.bottomBarBlurAlpha
+            bottomBarBlurAlpha = ThemeConfig.bottomBarBlurAlpha,
+            bottomBarLensRadius = ThemeConfig.bottomBarLensRadius
         )
         addConfig(config)
         return config
@@ -281,7 +283,8 @@ object PersonalizationThemeConfig {
         var topBarBlurRadius: Int = 24,
         var bottomBarBlurRadius: Int = 8,
         var topBarBlurAlpha: Int = 73,
-        var bottomBarBlurAlpha: Int = 40
+        var bottomBarBlurAlpha: Int = 40,
+        var bottomBarLensRadius: Float = 24f
     )
 }
 
@@ -332,6 +335,7 @@ class ConfigSerializer : JsonSerializer<PersonalizationThemeConfig.Config>,
         obj.addProperty("bottomBarBlurRadius", src.bottomBarBlurRadius)
         obj.addProperty("topBarBlurAlpha", src.topBarBlurAlpha)
         obj.addProperty("bottomBarBlurAlpha", src.bottomBarBlurAlpha)
+        obj.addProperty("bottomBarLensRadius", src.bottomBarLensRadius)
         return obj
     }
 
@@ -379,7 +383,8 @@ class ConfigSerializer : JsonSerializer<PersonalizationThemeConfig.Config>,
             topBarBlurRadius = obj.getInt("topBarBlurRadius", 24),
             bottomBarBlurRadius = obj.getInt("bottomBarBlurRadius", 8),
             topBarBlurAlpha = obj.getInt("topBarBlurAlpha", 73),
-            bottomBarBlurAlpha = obj.getInt("bottomBarBlurAlpha", 40)
+            bottomBarBlurAlpha = obj.getInt("bottomBarBlurAlpha", 40),
+            bottomBarLensRadius = obj.getFloat("bottomBarLensRadius", 24f)
         )
     }
 

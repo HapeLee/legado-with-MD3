@@ -223,7 +223,8 @@ object ThemePackConfig {
             topBarBlurRadius = pack.topBarBlurRadius,
             bottomBarBlurRadius = pack.bottomBarBlurRadius,
             topBarBlurAlpha = pack.topBarBlurAlpha,
-            bottomBarBlurAlpha = pack.bottomBarBlurAlpha
+            bottomBarBlurAlpha = pack.bottomBarBlurAlpha,
+            bottomBarLensRadius = pack.bottomBarLensRadius
         ))
 
         ThemeConfig.bgImageLight = restoreResourcePath(dir, "bg_light", pack.bgImageLight)
@@ -455,6 +456,7 @@ object ThemePackConfig {
         var bottomBarBlurRadius: Int = 8,
         var topBarBlurAlpha: Int = 73,
         var bottomBarBlurAlpha: Int = 40,
+        var bottomBarLensRadius: Float = 24f,
         var bgImageLight: String? = null,
         var bgImageDark: String? = null,
         var bgImageBlurring: Int = 0,
@@ -542,6 +544,7 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
         obj.addProperty("bottomBarBlurRadius", src.bottomBarBlurRadius)
         obj.addProperty("topBarBlurAlpha", src.topBarBlurAlpha)
         obj.addProperty("bottomBarBlurAlpha", src.bottomBarBlurAlpha)
+        obj.addProperty("bottomBarLensRadius", src.bottomBarLensRadius)
         obj.addProperty("bgImageLight", src.bgImageLight)
         obj.addProperty("bgImageDark", src.bgImageDark)
         obj.addProperty("bgImageBlurring", src.bgImageBlurring)
@@ -618,6 +621,7 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
             bottomBarBlurRadius = obj.getInt("bottomBarBlurRadius", 8),
             topBarBlurAlpha = obj.getInt("topBarBlurAlpha", 73),
             bottomBarBlurAlpha = obj.getInt("bottomBarBlurAlpha", 40),
+            bottomBarLensRadius = obj.getFloat("bottomBarLensRadius", 24f),
             bgImageLight = obj.getString("bgImageLight", null),
             bgImageDark = obj.getString("bgImageDark", null),
             bgImageBlurring = obj.getInt("bgImageBlurring", 0),
