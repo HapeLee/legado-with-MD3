@@ -40,6 +40,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
@@ -80,6 +84,8 @@ fun BookshelfItem(
     titleCenter: Boolean = true,
     titleMaxLines: Int = 2,
     coverShadow: Boolean = false,
+    titleColor: Color? = null,
+    descAnnotated: AnnotatedString? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
@@ -227,7 +233,11 @@ fun BookshelfItem(
                     ) {
                         AppText(
                             text = title,
-                            style = LegadoTheme.typography.titleMediumEmphasized,
+                            style = if (titleColor != null) {
+                                LegadoTheme.typography.titleMediumEmphasized.copy(color = titleColor)
+                            } else {
+                                LegadoTheme.typography.titleMediumEmphasized
+                            },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -243,13 +253,22 @@ fun BookshelfItem(
                             )
                         }
                         if (!isCompact) {
-                            desc?.let {
+                            if (descAnnotated != null) {
                                 AppText(
-                                    text = it,
+                                    text = descAnnotated,
                                     style = LegadoTheme.typography.labelSmallEmphasized,
                                     maxLines = descMaxLines,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                            } else {
+                                desc?.let {
+                                    AppText(
+                                        text = it,
+                                        style = LegadoTheme.typography.labelSmallEmphasized,
+                                        maxLines = descMaxLines,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                         extra?.let {
@@ -425,13 +444,27 @@ fun BookGroupItemList(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
+    val firstBookName = previewBooks.firstOrNull()?.name
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val descAnnotated = if (firstBookName != null) {
+        buildAnnotatedString {
+            append("最近阅读：")
+            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
+                append("《$firstBookName》")
+            }
+        }
+    } else {
+        null
+    }
     BookshelfItem(
         isGrid = false,
         gridStyle = 0,
         isCompact = isCompact,
         cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
         title = group.groupName,
+        titleColor = primaryColor,
         subTitle = countText,
+        descAnnotated = descAnnotated,
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
