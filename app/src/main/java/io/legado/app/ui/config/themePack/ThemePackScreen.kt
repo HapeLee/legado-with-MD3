@@ -330,12 +330,10 @@ private fun ThemePackItem(
                             pack.navIconExplore.isNotEmpty() ||
                             pack.navIconRss.isNotEmpty() ||
                             pack.navIconMy.isNotEmpty()
-                    val hasReadBg = pack.readBgType == 2 || pack.readBgTypeNight == 2 || pack.readBgTypeEInk == 2
                     val hasCover = pack.defaultCover.isNotEmpty() || pack.defaultCoverDark.isNotEmpty()
                     val features = mutableListOf<String>()
                     if (pack.appFontPath != null) features.add("应用字体")
                     if (pack.bgImageLight != null || pack.bgImageDark != null) features.add("应用背景")
-                    if (hasReadBg) features.add("阅读背景")
                     if (hasCover) features.add("封面图片")
                     if (hasCustomIcon) features.add("图标")
                     if (features.isNotEmpty()) {

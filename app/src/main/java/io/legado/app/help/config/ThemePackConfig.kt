@@ -137,12 +137,6 @@ object ThemePackConfig {
             navIconExplore = MainConfig.navIconExplore,
             navIconRss = MainConfig.navIconRss,
             navIconMy = MainConfig.navIconMy,
-            readBgStr = ReadBookConfig.durConfig.bgStr,
-            readBgStrNight = ReadBookConfig.durConfig.bgStrNight,
-            readBgStrEInk = ReadBookConfig.durConfig.bgStrEInk,
-            readBgType = ReadBookConfig.durConfig.bgType,
-            readBgTypeNight = ReadBookConfig.durConfig.bgTypeNight,
-            readBgTypeEInk = ReadBookConfig.durConfig.bgTypeEInk,
             coverTextColor = CoverConfig.coverTextColor,
             coverShadowColor = CoverConfig.coverShadowColor,
             coverTextColorN = CoverConfig.coverTextColorN,
@@ -169,10 +163,6 @@ object ThemePackConfig {
         copyResourceFile(pack.navIconExplore, dir, "nav_explore")
         copyResourceFile(pack.navIconRss, dir, "nav_rss")
         copyResourceFile(pack.navIconMy, dir, "nav_my")
-
-        copyReadBgImage(pack.readBgType, pack.readBgStr, dir, "read_bg_day")
-        copyReadBgImage(pack.readBgTypeNight, pack.readBgStrNight, dir, "read_bg_night")
-        copyReadBgImage(pack.readBgTypeEInk, pack.readBgStrEInk, dir, "read_bg_eink")
 
         copyCoverImages(pack.defaultCover, dir, "cover_day")
         copyCoverImages(pack.defaultCoverDark, dir, "cover_night")
@@ -236,14 +226,6 @@ object ThemePackConfig {
         MainConfig.navIconExplore = restoreResourcePath(dir, "nav_explore", pack.navIconExplore) ?: ""
         MainConfig.navIconRss = restoreResourcePath(dir, "nav_rss", pack.navIconRss) ?: ""
         MainConfig.navIconMy = restoreResourcePath(dir, "nav_my", pack.navIconMy) ?: ""
-
-        val readConfig = ReadBookConfig.durConfig
-        readConfig.bgType = pack.readBgType
-        readConfig.bgTypeNight = pack.readBgTypeNight
-        readConfig.bgTypeEInk = pack.readBgTypeEInk
-        readConfig.bgStr = restoreReadBg(dir, "read_bg_day", pack.readBgType, pack.readBgStr)
-        readConfig.bgStrNight = restoreReadBg(dir, "read_bg_night", pack.readBgTypeNight, pack.readBgStrNight)
-        readConfig.bgStrEInk = restoreReadBg(dir, "read_bg_eink", pack.readBgTypeEInk, pack.readBgStrEInk)
 
         CoverConfig.coverTextColor = pack.coverTextColor
         CoverConfig.coverShadowColor = pack.coverShadowColor
@@ -338,53 +320,6 @@ object ThemePackConfig {
         return targetFile.absolutePath
     }
 
-    private fun restoreReadBg(packDir: File, prefix: String, bgType: Int, originalBgStr: String): String {
-        if (originalBgStr.isEmpty()) return originalBgStr
-        val candidates = packDir.listFiles { file ->
-            file.name.startsWith(prefix) && file.isFile
-        }
-        if (candidates.isNullOrEmpty()) return originalBgStr
-        val sourceFile = candidates.first()
-        val bgName = sourceFile.name
-        val bgDir = File(appCtx.externalFiles, "bg")
-        bgDir.mkdirs()
-        val targetFile = File(bgDir, bgName)
-        if (!targetFile.exists()) {
-            sourceFile.copyTo(targetFile, overwrite = true)
-        }
-        return bgName
-    }
-
-    private fun resolveReadBgPath(bgStr: String): String? {
-        if (bgStr.isEmpty()) return null
-        return if (bgStr.contains(File.separator)) {
-            bgStr
-        } else {
-            FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
-        }
-    }
-
-    private fun copyReadBgImage(bgType: Int, bgStr: String, destDir: File, prefix: String) {
-        if (bgStr.isEmpty()) return
-        when (bgType) {
-            1 -> {
-                kotlin.runCatching {
-                    val ext = bgStr.substringAfterLast(".", "jpg")
-                    val destFile = File(destDir, "$prefix.$ext")
-                    appCtx.assets.open("bg${File.separator}$bgStr").use { input ->
-                        destFile.outputStream().use { output ->
-                            input.copyTo(output)
-                        }
-                    }
-                }
-            }
-            2 -> {
-                val bgPath = resolveReadBgPath(bgStr)
-                copyResourceFile(bgPath, destDir, prefix)
-            }
-        }
-    }
-
     private fun copyCoverImages(coverPaths: String, destDir: File, prefix: String) {
         val paths = coverPaths.split(",").filter { it.isNotBlank() }
         paths.forEachIndexed { index, path ->
@@ -465,12 +400,6 @@ object ThemePackConfig {
         var navIconExplore: String = "",
         var navIconRss: String = "",
         var navIconMy: String = "",
-        var readBgStr: String = "#EEEEEE",
-        var readBgStrNight: String = "#000000",
-        var readBgStrEInk: String = "#FFFFFF",
-        var readBgType: Int = 0,
-        var readBgTypeNight: Int = 0,
-        var readBgTypeEInk: Int = 0,
         var coverTextColor: Int = -16777216,
         var coverShadowColor: Int = -16777216,
         var coverTextColorN: Int = -1,
@@ -553,12 +482,6 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
         obj.addProperty("navIconExplore", src.navIconExplore)
         obj.addProperty("navIconRss", src.navIconRss)
         obj.addProperty("navIconMy", src.navIconMy)
-        obj.addProperty("readBgStr", src.readBgStr)
-        obj.addProperty("readBgStrNight", src.readBgStrNight)
-        obj.addProperty("readBgStrEInk", src.readBgStrEInk)
-        obj.addProperty("readBgType", src.readBgType)
-        obj.addProperty("readBgTypeNight", src.readBgTypeNight)
-        obj.addProperty("readBgTypeEInk", src.readBgTypeEInk)
         obj.addProperty("coverTextColor", src.coverTextColor.toHexString())
         obj.addProperty("coverShadowColor", src.coverShadowColor.toHexString())
         obj.addProperty("coverTextColorN", src.coverTextColorN.toHexString())
@@ -630,12 +553,6 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
             navIconExplore = obj.getString("navIconExplore", "") ?: "",
             navIconRss = obj.getString("navIconRss", "") ?: "",
             navIconMy = obj.getString("navIconMy", "") ?: "",
-            readBgStr = obj.getString("readBgStr", "#EEEEEE") ?: "#EEEEEE",
-            readBgStrNight = obj.getString("readBgStrNight", "#000000") ?: "#000000",
-            readBgStrEInk = obj.getString("readBgStrEInk", "#FFFFFF") ?: "#FFFFFF",
-            readBgType = obj.getInt("readBgType", 0),
-            readBgTypeNight = obj.getInt("readBgTypeNight", 0),
-            readBgTypeEInk = obj.getInt("readBgTypeEInk", 0),
             coverTextColor = obj.getInt("coverTextColor", -16777216),
             coverShadowColor = obj.getInt("coverShadowColor", -16777216),
             coverTextColorN = obj.getInt("coverTextColorN", -1),
