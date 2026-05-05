@@ -75,23 +75,20 @@ fun AppScaffold(
                     FabPosition.Center -> MiuixFabPosition.Center
                     else -> MiuixFabPosition.End
                 }
-                MiuixScaffold(
-                    modifier = modifier,
-                    topBar = {
-                        topBar(hazeState)
-                    },
-                    bottomBar = bottomBar,
-                    snackbarHost = snackbarHost,
-                    floatingActionButton = floatingActionButton,
-                    floatingActionButtonPosition = miuixFabPosition,
-                    containerColor = miuixContainerColor,
-                    contentWindowInsets = contentWindowInsets
-                ) { paddingValues ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                Box(modifier = modifier.fillMaxSize()) {
+                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    MiuixScaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            topBar(hazeState)
+                        },
+                        bottomBar = bottomBar,
+                        snackbarHost = snackbarHost,
+                        floatingActionButton = floatingActionButton,
+                        floatingActionButtonPosition = miuixFabPosition,
+                        containerColor = miuixContainerColor,
+                        contentWindowInsets = contentWindowInsets
+                    ) { paddingValues ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -111,24 +108,21 @@ fun AppScaffold(
             }
 
             else -> {
-                Scaffold(
-                    modifier = modifier,
-                    topBar = {
-                        topBar(hazeState)
-                    },
-                    bottomBar = bottomBar,
-                    snackbarHost = snackbarHost,
-                    floatingActionButton = floatingActionButton,
-                    floatingActionButtonPosition = floatingActionButtonPosition,
-                    containerColor = containerColor,
-                    contentColor = contentColor,
-                    contentWindowInsets = contentWindowInsets
-                ) { paddingValues ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                    ) {
-                        BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                Box(modifier = modifier.fillMaxSize()) {
+                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            topBar(hazeState)
+                        },
+                        bottomBar = bottomBar,
+                        snackbarHost = snackbarHost,
+                        floatingActionButton = floatingActionButton,
+                        floatingActionButtonPosition = floatingActionButtonPosition,
+                        containerColor = containerColor,
+                        contentColor = contentColor,
+                        contentWindowInsets = contentWindowInsets
+                    ) { paddingValues ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
