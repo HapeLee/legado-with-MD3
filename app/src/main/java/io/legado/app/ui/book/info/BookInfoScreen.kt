@@ -72,6 +72,8 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.config.AppConfig
+import io.legado.app.model.BookCover
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -402,6 +404,9 @@ private fun BookInfoTransparentTopAppBar(
 
 @Composable
 private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
+    val useDefaultCover = AppConfig.useDefaultCover || book?.customCoverUrl == "use_default_cover"
+    if (useDefaultCover) return null
+
     val imageLoader = koinInject<ImageLoader>()
     var shouldExtractColor by remember(book?.bookUrl) { mutableStateOf(false) }
 
@@ -413,7 +418,12 @@ private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
         }
     }
 
-    val coverPath = if (shouldExtractColor) book?.getDisplayCover() else null
+    val isNight = AppConfig.isNightTheme
+
+    val coverPath = if (shouldExtractColor) {
+        book?.getDisplayCover()
+    } else null
+
     val sourceOrigin = if (shouldExtractColor) book?.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
@@ -469,8 +479,15 @@ private fun BookInfoTopBarActions(
 
 @Composable
 private fun BookInfoBackdrop(book: Book) {
-    val cover = book.getDisplayCover()
-    val sourceOrigin = book.origin
+    val useDefaultCover = AppConfig.useDefaultCover || book.customCoverUrl == "use_default_cover"
+    val isNight = AppConfig.isNightTheme
+
+    val cover = if (useDefaultCover) {
+        BookCover.getRandomDefaultPath(book.bookUrl, isNight)
+    } else {
+        book.getDisplayCover()
+    }
+    val sourceOrigin = if (!useDefaultCover) book.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val context = LocalContext.current
     val imageLoader = koinInject<ImageLoader>()
