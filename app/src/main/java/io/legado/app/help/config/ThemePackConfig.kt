@@ -342,9 +342,7 @@ object ThemePackConfig {
         val restoredPaths = mutableListOf<String>()
         sortedCandidates.forEach { sourceFile ->
             val targetFile = File(coverDir, sourceFile.name)
-            if (!targetFile.exists()) {
-                sourceFile.copyTo(targetFile, overwrite = true)
-            }
+            sourceFile.copyTo(targetFile, overwrite = true)
             restoredPaths.add(targetFile.absolutePath)
         }
         return if (restoredPaths.isEmpty()) originalPaths else restoredPaths.joinToString(",")
