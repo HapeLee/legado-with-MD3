@@ -47,7 +47,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.legato.kazusa.diy"
+        applicationId = "io.legato.kazusa"
         minSdk = 26
         targetSdk = 37
         versionCode = System.getenv("COMMIT_NUMBER")?.toInt()?.let { 10000 + it } ?: 32640
@@ -170,7 +170,6 @@ ksp {
 dependencies {
     coreLibraryDesugaring(libs.desugar)
     testImplementation(libs.junit)
-    testImplementation(libs.robolectric)
     androidTestImplementation(libs.bundles.androidTest)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.collections.immutable)

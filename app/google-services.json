@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:499897677610:android:8515a1e32b7b544ec09053",
         "android_client_info": {
-          "package_name": "io.legato.kazusa.diy"
+          "package_name": "io.legato.kazusa"
         }
       },
       "oauth_client": [],
@@ -28,7 +28,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:499897677610:android:f3b742fbea52bbfec09053",
         "android_client_info": {
-          "package_name": "io.legato.kazusa.diy.debug"
+          "package_name": "io.legato.kazusa.debug"
         }
       },
       "oauth_client": [],
