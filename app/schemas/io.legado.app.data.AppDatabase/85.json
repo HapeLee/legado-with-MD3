@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 85,
-    "identityHash": "3796a7cd8db90f34502bed88600a006f",
+    "identityHash": "12c08f88be6a2747b2396e98856b0022",
     "entities": [
       {
         "tableName": "books",
@@ -955,7 +955,7 @@
       },
       {
         "tableName": "rssSources",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sourceUrl` TEXT NOT NULL, `sourceName` TEXT NOT NULL, `sourceIcon` TEXT NOT NULL, `sourceGroup` TEXT, `sourceComment` TEXT, `enabled` INTEGER NOT NULL, `variableComment` TEXT, `jsLib` TEXT, `enabledCookieJar` INTEGER DEFAULT 0, `concurrentRate` TEXT, `header` TEXT, `loginUrl` TEXT, `loginUi` TEXT, `loginCheckJs` TEXT, `coverDecodeJs` TEXT, `sortUrl` TEXT, `singleUrl` INTEGER NOT NULL, `articleStyle` INTEGER NOT NULL DEFAULT 0, `ruleArticles` TEXT, `ruleNextPage` TEXT, `ruleTitle` TEXT, `rulePubDate` TEXT, `ruleDescription` TEXT, `ruleImage` TEXT, `ruleLink` TEXT, `ruleContent` TEXT, `contentWhitelist` TEXT, `contentBlacklist` TEXT, `shouldOverrideUrlLoading` TEXT, `style` TEXT, `enableJs` INTEGER NOT NULL DEFAULT 1, `loadWithBaseUrl` INTEGER NOT NULL DEFAULT 1, `injectJs` TEXT, `preloadJs` TEXT, `startHtml` TEXT, `startStyle` TEXT, `startJs` TEXT, `showWebLog` INTEGER NOT NULL DEFAULT 0, `lastUpdateTime` INTEGER NOT NULL DEFAULT 0, `customOrder` INTEGER NOT NULL DEFAULT 0, `type` INTEGER NOT NULL DEFAULT 0, `preload` INTEGER NOT NULL DEFAULT 0, `cacheFirst` INTEGER NOT NULL DEFAULT 0, `searchUrl` TEXT, `redirectPolicy` TEXT NOT NULL DEFAULT 'ASK_CROSS_ORIGIN', PRIMARY KEY(`sourceUrl`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sourceUrl` TEXT NOT NULL, `sourceName` TEXT NOT NULL, `sourceIcon` TEXT NOT NULL, `sourceGroup` TEXT, `sourceComment` TEXT, `enabled` INTEGER NOT NULL, `variableComment` TEXT, `jsLib` TEXT, `enabledCookieJar` INTEGER DEFAULT 0, `concurrentRate` TEXT, `header` TEXT, `loginUrl` TEXT, `loginUi` TEXT, `loginCheckJs` TEXT, `coverDecodeJs` TEXT, `sortUrl` TEXT, `singleUrl` INTEGER NOT NULL, `articleStyle` INTEGER NOT NULL DEFAULT 0, `ruleArticles` TEXT, `ruleNextPage` TEXT, `ruleTitle` TEXT, `rulePubDate` TEXT, `ruleDescription` TEXT, `ruleImage` TEXT, `ruleLink` TEXT, `ruleContent` TEXT, `contentWhitelist` TEXT, `contentBlacklist` TEXT, `shouldOverrideUrlLoading` TEXT, `style` TEXT, `enableJs` INTEGER NOT NULL DEFAULT 1, `loadWithBaseUrl` INTEGER NOT NULL DEFAULT 1, `injectJs` TEXT, `lastUpdateTime` INTEGER NOT NULL DEFAULT 0, `customOrder` INTEGER NOT NULL DEFAULT 0, `redirectPolicy` TEXT NOT NULL DEFAULT 'ASK_CROSS_ORIGIN', PRIMARY KEY(`sourceUrl`))",
         "fields": [
           {
             "fieldPath": "sourceUrl",
@@ -1135,33 +1135,6 @@
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "preloadJs",
-            "columnName": "preloadJs",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "startHtml",
-            "columnName": "startHtml",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "startStyle",
-            "columnName": "startStyle",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "startJs",
-            "columnName": "startJs",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "showWebLog",
-            "columnName": "showWebLog",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
-          },
-          {
             "fieldPath": "lastUpdateTime",
             "columnName": "lastUpdateTime",
             "affinity": "INTEGER",
@@ -1174,32 +1147,6 @@
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
-          },
-          {
-            "fieldPath": "type",
-            "columnName": "type",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
-          },
-          {
-            "fieldPath": "preload",
-            "columnName": "preload",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
-          },
-          {
-            "fieldPath": "cacheFirst",
-            "columnName": "cacheFirst",
-            "affinity": "INTEGER",
-            "notNull": true,
-            "defaultValue": "0"
-          },
-          {
-            "fieldPath": "searchUrl",
-            "columnName": "searchUrl",
-            "affinity": "TEXT"
           },
           {
             "fieldPath": "redirectPolicy",
@@ -2148,7 +2095,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3796a7cd8db90f34502bed88600a006f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '12c08f88be6a2747b2396e98856b0022')"
     ]
   }
 }
