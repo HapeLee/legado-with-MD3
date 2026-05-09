@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -256,9 +257,14 @@ fun ThemePackScreen(
         text = "确定删除主题「${deleteTarget?.name}」？此操作不可恢复。"
     )
 
-    exportingPack?.let { pack ->
-        kotlin.runCatching {
-            exportLauncher.launch("${pack.name}.zip")
+    LaunchedEffect(exportingPack) {
+        exportingPack?.let { pack ->
+            kotlin.runCatching {
+                exportLauncher.launch("${pack.name}.zip")
+            }.onFailure {
+                exportingPack = null
+                context.toastOnUi("导出失败: ${it.message}")
+            }
         }
     }
 }
@@ -299,7 +305,7 @@ private fun ThemePackItem(
                     .height(120.dp)
                     .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(
-                        if (pack.md3Primary != 0) Color(pack.md3Primary)
+                        if (pack.themeColor != 0) Color(pack.themeColor)
                         else MaterialTheme.colorScheme.primary
                     )
             ) {

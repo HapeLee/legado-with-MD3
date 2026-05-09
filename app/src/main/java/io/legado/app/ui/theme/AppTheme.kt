@@ -163,17 +163,15 @@ fun AppTheme(
     val useMiuixMonet = ThemeConfig.useMiuixMonet
     val customPrimary = ThemeConfig.cPrimary
     val customNightPrimary = ThemeConfig.cNPrimary
-    val customFontColor = ThemeConfig.cFontColor
-    val customBgColor = ThemeConfig.cBgColor
     val appFontPath = ThemeConfig.appFontPath
     
-    // Material Design 3 color roles
-    val md3Primary = ThemeConfig.cMD3Primary
-    val md3OnPrimary = ThemeConfig.cMD3OnPrimary
-    val md3OnPrimaryContainer = ThemeConfig.cMD3OnPrimaryContainer
-    val md3OnSurface = ThemeConfig.cMD3OnSurface
-    val md3Background = ThemeConfig.cMD3Background
-    val md3SurfaceContainerLow = ThemeConfig.cMD3SurfaceContainerLow
+    val enableDeepPersonalization = ThemeConfig.enableDeepPersonalization
+    val themeColor = ThemeConfig.themeColor
+    val secondaryThemeColor = ThemeConfig.secondaryThemeColor
+    val primaryTextColor = ThemeConfig.primaryTextColor
+    val secondaryTextColor = ThemeConfig.secondaryTextColor
+    val themeBackgroundColor = ThemeConfig.themeBackgroundColor
+    val customLabelContainerColor = ThemeConfig.labelContainerColor
     
     val colorSchemeMode = ThemeResolver.resolveColorSchemeMode(themeModeValue)
     val miuixColorSchemeMode = remember(themeModeValue, useMiuixMonet) {
@@ -215,32 +213,30 @@ fun AppTheme(
             isPureBlack,
             customPrimary,
             customNightPrimary,
-            customFontColor,
-            customBgColor,
-            md3Primary,
-            md3OnPrimary,
-            md3OnSurface,
-            md3Background,
-            md3SurfaceContainerLow,
-            md3OnPrimaryContainer,
+            enableDeepPersonalization,
+            themeColor,
+            secondaryThemeColor,
+            primaryTextColor,
+            secondaryTextColor,
+            themeBackgroundColor,
+            customLabelContainerColor,
             paletteStyleValue,
             materialVersion
         ) {
-            if (ThemeConfig.enableDeepPersonalization &&
-                (md3Primary != 0 ||
-                 md3OnPrimary != 0 ||
-                 md3OnSurface != 0 ||
-                 md3Background != 0 ||
-                 md3SurfaceContainerLow != 0 ||
-                 md3OnPrimaryContainer != 0)) {
-                // 使用用户自定义颜色
+            if (enableDeepPersonalization &&
+                (themeColor != 0 ||
+                 secondaryThemeColor != 0 ||
+                 primaryTextColor != 0 ||
+                 secondaryTextColor != 0 ||
+                 themeBackgroundColor != 0 ||
+                 customLabelContainerColor != 0)) {
                 val userPalette = UserColorPalette(
-                    primaryColor = if (md3Primary != 0) Color(md3Primary) else Color(0xFF6750A4),
-                    secondaryColor = if (md3OnPrimary != 0) Color(md3OnPrimary) else Color(0xFFFFFFFF),
-                    backgroundColor = if (md3Background != 0) Color(md3Background) else Color(0xFFFEF7FF),
-                    primaryFontColor = if (md3OnSurface != 0) Color(md3OnSurface) else Color(0xFF1C1B1F),
-                    secondaryFontColor = if (md3OnPrimaryContainer != 0) Color(md3OnPrimaryContainer) else Color(0xFF21005D),
-                    labelContainerColor = if (md3SurfaceContainerLow != 0) Color(md3SurfaceContainerLow) else Color(0xFFF7F2FA)
+                    primaryColor = if (themeColor != 0) Color(themeColor) else Color(0xFF6750A4),
+                    secondaryColor = if (secondaryThemeColor != 0) Color(secondaryThemeColor) else Color(0xFF625B71),
+                    backgroundColor = if (themeBackgroundColor != 0) Color(themeBackgroundColor) else Color(0xFFFEF7FF),
+                    primaryFontColor = if (primaryTextColor != 0) Color(primaryTextColor) else Color(0xFF1C1B1F),
+                    secondaryFontColor = if (secondaryTextColor != 0) Color(secondaryTextColor) else Color(0xFF49454F),
+                    labelContainerColor = if (customLabelContainerColor != 0) Color(customLabelContainerColor) else Color(0xFFF7F2FA)
                 )
                 generateColorScheme(userPalette, darkTheme)
             } else {
@@ -370,28 +366,18 @@ fun AppTheme(
                 val miuixColorScheme = MiuixTheme.colorScheme
 
                 val mappedColorScheme = remember(miuixColorScheme) {
-                    val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cBgColor != 0) {
-                        Color(ThemeConfig.cBgColor)
+                    val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
+                        Color(ThemeConfig.themeBackgroundColor)
                     } else {
                         miuixColorScheme.background
                     }
-                    val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cMD3OnSurface != 0) {
-                        Color(ThemeConfig.cMD3OnSurface)
-                    } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cFontColor != 0) {
-                        Color(ThemeConfig.cFontColor)
+                    val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.primaryTextColor != 0) {
+                        Color(ThemeConfig.primaryTextColor)
                     } else {
                         miuixColorScheme.onSurface
                     }
-                    val customTopBarColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cTopBarColor != 0) {
-                        Color(ThemeConfig.cTopBarColor)
-                    } else {
-                        miuixColorScheme.surface
-                    }
-                    val customNavBarColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cNavBarColor != 0) {
-                        Color(ThemeConfig.cNavBarColor)
-                    } else {
-                        miuixColorScheme.surface
-                    }
+                    val customTopBarColor = miuixColorScheme.surface
+                    val customNavBarColor = miuixColorScheme.surface
 
                     LegadoColorScheme(
                         primary = miuixColorScheme.primary,
@@ -525,28 +511,18 @@ fun AppTheme(
                     }
                 }
                 val semanticColors = remember(colorScheme) {
-                    val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cBgColor != 0) {
-                        Color(ThemeConfig.cBgColor)
+                    val customBgColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
+                        Color(ThemeConfig.themeBackgroundColor)
                     } else {
                         colorScheme.background
                     }
-                    val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cMD3OnSurface != 0) {
-                        Color(ThemeConfig.cMD3OnSurface)
-                    } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cFontColor != 0) {
-                        Color(ThemeConfig.cFontColor)
+                    val customFontColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.primaryTextColor != 0) {
+                        Color(ThemeConfig.primaryTextColor)
                     } else {
                         colorScheme.onSurface
                     }
-                    val customTopBarColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cTopBarColor != 0) {
-                        Color(ThemeConfig.cTopBarColor)
-                    } else {
-                        colorScheme.surface
-                    }
-                    val customNavBarColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cNavBarColor != 0) {
-                        Color(ThemeConfig.cNavBarColor)
-                    } else {
-                        colorScheme.surface
-                    }
+                    val customTopBarColor = colorScheme.surface
+                    val customNavBarColor = colorScheme.surface
 
                     colorScheme.toLegadoColorScheme(
                         customBgColor = customBgColor,

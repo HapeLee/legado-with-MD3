@@ -32,8 +32,8 @@ fun Modifier.responsiveHazeEffect(
     val enableBlur = ThemeConfig.enableBlur
     val enableProgressiveBlur = ThemeConfig.enableProgressiveBlur
     val composeEngine = LegadoTheme.composeEngine
-    val containerColor = if (ThemeConfig.cMD3Secondary != 0) {
-        Color(ThemeConfig.cMD3Secondary)
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
     } else if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixTheme.colorScheme.surface
     } else {
@@ -70,8 +70,8 @@ fun Modifier.responsiveHazeEffectFixedStyle(
 ): Modifier {
     val enableBlur = ThemeConfig.enableBlur
     val composeEngine = LegadoTheme.composeEngine
-    val containerColor = if (ThemeConfig.cMD3Secondary != 0) {
-        Color(ThemeConfig.cMD3Secondary)
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
     } else if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixTheme.colorScheme.surface
     } else {
@@ -102,8 +102,8 @@ fun Modifier.responsiveHazeEffectFixedStyle(
 fun Modifier.regularHazeEffect(state: HazeState): Modifier {
     val enableBlur = ThemeConfig.enableBlur
     val composeEngine = LegadoTheme.composeEngine
-    val containerColor = if (ThemeConfig.cMD3Secondary != 0) {
-        Color(ThemeConfig.cMD3Secondary)
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
     } else if (ThemeResolver.isMiuixEngine(composeEngine)) {
         MiuixTheme.colorScheme.surface
     } else {

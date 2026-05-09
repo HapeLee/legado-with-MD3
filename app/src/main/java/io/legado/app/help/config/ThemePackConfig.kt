@@ -1,5 +1,6 @@
 package io.legado.app.help.config
 
+import android.net.Uri
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
@@ -92,43 +93,7 @@ object ThemePackConfig {
         val pack = ThemePack(
             name = name,
             folderName = folderName,
-            md3Primary = ThemeConfig.cMD3Primary,
-            md3OnPrimary = ThemeConfig.cMD3OnPrimary,
-            md3PrimaryContainer = ThemeConfig.cMD3PrimaryContainer,
-            md3OnPrimaryContainer = ThemeConfig.cMD3OnPrimaryContainer,
-            md3Secondary = ThemeConfig.cMD3Secondary,
-            md3OnSecondary = ThemeConfig.cMD3OnSecondary,
-            md3SecondaryContainer = ThemeConfig.cMD3SecondaryContainer,
-            md3Tertiary = ThemeConfig.cMD3Tertiary,
-            md3Error = ThemeConfig.cMD3Error,
-            md3Surface = ThemeConfig.cMD3Surface,
-            md3OnSurface = ThemeConfig.cMD3OnSurface,
-            md3Background = ThemeConfig.cMD3Background,
-            md3Outline = ThemeConfig.cMD3Outline,
-            md3SurfaceContainerLow = ThemeConfig.cMD3SurfaceContainerLow,
-            md3SurfaceVariant = ThemeConfig.cMD3SurfaceVariant,
-            topBarColor = ThemeConfig.cTopBarColor,
-            navBarColor = ThemeConfig.cNavBarColor,
-            fontColor = ThemeConfig.cFontColor,
-            bgColor = ThemeConfig.cBgColor,
-            bookInfoInputColor = ThemeConfig.cBookInfoInputColor,
-            appFontPath = ThemeConfig.appFontPath,
-            enableContainerBorder = ThemeConfig.enableContainerBorder,
-            containerBorderWidth = ThemeConfig.containerBorderWidth,
-            containerBorderStyle = ThemeConfig.containerBorderStyle,
-            containerBorderDashWidth = ThemeConfig.containerBorderDashWidth,
-            containerBorderColor = ThemeConfig.containerBorderColor,
-            enableItemDivider = ThemeConfig.enableItemDivider,
-            itemDividerWidth = ThemeConfig.itemDividerWidth,
-            itemDividerLength = ThemeConfig.itemDividerLength,
-            itemDividerColor = ThemeConfig.itemDividerColor,
-            enableCustomTagColors = ThemeConfig.enableCustomTagColors,
-            customTagColorsJson = ThemeConfig.customTagColorsJson,
-            enableBlur = ThemeConfig.enableBlur,
-            topBarBlurRadius = ThemeConfig.topBarBlurRadius,
-            bottomBarBlurRadius = ThemeConfig.bottomBarBlurRadius,
-            topBarBlurAlpha = ThemeConfig.topBarBlurAlpha,
-            bottomBarBlurAlpha = ThemeConfig.bottomBarBlurAlpha,
+            appearance = ThemeAppearanceConfig.fromCurrent(),
             bgImageLight = ThemeConfig.bgImageLight,
             bgImageDark = ThemeConfig.bgImageDark,
             bgImageBlurring = ThemeConfig.bgImageBlurring,
@@ -156,7 +121,7 @@ object ThemePackConfig {
         val dir = File(baseDir, folderName)
         dir.mkdirs()
 
-        copyResourceFile(pack.appFontPath, dir, "app_font")
+        copyResourceFile(pack.appearance.appFontPath, dir, "app_font")
         copyResourceFile(pack.bgImageLight, dir, "bg_light")
         copyResourceFile(pack.bgImageDark, dir, "bg_dark")
         copyResourceFile(pack.navIconBookshelf, dir, "nav_bookshelf")
@@ -174,48 +139,10 @@ object ThemePackConfig {
 
     fun applyPack(pack: ThemePack) {
         val dir = getPackDir(pack)
-
-        PersonalizationThemeConfig.applyConfig(PersonalizationThemeConfig.Config(
-            themeName = "",
-            md3Primary = pack.md3Primary,
-            md3OnPrimary = pack.md3OnPrimary,
-            md3PrimaryContainer = pack.md3PrimaryContainer,
-            md3OnPrimaryContainer = pack.md3OnPrimaryContainer,
-            md3Secondary = pack.md3Secondary,
-            md3OnSecondary = pack.md3OnSecondary,
-            md3SecondaryContainer = pack.md3SecondaryContainer,
-            md3Tertiary = pack.md3Tertiary,
-            md3Error = pack.md3Error,
-            md3Surface = pack.md3Surface,
-            md3OnSurface = pack.md3OnSurface,
-            md3Background = pack.md3Background,
-            md3Outline = pack.md3Outline,
-            md3SurfaceContainerLow = pack.md3SurfaceContainerLow,
-            md3SurfaceVariant = pack.md3SurfaceVariant,
-            topBarColor = pack.topBarColor,
-            navBarColor = pack.navBarColor,
-            fontColor = pack.fontColor,
-            bgColor = pack.bgColor,
-            bookInfoInputColor = pack.bookInfoInputColor,
-            appFontPath = restoreResourcePath(dir, "app_font", pack.appFontPath),
-            enableContainerBorder = pack.enableContainerBorder,
-            containerBorderWidth = pack.containerBorderWidth,
-            containerBorderStyle = pack.containerBorderStyle,
-            containerBorderDashWidth = pack.containerBorderDashWidth,
-            containerBorderColor = pack.containerBorderColor,
-            enableItemDivider = pack.enableItemDivider,
-            itemDividerWidth = pack.itemDividerWidth,
-            itemDividerLength = pack.itemDividerLength,
-            itemDividerColor = pack.itemDividerColor,
-            enableCustomTagColors = pack.enableCustomTagColors,
-            customTagColorsJson = pack.customTagColorsJson,
-            enableBlur = pack.enableBlur,
-            topBarBlurRadius = pack.topBarBlurRadius,
-            bottomBarBlurRadius = pack.bottomBarBlurRadius,
-            topBarBlurAlpha = pack.topBarBlurAlpha,
-            bottomBarBlurAlpha = pack.bottomBarBlurAlpha,
-            bottomBarLensRadius = pack.bottomBarLensRadius
-        ))
+        val restoredAppearance = pack.appearance.copy(
+            appFontPath = restoreResourcePath(dir, "app_font", pack.appearance.appFontPath)
+        )
+        restoredAppearance.applyToThemeConfig()
 
         ThemeConfig.bgImageLight = restoreResourcePath(dir, "bg_light", pack.bgImageLight)
         ThemeConfig.bgImageDark = restoreResourcePath(dir, "bg_dark", pack.bgImageDark)
@@ -265,44 +192,69 @@ object ThemePackConfig {
         val dir = File(baseDir, folderName)
         dir.mkdirs()
 
-        ZipInputStream(FileInputStream(zipFile)).use { zis ->
-            var entry = zis.nextEntry
-            while (entry != null) {
-                val outFile = File(dir, entry.name)
-                if (entry.isDirectory) {
-                    outFile.mkdirs()
-                } else {
-                    outFile.parentFile?.mkdirs()
-                    FileOutputStream(outFile).use { fos ->
-                        zis.copyTo(fos)
-                    }
-                }
-                zis.closeEntry()
-                entry = zis.nextEntry
-            }
-        }
-
-        val configFile = File(dir, CONFIG_FILE)
-        if (!configFile.exists()) {
-            dir.deleteRecursively()
-            return null
-        }
-
         return kotlin.runCatching {
+            ZipInputStream(FileInputStream(zipFile)).use { zis ->
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    val outFile = resolveZipOutputFile(dir, entry)
+                    if (entry.isDirectory) {
+                        outFile.mkdirs()
+                    } else {
+                        outFile.parentFile?.mkdirs()
+                        FileOutputStream(outFile).use { fos ->
+                            zis.copyTo(fos)
+                        }
+                    }
+                    zis.closeEntry()
+                    entry = zis.nextEntry
+                }
+            }
+
+            val configFile = File(dir, CONFIG_FILE)
+            if (!configFile.exists()) {
+                dir.deleteRecursively()
+                return null
+            }
+
             val json = configFile.readText()
             val pack = PACK_GSON.fromJson(json, ThemePack::class.java)
             pack.folderName = folderName
             _packList.add(pack)
             pack
+        }.onFailure {
+            dir.deleteRecursively()
         }.getOrNull()
+    }
+
+    private fun resolveZipOutputFile(dir: File, entry: ZipEntry): File {
+        val outFile = File(dir, entry.name).canonicalFile
+        val canonicalDir = dir.canonicalFile
+        if (outFile.path == canonicalDir.path ||
+            outFile.path.startsWith(canonicalDir.path + File.separator)
+        ) {
+            return outFile
+        }
+        throw IllegalArgumentException("Invalid theme pack entry: ${entry.name}")
     }
 
     private fun copyResourceFile(sourcePath: String?, destDir: File, prefix: String) {
         if (sourcePath.isNullOrEmpty()) return
+        val sourceUri = Uri.parse(sourcePath)
+        val sourceName = sourceUri.lastPathSegment ?: sourcePath
+        val ext = sourceName.substringAfterLast(".", "dat").ifBlank { "dat" }
+        val destFile = File(destDir, "$prefix.$ext")
+
+        if (sourceUri.scheme == "content") {
+            appCtx.contentResolver.openInputStream(sourceUri)?.use { input ->
+                FileOutputStream(destFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            return
+        }
+
         val sourceFile = File(sourcePath)
         if (!sourceFile.exists()) return
-        val ext = sourceFile.extension.ifEmpty { "dat" }
-        val destFile = File(destDir, "$prefix.$ext")
         sourceFile.copyTo(destFile, overwrite = true)
     }
 
@@ -329,7 +281,6 @@ object ThemePackConfig {
 
     private fun restoreCoverImages(packDir: File, prefix: String, originalPaths: String): String {
         if (originalPaths.isEmpty()) return ""
-        val originalList = originalPaths.split(",").filter { it.isNotBlank() }
         val candidates = packDir.listFiles { file ->
             file.name.startsWith(prefix + "_") && file.isFile
         }
@@ -352,44 +303,7 @@ object ThemePackConfig {
         var name: String = "",
         @Transient
         var folderName: String = "",
-        var md3Primary: Int = 0,
-        var md3OnPrimary: Int = 0,
-        var md3PrimaryContainer: Int = 0,
-        var md3OnPrimaryContainer: Int = 0,
-        var md3Secondary: Int = 0,
-        var md3OnSecondary: Int = 0,
-        var md3SecondaryContainer: Int = 0,
-        var md3Tertiary: Int = 0,
-        var md3Error: Int = 0,
-        var md3Surface: Int = 0,
-        var md3OnSurface: Int = 0,
-        var md3Background: Int = 0,
-        var md3Outline: Int = 0,
-        var md3SurfaceContainerLow: Int = 0,
-        var md3SurfaceVariant: Int = 0,
-        var topBarColor: Int = 0,
-        var navBarColor: Int = 0,
-        var fontColor: Int = 0,
-        var bgColor: Int = 0,
-        var bookInfoInputColor: Int = 0,
-        var appFontPath: String? = null,
-        var enableContainerBorder: Boolean = false,
-        var containerBorderWidth: Float = 1f,
-        var containerBorderStyle: String = "solid",
-        var containerBorderDashWidth: Float = 4f,
-        var containerBorderColor: Int = 0,
-        var enableItemDivider: Boolean = true,
-        var itemDividerWidth: Float = 1f,
-        var itemDividerLength: Float = 80f,
-        var itemDividerColor: Int = 0,
-        var enableCustomTagColors: Boolean = false,
-        var customTagColorsJson: String? = null,
-        var enableBlur: Boolean = false,
-        var topBarBlurRadius: Int = 24,
-        var bottomBarBlurRadius: Int = 8,
-        var topBarBlurAlpha: Int = 73,
-        var bottomBarBlurAlpha: Int = 40,
-        var bottomBarLensRadius: Float = 24f,
+        var appearance: ThemeAppearanceConfig = ThemeAppearanceConfig(),
         var bgImageLight: String? = null,
         var bgImageDark: String? = null,
         var bgImageBlurring: Int = 0,
@@ -412,20 +326,14 @@ object ThemePackConfig {
         var coverInfoOrientation: String = "0",
         var defaultCover: String = "",
         var defaultCoverDark: String = ""
-    )
+    ) {
+        val themeColor: Int get() = appearance.themeColor
+        val appFontPath: String? get() = appearance.appFontPath
+    }
 }
 
 class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
     JsonDeserializer<ThemePackConfig.ThemePack> {
-
-    private val COLOR_FIELDS = setOf(
-        "md3Primary", "md3OnPrimary", "md3PrimaryContainer", "md3OnPrimaryContainer",
-        "md3Secondary", "md3OnSecondary", "md3SecondaryContainer",
-        "md3Tertiary", "md3Error", "md3Surface", "md3OnSurface",
-        "md3Background", "md3Outline", "md3SurfaceContainerLow", "md3SurfaceVariant",
-        "topBarColor", "navBarColor", "fontColor", "bgColor", "bookInfoInputColor",
-        "containerBorderColor", "itemDividerColor"
-    )
 
     override fun serialize(
         src: ThemePackConfig.ThemePack,
@@ -434,44 +342,7 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
     ): JsonElement {
         val obj = JsonObject()
         obj.addProperty("name", src.name)
-        obj.addProperty("md3Primary", src.md3Primary.toHexString())
-        obj.addProperty("md3OnPrimary", src.md3OnPrimary.toHexString())
-        obj.addProperty("md3PrimaryContainer", src.md3PrimaryContainer.toHexString())
-        obj.addProperty("md3OnPrimaryContainer", src.md3OnPrimaryContainer.toHexString())
-        obj.addProperty("md3Secondary", src.md3Secondary.toHexString())
-        obj.addProperty("md3OnSecondary", src.md3OnSecondary.toHexString())
-        obj.addProperty("md3SecondaryContainer", src.md3SecondaryContainer.toHexString())
-        obj.addProperty("md3Tertiary", src.md3Tertiary.toHexString())
-        obj.addProperty("md3Error", src.md3Error.toHexString())
-        obj.addProperty("md3Surface", src.md3Surface.toHexString())
-        obj.addProperty("md3OnSurface", src.md3OnSurface.toHexString())
-        obj.addProperty("md3Background", src.md3Background.toHexString())
-        obj.addProperty("md3Outline", src.md3Outline.toHexString())
-        obj.addProperty("md3SurfaceContainerLow", src.md3SurfaceContainerLow.toHexString())
-        obj.addProperty("md3SurfaceVariant", src.md3SurfaceVariant.toHexString())
-        obj.addProperty("topBarColor", src.topBarColor.toHexString())
-        obj.addProperty("navBarColor", src.navBarColor.toHexString())
-        obj.addProperty("fontColor", src.fontColor.toHexString())
-        obj.addProperty("bgColor", src.bgColor.toHexString())
-        obj.addProperty("bookInfoInputColor", src.bookInfoInputColor.toHexString())
-        obj.addProperty("appFontPath", src.appFontPath)
-        obj.addProperty("enableContainerBorder", src.enableContainerBorder)
-        obj.addProperty("containerBorderWidth", src.containerBorderWidth)
-        obj.addProperty("containerBorderStyle", src.containerBorderStyle)
-        obj.addProperty("containerBorderDashWidth", src.containerBorderDashWidth)
-        obj.addProperty("containerBorderColor", src.containerBorderColor.toHexString())
-        obj.addProperty("enableItemDivider", src.enableItemDivider)
-        obj.addProperty("itemDividerWidth", src.itemDividerWidth)
-        obj.addProperty("itemDividerLength", src.itemDividerLength)
-        obj.addProperty("itemDividerColor", src.itemDividerColor.toHexString())
-        obj.addProperty("enableCustomTagColors", src.enableCustomTagColors)
-        obj.addProperty("customTagColorsJson", src.customTagColorsJson)
-        obj.addProperty("enableBlur", src.enableBlur)
-        obj.addProperty("topBarBlurRadius", src.topBarBlurRadius)
-        obj.addProperty("bottomBarBlurRadius", src.bottomBarBlurRadius)
-        obj.addProperty("topBarBlurAlpha", src.topBarBlurAlpha)
-        obj.addProperty("bottomBarBlurAlpha", src.bottomBarBlurAlpha)
-        obj.addProperty("bottomBarLensRadius", src.bottomBarLensRadius)
+        ThemeAppearanceJson.writeTo(obj, src.appearance)
         obj.addProperty("bgImageLight", src.bgImageLight)
         obj.addProperty("bgImageDark", src.bgImageDark)
         obj.addProperty("bgImageBlurring", src.bgImageBlurring)
@@ -480,10 +351,10 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
         obj.addProperty("navIconExplore", src.navIconExplore)
         obj.addProperty("navIconRss", src.navIconRss)
         obj.addProperty("navIconMy", src.navIconMy)
-        obj.addProperty("coverTextColor", src.coverTextColor.toHexString())
-        obj.addProperty("coverShadowColor", src.coverShadowColor.toHexString())
-        obj.addProperty("coverTextColorN", src.coverTextColorN.toHexString())
-        obj.addProperty("coverShadowColorN", src.coverShadowColorN.toHexString())
+        obj.addProperty("coverTextColor", ThemeAppearanceJson.colorToHex(src.coverTextColor))
+        obj.addProperty("coverShadowColor", ThemeAppearanceJson.colorToHex(src.coverShadowColor))
+        obj.addProperty("coverTextColorN", ThemeAppearanceJson.colorToHex(src.coverTextColorN))
+        obj.addProperty("coverShadowColorN", ThemeAppearanceJson.colorToHex(src.coverShadowColorN))
         obj.addProperty("coverShowName", src.coverShowName)
         obj.addProperty("coverShowAuthor", src.coverShowAuthor)
         obj.addProperty("coverShowNameN", src.coverShowNameN)
@@ -505,44 +376,7 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
         val obj = json.asJsonObject
         return ThemePackConfig.ThemePack(
             name = obj.getString("name", "") ?: "",
-            md3Primary = obj.getInt("md3Primary", 0),
-            md3OnPrimary = obj.getInt("md3OnPrimary", 0),
-            md3PrimaryContainer = obj.getInt("md3PrimaryContainer", 0),
-            md3OnPrimaryContainer = obj.getInt("md3OnPrimaryContainer", 0),
-            md3Secondary = obj.getInt("md3Secondary", 0),
-            md3OnSecondary = obj.getInt("md3OnSecondary", 0),
-            md3SecondaryContainer = obj.getInt("md3SecondaryContainer", 0),
-            md3Tertiary = obj.getInt("md3Tertiary", 0),
-            md3Error = obj.getInt("md3Error", 0),
-            md3Surface = obj.getInt("md3Surface", 0),
-            md3OnSurface = obj.getInt("md3OnSurface", 0),
-            md3Background = obj.getInt("md3Background", 0),
-            md3Outline = obj.getInt("md3Outline", 0),
-            md3SurfaceContainerLow = obj.getInt("md3SurfaceContainerLow", 0),
-            md3SurfaceVariant = obj.getInt("md3SurfaceVariant", 0),
-            topBarColor = obj.getInt("topBarColor", 0),
-            navBarColor = obj.getInt("navBarColor", 0),
-            fontColor = obj.getInt("fontColor", 0),
-            bgColor = obj.getInt("bgColor", 0),
-            bookInfoInputColor = obj.getInt("bookInfoInputColor", 0),
-            appFontPath = obj.getString("appFontPath", null),
-            enableContainerBorder = obj.getBoolean("enableContainerBorder", false) ?: false,
-            containerBorderWidth = obj.getFloat("containerBorderWidth", 1f),
-            containerBorderStyle = obj.getString("containerBorderStyle", "solid") ?: "solid",
-            containerBorderDashWidth = obj.getFloat("containerBorderDashWidth", 4f),
-            containerBorderColor = obj.getInt("containerBorderColor", 0),
-            enableItemDivider = obj.getBoolean("enableItemDivider", true) ?: true,
-            itemDividerWidth = obj.getFloat("itemDividerWidth", 1f),
-            itemDividerLength = obj.getFloat("itemDividerLength", 80f),
-            itemDividerColor = obj.getInt("itemDividerColor", 0),
-            enableCustomTagColors = obj.getBoolean("enableCustomTagColors", false) ?: false,
-            customTagColorsJson = obj.getString("customTagColorsJson", null),
-            enableBlur = obj.getBoolean("enableBlur", false) ?: false,
-            topBarBlurRadius = obj.getInt("topBarBlurRadius", 24),
-            bottomBarBlurRadius = obj.getInt("bottomBarBlurRadius", 8),
-            topBarBlurAlpha = obj.getInt("topBarBlurAlpha", 73),
-            bottomBarBlurAlpha = obj.getInt("bottomBarBlurAlpha", 40),
-            bottomBarLensRadius = obj.getFloat("bottomBarLensRadius", 24f),
+            appearance = ThemeAppearanceJson.readFrom(obj),
             bgImageLight = obj.getString("bgImageLight", null),
             bgImageDark = obj.getString("bgImageDark", null),
             bgImageBlurring = obj.getInt("bgImageBlurring", 0),
@@ -551,24 +385,22 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
             navIconExplore = obj.getString("navIconExplore", "") ?: "",
             navIconRss = obj.getString("navIconRss", "") ?: "",
             navIconMy = obj.getString("navIconMy", "") ?: "",
-            coverTextColor = obj.getInt("coverTextColor", -16777216),
-            coverShadowColor = obj.getInt("coverShadowColor", -16777216),
-            coverTextColorN = obj.getInt("coverTextColorN", -1),
-            coverShadowColorN = obj.getInt("coverShadowColorN", -1),
-            coverShowName = obj.getBoolean("coverShowName", true) ?: true,
-            coverShowAuthor = obj.getBoolean("coverShowAuthor", true) ?: true,
-            coverShowNameN = obj.getBoolean("coverShowNameN", true) ?: true,
-            coverShowAuthorN = obj.getBoolean("coverShowAuthorN", true) ?: true,
-            coverDefaultColor = obj.getBoolean("coverDefaultColor", true) ?: true,
-            coverShowShadow = obj.getBoolean("coverShowShadow", false) ?: false,
-            coverShowStroke = obj.getBoolean("coverShowStroke", true) ?: true,
+            coverTextColor = ThemeAppearanceJson.readColor(obj, "coverTextColor").takeIf { it != 0 } ?: -16777216,
+            coverShadowColor = ThemeAppearanceJson.readColor(obj, "coverShadowColor").takeIf { it != 0 } ?: -16777216,
+            coverTextColorN = ThemeAppearanceJson.readColor(obj, "coverTextColorN").takeIf { it != 0 } ?: -1,
+            coverShadowColorN = ThemeAppearanceJson.readColor(obj, "coverShadowColorN").takeIf { it != 0 } ?: -1,
+            coverShowName = obj.getBoolean("coverShowName", true),
+            coverShowAuthor = obj.getBoolean("coverShowAuthor", true),
+            coverShowNameN = obj.getBoolean("coverShowNameN", true),
+            coverShowAuthorN = obj.getBoolean("coverShowAuthorN", true),
+            coverDefaultColor = obj.getBoolean("coverDefaultColor", true),
+            coverShowShadow = obj.getBoolean("coverShowShadow", false),
+            coverShowStroke = obj.getBoolean("coverShowStroke", true),
             coverInfoOrientation = obj.getString("coverInfoOrientation", "0") ?: "0",
             defaultCover = obj.getString("defaultCover", "") ?: "",
             defaultCoverDark = obj.getString("defaultCoverDark", "") ?: ""
         )
     }
-
-    private fun Int.toHexString(): String = "#${String.format("%08X", this)}"
 
     private fun JsonObject.getString(name: String, default: String?): String? {
         val elem = get(name)
@@ -576,9 +408,7 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
             elem == null || elem.isJsonNull -> default
             elem.isJsonPrimitive -> {
                 val prim = elem.asJsonPrimitive
-                if (prim.isString) prim.asString
-                else if (prim.isNumber) prim.asString
-                else default
+                if (prim.isString || prim.isNumber) prim.asString else default
             }
             else -> default
         }
@@ -590,43 +420,21 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
             elem == null || elem.isJsonNull -> default
             elem.isJsonPrimitive -> {
                 val prim = elem.asJsonPrimitive
-                if (prim.isNumber) prim.asNumber.toInt()
-                else if (prim.isString) parseColorString(prim.asString)
-                else default
+                if (prim.isNumber) prim.asNumber.toInt() else default
             }
             else -> default
         }
     }
 
-    private fun JsonObject.getFloat(name: String, default: Float): Float {
+    private fun JsonObject.getBoolean(name: String, default: Boolean): Boolean {
         val elem = get(name)
         return when {
             elem == null || elem.isJsonNull -> default
             elem.isJsonPrimitive -> {
                 val prim = elem.asJsonPrimitive
-                if (prim.isNumber) prim.asNumber.toFloat()
-                else default
+                if (prim.isBoolean) prim.asBoolean else default
             }
             else -> default
         }
-    }
-
-    private fun JsonObject.getBoolean(name: String, default: Boolean?): Boolean? {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isBoolean) prim.asBoolean
-                else default
-            }
-            else -> default
-        }
-    }
-
-    private fun parseColorString(colorStr: String): Int {
-        return kotlin.runCatching {
-            android.graphics.Color.parseColor(colorStr)
-        }.getOrDefault(0)
     }
 }

@@ -46,28 +46,28 @@ fun GlassMediumFlexibleTopAppBar(
     val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
 
     val containerColor = if (!isMiuix) {
-        if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             GlassTopAppBarDefaults.containerColor()
         }
     } else {
-        if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             GlassTopAppBarDefaults.getMiuixAppBarColor()
         }
     }
 
     val scrolledColor = if (!isMiuix) {
-        if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             GlassTopAppBarDefaults.scrolledContainerColor()
         }
     } else {
-        if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             GlassTopAppBarDefaults.getMiuixAppBarColor()
         }
@@ -169,8 +169,8 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun getMiuixAppBarColor(): Color {
-        val baseColor = if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        val baseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             MiuixTheme.colorScheme.surface
         }
@@ -197,8 +197,8 @@ object GlassTopAppBarDefaults {
     @Composable
     fun glassColors(): TopAppBarColors {
 
-        val containerBaseColor = if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        val containerBaseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             MaterialTheme.colorScheme.surface
         }
@@ -207,8 +207,8 @@ object GlassTopAppBarDefaults {
             blurAlpha = GlassDefaults.TransparentAlpha
         )
 
-        val scrolledBaseColor = if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        val scrolledBaseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }
@@ -226,8 +226,8 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun containerColor(): Color {
-        val baseColor = if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        val baseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             MaterialTheme.colorScheme.surface
         }
@@ -240,8 +240,8 @@ object GlassTopAppBarDefaults {
 
     @Composable
     fun scrolledContainerColor(): Color {
-        val baseColor = if (ThemeConfig.cMD3Secondary != 0) {
-            Color(ThemeConfig.cMD3Secondary)
+        val baseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
         } else {
             MaterialTheme.colorScheme.surfaceContainer
         }

@@ -38,6 +38,7 @@
     <string name="predictive_back_summary">Enable system predictive back gestures</string>
     <string name="restart_to_apply">Restart to apply</string>
     <string name="custom_theme">Custom Theme</string>
+    <string name="appearance_setting">外观设置</string>
     <string name="click_to_select">Click to select</string>
     <string name="compose_related">Compose Related</string>
     <string name="use_flexible_top_bar">Use Flexible App Top Bar</string>

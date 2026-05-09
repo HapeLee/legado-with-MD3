@@ -181,7 +181,7 @@ fun BookInfoEditContent(
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        val bookInfoInputColor = ThemeConfig.cBookInfoInputColor
+        val bookInfoInputColor = ThemeConfig.bookInfoInputColor
         val inputBackgroundColor = if (bookInfoInputColor != 0) {
             Color(bookInfoInputColor)
         } else {
@@ -252,7 +252,7 @@ fun BookTypeDropdown(
         textFieldState.setTextAndPlaceCursorAtEnd(selectedType)
     }
 
-    val bookInfoInputColor = ThemeConfig.cBookInfoInputColor
+    val bookInfoInputColor = ThemeConfig.bookInfoInputColor
     val inputBackgroundColor = if (bookInfoInputColor != 0) {
         Color(bookInfoInputColor)
     } else {

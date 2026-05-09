@@ -155,8 +155,8 @@ fun MainScreen(
     }
 
     val hazeState = remember { HazeState() }
-    val floatingBarSurfaceColor = if (ThemeConfig.cMD3Secondary != 0) {
-        Color(ThemeConfig.cMD3Secondary)
+    val floatingBarSurfaceColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
     } else {
         MaterialTheme.colorScheme.surface
     }

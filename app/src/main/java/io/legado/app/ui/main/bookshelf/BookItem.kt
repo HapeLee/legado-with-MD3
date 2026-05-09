@@ -89,8 +89,8 @@ fun BookshelfItem(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
-    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.cMD3Secondary != 0) {
-        Color(ThemeConfig.cMD3Secondary)
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
     } else {
         LegadoTheme.colorScheme.cardContainer
     }

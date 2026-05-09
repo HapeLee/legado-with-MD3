@@ -82,120 +82,41 @@ object ThemeConfig {
             postEvent(EventBus.RECREATE, "")
         }
 
-    var cPrimary by prefDelegate(PreferKey.cPrimary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var cPrimary by prefDelegate(PreferKey.cPrimary, 0)
 
-    var cTopBarColor by prefDelegate(PreferKey.cTopBarColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var enableDeepPersonalization by prefDelegate(PreferKey.enableDeepPersonalization, false)
 
-    var cNavBarColor by prefDelegate(PreferKey.cNavBarColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var themeColor by prefDelegate(PreferKey.themeColor, 0)
 
-    var cFontColor by prefDelegate(PreferKey.cFontColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var secondaryThemeColor by prefDelegate(PreferKey.secondaryThemeColor, 0)
 
-    var cBgColor by prefDelegate(PreferKey.cBgColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var primaryTextColor by prefDelegate(PreferKey.primaryTextColor, 0)
 
-    var enableDeepPersonalization by prefDelegate(PreferKey.enableDeepPersonalization, false) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var secondaryTextColor by prefDelegate(PreferKey.secondaryTextColor, 0)
 
-    // Material Design 3 color roles
-    var cMD3Primary by prefDelegate(PreferKey.cMD3Primary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3OnPrimary by prefDelegate(PreferKey.cMD3OnPrimary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3PrimaryContainer by prefDelegate(PreferKey.cMD3PrimaryContainer, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3OnPrimaryContainer by prefDelegate(PreferKey.cMD3OnPrimaryContainer, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Secondary by prefDelegate(PreferKey.cMD3Secondary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3OnSecondary by prefDelegate(PreferKey.cMD3OnSecondary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3SecondaryContainer by prefDelegate(PreferKey.cMD3SecondaryContainer, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3OnSecondaryContainer by prefDelegate(PreferKey.cMD3OnSecondaryContainer, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Tertiary by prefDelegate(PreferKey.cMD3Tertiary, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Error by prefDelegate(PreferKey.cMD3Error, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Surface by prefDelegate(PreferKey.cMD3Surface, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3OnSurface by prefDelegate(PreferKey.cMD3OnSurface, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Background by prefDelegate(PreferKey.cMD3Background, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3Outline by prefDelegate(PreferKey.cMD3Outline, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3SurfaceContainerLow by prefDelegate(PreferKey.cMD3SurfaceContainerLow, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-    var cMD3SurfaceVariant by prefDelegate(PreferKey.cMD3SurfaceVariant, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var themeBackgroundColor by prefDelegate(PreferKey.themeBackgroundColor, 0)
 
-    var enableContainerBorder by prefDelegate(PreferKey.enableContainerBorder, false) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var labelContainerColor by prefDelegate(PreferKey.labelContainerColor, 0)
 
-    var containerBorderWidth by prefDelegate(PreferKey.containerBorderWidth, 1f) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var enableContainerBorder by prefDelegate(PreferKey.enableContainerBorder, false)
 
-    var containerBorderStyle by prefDelegate(PreferKey.containerBorderStyle, "solid") {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var containerBorderWidth by prefDelegate(PreferKey.containerBorderWidth, 1f)
 
-    var containerBorderColor by prefDelegate(PreferKey.containerBorderColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var containerBorderStyle by prefDelegate(PreferKey.containerBorderStyle, "solid")
 
-    var containerBorderDashWidth by prefDelegate(PreferKey.containerBorderDashWidth, 4f) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var containerBorderColor by prefDelegate(PreferKey.containerBorderColor, 0)
+
+    var containerBorderDashWidth by prefDelegate(PreferKey.containerBorderDashWidth, 4f)
 
     // 中间单线间隔设置
-    var enableItemDivider by prefDelegate(PreferKey.enableItemDivider, true) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var enableItemDivider by prefDelegate(PreferKey.enableItemDivider, false)
 
-    var itemDividerWidth by prefDelegate(PreferKey.itemDividerWidth, 1f) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var itemDividerWidth by prefDelegate(PreferKey.itemDividerWidth, 1f)
 
-    var itemDividerLength by prefDelegate(PreferKey.itemDividerLength, 80f) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var itemDividerLength by prefDelegate(PreferKey.itemDividerLength, 80f)
+    var itemDividerColor by prefDelegate(PreferKey.itemDividerColor, 0)
 
-    var itemDividerColor by prefDelegate(PreferKey.itemDividerColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
-
-    var cBookInfoInputColor by prefDelegate(PreferKey.cBookInfoInputColor, 0) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var bookInfoInputColor by prefDelegate(PreferKey.bookInfoInputColor, 0)
 
     var cNPrimary by prefDelegate(PreferKey.cNPrimary, 0) {
         postEvent(EventBus.RECREATE, "")
