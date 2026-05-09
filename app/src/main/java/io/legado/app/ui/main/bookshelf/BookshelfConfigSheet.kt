@@ -258,21 +258,20 @@ fun BookshelfConfigSheet(
                     steps = 10,
                     onValueChange = { BookshelfConfig.bookshelfIntroMaxLines = it.toInt() }
                 )
-            }
-
-            CompactSwitchSettingItem(
-                title = "自定义标签颜色",
-                checked = ThemeConfig.enableCustomTagColors,
-                color = MaterialTheme.colorScheme.surface,
-                onCheckedChange = { ThemeConfig.enableCustomTagColors = it }
-            )
-
-            AnimatedVisibility(visible = ThemeConfig.enableCustomTagColors) {
-                CompactClickableSettingItem(
-                    title = "管理标签颜色",
+                CompactSwitchSettingItem(
+                    title = "自定义标签颜色",
+                    checked = ThemeConfig.enableCustomTagColors,
                     color = MaterialTheme.colorScheme.surface,
-                    onClick = { showLabelColorManage = true }
+                    onCheckedChange = { ThemeConfig.enableCustomTagColors = it }
                 )
+
+                AnimatedVisibility(visible = ThemeConfig.enableCustomTagColors) {
+                    CompactClickableSettingItem(
+                        title = "管理标签颜色",
+                        color = MaterialTheme.colorScheme.surface,
+                        onClick = { showLabelColorManage = true }
+                    )
+                }
             }
 
             CompactSwitchSettingItem(
