@@ -9,8 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.LocalSplicedColumnGroupState
-import io.legado.app.ui.widget.components.divider.SettingItemDivider
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 
@@ -26,13 +25,7 @@ fun ClickableSettingItem(
     onClick: () -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val groupState = LocalSplicedColumnGroupState.current
-    val showDivider = groupState.enableItemDivider && groupState.currentIndex() > 0
-
-    if (showDivider) {
-        SettingItemDivider()
-    }
-    groupState.incrementIndex()
+    SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         ArrowPreference(

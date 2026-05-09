@@ -115,6 +115,15 @@ fun SplicedColumnGroup(
 }
 
 @Composable
+fun SplicedColumnDivider() {
+    val groupState = LocalSplicedColumnGroupState.current
+    if (groupState.enableItemDivider && groupState.currentIndex() > 0) {
+        SettingItemDivider()
+    }
+    groupState.incrementIndex()
+}
+
+@Composable
 fun SettingItemWithDivider(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit

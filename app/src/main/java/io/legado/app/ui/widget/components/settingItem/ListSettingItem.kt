@@ -10,8 +10,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.widget.components.LocalSplicedColumnGroupState
-import io.legado.app.ui.widget.components.divider.SettingItemDivider
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.SpinnerEntry
 import top.yukonga.miuix.kmp.preference.OverlaySpinnerPreference
@@ -27,13 +26,7 @@ fun DropdownListSettingItem(
     onValueChange: (String) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
-    val groupState = LocalSplicedColumnGroupState.current
-    val showDivider = groupState.enableItemDivider && groupState.currentIndex() > 0
-
-    if (showDivider) {
-        SettingItemDivider()
-    }
-    groupState.incrementIndex()
+    SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
