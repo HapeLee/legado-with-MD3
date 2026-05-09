@@ -623,7 +623,6 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     }
 
                     DisposableEffect(lifecycleOwner, searchViewModel) {
-                        searchViewModel.onIntent(SearchIntent.ResumeEngine)
                         val observer = LifecycleEventObserver { _, event ->
                             when (event) {
                                 Lifecycle.Event.ON_RESUME -> {
@@ -640,7 +639,6 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                         lifecycleOwner.lifecycle.addObserver(observer)
                         onDispose {
                             lifecycleOwner.lifecycle.removeObserver(observer)
-                            searchViewModel.onIntent(SearchIntent.PauseEngine)
                         }
                     }
 
