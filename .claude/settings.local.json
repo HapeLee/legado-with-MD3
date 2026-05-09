@@ -35,7 +35,15 @@
       "Bash(Select-Object -Last 30)",
       "Bash(./gradlew.bat :app:compileAppDebugKotlin)",
       "Bash(git add *)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1)",
+      "WebFetch(domain:cs.android.com)",
+      "WebFetch(domain:github.com)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\Android\\\\.gradle\\\\caches\\\\modules-2\\\\files-2.1\\\\androidx.navigation3\\\\navigation3-runtime-android\\\\1.0.1\" -Recurse | ForEach-Object { $_.FullName + \" \\(\" + $_.Length + \" bytes\\)\" })",
+      "Bash(jar tf *)",
+      "Read(//d/tmp/**)",
+      "Bash(jar xf *)"
     ]
   }
 }

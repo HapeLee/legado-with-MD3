@@ -702,7 +702,18 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     )
                 }
 
-                entry<MainRouteBookInfo> { route ->
+                entry<MainRouteBookInfo>(
+                    metadata = NavDisplay.transitionSpec {
+                        fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(300))
+                    } + NavDisplay.popTransitionSpec {
+                        fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(300))
+                    } + NavDisplay.predictivePopTransitionSpec { _ ->
+                        fadeIn(animationSpec = tween(300)) togetherWith
+                            fadeOut(animationSpec = tween(300))
+                    }
+                ) { route ->
                     val bookInfoViewModel = koinViewModel<BookInfoViewModel>()
                     BookInfoRouteScreen(
                         bookUrl = route.bookUrl,
