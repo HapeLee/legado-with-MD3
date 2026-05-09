@@ -9,6 +9,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import io.legado.app.utils.FileUtils
+import io.legado.app.utils.getString
 import splitties.init.appCtx
 import java.io.File
 import java.lang.reflect.Type
@@ -140,15 +141,4 @@ class ConfigSerializer : JsonSerializer<PersonalizationThemeConfig.Config>,
         )
     }
 
-    private fun JsonObject.getString(name: String, default: String?): String? {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isString || prim.isNumber) prim.asString else default
-            }
-            else -> default
-        }
-    }
 }

@@ -1,6 +1,5 @@
 package io.legado.app.ui.config.personalizationConfig
 
-import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -35,9 +34,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.res.ResourcesCompat
-import androidx.documentfile.provider.DocumentFile
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
+import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -46,10 +45,8 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.listFileDocs
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.takePersistablePermissionSafely
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,34 +183,3 @@ fun FontItem(fontDoc: FileDoc, onFontSelected: (FileDoc) -> Unit) {
     }
 }
 
-private fun loadFontFiles(context: Context, folderUri: Uri?): List<FileDoc> {
-    val fontRegex = Regex("(?i).*\\.[ot]tf")
-    
-    if (folderUri != null) {
-        // 从选择的文件夹加载字体文件
-        val documentFile = DocumentFile.fromTreeUri(context, folderUri)
-        val fontFiles = mutableListOf<FileDoc>()
-        
-        documentFile?.listFiles()?.forEach { docFile ->
-            if (docFile.isFile && docFile.name?.matches(fontRegex) == true) {
-                // 创建FileDoc对象
-                val fileDoc = FileDoc(
-                    name = docFile.name ?: "",
-                    isDir = false,
-                    size = docFile.length(),
-                    lastModified = docFile.lastModified(),
-                    uri = docFile.uri
-                )
-                fontFiles.add(fileDoc)
-            }
-        }
-        
-        return fontFiles
-    } else {
-        // 使用默认的字体路径
-        val fontPath = "${context.getExternalFilesDir(null)?.absolutePath}/font"
-        return File(fontPath).listFileDocs {
-            it.name.matches(fontRegex)
-        }
-    }
-}

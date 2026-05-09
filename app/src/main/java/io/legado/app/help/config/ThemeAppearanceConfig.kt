@@ -5,6 +5,9 @@ import com.google.gson.JsonObject
 import io.legado.app.ui.config.themeConfig.TagColorPair
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.GSON
+import io.legado.app.utils.getBoolean
+import io.legado.app.utils.getFloat
+import io.legado.app.utils.getString
 import androidx.core.graphics.toColorInt
 
 data class ThemeAppearanceConfig(
@@ -230,18 +233,6 @@ object ThemeAppearanceJson {
 
     fun colorToHex(color: Int): String = "#${String.format("%08X", color)}"
 
-    private fun JsonObject.getString(name: String, default: String?): String? {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isString || prim.isNumber) prim.asString else default
-            }
-            else -> default
-        }
-    }
-
     private fun JsonObject.getInt(name: String, default: Int): Int {
         val elem = get(name)
         return when {
@@ -253,30 +244,6 @@ object ThemeAppearanceJson {
                     prim.isString -> parseColorString(prim.asString)
                     else -> default
                 }
-            }
-            else -> default
-        }
-    }
-
-    private fun JsonObject.getFloat(name: String, default: Float): Float {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isNumber) prim.asNumber.toFloat() else default
-            }
-            else -> default
-        }
-    }
-
-    private fun JsonObject.getBoolean(name: String, default: Boolean): Boolean {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isBoolean) prim.asBoolean else default
             }
             else -> default
         }

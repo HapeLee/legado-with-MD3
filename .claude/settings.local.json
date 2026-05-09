@@ -27,7 +27,14 @@
       "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 30)",
       "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 15)",
       "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 10)",
-      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 8)"
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 8)",
+      "Bash(Get-ChildItem \"app/src/main/java/io/legado/app/ui/main/bookshelf/\" -Name)",
+      "Bash(Sort-Object)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(Select-Object -Last 30)",
+      "Bash(./gradlew.bat :app:compileAppDebugKotlin)",
+      "Bash(git add *)"
     ]
   }
 }

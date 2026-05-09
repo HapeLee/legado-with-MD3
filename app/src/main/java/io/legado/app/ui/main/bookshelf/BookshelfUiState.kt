@@ -1,6 +1,7 @@
 package io.legado.app.ui.main.bookshelf
 
 import androidx.compose.runtime.Stable
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -13,7 +14,7 @@ import kotlinx.collections.immutable.persistentSetOf
 data class BookshelfGroupSelectorState(
     val groups: ImmutableList<BookGroupUi> = persistentListOf(),
     val selectedGroupIndex: Int = 0,
-    val selectedGroupId: Long = BookGroupUi.IdAll
+    val selectedGroupId: Long = BookGroup.IdAll
 )
 
 sealed interface BookshelfOverlay {
@@ -42,7 +43,7 @@ data class BookshelfUiState(
     val currentGroupBookCount: Int = 0,
     val allBooksCount: Int = 0,
     val selectedGroupIndex: Int = 0,
-    val selectedGroupId: Long = BookGroupUi.IdAll,
+    val selectedGroupId: Long = BookGroup.IdAll,
     val loadingText: String? = null,
     val upBooksCount: Int = 0,
     val updatingBooks: ImmutableSet<String> = persistentSetOf(),

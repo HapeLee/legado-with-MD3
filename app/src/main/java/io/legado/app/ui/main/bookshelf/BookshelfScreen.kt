@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.ui.about.AppLogSheet
+import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.main.bookCoverSharedElementKey
@@ -226,7 +227,7 @@ fun BookshelfScreen(
     }
 
     val currentTabGroupId =
-        uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroupUi.IdAll
+        uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroup.IdAll
     val searchGroupExists = uiState.allGroups.any { it.groupId == uiState.selectedGroupId }
     val currentGroupId = if (uiState.isSearch && searchGroupExists) {
         uiState.selectedGroupId
@@ -544,10 +545,10 @@ fun BookshelfScreen(
 
                                     if (uiState.isSearch) {
                                         val allGroup = uiState.allGroups.firstOrNull {
-                                            it.groupId == BookGroupUi.IdAll
+                                            it.groupId == BookGroup.IdAll
                                         }
                                         val hiddenGroups = uiState.allGroups.filter {
-                                            !it.show && it.groupId != BookGroupUi.IdAll
+                                            !it.show && it.groupId != BookGroup.IdAll
                                         }
 
                                         if (allGroup != null || hiddenGroups.isNotEmpty()) {

@@ -13,6 +13,9 @@ import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.FileUtils
+import io.legado.app.utils.getBoolean
+import io.legado.app.utils.getInt
+import io.legado.app.utils.getString
 import io.legado.app.utils.externalFiles
 import splitties.init.appCtx
 import java.io.File
@@ -402,39 +405,4 @@ class ThemePackSerializer : JsonSerializer<ThemePackConfig.ThemePack>,
         )
     }
 
-    private fun JsonObject.getString(name: String, default: String?): String? {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isString || prim.isNumber) prim.asString else default
-            }
-            else -> default
-        }
-    }
-
-    private fun JsonObject.getInt(name: String, default: Int): Int {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isNumber) prim.asNumber.toInt() else default
-            }
-            else -> default
-        }
-    }
-
-    private fun JsonObject.getBoolean(name: String, default: Boolean): Boolean {
-        val elem = get(name)
-        return when {
-            elem == null || elem.isJsonNull -> default
-            elem.isJsonPrimitive -> {
-                val prim = elem.asJsonPrimitive
-                if (prim.isBoolean) prim.asBoolean else default
-            }
-            else -> default
-        }
-    }
 }

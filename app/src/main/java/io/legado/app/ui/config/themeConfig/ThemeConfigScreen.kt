@@ -76,14 +76,13 @@ import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
-import androidx.documentfile.provider.DocumentFile
-import java.io.File
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.constant.EventBus
 import io.legado.app.help.LauncherIconHelp
+import io.legado.app.help.loadFontFiles
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.lib.theme.ThemeStore
@@ -109,7 +108,6 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.listFileDocs
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
@@ -1240,27 +1238,3 @@ private fun getThemeColors(
     )
 }
 
-private fun loadFontFiles(context: Context, folderUri: Uri?): List<FileDoc> {
-    val fontRegex = Regex("(?i).*\\.[ot]tf")
-    if (folderUri != null) {
-        val documentFile = DocumentFile.fromTreeUri(context, folderUri)
-        val fontFiles = mutableListOf<FileDoc>()
-        documentFile?.listFiles()?.forEach { docFile ->
-            if (docFile.isFile && docFile.name?.matches(fontRegex) == true) {
-                fontFiles.add(
-                    FileDoc(
-                        name = docFile.name ?: "",
-                        isDir = false,
-                        size = docFile.length(),
-                        lastModified = docFile.lastModified(),
-                        uri = docFile.uri
-                    )
-                )
-            }
-        }
-        return fontFiles
-    } else {
-        val fontPath = "${context.getExternalFilesDir(null)?.absolutePath}/font"
-        return File(fontPath).listFileDocs { it.name.matches(fontRegex) }
-    }
-}
