@@ -47,7 +47,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -395,7 +394,7 @@ fun BookGroupCover(
 
 @Composable
 fun BookGroupItemGrid(
-    group: BookGroup,
+    group: BookGroupUi,
     previewBooks: List<BookShelfItem>,
     countText: String? = null,
     gridStyle: Int = 0,
@@ -432,7 +431,7 @@ fun BookGroupItemGrid(
 
 @Composable
 fun BookGroupItemList(
-    group: BookGroup,
+    group: BookGroupUi,
     previewBooks: List<BookShelfItem>,
     countText: String? = null,
     isCompact: Boolean = false,

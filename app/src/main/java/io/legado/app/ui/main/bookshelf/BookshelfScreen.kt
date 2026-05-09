@@ -76,7 +76,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
-import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
@@ -212,17 +211,6 @@ fun BookshelfScreen(
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
 
-    LaunchedEffect(uiState.groups, uiState.isSearch) {
-        if (!uiState.isSearch && uiState.groups.isNotEmpty()) {
-            val savedGroupId = BookshelfConfig.saveTabPosition
-            val savedGroupIndex = uiState.groups.indexOfFirst { it.groupId == savedGroupId }
-            if (savedGroupIndex >= 0 && savedGroupIndex != pagerState.currentPage) {
-                viewModel.changeGroup(savedGroupId)
-                pagerState.scrollToPage(savedGroupIndex)
-            }
-        }
-    }
-
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
@@ -238,7 +226,7 @@ fun BookshelfScreen(
     }
 
     val currentTabGroupId =
-        uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroup.IdAll
+        uiState.groups.getOrNull(pagerState.currentPage)?.groupId ?: BookGroupUi.IdAll
     val searchGroupExists = uiState.allGroups.any { it.groupId == uiState.selectedGroupId }
     val currentGroupId = if (uiState.isSearch && searchGroupExists) {
         uiState.selectedGroupId
@@ -556,10 +544,10 @@ fun BookshelfScreen(
 
                                     if (uiState.isSearch) {
                                         val allGroup = uiState.allGroups.firstOrNull {
-                                            it.groupId == BookGroup.IdAll
+                                            it.groupId == BookGroupUi.IdAll
                                         }
                                         val hiddenGroups = uiState.allGroups.filter {
-                                            !it.show && it.groupId != BookGroup.IdAll
+                                            !it.show && it.groupId != BookGroupUi.IdAll
                                         }
 
                                         if (allGroup != null || hiddenGroups.isNotEmpty()) {
@@ -709,10 +697,6 @@ fun BookshelfScreen(
                             paddingValues = paddingValues,
                             books = uiState.items,
                             uiState = uiState,
-                            bookshelfLayoutMode = bookshelfLayoutMode,
-                            bookshelfLayoutGrid = bookshelfLayoutGrid,
-                            bookshelfLayoutList = bookshelfLayoutList,
-                            isEditMode = isEditMode,
                             selectedBookUrls = selectedBookUrls,
                             canReorderBooks = false,
                             onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
@@ -725,6 +709,7 @@ fun BookshelfScreen(
                             onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                             onBookClick = onBookClick,
                             onBookLongClick = onBookLongClick,
+                            isCurrentPage = true,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
                         )
@@ -732,17 +717,15 @@ fun BookshelfScreen(
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            beyondViewportPageCount = 1,
+                            beyondViewportPageCount = 2,
                             key = { if (it < uiState.groups.size) uiState.groups[it].groupId else it }
                         ) { pageIndex ->
                             val group = uiState.groups.getOrNull(pageIndex)
                             if (group != null) {
                                 val isSelectedGroup = group.groupId == uiState.selectedGroupId
-                                val books = if (isSelectedGroup) {
-                                    uiState.items
-                                } else {
-                                    emptyList()
-                                }
+                                val books = uiState.allGroupBooks[group.groupId]
+                                    ?: if (isSelectedGroup) uiState.items
+                                    else emptyList()
                                 val canReorderBooks = isEditMode &&
                                         !uiState.isSearch &&
                                         (group.bookSort.takeIf { it >= 0 }
@@ -752,10 +735,6 @@ fun BookshelfScreen(
                                     paddingValues = paddingValues,
                                     books = books,
                                     uiState = uiState,
-                                    bookshelfLayoutMode = bookshelfLayoutMode,
-                                    bookshelfLayoutGrid = bookshelfLayoutGrid,
-                                    bookshelfLayoutList = bookshelfLayoutList,
-                                    isEditMode = isEditMode,
                                     selectedBookUrls = selectedBookUrls,
                                     canReorderBooks = canReorderBooks,
                                     onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
@@ -788,6 +767,7 @@ fun BookshelfScreen(
                                     onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                                     onBookClick = onBookClick,
                                     onBookLongClick = onBookLongClick,
+                                    isCurrentPage = isSelectedGroup,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
                                 )
@@ -1022,10 +1002,6 @@ fun BookshelfPage(
     paddingValues: PaddingValues,
     books: List<BookShelfItem>,
     uiState: BookshelfUiState,
-    bookshelfLayoutMode: Int,
-    bookshelfLayoutGrid: Int,
-    bookshelfLayoutList: Int,
-    isEditMode: Boolean,
     selectedBookUrls: Set<String>,
     canReorderBooks: Boolean,
     onToggleBookSelection: (BookShelfItem) -> Unit,
@@ -1038,10 +1014,12 @@ fun BookshelfPage(
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit,
+    isCurrentPage: Boolean = true,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     if (books.isEmpty()) {
+        if (!isCurrentPage) return
         if (uiState.isSearch) {
             EmptyMessage(
                 modifier = Modifier
@@ -1068,6 +1046,14 @@ fun BookshelfPage(
         return
     }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val bookshelfLayoutMode =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutModeLandscape else BookshelfConfig.bookshelfLayoutModePortrait
+    val bookshelfLayoutGrid =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutGridLandscape else BookshelfConfig.bookshelfLayoutGridPortrait
+    val bookshelfLayoutList =
+        if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
     val columns = if (bookshelfLayoutMode == 0) bookshelfLayoutList else bookshelfLayoutGrid
     val isGridMode = bookshelfLayoutMode != 0
     val totalHorizontalPadding =
@@ -1148,7 +1134,7 @@ fun BookshelfPage(
                     animatedVisibilityScope = animatedVisibilityScope,
                     sharedCoverKey = bookCoverSharedElementKey(book.bookUrl),
                     onClick = {
-                        if (isEditMode) {
+                        if (uiState.isEditMode) {
                             onToggleBookSelection(book)
                         } else {
                             onBookClick(book)
@@ -1158,7 +1144,7 @@ fun BookshelfPage(
                         null
                     } else {
                         {
-                            if (isEditMode) {
+                            if (uiState.isEditMode) {
                                 onToggleBookSelection(book)
                             } else {
                                 onBookLongClick(book)

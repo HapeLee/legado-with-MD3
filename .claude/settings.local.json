@@ -14,7 +14,14 @@
       "Bash(cp -r \"D:/AndroidPrj/legado-with-MD3/.codex/skills/legado-compose-review/references\" \"D:/AndroidPrj/legado-with-MD3/.claude/skills/legado-compose-review/\")",
       "WebSearch",
       "Bash(./gradlew assembleAppDebug)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(./gradlew :app:compileAppDebugKotlin --no-daemon)",
+      "Bash(Select-Object -Last 50)",
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --no-daemon 2>&1 | Select-Object -Last 50)",
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 30)",
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 40)",
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 15)",
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 5)"
     ]
   }
 }

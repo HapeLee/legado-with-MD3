@@ -73,10 +73,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -158,10 +161,6 @@ class BookshelfViewModel(
     val allGroupsFlow: StateFlow<List<BookGroup>> = bookGroupRepository.flowAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val allBooksFlow = appDb.bookDao.flowBookShelf()
-        .distinctUntilChanged()
-        .flowOn(Dispatchers.Default)
-
     private data class GroupPreviewState(
         val previews: ImmutableMap<Long, ImmutableList<BookShelfItem>>,
         val counts: ImmutableMap<Long, Int>,
@@ -173,7 +172,7 @@ class BookshelfViewModel(
         groupIdFlow
     ) { groups, selectedGroupId ->
         BookshelfGroupSelectorState(
-            groups = groups.toImmutableList(),
+            groups = groups.map { it.toBookGroupUi() }.toImmutableList(),
             selectedGroupIndex = groups.indexOfFirst { it.groupId == selectedGroupId }
                 .coerceAtLeast(0),
             selectedGroupId = selectedGroupId
@@ -197,6 +196,25 @@ class BookshelfViewModel(
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val allGroupBooksFlow: StateFlow<Map<Long, List<BookShelfItem>>> = combine(
+        groupsFlow, sortConfigFlow
+    ) { groups, sortConfig ->
+        groups to sortConfig
+    }.flatMapLatest { (groups, sortConfig) ->
+        if (groups.isEmpty()) {
+            flowOf(emptyMap())
+        } else {
+            val flows = groups.map { group ->
+                appDb.bookDao.flowBookShelfByGroup(group.groupId).map { books ->
+                    group.groupId to sortBooks(books, group, sortConfig)
+                }
+            }
+            combine(flows) { it.toMap() }
+        }
+    }.flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     private val visibleBooksFlow = combine(
         booksFlow,
         searchKeyFlow,
@@ -213,15 +231,45 @@ class BookshelfViewModel(
         selectedBookUrls.intersect(visibleBookUrls)
     }.distinctUntilChanged()
 
-    private val groupPreviewsFlow =
-        combine(
-            groupsFlow,
-            allBooksFlow,
-            bookGroupStyleFlow,
-            sortConfigFlow
-        ) { groups, allBooks, bookGroupStyle, sortConfig ->
-            buildGroupPreviewState(groups, allBooks, bookGroupStyle, sortConfig)
-        }.distinctUntilChanged().flowOn(Dispatchers.Default)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val groupPreviewsFlow = combine(
+        groupsFlow,
+        bookGroupStyleFlow,
+        appDb.bookDao.flowSystemGroupCounts()
+    ) { groups, bookGroupStyle, systemCounts ->
+        Triple(groups, bookGroupStyle, systemCounts.associate { it.groupId to it.count })
+    }.flatMapLatest { (groups, bookGroupStyle, systemCountsMap) ->
+        if (bookGroupStyle !in 2..3) {
+            appDb.bookDao.flowAllBookShelfCount().map { count ->
+                GroupPreviewState(persistentMapOf(), persistentMapOf(), count)
+            }
+        } else if (groups.isEmpty()) {
+            flowOf(GroupPreviewState(persistentMapOf(), persistentMapOf(), 0))
+        } else {
+            val groupFlows = groups.map { group ->
+                val countFlow: Flow<Int> = if (group.groupId > 0) {
+                    appDb.bookDao.flowUserGroupBookCount(group.groupId)
+                } else {
+                    flowOf(systemCountsMap[group.groupId] ?: 0)
+                }
+                val previewFlow = appDb.bookDao.flowGroupPreview(group.groupId)
+                combine(countFlow, previewFlow) { count, preview ->
+                    Triple(group.groupId, count, preview)
+                }
+            }
+            combine(groupFlows) { results ->
+                var previews = persistentMapOf<Long, ImmutableList<BookShelfItem>>()
+                var counts = persistentMapOf<Long, Int>()
+                var allBookCount = 0
+                results.forEach { (groupId, count, preview) ->
+                    counts = counts.put(groupId, count)
+                    previews = previews.put(groupId, preview.toImmutableList())
+                    if (groupId == BookGroup.IdAll) allBookCount = count
+                }
+                GroupPreviewState(previews, counts, allBookCount)
+            }
+        }
+    }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
     private val coreInternalStateFlow = combine(
         groupIdFlow,
@@ -309,21 +357,42 @@ class BookshelfViewModel(
     }
 
     private val dataStateFlow = combine(
-        booksFlow,
-        groupsFlow,
-        allGroupsFlow,
-        groupPreviewsFlow,
-        internalStateFlow
-    ) { books, groups, allGroups, previews, internal ->
-        BookshelfDataState(books, groups, allGroups, previews, internal)
+        combine(
+            booksFlow,
+            groupsFlow,
+            allGroupsFlow,
+            groupPreviewsFlow,
+            internalStateFlow
+        ) { books, groups, allGroups, previews, internal ->
+            BookshelfDataCore(books, groups, allGroups, previews, internal)
+        },
+        allGroupBooksFlow
+    ) { core, allGroupBooks ->
+        BookshelfDataState(
+            books = core.books,
+            groups = core.groups.map { it.toBookGroupUi() },
+            allGroups = core.allGroups.map { it.toBookGroupUi() },
+            previews = core.previews,
+            internal = core.internal,
+            allGroupBooks = allGroupBooks
+        )
     }
 
-    private data class BookshelfDataState(
+    private data class BookshelfDataCore(
         val books: List<BookShelfItem>,
         val groups: List<BookGroup>,
         val allGroups: List<BookGroup>,
         val previews: GroupPreviewState,
         val internal: InternalState
+    )
+
+    private data class BookshelfDataState(
+        val books: List<BookShelfItem>,
+        val groups: List<BookGroupUi>,
+        val allGroups: List<BookGroupUi>,
+        val previews: GroupPreviewState,
+        val internal: InternalState,
+        val allGroupBooks: Map<Long, List<BookShelfItem>>
     )
 
     val uiState: StateFlow<BookshelfUiState> = combine(
@@ -383,7 +452,8 @@ class BookshelfViewModel(
             },
             currentGroupName = currentGroupName,
             draggingBooks = interaction.draggingBooks?.toImmutableList(),
-            pendingSavedBooks = interaction.pendingSavedBooks?.toImmutableList()
+            pendingSavedBooks = interaction.pendingSavedBooks?.toImmutableList(),
+            allGroupBooks = data.allGroupBooks.mapValues { it.value.toImmutableList() }.toImmutableMap()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BookshelfUiState())
 
@@ -493,93 +563,6 @@ class BookshelfViewModel(
             upBooksCount > 0 -> "$baseTitle ($upBooksCount)"
             else -> baseTitle
         }
-    }
-
-    private fun buildGroupPreviewState(
-        groups: List<BookGroup>,
-        allBooks: List<BookShelfItem>,
-        bookGroupStyle: Int,
-        sortConfig: BookshelfSortConfig
-    ): GroupPreviewState {
-        if (bookGroupStyle !in 2..3) {
-            return GroupPreviewState(persistentMapOf(), persistentMapOf(), allBooks.size)
-        }
-
-        val buckets = HashMap<Long, MutableList<BookShelfItem>>(groups.size)
-        groups.forEach { group ->
-            buckets[group.groupId] = ArrayList()
-        }
-
-        val userGroups = groups.filter { it.groupId > 0 }
-        val sumUserGroupIds = userGroups.sumOf { it.groupId }
-
-        fun add(groupId: Long, book: BookShelfItem) {
-            buckets[groupId]?.add(book)
-        }
-
-        allBooks.forEach { book ->
-            add(BookGroup.IdAll, book)
-            if (book.isRootGroupBook(sumUserGroupIds)) add(BookGroup.IdRoot, book)
-            if (book.isLocal) add(BookGroup.IdLocal, book)
-            if (book.isAudio) add(BookGroup.IdAudio, book)
-            if (book.isNetNoneGroupBook(sumUserGroupIds)) add(BookGroup.IdNetNone, book)
-            if (book.isLocalNoneGroupBook(sumUserGroupIds)) add(BookGroup.IdLocalNone, book)
-            if (book.isImage) add(BookGroup.IdManga, book)
-            if ((book.type and BookType.text) > 0) add(BookGroup.IdText, book)
-            if ((book.type and BookType.updateError) > 0) add(BookGroup.IdError, book)
-            if (book.durChapterIndex == 0 && book.durChapterPos == 0) {
-                add(BookGroup.IdUnread, book)
-            }
-            if (book.totalChapterNum > 0 &&
-                book.durChapterIndex > 0 &&
-                book.durChapterIndex < book.totalChapterNum - 1
-            ) {
-                add(BookGroup.IdReading, book)
-            }
-            if (book.totalChapterNum > 0 && book.durChapterIndex >= book.totalChapterNum - 1) {
-                add(BookGroup.IdReadFinished, book)
-            }
-            userGroups.forEach { group ->
-                if ((book.group and group.groupId) != 0L) {
-                    add(group.groupId, book)
-                }
-            }
-        }
-
-        val previews = HashMap<Long, ImmutableList<BookShelfItem>>(groups.size)
-        val counts = HashMap<Long, Int>(groups.size)
-        groups.forEach { group ->
-            val groupBooks = buckets[group.groupId].orEmpty()
-            counts[group.groupId] = groupBooks.size
-            previews[group.groupId] = buildGroupPreview(sortBooks(groupBooks, group, sortConfig))
-        }
-        return GroupPreviewState(previews.toImmutableMap(), counts.toImmutableMap(), allBooks.size)
-    }
-
-    private fun BookShelfItem.isRootGroupBook(sumUserGroupIds: Long): Boolean {
-        return (type and BookType.text) > 0 &&
-                (type and BookType.local) == 0 &&
-                (sumUserGroupIds and group) == 0L
-    }
-
-    private fun BookShelfItem.isNetNoneGroupBook(sumUserGroupIds: Long): Boolean {
-        return (type and BookType.audio) == 0 &&
-                (type and BookType.local) == 0 &&
-                (sumUserGroupIds and group) == 0L
-    }
-
-    private fun BookShelfItem.isLocalNoneGroupBook(sumUserGroupIds: Long): Boolean {
-        return (type and BookType.local) > 0 &&
-                (sumUserGroupIds and group) == 0L
-    }
-
-    private fun buildGroupPreview(sortedBooks: List<BookShelfItem>): ImmutableList<BookShelfItem> {
-        val booksWithCover = sortedBooks.filter { it.getDisplayCover() != null }
-        return if (booksWithCover.size >= 4) {
-            booksWithCover.take(4)
-        } else {
-            (booksWithCover + sortedBooks.filter { it.getDisplayCover() == null }).take(4)
-        }.toImmutableList()
     }
 
     fun changeGroup(groupId: Long) {
