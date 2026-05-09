@@ -21,7 +21,13 @@
       "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 30)",
       "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 40)",
       "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 15)",
-      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 5)"
+      "PowerShell(./gradlew :app:compileAppDebugKotlin --rerun-tasks 2>&1 | Select-Object -Last 5)",
+      "Bash(./gradlew assembleAppNoR8)",
+      "Bash(.\\\\gradlew.bat :app:compileAppDebugKotlin)",
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 30)",
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 15)",
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 10)",
+      "PowerShell(.\\\\gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 8)"
     ]
   }
 }

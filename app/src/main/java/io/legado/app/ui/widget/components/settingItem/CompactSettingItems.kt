@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +33,8 @@ import io.legado.app.ui.widget.components.ValueStepper
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
+import top.yukonga.miuix.kmp.preference.ArrowPreference
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
@@ -248,6 +251,41 @@ fun CompactSwitchSettingItem(
                     enabled = enabled
                 )
             }
+        )
+    }
+}
+
+@Composable
+fun CompactClickableSettingItem(
+    title: String,
+    description: String? = null,
+    imageVector: ImageVector? = null,
+    color: Color? = MaterialTheme.colorScheme.surface,
+    shape: Shape = MaterialTheme.shapes.small,
+    onClick: () -> Unit
+) {
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        ArrowPreference(
+            title = title,
+            summary = description,
+            insideMargin = BasicComponentDefaults.InsideMargin,
+            onClick = onClick
+        )
+    } else {
+        SettingItem(
+            title = title,
+            description = description,
+            imageVector = imageVector,
+            color = color,
+            shape = shape,
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            onClick = onClick
         )
     }
 }

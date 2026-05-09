@@ -40,6 +40,9 @@ Transform tasks into verifiable goals:
 ## Build / Test / Run
 
 ```bash
+# Quick compile check (Kotlin only, no dex/package — fastest for verifying code compiles)
+.\gradlew.bat :app:compileAppDebugKotlin
+
 # Assemble all variants
 ./gradlew assembleAppRelease
 

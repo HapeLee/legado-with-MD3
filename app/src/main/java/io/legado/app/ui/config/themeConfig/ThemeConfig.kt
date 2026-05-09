@@ -108,7 +108,6 @@ object ThemeConfig {
 
     var containerBorderDashWidth by prefDelegate(PreferKey.containerBorderDashWidth, 4f)
 
-    // 中间单线间隔设置
     var enableItemDivider by prefDelegate(PreferKey.enableItemDivider, false)
 
     var itemDividerWidth by prefDelegate(PreferKey.itemDividerWidth, 1f)
@@ -128,15 +127,12 @@ object ThemeConfig {
 
     var launcherIcon by prefDelegate(PreferKey.launcherIcon, "ic_launcher")
 
-    var enableCustomTagColors by prefDelegate(PreferKey.enableCustomTagColors, false) {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var enableCustomTagColors by prefDelegate(PreferKey.enableCustomTagColors, false)
 
     var customTagColorsJson: String?
         get() = appCtx.getPrefString(PreferKey.customTagColors)
         set(value) {
             appCtx.putPrefString(PreferKey.customTagColors, value)
-            postEvent(EventBus.RECREATE, "")
         }
 
     fun getCustomTagColors(): List<TagColorPair> {
