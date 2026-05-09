@@ -202,6 +202,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                     ReadBook.moveToNextPage()
                 }
                 upTtsProgress(readAloudNumber + 1)
+                upMediaMetadata(showContent = true)
             }
         }
 
