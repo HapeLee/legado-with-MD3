@@ -472,7 +472,7 @@ abstract class BaseReadAloudService : BaseService(),
      * @param showContent 是否显示当前朗读内容作为歌词
      */
     internal fun upMediaMetadata(showContent: Boolean = false) {
-        val currentContent = if (showContent && nowSpeak < contentList.size) {
+        val currentContent = if (showContent && nowSpeak in contentList.indices) {
             contentList[nowSpeak]
         } else {
             null
