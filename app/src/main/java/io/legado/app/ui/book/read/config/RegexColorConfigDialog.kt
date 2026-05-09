@@ -11,6 +11,7 @@ import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogRegexColorConfigBinding
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.RegexColorRule
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
@@ -150,13 +151,6 @@ class RegexColorConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_reg
         postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
     }
 }
-
-data class RegexColorRule(
-    var name: String,
-    var pattern: String,
-    var color: Int,
-    var fontPath: String = ""
-)
 
 class RegexColorRuleAdapter(
     private val onDeleteClick: ((Int) -> Unit)? = null,

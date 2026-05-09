@@ -34,7 +34,8 @@
       "Bash(git commit *)",
       "Bash(Select-Object -Last 30)",
       "Bash(./gradlew.bat :app:compileAppDebugKotlin)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git mv *)"
     ]
   }
 }

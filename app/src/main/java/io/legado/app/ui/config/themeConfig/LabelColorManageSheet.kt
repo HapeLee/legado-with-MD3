@@ -26,7 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
-import io.legado.app.help.TagColorGenerator
+import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
 import io.legado.app.ui.widget.components.button.SmallIconButton

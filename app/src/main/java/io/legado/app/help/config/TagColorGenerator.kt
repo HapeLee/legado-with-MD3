@@ -1,4 +1,4 @@
-package io.legado.app.help
+package io.legado.app.help.config
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
