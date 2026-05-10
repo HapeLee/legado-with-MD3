@@ -57,6 +57,7 @@ class RssSourceEditActivity :
     }
     private val adapter by lazy { RssSourceEditAdapter() }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
+    private val startEntities: ArrayList<EditEntity> = ArrayList()
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
@@ -156,6 +157,8 @@ class RssSourceEditActivity :
                 ErrorCorrectionLevel.L
             )
 
+            R.id.menu_log -> showDialogFragment<io.legado.app.ui.about.AppLogDialog>()
+
             R.id.menu_help -> showHelp("ruleHelp")
         }
         return super.onCompatOptionsItemSelected(item)
@@ -164,6 +167,9 @@ class RssSourceEditActivity :
     private fun initView() {
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_base)
+        })
+        binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
+            setText(R.string.source_tab_start)
         })
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_list)
@@ -199,8 +205,9 @@ class RssSourceEditActivity :
 
     private fun setEditEntities(tabPosition: Int?) {
         when (tabPosition) {
-            1 -> adapter.editEntities = listEntities
-            2 -> adapter.editEntities = webViewEntities
+            1 -> adapter.editEntities = startEntities
+            2 -> adapter.editEntities = listEntities
+            3 -> adapter.editEntities = webViewEntities
             else -> adapter.editEntities = sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
@@ -212,6 +219,21 @@ class RssSourceEditActivity :
             binding.cbIsEnable.isChecked = rs.enabled
             binding.cbSingleUrl.isChecked = rs.singleUrl
             binding.cbIsEnableCookie.isChecked = rs.enabledCookieJar == true
+            binding.cbIsEnablePreload.isChecked = rs.preload
+            val typeCount = binding.spType.adapter?.count ?: 0
+            if (typeCount > 0 && rs.type !in 0..<typeCount) {
+                rs.type = 0
+            }
+            if (typeCount > 0) {
+                binding.spType.setSelection(rs.type)
+            }
+            val styleCount = binding.lyType.adapter?.count ?: 0
+            if (styleCount > 0 && rs.articleStyle !in 0..<styleCount) {
+                rs.articleStyle = 0
+            }
+            if (styleCount > 0) {
+                binding.lyType.setSelection(rs.articleStyle)
+            }
         }
         sourceEntities.clear()
         sourceEntities.apply {
@@ -220,6 +242,7 @@ class RssSourceEditActivity :
             add(EditEntity("sourceIcon", rs.sourceIcon, R.string.source_icon))
             add(EditEntity("sourceGroup", rs.sourceGroup, R.string.source_group))
             add(EditEntity("sourceComment", rs.sourceComment, R.string.comment))
+            add(EditEntity("searchUrl", rs.searchUrl, R.string.r_search_url))
             add(EditEntity("sortUrl", rs.sortUrl, R.string.sort_url))
             add(EditEntity("loginUrl", rs.loginUrl, R.string.login_url))
             add(EditEntity("loginUi", rs.loginUi, R.string.login_ui))
@@ -229,6 +252,13 @@ class RssSourceEditActivity :
             add(EditEntity("variableComment", rs.variableComment, R.string.variable_comment))
             add(EditEntity("concurrentRate", rs.concurrentRate, R.string.concurrent_rate))
             add(EditEntity("jsLib", rs.jsLib, "jsLib"))
+        }
+        startEntities.clear()
+        startEntities.apply {
+            add(EditEntity("startHtml", rs.startHtml, R.string.r_startHtml))
+            add(EditEntity("startStyle", rs.startStyle, R.string.r_startStyle))
+            add(EditEntity("startJs", rs.startJs, R.string.r_startJs))
+            add(EditEntity("preloadJs", rs.preloadJs, R.string.r_preloadJs))
         }
         listEntities.clear()
         listEntities.apply {
@@ -258,6 +288,22 @@ class RssSourceEditActivity :
                     EditEntity.ViewType.checkBox
                 )
             )
+            add(
+                EditEntity(
+                    "showWebLog",
+                    rs.showWebLog.toString(),
+                    R.string.load_with_web_log,
+                    EditEntity.ViewType.checkBox
+                )
+            )
+            add(
+                EditEntity(
+                    "cacheFirst",
+                    rs.cacheFirst.toString(),
+                    R.string.cache_first,
+                    EditEntity.ViewType.checkBox
+                )
+            )
             add(EditEntity("ruleContent", rs.ruleContent, R.string.r_content))
             add(EditEntity("style", rs.style, R.string.r_style))
             add(EditEntity("injectJs", rs.injectJs, R.string.r_inject_js))
@@ -280,6 +326,9 @@ class RssSourceEditActivity :
         source.enabled = binding.cbIsEnable.isChecked
         source.singleUrl = binding.cbSingleUrl.isChecked
         source.enabledCookieJar = binding.cbIsEnableCookie.isChecked
+        source.preload = binding.cbIsEnablePreload.isChecked
+        source.type = binding.spType.selectedItemPosition
+        source.articleStyle = binding.lyType.selectedItemPosition
         sourceEntities.forEach {
             it.value = it.value?.takeIf { s -> s.isNotBlank() }
             when (it.key) {
@@ -295,8 +344,18 @@ class RssSourceEditActivity :
                 "header" -> source.header = it.value
                 "variableComment" -> source.variableComment = it.value
                 "concurrentRate" -> source.concurrentRate = it.value
+                "searchUrl" -> source.searchUrl = it.value
                 "sortUrl" -> source.sortUrl = it.value
                 "jsLib" -> source.jsLib = it.value
+            }
+        }
+        startEntities.forEach {
+            it.value = it.value?.takeIf { s -> s.isNotBlank() }
+            when (it.key) {
+                "startHtml" -> source.startHtml = it.value
+                "startStyle" -> source.startStyle = it.value
+                "startJs" -> source.startJs = it.value
+                "preloadJs" -> source.preloadJs = it.value
             }
         }
         listEntities.forEach {
@@ -327,6 +386,8 @@ class RssSourceEditActivity :
             when (it.key) {
                 "enableJs" -> source.enableJs = it.value.isTrue()
                 "loadWithBaseUrl" -> source.loadWithBaseUrl = it.value.isTrue()
+                "showWebLog" -> source.showWebLog = it.value.isTrue()
+                "cacheFirst" -> source.cacheFirst = it.value.isTrue()
                 "ruleContent" -> source.ruleContent =
                     viewModel.ruleComplete(it.value, source.ruleArticles)
 

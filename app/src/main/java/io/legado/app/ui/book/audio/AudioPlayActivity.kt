@@ -25,10 +25,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.transition.TransitionManager
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.slider.Slider
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
+import android.graphics.Typeface
+import com.dirror.lyricviewx.OnPlayClickListener
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.BookType
@@ -43,6 +46,7 @@ import io.legado.app.databinding.ActivityAudioPlayBinding
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
 import io.legado.app.model.SourceCallBack
@@ -55,6 +59,7 @@ import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.ToolbarUtils.setAllIconsColor
 import io.legado.app.utils.applyNavigationBarPadding
+import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.observeEventSticky
@@ -96,6 +101,9 @@ class AudioPlayActivity :
     private var secondaryContainerFinalColor: Int = 0
     private var currentJob: Job? = null
     private var wrappedContext: Context? = null
+    private val lyricViewX by lazy { binding.lyricViewX }
+    private var lyricOn = false
+    private var oldLyric: String? = null
 
     private val progressTimeFormat by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -227,6 +235,21 @@ class AudioPlayActivity :
     }
 
     private fun initView() {
+        // 应用深度个性化中设置的字体
+        ThemeConfig.appFontPath?.let {
+            try {
+                val typeface = Typeface.createFromFile(it)
+                // 为所有文本控件设置字体
+                binding.tvTitle.typeface = typeface
+                binding.tvSubTitle.typeface = typeface
+                binding.tvDurTime.typeface = typeface
+                binding.tvAllTime.typeface = typeface
+                binding.tvSpeed.typeface = typeface
+                binding.tvTimer.typeface = typeface
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
         binding.ivTimer.isEnabled = false
         binding.ivFastForward.isEnabled = false
 
@@ -279,7 +302,10 @@ class AudioPlayActivity :
 
             override fun onStopTrackingTouch(slider: Slider) {
                 adjustProgress = false
-                AudioPlay.adjustProgress(slider.value.toInt())
+                val progress = slider.value.toInt()
+                AudioPlay.adjustProgress(progress)
+                // 更新歌词进度
+                upLyricP(progress)
             }
         })
 
@@ -503,6 +529,8 @@ class AudioPlayActivity :
                 binding.playerProgress.trackActiveTintList = ColorStateList.valueOf(color)
                 binding.tvDurTime.setTextColor(color)
                 binding.tvAllTime.setTextColor(color)
+                // 更新歌词高亮颜色
+                binding.lyricViewX.setCurrentColor(color)
             }
         }
 
@@ -671,6 +699,8 @@ class AudioPlayActivity :
             val safeValue = progress.toFloat().coerceIn(slider.valueFrom, slider.valueTo)
             if (!adjustProgress) slider.value = safeValue
             binding.tvDurTime.text = progressTimeFormat.format(progress.toLong())
+            // 更新歌词进度
+            upLyricP(progress)
         }
 
         observeEventSticky<Int>(EventBus.AUDIO_BUFFER_PROGRESS) {
@@ -700,6 +730,56 @@ class AudioPlayActivity :
         runOnUiThread {
             binding.progressLoading.visible(loading)
         }
+    }
+
+    override fun upLyric(lyric: String?) {
+        if (oldLyric == lyric) return
+        oldLyric = lyric
+        if (lyric.isNullOrBlank()) {
+            // 没有歌词时，显示标题区域，隐藏歌词
+            binding.lyricViewX.gone()
+            binding.llTitle.visible()
+            return
+        }
+        // 有歌词时，隐藏标题区域，显示歌词
+        binding.llTitle.gone()
+        // 先隐藏歌词视图，避免显示旧歌词
+        binding.lyricViewX.gone()
+        lyricViewX.loadLyric(lyric)
+        binding.lyricViewX.visible()
+        if (lyricOn) {
+            upLyricP(AudioPlay.durChapterPos)
+        } else {
+            lyricOn = true
+            lyricViewX.apply {
+                setNormalTextSize(50F)
+                setCurrentTextSize(60F)
+                // 加载深度个性化中设置的字体
+                ThemeConfig.appFontPath?.let {
+                    try {
+                        val typeface = Typeface.createFromFile(it)
+                        // LyricViewX 1.3.2 版本可能不支持 setTypeface 方法
+                        // 暂时注释掉，后续可以通过 XML 或其他方式设置
+                        // setTypeface(typeface)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+                setDraggable(true, object : OnPlayClickListener {
+                    override fun onPlayClick(time: Long): Boolean {
+                        AudioPlay.adjustProgress(time.toInt())
+                        return true
+                    }
+                })
+            }
+            lyricViewX.postDelayed({
+                upLyricP(AudioPlay.durChapterPos)
+            }, 100)
+        }
+    }
+
+    override fun upLyricP(position: Int) {
+        lyricViewX.updateTime(position.toLong(), false)
     }
 
     override fun addToBookshelf(book: Book, toc: List<BookChapter>) {

@@ -1,5 +1,8 @@
 package io.legado.app.ui.widget.components.cover
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,6 +17,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.card.TextCard
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookshelfCover(
     name: String?,
@@ -28,6 +32,9 @@ fun BookshelfCover(
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
     showLoadingPlaceholder: Boolean = true,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     Box(modifier = modifier) {
         CoilBookCover(
@@ -38,6 +45,9 @@ fun BookshelfCover(
             sourceOrigin = sourceOrigin,
             onLoadFinish = onLoadFinish,
             showLoadingPlaceholder = showLoadingPlaceholder,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey,
         )
 
         if (!badgeText.isNullOrEmpty()) {

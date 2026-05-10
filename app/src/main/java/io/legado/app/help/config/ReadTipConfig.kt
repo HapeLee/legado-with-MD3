@@ -85,10 +85,16 @@ object ReadTipConfig {
             ReadBookConfig.config.footerMode = value
         }
 
-    var tipColor: Int
-        get() = ReadBookConfig.config.tipColor
+    var tipHeaderColor: Int
+        get() = ReadBookConfig.config.tipHeaderColor
         set(value) {
-            ReadBookConfig.config.tipColor = value
+            ReadBookConfig.config.tipHeaderColor = value
+        }
+
+    var tipFooterColor: Int
+        get() = ReadBookConfig.config.tipFooterColor
+        set(value) {
+            ReadBookConfig.config.tipFooterColor = value
         }
 
     var tipDividerColor: Int

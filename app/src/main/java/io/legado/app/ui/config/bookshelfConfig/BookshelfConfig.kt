@@ -54,6 +54,16 @@ object BookshelfConfig {
     var showLastUpdateTime by prefDelegate(PreferKey.showLastUpdateTime, false)
 
     /**
+     * 是否在列表中显示书籍简介
+     */
+    var showBookIntro by prefDelegate(PreferKey.showBookIntro, false)
+
+    /**
+     * 列表模式下简介显示行数 (0为显示全部)
+     */
+    var bookshelfIntroMaxLines by prefDelegate(PreferKey.bookshelfIntroMaxLines, 0)
+
+    /**
      * 是否显示等待更新的书籍数量
      */
     var showWaitUpCount by prefDelegate(PreferKey.showWaitUpCount, false)

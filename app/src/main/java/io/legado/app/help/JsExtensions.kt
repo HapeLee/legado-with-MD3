@@ -1105,7 +1105,7 @@ interface JsExtensions : JsEncodeUtils {
      * 弹窗提示
      */
     fun toast(msg: Any?) {
-        rhinoContext.ensureActive()
+        rhinoContextOrNull?.ensureActive()
         appCtx.toastForJs("${getSource()?.getTag()}: ${msg.toString()}")
     }
 
@@ -1113,7 +1113,7 @@ interface JsExtensions : JsEncodeUtils {
      * 弹窗提示 停留时间较长
      */
     fun longToast(msg: Any?) {
-        rhinoContext.ensureActive()
+        rhinoContextOrNull?.ensureActive()
         appCtx.longToastForJs("${getSource()?.getTag()}: ${msg.toString()}")
     }
 

@@ -934,30 +934,49 @@ object ChapterProvider {
 
     @SuppressLint("UseKtx")
     private fun getPaints(typeface: Typeface?): Pair<TextPaint, TextPaint> {
+        val titleTypeface = runCatching {
+            val titleFontPath = ReadBookConfig.titleFont
+            when {
+                titleFontPath.isContentScheme() -> {
+                    appCtx.contentResolver
+                        .openFileDescriptor(titleFontPath.toUri(), "r")!!
+                        .use {
+                            Typeface.Builder(it.fileDescriptor).build()
+                        }
+                }
+                titleFontPath.isNotEmpty() -> {
+                    Typeface.Builder(File(titleFontPath)).build()
+                }
+                else -> typeface
+            }
+        }.getOrNull() ?: typeface
+
         val bold = Typeface.create(typeface, Typeface.BOLD)
         val normal = Typeface.create(typeface, Typeface.NORMAL)
-        val titleFont = when (ReadBookConfig.titleBold) {
+        val titleBoldTypeface = Typeface.create(titleTypeface, Typeface.BOLD)
+        val titleNormalTypeface = Typeface.create(titleTypeface, Typeface.NORMAL)
+        val titleFontTypeface = when (ReadBookConfig.titleBold) {
             1 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, 900, false)
+                Typeface.create(titleTypeface, 900, false)
             else
-                bold
+                titleBoldTypeface
 
             2 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, 300, false)
+                Typeface.create(titleTypeface, 300, false)
             else
-                normal
+                titleNormalTypeface
 
             0 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, 400, false)
+                Typeface.create(titleTypeface, 400, false)
             else
-                normal
+                titleNormalTypeface
 
             in 100..900 -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                Typeface.create(typeface, ReadBookConfig.titleBold, false)
+                Typeface.create(titleTypeface, ReadBookConfig.titleBold, false)
             else
-                normal
+                titleNormalTypeface
 
-            else -> normal
+            else -> titleNormalTypeface
         }
 
         val textFont = when (ReadBookConfig.textBold) {
@@ -989,7 +1008,7 @@ object ChapterProvider {
         val tPaint = TextPaint()
         tPaint.color = ReadBookConfig.textColor
         tPaint.letterSpacing = ReadBookConfig.letterSpacing
-        tPaint.typeface = titleFont
+        tPaint.typeface = titleFontTypeface
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ReadBookConfig.titleBold in 100..900)
             tPaint.setFontVariationSettings("'wght' ${ReadBookConfig.titleBold}")
         tPaint.textSize = with(ReadBookConfig) { textSize + titleSize }.toFloat().spToPx()

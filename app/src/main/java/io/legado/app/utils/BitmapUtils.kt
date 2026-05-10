@@ -47,6 +47,7 @@ object BitmapUtils {
             BitmapFactory.decodeFileDescriptor(fis.fd, null, op)
             op.inSampleSize = calculateInSampleSize(op, width, height)
             op.inJustDecodeBounds = false
+            op.inPreferredConfig = Config.ARGB_8888
             BitmapFactory.decodeFileDescriptor(fis.fd, null, op)
         }
     }

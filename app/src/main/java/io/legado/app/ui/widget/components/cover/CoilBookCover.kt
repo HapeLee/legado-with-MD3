@@ -6,11 +6,13 @@ import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.TextUtils
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -34,17 +37,15 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.card.NormalCard
-import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoilBookCover(
     name: String?,
@@ -55,6 +56,9 @@ fun CoilBookCover(
     onLoadFinish: (() -> Unit)? = null,
     ignoreUseDefaultCover: Boolean = false,
     showLoadingPlaceholder: Boolean = true,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
@@ -62,11 +66,7 @@ fun CoilBookCover(
     val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
     val finalPath = if (useDefault) null else path
 
-    val randomPath = remember(
-        name, author, path, isNight,
-        CoverConfig.defaultCover,
-        CoverConfig.defaultCoverDark
-    ) {
+    val randomPath = remember(name, author, path, isNight) {
         BookCoverModel.getRandomDefaultPath(
             seed = name ?: author ?: path ?: "",
             isNight = isNight
@@ -74,57 +74,46 @@ fun CoilBookCover(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-
     var isOnlineCoverLoaded by remember(path) { mutableStateOf(false) }
-    var isFinalPathLoaded by remember(path) { mutableStateOf(false) }
-    var isFinalPathLoadFinished by remember(path) { mutableStateOf(false) }
-    var isPlaceholderAllowed by remember(path, showLoadingPlaceholder) {
-        mutableStateOf(showLoadingPlaceholder)
-    }
-    LaunchedEffect(finalPath) {
-        isOnlineCoverLoaded = false
-        isFinalPathLoaded = false
-        isFinalPathLoadFinished = finalPath == null
-    }
-    LaunchedEffect(finalPath, showLoadingPlaceholder) {
-        if (showLoadingPlaceholder) {
-            isPlaceholderAllowed = true
-        } else {
-            isPlaceholderAllowed = false
-            delay(600)
-            isPlaceholderAllowed = true
-        }
-    }
 
-    NormalCard(
-        cornerRadius = 4.dp,
-        containerColor = if (!hasCustomDefault && !isOnlineCoverLoaded) {
-            LegadoTheme.colorScheme.surfaceContainerLow
-        } else
-            LegadoTheme.colorScheme.surfaceContainerLow.copy(alpha = 0f)
-    ){
-        BoxWithConstraints(
-            modifier = modifier
-                .aspectRatio(5f / 7f)
-                .then(
-                    if (CoverConfig.coverShowShadow) {
-                        Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
+    Box(
+        modifier = modifier
+            .then(
+                if (CoverConfig.coverShowShadow) {
+                    Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
+                } else Modifier
+            )
+            .background(
+                if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                    LegadoTheme.colorScheme.surfaceContainerLow
+                } else Color.Transparent,
+                RoundedCornerShape(4.dp)
+            )
+            .clip(RoundedCornerShape(4.dp))
+    ) {
+        val imageContentModifier = Modifier
+            .fillMaxSize()
+            .then(
+                with(sharedTransitionScope) {
+                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(sharedCoverKey),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            renderInOverlayDuringTransition = true
+                        )
                     } else Modifier
-                )
-        ) {
-            val density = LocalDensity.current
-            val iconSizeDp = with(density) {
-                (minOf(maxWidth, maxHeight).toPx() / 3f).toDp()
-            }
+                }
+            )
 
-            if (hasCustomDefault && !isFinalPathLoaded) {
+        Box(modifier = imageContentModifier) {
+            if (hasCustomDefault && !isOnlineCoverLoaded) {
                 AsyncImage(
                     model = buildCoverImageRequest(
                         context = context,
                         data = randomPath,
                         sourceOrigin = null,
                         loadOnlyWifi = false,
-                        crossfade = true,
+                        crossfade = showLoadingPlaceholder,
                     ),
                     contentDescription = null,
                     imageLoader = koinInject(),
@@ -140,7 +129,7 @@ fun CoilBookCover(
                         data = finalPath,
                         sourceOrigin = sourceOrigin,
                         loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                        crossfade = true,
+                        crossfade = showLoadingPlaceholder,
                     ),
                     contentDescription = null,
                     imageLoader = koinInject(),
@@ -148,13 +137,10 @@ fun CoilBookCover(
                     modifier = Modifier.fillMaxSize(),
                     onSuccess = {
                         isOnlineCoverLoaded = true
-                        isFinalPathLoaded = true
-                        isFinalPathLoadFinished = true
                         onLoadFinish?.invoke()
                     },
                     onError = {
                         isOnlineCoverLoaded = false
-                        isFinalPathLoadFinished = true
                         onLoadFinish?.invoke()
                     }
                 )
@@ -163,28 +149,24 @@ fun CoilBookCover(
                     onLoadFinish?.invoke()
                 }
             }
+        }
 
-            val showPlaceholder = isPlaceholderAllowed && (showLoadingPlaceholder || isFinalPathLoadFinished)
-
-            if (!hasCustomDefault && !isOnlineCoverLoaded && showPlaceholder) {
+        if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
+            if (!hasCustomDefault) {
                 Icon(
                     Icons.Default.Book,
                     contentDescription = null,
                     tint = LegadoTheme.colorScheme.secondary,
                     modifier = Modifier
-                        .size(iconSizeDp)
+                        .fillMaxSize(0.35f)
                         .align(Alignment.Center)
                 )
             }
-
-            if (!isOnlineCoverLoaded && showPlaceholder) {
-                CoverTextOverlay(
-                    name = name,
-                    author = author,
-                    isNight = isNight
-                )
-            }
-
+            CoverTextOverlay(
+                name = name,
+                author = author,
+                isNight = isNight
+            )
         }
     }
 }
@@ -196,8 +178,7 @@ private fun CoverTextOverlay(
     isNight: Boolean
 ) {
     val showName = if (isNight) CoverConfig.coverShowNameN else CoverConfig.coverShowName
-    val showAuthor =
-        (if (isNight) CoverConfig.coverShowAuthorN else CoverConfig.coverShowAuthor) && showName
+    val showAuthor = (if (isNight) CoverConfig.coverShowAuthorN else CoverConfig.coverShowAuthor) && showName
 
     if (!showName && !showAuthor) return
 
@@ -231,9 +212,7 @@ private fun CoverTextOverlay(
 
                 if (isHorizontal) {
                     val maxWidth = (viewWidth * 0.8f).toInt()
-                    val textPaint = TextPaint(paint).apply {
-                        textAlign = Paint.Align.LEFT
-                    }
+                    val textPaint = TextPaint(paint).apply { textAlign = Paint.Align.LEFT }
                     val layout = StaticLayout.Builder
                         .obtain(name, 0, name.length, textPaint, maxWidth)
                         .setAlignment(Layout.Alignment.ALIGN_CENTER)
@@ -296,12 +275,7 @@ private fun CoverTextOverlay(
                     }
                 }
                 if (isHorizontal) {
-                    val authorText = TextUtils.ellipsize(
-                        author,
-                        TextPaint(paint),
-                        viewWidth * 0.9f,
-                        TextUtils.TruncateAt.END
-                    )
+                    val authorText = TextUtils.ellipsize(author, TextPaint(paint), viewWidth * 0.9f, TextUtils.TruncateAt.END)
                     if (CoverConfig.coverShowStroke) {
                         val strokePaint = Paint(paint).apply {
                             color = Color.White.toArgb()
@@ -309,19 +283,9 @@ private fun CoverTextOverlay(
                             strokeWidth = paint.textSize / 10
                             clearShadowLayer()
                         }
-                        nativeCanvas.drawText(
-                            authorText.toString(),
-                            viewWidth / 2,
-                            viewHeight * 0.75f,
-                            strokePaint
-                        )
+                        nativeCanvas.drawText(authorText.toString(), viewWidth / 2, viewHeight * 0.75f, strokePaint)
                     }
-                    nativeCanvas.drawText(
-                        authorText.toString(),
-                        viewWidth / 2,
-                        viewHeight * 0.75f,
-                        paint
-                    )
+                    nativeCanvas.drawText(authorText.toString(), viewWidth / 2, viewHeight * 0.75f, paint)
                 } else {
                     val startX = viewWidth * 0.84f
                     val fm = paint.fontMetrics

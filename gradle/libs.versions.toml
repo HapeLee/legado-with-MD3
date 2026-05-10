@@ -88,6 +88,7 @@ timber = "5.0.1"
 miuix = "0.9.0"
 backdrop = "1.0.6"
 capsule = "2.1.3"
+lyricViewx = "1.3.2"
 [libraries]
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
@@ -258,6 +259,7 @@ miuix-ui-android = { module = "top.yukonga.miuix.kmp:miuix-ui-android", version.
 
 capsule = { module = "io.github.kyant0:capsule", version.ref = "capsule" }
 backdrop = { module = "io.github.kyant0:backdrop", version.ref = "backdrop" }
+lyricViewx = { module = "com.github.Moriafly:LyricViewX", version.ref = "lyricViewx" }
 
 [bundles]
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]

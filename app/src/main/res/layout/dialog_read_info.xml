@@ -40,26 +40,61 @@
         android:textSize="14sp"
         android:textStyle="bold" />
 
-    <com.google.android.material.button.MaterialButtonGroup
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="end"
-        app:overflowMode="wrap">
+        android:paddingTop="8dp"
+        android:orientation="horizontal"
+        tools:ignore="RtlHardcoded,RtlSymmetry">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_padding_setting"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="0dp"
+            android:layout_marginEnd="8dp"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
             android:text="@string/padding"/>
 
         <io.legado.app.ui.widget.AccentColorButton
-            android:id="@+id/btn_tip_color"
+            android:id="@+id/btn_header_font"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             style="@style/Widget.Material3Expressive.Button.OutlinedButton"
-            android:text="@string/text_color" />
+            android:text="@string/header_font" />
+
+        <io.legado.app.ui.widget.SimpleCounterView
+            android:id="@+id/scv_header_font_size"
+            android:layout_width="180dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            app:max="30"
+            app:min="8"
+            app:orientation="horizontal"
+            app:title="@string/header_font_size" />
+
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        app:overflowMode="wrap">
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_header_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/header_color" />
+
+        <io.legado.app.ui.widget.AccentColorButton
+            android:id="@+id/btn_footer_color"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/Widget.Material3Expressive.Button.OutlinedButton"
+            android:text="@string/footer_color" />
 
         <io.legado.app.ui.widget.AccentColorButton
             android:id="@+id/btn_divider_color"

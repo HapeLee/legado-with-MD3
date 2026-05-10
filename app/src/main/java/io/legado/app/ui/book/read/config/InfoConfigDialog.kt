@@ -11,23 +11,32 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.ui.book.read.ReadBookActivity
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
-class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info) {
+class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info), FontSelectDialog.CallBack {
 
     private val binding by viewBinding(DialogReadInfoBinding::bind)
     private val callBack get() = activity as? ReadBookActivity
+
+    override val curFontPath: String
+        get() = ReadBookConfig.headerFont
+
+    override fun selectFont(path: String) {
+        ReadBookConfig.headerFont = path
+        ReadBookConfig.save()
+        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+    }
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         initView()
         initEvent()
         observeEvent<String>(EventBus.TIP_COLOR) {
-            upTvTipColor()
+            upTvHeaderColor()
+            upTvFooterColor()
             upTvTipDividerColor()
         }
         observeEvent<ArrayList<Int>>(EventBus.UP_CONFIG) { list ->
@@ -59,17 +68,28 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
             callBack?.showPaddingConfig()
             dismissAllowingStateLoss()
         }
-        upTvTipColor()
+        upTvHeaderColor()
+        upTvFooterColor()
         upTvTipDividerColor()
+        binding.scvHeaderFontSize.progress = ReadBookConfig.headerFontSize
     }
 
-    private fun upTvTipColor() {
-        val tipColor = if (ReadTipConfig.tipColor == 0) {
+    private fun upTvHeaderColor() {
+        val tipColor = if (ReadTipConfig.tipHeaderColor == 0) {
             ReadBookConfig.textColor
         } else {
-            ReadTipConfig.tipColor
+            ReadTipConfig.tipHeaderColor
         }
-        binding.btnTipColor.color = tipColor
+        binding.btnHeaderColor.color = tipColor
+    }
+
+    private fun upTvFooterColor() {
+        val tipColor = if (ReadTipConfig.tipFooterColor == 0) {
+            ReadBookConfig.textColor
+        } else {
+            ReadTipConfig.tipFooterColor
+        }
+        binding.btnFooterColor.color = tipColor
     }
 
     private fun upTvTipDividerColor() {
@@ -171,19 +191,36 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6))
             }
         }
-        btnTipColor.setOnClickListener {
+        btnHeaderColor.setOnClickListener {
             context?.selector(items = ReadTipConfig.tipColorNames) { _, i ->
                 when (i) {
                     0 -> {
-                        ReadTipConfig.tipColor = 0
-                        upTvTipColor()
+                        ReadTipConfig.tipHeaderColor = 0
+                        upTvHeaderColor()
                         postEvent(EventBus.UP_CONFIG, arrayListOf(2))
                     }
 
                     1 -> ColorPickerDialog.newBuilder()
                         .setShowAlphaSlider(false)
                         .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
-                        .setDialogId(TIP_COLOR)
+                        .setDialogId(TipConfigDialog.TIP_HEADER_COLOR)
+                        .show(requireActivity())
+                }
+            }
+        }
+        btnFooterColor.setOnClickListener {
+            context?.selector(items = ReadTipConfig.tipColorNames) { _, i ->
+                when (i) {
+                    0 -> {
+                        ReadTipConfig.tipFooterColor = 0
+                        upTvFooterColor()
+                        postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                    }
+
+                    1 -> ColorPickerDialog.newBuilder()
+                        .setShowAlphaSlider(false)
+                        .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                        .setDialogId(TipConfigDialog.TIP_FOOTER_COLOR)
                         .show(requireActivity())
                 }
             }
@@ -204,6 +241,14 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
                         .show(requireActivity())
                 }
             }
+        }
+        btnHeaderFont.setOnClickListener {
+            FontSelectDialog().show(childFragmentManager, "headerFontSelect")
+        }
+        binding.scvHeaderFontSize.onChanged = {
+            ReadBookConfig.headerFontSize = it
+            ReadBookConfig.save()
+            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
         }
     }
 

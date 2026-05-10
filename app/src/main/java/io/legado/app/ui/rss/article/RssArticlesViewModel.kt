@@ -24,21 +24,24 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
     private var nextPageUrl: String? = null
     var sortName: String = ""
     var sortUrl: String = ""
+    var searchKey: String? = null
     var page = 1
 
     fun init(bundle: Bundle?) {
         bundle?.let {
             init(
                 sortName = it.getString("sortName") ?: "",
-                sortUrl = it.getString("sortUrl") ?: ""
+                sortUrl = it.getString("sortUrl") ?: "",
+                searchKey = it.getString("searchKey")
             )
         }
     }
 
-    fun init(sortName: String, sortUrl: String) {
-        if (this.sortName == sortName && this.sortUrl == sortUrl) return
+    fun init(sortName: String, sortUrl: String, searchKey: String? = null) {
+        if (this.sortName == sortName && this.sortUrl == sortUrl && this.searchKey == searchKey) return
         this.sortName = sortName
         this.sortUrl = sortUrl
+        this.searchKey = searchKey
         page = 1
         nextPageUrl = null
         _loadState.value = RssArticlesLoadState()
@@ -53,7 +56,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
         )
         page = 1
         order = System.currentTimeMillis()
-        Rss.getArticles(viewModelScope, sortName, sortUrl, rssSource, page).onSuccess(IO) {
+        Rss.getArticles(viewModelScope, sortName, sortUrl, rssSource, page, searchKey).onSuccess(IO) {
             nextPageUrl = it.second
             val articles = it.first
             articles.forEach { rssArticle ->
@@ -97,7 +100,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
         )
 
         page++
-        Rss.getArticles(viewModelScope, sortName, pageUrl, rssSource, page).onSuccess(IO) {
+        Rss.getArticles(viewModelScope, sortName, pageUrl, rssSource, page, searchKey).onSuccess(IO) {
             nextPageUrl = it.second
             loadMoreSuccess(it.first)
         }.onError {

@@ -204,6 +204,19 @@ fun Context.getPrefLong(key: String, defValue: Long = 0L): Long {
 fun Context.putPrefLong(key: String, value: Long) =
     defaultSharedPreferences.edit { putLong(key, value) }
 
+fun Context.getPrefFloat(key: String, defValue: Float = 0f): Float {
+    return try {
+        defaultSharedPreferences.getFloat(key, defValue)
+    } catch (e: ClassCastException) {
+        val value = defaultSharedPreferences.getInt(key, defValue.toInt()).toFloat()
+        defaultSharedPreferences.edit { putFloat(key, value) }
+        value
+    }
+}
+
+fun Context.putPrefFloat(key: String, value: Float) =
+    defaultSharedPreferences.edit { putFloat(key, value) }
+
 fun Context.getPrefString(key: String, defValue: String? = null) =
     defaultSharedPreferences.getString(key, defValue)
 

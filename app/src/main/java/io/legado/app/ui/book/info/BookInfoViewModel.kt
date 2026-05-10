@@ -709,19 +709,30 @@ class BookInfoViewModel(
 
     private fun refreshMeta(book: Book) {
         execute {
-            val kinds = book.getKindList().toMutableList()
+            val allKinds = book.getKindList()
+            val customKinds = allKinds.filter { it.startsWith("#") }
+            val sourceKinds = allKinds.filter { !it.startsWith("#") }.toMutableList()
             if (book.isLocal) {
                 val size = FileDoc.fromFile(book.bookUrl).size
                 if (size > 0) {
-                    kinds.add(ConvertUtils.formatFileSize(size))
+                    sourceKinds.add(ConvertUtils.formatFileSize(size))
                 }
             }
+            val mergedKinds = (customKinds + sourceKinds).distinct()
             val userGroupIds = appDb.bookGroupDao.idsSum
             val groupAnd = userGroupIds and book.group
             val hasCustomGroup = book.group > 0L && groupAnd != 0L
             val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
             val normalizedGroupNames = groupNames.ifBlank { null }
-            Triple(kinds.toList(), normalizedGroupNames, hasCustomGroup)
+            val persistedCustomKinds = currentKindLabels.filter { it.startsWith("#") }
+            val finalKinds = if (persistedCustomKinds.isNotEmpty()) {
+                (persistedCustomKinds + sourceKinds).distinct()
+            } else {
+                mergedKinds
+            }
+            book.kind = finalKinds.joinToString(",")
+            appDb.bookDao.update(book)
+            Triple(finalKinds, normalizedGroupNames, hasCustomGroup)
         }.onSuccess {
             currentKindLabels = it.first
             currentGroupNames = it.second

@@ -9,6 +9,7 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.JsExtensions
+import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.ui.association.AddToBookshelfDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.login.SourceLoginActivity
@@ -72,10 +73,19 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
         activityRef.get()?.showDialogFragment(PhotoDialog(src, getSource()?.getKey()))
     }
 
+    @JvmOverloads
+    fun getStringList(rule: String?, mContent: Any? = null, isUrl: Boolean = false): List<String>? {
+        return AnalyzeRule(null, source = getSource()).getStringList(rule, mContent, isUrl)
+    }
+
+    @JvmOverloads
+    fun getString(ruleStr: String?, mContent: Any? = null, isUrl: Boolean = false): String {
+        return AnalyzeRule(null, source = getSource()).getString(ruleStr, mContent, isUrl)
+    }
 
     @JavascriptInterface
     @JvmOverloads
-    fun open(name: String, url: String? = null, title: String? = null, origin: String? = null) {
+    open fun open(name: String, url: String? = null, title: String? = null, origin: String? = null) {
         val activity = activityRef.get() ?: return
         activity.lifecycleScope.launch(IO) {
             val source = getSource() ?: return@launch
@@ -151,7 +161,7 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
                         origin = sourceUrl,
                         readTime = System.currentTimeMillis()
                     )
-                    appDb.rssReadRecordDao.insertRecord(rssReadRecord) //留下历史记录
+                    appDb.rssReadRecordDao.insertRecord(rssReadRecord)
                     withContext(Main) {
                         activity.startActivity(
                             MainActivity.createRssReadIntent(

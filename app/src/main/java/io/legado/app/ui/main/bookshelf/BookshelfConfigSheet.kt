@@ -12,6 +12,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringArrayResource
@@ -19,8 +23,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.CompactSwitchSettingItem
@@ -33,6 +40,7 @@ fun BookshelfConfigSheet(
 ) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var showLabelColorManage by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
         title = stringResource(R.string.bookshelf_layout),
@@ -235,6 +243,38 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
+                title = "列表模式显示更多",
+                checked = BookshelfConfig.showBookIntro,
+                color = MaterialTheme.colorScheme.surface,
+                onCheckedChange = { BookshelfConfig.showBookIntro = it }
+            )
+
+            AnimatedVisibility(visible = BookshelfConfig.showBookIntro) {
+                CompactSliderSettingItem(
+                    title = "简介行数",
+                    description = if (BookshelfConfig.bookshelfIntroMaxLines == 0) "显示全部简介" else "显示 ${BookshelfConfig.bookshelfIntroMaxLines} 行简介",
+                    value = BookshelfConfig.bookshelfIntroMaxLines.toFloat(),
+                    valueRange = 0f..10f,
+                    steps = 10,
+                    onValueChange = { BookshelfConfig.bookshelfIntroMaxLines = it.toInt() }
+                )
+                CompactSwitchSettingItem(
+                    title = "自定义标签颜色",
+                    checked = ThemeConfig.enableCustomTagColors,
+                    color = MaterialTheme.colorScheme.surface,
+                    onCheckedChange = { ThemeConfig.enableCustomTagColors = it }
+                )
+
+                AnimatedVisibility(visible = ThemeConfig.enableCustomTagColors) {
+                    CompactClickableSettingItem(
+                        title = "管理标签颜色",
+                        color = MaterialTheme.colorScheme.surface,
+                        onClick = { showLabelColorManage = true }
+                    )
+                }
+            }
+
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_wait_up_count),
                 checked = BookshelfConfig.showWaitUpCount,
                 color = MaterialTheme.colorScheme.surface,
@@ -265,5 +305,10 @@ fun BookshelfConfigSheet(
                 onValueChange = { BookshelfConfig.bookshelfRefreshingLimit = it.toInt() }
             )
         }
+
+        LabelColorManageSheet(
+            show = showLabelColorManage,
+            onDismissRequest = { showLabelColorManage = false }
+        )
     }
 }

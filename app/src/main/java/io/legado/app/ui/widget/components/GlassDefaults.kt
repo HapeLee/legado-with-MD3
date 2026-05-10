@@ -20,7 +20,15 @@ object GlassDefaults {
         }
     }
 
-    // 默认的玻璃效果透明度值，方便全局修改
+    @Composable
+    fun secondaryColorOr(fallback: @Composable () -> Color): Color {
+        return if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+            Color(ThemeConfig.secondaryThemeColor)
+        } else {
+            fallback()
+        }
+    }
+
     val DefaultBlurAlpha = 0.36f
     val ThickBlurAlpha = 0.72f
     val TransparentAlpha = 0f

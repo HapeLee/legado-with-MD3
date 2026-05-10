@@ -21,6 +21,7 @@ import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.TextField as MiuixTextField
@@ -46,6 +47,7 @@ fun InputSettingItem(
     }
 
     val composeEngine = LegadoTheme.composeEngine
+    SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         Column(modifier = Modifier.fillMaxWidth()) {

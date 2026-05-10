@@ -10,6 +10,7 @@ import io.legado.app.databinding.DialogUnderlineConfigBinding
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedLine
 import io.legado.app.help.config.ReadBookConfig.underline
+import io.legado.app.help.config.ReadBookConfig.underlineExtend
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -39,6 +40,7 @@ class UnderlineConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_unde
         binding.swUnderline.isChecked = underline
         binding.swDottedline.isChecked = dottedLine
         binding.swDottedline.isEnabled = underline
+        binding.swUnderlineExtend.isChecked = underlineExtend
 
         binding.swUnderline.addOnCheckedChangeListener { _, isChecked ->
             underline = isChecked
@@ -52,6 +54,11 @@ class UnderlineConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_unde
 
         binding.swDottedline.addOnCheckedChangeListener { _, isChecked ->
             dottedLine = isChecked
+            postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+        }
+
+        binding.swUnderlineExtend.addOnCheckedChangeListener { _, isChecked ->
+            underlineExtend = isChecked
             postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
         }
 

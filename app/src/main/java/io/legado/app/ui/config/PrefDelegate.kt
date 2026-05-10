@@ -7,10 +7,12 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefLong
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefBoolean
+import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
@@ -63,6 +65,7 @@ fun <T> prefDelegate(
                 defaultValue is Int -> appCtx.getPrefInt(key, defaultValue) as T
                 defaultValue is Boolean -> appCtx.getPrefBoolean(key, defaultValue) as T
                 defaultValue is Long -> appCtx.getPrefLong(key, defaultValue) as T
+                defaultValue is Float -> appCtx.getPrefFloat(key, defaultValue) as T
                 else -> defaultValue
             }
         }
@@ -78,6 +81,7 @@ fun <T> prefDelegate(
                     is Int -> appCtx.putPrefInt(key, value)
                     is Boolean -> appCtx.putPrefBoolean(key, value)
                     is Long -> appCtx.putPrefLong(key, value)
+                    is Float -> appCtx.putPrefFloat(key, value)
                 }
                 _value.value = value
                 onValueChange?.invoke(value)

@@ -75,7 +75,7 @@ fun CrashReportScreen(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                Text(
+                AppText(
                     text = displayText,
                     style = LegadoTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace

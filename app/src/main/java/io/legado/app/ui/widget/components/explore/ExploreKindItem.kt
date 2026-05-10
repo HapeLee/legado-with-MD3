@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.explore
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.text.AppText
@@ -38,13 +40,24 @@ fun ExploreKindItem(
 
         val cornerRadius = 12.dp
 
+        val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
+        val borderWidth = (ThemeConfig.containerBorderWidth - 0.8f).coerceAtLeast(0.1f).dp
+        val borderColor = if (ThemeConfig.containerBorderColor != 0) {
+            androidx.compose.ui.graphics.Color(ThemeConfig.containerBorderColor)
+        } else {
+            LegadoTheme.colorScheme.outline
+        }
+
         if (isClickable) {
             GlassCard(
                 onClick = onClick,
                 cornerRadius = cornerRadius,
                 containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.onSurface,
-                modifier = modifier
+                modifier = modifier,
+                border = if (enableBorder) {
+                    BorderStroke(borderWidth, borderColor)
+                } else null
             ) {
                 KindText(
                     text = displayText,
@@ -58,7 +71,9 @@ fun ExploreKindItem(
                 containerColor = backgroundColor,
                 contentColor = LegadoTheme.colorScheme.primary,
                 modifier = modifier,
-                border = CardDefaults.outlinedCardBorder()
+                border = if (enableBorder) {
+                    BorderStroke(borderWidth, borderColor)
+                } else BorderStroke(1.dp, LegadoTheme.colorScheme.outline)
             ) {
                 KindText(
                     text = displayText,

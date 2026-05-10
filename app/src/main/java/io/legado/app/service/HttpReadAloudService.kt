@@ -626,6 +626,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         updateNextPos()
         upPlayPos()
+        upMediaMetadata(showContent = true)
     }
 
     override fun onPlayerError(error: PlaybackException) {

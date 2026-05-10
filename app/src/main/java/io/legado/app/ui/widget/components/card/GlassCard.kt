@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.card
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,26 @@ private fun BaseCard(
 ) {
     val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer)
         .let { it.copy(alpha = it.alpha * alpha) }
-    if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+    val isTransparent = containerColor == Color.Transparent
+    val shape = RoundedCornerShape(cornerRadius)
+
+    if (isTransparent) {
+        val clickableModifier = if (onClick != null || onLongClick != null) {
+            modifier
+                .clip(shape)
+                .combinedClickable(
+                    onClick = { onClick?.invoke() },
+                    onLongClick = onLongClick
+                )
+        } else {
+            modifier.clip(shape)
+        }
+        Box(
+            modifier = clickableModifier
+        ) {
+            Column(content = content)
+        }
+    } else if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
         val colors = MiuixCardDefaults.defaultColors(
             color = resolvedContainerColor,
             contentColor = contentColor ?: LegadoTheme.colorScheme.onSurface

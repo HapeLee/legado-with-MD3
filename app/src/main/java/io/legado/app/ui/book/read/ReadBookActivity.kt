@@ -86,8 +86,12 @@ import io.legado.app.ui.book.read.config.ReadAloudDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_HEADER_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_FOOTER_COLOR
 import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TITLE_COLOR
+import io.legado.app.ui.book.read.config.RegexColorConfigDialog
+import io.legado.app.ui.book.read.config.RegexColorConfigDialog.Companion.REGEX_RULE_COLOR
 import io.legado.app.ui.book.read.config.ToolButtonConfigDialog
 import io.legado.app.ui.book.read.config.UnderlineConfigDialog.Companion.U_COLOR
 import io.legado.app.ui.book.read.page.ContentTextView
@@ -95,6 +99,7 @@ import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.searchContent.SearchContentActivity
 import io.legado.app.ui.book.searchContent.SearchResult
@@ -1698,8 +1703,14 @@ class ReadBookActivity : BaseReadBookActivity(),
                 }
             }
 
-            TIP_COLOR -> {
-                ReadTipConfig.tipColor = color
+            TIP_HEADER_COLOR -> {
+                ReadTipConfig.tipHeaderColor = color
+                postEvent(EventBus.TIP_COLOR, "")
+                postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            }
+
+            TIP_FOOTER_COLOR -> {
+                ReadTipConfig.tipFooterColor = color
                 postEvent(EventBus.TIP_COLOR, "")
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2))
             }
@@ -1708,6 +1719,24 @@ class ReadBookActivity : BaseReadBookActivity(),
                 ReadTipConfig.tipDividerColor = color
                 postEvent(EventBus.TIP_COLOR, "")
                 postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            }
+
+            TITLE_COLOR -> {
+                ReadBookConfig.titleColor = color
+                postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+            }
+
+            REGEX_RULE_COLOR -> {
+                val pos = RegexColorConfigDialog.pendingColorPosition
+                if (pos in ReadBookConfig.regexColorRules.indices) {
+                    ReadBookConfig.regexColorRules[pos].color = color
+                    ReadBookConfig.saveRegexColorRules()
+                    TextChapterLayout.invalidateRegexCache()
+                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+                }
+                val fontConfigDialog = supportFragmentManager.findFragmentByTag("FontConfigDialog")
+                (fontConfigDialog?.childFragmentManager?.findFragmentByTag("regexColorConfig") as? RegexColorConfigDialog)
+                    ?.onColorSelected(color)
             }
 
             B_COLOR -> {

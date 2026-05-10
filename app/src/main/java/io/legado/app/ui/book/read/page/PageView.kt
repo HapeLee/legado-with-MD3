@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
@@ -30,9 +31,11 @@ import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.applyStatusBarPadding
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
+import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
+import java.io.File
 import java.util.Date
 
 /**
@@ -91,8 +94,11 @@ class PageView(context: Context) : FrameLayout(context) {
         upTipStyle()
         ReadBookConfig.let {
             val textColor = it.textColor
-            val tipColor = with(ReadTipConfig) {
-                if (tipColor == 0) textColor else tipColor
+            val headerColor = with(ReadTipConfig) {
+                if (tipHeaderColor == 0) textColor else tipHeaderColor
+            }
+            val footerColor = with(ReadTipConfig) {
+                if (tipFooterColor == 0) textColor else tipFooterColor
             }
             val tipDividerColor = with(ReadTipConfig) {
                 when (tipDividerColor) {
@@ -101,12 +107,12 @@ class PageView(context: Context) : FrameLayout(context) {
                     else -> tipDividerColor
                 }
             }
-            tvHeaderLeft.setColor(tipColor)
-            tvHeaderMiddle.setColor(tipColor)
-            tvHeaderRight.setColor(tipColor)
-            tvFooterLeft.setColor(tipColor)
-            tvFooterMiddle.setColor(tipColor)
-            tvFooterRight.setColor(tipColor)
+            tvHeaderLeft.setColor(headerColor)
+            tvHeaderMiddle.setColor(headerColor)
+            tvHeaderRight.setColor(headerColor)
+            tvFooterLeft.setColor(footerColor)
+            tvFooterMiddle.setColor(footerColor)
+            tvFooterRight.setColor(footerColor)
             vwTopDivider.backgroundColor = tipDividerColor
             vwBottomDivider.backgroundColor = tipDividerColor
             upStatusBar()
@@ -129,6 +135,24 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         upTime()
         upBattery(battery)
+    }
+
+    private fun loadTypeface(fontPath: String): Typeface? {
+        return runCatching {
+            when {
+                fontPath.isContentScheme() -> {
+                    context.contentResolver
+                        .openFileDescriptor(fontPath.toUri(), "r")
+                        ?.use {
+                            Typeface.Builder(it.fileDescriptor).build()
+                        }
+                }
+                fontPath.isNotEmpty() -> {
+                    Typeface.Builder(File(fontPath)).build()
+                }
+                else -> null
+            }
+        }.getOrNull()
     }
 
     /**
@@ -208,106 +232,108 @@ class PageView(context: Context) : FrameLayout(context) {
                 tvFooterRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
             }
         }
+        val tipTypeface = loadTypeface(ReadBookConfig.headerFont) ?: ChapterProvider.typeface
+        val tipTextSize = ReadBookConfig.headerFontSize.toFloat()
         tvTitle = getTipView(ReadTipConfig.chapterTitle)?.apply {
             tag = ReadTipConfig.chapterTitle
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
         tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
             tag = ReadTipConfig.chapterTitleArrow
             typeface = Typeface.DEFAULT
-            textSize = 12f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
         tvTitleArrowClassic = getTipView(ReadTipConfig.chapterTitleArrowClassic)?.apply {
             tag = ReadTipConfig.chapterTitleArrowClassic
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
         tvTime = getTipView(ReadTipConfig.time)?.apply {
             tag = ReadTipConfig.time
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
         tvBattery = getTipView(ReadTipConfig.battery)?.apply {
             tag = ReadTipConfig.battery
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.OUTER
         }
         tvBatteryClassic = getTipView(ReadTipConfig.batteryClassic)?.apply {
             tag = ReadTipConfig.batteryClassic
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
         tvBatteryInside = getTipView(ReadTipConfig.batteryInside)?.apply {
             tag = ReadTipConfig.batteryInside
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.INNER
         }
         tvBatteryIcon = getTipView(ReadTipConfig.batteryIcon)?.apply {
             tag = ReadTipConfig.batteryIcon
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ICON
         }
         tvPage = getTipView(ReadTipConfig.page)?.apply {
             tag = ReadTipConfig.page
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
         tvTotalProgress = getTipView(ReadTipConfig.totalProgress)?.apply {
             tag = ReadTipConfig.totalProgress
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
         tvTotalProgress1 = getTipView(ReadTipConfig.totalProgress1)?.apply {
             tag = ReadTipConfig.totalProgress1
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
         tvPageAndTotal = getTipView(ReadTipConfig.pageAndTotal)?.apply {
             tag = ReadTipConfig.pageAndTotal
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
         tvBookName = getTipView(ReadTipConfig.bookName)?.apply {
             tag = ReadTipConfig.bookName
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
         tvTimeBattery = getTipView(ReadTipConfig.timeBattery)?.apply {
             tag = ReadTipConfig.timeBattery
             typeface = Typeface.DEFAULT
-            textSize = 11f
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.TIME
         }
         tvTimeBatteryClassic = getTipView(ReadTipConfig.timeBatteryClassic)?.apply {
             tag = ReadTipConfig.timeBatteryClassic
-            typeface = ChapterProvider.typeface
-            textSize = 11f
+            typeface = tipTypeface
+            textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
         tvBatteryP = getTipView(ReadTipConfig.batteryPercentage)?.apply {
             tag = ReadTipConfig.batteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
         tvTimeBatteryP = getTipView(ReadTipConfig.timeBatteryPercentage)?.apply {
             tag = ReadTipConfig.timeBatteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
-            typeface = ChapterProvider.typeface
-            textSize = 12f
+            typeface = tipTypeface
+            textSize = tipTextSize
         }
     }
 

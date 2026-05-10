@@ -5,10 +5,12 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
@@ -24,19 +26,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.data.entities.BookGroup
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -44,6 +56,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toTimeAgo
 
 /**
@@ -63,24 +76,62 @@ fun BookshelfItem(
     titleEnd: @Composable (() -> Unit)? = null,
     subTitle: String? = null,
     desc: String? = null,
+    descMaxLines: Int = 1,
     extra: @Composable (RowScope.() -> Unit)? = null,
+    bottomContent: @Composable (() -> Unit)? = null,
     titleSmallFont: Boolean = false,
     titleCenter: Boolean = true,
     titleMaxLines: Int = 2,
     coverShadow: Boolean = false,
+    titleColor: Color? = null,
+    descAnnotated: AnnotatedString? = null,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
-    val selectedColor = if (isSelected) {
-        LegadoTheme.colorScheme.secondaryContainer
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor)
+    } else {
+        LegadoTheme.colorScheme.cardContainer
+    }
+
+    val borderWidth = ThemeConfig.containerBorderWidth.dp
+    val borderColor = if (ThemeConfig.containerBorderColor != 0) {
+        Color(ThemeConfig.containerBorderColor)
+    } else {
+        LegadoTheme.colorScheme.outline
+    }
+    val borderStyle = ThemeConfig.containerBorderStyle
+    val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
+
+    val borderModifier = if (enableBorder && borderStyle == "solid") {
+        Modifier.border(borderWidth, borderColor, MaterialTheme.shapes.small)
+    } else if (enableBorder) {
+        val dashWidth = ThemeConfig.containerBorderDashWidth
+        val pathEffect = when (borderStyle) {
+            "dashed" -> PathEffect.dashPathEffect(floatArrayOf(dashWidth, dashWidth))
+            "dotted" -> PathEffect.dashPathEffect(floatArrayOf(dashWidth / 2, dashWidth))
+            else -> null
+        }
+        Modifier.drawWithContent {
+            drawContent()
+            val cornerRadius = CornerRadius(8.dp.toPx(), 8.dp.toPx())
+            val halfStroke = borderWidth.toPx() / 2
+            drawRoundRect(
+                color = borderColor,
+                topLeft = Offset(halfStroke, halfStroke),
+                size = Size(size.width - borderWidth.toPx(), size.height - borderWidth.toPx()),
+                cornerRadius = cornerRadius,
+                style = Stroke(width = borderWidth.toPx(), pathEffect = pathEffect)
+            )
+        }
     } else {
         LegadoTheme.colorScheme.surface.copy(alpha = 0f)
+        Modifier
     }
+
     if (isGrid) {
         Box(
             modifier = modifier
-                .clip(MaterialTheme.shapes.small)
-                .background(selectedColor)
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick
@@ -99,7 +150,7 @@ fun BookshelfItem(
                                 MaterialTheme.shapes.extraSmall
                             ) else Modifier
                         )
-                        .clip(MaterialTheme.shapes.extraSmall) // 先阴影后裁剪
+                        .clip(MaterialTheme.shapes.extraSmall)
                 ) {
                     cover(Modifier.fillMaxSize())
                     if (gridStyle == 1) {
@@ -146,14 +197,18 @@ fun BookshelfItem(
             }
         }
     } else {
-        // 列表布局
         Column {
             NormalCard(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(all = 4.dp),
+                    .padding(all = 4.dp)
+                    .then(borderModifier),
                 cornerRadius = 8.dp,
-                containerColor = selectedColor,
+                containerColor = if (isSelected) {
+                    LegadoTheme.colorScheme.secondaryContainer
+                } else {
+                    containerColor
+                },
                 onClick = onClick,
                 onLongClick = onLongClick
             ) {
@@ -177,7 +232,11 @@ fun BookshelfItem(
                     ) {
                         AppText(
                             text = title,
-                            style = LegadoTheme.typography.titleMediumEmphasized,
+                            style = if (titleColor != null) {
+                                LegadoTheme.typography.titleMediumEmphasized.copy(color = titleColor)
+                            } else {
+                                LegadoTheme.typography.titleMediumEmphasized
+                            },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -193,13 +252,22 @@ fun BookshelfItem(
                             )
                         }
                         if (!isCompact) {
-                            desc?.let {
+                            if (descAnnotated != null) {
                                 AppText(
-                                    text = it,
+                                    text = descAnnotated,
                                     style = LegadoTheme.typography.labelSmallEmphasized,
-                                    maxLines = 1,
+                                    maxLines = descMaxLines,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                            } else {
+                                desc?.let {
+                                    AppText(
+                                        text = it,
+                                        style = LegadoTheme.typography.labelSmallEmphasized,
+                                        maxLines = descMaxLines,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                         extra?.let {
@@ -210,6 +278,7 @@ fun BookshelfItem(
                         }
                     }
                 }
+                bottomContent?.invoke()
             }
             if (BookshelfConfig.bookshelfShowDivider)
                 HorizontalDivider(
@@ -232,7 +301,6 @@ fun BookGroupCover(
         modifier = modifier
             .aspectRatio(5f / 7f)
             .clip(RoundedCornerShape(4.dp))
-            .background(LegadoTheme.colorScheme.surfaceContainer)
     ) {
         if (!coverPath.isNullOrBlank()) {
             CoilBookCover(
@@ -326,7 +394,7 @@ fun BookGroupCover(
 
 @Composable
 fun BookGroupItemGrid(
-    group: BookGroup,
+    group: BookGroupUi,
     previewBooks: List<BookShelfItem>,
     countText: String? = null,
     gridStyle: Int = 0,
@@ -363,7 +431,7 @@ fun BookGroupItemGrid(
 
 @Composable
 fun BookGroupItemList(
-    group: BookGroup,
+    group: BookGroupUi,
     previewBooks: List<BookShelfItem>,
     countText: String? = null,
     isCompact: Boolean = false,
@@ -375,13 +443,27 @@ fun BookGroupItemList(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
+    val firstBookName = previewBooks.firstOrNull()?.name
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val descAnnotated = if (firstBookName != null) {
+        buildAnnotatedString {
+            append("最近阅读：")
+            withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Medium)) {
+                append("《$firstBookName》")
+            }
+        }
+    } else {
+        null
+    }
     BookshelfItem(
         isGrid = false,
         gridStyle = 0,
         isCompact = isCompact,
         cover = { BookGroupCover(books = previewBooks, coverPath = group.cover, modifier = it) },
         title = group.groupName,
+        titleColor = primaryColor,
         subTitle = countText,
+        descAnnotated = descAnnotated,
         titleSmallFont = titleSmallFont,
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
@@ -454,28 +536,21 @@ fun BookItem(
             }
         } else null,
         cover = { modifier ->
-            val coverModifier = with(sharedTransitionScope) {
-                if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                    Modifier.fillMaxWidth().sharedElement(
-                        sharedContentState = rememberSharedContentState(sharedCoverKey),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                    )
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-            }
             BookshelfCover(
                 name = book.name,
                 author = book.author,
                 path = book.getDisplayCover(),
                 isUpdating = isUpdating,
                 modifier = modifier,
-                coverModifier = coverModifier,
+                coverModifier = Modifier.fillMaxWidth().aspectRatio(5f / 7f),
                 sourceOrigin = book.origin,
                 badgeText = if (layoutMode != 0) unreadText else null,
                 showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
                 leftBottomText = matchedSourceLabel ?: bookTypeLabel,
-                showLoadingPlaceholder = sharedCoverKey == null,
+                showLoadingPlaceholder = true,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                sharedCoverKey = sharedCoverKey,
             )
         },
         title = book.name,
@@ -485,6 +560,52 @@ fun BookItem(
             book.author
         },
         desc = book.durChapterTitle ?: "",
+        bottomContent = if (layoutMode == 0 && BookshelfConfig.showBookIntro) {
+            {
+                val kindList = book.kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }
+                val intro = book.intro?.takeIf { it.isNotBlank() }
+                val customTagColors = if (ThemeConfig.enableCustomTagColors) ThemeConfig.getCustomTagColors() else emptyList()
+                if (!kindList.isNullOrEmpty()) {
+                        FlowRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            kindList.forEachIndexed { index, label ->
+                                val colorPair = if (customTagColors.isNotEmpty()) {
+                                    customTagColors[index % customTagColors.size]
+                                } else {
+                                    null
+                                }
+                                TextCard(
+                                    text = label,
+                                    backgroundColor = if (colorPair != null && colorPair.bgColor != 0) Color(colorPair.bgColor) else LegadoTheme.colorScheme.surfaceContainerHighest,
+                                    contentColor = if (colorPair != null && colorPair.textColor != 0) Color(colorPair.textColor) else LegadoTheme.colorScheme.primary,
+                                    cornerRadius = 4.dp,
+                                    horizontalPadding = 6.dp,
+                                    verticalPadding = 2.dp,
+                                    textStyle = LegadoTheme.typography.labelSmall
+                                )
+                            }
+                        }
+                    }
+                if (intro != null) {
+                    val maxLines = if (BookshelfConfig.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else BookshelfConfig.bookshelfIntroMaxLines
+                    AppText(
+                        text = intro,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        maxLines = maxLines,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        } else null,
         extra = {
             if (BookshelfConfig.showLastUpdateTime && !book.isLocal) {
                 AppText(

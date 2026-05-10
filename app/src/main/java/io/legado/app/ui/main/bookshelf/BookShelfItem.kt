@@ -25,7 +25,9 @@ data class BookShelfItem(
     val type: Int,
     val group: Long,
     val order: Int,
-    val canUpdate: Boolean = true
+    val canUpdate: Boolean = true,
+    val intro: String? = null,
+    val kind: String? = null
 ) {
     fun getDisplayCover() = if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
 

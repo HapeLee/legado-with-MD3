@@ -19,16 +19,26 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 
-class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config) {
+class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config), FontSelectDialog.CallBack {
 
     companion object {
-        const val TIP_COLOR = 7897
+        const val TIP_HEADER_COLOR = 7897
+        const val TIP_FOOTER_COLOR = 7899
         const val TIP_DIVIDER_COLOR = 7898
+        const val TITLE_COLOR = 7896
         const val B_COLOR = 114
         const val A_COLOR = 514
     }
 
     private val binding by viewBinding(DialogTipConfigBinding::bind)
+
+    override val curFontPath: String
+        get() = ReadBookConfig.titleFont
+
+    override fun selectFont(path: String) {
+        ReadBookConfig.titleFont = path
+        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+    }
 
     override fun onStart() {
         super.onStart()
@@ -40,6 +50,10 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         observeEvent<Boolean>(EventBus.UPDATE_READ_ACTION_BAR) {
             binding.abtnBackgroundColor.color = ReadBookConfig.durConfig.curMenuBg()
             binding.abtnAccentColor.color = ReadBookConfig.durConfig.curMenuAc()
+        }
+        observeEvent<ArrayList<Int>>(EventBus.UP_CONFIG) {
+            val preview = if (ReadBookConfig.titleColor != 0) ReadBookConfig.titleColor else ReadBookConfig.textColor
+            binding.abtnTitleColor.color = preview or 0xFF000000.toInt()
         }
     }
 
@@ -53,15 +67,39 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         }
         val weightOptions = context?.resources?.getStringArray(R.array.text_font_weight)
         val weightValues = listOf(0, 1, 2)
+        val initialWeightIndex = weightValues.indexOf(ReadBookConfig.titleBold)
+        val weightIconMap = mapOf(
+            0 to R.drawable.ic_text_weight_0,
+            1 to R.drawable.ic_text_weight_1,
+            2 to R.drawable.ic_text_weight_2,
+        )
+        val initialIconRes = weightIconMap[initialWeightIndex] ?: R.drawable.ic_text_weight_2
+        binding.textFontWeightConverter.setIconResource(initialIconRes)
         binding.textFontWeightConverter.setOnClickListener {
             context?.alert(titleResource = R.string.text_font_weight_converter) {
                 weightOptions?.let { options ->
                     items(options.toList()) { _, i ->
                         ReadBookConfig.titleBold = weightValues[i]
+                        val iconRes = weightIconMap[i] ?: R.drawable.ic_text_weight_2
+                        binding.textFontWeightConverter.setIconResource(iconRes)
                         postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
                     }
                 }
             }
+        }
+        binding.btnSelectTitleFont.setOnClickListener {
+            FontSelectDialog().show(childFragmentManager, "fontSelect")
+        }
+        val titleColorValue = ReadBookConfig.titleColor
+        val titleColorPreview = if (titleColorValue != 0) titleColorValue else ReadBookConfig.textColor
+        binding.abtnTitleColor.color = titleColorPreview or 0xFF000000.toInt()
+        binding.abtnTitleColor.setOnClickListener {
+            ColorPickerDialog.newBuilder()
+                .setColor(titleColorPreview or 0xFF000000.toInt())
+                .setShowAlphaSlider(false)
+                .setDialogType(ColorPickerDialog.TYPE_CUSTOM)
+                .setDialogId(TITLE_COLOR)
+                .show(requireActivity())
         }
         binding.abtnBackgroundColor.color = ReadBookConfig.durConfig.curMenuBg()
         binding.abtnAccentColor.color = ReadBookConfig.durConfig.curMenuAc()

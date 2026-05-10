@@ -107,6 +107,10 @@ class FontConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_conf
             callBack2?.showShadowSet()
         }
 
+        binding.btnRegexColor.setOnClickListener {
+            RegexColorConfigDialog().show(childFragmentManager, "regexColorConfig")
+        }
+
         binding.btnSelectFonts.setOnClickListener {
             callBack2?.showFontSelect()
         }

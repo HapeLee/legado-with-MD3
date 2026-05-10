@@ -23,6 +23,7 @@ object BackupConfig {
     private const val readConfigKey = "readConfig"
     private const val themeConfigKey = "themeConfig"
     private const val coverConfigKey = "coverConfig"
+    private const val personalizationThemeConfigKey = "personalizationThemeConfig"
     private const val localBookKey = "localBook"
 
     //配置忽略key
@@ -30,6 +31,7 @@ object BackupConfig {
         readConfigKey,
         PreferKey.themeMode,
         themeConfigKey,
+        personalizationThemeConfigKey,
         coverConfigKey,
         PreferKey.bookshelfLayout,
         PreferKey.showRss,
@@ -42,6 +44,7 @@ object BackupConfig {
         appCtx.getString(R.string.read_config),
         appCtx.getString(R.string.theme_mode),
         appCtx.getString(R.string.theme_config),
+        "深度个性化主题",
         appCtx.getString(R.string.cover_config),
         appCtx.getString(R.string.bookshelf_layout),
         appCtx.getString(R.string.show_rss),
@@ -84,15 +87,9 @@ object BackupConfig {
 
     private val themePrefKeys = arrayOf(
         PreferKey.cPrimary,
-        PreferKey.cAccent,
-        PreferKey.cBackground,
-        PreferKey.cBBackground,
+        PreferKey.cNPrimary,
         PreferKey.bgImage,
         PreferKey.bgImageBlurring,
-        PreferKey.cNPrimary,
-        PreferKey.cNAccent,
-        PreferKey.cNBackground,
-        PreferKey.cNBBackground,
         PreferKey.bgImageN,
         PreferKey.bgImageNBlurring
     )
@@ -128,6 +125,8 @@ object BackupConfig {
         get() = ignoreConfig[themeConfigKey] == true
     private val ignoreCoverConfig: Boolean
         get() = ignoreConfig[coverConfigKey] == true
+    val ignorePersonalizationThemeConfig: Boolean
+        get() = ignoreConfig[personalizationThemeConfigKey] == true
     private val ignoreBookshelfLayout: Boolean
         get() = ignoreConfig[PreferKey.bookshelfLayout] == true
     private val ignoreShowRss: Boolean

@@ -153,8 +153,8 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
         companion object {
             fun parse(version: String): SemVer {
-                val regex = Regex("""(\d+)\.(\d+)\.(\d+)(?:-([\w.]+))?""")
-                val match = regex.matchEntire(version)
+                val regex = Regex("""(\d+)\.(\d+)\.(\d+)(?:[-_]([\w.]+))?""")
+                val match = regex.find(version)
                     ?: throw IllegalArgumentException("Invalid version: $version")
                 val (maj, min, pat, pre) = match.destructured
                 return SemVer(maj.toInt(), min.toInt(), pat.toInt(), pre.ifBlank { null })

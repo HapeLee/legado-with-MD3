@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.preference.ArrowPreference
 
@@ -24,6 +25,8 @@ fun ClickableSettingItem(
     onClick: () -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
+    SplicedColumnDivider()
+
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         ArrowPreference(
             title = title,

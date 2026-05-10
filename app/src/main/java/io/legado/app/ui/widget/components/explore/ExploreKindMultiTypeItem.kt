@@ -39,6 +39,7 @@ import io.legado.app.App
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -321,7 +322,11 @@ private fun ExploreKindCompactTextField(
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(10.dp)
-    val borderColor = if (isFocused) {
+    val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
+    val borderWidth = ThemeConfig.containerBorderWidth.dp
+    val borderColor = if (ThemeConfig.containerBorderColor != 0) {
+        Color(ThemeConfig.containerBorderColor)
+    } else if (isFocused) {
         LegadoTheme.colorScheme.primary
     } else {
         Color.Transparent
@@ -338,7 +343,7 @@ private fun ExploreKindCompactTextField(
             .height(34.dp)
             .clip(shape)
             .background(backgroundColor)
-            .border(width = 1.dp, color = borderColor, shape = shape),
+            .border(width = borderWidth, color = borderColor, shape = shape),
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier

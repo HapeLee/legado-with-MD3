@@ -19,6 +19,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.inputStream
+import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,7 @@ data class BookInfoEditUiState(
     val coverUrl: String? = null,
     val intro: String? = null,
     val remark: String? = null,
+    val kindList: List<String> = emptyList(),
     val selectedType: String = "文本",
     val bookTypes: List<String> = listOf("文本", "音频", "图片"),
     val fixedType: Boolean = false,
@@ -57,6 +59,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     coverUrl = it.getDisplayCover(),
                     intro = it.getDisplayIntro(),
                     remark = it.remark,
+                    kindList = it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty(),
                     selectedType = _uiState.value.bookTypes[selectedTypeIndex],
                     fixedType = it.config.fixedType,
                     book = it
@@ -83,6 +86,10 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
 
     fun onRemarkChange(remark: String) {
         _uiState.value = _uiState.value.copy(remark = remark)
+    }
+
+    fun onKindListChange(kindList: List<String>) {
+        _uiState.value = _uiState.value.copy(kindList = kindList)
     }
 
     fun onBookTypeChange(bookType: String) {
@@ -116,6 +123,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 book.config.fixedType = currentState.fixedType
                 book.customCoverUrl = if (currentState.coverUrl == book.coverUrl) null else currentState.coverUrl
                 book.customIntro = if (currentState.intro == book.intro) null else currentState.intro
+                book.kind = currentState.kindList.joinToString(",")
                 BookHelp.updateCacheFolder(oldBook, book)
 
                 if (ReadBook.book?.bookUrl == book.bookUrl) {

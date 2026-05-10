@@ -5,6 +5,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -82,6 +85,7 @@ import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import kotlinx.coroutines.delay
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -89,7 +93,7 @@ import org.koin.compose.koinInject
 @SuppressLint("LocalContextConfigurationRead", "ConfigurationScreenWidthHeight")
 @OptIn(
     ExperimentalMaterial3Api::class, ExperimentalHazeMaterialsApi::class,
-    ExperimentalMaterial3ExpressiveApi::class
+    ExperimentalMaterial3ExpressiveApi::class, ExperimentalSharedTransitionApi::class
 )
 @Composable
 fun ExploreShowScreen(
@@ -98,7 +102,9 @@ fun ExploreShowScreen(
     exploreUrl: String?,
     onBack: () -> Unit,
     onBookClick: (SearchBook) -> Unit,
-    viewModel: ExploreShowViewModel = koinViewModel()
+    viewModel: ExploreShowViewModel = koinViewModel(),
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
 
     LaunchedEffect(sourceUrl, exploreUrl, viewModel) {
@@ -448,7 +454,9 @@ fun ExploreShowScreen(
                                 book = item.book,
                                 shelfState = item.shelfState,
                                 onClick = { onBookClick(item.book) },
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier.animateItem(),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                             )
                         }
 
@@ -480,7 +488,9 @@ fun ExploreShowScreen(
                                 book = item.book,
                                 shelfState = item.shelfState,
                                 onClick = { onBookClick(item.book) },
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier.animateItem(),
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
                             )
                         }
 
@@ -500,33 +510,45 @@ fun ExploreShowScreen(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ExploreBookItem(
     book: SearchBook,
     shelfState: BookShelfState,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     SearchBookListItem(
         book = book,
         shelfState = shelfState,
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
     )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ExploreBookGridItem(
     book: SearchBook,
     onClick: () -> Unit,
     shelfState: BookShelfState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     SearchBookGridItem(
         book = book,
         shelfState = shelfState,
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
     )
 }
 

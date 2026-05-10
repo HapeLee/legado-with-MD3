@@ -34,6 +34,15 @@ class RssSourceDebugModel(application: Application) : BaseViewModel(application)
         }
     }
 
+    fun startDebug(source: RssSource, key: String) {
+        execute {
+            Debug.callback = this@RssSourceDebugModel
+            Debug.startDebug(this, source, key)
+        }.onStart {
+            // 可以在这里添加开始回调
+        }
+    }
+
     override fun printLog(state: Int, msg: String) {
         when (state) {
             10 -> listSrc = msg

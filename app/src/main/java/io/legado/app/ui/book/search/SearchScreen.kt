@@ -1,6 +1,9 @@
 package io.legado.app.ui.book.search
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -91,25 +94,28 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 
-@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class)
+@OptIn(FlowPreview::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
     onBack: () -> Unit,
     onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
     onOpenSourceManage: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var scopeSheetTab by rememberSaveable { mutableStateOf(0) }
+    var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
@@ -142,9 +148,14 @@ fun SearchScreen(
         snapshotFlow { queryInput }
             .distinctUntilChanged()
             .debounce(200)
-            .filter { it != latestQuery }
             .collect { newQuery ->
-                viewModel.onIntent(SearchIntent.UpdateQuery(newQuery))
+                if (ignoreNextDebouncedQuery == newQuery) {
+                    ignoreNextDebouncedQuery = null
+                    return@collect
+                }
+                if (newQuery != latestQuery) {
+                    viewModel.onIntent(SearchIntent.UpdateQuery(newQuery))
+                }
             }
     }
 
@@ -188,6 +199,7 @@ fun SearchScreen(
     val submitSearch: (String) -> Unit = { rawQuery ->
         val normalized = rawQuery.trim()
         if (normalized.isNotBlank()) {
+            ignoreNextDebouncedQuery = normalized
             queryInput = normalized
             if (normalized != state.query) {
                 viewModel.onIntent(SearchIntent.UpdateQuery(normalized))
@@ -356,7 +368,10 @@ fun SearchScreen(
                                         shelfState = item.shelfState,
                                         onClick = {
                                             viewModel.onIntent(SearchIntent.OpenSearchBook(item.book))
-                                        }
+                                        },
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = bookCoverSharedElementKey(item.book.bookUrl)
                                     )
                                 }
 

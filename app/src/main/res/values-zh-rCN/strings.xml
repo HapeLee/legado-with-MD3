@@ -210,6 +210,7 @@
     <string name="share_app">软件分享</string>
     <string name="flow_sys">跟随系统</string>
     <string name="add">添加</string>
+    <string name="minus">减少</string>
     <string name="import_book_source">导入书源</string>
     <string name="import_local">本地导入</string>
     <string name="import_on_line">网络导入</string>
@@ -470,6 +471,7 @@
     <string name="rule_next_content">正文下一页 URL 规则（nextContentUrl）</string>
     <string name="rule_web_js">WebView JS（webJs）</string>
     <string name="rule_image_style">图片样式（imageStyle）</string>
+    <string name="rule_sub_content">副文规则（subContent）</string>
     <string name="rule_replace_regex">替换规则（replaceRegex）</string>
     <string name="rule_source_regex">资源正则（sourceRegex）</string>
     <string name="rule_pay_action">购买操作（payAction）</string>
@@ -902,6 +904,7 @@
     <string name="use_default_cover">总是使用默认封面</string>
     <string name="use_default_cover_s">总是显示默认封面（不显示网络封面）</string>
     <string name="title_font_size">字号</string>
+    <string name="title_color">标题颜色</string>
     <string name="title_margin_top">上边距</string>
     <string name="title_margin_bottom">下边距</string>
     <string name="show">显示</string>
@@ -1120,7 +1123,7 @@
     <string name="replace_state_change">替换(启用/禁用)</string>
     <string name="show_last_update_time">显示上次更新时间</string>
     <string name="refresh_list">刷新列表</string>
-    <string name="tip_divider_color">分隔线颜色</string>
+    <string name="tip_divider_color">分隔线</string>
     <string name="same_title_removed">移除重复标题</string>
     <string name="update_book_fail">更新失败</string>
     <string name="notification_permission_rationale">阅读需要发送通知来显示朗读控制和下载进度。</string>
@@ -1345,7 +1348,7 @@
     <string name="reduce_stutter">减少进入阅读界面时的卡顿，但加载书籍时间会延长。仅在开启共享元素动画时生效</string>
     <string name="delay_book_load">延缓书籍加载</string>
     <string name="compact_list">紧凑列表</string>
-    <string name="author_read">%s • %d章未读</string>
+    <string name="author_read">%1$s • %2$d章未读</string>
     <string name="menu_alpha_sum">当前 %d%%</string>
     <string name="menu_alpha">菜单透明度</string>
     <string name="change_source_option_title">请选择操作</string>

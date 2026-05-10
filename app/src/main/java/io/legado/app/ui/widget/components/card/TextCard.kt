@@ -1,5 +1,6 @@
 package io.legado.app.ui.widget.components.card
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -35,7 +36,8 @@ fun TextCard(
     verticalPadding: Dp = 4.dp,
     iconSize: Dp = 14.dp,
     spacing: Dp = 4.dp,
-    textStyle: TextStyle = LegadoTheme.typography.labelSmallEmphasized
+    textStyle: TextStyle = LegadoTheme.typography.labelSmallEmphasized,
+    border: BorderStroke? = null
 ) {
     val defaultBackground = LegadoTheme.colorScheme.surfaceContainer
     val defaultContent = LegadoTheme.colorScheme.onSurface
@@ -48,7 +50,8 @@ fun TextCard(
         cornerRadius = cornerRadius,
         containerColor = finalBackgroundColor,
         contentColor = finalContentColor,
-        onClick = onClick
+        onClick = onClick,
+        border = border
     ) {
         Row(
             modifier = Modifier.padding(

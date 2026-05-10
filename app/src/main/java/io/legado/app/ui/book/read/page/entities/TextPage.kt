@@ -368,9 +368,14 @@ data class TextPage(
     }
 
     fun upRenderHeight() {
-        renderHeight = ceil(lines.last().lineBottom).toInt()
+        val underlineExtraHeight = if (ReadBookConfig.underline) {
+            (ReadBookConfig.durConfig.underlinePadding + ReadBookConfig.underlineHeight).dpToPx().toInt()
+        } else {
+            0
+        }
+        renderHeight = ceil(lines.last().lineBottom).toInt() + underlineExtraHeight
         if (leftLineSize > 0 && leftLineSize != lines.size) {
-            val leftHeight = ceil(lines[leftLineSize - 1].lineBottom).toInt()
+            val leftHeight = ceil(lines[leftLineSize - 1].lineBottom).toInt() + underlineExtraHeight
             renderHeight = max(renderHeight, leftHeight)
         }
     }

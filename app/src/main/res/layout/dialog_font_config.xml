@@ -88,6 +88,13 @@
             android:layout_height="wrap_content"
             app:icon="@drawable/ic_fill_colors" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRegexColor"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Tonal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_palette" />
+
     </com.google.android.material.button.MaterialButtonGroup>
 
     <TextView

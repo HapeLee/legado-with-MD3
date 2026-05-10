@@ -65,6 +65,7 @@ import com.kyant.backdrop.shadow.Shadow
 import com.kyant.capsule.ContinuousCapsule
 import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.animation.InteractiveHighlight
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -110,12 +111,19 @@ fun FloatingBottomBar(
     backdrop: Backdrop,
     tabsCount: Int,
     isBlurEnabled: Boolean = true,
+    hasCustomIcons: Boolean = false,
     content: @Composable RowScope.() -> Unit
 ) {
     val isInLightTheme = !LegadoTheme.isDark
-    val accentColor = LegadoTheme.colorScheme.primary
-    val containerColor = if (isBlurEnabled) {
-        LegadoTheme.colorScheme.surfaceContainer.copy(alpha = 0.4f)
+    val accentColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeColor != 0) {
+        Color(ThemeConfig.themeColor)
+    } else {
+        LegadoTheme.colorScheme.primary
+    }
+    val containerColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
+        Color(ThemeConfig.secondaryThemeColor).copy(alpha = if (isBlurEnabled) ThemeConfig.bottomBarBlurAlpha / 100f else 1f)
+    } else if (isBlurEnabled) {
+        LegadoTheme.colorScheme.surfaceContainer.copy(alpha = ThemeConfig.bottomBarBlurAlpha / 100f)
     } else {
         LegadoTheme.colorScheme.surfaceContainer
     }
@@ -250,8 +258,8 @@ fun FloatingBottomBar(
                     effects = {
                         if (isBlurEnabled) {
                             vibrancy()
-                            blur(8f.dp.toPx())
-                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                            blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
+                            lens(ThemeConfig.bottomBarLensRadius.dp.toPx(), ThemeConfig.bottomBarLensRadius.dp.toPx())
                         }
                     },
                     highlight = {
@@ -307,8 +315,8 @@ fun FloatingBottomBar(
                             if (isBlurEnabled) {
                                 val progress = dampedDragAnimation.pressProgress
                                 vibrancy()
-                                blur(8f.dp.toPx())
-                                lens(24f.dp.toPx() * progress, 24f.dp.toPx() * progress)
+                                blur(ThemeConfig.bottomBarBlurRadius.toFloat().dp.toPx())
+                                lens(ThemeConfig.bottomBarLensRadius.dp.toPx() * progress, ThemeConfig.bottomBarLensRadius.dp.toPx() * progress)
                             }
                         },
                         highlight = {
@@ -331,7 +339,10 @@ fun FloatingBottomBar(
                     )
                     .height(56.dp)
                     .padding(horizontal = 4.dp)
-                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                    .then(
+                        if (hasCustomIcons) Modifier
+                        else Modifier.graphicsLayer(colorFilter = ColorFilter.tint(accentColor))
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
             )

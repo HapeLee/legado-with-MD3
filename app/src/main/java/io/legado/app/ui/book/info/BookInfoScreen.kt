@@ -3,6 +3,8 @@ package io.legado.app.ui.book.info
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -54,6 +57,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -72,6 +76,8 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.config.AppConfig
+import io.legado.app.model.BookCover
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -402,6 +408,9 @@ private fun BookInfoTransparentTopAppBar(
 
 @Composable
 private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
+    val useDefaultCover = AppConfig.useDefaultCover || book?.customCoverUrl == "use_default_cover"
+    if (useDefaultCover) return null
+
     val imageLoader = koinInject<ImageLoader>()
     var shouldExtractColor by remember(book?.bookUrl) { mutableStateOf(false) }
 
@@ -413,7 +422,12 @@ private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
         }
     }
 
-    val coverPath = if (shouldExtractColor) book?.getDisplayCover() else null
+    val isNight = AppConfig.isNightTheme
+
+    val coverPath = if (shouldExtractColor) {
+        book?.getDisplayCover()
+    } else null
+
     val sourceOrigin = if (shouldExtractColor) book?.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
@@ -469,8 +483,15 @@ private fun BookInfoTopBarActions(
 
 @Composable
 private fun BookInfoBackdrop(book: Book) {
-    val cover = book.getDisplayCover()
-    val sourceOrigin = book.origin
+    val useDefaultCover = AppConfig.useDefaultCover || book.customCoverUrl == "use_default_cover"
+    val isNight = AppConfig.isNightTheme
+
+    val cover = if (useDefaultCover) {
+        BookCover.getRandomDefaultPath(book.bookUrl, isNight)
+    } else {
+        book.getDisplayCover()
+    }
+    val sourceOrigin = if (!useDefaultCover) book.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val context = LocalContext.current
     val imageLoader = koinInject<ImageLoader>()
@@ -483,6 +504,12 @@ private fun BookInfoBackdrop(book: Book) {
             showBackdropImage = true
         }
     }
+
+    val backdropAlpha by animateFloatAsState(
+        targetValue = if (showBackdropImage) 1f else 0f,
+        animationSpec = tween(800),
+        label = "BackdropFade"
+    )
 
     val backdropRequest = remember(cover, sourceOrigin, loadOnlyWifi, context) {
         buildCoverImageRequest(
@@ -499,15 +526,16 @@ private fun BookInfoBackdrop(book: Book) {
         0.42f
     )
     Box(modifier = Modifier.fillMaxSize()) {
-        if (!cover.isNullOrBlank() && showBackdropImage) {
+        if (!cover.isNullOrBlank()) {
             AsyncImage(
                 model = backdropRequest,
                 imageLoader = imageLoader,
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(360.dp)
-                    .blur(24.dp),
+                    .height(480.dp)
+                    .blur(24.dp)
+                    .alpha(backdropAlpha),
                 contentScale = ContentScale.Crop,
             )
         }
@@ -523,10 +551,10 @@ private fun BookInfoBackdrop(book: Book) {
                     Brush.verticalGradient(
                         colorStops = arrayOf(
                             0f to Color.Transparent,
-                            0.18f to seedOverlay.copy(alpha = 0.10f),
-                            0.34f to seedOverlay.copy(alpha = 0.18f),
-                            0.52f to LegadoTheme.colorScheme.surface.copy(alpha = 0.82f),
-                            0.72f to LegadoTheme.colorScheme.surface,
+                            0.20f to seedOverlay.copy(alpha = 0.10f),
+                            0.40f to seedOverlay.copy(alpha = 0.18f),
+                            0.60f to LegadoTheme.colorScheme.surface.copy(alpha = 0.85f),
+                            0.80f to LegadoTheme.colorScheme.surface,
                             1f to LegadoTheme.colorScheme.surface,
                         )
                     )
@@ -670,25 +698,16 @@ private fun BookInfoHeader(
                         .width(112.dp)
                         .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
                 ) {
-                    val coverModifier = with(sharedTransitionScope) {
-                        if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                            Modifier
-                                .width(112.dp)
-                                .sharedElement(
-                                    sharedContentState = rememberSharedContentState(sharedCoverKey),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                )
-                        } else {
-                            Modifier.width(112.dp)
-                        }
-                    }
                     CoilBookCover(
                         name = book.name,
                         author = book.author,
                         path = book.getDisplayCover(),
                         sourceOrigin = book.origin,
-                        modifier = coverModifier,
+                        modifier = Modifier.width(112.dp).aspectRatio(5f / 7f),
                         showLoadingPlaceholder = sharedCoverKey == null,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        sharedCoverKey = sharedCoverKey,
                     )
                 }
                 Column(

@@ -17,6 +17,11 @@ import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+data class GroupBookCount(
+    val groupId: Long,
+    val count: Int
+)
+
 @Dao
 interface BookDao {
 
@@ -91,7 +96,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         where type & ${BookType.text} > 0
         and type & ${BookType.local} = 0
@@ -125,7 +132,9 @@ interface BookDao {
         type,
         `group`,
         `order`,
-        canUpdate
+        canUpdate,
+        ifnull(customIntro, intro) as intro,
+        kind
     FROM books
     ORDER BY durChapterTime DESC
 """
@@ -156,8 +165,10 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
-        FROM books 
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
+        FROM books
         WHERE type & ${BookType.audio} > 0
         """
     )
@@ -187,7 +198,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE type & ${BookType.local} > 0
         """
@@ -223,7 +236,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0
         and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
@@ -260,7 +275,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         where type & ${BookType.local} > 0
         and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
@@ -292,7 +309,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE (`group` & :group) > 0
         """
@@ -325,7 +344,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE name like '%'||:key||'%' or author like '%'||:key||'%' or originName like '%'||:key||'%'
         """
@@ -356,7 +377,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         where type & ${BookType.updateError} > 0 
         order by durChapterTime desc
@@ -388,7 +411,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE durChapterIndex = 0 AND durChapterPos = 0
         """
@@ -419,7 +444,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
         """
@@ -450,7 +477,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
         """
@@ -481,7 +510,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE type & ${BookType.image} > 0
         """
@@ -512,7 +543,9 @@ interface BookDao {
             type,
             `group`,
             `order`,
-            canUpdate
+            canUpdate,
+            ifnull(customIntro, intro) as intro,
+            kind
         FROM books 
         WHERE type & ${BookType.text} > 0
         """
@@ -627,4 +660,268 @@ interface BookDao {
 
     @Query("delete from books where type & ${BookType.notShelf} > 0")
     fun deleteNotShelfBook()
+
+    // ── Group preview / count queries (DB-level, replaces in-memory buildGroupPreviewState) ──
+
+    @Query("SELECT COUNT(*) FROM books")
+    fun flowAllBookShelfCount(): Flow<Int>
+
+    @Query(
+        """
+        SELECT ${BookGroup.IdAll} AS groupId, COUNT(*) AS count FROM books
+        UNION ALL SELECT ${BookGroup.IdRoot}, COUNT(*) FROM books
+            WHERE type & ${BookType.text} > 0 AND type & ${BookType.local} = 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND (SELECT show FROM book_groups WHERE groupId = ${BookGroup.IdNetNone}) != 1
+        UNION ALL SELECT ${BookGroup.IdLocal}, COUNT(*) FROM books WHERE type & ${BookType.local} > 0
+        UNION ALL SELECT ${BookGroup.IdAudio}, COUNT(*) FROM books WHERE type & ${BookType.audio} > 0
+        UNION ALL SELECT ${BookGroup.IdNetNone}, COUNT(*) FROM books
+            WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+        UNION ALL SELECT ${BookGroup.IdLocalNone}, COUNT(*) FROM books
+            WHERE type & ${BookType.local} > 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+        UNION ALL SELECT ${BookGroup.IdManga}, COUNT(*) FROM books WHERE type & ${BookType.image} > 0
+        UNION ALL SELECT ${BookGroup.IdText}, COUNT(*) FROM books WHERE type & ${BookType.text} > 0
+        UNION ALL SELECT ${BookGroup.IdError}, COUNT(*) FROM books WHERE type & ${BookType.updateError} > 0
+        UNION ALL SELECT ${BookGroup.IdUnread}, COUNT(*) FROM books WHERE durChapterIndex = 0 AND durChapterPos = 0
+        UNION ALL SELECT ${BookGroup.IdReading}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
+        UNION ALL SELECT ${BookGroup.IdReadFinished}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+        """
+    )
+    fun flowSystemGroupCounts(): Flow<List<GroupBookCount>>
+
+    @Query("SELECT COUNT(*) FROM books WHERE (`group` & :groupId) > 0")
+    fun flowUserGroupBookCount(groupId: Long): Flow<Int>
+
+    fun flowGroupPreview(groupId: Long): Flow<List<BookShelfItem>> {
+        return when (groupId) {
+            BookGroup.IdRoot -> flowBookShelfRootPreview()
+            BookGroup.IdAll -> flowBookShelfPreview()
+            BookGroup.IdLocal -> flowBookShelfLocalPreview()
+            BookGroup.IdAudio -> flowBookShelfAudioPreview()
+            BookGroup.IdNetNone -> flowBookShelfNetNoGroupPreview()
+            BookGroup.IdLocalNone -> flowBookShelfLocalNoGroupPreview()
+            BookGroup.IdManga -> flowBookShelfMangaPreview()
+            BookGroup.IdText -> flowBookShelfTextPreview()
+            BookGroup.IdError -> flowBookShelfUpdateErrorPreview()
+            BookGroup.IdUnread -> flowBookShelfUnreadPreview()
+            BookGroup.IdReading -> flowBookShelfReadingPreview()
+            BookGroup.IdReadFinished -> flowBookShelfReadFinishedPreview()
+            else -> flowBookShelfPreviewByUserGroup(groupId)
+        }.map { list ->
+            list.filterNot { it.isNotShelf }
+        }
+    }
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.text} > 0 AND type & ${BookType.local} = 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND (SELECT show FROM book_groups WHERE groupId = ${BookGroup.IdNetNone}) != 1
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfRootPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.local} > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfLocalPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.audio} > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfAudioPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfNetNoGroupPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.local} > 0
+            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfLocalNoGroupPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.image} > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfMangaPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.text} > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfTextPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE type & ${BookType.updateError} > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfUpdateErrorPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE durChapterIndex = 0 AND durChapterPos = 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfUnreadPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfReadingPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfReadFinishedPreview(): Flow<List<BookShelfItem>>
+
+    @Query(
+        """
+        SELECT bookUrl, name, author, origin, originName,
+            coverUrl, customCoverUrl, durChapterTitle, durChapterTime,
+            durChapterPos, latestChapterTitle, latestChapterTime,
+            lastCheckCount, totalChapterNum, durChapterIndex,
+            type, `group`, `order`, canUpdate,
+            ifnull(customIntro, intro) as intro, kind
+        FROM books
+        WHERE (`group` & :groupId) > 0
+        ORDER BY CASE WHEN (coverUrl IS NOT NULL OR customCoverUrl IS NOT NULL) THEN 0 ELSE 1 END, durChapterTime DESC
+        LIMIT 4
+        """
+    )
+    fun flowBookShelfPreviewByUserGroup(groupId: Long): Flow<List<BookShelfItem>>
 }

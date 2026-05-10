@@ -73,6 +73,8 @@ data class TextLine(
     fun addColumn(column: BaseColumn) {
         if (column !is TextColumn) {
             onlyTextColumn = false
+        } else if (column.color != null) {
+            onlyTextColumn = false
         }
         column.textLine = this
         textColumns.add(column)
@@ -189,6 +191,8 @@ data class TextLine(
         }
         val textColor = if (isReadAloud) {
             ReadBookConfig.textAccentColor
+        } else if (isTitle && ReadBookConfig.titleColor != 0) {
+            ReadBookConfig.titleColor
         } else {
             ReadBookConfig.textColor
         }
@@ -229,7 +233,17 @@ data class TextLine(
             null
 
         val lineY = height + (ReadBookConfig.durConfig.underlinePadding - 10).dpToPx()
-        canvas.drawLine(lineStart + indentWidth, lineY, lineEnd, lineY, paint)
+        val startX = if (ReadBookConfig.underlineExtend) {
+            ChapterProvider.paddingLeft.toFloat()
+        } else {
+            lineStart + indentWidth
+        }
+        val endX = if (ReadBookConfig.underlineExtend) {
+            (ChapterProvider.paddingLeft + ChapterProvider.visibleWidth).toFloat()
+        } else {
+            lineEnd
+        }
+        canvas.drawLine(startX, lineY, endX, lineY, paint)
     }
 
 

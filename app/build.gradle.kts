@@ -278,5 +278,6 @@ dependencies {
     implementation(libs.miuix.shapes.android)
     implementation(libs.capsule)
     implementation(libs.backdrop)
+    implementation(libs.lyricViewx)
     implementation(libs.timber)
 }

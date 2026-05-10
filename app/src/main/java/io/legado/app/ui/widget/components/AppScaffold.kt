@@ -15,9 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -70,65 +75,110 @@ fun AppScaffold(
                     FabPosition.Center -> MiuixFabPosition.Center
                     else -> MiuixFabPosition.End
                 }
-                MiuixScaffold(
-                    modifier = modifier,
-                    topBar = {
-                        topBar(hazeState)
-                    },
-                    bottomBar = bottomBar,
-                    snackbarHost = snackbarHost,
-                    floatingActionButton = floatingActionButton,
-                    floatingActionButtonPosition = miuixFabPosition,
-                    containerColor = miuixContainerColor,
-                    contentWindowInsets = contentWindowInsets
-                ) { paddingValues ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .responsiveHazeSource(hazeState)
-                            .then(
-                                if (contentDrawsBehindBars) Modifier
-                                else Modifier.padding(paddingValues)
+                Box(modifier = modifier.fillMaxSize()) {
+                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    MiuixScaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            topBar(hazeState)
+                        },
+                        bottomBar = bottomBar,
+                        snackbarHost = snackbarHost,
+                        floatingActionButton = floatingActionButton,
+                        floatingActionButtonPosition = miuixFabPosition,
+                        containerColor = miuixContainerColor,
+                        contentWindowInsets = contentWindowInsets
+                    ) { paddingValues ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (contentDrawsBehindBars) Modifier
+                                    else Modifier.padding(paddingValues)
+                                )
+                        ) {
+                            content(
+                                if (contentDrawsBehindBars) paddingValues
+                                else PaddingValues(0.dp)
                             )
-                    ) {
-                        content(
-                            if (contentDrawsBehindBars) paddingValues
-                            else PaddingValues(0.dp)
-                        )
+                        }
                     }
                 }
             }
 
             else -> {
-                Scaffold(
-                    modifier = modifier,
-                    topBar = {
-                        topBar(hazeState)
-                    },
-                    bottomBar = bottomBar,
-                    snackbarHost = snackbarHost,
-                    floatingActionButton = floatingActionButton,
-                    floatingActionButtonPosition = floatingActionButtonPosition,
-                    containerColor = containerColor,
-                    contentColor = contentColor,
-                    contentWindowInsets = contentWindowInsets
-                ) { paddingValues ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .responsiveHazeSource(hazeState)
-                            .then(
-                                if (contentDrawsBehindBars) Modifier
-                                else Modifier.padding(paddingValues)
+                Box(modifier = modifier.fillMaxSize()) {
+                    BackgroundImageContent(isDark = isDark, hazeState = hazeState)
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        topBar = {
+                            topBar(hazeState)
+                        },
+                        bottomBar = bottomBar,
+                        snackbarHost = snackbarHost,
+                        floatingActionButton = floatingActionButton,
+                        floatingActionButtonPosition = floatingActionButtonPosition,
+                        containerColor = containerColor,
+                        contentColor = contentColor,
+                        contentWindowInsets = contentWindowInsets
+                    ) { paddingValues ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (contentDrawsBehindBars) Modifier
+                                    else Modifier.padding(paddingValues)
+                                )
+                        ) {
+                            content(
+                                if (contentDrawsBehindBars) paddingValues
+                                else PaddingValues(0.dp)
                             )
-                    ) {
-                        content(
-                            if (contentDrawsBehindBars) paddingValues
-                            else PaddingValues(0.dp)
-                        )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun BackgroundImageContent(
+    isDark: Boolean,
+    hazeState: HazeState
+) {
+    val hasImageBg = ThemeConfig.hasImageBg(isDark)
+    val bgImagePath = if (isDark) ThemeConfig.bgImageDark else ThemeConfig.bgImageLight
+    val blur = if (isDark) {
+        ThemeConfig.bgImageNBlurring
+    } else {
+        ThemeConfig.bgImageBlurring
+    }
+
+    if (hasImageBg && !bgImagePath.isNullOrBlank()) {
+        if (ThemeConfig.enableBlur) {
+            AsyncImage(
+                model = bgImagePath,
+                contentDescription = null,
+                imageLoader = org.koin.compose.koinInject(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(hazeState),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            AsyncImage(
+                model = bgImagePath,
+                contentDescription = null,
+                imageLoader = org.koin.compose.koinInject(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(blur.dp),
+                contentScale = ContentScale.Crop
+            )
         }
     }
 }

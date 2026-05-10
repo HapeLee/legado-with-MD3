@@ -26,10 +26,12 @@ import io.legado.app.utils.getFile
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefInt
+import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
+import io.legado.app.utils.putPrefString
 import io.legado.app.utils.resizeAndRecycle
 import splitties.init.appCtx
 import java.io.File
@@ -226,6 +228,12 @@ object ReadBookConfig {
                 appCtx.putPrefBoolean(PreferKey.shareLayout, value)
             }
         }
+    
+    val regexColorRules: ArrayList<RegexColorRule> get() = durConfig.regexColorRules
+
+    fun saveRegexColorRules() {
+        save()
+    }
 
     /**
      * 两端对齐
@@ -258,6 +266,36 @@ object ReadBookConfig {
         get() = config.textFont
         set(value) {
             config.textFont = value
+        }
+
+    var titleFont: String
+        get() = config.titleFont
+        set(value) {
+            config.titleFont = value
+        }
+
+    var headerFont: String
+        get() = config.headerFont
+        set(value) {
+            config.headerFont = value
+        }
+
+    var footerFont: String
+        get() = config.footerFont
+        set(value) {
+            config.footerFont = value
+        }
+
+    var headerFontSize: Int
+        get() = config.headerFontSize.takeIf { it > 0 } ?: 12
+        set(value) {
+            config.headerFontSize = value
+        }
+
+    var footerFontSize: Int
+        get() = config.footerFontSize.takeIf { it > 0 } ?: 12
+        set(value) {
+            config.footerFontSize = value
         }
 
     var textBold: Int
@@ -393,6 +431,12 @@ object ReadBookConfig {
             config.titleBottomSpacing = value
         }
 
+    var titleColor: Int
+        get() = config.titleColor
+        set(value) {
+            config.titleColor = value
+        }
+
     var paragraphIndent: String
         get() = config.paragraphIndent
         set(value) {
@@ -415,6 +459,12 @@ object ReadBookConfig {
         get() = config.underlinePadding
         set(value) {
             config.underlinePadding = value
+        }
+
+    var underlineExtend: Boolean
+        get() = config.underlineExtend
+        set(value) {
+            config.underlineExtend = value
         }
 
     var dottedLine: Boolean
@@ -544,9 +594,14 @@ object ReadBookConfig {
         }
 
     fun getExportConfig(): Config {
-        val exportConfig = durConfig.copy()
+        val exportConfig = durConfig.copy(regexColorRules = ArrayList(durConfig.regexColorRules.map { it.copy() }))
         if (shareLayout) {
             exportConfig.textFont = shareConfig.textFont
+            exportConfig.titleFont = shareConfig.titleFont
+            exportConfig.headerFont = shareConfig.headerFont
+            exportConfig.footerFont = shareConfig.footerFont
+            exportConfig.headerFontSize = shareConfig.headerFontSize
+            exportConfig.footerFontSize = shareConfig.footerFontSize
             exportConfig.textBold = shareConfig.textBold
             exportConfig.textSize = shareConfig.textSize
             exportConfig.letterSpacing = shareConfig.letterSpacing
@@ -556,6 +611,7 @@ object ReadBookConfig {
             exportConfig.titleSize = shareConfig.titleSize
             exportConfig.titleTopSpacing = shareConfig.titleTopSpacing
             exportConfig.titleBottomSpacing = shareConfig.titleBottomSpacing
+            exportConfig.titleColor = shareConfig.titleColor
             exportConfig.paddingBottom = shareConfig.paddingBottom
             exportConfig.paddingLeft = shareConfig.paddingLeft
             exportConfig.paddingRight = shareConfig.paddingRight
@@ -576,7 +632,8 @@ object ReadBookConfig {
             exportConfig.tipFooterLeft = shareConfig.tipFooterLeft
             exportConfig.tipFooterMiddle = shareConfig.tipFooterMiddle
             exportConfig.tipFooterRight = shareConfig.tipFooterRight
-            exportConfig.tipColor = shareConfig.tipColor
+            exportConfig.tipHeaderColor = shareConfig.tipHeaderColor
+            exportConfig.tipFooterColor = shareConfig.tipFooterColor
             exportConfig.headerMode = shareConfig.headerMode
             // MD3专有属性
             exportConfig.footerMode = shareConfig.footerMode
@@ -626,6 +683,20 @@ object ReadBookConfig {
                 config.textFont = fontPath
             } else {
                 config.textFont = ""
+            }
+        }
+        if (config.titleFont.isNotEmpty()) {
+            val fontName = config.titleFont
+            val fontPath =
+                FileUtils.getPath(appCtx.externalFiles, "font", fontName)
+            val fontFile = configDir.getFile(fontName)
+            if (fontFile.exists()) {
+                if (!FileUtils.exist(fontPath)) {
+                    fontFile.copyTo(File(fontPath))
+                }
+                config.titleFont = fontPath
+            } else {
+                config.titleFont = ""
             }
         }
         if (config.bgType == 2) {
@@ -688,6 +759,11 @@ object ReadBookConfig {
         private var pageAnim: Int = 0,//翻页动画
         private var pageAnimEInk: Int = 4,
         var textFont: String = "",//字体
+        var titleFont: String = "",//标题字体
+        var headerFont: String = "",//页眉字体
+        var footerFont: String = "",//页脚字体
+        var headerFontSize: Int = 12,//页眉字号
+        var footerFontSize: Int = 12,//页脚字号
         var textBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
         var textSize: Int = 20,//文字大小
         var textItalic: Boolean = false,// 是否启用斜体
@@ -704,6 +780,7 @@ object ReadBookConfig {
         var titleSize: Int = 0,
         var titleTopSpacing: Int = 0,
         var titleBottomSpacing: Int = 0,
+        var titleColor: Int = 0,
         var titleBold: Int = 500,//是否粗体字 0:正常, 1:粗体, 2:细体
         var titleLineSpacingExtra: Int = 12,
         var titleLineSpacingSub: Int = 12,
@@ -715,6 +792,7 @@ object ReadBookConfig {
         var underline: Boolean = false, //下划线
         var underlinePadding: Int = 10,
         var underlineHeight: Int = 1,
+        var underlineExtend: Boolean = false, //下划线延伸
         var underlineColor: String = "#3E3D3B",
         var underlineColorNight: String = "#ADADAD",
         var dottedLine: Boolean = false, //虚线
@@ -740,10 +818,12 @@ object ReadBookConfig {
         var tipFooterLeft: Int = ReadTipConfig.chapterTitle,
         var tipFooterMiddle: Int = ReadTipConfig.none,
         var tipFooterRight: Int = ReadTipConfig.pageAndTotal,
-        var tipColor: Int = 0,
+        var tipHeaderColor: Int = 0,
+        var tipFooterColor: Int = 0,
         var tipDividerColor: Int = -1,
         var headerMode: Int = 0,
-        var footerMode: Int = 0
+        var footerMode: Int = 0,
+        var regexColorRules: ArrayList<RegexColorRule> = arrayListOf()
     ) {
 
         @Transient
@@ -821,6 +901,11 @@ object ReadBookConfig {
             "pageAnim" to pageAnim,
             "pageAnimEInk" to pageAnimEInk,
             "textFont" to textFont,
+            "titleFont" to titleFont,
+            "headerFont" to headerFont,
+            "footerFont" to footerFont,
+            "headerFontSize" to headerFontSize,
+            "footerFontSize" to footerFontSize,
             "textBold" to textBold,
             "textSize" to textSize,
             "letterSpacing" to letterSpacing,
@@ -830,6 +915,7 @@ object ReadBookConfig {
             "titleSize" to titleSize,
             "titleTopSpacing" to titleTopSpacing,
             "titleBottomSpacing" to titleBottomSpacing,
+            "titleColor" to titleColor,
             "paragraphIndent" to paragraphIndent,
             "paddingBottom" to paddingBottom,
             "paddingLeft" to paddingLeft,
@@ -851,10 +937,12 @@ object ReadBookConfig {
             "tipFooterLeft" to tipFooterLeft,
             "tipFooterMiddle" to tipFooterMiddle,
             "tipFooterRight" to tipFooterRight,
-            "tipColor" to tipColor,
+            "tipHeaderColor" to tipHeaderColor,
+            "tipFooterColor" to tipFooterColor,
             "tipDividerColor" to tipDividerColor,
             "headerMode" to headerMode,
-            "footerMode" to footerMode
+            "footerMode" to footerMode,
+            "regexColorRules" to regexColorRules.map { mapOf("name" to it.name, "pattern" to it.pattern, "color" to it.color, "fontPath" to it.fontPath) }
         )
 
         fun getBgPath(bgIndex: Int): String? {

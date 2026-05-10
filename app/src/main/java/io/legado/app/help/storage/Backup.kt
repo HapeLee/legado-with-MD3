@@ -14,6 +14,7 @@ import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.PersonalizationThemeConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.BookCover
@@ -83,6 +84,7 @@ object Backup {
             ReadBookConfig.configFileName,
             ReadBookConfig.shareConfigFileName,
             OldThemeConfig.configFileName,
+            PersonalizationThemeConfig.configFileName,
             BookCover.configFileName,
             "config.xml"
         )
@@ -181,6 +183,8 @@ object Backup {
             FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
                 .writeText(GSON.toJson(it))
         }
+        FileUtils.createFileIfNotExist(backupPath + File.separator + PersonalizationThemeConfig.configFileName)
+            .writeText(PersonalizationThemeConfig.toJson())
         currentCoroutineContext().ensureActive()
         appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
             sp.edit(commit = true) {

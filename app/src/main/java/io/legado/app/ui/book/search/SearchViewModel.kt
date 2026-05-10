@@ -234,7 +234,13 @@ class SearchViewModel(
     }
 
     private fun updateQuery(query: String, showSuggestions: Boolean) {
-        if (showSuggestions && _uiState.value.isSearching) {
+        val currentState = _uiState.value
+        val isSameQuery = currentState.query == query
+        val sameUiFlag = currentState.showSuggestions == showSuggestions
+        if (isSameQuery && sameUiFlag) {
+            return
+        }
+        if (showSuggestions && currentState.isSearching && !isSameQuery) {
             stopSearch(manualStop = false)
         }
         queryFlow.value = query

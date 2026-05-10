@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
+import io.legado.app.ui.widget.components.SplicedColumnDivider
 import top.yukonga.miuix.kmp.preference.SwitchPreference
 
 
@@ -20,6 +21,7 @@ fun SwitchSettingItem(
     onCheckedChange: (Boolean) -> Unit
 ) {
     val composeEngine = LegadoTheme.composeEngine
+    SplicedColumnDivider()
 
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
         SwitchPreference(

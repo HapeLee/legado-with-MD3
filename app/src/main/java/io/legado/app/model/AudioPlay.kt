@@ -59,6 +59,7 @@ object AudioPlay : CoroutineScope by MainScope() {
     var durChapterPos = 0
     var durChapter: BookChapter? = null
     var durPlayUrl = ""
+    var durLyric: String? = null
     var durAudioSize = 0
     var inBookshelf = false
     var bookSource: BookSource? = null
@@ -153,14 +154,23 @@ object AudioPlay : CoroutineScope by MainScope() {
                     .onSuccess { content ->
                         if (content.isEmpty()) {
                             appCtx.toastOnUi("未获取到资源链接")
+                            // 加载失败时清空歌词
+                            durLyric = null
+                            callback?.upLyric(null)
                         } else {
                             contentLoadFinish(chapter, content)
                         }
-                    }.onError {
-                        AppLog.put("获取资源链接出错\n$it", it, true)
+                    }.onError { error ->
+                        AppLog.put("获取资源链接出错\n$error", error, true)
                         upLoading(false)
+                        // 加载失败时清空歌词
+                        durLyric = null
+                        callback?.upLyric(null)
                     }.onCancel {
                         removeLoading(index)
+                        // 取消加载时清空歌词
+                        durLyric = null
+                        callback?.upLyric(null)
                     }.onFinally {
                         removeLoading(index)
                     }
@@ -177,7 +187,10 @@ object AudioPlay : CoroutineScope by MainScope() {
     private fun contentLoadFinish(chapter: BookChapter, content: String) {
         if (chapter.index == book?.durChapterIndex) {
             durPlayUrl = content
+            durLyric = chapter.getVariable("lyric").takeIf { it.isNotBlank() }
             upPlayUrl()
+            // 重新加载歌词，确保循环播放时歌词进度重置
+            callback?.upLyric(durLyric)
         }
     }
 
@@ -397,6 +410,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun register(context: Context) {
         activityContext = context
         callback = context as CallBack
+        // 主动更新歌词状态，确保重新进入时歌词控件能正确显示
+        callback?.upLyric(durLyric)
     }
 
     fun unregister(context: Context) {
@@ -418,6 +433,8 @@ object AudioPlay : CoroutineScope by MainScope() {
     interface CallBack {
 
         fun upLoading(loading: Boolean)
+        fun upLyric(lyric: String?)
+        fun upLyricP(position: Int)
 
     }
 

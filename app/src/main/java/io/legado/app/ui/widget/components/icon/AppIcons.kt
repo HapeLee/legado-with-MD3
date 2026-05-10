@@ -96,7 +96,7 @@ object AppIcons {
 
     val Replay: ImageVector
         @Composable
-        get() = if (isMiuix) MiuixIcons.Refresh ?: Icons.Default.Replay else Icons.Default.Replay
+        get() = if (isMiuix) MiuixIcons.Refresh else Icons.Default.Replay
 
     @Composable
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {

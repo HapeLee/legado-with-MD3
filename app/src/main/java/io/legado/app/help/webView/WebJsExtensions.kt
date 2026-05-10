@@ -9,6 +9,8 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.CacheManager
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
@@ -17,27 +19,40 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.ui.rss.read.RssJsExtensions
 import io.legado.app.utils.GSON
-import io.legado.app.utils.escapeForJs
 import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.isJsonObject
 import java.lang.ref.WeakReference
 import java.util.UUID
 
 @Suppress("unused")
 class WebJsExtensions(
-    source: BaseSource, activity: AppCompatActivity,
-    private val webView: WebView,
-    private val bookType: Int = 0,
+    source: BaseSource,
+    activity: AppCompatActivity?,
+    webView: WebView,
+    bookType: Int = 0,
     callback: Callback? = null
 ) : RssJsExtensions(activity, source) {
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
+    private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
 
     interface Callback {
         fun upConfig(config: String)
+        fun onNavigateToArticles(sortUrl: String? = null)
     }
 
     @JavascriptInterface
     fun upConfig(config: String) {
         callbackRef.get()?.upConfig(config)
+    }
+
+    @JavascriptInterface
+    fun navigateToArticles() {
+        callbackRef.get()?.onNavigateToArticles(null)
+    }
+
+    @JavascriptInterface
+    fun navigateToArticles(sortUrl: String?) {
+        callbackRef.get()?.onNavigateToArticles(sortUrl)
     }
 
     private val bookAndChapter by lazy {
@@ -63,154 +78,201 @@ class WebJsExtensions(
     private val book: Book? get() = bookAndChapter.first
     private val chapter: BookChapter? get() = bookAndChapter.second
 
-    /**
-     * 由软件主动注入的js函数调用
-     */
+    val analyzeRule by lazy {
+        AnalyzeRule(book, source = getSource()).setChapter(chapter)
+    }
+
     @JavascriptInterface
-    fun request(funName: String, jsParam: Array<String>, id: String) {
+    fun request(funName: String, jsParam: Array<String?>, id: String) {
         val activity = activityRef.get() ?: return
         Coroutine.async(activity.lifecycleScope) {
+            val params = Array(6) { i -> jsParam.getOrNull(i) }
+            val p0 = params[0]
+            val p1 = params[1]
+            val p2 = params[2]
+            val p3 = params[3]
+            val p4 = params[4]
+            val p5 = params[5]
             when (funName) {
-                "run" -> AnalyzeRule(book, getSource()).run {
-                    setCoroutineContext(coroutineContext)
-                    setChapter(chapter)
-                    evalJS(jsParam[0]).toString()
+                "run" -> {
+                    analyzeRule.setCoroutineContext(coroutineContext)
+                        .evalJS(
+                            p0 ?: throw NoStackTraceException("error null")
+                        ).toString()
                 }
                 "ajaxAwait" -> {
-                    ajax(jsParam[0], jsParam[1].toIntOrNull()).toString()
+                    ajax(
+                        p0 ?: throw NoStackTraceException("error url null"),
+                        p1?.toLongOrNull()
+                    ).toString()
                 }
                 "connectAwait" -> {
-                    connect(jsParam[0], jsParam[1], jsParam[2].toIntOrNull())
+                    connect(
+                        p0 ?: throw NoStackTraceException("error url null"),
+                        p1,
+                        p2?.toIntOrNull()
+                    )
                 }
                 "getAwait" -> {
-                    get(jsParam[0], jsParam[1], jsParam[2].toIntOrNull())
+                    get(
+                        p0 ?: throw NoStackTraceException("error url null"),
+                        p1 ?: throw NoStackTraceException("error header null"),
+                        p2?.toIntOrNull()
+                    )
                 }
                 "headAwait" -> {
-                    head(jsParam[0], jsParam[1], jsParam[2].toIntOrNull())
+                    head(
+                        p0 ?: throw NoStackTraceException("error url null"),
+                        p1 ?: throw NoStackTraceException("error header null"),
+                        p2?.toIntOrNull()
+                    )
                 }
                 "postAwait" -> {
-                    post(jsParam[0], jsParam[1], jsParam[2], jsParam[3].toIntOrNull())
+                    post(
+                        p0 ?: throw NoStackTraceException("error url null"),
+                        p1 ?: throw NoStackTraceException("error body null"),
+                        p2 ?: throw NoStackTraceException("error header null"),
+                        p3?.toIntOrNull()
+                    )
                 }
                 "webViewAwait" -> {
-                    webView(jsParam[0], jsParam[1], jsParam[2], jsParam[3].toBoolean()).toString()
+                    webView(
+                        p0,
+                        p1,
+                        p2,
+                        p3.toBoolean()
+                    ).toString()
                 }
                 "webViewGetSourceAwait" -> {
                     webViewGetSource(
-                        jsParam[0],
-                        jsParam[1],
-                        jsParam[2],
-                        jsParam[3],
-                        jsParam[4].toBoolean(),
-                        jsParam[5].toLongOrNull() ?: 0
+                        p0,
+                        p1,
+                        p2,
+                        p3 ?: throw NoStackTraceException("error sourceRegex null"),
+                        p4.toBoolean(),
+                        p5?.toLongOrNull() ?: 0
                     ).toString()
                 }
                 "decryptStrAwait" -> {
-                    createSymmetricCrypto(jsParam[0], jsParam[1], jsParam[2]).decryptStr(jsParam[3])
+                    createSymmetricCrypto(
+                        p0 ?: throw NoStackTraceException("error transformation null"),
+                        p1 ?: throw NoStackTraceException("error key null"),
+                        p2
+                    ).decryptStr(p3 ?: throw NoStackTraceException("error data null"))
                 }
                 "encryptBase64Await" -> {
                     createSymmetricCrypto(
-                        jsParam[0],
-                        jsParam[1],
-                        jsParam[2]
-                    ).encryptBase64(jsParam[3])
+                        p0 ?: throw NoStackTraceException("error transformation null"),
+                        p1 ?: throw NoStackTraceException("error key null"),
+                        p2
+                    ).encryptBase64(p3 ?: throw NoStackTraceException("error data null"))
                 }
                 "encryptHexAwait" -> {
-                    createSymmetricCrypto(jsParam[0], jsParam[1], jsParam[2]).encryptHex(jsParam[3])
+                    createSymmetricCrypto(
+                        p0 ?: throw NoStackTraceException("error transformation null"),
+                        p1 ?: throw NoStackTraceException("error key null"),
+                        p2
+                    ).encryptHex(p3 ?: throw NoStackTraceException("error data null"))
                 }
                 "createSignHexAwait" -> {
-                    createSign(jsParam[0]).setPublicKey(jsParam[1]).setPrivateKey(jsParam[2])
-                        .signHex(jsParam[3])
+                    createSign(p0 ?: throw NoStackTraceException("error algorithm null"))
+                        .setPublicKey(p1 ?: throw NoStackTraceException("error publicKey null"))
+                        .setPrivateKey(p2 ?: throw NoStackTraceException("error privateKey null"))
+                        .signHex(p3 ?: throw NoStackTraceException("error data null"))
                 }
                 "downloadFileAwait" -> {
-                    downloadFile(jsParam[0])
+                    downloadFile(p0 ?: throw NoStackTraceException("error url null"))
                 }
                 "readTxtFileAwait" -> {
-                    readTxtFile(jsParam[0])
+                    readTxtFile(p0 ?: throw NoStackTraceException("error path null"))
                 }
                 "importScriptAwait" -> {
-                    importScript(jsParam[0])
+                    importScript(p0 ?: throw NoStackTraceException("error path null"))
                 }
-                "getStringAwait" -> AnalyzeRule(book, getSource()).run {
-                    setCoroutineContext(coroutineContext)
-                    setChapter(chapter)
-                    getString(jsParam[0], jsParam[1])
+                "getStringAwait" -> {
+                    analyzeRule.setCoroutineContext(coroutineContext)
+                        .getString(p0, p1)
                 }
-                else -> "error funName"
+                else -> throw NoStackTraceException("error funName")
             }
         }.onSuccess { data ->
-            webView.evaluateJavascript(
-                "window.$JSBridgeResult('$id', '${data.escapeForJs()}', null);",
-                null
-            )
+            CacheManager.putMemory(id, data)
+            webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', true);", null)
         }.onError {
-            webView.evaluateJavascript(
-                "window.$JSBridgeResult('$id', null, '${it.localizedMessage?.escapeForJs()}');",
-                null
-            )
+            CacheManager.putMemory(id, it.localizedMessage ?: "err")
+            webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', false);", null)
         }
     }
+
     @JavascriptInterface
     fun toast(msg: String?) {
         super.toast(msg)
     }
+
     @JavascriptInterface
     fun longToast(msg: String?) {
         super.longToast(msg)
     }
+
+    @JavascriptInterface
+    override fun open(name: String, url: String?, title: String?, origin: String?) {
+        when (name) {
+            "sort" -> {
+                val sortUrl = if (!url.isNullOrBlank()) {
+                    if (url.isJsonObject()) url else title?.let { "{\"$it\":\"$url\"}" } ?: url
+                } else null
+                callbackRef.get()?.onNavigateToArticles(sortUrl)
+            }
+            else -> super.open(name, url, title, origin)
+        }
+    }
+
     @JavascriptInterface
     fun log(msg: String?): String {
         return super.log(msg).toString()
     }
+
     @JavascriptInterface
-    fun ajax(url: String): String? {
-        return super.ajax(url, 9000)
+    @JvmOverloads
+    fun ajax(url: String, callTimeout: Int = 9000): String? {
+        return super.ajax(url, callTimeout.toLong())
     }
+
     @JavascriptInterface
-    fun ajax(url: String, callTimeout: Int?): String? {
-        return super.ajax(url, callTimeout?.toLong())
-    }
-    @JavascriptInterface
-    fun connect(urlStr: String?): String {
-        if (urlStr.isNullOrEmpty()) return "error empty url"
-        return super.connect(urlStr, null, 9000).toString()
-    }
-    @JavascriptInterface
-    fun connect(urlStr: String, header: String): String {
-        return super.connect(urlStr, header, 9000).toString()
-    }
-    @JavascriptInterface
-    fun connect(urlStr: String, header: String, callTimeout: Int?): String {
+    @JvmOverloads
+    fun connect(urlStr: String, header: String? = null, callTimeout: Int? = 9000): String {
         return super.connect(urlStr, header, callTimeout?.toLong()).toString()
     }
+
     @JavascriptInterface
-    fun get(urlStr: String, headers: String): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return super.get(urlStr, headerMap, 9000).body()
+    @JvmOverloads
+    fun get(urlStr: String, header: String, timeout: Int? = 9000): String {
+        val headers = GSON.fromJsonObject<Map<String, String>>(header).getOrNull() ?: emptyMap()
+        return super.get(urlStr, headers, timeout).body()
     }
+
     @JavascriptInterface
-    fun get(urlStr: String, headers: String, timeout: Int?): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return super.get(urlStr, headerMap, timeout).body()
+    @JvmOverloads
+    fun post(urlStr: String, body: String, header: String, timeout: Int? = 9000): String {
+        val headers = GSON.fromJsonObject<Map<String, String>>(header).getOrNull() ?: emptyMap()
+        return super.post(urlStr, body, headers, timeout).body()
     }
+
     @JavascriptInterface
-    fun post(urlStr: String, body: String, headers: String): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return super.post(urlStr, body, headerMap, 9000).body()
+    @JvmOverloads
+    fun head(urlStr: String, header: String, timeout: Int? = 9000): String {
+        val headers = GSON.fromJsonObject<Map<String, String>>(header).getOrNull() ?: emptyMap()
+        return GSON.toJson(super.head(urlStr, headers, timeout).headers())
     }
+
     @JavascriptInterface
-    fun post(urlStr: String, body: String, headers: String, timeout: Int?): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return super.post(urlStr, body, headerMap, timeout).body()
+    fun getStringList(rule: String?, mContent: String? = null, isUrl: Boolean = false): List<String>? {
+        return super.getStringList(rule, mContent, isUrl)
     }
+
     @JavascriptInterface
-    fun head(urlStr: String, headers: String): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return GSON.toJson(super.head(urlStr, headerMap, 9000).headers())
-    }
-    @JavascriptInterface
-    fun head(urlStr: String, headers: String, timeout: Int?): String {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(headers).getOrNull() ?: emptyMap()
-        return GSON.toJson(super.head(urlStr, headerMap, timeout).headers())
+    fun getString(ruleStr: String?, mContent: String? = null, isUrl: Boolean = false): String {
+        return super.getString(ruleStr, mContent, isUrl)
     }
 
     companion object {
@@ -218,6 +280,7 @@ class WebJsExtensions(
             val letters = "abcdefghijklmnopqrstuvwxyz"
             return letters.random()
         }
+
         val uuid by lazy {
             UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
         }
@@ -234,9 +297,12 @@ class WebJsExtensions(
             "<script src=\"$nameUrl\"></script>"
         }
 
+        val getInjectionString = "try{var cache=$nameCache,source=$nameSource,java=$nameJava;}catch(e){}"
+
         val JS_INJECTION by lazy {
             """
             const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);
+            const params = a => a.map(p => p != null && typeof p.toString === 'function' ? p.toString() : null);
             const JSBridgeCallbacks = {};
             const java = window.$nameJava;
             delete window.$nameJava;
@@ -248,122 +314,124 @@ class WebJsExtensions(
                 return new Promise((resolve, reject) => {
                     const id = requestId("run");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("run", [String(jsCode)], id);
+                    java.request("run", [String(jsCode)], id);
                 });
             };
-            function ajaxAwait(url, callTimeout) {
+            function ajaxAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("ajaxAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("ajaxAwait", [String(url), String(callTimeout)], id);
+                    java.request("ajaxAwait", params(args), id);
                 });
             };
-            function connectAwait(url, header, callTimeout) {
+            function connectAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("connectAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("connectAwait", [String(url), String(header), String(callTimeout)], id);
+                    java.request("connectAwait", params(args), id);
                 });
             };
-            function getAwait(url, header, callTimeout) {
+            function getAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("getAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("getAwait", [String(url), String(header), String(callTimeout)], id);
+                    java.request("getAwait", params(args), id);
                 });
             };
-            function headAwait(url, header, callTimeout) {
+            function headAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("headAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("headAwait", [String(url), String(header), String(callTimeout)], id);
+                    java.request("headAwait", params(args), id);
                 });
             };
-            function postAwait(url, body, header, callTimeout) {
+            function postAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("postAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("postAwait", [String(url), String(body), String(header), String(callTimeout)], id);
+                    java.request("postAwait", params(args), id);
                 });
             };
-            function webViewAwait(html, url, js, cacheFirst) {
+            function webViewAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("webViewAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("webViewAwait", [String(html), String(url), String(js), String(cacheFirst)], id);
+                    java.request("webViewAwait", params(args), id);
                 });
             };
-            function webViewGetSourceAwait(html, url, js, sourceRegex, cacheFirst, delayTime) {
+            function webViewGetSourceAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("webViewGetSourceAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("webViewGetSourceAwait", [String(html), String(url), String(js), String(sourceRegex), String(cacheFirst), String(delayTime)], id);
+                    java.request("webViewGetSourceAwait", params(args), id);
                 });
             }
-            function decryptStrAwait(transformation, key, iv, data) {
+            function decryptStrAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("decryptStrAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("decryptStrAwait", [String(transformation), String(key), String(iv), String(data)], id);
+                    java.request("decryptStrAwait", params(args), id);
                 });
             };
-            function encryptBase64Await(transformation, key, iv, data) {
+            function encryptBase64Await(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("encryptBase64Await");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("encryptBase64Await", [String(transformation), String(key), String(iv), String(data)], id);
+                    java.request("encryptBase64Await", params(args), id);
                 });
             };
-            function encryptHexAwait(transformation, key, iv, data) {
+            function encryptHexAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("encryptHexAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("encryptHexAwait", [String(transformation), String(key), String(iv), String(data)], id);
+                    java.request("encryptHexAwait", params(args), id);
                 });
             };
-            function createSignHexAwait(algorithm, publicKey, privateKey, data) {
+            function createSignHexAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("createSignHexAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("createSignHexAwait", [String(algorithm), String(publicKey), String(privateKey), String(data)], id);
+                    java.request("createSignHexAwait", params(args), id);
                 });
             };
             function downloadFileAwait(url) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("downloadFileAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("downloadFileAwait", [String(url)], id);
+                    java.request("downloadFileAwait", [String(url)], id);
                 });
             };
             function readTxtFileAwait(path) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("readTxtFileAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("readTxtFileAwait", [String(path)], id);
+                    java.request("readTxtFileAwait", [String(path)], id);
                 });
             };
             function importScriptAwait(url) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("importScriptAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("importScriptAwait", [String(url)], id);
+                    java.request("importScriptAwait", [String(url)], id);
                 });
             };
-            function getStringAwait(ruleStr, mContent) {
+            function getStringAwait(...args) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("getStringAwait");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("getStringAwait", [String(ruleStr), String(mContent)], id);
+                    java.request("getStringAwait", params(args), id);
                 });
             };
-            window.$JSBridgeResult = function(requestId, result, error) {
-                if (JSBridgeCallbacks[requestId]) {
-                    if (error) {
-                        JSBridgeCallbacks[requestId].reject(error);
+            window.$JSBridgeResult = function(id, success) {
+                const callBack = JSBridgeCallbacks[id];
+                if (callBack) {
+                    const result = cache.getFromMemory(id);
+                    if (success) {
+                        callBack.resolve(result);
                     } else {
-                        JSBridgeCallbacks[requestId].resolve(result);
+                        callBack.reject(result);
                     }
-                    delete JSBridgeCallbacks[requestId];
+                    delete JSBridgeCallbacks[id];
                 }
             };""".trimIndent()
         }
@@ -374,21 +442,25 @@ class WebJsExtensions(
             const JSBridgeCallbacks = {};
             const java = window.$nameJava;
             delete window.$nameJava;
+            const cache = window.$nameCache;
+            delete window.$nameCache;
             function run(jsCode) {
                 return new Promise((resolve, reject) => {
                     const id = requestId("run");
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java?.request("run", [String(jsCode)], id);
+                    java.request("run", [String(jsCode)], id);
                 });
             };
-            window.$JSBridgeResult = function(requestId, result, error) {
-                if (JSBridgeCallbacks[requestId]) {
-                    if (error) {
-                        JSBridgeCallbacks[requestId].reject(error);
+            window.$JSBridgeResult = function(id, success) {
+                const callBack = JSBridgeCallbacks[id];
+                if (callBack) {
+                    const result = cache.getFromMemory(id);
+                    if (success) {
+                        callBack.resolve(result);
                     } else {
-                        JSBridgeCallbacks[requestId].resolve(result);
+                        callBack.reject(result);
                     }
-                    delete JSBridgeCallbacks[requestId];
+                    delete JSBridgeCallbacks[id];
                 }
             };""".trimIndent()
         }

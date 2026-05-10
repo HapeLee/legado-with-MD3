@@ -34,6 +34,7 @@ import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.settingItem.SettingItem
+import io.legado.app.ui.widget.components.SettingItemWithDivider
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -132,56 +133,56 @@ fun AboutScreen(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 title = ""
             ){
-                SettingItem(
-                    title = stringResource(R.string.contributors),
-                    description = null,
-                    option = null,
-                    onClick = {
-                        onOpenUrl("https://github.com/gedoor/legado/graphs/contributors")
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.privacy_policy),
-                    description = null,
-                    option = null,
-                    onClick = {
-                        onShowMdFile("隐私政策", "privacyPolicy.md")
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.license),
-                    description = null,
-                    option = null,
-                    onClick = {
-                        onShowMdFile("许可证", "LICENSE.md")
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.disclaimer),
-                    description = null,
-                    option = null,
-                    onClick = {
-                        onShowMdFile("免责声明", "disclaimer.md")
-                    }
-                )
-                SettingItem(
-                    title = stringResource(R.string.crash_log),
-                    description = null,
-                    option = null,
-                    onClick = onShowCrashLogs
-                )
-                SettingItem(
-                    title = stringResource(R.string.save_log),
-                    description = null,
-                    option = null,
-                    onClick = onSaveLog
-                )
-                SettingItem(
-                    title = stringResource(R.string.create_heap_dump),
-                    description = null,
-                    option = null,
-                    onClick = onCreateHeapDump
-                )
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.contributors),
+                        onClick = {
+                            onOpenUrl("https://github.com/gedoor/legado/graphs/contributors")
+                        }
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.privacy_policy),
+                        onClick = {
+                            onShowMdFile("隐私政策", "privacyPolicy.md")
+                        }
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.license),
+                        onClick = {
+                            onShowMdFile("许可证", "LICENSE.md")
+                        }
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.disclaimer),
+                        onClick = {
+                            onShowMdFile("免责声明", "disclaimer.md")
+                        }
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.crash_log),
+                        onClick = onShowCrashLogs
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.save_log),
+                        onClick = onSaveLog
+                    )
+                }
+                SettingItemWithDivider {
+                    SettingItem(
+                        title = stringResource(R.string.create_heap_dump),
+                        onClick = onCreateHeapDump
+                    )
+                }
             }
         }
     }

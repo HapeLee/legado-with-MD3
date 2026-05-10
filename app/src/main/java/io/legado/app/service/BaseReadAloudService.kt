@@ -14,6 +14,7 @@ import android.media.AudioManager
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.PowerManager
+import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.telephony.PhoneStateListener
@@ -162,6 +163,7 @@ abstract class BaseReadAloudService : BaseService(),
         }.onSuccess {
             if (it.width > 16 && it.height > 16) {
                 cover = it
+                upMediaMetadata()
                 upReadAloudNotification()
             }
         }
@@ -265,6 +267,7 @@ abstract class BaseReadAloudService : BaseService(),
             }
             paragraphStartPos = pos
             launch(Main) {
+                upMediaMetadata()
                 if (play) play() else pageChanged = true
             }
         }.onError {
@@ -345,6 +348,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
             }
             upTtsProgress(readAloudNumber + 1)
+            upMediaMetadata(showContent = true)
             play()
         } else {
             toLast = true
@@ -371,6 +375,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
             }
             upTtsProgress(readAloudNumber + 1)
+            upMediaMetadata(showContent = true)
             play()
         } else {
             nextChapter()
@@ -460,6 +465,26 @@ abstract class BaseReadAloudService : BaseService(),
 //                )
                 .build()
         )
+    }
+
+    /**
+     * 更新媒体元数据, 用于车机蓝牙显示
+     * @param showContent 是否显示当前朗读内容作为歌词
+     */
+    internal fun upMediaMetadata(showContent: Boolean = false) {
+        val currentContent = if (showContent && nowSpeak in contentList.indices) {
+            contentList[nowSpeak]
+        } else {
+            null
+        }
+        val metadata = MediaMetadataCompat.Builder()
+            .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, cover)
+            .putText(MediaMetadataCompat.METADATA_KEY_TITLE, ReadBook.book?.name ?: "")
+            .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, textChapter?.title ?: "")
+            .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, ReadBook.book?.author ?: "")
+            .putText(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, currentContent ?: "")
+            .build()
+        mediaSessionCompat.setMetadata(metadata)
     }
 
     /**

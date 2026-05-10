@@ -93,6 +93,38 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectTitleFont"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_title_font"
+                android:text="@string/text_font"
+                android:minWidth="0dp"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/textFontWeightConverter"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/title_font_size"
+                android:minWidth="0dp" />
+
+            <io.legado.app.ui.widget.AccentColorButton
+                android:id="@+id/abtnTitleColor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                style="@style/Widget.Material3Expressive.Button.TonalButton"
+                android:text="@string/title_color" />
+
+        </com.google.android.material.button.MaterialButtonGroup>
+
+        <com.google.android.material.button.MaterialButtonGroup
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end">
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_title_segType"
                 android:layout_width="wrap_content"
@@ -106,14 +138,6 @@
                 android:layout_height="wrap_content"
                 android:text="@string/split_title_mode"
                 style="@style/Widget.Material3Expressive.Button.TonalButton"/>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/textFontWeightConverter"
-                style="@style/Widget.Material3Expressive.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/font_weight_text"
-                android:minWidth="0dp" />
 
         </com.google.android.material.button.MaterialButtonGroup>
 

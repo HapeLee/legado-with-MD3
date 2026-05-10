@@ -57,7 +57,7 @@
                     android:id="@+id/dsb_header_padding_top"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    app:max="200"
+                    app:max="300"
                     app:title="@string/padding_top" />
 
                 <View
@@ -70,7 +70,7 @@
                     android:id="@+id/dsb_header_padding_bottom"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    app:max="200"
+                    app:max="300"
                     app:title="@string/padding_bottom" />
 
             </LinearLayout>
@@ -84,7 +84,7 @@
                     android:id="@+id/dsb_header_padding_left"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    app:max="200"
+                    app:max="300"
                     app:title="@string/padding_left" />
 
                 <View
@@ -96,7 +96,7 @@
                     android:id="@+id/dsb_header_padding_right"
                     android:layout_width="120dp"
                     android:layout_height="wrap_content"
-                    app:max="200"
+                    app:max="300"
                     app:title="@string/padding_right" />
 
             </LinearLayout>
@@ -121,7 +121,7 @@
                 android:id="@+id/dsb_padding_top"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_top" />
 
             <View
@@ -133,7 +133,7 @@
                 android:id="@+id/dsb_padding_bottom"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_bottom" />
 
         </LinearLayout>
@@ -147,7 +147,7 @@
                 android:id="@+id/dsb_padding_left"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_left" />
 
             <View
@@ -159,7 +159,7 @@
                 android:id="@+id/dsb_padding_right"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_right" />
 
         </LinearLayout>
@@ -196,7 +196,7 @@
                 android:id="@+id/dsb_footer_padding_top"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_top" />
 
             <View
@@ -208,7 +208,7 @@
                 android:id="@+id/dsb_footer_padding_bottom"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_bottom" />
 
         </LinearLayout>
@@ -222,7 +222,7 @@
                 android:id="@+id/dsb_footer_padding_left"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_left" />
 
             <View
@@ -234,7 +234,7 @@
                 android:id="@+id/dsb_footer_padding_right"
                 android:layout_width="120dp"
                 android:layout_height="wrap_content"
-                app:max="200"
+                app:max="300"
                 app:title="@string/padding_right" />
 
         </LinearLayout>

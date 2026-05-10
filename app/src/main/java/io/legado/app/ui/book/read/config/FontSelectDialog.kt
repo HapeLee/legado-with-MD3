@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.net.toUri
+import androidx.core.widget.addTextChangedListener
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -50,6 +51,7 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         val curFontPath = callBack?.curFontPath ?: ""
         FontAdapter(requireContext(), curFontPath)
     }
+    private var allFontItems: List<FileDoc> = emptyList()
 
     private val selectFontDir = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
@@ -76,6 +78,22 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         binding.recyclerView.layoutManager = GridLayoutManager(context, 2)
         binding.recyclerView.adapter = adapter
         initView()
+        initSearch()
+    }
+
+    private fun initSearch() {
+        binding.etSearch.addTextChangedListener {
+            filterFonts(it.toString())
+        }
+    }
+
+    private fun filterFonts(keyword: String) {
+        val filtered = if (keyword.isBlank()) {
+            allFontItems
+        } else {
+            allFontItems.filter { it.name.contains(keyword, ignoreCase = true) }
+        }
+        adapter.setItems(filtered)
     }
 
     private fun initView() {
@@ -135,6 +153,7 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
             } ?: ArrayList()
             mergeFontItems(fontItems, getLocalFonts())
         }.onSuccess {
+            allFontItems = it
             adapter.setItems(it)
         }.onError {
             AppLog.put("加载字体文件失败\n${it.localizedMessage}", it)
@@ -176,8 +195,10 @@ class FontSelectDialog : BaseBottomSheetDialogFragment(R.layout.dialog_font_sele
         callBack?.selectFont("")
     }
 
+    var explicitCallback: CallBack? = null
+
     private val callBack: CallBack?
-        get() = (parentFragment as? CallBack) ?: (activity as? CallBack)
+        get() = explicitCallback ?: (parentFragment as? CallBack) ?: (activity as? CallBack)
 
     inner class FontAdapter(context: Context, curFilePath: String) :
         RecyclerAdapter<FileDoc, ItemFontBinding>(context) {

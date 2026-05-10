@@ -211,9 +211,9 @@ object BookContent {
         if (!book.isAudio && !book.isVideo) { //音频和视频获取的是链接，不需要html格式化 && !book.isVideo
             val useHtmlMap = mutableMapOf<String, String>()
             if (AppConfig.adaptSpecialStyle) {
-                content = AppPattern.useHtmlRegex.replace(content) { matchResult ->
+                content = AppPattern.useHtmlRegex.replace(content) {
                     val placeholder = "{usehtml_${useHtmlMap.size}}"
-                    useHtmlMap[placeholder] = matchResult.value
+                    useHtmlMap[placeholder] = it.value
                     placeholder
                 }
             }
@@ -223,6 +223,13 @@ object BookContent {
             }
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 content = content.replace(placeholder, originalContent)
+            }
+        }
+        //获取副文（歌词等）
+        contentRule.subContent?.takeIf { it.isNotBlank() }?.let {
+            val subContent = analyzeRule.getString(it, unescape = false)
+            if (subContent.isNotBlank()) {
+                chapter.putVariable("lyric", subContent)
             }
         }
         //获取下一页链接

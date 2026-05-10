@@ -33,20 +33,6 @@ fun miuixStylesToM3Typography(miuixStyles: TextStyles): Typography {
         labelLarge = miuixStyles.footnote1.copy(fontSize = 14.sp), // 14.sp
         labelMedium = miuixStyles.footnote1, // 13.sp
         labelSmall = miuixStyles.footnote2,  // 11.sp
-
-        bodyLargeEmphasized = miuixStyles.paragraph.copy(fontWeight = FontWeight.Medium),
-        bodyMediumEmphasized = miuixStyles.body1.copy(fontWeight = FontWeight.Medium),
-        bodySmallEmphasized = miuixStyles.body2.copy(
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
-        ),
-
-        labelLargeEmphasized = miuixStyles.button.copy(
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
-        ),
-        labelMediumEmphasized = miuixStyles.footnote1.copy(fontWeight = FontWeight.Medium),
-        labelSmallEmphasized = miuixStyles.footnote2.copy(fontWeight = FontWeight.Medium)
     )
 }
 
@@ -54,28 +40,28 @@ fun miuixStylesToM3Typography(miuixStyles: TextStyles): Typography {
 fun Typography.toLegadoTypography(): LegadoTypography {
     return LegadoTypography(
         headlineLarge = headlineLarge,
-        headlineLargeEmphasized = headlineLargeEmphasized,
+        headlineLargeEmphasized = headlineLarge.copy(fontWeight = FontWeight.Medium),
         headlineMedium = headlineMedium,
-        headlineMediumEmphasized = headlineMediumEmphasized,
+        headlineMediumEmphasized = headlineMedium.copy(fontWeight = FontWeight.Medium),
         headlineSmall = headlineSmall,
-        headlineSmallEmphasized = headlineSmallEmphasized,
+        headlineSmallEmphasized = headlineSmall.copy(fontWeight = FontWeight.Medium),
         titleLarge = titleLarge,
-        titleLargeEmphasized = titleLargeEmphasized,
+        titleLargeEmphasized = titleLarge.copy(fontWeight = FontWeight.Medium),
         titleMedium = titleMedium,
-        titleMediumEmphasized = titleMediumEmphasized,
+        titleMediumEmphasized = titleMedium.copy(fontWeight = FontWeight.Medium),
         titleSmall = titleSmall,
-        titleSmallEmphasized = titleSmallEmphasized,
+        titleSmallEmphasized = titleSmall.copy(fontWeight = FontWeight.Medium),
         bodyLarge = bodyLarge,
-        bodyLargeEmphasized = bodyLargeEmphasized,
+        bodyLargeEmphasized = bodyLarge.copy(fontWeight = FontWeight.Medium),
         bodyMedium = bodyMedium,
-        bodyMediumEmphasized = bodyMediumEmphasized,
+        bodyMediumEmphasized = bodyMedium.copy(fontWeight = FontWeight.Medium),
         bodySmall = bodySmall,
-        bodySmallEmphasized = bodySmallEmphasized,
+        bodySmallEmphasized = bodySmall.copy(fontWeight = FontWeight.Medium),
         labelLarge = labelLarge,
-        labelLargeEmphasized = labelLargeEmphasized,
+        labelLargeEmphasized = labelLarge.copy(fontWeight = FontWeight.Medium),
         labelMedium = labelMedium,
-        labelMediumEmphasized = labelMediumEmphasized,
+        labelMediumEmphasized = labelMedium.copy(fontWeight = FontWeight.Medium),
         labelSmall = labelSmall,
-        labelSmallEmphasized = labelSmallEmphasized
+        labelSmallEmphasized = labelSmall.copy(fontWeight = FontWeight.Medium)
     )
 }
