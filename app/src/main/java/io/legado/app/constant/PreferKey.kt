@@ -318,4 +318,17 @@ object PreferKey {
     const val navIconExplore = "navIconExplore"
     const val navIconRss = "navIconRss"
     const val navIconMy = "navIconMy"
+
+    // Translation
+    const val llmTranslateEnabled = "llmTranslateEnabled"
+    const val llmProvider = "llmProvider"
+    const val llmBaseUrl = "llmBaseUrl"
+    const val llmApiKey = "llmApiKey"
+    const val llmModel = "llmModel"
+    const val llmTargetLanguage = "llmTargetLanguage"
+    const val llmMaxCharsPerChunk = "llmMaxCharsPerChunk"
+    const val llmConcurrentChunks = "llmConcurrentChunks"
+    const val llmRetryCount = "llmRetryCount"
+    const val llmPrompt = "llmPrompt"
+    const val translateBookInfoEnabled = "translateBookInfoEnabled"
 }

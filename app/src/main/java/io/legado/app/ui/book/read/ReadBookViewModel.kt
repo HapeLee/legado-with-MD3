@@ -57,7 +57,8 @@ import kotlin.coroutines.coroutineContext
 class ReadBookViewModel(
     application: Application,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
-    private val uploadReadingProgressUseCase: UploadReadingProgressUseCase
+    private val uploadReadingProgressUseCase: UploadReadingProgressUseCase,
+    val translateChapterUseCase: io.legado.app.domain.usecase.TranslateChapterUseCase
 ) : BaseViewModel(application) {
     val permissionDenialLiveData = MutableLiveData<Int>()
     var isInitFinish = false
@@ -343,7 +344,7 @@ class ReadBookViewModel(
                 }
             }.onStart {
                 ReadBook.upMsg(context.getString(R.string.source_auto_changing))
-        }.mapParallelSafe(OtherConfig.threadCount) { source ->
+            }.mapParallelSafe(OtherConfig.threadCount) { source ->
                 val book = WebBook.preciseSearchAwait(source, name, author).getOrThrow()
                 if (book.tocUrl.isEmpty()) {
                     WebBook.getBookInfoAwait(source, book)

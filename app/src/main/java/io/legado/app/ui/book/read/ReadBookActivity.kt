@@ -62,6 +62,9 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeRule
+import io.legado.app.model.translation.TranslationDisplayState
+import io.legado.app.model.translation.TranslationManager
+import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
@@ -172,7 +175,8 @@ class ReadBookActivity : BaseReadBookActivity(),
     ColorPickerDialogListener,
     FontConfigDialog.CallBack,
     FontSelectDialog.CallBack,
-    LayoutProgressListener {
+    LayoutProgressListener,
+    TranslationActionDialog.CallBack {
 
     private val tocActivity =
         registerForActivityResult(TocActivityResult()) {
@@ -751,6 +755,106 @@ class ReadBookActivity : BaseReadBookActivity(),
         viewModel.refreshContentAll(book)
     }
 
+    override fun onTranslationClick() {
+        if (!TranslationConfig.llmTranslateEnabled) {
+            toastOnUi(R.string.llm_translate_enabled)
+            return
+        }
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+
+        val displayState = TranslationManager.getChapterDisplayState(book, chapter)
+        when (displayState) {
+            TranslationDisplayState.Original -> translateCurrentChapter()
+            TranslationDisplayState.Translating -> showTranslationActionDialog(displayState, 0, 0)
+            TranslationDisplayState.Translated -> showTranslationActionDialog(displayState, 0, 0)
+        }
+    }
+
+    private fun showTranslationActionDialog(displayState: TranslationDisplayState, current: Int, total: Int) {
+        bottomDialog++
+        TranslationActionDialog().apply {
+            this.displayState = displayState
+            this.currentChunk = current
+            this.totalChunks = total
+        }.show(supportFragmentManager, "translationActions")
+    }
+
+    private fun translateCurrentChapter() {
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+
+        // Observe translation state for progressive updates
+        val translationJob = lifecycleScope.launch {
+            TranslationManager.translationState.collect { state ->
+                when (state) {
+                    is TranslationManager.TranslationState.Translating -> {
+                        // Apply mixed content if available
+                        state.mixedContent?.let { mixed ->
+                            val currentChapterIndex = ReadBook.durChapterIndex
+                            if (book.bookUrl == ReadBook.book?.bookUrl && currentChapterIndex == chapter.index) {
+                                ReadBook.contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
+                            }
+                        }
+                        binding.readMenu.updateTranslationButton(
+                            TranslationDisplayState.Translating,
+                            state.currentChunk,
+                            state.totalChunks
+                        )
+                    }
+                    is TranslationManager.TranslationState.Finished -> {
+                        binding.readMenu.updateTranslationButton(TranslationDisplayState.Translated, 0, 0)
+                    }
+                    is TranslationManager.TranslationState.Error -> {
+                        binding.readMenu.updateTranslationButton(TranslationDisplayState.Original, 0, 0)
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            val result = TranslationManager.translateChapter(book, chapter, viewModel.translateChapterUseCase)
+            translationJob.cancel()
+            result.onSuccess { content ->
+                ReadBook.contentLoadFinish(book, chapter, content, upContent = true, resetPageOffset = false)
+                binding.readMenu.updateTranslationButton(TranslationDisplayState.Translated, 0, 0)
+                toastOnUi(R.string.translation_complete)
+            }.onFailure { error ->
+                binding.readMenu.updateTranslationButton(TranslationDisplayState.Original, 0, 0)
+                toastOnUi(getString(R.string.translation_failed, error.message ?: ""))
+            }
+        }
+    }
+
+    override fun onTranslationSwitchToOriginal() {
+        switchCurrentChapterToOriginal()
+    }
+
+    override fun onTranslationRetranslate() {
+        retranslateCurrentChapter()
+    }
+
+    private fun switchCurrentChapterToOriginal() {
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+        TranslationManager.showOriginal(book, chapter) {
+            BookHelp.getContent(book, chapter)
+        }
+        ReadBook.loadContent(false)
+        binding.readMenu.updateTranslationButton(TranslationDisplayState.Original, 0, 0)
+        toastOnUi(R.string.show_original)
+    }
+
+    fun retranslateCurrentChapter() {
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+        lifecycleScope.launch {
+            TranslationManager.deleteTranslationCache(book, chapter)
+            translateCurrentChapter()
+        }
+    }
+
     override fun onMenuItemClick(item: MenuItem): Boolean {
         return onCompatOptionsItemSelected(item)
     }
@@ -853,7 +957,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                 handleKeyPage(PageDirection.NEXT, longPress)
                 return true
             }
-             // 手柄方向键控制翻页
+            // 手柄方向键控制翻页
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT -> {
                 handleKeyPage(PageDirection.PREV, longPress)
                 return true
@@ -1155,6 +1259,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         handler.post {
             upMenu()
             binding.readMenu.upBookView()
+            updateTranslationButtonState()
         }
     }
 
@@ -1188,8 +1293,17 @@ class ReadBookActivity : BaseReadBookActivity(),
                 upSeekBarProgress()
             }
             loadStates = false
+            // Update translation button state when content changes
+            updateTranslationButtonState()
             success?.invoke()
         }
+    }
+
+    private fun updateTranslationButtonState() {
+        val book = ReadBook.book ?: return
+        val chapterIndex = ReadBook.durChapterIndex
+        val state = TranslationManager.getChapterState(book.bookUrl, chapterIndex)
+        binding.readMenu.updateTranslationButton(state.displayState, state.currentChunk, state.totalChunks)
     }
 
     override suspend fun upContentAwait(

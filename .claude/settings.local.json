@@ -69,7 +69,8 @@
       "Bash(Select-String -Pattern \"FAILED|error:\")",
       "Bash(Select-Object -First 5)",
       "Bash(Select-String -NotMatch \"^\\\\s*$\")",
-      "Bash(Select-Object -Last 20)"
+      "Bash(Select-Object -Last 20)",
+      "Bash(rg \"TranslationChapterState|TranslationActionDialog|dialog_translation_actions\" --lines=3 -l app/src/main/java)"
     ]
   }
 }

@@ -69,6 +69,7 @@ import io.legado.app.ui.config.customTheme.CustomThemeScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
+import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.read.MainRouteRssRead
@@ -106,6 +107,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         private const val ROUTE_SETTINGS_BACKUP = "settings/backup"
         private const val ROUTE_SETTINGS_CUSTOM_THEME = "settings/custom_theme"
         private const val ROUTE_SETTINGS_DOWNLOAD_CACHE = "settings/download_cache"
+        private const val ROUTE_SETTINGS_TRANSLATION = "settings/translation"
         private const val ROUTE_IMPORT_LOCAL = "import/local"
         private const val ROUTE_IMPORT_REMOTE = "import/remote"
         private const val ROUTE_CACHE = "cache"
@@ -298,6 +300,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     @Serializable
     private data object MainRouteSettingsDownloadCache : MainRoute
+
+    @Serializable
+    private data object MainRouteSettingsTranslation : MainRoute
 
     @Serializable
     private data object MainRouteImportLocal : MainRoute
@@ -557,8 +562,13 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                         onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
                         onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
                         onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
-                        onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) }
+                        onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
+                        onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
                     )
+                }
+
+                entry<MainRouteSettingsTranslation> {
+                    TranslationConfigScreen(onBackClick = { navigateBack(backStack) })
                 }
 
                 entry<MainRouteSettingsOther> {
@@ -843,7 +853,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             MainRouteSettingsBackup,
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
-            MainRouteSettingsDownloadCache -> {
+            MainRouteSettingsDownloadCache,
+            MainRouteSettingsTranslation -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
                 backStack.add(MainRouteSettings)
@@ -1107,6 +1118,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             "settings/backup" -> MainRouteSettingsBackup
             "settings/custom_theme" -> MainRouteSettingsCustomTheme
             "settings/download_cache" -> MainRouteSettingsDownloadCache
+            "settings/translation" -> MainRouteSettingsTranslation
             "import/local" -> MainRouteImportLocal
             "import/remote" -> MainRouteImportRemote
             ROUTE_MAIN -> MainRouteHome
@@ -1117,6 +1129,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             ROUTE_SETTINGS_THEME -> MainRouteSettingsTheme
             ROUTE_SETTINGS_BACKUP -> MainRouteSettingsBackup
             ROUTE_SETTINGS_DOWNLOAD_CACHE -> MainRouteSettingsDownloadCache
+            ROUTE_SETTINGS_TRANSLATION -> MainRouteSettingsTranslation
             ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
             ROUTE_IMPORT_REMOTE -> MainRouteImportRemote
             ROUTE_CACHE -> MainRouteCache(intent?.getLongExtra(EXTRA_CACHE_GROUP_ID, -1L) ?: -1L)

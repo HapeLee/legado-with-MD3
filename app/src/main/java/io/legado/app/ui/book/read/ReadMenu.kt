@@ -640,10 +640,10 @@ class ReadMenu @JvmOverloads constructor(
                 onClick = { runMenuOut{ callBack.openSearchActivity(null) } }
             ),
             ToolButton(
-                id = "auto_page",
-                iconRes = R.drawable.ic_auto_page,
-                description = context.getString(R.string.auto_next_page),
-                onClick = { runMenuOut { callBack.autoPage() } }
+                id = "translate",
+                iconRes = R.drawable.ic_translate,
+                description = context.getString(R.string.translate),
+                onClick = { runMenuOut { callBack.onTranslationClick() } }
             ),
             ToolButton(
                 id = "catalog",
@@ -709,6 +709,12 @@ class ReadMenu @JvmOverloads constructor(
                 onLongClick = { runMenuOut { callBack.openReplaceRule() } },
                 onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
                 onClick = {  }
+            ),
+            ToolButton(
+                id = "auto_page",
+                iconRes = R.drawable.ic_auto_page,
+                description = context.getString(R.string.auto_next_page),
+                onClick = { runMenuOut { callBack.autoPage() } }
             )
         )
     }
@@ -758,6 +764,25 @@ class ReadMenu @JvmOverloads constructor(
             setIconResource(icon)
             contentDescription = desc
             tooltipText = desc
+        }
+    }
+
+    fun updateTranslationButton(displayState: io.legado.app.model.translation.TranslationDisplayState, current: Int = 0, total: Int = 0) {
+        val btn = buttonMap["translate"] ?: return
+        val ctx = context
+        when (displayState) {
+            io.legado.app.model.translation.TranslationDisplayState.Original -> {
+                btn.contentDescription = ctx.getString(R.string.translate)
+                btn.tooltipText = ctx.getString(R.string.translate)
+            }
+            io.legado.app.model.translation.TranslationDisplayState.Translating -> {
+                btn.contentDescription = ctx.getString(R.string.translation_progress, current, total)
+                btn.tooltipText = ctx.getString(R.string.translation_progress, current, total)
+            }
+            io.legado.app.model.translation.TranslationDisplayState.Translated -> {
+                btn.contentDescription = ctx.getString(R.string.translation_actions)
+                btn.tooltipText = ctx.getString(R.string.translation_actions)
+            }
         }
     }
 
@@ -914,6 +939,7 @@ class ReadMenu @JvmOverloads constructor(
         fun onMenuShow()
         fun onMenuHide()
         fun changeReplaceRuleState()
+        fun onTranslationClick()
     }
 
     data class ToolButton(
