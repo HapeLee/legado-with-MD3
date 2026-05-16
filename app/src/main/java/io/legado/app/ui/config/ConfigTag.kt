@@ -8,6 +8,5 @@ object ConfigTag {
     const val COVER_CONFIG = "coverConfig"
     const val READ_CONFIG = "readConfig"
     const val DOWNLOAD_CACHE_CONFIG = "downloadCacheConfig"
-    const val TRANSLATION_CONFIG = "translationConfig"
 
 }
