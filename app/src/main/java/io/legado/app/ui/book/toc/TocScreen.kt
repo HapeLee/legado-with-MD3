@@ -17,7 +17,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -51,9 +50,7 @@ import androidx.compose.material.icons.filled.VerticalAlignBottom
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -108,7 +105,6 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -350,16 +346,12 @@ fun TocScreen(
                         0 -> {
                             RoundDropdownMenuItem(
                                 text = "使用替换规则",
-                                trailingIcon = {
-                                    Checkbox(checked = useReplace, onCheckedChange = null)
-                                },
+                                isSelected = useReplace,
                                 onClick = { viewModel.toggleUseReplace() }
                             )
                             RoundDropdownMenuItem(
                                 text = "显示字数",
-                                trailingIcon = {
-                                    Checkbox(checked = showWordCount, onCheckedChange = null)
-                                },
+                                isSelected = showWordCount,
                                 onClick = { viewModel.toggleShowWordCount() }
                             )
                             RoundDropdownMenuItem(
@@ -407,12 +399,7 @@ fun TocScreen(
                                 )
                                 RoundDropdownMenuItem(
                                     text = "拆分超长章节",
-                                    trailingIcon = {
-                                        Checkbox(
-                                            checked = viewModel.isSplitLongChapter,
-                                            onCheckedChange = null
-                                        )
-                                    },
+                                    isSelected = viewModel.isSplitLongChapter,
                                     onClick = {
                                         viewModel.toggleSplitLongChapter()
                                         dismiss()
