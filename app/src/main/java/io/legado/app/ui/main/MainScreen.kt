@@ -301,7 +301,10 @@ fun MainScreen(
             modifier = Modifier.weight(1f),
             bottomBar = {
                 if (!useRail && mainUiState.showBottomView && !useFloatingBottomBar) {
-                    AppNavigationBar() {
+                    AppNavigationBar(
+                        showLabel = showLabel,
+                        alwaysShowLabel = alwaysShowLabel
+                    ) {
                         destinations.forEachIndexed { index, destination ->
                             val selected = pagerState.targetPage == index
                             val customIconPath = destination.customIconPath

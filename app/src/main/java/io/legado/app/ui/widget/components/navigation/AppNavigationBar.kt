@@ -39,10 +39,16 @@ import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 @Composable
 fun AppNavigationBar(
     modifier: Modifier = Modifier,
-    miuixMode: NavigationBarDisplayMode = NavigationBarDisplayMode.IconAndText,
+    showLabel: Boolean = true,
+    alwaysShowLabel: Boolean = true,
     content: @Composable RowScope.() -> Unit
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
+    val miuixMode = when {
+        !showLabel -> NavigationBarDisplayMode.IconOnly
+        alwaysShowLabel -> NavigationBarDisplayMode.IconAndText
+        else -> NavigationBarDisplayMode.IconWithSelectedLabel
+    }
     val opacity = (ThemeConfig.bottomBarOpacity.coerceIn(0, 100)) / 100f
     val hazeState = LocalHazeState.current
     val hazeModifier = if (hazeState != null) {
