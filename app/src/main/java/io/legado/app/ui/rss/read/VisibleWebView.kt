@@ -29,6 +29,7 @@ class VisibleWebView(
     private var lastSelectedText: String = ""
 
     init {
+        setBackgroundColor(0)
         settings.javaScriptEnabled = true
         settings.domStorageEnabled = true
 

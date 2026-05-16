@@ -3,6 +3,9 @@ package io.legado.app.ui.book.manage
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,10 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
@@ -38,18 +39,9 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
-import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
-import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -60,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -81,13 +72,18 @@ import io.legado.app.ui.book.changesource.ChangeSourceMigrationOptionsSheet
 import io.legado.app.ui.book.info.ChangeSourceSheet
 import io.legado.app.ui.book.info.GroupSelectSheet
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.LegadoTheme.composeEngine
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalTextButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -119,11 +115,6 @@ import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-data class BookshelfManageFabAction(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
-    val label: String,
-    val action: () -> Unit
-)
 
 private data class BookshelfManageListState(
     override val items: List<Book> = emptyList(),
@@ -150,7 +141,6 @@ fun BookshelfManageRouteScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BookshelfManageScreen(
     viewModel: BookshelfManageScreenViewModel,
@@ -390,20 +380,20 @@ private fun BookshelfManageScreen(
         return if (targetBooks.all { it.group == firstGroup }) firstGroup else 0L
     }
     val fabItems = listOf(
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.SelectAll,
             stringResource(R.string.select_all)
         ) {
             selectedBookUrls = filteredBooks.mapTo(hashSetOf()) { it.bookUrl }
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Refresh,
             stringResource(R.string.revert_selection)
         ) {
             val filteredUrls = filteredBooks.map { it.bookUrl }.toSet()
             selectedBookUrls = (selectedBookUrls - filteredUrls) + (filteredUrls - selectedBookUrls)
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Download,
             "缓存选中"
         ) {
@@ -411,7 +401,7 @@ private fun BookshelfManageScreen(
                 showBatchDownloadConfirmDialog = true
             }
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Refresh,
             "批量换源"
         ) {
@@ -419,7 +409,7 @@ private fun BookshelfManageScreen(
                 showBatchSourcePickerSheet = true
             }
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Bookmarks,
             stringResource(R.string.move_to_group)
         ) {
@@ -429,20 +419,20 @@ private fun BookshelfManageScreen(
                 showGroupSelectSheet = true
             }
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Upload,
             "导出选中"
         ) {
             exportSelected()
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Delete,
             stringResource(R.string.clear_cache)
         ) {
             viewModel.dispatch(BookshelfManageScreenIntent.ClearCachesForBooks(selectedBookUrls))
             clearSelection()
         },
-        BookshelfManageFabAction(
+        FabMenuItem(
             Icons.Default.Delete,
             stringResource(R.string.delete)
         ) {
@@ -620,44 +610,14 @@ private fun BookshelfManageScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButtonMenu(
+            AppFloatingActionButtonMenu(
                 modifier = Modifier.offset(x = 16.dp, y = 16.dp),
                 expanded = fabMenuExpanded,
-                button = {
-                    ToggleFloatingActionButton(
-                        modifier = Modifier
-                            .animateFloatingActionButton(
-                                visible = true,
-                                alignment = Alignment.BottomEnd,
-                            )
-                            .focusRequester(focusRequester),
-                        checked = fabMenuExpanded,
-                        onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                    ) {
-                        val imageVector by remember {
-                            derivedStateOf {
-                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.AutoMirrored.Filled.MenuOpen
-                            }
-                        }
-                        Icon(
-                            imageVector = imageVector,
-                            contentDescription = "Menu",
-                            modifier = Modifier.animateIcon({ checkedProgress }),
-                        )
-                    }
-                }
-            ) {
-                fabItems.forEach { (icon, label, action) ->
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            action()
-                            fabMenuExpanded = false
-                        },
-                        icon = { Icon(icon, contentDescription = null) },
-                        text = { Text(text = label) }
-                    )
-                }
-            }
+                onExpandedChange = { fabMenuExpanded = it },
+                items = fabItems,
+                visible = true,
+                focusRequester = focusRequester
+            )
         }
     ) { paddingValues ->
         val renderVersion by rememberUpdatedState(state.cacheVersion)
@@ -681,6 +641,15 @@ private fun BookshelfManageScreen(
                     stringResource(R.string.cache_download_failed, it)
                 }
                 val isSelected = selectedBookUrls.contains(book.bookUrl)
+                val isMiuix = ThemeResolver.isMiuixEngine(composeEngine)
+                val animatedContainerColor by animateColorAsState(
+                    targetValue = if (isSelected)
+                        LegadoTheme.colorScheme.secondaryContainer
+                    else
+                        if (isMiuix) LegadoTheme.colorScheme.surfaceContainer else LegadoTheme.colorScheme.surfaceContainerLow,
+                    animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
+                    label = "CardColor"
+                )
                 val exportMsg = remember(renderVersion, book.bookUrl) {
                     ExportBookService.exportMsg[book.bookUrl]
                 }
@@ -689,7 +658,7 @@ private fun BookshelfManageScreen(
                     key = book.bookUrl,
                     enabled = canReorderBooks
                 ) {
-                    NormalCard(
+                    GlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(
@@ -701,11 +670,7 @@ private fun BookshelfManageScreen(
                             ),
                         onClick = { toggleBookSelection(book) },
                         onLongClick = { toggleBookSelection(book) },
-                        containerColor = if (isSelected) {
-                            LegadoTheme.colorScheme.surfaceContainerHigh
-                        } else {
-                            LegadoTheme.colorScheme.surfaceContainerLow
-                        }
+                        containerColor = animatedContainerColor
                     ) {
                         Column(
                             modifier = Modifier

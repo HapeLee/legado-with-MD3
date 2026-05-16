@@ -3,9 +3,9 @@
 package io.legado.app.utils
 
 import android.content.res.Configuration
-import android.content.res.Resources
+import splitties.init.appCtx
 
-val sysConfiguration: Configuration = Resources.getSystem().configuration
+val sysConfiguration: Configuration get() = appCtx.resources.configuration
 
 val Configuration.isNightMode: Boolean
     get() {

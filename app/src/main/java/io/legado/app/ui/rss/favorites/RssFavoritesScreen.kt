@@ -219,7 +219,9 @@ fun RssFavoritesScreen(
                                     path = rssStar.image,
                                     sourceOrigin = rssStar.origin,
                                     contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(54.dp)
+                                    modifier = Modifier
+                                        .padding(vertical = 12.dp)
+                                        .size(54.dp)
                                 )
                             }
                         } else null,

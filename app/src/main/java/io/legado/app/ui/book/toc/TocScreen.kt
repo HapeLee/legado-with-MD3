@@ -36,10 +36,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.ExpandMore
@@ -52,16 +50,10 @@ import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButtonMenu
-import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
-import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -76,7 +68,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -95,8 +86,10 @@ import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.CollapsibleHeader
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
@@ -215,7 +208,7 @@ fun TocScreen(
 
     val fabItems = remember(state.items) {
         listOf(
-            FabAction(Icons.Default.LocationOn, "定位至当前阅读") {
+            FabMenuItem(Icons.Default.LocationOn, "定位至当前阅读") {
                 scope.launch {
                     val target = state.items.indexOfFirst { it.isDur }
                     if (target != -1) {
@@ -226,13 +219,13 @@ fun TocScreen(
                     }
                 }
             },
-            FabAction(Icons.Default.VerticalAlignTop, "移至顶部") {
+            FabMenuItem(Icons.Default.VerticalAlignTop, "移至顶部") {
                 scope.launch { listState.animateScrollToItem(0) }
             },
-            FabAction(Icons.Default.VerticalAlignBottom, "移至底部") {
+            FabMenuItem(Icons.Default.VerticalAlignBottom, "移至底部") {
                 scope.launch { listState.animateScrollToItem(state.items.size) }
             },
-            FabAction(Icons.Default.DownloadForOffline, "下载全部") {
+            FabMenuItem(Icons.Default.DownloadForOffline, "下载全部") {
                 viewModel.downloadAll()
             }
         )
@@ -509,45 +502,15 @@ fun TocScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButtonMenu(
+            AppFloatingActionButtonMenu(
                 modifier = Modifier
                     .offset(x = 16.dp, y = 16.dp),
                 expanded = fabMenuExpanded,
-                button = {
-                    ToggleFloatingActionButton(
-                        modifier = Modifier
-                            .animateFloatingActionButton(
-                                visible = shouldShowFab,
-                                alignment = Alignment.BottomEnd,
-                            )
-                            .focusRequester(focusRequester),
-                        checked = fabMenuExpanded,
-                        onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                    ) {
-                        val imageVector by remember {
-                            derivedStateOf {
-                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.AutoMirrored.Filled.MenuOpen
-                            }
-                        }
-                        Icon(
-                            imageVector = imageVector,
-                            contentDescription = "Menu",
-                            modifier = Modifier.animateIcon({ checkedProgress }),
-                        )
-                    }
-                }
-            ) {
-                fabItems.forEach { (icon, label, action) ->
-                    FloatingActionButtonMenuItem(
-                        onClick = {
-                            action()
-                            fabMenuExpanded = false
-                        },
-                        icon = { Icon(icon, contentDescription = null) },
-                        text = { Text(text = label) }
-                    )
-                }
-            }
+                onExpandedChange = { fabMenuExpanded = it },
+                items = fabItems,
+                visible = shouldShowFab,
+                focusRequester = focusRequester
+            )
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {

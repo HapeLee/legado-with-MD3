@@ -90,7 +90,15 @@
       "WebFetch(domain:api.github.com)",
       "Bash(javap -public /tmp/classes.jar!top/yukonga/miuix/kmp/basic/NavigationBarKt.class)",
       "Bash(javap -public -cp /tmp/classes.jar top.yukonga.miuix.kmp.basic.NavigationBarKt)",
-      "PowerShell(Join-Path *)"
+      "PowerShell(Join-Path *)",
+      "Bash(dir /s /b \"C:\\\\Users\\\\*\\\\.gradle\\\\caches\")",
+      "Bash(findstr /i \"material3\")",
+      "Bash(findstr /i \"sources\")",
+      "Bash(dir /s /b \"%USERPROFILE%\\\\.gradle\\\\caches\")",
+      "Bash(findstr /i \"material3.*sources\")",
+      "WebFetch(domain:android.googlesource.com)",
+      "Read(//c/Users//**)",
+      "Read(//c/Users/**)"
     ]
   }
 }
