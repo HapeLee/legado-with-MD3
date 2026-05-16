@@ -10,6 +10,8 @@ import android.content.res.Configuration
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.graphics.scale
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.color.DynamicColorsOptions
@@ -64,6 +66,7 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isDebuggable
 import kotlinx.coroutines.launch
 import org.chromium.base.ThreadUtils
+import org.koin.android.ext.android.get
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext.startKoin
 import splitties.init.appCtx
@@ -73,9 +76,13 @@ import java.net.URL
 import java.util.concurrent.TimeUnit
 import java.util.logging.Level
 
-class App : Application() {
+class App : Application(), ImageLoaderFactory {
 
     private lateinit var oldConfig: Configuration
+
+    override fun newImageLoader(): ImageLoader {
+        return get()
+    }
 
     override fun onCreate() {
         startKoin {

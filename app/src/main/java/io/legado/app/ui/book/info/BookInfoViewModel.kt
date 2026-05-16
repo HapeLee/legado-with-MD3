@@ -7,7 +7,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
-import coil.imageLoader
+import coil.ImageLoader
 import coil.request.SuccessResult
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
@@ -78,6 +78,7 @@ class BookInfoViewModel(
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val bookGroupRepository: BookGroupRepository,
+    private val imageLoader: ImageLoader,
 ) : BaseViewModel(application) {
 
     val allGroups = bookGroupRepository.flowAll()
@@ -467,7 +468,7 @@ class BookInfoViewModel(
                 loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
                 crossfade = false
             )
-            val result = context.imageLoader.execute(request)
+            val result = imageLoader.execute(request)
             if (result is SuccessResult) {
                 val bitmap = result.drawable.toBitmap()
                 val outputStream = ByteArrayOutputStream()
