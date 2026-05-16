@@ -19,14 +19,11 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +47,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -315,19 +313,14 @@ private fun SavedThemeItem(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.2f)
+                    .aspectRatio(1.4f)
             ) {
                 // 日间行
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                0.5f to lightBg,
-                                0.8f to lightPrimary
-                            )
-                        )
+                        .background(lightBg)
                 ) {
                     AppText(
                         text = "日间",
@@ -335,8 +328,22 @@ private fun SavedThemeItem(
                         color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
                         else Color.Black.copy(alpha = 0.5f),
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(12.dp)
+                            .align(Alignment.CenterStart)
+                            .padding(start = 12.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 16.dp)
+                            .size(28.dp)
+                            .shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(6.dp),
+                                ambientColor = lightPrimary,
+                                spotColor = lightPrimary
+                            )
+                            .background(lightPrimary, RoundedCornerShape(6.dp))
                     )
                 }
 
@@ -345,20 +352,29 @@ private fun SavedThemeItem(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth()
-                        .background(
-                            Brush.horizontalGradient(
-                                0.5f to darkBg,
-                                0.8f to darkPrimary
-                            )
-                        )
+                        .background(darkBg)
                 ) {
                     AppText(
                         text = "夜间",
                         style = MaterialTheme.typography.labelMediumEmphasized,
                         color = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(12.dp)
+                            .align(Alignment.CenterStart)
+                            .padding(start = 12.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 16.dp)
+                            .size(28.dp)
+                            .shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(6.dp),
+                                ambientColor = darkPrimary,
+                                spotColor = darkPrimary
+                            )
+                            .background(darkPrimary, RoundedCornerShape(6.dp))
                     )
                 }
             }
@@ -377,28 +393,18 @@ private fun SavedThemeItem(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "编辑",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    IconButton(onClick = onExport, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "导出",
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "删除",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
+                    SmallIconButton(
+                        onClick = onEdit,
+                        imageVector = Icons.Default.Edit
+                    )
+                    SmallIconButton(
+                        onClick = onExport,
+                        imageVector = Icons.Default.Share
+                    )
+                    SmallIconButton(
+                        onClick = onDelete,
+                        imageVector = Icons.Default.Delete
+                    )
                 }
             }
         }
