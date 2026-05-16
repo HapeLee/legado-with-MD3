@@ -847,7 +847,7 @@ fun BookshelfScreen(
                             uiState = uiState,
                             selectedBookUrls = selectedBookUrls,
                             canReorderBooks = false,
-                            onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                            onToggleBookSelection = { toggleBookSelection(it.book.bookUrl) },
                             draggingBooks = null,
                             pendingSavedBooks = null,
                             onDragStarted = {},
@@ -890,7 +890,7 @@ fun BookshelfScreen(
                                     uiState = uiState,
                                     selectedBookUrls = selectedBookUrls,
                                     canReorderBooks = canReorderBooks,
-                                    onToggleBookSelection = { toggleBookSelection(it.bookUrl) },
+                                    onToggleBookSelection = { toggleBookSelection(it.book.bookUrl) },
                                     draggingBooks = if (isSelectedGroup) {
                                         uiState.draggingBooks
                                     } else {
@@ -1241,15 +1241,15 @@ private data class BookshelfEditStickySummary(
 @Composable
 fun BookshelfPage(
     paddingValues: PaddingValues,
-    books: ImmutableList<BookShelfItem>,
+    books: ImmutableList<BookUiItem>,
     uiState: BookshelfUiState,
     selectedBookUrls: ImmutableSet<String>,
     canReorderBooks: Boolean,
-    onToggleBookSelection: (BookShelfItem) -> Unit,
-    draggingBooks: ImmutableList<BookShelfItem>?,
-    pendingSavedBooks: ImmutableList<BookShelfItem>?,
-    onDragStarted: (ImmutableList<BookShelfItem>) -> Unit,
-    onMoveBook: (fromIndex: Int, toIndex: Int, currentBooks: ImmutableList<BookShelfItem>) -> Unit,
+    onToggleBookSelection: (BookUiItem) -> Unit,
+    draggingBooks: ImmutableList<BookUiItem>?,
+    pendingSavedBooks: ImmutableList<BookUiItem>?,
+    onDragStarted: (ImmutableList<BookUiItem>) -> Unit,
+    onMoveBook: (fromIndex: Int, toIndex: Int, currentBooks: ImmutableList<BookUiItem>) -> Unit,
     onDragFinished: () -> Unit,
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
@@ -1367,15 +1367,15 @@ fun BookshelfPage(
             horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
             showFastScroll = showFastScroll
         ) {
-            items(displayBooks, key = { it.bookUrl }) { book ->
-                val isSelected = selectedBookUrls.contains(book.bookUrl)
+            items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
+                val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
                 ReorderableItem(
                     state = reorderableState,
-                    key = book.bookUrl,
+                    key = bookUi.book.bookUrl,
                     enabled = canReorderBooks
                 ) {
                     BookItem(
-                        book = book,
+                        bookUi = bookUi,
                         modifier = Modifier.then(
                             if (canReorderBooks) {
                                 Modifier.longPressDraggableHandle(
@@ -1399,7 +1399,7 @@ fun BookshelfPage(
                         isSelected = isSelected,
                         gridStyle = bookItemGridStyle,
                         isCompact = bookItemIsCompact,
-                        isUpdating = uiState.updatingBooks.contains(book.bookUrl),
+                        isUpdating = uiState.updatingBooks.contains(bookUi.book.bookUrl),
                         titleSmallFont = bookItemTitleSmallFont,
                         titleCenter = bookItemTitleCenter,
                         titleMaxLines = bookItemTitleMaxLines,
@@ -1408,12 +1408,12 @@ fun BookshelfPage(
                         searchKey = uiState.searchKey,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = if (isCurrentPage) bookCoverSharedElementKey(book.bookUrl) else null,
+                        sharedCoverKey = if (isCurrentPage) bookCoverSharedElementKey(bookUi.book.bookUrl) else null,
                         onClick = {
                             if (uiState.isEditMode) {
-                                onToggleBookSelection(book)
+                                onToggleBookSelection(bookUi)
                             } else {
-                                onBookClick(book)
+                                onBookClick(bookUi.book)
                             }
                         },
                         onLongClick = if (canReorderBooks) {
@@ -1421,9 +1421,9 @@ fun BookshelfPage(
                         } else {
                             {
                                 if (uiState.isEditMode) {
-                                    onToggleBookSelection(book)
+                                    onToggleBookSelection(bookUi)
                                 } else {
-                                    onBookLongClick(book)
+                                    onBookLongClick(bookUi.book)
                                 }
                             }
                         }

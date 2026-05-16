@@ -54,7 +54,6 @@ import io.legado.app.ui.widget.components.cover.BookshelfCover
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toTimeAgo
 
 /**
@@ -289,7 +288,7 @@ fun BookshelfItem(
 
 @Composable
 fun BookGroupCover(
-    books: List<BookShelfItem>,
+    books: List<BookUiItem>,
     coverPath: String? = null,
     leftBottomText: String? = null,
     modifier: Modifier = Modifier
@@ -328,7 +327,7 @@ fun BookGroupCover(
                                 .fillMaxHeight()
                                 .padding(1.dp)
                         ) {
-                            books.getOrNull(0)?.let {
+                            books.getOrNull(0)?.book?.let {
                                 CoilBookCover(
                                     name = it.name,
                                     author = it.author,
@@ -343,7 +342,7 @@ fun BookGroupCover(
                                 .fillMaxHeight()
                                 .padding(1.dp)
                         ) {
-                            books.getOrNull(1)?.let {
+                            books.getOrNull(1)?.book?.let {
                                 CoilBookCover(
                                     name = it.name,
                                     author = it.author,
@@ -360,7 +359,7 @@ fun BookGroupCover(
                                 .fillMaxHeight()
                                 .padding(1.dp)
                         ) {
-                            books.getOrNull(2)?.let {
+                            books.getOrNull(2)?.book?.let {
                                 CoilBookCover(
                                     name = it.name,
                                     author = it.author,
@@ -375,7 +374,7 @@ fun BookGroupCover(
                                 .fillMaxHeight()
                                 .padding(1.dp)
                         ) {
-                            books.getOrNull(3)?.let {
+                            books.getOrNull(3)?.book?.let {
                                 CoilBookCover(
                                     name = it.name,
                                     author = it.author,
@@ -406,7 +405,7 @@ fun BookGroupCover(
 @Composable
 fun BookGroupItemGrid(
     group: BookGroupUi,
-    previewBooks: List<BookShelfItem>,
+    previewBooks: List<BookUiItem>,
     countText: String? = null,
     gridStyle: Int = 0,
     titleSmallFont: Boolean = false,
@@ -443,7 +442,7 @@ fun BookGroupItemGrid(
 @Composable
 fun BookGroupItemList(
     group: BookGroupUi,
-    previewBooks: List<BookShelfItem>,
+    previewBooks: List<BookUiItem>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     countText: String? = null,
@@ -467,7 +466,7 @@ fun BookGroupItemList(
         )
         return
     }
-    val firstBookName = previewBooks.firstOrNull()?.name
+    val firstBookName = previewBooks.firstOrNull()?.book?.name
     val descAnnotated = if (firstBookName != null) {
         buildAnnotatedString {
             append("最近阅读：")
@@ -499,7 +498,7 @@ fun BookGroupItemList(
 @Composable
 fun BookGroupItemHorizontalCovers(
     group: BookGroupUi,
-    previewBooks: List<BookShelfItem>,
+    previewBooks: List<BookUiItem>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     countText: String? = null,
@@ -563,7 +562,8 @@ fun BookGroupItemHorizontalCovers(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val coverCount = BookshelfConfig.bookshelfGroupCoverCount
-                    previewBooks.take(coverCount).forEach { book ->
+                    previewBooks.take(coverCount).forEach { bookUi ->
+                        val book = bookUi.book
                         Box(
                             modifier = Modifier
                                 .weight(1f)
@@ -597,7 +597,7 @@ fun BookGroupItemHorizontalCovers(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun BookItem(
-    book: BookShelfItem,
+    bookUi: BookUiItem,
     layoutMode: Int,
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
@@ -616,6 +616,7 @@ fun BookItem(
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
+    val book = bookUi.book
     val unreadCount = book.getUnreadChapterNum()
     val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
     val bookTypeLabel = if (BookshelfConfig.showTip) {
@@ -684,10 +685,10 @@ fun BookItem(
         desc = book.durChapterTitle ?: "",
         columnContent = if (layoutMode == 0 && !isCompact && BookshelfConfig.showBookIntro) {
             {
-                val kindList = book.kind?.splitNotBlank(",", "\n")?.filter { it.isNotBlank() }
+                val kindList = bookUi.displayTags
                 val intro = book.intro?.takeIf { it.isNotBlank() }
                 val customTagColors = if (ThemeConfig.enableCustomTagColors) ThemeConfig.getCustomTagColors() else emptyList()
-                if (BookshelfConfig.bookshelfShowTag && !kindList.isNullOrEmpty()) {
+                if (BookshelfConfig.bookshelfShowTag && kindList.isNotEmpty()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

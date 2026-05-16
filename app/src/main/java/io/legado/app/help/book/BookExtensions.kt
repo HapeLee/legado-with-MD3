@@ -2,7 +2,6 @@
 
 package io.legado.app.help.book
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import androidx.core.net.toUri
 import com.script.buildScriptBindings
@@ -19,6 +18,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
 import io.legado.app.utils.MD5Utils
@@ -27,6 +27,7 @@ import io.legado.app.utils.find
 import io.legado.app.utils.inputStream
 import io.legado.app.utils.isUri
 import io.legado.app.utils.normalizeFileName
+import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 import java.io.File
@@ -306,6 +307,44 @@ fun Book.upType() {
     }
 }
 
+fun Book.upKind() {
+    val fileSizePattern = Regex("""^\d[\d,.]*\s*(b|kb|M|G|T)$""", RegexOption.IGNORE_CASE)
+    val wordCountPattern = Regex(""".*?\d.*字$""")
+    val kinds = kind?.splitNotBlank(",", "\n").orEmpty()
+        .filter {
+            it.isNotBlank() && !fileSizePattern.matches(it.trim()) && !wordCountPattern.matches(
+                it.trim()
+            )
+        }
+        .toMutableList()
+
+    if (isLocal) {
+        // 添加格式
+        val typeName = getBookTypeName()
+        if (typeName != "未知类型" && !kinds.contains(typeName)) {
+            kinds.add(0, typeName)
+        }
+        // 添加大小
+        try {
+            val size = FileDoc.fromFile(bookUrl).size
+            if (size > 0) {
+                kinds.add(io.legado.app.utils.ConvertUtils.formatFileSize(size))
+            }
+        } catch (e: Exception) {
+            // ignore
+        }
+    }
+
+    // 添加字数
+    wordCount?.let {
+        if (it.isNotBlank()) {
+            kinds.add(it)
+        }
+    }
+
+    kind = kinds.distinct().joinToString(",")
+}
+
 fun Book.sync(oldBook: Book) {
     val curBook = appDb.bookDao.getBook(oldBook.bookUrl)!!
     durChapterTime = curBook.durChapterTime
@@ -344,6 +383,10 @@ fun Book.updateTo(newBook: Book): Book {
         newBook.type = type
     }
     newBook.readConfig = readConfig
+    if (newBook.wordCount.isNullOrBlank()) {
+        newBook.wordCount = wordCount
+    }
+    newBook.upKind()
     val variableMap = variableMap.toMutableMap()
     variableMap.keys.removeIf {
         newBook.hasVariable(it)

@@ -355,6 +355,9 @@ data class Book(
             newBook.type = type
         }
         newBook.readConfig = readConfig
+        if (newBook.wordCount.isNullOrBlank()) {
+            newBook.wordCount = wordCount
+        }
         return newBook
     }
 

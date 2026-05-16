@@ -36,6 +36,7 @@ import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
+import io.legado.app.help.book.upKind
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -51,8 +52,6 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
-import io.legado.app.utils.ConvertUtils
-import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
@@ -759,24 +758,14 @@ class BookInfoViewModel(
 
     private fun refreshMeta(book: Book) {
         execute {
-            val fileSizePattern = Regex("""^\d[\d,.]*\s*(b|kb|M|G|T)$""", RegexOption.IGNORE_CASE)
-            val kinds = (book.kind?.splitNotBlank(",", "\n").orEmpty().toList())
-                .filter { !fileSizePattern.matches(it.trim()) }
-                .toMutableList()
-            if (book.isLocal) {
-                val size = FileDoc.fromFile(book.bookUrl).size
-                if (size > 0) {
-                    kinds.add(ConvertUtils.formatFileSize(size))
-                }
-            }
-            val finalKinds = kinds.distinct()
+            book.upKind()
             val userGroupIds = appDb.bookGroupDao.idsSum
             val groupAnd = userGroupIds and book.group
             val hasCustomGroup = book.group > 0L && groupAnd != 0L
             val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
             val normalizedGroupNames = groupNames.ifBlank { null }
-            book.kind = finalKinds.joinToString(",")
             appDb.bookDao.update(book)
+            val finalKinds = book.kind?.splitNotBlank(",", "\n").orEmpty().toList()
             Triple(finalKinds, normalizedGroupNames, hasCustomGroup)
         }.onSuccess {
             currentKindLabels = it.first

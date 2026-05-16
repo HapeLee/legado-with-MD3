@@ -33,7 +33,7 @@ sealed interface BookshelfOverlay {
 
 @Stable
 data class BookshelfUiState(
-    override val items: ImmutableList<BookShelfItem> = persistentListOf(),
+    override val items: ImmutableList<BookUiItem> = persistentListOf(),
     override val selectedIds: ImmutableSet<Any> = persistentSetOf(),
     override val searchKey: String = "",
     override val isSearch: Boolean = false,
@@ -41,7 +41,7 @@ data class BookshelfUiState(
     val isInitialLoading: Boolean = true,
     val groups: ImmutableList<BookGroupUi> = persistentListOf(),
     val allGroups: ImmutableList<BookGroupUi> = persistentListOf(),
-    val groupPreviews: ImmutableMap<Long, ImmutableList<BookShelfItem>> = persistentMapOf(),
+    val groupPreviews: ImmutableMap<Long, ImmutableList<BookUiItem>> = persistentMapOf(),
     val groupBookCounts: ImmutableMap<Long, Int> = persistentMapOf(),
     val currentGroupBookCount: Int = 0,
     val allBooksCount: Int = 0,
@@ -61,7 +61,7 @@ data class BookshelfUiState(
     val title: String = "",
     val subtitle: String? = null,
     val currentGroupName: String? = null,
-    val draggingBooks: ImmutableList<BookShelfItem>? = null,
-    val pendingSavedBooks: ImmutableList<BookShelfItem>? = null,
-    val allGroupBooks: ImmutableMap<Long, ImmutableList<BookShelfItem>> = persistentMapOf()
-) : ListUiState<BookShelfItem>
+    val draggingBooks: ImmutableList<BookUiItem>? = null,
+    val pendingSavedBooks: ImmutableList<BookUiItem>? = null,
+    val allGroupBooks: ImmutableMap<Long, ImmutableList<BookUiItem>> = persistentMapOf()
+) : ListUiState<BookUiItem>
