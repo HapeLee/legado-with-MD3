@@ -7,11 +7,17 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
+import io.legado.app.model.Download
+import io.legado.app.ui.about.AboutEffect
+import io.legado.app.ui.about.AboutScreen
+import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
 import io.legado.app.ui.book.explore.ExploreShowScreen
 import io.legado.app.ui.book.import.local.ImportBookScreen
@@ -40,9 +46,12 @@ import io.legado.app.ui.rss.favorites.RssFavoritesScreen
 import io.legado.app.ui.rss.read.MainRouteRssRead
 import io.legado.app.ui.rss.read.RssReadRouteScreen
 import io.legado.app.ui.rss.subscription.RuleSubScreen
+import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
@@ -126,6 +135,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToReadRecord = {
                 onNavigateToRoute(MainRouteReadRecord)
+            },
+            onNavigateToAbout = {
+                onNavigateToRoute(MainRouteAbout)
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
@@ -418,6 +430,29 @@ fun MainActivity.mainEntryProvider(
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+        )
+    }
+
+    entry<MainRouteAbout> {
+        val viewModel = koinViewModel<AboutViewModel>()
+        val context = LocalContext.current
+        LaunchedEffect(viewModel) {
+            viewModel.effects.collectLatest { effect ->
+                when (effect) {
+                    is AboutEffect.OpenUrl -> context.openUrl(effect.url)
+                    is AboutEffect.ShowToast -> context.toastOnUi(effect.message)
+                    is AboutEffect.StartDownload -> Download.start(
+                        context,
+                        effect.url,
+                        effect.fileName
+                    )
+                }
+            }
+        }
+        AboutScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            onBack = { onNavigateBack() },
         )
     }
 }

@@ -116,6 +116,7 @@ fun MainScreen(
     onNavigateToRssFavorites: () -> Unit,
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
+    onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -154,6 +155,7 @@ fun MainScreen(
 
                 MainEffect.ExitApp -> (context as? ComponentActivity)?.finish()
                 MainEffect.NavigateToReadRecord -> onNavigateToReadRecord()
+                MainEffect.NavigateToAbout -> onNavigateToAbout()
             }
         }
     }
@@ -231,7 +233,7 @@ fun MainScreen(
                             modifier = Modifier.padding(start = 20.dp),
                             onClick = { onNavigateToSearch(null) },
                             expanded = expanded,
-                            icon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            icon = { AppIcon(Icons.Default.Search, contentDescription = null) },
                             text = { AppText(stringResource(R.string.search)) }
                         )
                     }

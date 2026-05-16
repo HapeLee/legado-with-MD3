@@ -89,7 +89,8 @@
       "WebFetch(domain:s01.oss.sonatype.org)",
       "WebFetch(domain:api.github.com)",
       "Bash(javap -public /tmp/classes.jar!top/yukonga/miuix/kmp/basic/NavigationBarKt.class)",
-      "Bash(javap -public -cp /tmp/classes.jar top.yukonga.miuix.kmp.basic.NavigationBarKt)"
+      "Bash(javap -public -cp /tmp/classes.jar top.yukonga.miuix.kmp.basic.NavigationBarKt)",
+      "PowerShell(Join-Path *)"
     ]
   }
 }

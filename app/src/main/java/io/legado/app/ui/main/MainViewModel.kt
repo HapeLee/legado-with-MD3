@@ -115,6 +115,8 @@ class MainViewModel(
 
             PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
 
+            PrefClickEvent.OpenAbout -> _effects.tryEmit(MainEffect.NavigateToAbout)
+
             else -> Unit
         }
     }
@@ -132,6 +134,7 @@ sealed interface MainEffect {
 
     data object ExitApp : MainEffect
     data object NavigateToReadRecord : MainEffect
+    data object NavigateToAbout : MainEffect
 }
 
 @Stable

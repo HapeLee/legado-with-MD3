@@ -58,6 +58,7 @@ import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
+import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
@@ -189,6 +190,7 @@ val appModule = module {
     viewModelOf(::MyViewModel)
     viewModelOf(::BookshelfViewModel)
     viewModelOf(::MainViewModel)
+    viewModelOf(::AboutViewModel)
     viewModelOf(::GroupViewModel)
     viewModelOf(::ReplaceRuleViewModel)
     viewModelOf(::AllBookmarkViewModel)

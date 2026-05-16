@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.main.MainDestination
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import okhttp3.internal.http2.Settings
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.basic.Search
 import top.yukonga.miuix.kmp.icon.extended.Album
@@ -102,25 +101,25 @@ object AppIcons {
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {
         return when (destination) {
             MainDestination.Bookshelf -> if (isMiuix) {
-                if (selected) MiuixIcons.Heavy.ContactsBook else MiuixIcons.Regular.ContactsBook
+                if (selected) MiuixIcons.Regular.ContactsBook else MiuixIcons.Regular.ContactsBook
             } else {
                 if (selected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks
             }
 
             MainDestination.Explore -> if (isMiuix) {
-                if (selected) MiuixIcons.Heavy.Album else MiuixIcons.Regular.Album
+                if (selected) MiuixIcons.Regular.Album else MiuixIcons.Regular.Album
             } else {
                 if (selected) Icons.Default.Explore else Icons.Outlined.Explore
             }
 
             MainDestination.Rss -> if (isMiuix) {
-                if (selected) MiuixIcons.Heavy.Favorites else MiuixIcons.Regular.Favorites
+                if (selected) MiuixIcons.Regular.Favorites else MiuixIcons.Regular.Favorites
             } else {
                 if (selected) Icons.Default.RssFeed else Icons.Outlined.RssFeed
             }
 
             MainDestination.My -> if (isMiuix) {
-                if (selected) MiuixIcons.Heavy.Settings else MiuixIcons.Regular.Settings
+                if (selected) MiuixIcons.Regular.Settings else MiuixIcons.Regular.Settings
             } else {
                 if (selected) Icons.Default.Person else Icons.Outlined.Person
             }

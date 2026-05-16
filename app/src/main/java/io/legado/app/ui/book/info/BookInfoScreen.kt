@@ -75,7 +75,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookCover
-import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -95,6 +94,7 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator

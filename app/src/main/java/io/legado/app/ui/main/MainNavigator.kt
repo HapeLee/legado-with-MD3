@@ -149,6 +149,16 @@ object MainNavigator {
                 }
             }
 
+            MainRouteAbout -> {
+                if (currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
+
             MainRouteReadRecordOverview -> {
                 if (currentRoute == MainRouteHome || currentRoute == MainRouteReadRecord) {
                     backStack.add(route)
@@ -257,6 +267,8 @@ object MainNavigator {
                         exploreUrl = intent.getStringExtra(MainIntent.EXTRA_EXPLORE_URL)
                     )
                 } ?: MainRouteHome
+
+            MainRouteConst.ROUTE_ABOUT -> MainRouteAbout
 
             else -> MainRouteHome
         }

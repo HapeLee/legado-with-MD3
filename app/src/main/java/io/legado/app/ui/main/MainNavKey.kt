@@ -80,6 +80,9 @@ data class MainRouteExploreShow(
     val exploreUrl: String?,
 ) : MainRoute
 
+@Serializable
+data object MainRouteAbout : MainRoute
+
 object MainRouteConst {
     const val ROUTE_MAIN = "main"
     const val ROUTE_SETTINGS = "settings"
@@ -103,4 +106,5 @@ object MainRouteConst {
     const val ROUTE_RULE_SUB = "rss/rule_sub"
     const val ROUTE_READ_RECORD = "read_record"
     const val ROUTE_READ_RECORD_OVERVIEW = "read_record_overview"
+    const val ROUTE_ABOUT = "about"
 }

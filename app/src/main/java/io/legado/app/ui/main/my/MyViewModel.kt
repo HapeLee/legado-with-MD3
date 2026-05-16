@@ -26,6 +26,7 @@ sealed class PrefClickEvent {
     data class StartActivity(val destination: Class<*>, val configTag: String? = null) : PrefClickEvent()
     object OpenReadRecord : PrefClickEvent()
     object OpenBookCacheManage : PrefClickEvent()
+    object OpenAbout : PrefClickEvent()
     object ToggleWebService : PrefClickEvent()
     object ExitApp : PrefClickEvent()
 }

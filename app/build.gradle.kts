@@ -229,6 +229,7 @@ dependencies {
     implementation(libs.markwon.image.glide)
     implementation(libs.markwon.ext.tables)
     implementation(libs.markwon.html)
+    implementation(libs.markdown.renderer.m3)
     implementation(libs.quick.chinese.transfer.core)
     implementation(libs.hutool.crypto)
     //noinspection GradleDependency
@@ -276,9 +277,8 @@ dependencies {
     implementation(libs.miuix.ui.android)
     implementation(libs.miuix.preference.android)
     implementation(libs.miuix.icons.android)
-    //implementation(libs.miuix.blur.android)
+    implementation(libs.miuix.blur.android)
     implementation(libs.miuix.core)
-    implementation(libs.miuix.shapes.android)
     implementation(libs.capsule)
     implementation(libs.backdrop)
     implementation(libs.lyricViewx)
