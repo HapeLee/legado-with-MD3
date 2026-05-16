@@ -62,6 +62,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeRule
+import io.legado.app.model.translation.TranslationChapterKey
 import io.legado.app.model.translation.TranslationDisplayState
 import io.legado.app.model.translation.TranslationManager
 import io.legado.app.ui.config.translation.TranslationConfig
@@ -145,6 +146,7 @@ import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
@@ -175,8 +177,7 @@ class ReadBookActivity : BaseReadBookActivity(),
     ColorPickerDialogListener,
     FontConfigDialog.CallBack,
     FontSelectDialog.CallBack,
-    LayoutProgressListener,
-    TranslationActionDialog.CallBack {
+    LayoutProgressListener {
 
     private val tocActivity =
         registerForActivityResult(TocActivityResult()) {
@@ -766,49 +767,54 @@ class ReadBookActivity : BaseReadBookActivity(),
         val displayState = TranslationManager.getChapterDisplayState(book, chapter)
         when (displayState) {
             TranslationDisplayState.Original -> translateCurrentChapter()
-            TranslationDisplayState.Translating -> showTranslationActionDialog(displayState, 0, 0)
-            TranslationDisplayState.Translated -> showTranslationActionDialog(displayState, 0, 0)
+            TranslationDisplayState.Translating,
+            TranslationDisplayState.Translated -> switchCurrentChapterToOriginal()
         }
     }
 
-    private fun showTranslationActionDialog(displayState: TranslationDisplayState, current: Int, total: Int) {
-        bottomDialog++
-        TranslationActionDialog().apply {
-            this.displayState = displayState
-            this.currentChunk = current
-            this.totalChunks = total
-        }.show(supportFragmentManager, "translationActions")
+    override fun onTranslationLongClick() {
+        if (!TranslationConfig.llmTranslateEnabled) {
+            toastOnUi(R.string.llm_translate_enabled)
+            return
+        }
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+
+        val displayState = TranslationManager.getChapterDisplayState(book, chapter)
+        if (displayState == TranslationDisplayState.Translated) {
+            alert(title = getString(R.string.retranslate_chapter), message = getString(R.string.retranslate_confirm)) {
+                positiveButton(getString(R.string.ok)) { retranslateCurrentChapter() }
+                negativeButton(getString(R.string.cancel))
+            }.show()
+        }
     }
 
     private fun translateCurrentChapter() {
         val book = ReadBook.book ?: return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+        val chapterKey = TranslationChapterKey(book.bookUrl, chapter.index)
 
         // Observe translation state for progressive updates
         val translationJob = lifecycleScope.launch {
-            TranslationManager.translationState.collect { state ->
-                when (state) {
-                    is TranslationManager.TranslationState.Translating -> {
-                        // Apply mixed content if available
-                        state.mixedContent?.let { mixed ->
-                            val currentChapterIndex = ReadBook.durChapterIndex
-                            if (book.bookUrl == ReadBook.book?.bookUrl && currentChapterIndex == chapter.index) {
-                                ReadBook.contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
-                            }
+            TranslationManager.chapterStates.collect { states ->
+                val chapterState = states[chapterKey] ?: return@collect
+                when (chapterState.displayState) {
+                    TranslationDisplayState.Translating -> {
+                        chapterState.mixedContent?.let { mixed ->
+                            ReadBook.contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
                         }
                         binding.readMenu.updateTranslationButton(
                             TranslationDisplayState.Translating,
-                            state.currentChunk,
-                            state.totalChunks
+                            chapterState.currentChunk,
+                            chapterState.totalChunks
                         )
                     }
-                    is TranslationManager.TranslationState.Finished -> {
+                    TranslationDisplayState.Translated -> {
                         binding.readMenu.updateTranslationButton(TranslationDisplayState.Translated, 0, 0)
                     }
-                    is TranslationManager.TranslationState.Error -> {
+                    TranslationDisplayState.Original -> {
                         binding.readMenu.updateTranslationButton(TranslationDisplayState.Original, 0, 0)
                     }
-                    else -> {}
                 }
             }
         }
@@ -819,20 +825,11 @@ class ReadBookActivity : BaseReadBookActivity(),
             result.onSuccess { content ->
                 ReadBook.contentLoadFinish(book, chapter, content, upContent = true, resetPageOffset = false)
                 binding.readMenu.updateTranslationButton(TranslationDisplayState.Translated, 0, 0)
-                toastOnUi(R.string.translation_complete)
             }.onFailure { error ->
                 binding.readMenu.updateTranslationButton(TranslationDisplayState.Original, 0, 0)
-                toastOnUi(getString(R.string.translation_failed, error.message ?: ""))
+                longToastOnUi(getString(R.string.translation_failed, error.message ?: ""))
             }
         }
-    }
-
-    override fun onTranslationSwitchToOriginal() {
-        switchCurrentChapterToOriginal()
-    }
-
-    override fun onTranslationRetranslate() {
-        retranslateCurrentChapter()
     }
 
     private fun switchCurrentChapterToOriginal() {

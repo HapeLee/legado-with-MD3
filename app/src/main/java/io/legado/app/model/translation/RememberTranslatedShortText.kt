@@ -29,26 +29,3 @@ fun rememberTranslatedShortText(
 
     return translated
 }
-
-/**
- * Batch version for multiple texts.
- * Returns a map of original -> translated.
- */
-@Composable
-fun rememberTranslatedShortTexts(
-    texts: List<String>,
-    enabled: Boolean = true
-): Map<String, String> {
-    var results by remember(texts) { mutableStateOf(texts.associateWith { it }) }
-
-    LaunchedEffect(texts, enabled) {
-        if (!enabled) {
-            results = texts.associateWith { it }
-            return@LaunchedEffect
-        }
-
-        results = ShortTextTranslator.translateBatch(texts)
-    }
-
-    return results
-}

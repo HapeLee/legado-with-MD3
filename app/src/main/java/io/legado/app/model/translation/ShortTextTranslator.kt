@@ -1,5 +1,7 @@
 package io.legado.app.model.translation
 
+import io.legado.app.data.dao.TranslationCacheDao
+import io.legado.app.data.entities.TranslationCache
 import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.ui.config.translation.TranslationConfig
 import kotlinx.coroutines.CoroutineScope
@@ -10,61 +12,79 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import org.koin.core.context.GlobalContext
+import java.util.regex.Pattern
 
 /**
- * Orchestrator for short text translation (book names, authors, etc.).
+ * Fire-and-forget short text translation with debounced batching.
  *
- * Features:
- * - Deduplicates concurrent requests for the same text via shared Deferred
- * - Debounces ~100ms and batches up to 20 texts per request
- * - Falls back to original text on batch failure
- * - Uses LlmGateway.translateShortBatch()
+ * translate() returns immediately:
+ * - Cached result if available (from memory or DB)
+ * - Original text if not cached (translation queued for async execution)
+ *
+ * Translation queue is debounced (200ms) or batched (30 items), then
+ * executed asynchronously and cached for future reads.
  */
 object ShortTextTranslator {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
 
-    private val pendingTexts = mutableMapOf<String, String>() // normalized -> original
-    private val pendingDeferreds = mutableMapOf<String, CompletableDeferred<String>>()
+    // In-memory cache for super-fast intra-session lookups
+    private val memoryCache = mutableMapOf<String, String>()
+
+    // Pending translations (normalized -> original)
+    private val pendingTexts = mutableMapOf<String, String>()
     private var batchJob: Job? = null
+    private var isRunning = false
 
-    private const val DEBOUNCE_MS = 100L
-    private const val MAX_BATCH_SIZE = 20
+    private const val DEBOUNCE_MS = 200L
+    private const val MAX_BATCH_SIZE = 30
 
-    private class CompletableDeferred<T> {
-        private var _isCompleted = false
-        private var _result: T? = null
-        private val waiters = mutableListOf<(T) -> Unit>()
+    // Matches: "Vichin ch.01", "Vichin Pt.01", "Vichin-Chapter 01"
+    // Captures: body, sep, marker, number
+    private val chapterMarkerPattern = Pattern.compile(
+        "(.+?)([\\s\\-_])(ch|pt)[.]*(\\d+[a-zA-Z]?)",
+        Pattern.CASE_INSENSITIVE
+    )
 
-        fun complete(result: T) {
-            _isCompleted = true
-            _result = result
-            waiters.forEach { it(result) }
-            waiters.clear()
+    private data class ChapterParts(val body: String, val sep: String, val marker: String, val number: String) {
+        fun originalMarker() = "$sep$marker.$number"
+    }
+
+    private fun parseChapterParts(text: String): ChapterParts? {
+        val matcher = chapterMarkerPattern.matcher(text)
+        if (matcher.matches()) {
+            return ChapterParts(
+                body = matcher.group(1)!!,
+                sep = matcher.group(2)!!,
+                marker = matcher.group(3)!!,
+                number = matcher.group(4)!!
+            )
         }
-
-        fun await(onResult: (T) -> Unit) {
-            if (_isCompleted) {
-                _result?.let(onResult)
-            } else {
-                waiters.add(onResult)
-            }
-        }
-
-        val isCompleted get() = _isCompleted
-        val result get() = _result
+        return null
     }
 
     private fun getGateway(): LlmGateway {
         return GlobalContext.get().get<LlmGateway>()
     }
 
+    private fun getCacheDao(): TranslationCacheDao {
+        return GlobalContext.get().get<TranslationCacheDao>()
+    }
+
     /**
-     * Translate a single short text.
-     * Returns the translated text, or original text if translation fails/disabled.
+     * Build cache key for short text translation.
+     * Format: targetLanguage@normalizedSource
+     */
+    private fun buildCacheKey(targetLanguage: String, normalizedSource: String): String {
+        return "$targetLanguage@$normalizedSource"
+    }
+
+    /**
+     * Translate a single short text (fire-and-forget).
+     * Returns immediately with cached result or original text.
+     * Translation happens asynchronously in the background.
      */
     suspend fun translate(text: String): String {
         if (!TranslationConfig.translateBookInfoEnabled) return text
@@ -73,85 +93,89 @@ object ShortTextTranslator {
         val normalized = TextLanguageHeuristics.normalize(text)
         if (normalized.isBlank()) return text
 
-        // Create new deferred first, then check for existing under lock
-        val newDeferred = CompletableDeferred<String>()
-        val sharedDeferred = mutex.withLock {
-            pendingDeferreds[normalized]?.let { existing ->
-                existing // Found existing deferred, will share it
-            } ?: run {
-                // No existing, register the new one
-                pendingDeferreds[normalized] = newDeferred
-                pendingTexts[normalized] = text
-                scheduleBatch()
-                null // signal we created new
-            }
-        } ?: newDeferred // If null, we created; if not null, use existing
+        val targetLanguage = TranslationConfig.llmTargetLanguage
 
-        // Wait for the result
-        var result: String? = null
-        sharedDeferred.await { result = it }
-        return result ?: text
+        // 检查是否需要章节分离处理
+        val chapterParts = parseChapterParts(text)
+        if (chapterParts != null) {
+            // 有章节标记，先用主体部分查找缓存
+            val bodyCacheKey = buildCacheKey(targetLanguage, chapterParts.body.lowercase())
+            val cachedBodyTranslation = memoryCache[bodyCacheKey]
+                ?: getCachedFromDb(bodyCacheKey)
+
+            if (cachedBodyTranslation != null) {
+                // 缓存命中，直接组合返回
+                return "$cachedBodyTranslation${chapterParts.originalMarker()}"
+            }
+
+            // 缓存未命中，翻译主体，原文返回
+            queueForTranslation(chapterParts.body, text)
+            return text
+        }
+
+        // 普通文本，直接走原有逻辑
+        val cacheKey = buildCacheKey(targetLanguage, normalized)
+
+        // Check in-memory cache first (fastest)
+        memoryCache[cacheKey]?.let { return it }
+
+        // Check DB cache
+//        getCachedFromDb(cacheKey)?.let { cached ->
+//            memoryCache[cacheKey] = cached
+//            return cached
+//        }
+
+        // Not cached - queue for async translation and return original immediately
+        queueForTranslation(normalized, text)
+        return text
     }
 
-    /**
-     * Translate multiple short texts in batch.
-     * Returns map of normalized text -> translated text.
-     */
-    suspend fun translateBatch(texts: List<String>): Map<String, String> {
-        if (!TranslationConfig.translateBookInfoEnabled) return texts.associateWith { it }
-        if (texts.isEmpty()) return emptyMap()
-
-        val needsTranslation = texts.filter {
-            TextLanguageHeuristics.needsTranslation(it) && it.isNotBlank()
+    private fun queueForTranslation(body: String, originalText: String) {
+        scope.launch {
+            mutex.withLock {
+                pendingTexts[body.lowercase()] = originalText
+                // 只要 pending 还有数据，就确保 batchJob 在跑
+                // 已经 active 的 job 不会被打断
+                if (batchJob?.isActive != true) {
+                    scheduleBatch()
+                }
+            }
         }
-        if (needsTranslation.isEmpty()) return texts.associateWith { it }
+    }
 
-        return withContext(Dispatchers.IO) {
-            val results = mutableMapOf<String, String>()
-            val normalizedToOriginal = needsTranslation.associate {
-                TextLanguageHeuristics.normalize(it) to it
+    private suspend fun getCachedFromDb(cacheKey: String): String? {
+        return try {
+            val dao = getCacheDao()
+            val cache = dao.getByCacheKey(cacheKey)
+            if (cache != null && cache.isSuccess && cache.translatedChunkContent != null) {
+                cache.translatedChunkContent
+            } else {
+                null
             }
+        } catch (e: Exception) {
+            null
+        }
+    }
 
-            val provider = TranslationConfig.llmProvider
-            val baseUrl = TranslationConfig.llmBaseUrl
-            val apiKey = TranslationConfig.llmApiKey
-            val model = TranslationConfig.llmModel
-            val targetLanguage = TranslationConfig.llmTargetLanguage
-
-            // Check if OpenAI-like provider is configured
-            if (provider == TranslationConfig.PROVIDER_OPENAI) {
-                if (baseUrl.isBlank() || apiKey.isBlank() || model.isBlank()) {
-                    return@withContext normalizedToOriginal // Return originals on incomplete config
-                }
-            }
-
-            val batch = normalizedToOriginal.keys.toList()
-            val result = invokeTranslateShortBatch(batch, targetLanguage, provider, baseUrl, apiKey, model)
-
-            result.onSuccess { translatedMap ->
-                for (index in translatedMap.keys) {
-                    if (index < batch.size) {
-                        val normalized = batch[index]
-                        val original = normalizedToOriginal[normalized]
-                        if (original != null) {
-                            results[original] = translatedMap[index] ?: original
-                        }
-                    }
-                }
-                // Add any texts that weren't translated (failed or not included)
-                for ((_, original) in normalizedToOriginal) {
-                    if (!results.containsKey(original)) {
-                        results[original] = original
-                    }
-                }
-            }.onFailure {
-                // On failure, return originals
-                for ((_, original) in normalizedToOriginal) {
-                    results[original] = original
-                }
-            }
-
-            results
+    private suspend fun saveToDb(cacheKey: String, normalizedSource: String, original: String, translated: String) {
+        try {
+            val dao = getCacheDao()
+            val cache = TranslationCache(
+                cacheKey = cacheKey,
+                bookUrl = "",
+                chapterIndex = 0,
+                chapterTitleMD5 = "",
+                originalContentHash = normalizedSource,
+                targetLanguage = TranslationConfig.llmTargetLanguage,
+                provider = TranslationConfig.llmProvider,
+                chunkIndex = 0,
+                originalChunkContent = original,
+                translatedChunkContent = translated,
+                status = TranslationCache.STATUS_SUCCESS
+            )
+            dao.insert(cache)
+        } catch (e: Exception) {
+            // Ignore cache save errors
         }
     }
 
@@ -172,58 +196,78 @@ object ShortTextTranslator {
     }
 
     private fun scheduleBatch() {
-        batchJob?.cancel()
+        // 如果已经有 job 在跑，就不要 cancel 它了，让它继续处理
+        if (batchJob?.isActive == true) return
+
         batchJob = scope.launch {
-            delay(DEBOUNCE_MS)
-            flushBatch()
+            isRunning = true
+            try {
+                while (true) {
+                    // 等待攒批：200ms 或达到 30 条
+                    var waited = 0L
+                    while (pendingTexts.size < MAX_BATCH_SIZE && waited < DEBOUNCE_MS) {
+                        delay(50)
+                        waited += 50
+                    }
+
+                    val batch = mutex.withLock {
+                        if (pendingTexts.isEmpty()) return@withLock null
+                        val result = pendingTexts.toMap()
+                        pendingTexts.clear()
+                        result
+                    }
+
+                    if (batch == null) break
+
+                    // 一旦进入 flushBatch，不再被 cancel
+                    // 新来的请求会等待当前 batch 完成
+                    flushBatch(batch)
+
+                    // flush 完成后检查是否还有新的待处理
+                    if (pendingTexts.isEmpty()) break
+                }
+            } finally {
+                isRunning = false
+            }
         }
     }
 
-    private suspend fun flushBatch() {
-        val textsToTranslate: Map<String, String>
-        val deferreds: Map<String, CompletableDeferred<String>>
+    private suspend fun flushBatch(batch: Map<String, String>) {
+        if (batch.isEmpty()) return
 
-        val locked = mutex.withLock {
-            if (pendingTexts.isEmpty()) return
-
-            pendingTexts.toMap() to pendingDeferreds.toMap().also {
-                pendingTexts.clear()
-                pendingDeferreds.clear()
-            }
-        }
-        textsToTranslate = locked.first
-        deferreds = locked.second
-
-        if (textsToTranslate.isEmpty()) return
-
-        // Split into batches of MAX_BATCH_SIZE
-        val normalizedList = textsToTranslate.keys.toList()
+        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val normalizedList = batch.keys.toList()
         val batches = normalizedList.chunked(MAX_BATCH_SIZE)
 
-        for (batch in batches) {
-            val provider = TranslationConfig.llmProvider
-            val baseUrl = TranslationConfig.llmBaseUrl
-            val apiKey = TranslationConfig.llmApiKey
-            val model = TranslationConfig.llmModel
-            val targetLanguage = TranslationConfig.llmTargetLanguage
+        try {
+            for (chunk in batches) {
+                val provider = TranslationConfig.llmProvider
+                val baseUrl = TranslationConfig.llmBaseUrl
+                val apiKey = TranslationConfig.llmApiKey
+                val model = TranslationConfig.llmModel
 
-            val result = invokeTranslateShortBatch(batch, targetLanguage, provider, baseUrl, apiKey, model)
+                val result = invokeTranslateShortBatch(chunk, targetLanguage, provider, baseUrl, apiKey, model)
 
-            val translatedMap = result.getOrNull() ?: emptyMap()
+                val translatedMap = result.getOrNull() ?: emptyMap()
 
-            // Resolve all deferreds
-            for (normalized in batch) {
-                val deferred = deferreds[normalized]
-                val index = batch.indexOf(normalized)
-                val translated = translatedMap[index]
-                if (deferred != null && translated != null) {
-                    val original = textsToTranslate[normalized]
-                    deferred.complete(translated)
-                } else {
-                    val original = textsToTranslate[normalized]
-                    deferred?.complete(original ?: normalized)
+                for (normalized in chunk) {
+                    val index = chunk.indexOf(normalized)
+                    val translated = translatedMap[index]
+                    val original = batch[normalized]
+
+                    if (translated != null) {
+                        val cacheKey = buildCacheKey(targetLanguage, normalized)
+                        memoryCache[cacheKey] = translated
+                        saveToDb(cacheKey, normalized, original ?: normalized, translated)
+                    }
                 }
             }
+        } catch (e: Exception) {
+            // On error, just skip - translation will be retried next time text is requested
         }
+    }
+
+    fun clearCache() {
+        memoryCache.clear()
     }
 }

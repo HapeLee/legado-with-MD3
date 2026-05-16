@@ -34,26 +34,25 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
+import io.legado.app.model.translation.rememberTranslatedShortText
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.cover.BookshelfCover
+import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toTimeAgo
@@ -642,7 +641,7 @@ fun BookItem(
                 sharedCoverKey = sharedCoverKey,
             )
         },
-        title = book.name,
+        title = rememberTranslatedShortText(book.name),
         subTitle = if (layoutMode == 0 && isCompact) {
             stringResource(R.string.author_read, book.author, unreadCount)
         } else {
@@ -683,7 +682,7 @@ fun BookItem(
                 if (BookshelfConfig.bookshelfShowIntro && intro != null) {
                     val maxLines = if (BookshelfConfig.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else BookshelfConfig.bookshelfIntroMaxLines
                     AppText(
-                        text = intro,
+                        text = rememberTranslatedShortText(intro),
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = maxLines,

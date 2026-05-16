@@ -671,7 +671,20 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 return@async
             }
             if (addLoading(index)) {
-                BookHelp.getContent(book, chapter)?.let {
+                // Check translation display state to determine which content to load
+                val displayState = io.legado.app.model.translation.TranslationManager.getChapterDisplayState(book, chapter)
+                val content = when (displayState) {
+                    io.legado.app.model.translation.TranslationDisplayState.Translated,
+                    io.legado.app.model.translation.TranslationDisplayState.Translating -> {
+                        // Load translated content if available
+                        val translatedContent = io.legado.app.model.translation.TranslationManager.getChapterTranslatedContent(
+                            book, chapter, io.legado.app.ui.config.translation.TranslationConfig.llmTargetLanguage
+                        )
+                        translatedContent ?: BookHelp.getContent(book, chapter)
+                    }
+                    else -> BookHelp.getContent(book, chapter)
+                }
+                content?.let {
                     contentLoadFinish(
                         book,
                         chapter,

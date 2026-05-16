@@ -125,6 +125,7 @@ class ReadBookViewModel(
             return
         }
         ReadBook.upMsg(null)
+
         if (!isSameBook) {
             ReadBook.loadContent(resetPageOffset = true) {
                 ReadBook.bookSource?.let {

@@ -123,21 +123,43 @@ class LlmTranslateClient : LlmGateway {
     }
 
     private suspend fun translateShortBatchWithGoogle(texts: List<String>, targetLanguage: String): Result<Map<Int, String>> {
-        val results = mutableMapOf<Int, String>()
-        for ((index, text) in texts.withIndex()) {
-            try {
-                val result = translateWithGoogle(text, targetLanguage)
-                if (result.isSuccess) {
-                    results[index] = result.getOrThrow()
-                }
-            } catch (e: Exception) {
-                // Skip failed translations
-            }
+        if (texts.isEmpty()) return Result.success(emptyMap())
+
+        val combinedText = texts.joinToString("\n")
+        val encodedText = java.net.URLEncoder.encode(combinedText, "UTF-8")
+        val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLanguage&dj=1&dt=t&ie=UTF-8&q=$encodedText"
+
+        val response = okHttpClient.newCallStrResponse {
+            url(url)
         }
-        return if (results.isNotEmpty()) {
+
+        if (!response.isSuccessful()) {
+            return Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
+        }
+
+        return try {
+            val json = GSON.fromJson(response.body, GoogleTranslateResponse::class.java)
+            val translatedText = json.sentences.filter { it.trans != null }.joinToString("") { it.trans ?: "" }
+
+            if (translatedText.isEmpty()) {
+                return Result.failure(Exception("Empty translation result"))
+            }
+
+            // Google returns translations with newlines preserved between original texts
+            val lines = translatedText.split("\n")
+            val results = mutableMapOf<Int, String>()
+
+            for (i in texts.indices) {
+                if (i < lines.size) {
+                    results[i] = lines[i]
+                } else {
+                    results[i] = texts[i]
+                }
+            }
+
             Result.success(results)
-        } else {
-            Result.failure(Exception("All short translations failed"))
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

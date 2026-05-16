@@ -70,7 +70,10 @@
       "Bash(Select-Object -First 5)",
       "Bash(Select-String -NotMatch \"^\\\\s*$\")",
       "Bash(Select-Object -Last 20)",
-      "Bash(rg \"TranslationChapterState|TranslationActionDialog|dialog_translation_actions\" --lines=3 -l app/src/main/java)"
+      "Bash(rg \"TranslationChapterState|TranslationActionDialog|dialog_translation_actions\" --lines=3 -l app/src/main/java)",
+      "Bash(./gradlew.bat :app:clean :app:compileAppDebugKotlin)",
+      "Bash(./gradlew.bat :app:assembleAppDebug)",
+      "Bash(./gradlew.bat :app:compileAppDebugKotlin --quiet)"
     ]
   }
 }

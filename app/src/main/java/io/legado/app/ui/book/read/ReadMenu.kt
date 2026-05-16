@@ -643,7 +643,8 @@ class ReadMenu @JvmOverloads constructor(
                 id = "translate",
                 iconRes = R.drawable.ic_translate,
                 description = context.getString(R.string.translate),
-                onClick = { runMenuOut { callBack.onTranslationClick() } }
+                onClick = { runMenuOut { callBack.onTranslationClick() } },
+                onLongClick = { runMenuOut { callBack.onTranslationLongClick() } }
             ),
             ToolButton(
                 id = "catalog",
@@ -770,18 +771,19 @@ class ReadMenu @JvmOverloads constructor(
     fun updateTranslationButton(displayState: io.legado.app.model.translation.TranslationDisplayState, current: Int = 0, total: Int = 0) {
         val btn = buttonMap["translate"] ?: return
         val ctx = context
+        val percent = if (total > 0) (current * 100 / total) else 0
         when (displayState) {
             io.legado.app.model.translation.TranslationDisplayState.Original -> {
                 btn.contentDescription = ctx.getString(R.string.translate)
                 btn.tooltipText = ctx.getString(R.string.translate)
             }
             io.legado.app.model.translation.TranslationDisplayState.Translating -> {
-                btn.contentDescription = ctx.getString(R.string.translation_progress, current, total)
-                btn.tooltipText = ctx.getString(R.string.translation_progress, current, total)
+                btn.contentDescription = ctx.getString(R.string.translation_progress, percent)
+                btn.tooltipText = ctx.getString(R.string.translation_progress, percent)
             }
             io.legado.app.model.translation.TranslationDisplayState.Translated -> {
-                btn.contentDescription = ctx.getString(R.string.translation_actions)
-                btn.tooltipText = ctx.getString(R.string.translation_actions)
+                btn.contentDescription = ctx.getString(R.string.return_to_original)
+                btn.tooltipText = ctx.getString(R.string.return_to_original)
             }
         }
     }
@@ -940,6 +942,7 @@ class ReadMenu @JvmOverloads constructor(
         fun onMenuHide()
         fun changeReplaceRuleState()
         fun onTranslationClick()
+        fun onTranslationLongClick()
     }
 
     data class ToolButton(

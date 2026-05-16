@@ -1512,6 +1512,7 @@
     <string name="translate_chapter">翻译章节</string>
     <string name="show_original">显示原文</string>
     <string name="retranslate_chapter">重新翻译章节</string>
+    <string name="retranslate_confirm">这将删除现有翻译并重新翻译。是否继续？</string>
     <string name="translation_in_progress">翻译中: %1$d/%2$d</string>
     <string name="translation_complete">翻译完成</string>
     <string name="translation_failed">翻译失败: %1$s</string>
@@ -1523,7 +1524,7 @@
     <string name="translation_actions">翻译操作</string>
     <string name="return_to_original">返回原文</string>
     <string name="retranslate">重新翻译</string>
-    <string name="translation_progress">翻译中 %1$d/%2$d</string>
+    <string name="translation_progress">翻译中 %1$d%%</string>
     <string name="translate_book_info">翻译书籍信息</string>
     <string name="translate_book_info_summary">显示翻译后的书名、作者和简介</string>
     <string name="book_info_translation_section">书籍信息翻译</string>

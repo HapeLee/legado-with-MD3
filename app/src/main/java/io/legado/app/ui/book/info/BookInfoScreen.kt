@@ -79,6 +79,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookCover
+import io.legado.app.model.translation.rememberTranslatedShortText
 import io.legado.app.ui.about.AppLogSheet
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -725,7 +726,7 @@ private fun BookInfoHeader(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     AppText(
-                        text = book.name,
+                        text = rememberTranslatedShortText(book.name),
                         style = LegadoTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         maxLines = 3,
@@ -964,7 +965,7 @@ private fun BookInfoSummary(
         }
         Spacer(modifier = Modifier.height(4.dp))
         AppText(
-            text = book.getDisplayIntro().orEmpty().ifBlank { stringResource(R.string.intro_show_null) },
+            text = rememberTranslatedShortText(book.getDisplayIntro().orEmpty().ifBlank { stringResource(R.string.intro_show_null) }),
             style = LegadoTheme.typography.bodyMedium,
         )
     }

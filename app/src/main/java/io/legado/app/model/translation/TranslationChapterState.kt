@@ -25,5 +25,7 @@ data class TranslationChapterState(
     var displayState: TranslationDisplayState = TranslationDisplayState.Original,
     var currentChunk: Int = 0,
     var totalChunks: Int = 0,
-    var mixedContent: String? = null
+    var mixedContent: String? = null,
+    var translatedContent: String? = null,
+    var errorMessage: String? = null
 )

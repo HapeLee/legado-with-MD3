@@ -1555,8 +1555,8 @@
     <string name="translate_chapter">Translate Chapter</string>
     <string name="show_original">Show Original</string>
     <string name="retranslate_chapter">Retranslate Chapter</string>
-    <string name="translation_in_progress">Translating: %1$d/%2$d</string>
-    <string name="translation_complete">Translation complete</string>
+    <string name="retranslate_confirm">This will delete the existing translation and re-translate. Continue?</string>
+    <string name="translation_in_progress">Translating: %1$d%%</string>
     <string name="translation_failed">Translation failed: %1$s</string>
     <string name="no_translation_cache">No translation cache</string>
     <string name="delete_translation_cache">Delete Translation Cache</string>
@@ -1564,10 +1564,8 @@
     <string name="clear_translation_cache">Clear Cache</string>
     <string name="translation_cache">Translation Cache</string>
     <string name="translate">Translate</string>
-    <string name="translation_actions">Translation Actions</string>
     <string name="return_to_original">Return to Original</string>
-    <string name="retranslate">Retranslate</string>
-    <string name="translation_progress">Translating %1$d/%2$d</string>
+    <string name="translation_progress">Translating %1$d%%</string>
     <string name="translate_book_info">Translate Book Info</string>
     <string name="translate_book_info_summary">Display translated book names, authors and intros</string>
     <string name="book_info_translation_section">Book Info Translation</string>
