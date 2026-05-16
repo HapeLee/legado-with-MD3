@@ -175,6 +175,13 @@ class BookshelfViewModel(
         val allBookCount: Int
     )
 
+    private data class DataForPreviews(
+        val groups: List<BookGroup>,
+        val bookGroupStyle: Int,
+        val systemCountsMap: Map<Long, Int>,
+        val allBookCount: Int
+    )
+
     val groupSelectorState: StateFlow<BookshelfGroupSelectorState> = combine(
         groupsFlow,
         groupIdFlow
@@ -262,16 +269,25 @@ class BookshelfViewModel(
     private val groupPreviewsFlow = combine(
         groupsFlow,
         bookGroupStyleFlow,
-        appDb.bookDao.flowSystemGroupCounts()
-    ) { groups, bookGroupStyle, systemCounts ->
-        Triple(groups, bookGroupStyle, systemCounts.associate { it.groupId to it.count })
-    }.flatMapLatest { (groups, bookGroupStyle, systemCountsMap) ->
+        appDb.bookDao.flowSystemGroupCounts(),
+        appDb.bookDao.flowAllBookShelfCount()
+    ) { groups, bookGroupStyle, systemCounts, totalCount ->
+        DataForPreviews(
+            groups,
+            bookGroupStyle,
+            systemCounts.associate { it.groupId to it.count },
+            totalCount
+        )
+    }.flatMapLatest { data ->
+        val groups = data.groups
+        val bookGroupStyle = data.bookGroupStyle
+        val systemCountsMap = data.systemCountsMap
+        val allBookCount = data.allBookCount
+
         if (bookGroupStyle !in 2..3) {
-            appDb.bookDao.flowAllBookShelfCount().map { count ->
-                GroupPreviewState(persistentMapOf(), persistentMapOf(), count)
-            }
+            flowOf(GroupPreviewState(persistentMapOf(), persistentMapOf(), allBookCount))
         } else if (groups.isEmpty()) {
-            flowOf(GroupPreviewState(persistentMapOf(), persistentMapOf(), 0))
+            flowOf(GroupPreviewState(persistentMapOf(), persistentMapOf(), allBookCount))
         } else {
             val groupFlows = groups.map { group ->
                 val countFlow: Flow<Int> = if (group.groupId > 0) {
@@ -287,11 +303,9 @@ class BookshelfViewModel(
             combine(groupFlows) { results ->
                 var previews = persistentMapOf<Long, ImmutableList<BookUiItem>>()
                 var counts = persistentMapOf<Long, Int>()
-                var allBookCount = 0
                 results.forEach { (groupId, count, preview) ->
                     counts = counts.put(groupId, count)
                     previews = previews.put(groupId, preview.toImmutableList())
-                    if (groupId == BookGroup.IdAll) allBookCount = count
                 }
                 GroupPreviewState(previews, counts, allBookCount)
             }
@@ -480,10 +494,16 @@ class BookshelfViewModel(
             bookshelfSort = internal.sortConfig.sort,
             bookshelfSortOrder = internal.sortConfig.sortOrder,
             title = title,
-            subtitle = if (interaction.isEditMode) {
-                context.getString(R.string.bookshelf_total_count, previews.allBookCount)
-            } else {
-                null
+            subtitle = when {
+                interaction.isEditMode -> {
+                    context.getString(R.string.bookshelf_total_count, previews.allBookCount)
+                }
+
+                internal.isSearchMode -> {
+                    context.getString(R.string.bookshelf_total_count, filteredBooks.size)
+                }
+
+                else -> null
             },
             currentGroupName = currentGroupName,
             draggingBooks = interaction.draggingBooks?.toImmutableList(),

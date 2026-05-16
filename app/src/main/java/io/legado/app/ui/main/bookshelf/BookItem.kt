@@ -151,7 +151,7 @@ fun BookshelfItem(
                                         )
                                     )
                                 )
-                                .padding(horizontal = 6.dp, vertical = 6.dp)
+                                .padding(all = 4.dp)
                         )
                     }
                 }
@@ -165,7 +165,7 @@ fun BookshelfItem(
                         textAlign = if (titleCenter) TextAlign.Center else TextAlign.Start,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp, start = 4.dp, end = 4.dp, bottom = 8.dp)
+                            .padding(start = 4.dp, end = 4.dp, bottom = 4.dp)
                     )
                 }
             }
@@ -175,7 +175,7 @@ fun BookshelfItem(
             NormalCard(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(all = 4.dp),
+                    .padding(vertical = 4.dp),
                 cornerRadius = 8.dp,
                 containerColor = if (isSelected) {
                     LegadoTheme.colorScheme.secondaryContainer
@@ -194,7 +194,6 @@ fun BookshelfItem(
                         modifier = Modifier
                             .align(Alignment.Top)
                             .width(if (!isCompact) 84.dp else 56.dp)
-                            .padding(end = 8.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -215,7 +214,7 @@ fun BookshelfItem(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(top = 8.dp, bottom = 8.dp, end = 8.dp),
+                            .padding(top = 4.dp, bottom = 4.dp, end = 4.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
                     Row(
@@ -524,13 +523,13 @@ fun BookGroupItemHorizontalCovers(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                        .padding(start = 4.dp, top = 4.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -549,7 +548,7 @@ fun BookGroupItemHorizontalCovers(
                         )
                     }
                     AppIcon(
-                        modifier = Modifier.padding(end = 6.dp),
+                        modifier = Modifier.padding(end = 4.dp),
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "",
                         tint = LegadoTheme.colorScheme.onSurfaceVariant
@@ -558,8 +557,8 @@ fun BookGroupItemHorizontalCovers(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val coverCount = BookshelfConfig.bookshelfGroupCoverCount
                     previewBooks.take(coverCount).forEach { bookUi ->

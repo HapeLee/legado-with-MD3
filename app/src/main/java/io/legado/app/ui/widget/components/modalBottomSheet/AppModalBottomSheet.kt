@@ -19,9 +19,12 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.style.TextAlign
@@ -164,4 +167,40 @@ fun AppModalBottomSheet(
             }
         }
     }
+}
+
+/**
+ * 专为 nullable 数据设计的 AppModalBottomSheet 重载。
+ * 当 [data] 不为 null 时显示弹窗；当 [data] 变为 null 时，自动缓存最后一次数据并播放退出动画。
+ */
+@Composable
+fun <T> AppModalBottomSheet(
+    data: T?,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    title: String? = null,
+    startAction: @Composable (() -> Unit)? = null,
+    endAction: @Composable (() -> Unit)? = null,
+    content: @Composable ColumnScope.(T) -> Unit
+) {
+    var cachedData by remember { mutableStateOf(data) }
+
+    if (data != null) {
+        cachedData = data
+    }
+
+    val currentData = cachedData
+    AppModalBottomSheet(
+        show = data != null,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        title = title,
+        startAction = startAction,
+        endAction = endAction,
+        content = {
+            if (currentData != null) {
+                content(currentData)
+            }
+        }
+    )
 }

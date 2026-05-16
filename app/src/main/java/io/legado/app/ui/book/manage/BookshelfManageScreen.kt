@@ -10,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,6 +26,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
@@ -35,7 +35,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Checkbox
@@ -54,16 +53,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.domain.usecase.BatchChangeSourcePreviewItem
 import io.legado.app.domain.usecase.BatchChangeSourcePreviewStatus
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.help.book.getExportFileName
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.tryParesExportFileName
@@ -80,11 +82,9 @@ import io.legado.app.ui.widget.components.AppFloatingActionButtonMenu
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.button.SmallTonalTextButton
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -805,28 +805,25 @@ private fun BookshelfManageScreen(
         }
     }
 
-    singleChangeSourceBook?.let { book ->
-        ChangeSourceSheet(
-            show = true,
-            oldBook = book,
-            onDismissRequest = { singleChangeSourceBook = null },
-            onReplace = { source, newBook, toc, options ->
-                viewModel.dispatch(
-                    BookshelfManageScreenIntent.ChangeBookSource(
-                        oldBookUrl = book.bookUrl,
-                        source = source,
-                        book = newBook,
-                        chapters = toc,
-                        options = options,
-                    )
+    ChangeSourceSheet(
+        data = singleChangeSourceBook,
+        onDismissRequest = { singleChangeSourceBook = null },
+        onReplace = { source: BookSource, newBook: Book, toc: List<BookChapter>, options: ChangeSourceMigrationOptions ->
+            viewModel.dispatch(
+                BookshelfManageScreenIntent.ChangeBookSource(
+                    oldBookUrl = singleChangeSourceBook?.bookUrl ?: "",
+                    source = source,
+                    book = newBook,
+                    chapters = toc,
+                    options = options,
                 )
-                singleChangeSourceBook = null
-            },
-            onAddAsNew = { _, _ ->
-                context.toastOnUi("请在书籍详情页添加为新书")
-            },
-        )
-    }
+            )
+            singleChangeSourceBook = null
+        },
+        onAddAsNew = { _: Book, _: List<BookChapter> ->
+            context.toastOnUi("请在书籍详情页添加为新书")
+        },
+    )
 
     BookSourcePickerSheet(
         show = showBatchSourcePickerSheet,
@@ -857,8 +854,7 @@ private fun BookshelfManageScreen(
     )
 
     BatchChangePreviewSheet(
-        show = state.batchChangePreviewItems.isNotEmpty(),
-        items = state.batchChangePreviewItems,
+        data = state.batchChangePreviewItems.takeIf { it.isNotEmpty() },
         onDismissRequest = { viewModel.dispatch(BookshelfManageScreenIntent.DismissBatchChangePreview) },
         onOpenBook = { book, inBookshelf ->
             viewModel.dispatch(BookshelfManageScreenIntent.OpenBookInfoPreview(book, inBookshelf))
@@ -871,29 +867,27 @@ private fun BookshelfManageScreen(
         },
         onShowOtherSources = { item -> otherSourcePreviewItem = item },
         onMigrateAll = { viewModel.dispatch(BookshelfManageScreenIntent.MigrateAllPreviewItems) },
+        onAddAllToShelf = { viewModel.dispatch(BookshelfManageScreenIntent.AddAllPreviewItemsToShelf) },
     )
 
-    manualSearchPreviewBook?.let { book ->
-        ChangeSourceSheet(
-            show = true,
-            oldBook = book,
-            onDismissRequest = { manualSearchPreviewBook = null },
-            onReplace = { source, newBook, toc, _ ->
-                viewModel.dispatch(
-                    BookshelfManageScreenIntent.UpdatePreviewItem(
-                        oldBookUrl = book.bookUrl,
-                        source = source,
-                        book = newBook,
-                        chapterCount = toc.size,
-                    )
+    ChangeSourceSheet(
+        data = manualSearchPreviewBook,
+        onDismissRequest = { manualSearchPreviewBook = null },
+        onReplace = { source: BookSource, newBook: Book, toc: List<BookChapter>, _ ->
+            viewModel.dispatch(
+                BookshelfManageScreenIntent.UpdatePreviewItem(
+                    oldBookUrl = manualSearchPreviewBook?.bookUrl ?: "",
+                    source = source,
+                    book = newBook,
+                    chapterCount = toc.size,
                 )
-                manualSearchPreviewBook = null
-            },
-            onAddAsNew = { _, _ ->
-                context.toastOnUi("请先选择替换候选后再新增至书架")
-            },
-        )
-    }
+            )
+            manualSearchPreviewBook = null
+        },
+        onAddAsNew = { _: Book, _: List<BookChapter> ->
+            context.toastOnUi("请先选择替换候选后再新增至书架")
+        },
+    )
 
     OtherSourceOptionsSheet(
         item = otherSourcePreviewItem,
@@ -1392,8 +1386,7 @@ private fun SourcePickerItem(
 
 @Composable
 private fun BatchChangePreviewSheet(
-    show: Boolean,
-    items: List<BatchChangeSourcePreviewItem>,
+    data: List<BatchChangeSourcePreviewItem>?,
     onDismissRequest: () -> Unit,
     onOpenBook: (Book, Boolean) -> Unit,
     onManualSearch: (Book) -> Unit,
@@ -1402,11 +1395,19 @@ private fun BatchChangePreviewSheet(
     onAddToShelf: (String) -> Unit,
     onShowOtherSources: (BatchChangeSourcePreviewItem) -> Unit,
     onMigrateAll: () -> Unit,
+    onAddAllToShelf: () -> Unit,
 ) {
     AppModalBottomSheet(
-        show = show,
+        data = data,
         onDismissRequest = onDismissRequest,
         title = "批量换源预览",
+        startAction = {
+            SmallTonalTextButton(
+                text = "新增全部",
+                imageVector = Icons.Default.Add,
+                onClick = onAddAllToShelf,
+            )
+        },
         endAction = {
             SmallTonalTextButton(
                 text = "迁移全部",
@@ -1414,7 +1415,7 @@ private fun BatchChangePreviewSheet(
                 onClick = onMigrateAll,
             )
         }
-    ) {
+    ) { items ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1449,15 +1450,15 @@ private fun BatchChangePreviewRow(
     onShowOtherSources: (BatchChangeSourcePreviewItem) -> Unit,
 ) {
     val candidate = item.selectedCandidate
-    NormalCard(
+    GlassCard(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        containerColor = LegadoTheme.colorScheme.onSheetContent,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1493,27 +1494,26 @@ private fun BatchChangePreviewRow(
                     modifier = Modifier.weight(1f),
                 )
             }
-            FlowRow(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MediumIconButton(
+                SmallTonalTextButton(
                     imageVector = Icons.Default.Search,
                     onClick = { onManualSearch(item.oldBook) },
                 )
                 SmallTonalTextButton(
                     text = "不迁移",
-                    imageVector = Icons.Default.SkipNext,
+                    imageVector = Icons.Default.Clear,
                     onClick = { onSkip(item.oldBook.bookUrl) },
                 )
                 SmallTonalTextButton(
-                    text = "开始迁移",
+                    text = "迁移",
                     imageVector = Icons.Default.PlayArrow,
                     onClick = { onMigrate(item.oldBook.bookUrl) },
                 )
                 SmallTonalTextButton(
-                    text = "新增至书架",
+                    text = "新增",
                     imageVector = Icons.Default.Add,
                     onClick = { onAddToShelf(item.oldBook.bookUrl) },
                 )
@@ -1553,7 +1553,8 @@ private fun PreviewBookInfo(
             AppText(
                 text = book.name,
                 style = LegadoTheme.typography.labelMedium,
-                maxLines = 1,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             AppText(
                 text = "${book.getRealAuthor()} · ${chapterCount ?: 0}章",
@@ -1566,8 +1567,7 @@ private fun PreviewBookInfo(
             AppText(
                 text = title,
                 style = LegadoTheme.typography.labelMedium,
-                color = LegadoTheme.colorScheme.error,
-                maxLines = 2,
+                color = LegadoTheme.colorScheme.error
             )
         }
     }
@@ -1581,41 +1581,38 @@ private fun OtherSourceOptionsSheet(
     onOpenBook: (Book) -> Unit,
 ) {
     AppModalBottomSheet(
-        show = item != null,
+        data = item,
         onDismissRequest = onDismissRequest,
         title = "其他源信息",
-    ) {
-        val currentItem = item
-        if (currentItem != null) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 560.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(currentItem.candidates.indices.toList(), key = { it }) { index ->
-                    val candidate = currentItem.candidates[index]
-                    SelectionItemCard(
-                        title = candidate.source.bookSourceName,
-                        subtitle = "${candidate.book.name} · ${candidate.chapterCount}章",
-                        supportingContent = {
-                            AppText(
-                                text = candidate.book.getRealAuthor(),
-                                style = LegadoTheme.typography.bodySmall,
-                            )
-                        },
-                        isSelected = index == currentItem.selectedCandidateIndex,
-                        onToggleSelection = { onSelect(currentItem.oldBook.bookUrl, index) },
-                        trailingAction = {
-                            SmallTonalIconButton(
-                                onClick = { onOpenBook(candidate.book) },
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                            )
-                        },
-                        containerColor = LegadoTheme.colorScheme.onSheetContent,
-                    )
-                }
+    ) { currentItem ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(currentItem.candidates.indices.toList(), key = { it }) { index ->
+                val candidate = currentItem.candidates[index]
+                SelectionItemCard(
+                    title = candidate.source.bookSourceName,
+                    subtitle = "${candidate.book.name} · ${candidate.chapterCount}章",
+                    supportingContent = {
+                        AppText(
+                            text = candidate.book.getRealAuthor(),
+                            style = LegadoTheme.typography.bodySmall,
+                        )
+                    },
+                    isSelected = index == currentItem.selectedCandidateIndex,
+                    onToggleSelection = { onSelect(currentItem.oldBook.bookUrl, index) },
+                    trailingAction = {
+                        SmallTonalIconButton(
+                            onClick = { onOpenBook(candidate.book) },
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                        )
+                    },
+                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                )
             }
         }
         Spacer(modifier = Modifier.height(16.dp))

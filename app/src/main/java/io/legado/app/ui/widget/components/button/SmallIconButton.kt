@@ -32,10 +32,10 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 import top.yukonga.miuix.kmp.basic.IconButton as MiuixIconButton
 import top.yukonga.miuix.kmp.basic.Text as MiuixText
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 private val SmallMiuixButtonSize = 32.dp
 private val SmallMiuixIconSize = 18.dp
@@ -74,7 +74,7 @@ fun SmallIconButton(
             MiuixIcon(
                 imageVector = imageVector,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(smallIconSize),
+                modifier = Modifier.size(16.dp),
             )
         }
     } else {
