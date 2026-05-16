@@ -44,7 +44,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.constant.BookType
-import io.legado.app.model.translation.rememberTranslatedShortText
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -641,7 +640,7 @@ fun BookItem(
                 sharedCoverKey = sharedCoverKey,
             )
         },
-        title = rememberTranslatedShortText(book.name),
+        title = book.name,
         subTitle = if (layoutMode == 0 && isCompact) {
             stringResource(R.string.author_read, book.author, unreadCount)
         } else {
@@ -682,7 +681,7 @@ fun BookItem(
                 if (BookshelfConfig.bookshelfShowIntro && intro != null) {
                     val maxLines = if (BookshelfConfig.bookshelfIntroMaxLines == 0) Int.MAX_VALUE else BookshelfConfig.bookshelfIntroMaxLines
                     AppText(
-                        text = rememberTranslatedShortText(intro),
+                        text = intro,
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = maxLines,

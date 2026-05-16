@@ -330,5 +330,4 @@ object PreferKey {
     const val llmConcurrentChunks = "llmConcurrentChunks"
     const val llmRetryCount = "llmRetryCount"
     const val llmPrompt = "llmPrompt"
-    const val translateBookInfoEnabled = "translateBookInfoEnabled"
-}
+    }

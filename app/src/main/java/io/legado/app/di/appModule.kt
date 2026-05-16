@@ -60,7 +60,6 @@ import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.model.translation.LlmTranslateClient
-import io.legado.app.model.translation.ShortTextTranslator
 import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
@@ -165,8 +164,7 @@ val appModule = module {
     singleOf(::SearchBooksUseCase)
     single<LlmGateway> { LlmTranslateClient() }
     singleOf(::TranslateChapterUseCase)
-    single { ShortTextTranslator }
-
+    
     single<ImageLoader> {
         ImageLoader.Builder(get())
             .components {

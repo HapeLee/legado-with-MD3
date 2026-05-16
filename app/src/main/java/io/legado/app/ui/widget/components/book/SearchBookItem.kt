@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
-import io.legado.app.model.translation.rememberTranslatedShortText
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
@@ -93,7 +92,7 @@ fun SearchBookListItem(
                 .align(Alignment.CenterVertically)
         ) {
             AppText(
-                text = rememberTranslatedShortText(book.name),
+                text = book.name,
                 style = LegadoTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -129,7 +128,7 @@ fun SearchBookListItem(
             val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
             if (intro.isNotEmpty()) {
                 AppText(
-                    text = rememberTranslatedShortText(intro),
+                    text = intro,
                     style = LegadoTheme.typography.labelSmall,
                     color = Color.Gray,
                     maxLines = 2,
@@ -202,7 +201,7 @@ fun SearchBookGridItem(
         Spacer(modifier = Modifier.height(4.dp))
 
         AppText(
-            text = rememberTranslatedShortText(book.name),
+            text = book.name,
             style = LegadoTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
             maxLines = 2,

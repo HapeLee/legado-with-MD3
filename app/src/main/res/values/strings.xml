@@ -1566,7 +1566,4 @@
     <string name="translate">Translate</string>
     <string name="return_to_original">Return to Original</string>
     <string name="translation_progress">Translating %1$d%%</string>
-    <string name="translate_book_info">Translate Book Info</string>
-    <string name="translate_book_info_summary">Display translated book names, authors and intros</string>
-    <string name="book_info_translation_section">Book Info Translation</string>
 </resources>

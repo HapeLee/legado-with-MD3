@@ -37,7 +37,7 @@ object TranslationConfig {
 
     var llmMaxCharsPerChunk by prefDelegate(
         PreferKey.llmMaxCharsPerChunk,
-        3000
+        10000
     )
 
     var llmConcurrentChunks by prefDelegate(
@@ -55,11 +55,7 @@ object TranslationConfig {
         DEFAULT_PROMPT
     )
 
-    var translateBookInfoEnabled by prefDelegate(
-        PreferKey.translateBookInfoEnabled,
-        false
-    )
-
+    
     const val PROVIDER_OPENAI = "openai"
     const val PROVIDER_GOOGLE = "google"
 
