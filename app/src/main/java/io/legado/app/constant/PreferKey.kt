@@ -253,8 +253,6 @@ object PreferKey {
     const val paddingDisplayCutouts = "paddingDisplayCutouts"
     const val autoCheckNewBackup = "autoCheckNewBackup"
     const val backupSyncMode = "backupSyncMode"
-    const val delayBookLoadEnable = "delayBookLoadEnable"
-    const val sharedElementEnterTransitionEnable = "sharedElementEnterTransitionEnable"
     const val bookshelfLayoutGridLandscape = "bookshelfLayoutGridLandscape"
     const val bookshelfLayoutGridPortrait = "bookshelfLayoutGridPortrait"
     const val bookshelfLayoutListLandscape = "bookshelfLayoutListLandscape"

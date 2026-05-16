@@ -103,16 +103,6 @@ object OtherConfig {
             DownloadCacheConfig.cronetEnable = value
         }
 
-    var sharedElementEnterTransitionEnable by prefDelegate(
-        PreferKey.sharedElementEnterTransitionEnable,
-        false
-    )
-
-    var delayBookLoadEnable by prefDelegate(
-        PreferKey.delayBookLoadEnable,
-        true
-    )
-
     var webServiceWakeLock by prefDelegate(
         PreferKey.webServiceWakeLock,
         false

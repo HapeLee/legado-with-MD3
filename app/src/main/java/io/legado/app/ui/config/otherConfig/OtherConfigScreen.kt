@@ -28,7 +28,6 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
@@ -36,6 +35,7 @@ import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
@@ -240,20 +240,6 @@ fun OtherConfigScreen(
             }
 
                 SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.use_animation),
-                    description = stringResource(R.string.opt_animation),
-                    checked = OtherConfig.sharedElementEnterTransitionEnable,
-                    onCheckedChange = { OtherConfig.sharedElementEnterTransitionEnable = it }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.delay_book_load),
-                    description = stringResource(R.string.reduce_stutter),
-                    checked = OtherConfig.delayBookLoadEnable,
-                    onCheckedChange = { OtherConfig.delayBookLoadEnable = it }
-                )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.web_service_wake_lock),
