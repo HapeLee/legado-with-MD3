@@ -124,6 +124,16 @@ data class Book(
     var syncTime: Long = 0L
 ) : Parcelable, BaseBook {
 
+    init {
+        kind = kind?.take(1000)
+        intro = intro?.take(5000)
+        customTag = customTag?.take(1000)
+        customIntro = customIntro?.take(5000)
+        remark = remark?.take(1000)
+        latestChapterTitle = latestChapterTitle?.take(200)
+        durChapterTitle = durChapterTitle?.take(200)
+    }
+
     @delegate:Transient
     @delegate:Ignore
     @IgnoredOnParcel
