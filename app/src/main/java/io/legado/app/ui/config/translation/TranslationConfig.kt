@@ -85,11 +85,11 @@ object TranslationConfig {
 
     const val OUTPUT_FORMAT = """Output is divided into two parts:
 
-**New** proper nouns, place names and terminology that need to be recorded for context, and the translation result.
+**New** proper nouns, place names that need to be recorded for context, and the translation result.
 
 Only select the most common and important terms (max 10) to include in the dictionary.
 
-Output format as follows:
+Output format as follows, IMPORTANT, **dictionary** part must begin with english word **[dictionary]**, MUST NOT start with any other words. **resul** part must begin with english word **[resul]**,  MUST NOT start with any other words:
 <example>
 [dictionary]
 Jack -> 杰克

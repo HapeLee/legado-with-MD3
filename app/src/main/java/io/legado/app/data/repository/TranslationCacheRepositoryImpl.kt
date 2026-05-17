@@ -22,8 +22,18 @@ interface TranslationCacheRepository {
     fun computeCacheKey(bookUrl: String, chapterIndex: Int, chunkIndex: Int, targetLanguage: String): String
     suspend fun getCachedChunks(book: Book, bookChapter: BookChapter, targetLanguage: String, contentHash: String): List<TranslationCache>
     suspend fun getCachedChunk(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int): TranslationCache?
-    suspend fun saveChunk(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int, originalChunkContent: String, originalContentHash: String, provider: String)
-    suspend fun updateChunkStatus(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int, status: Int, translatedContent: String?, errorMessage: String?)
+    suspend fun saveChunk(
+        book: Book,
+        bookChapter: BookChapter,
+        targetLanguage: String,
+        chunkIndex: Int,
+        originalChunkContent: String,
+        originalContentHash: String,
+        provider: String,
+        status: Int,
+        translatedContent: String?,
+        errorMessage: String?
+    )
     suspend fun clearChunkCacheForChapter(book: Book, bookChapter: BookChapter, targetLanguage: String)
     suspend fun clearChunkCacheForBook(book: Book, targetLanguage: String)
     suspend fun clearAllChunkCache()
@@ -165,48 +175,23 @@ class TranslationCacheRepositoryImpl : TranslationCacheRepository {
         chunkIndex: Int,
         originalChunkContent: String,
         originalContentHash: String,
-        provider: String
+        provider: String,
+        status: Int,
+        translatedContent: String?,
+        errorMessage: String?
     ) = withContext(Dispatchers.IO) {
         val chunk = TranslationCache(
             chunkIndex = chunkIndex,
             originalChunkContent = originalChunkContent,
-            translatedChunkContent = null,
-            status = TranslationCache.STATUS_PENDING,
-            errorMessage = null,
+            translatedChunkContent = translatedContent,
+            status = status,
+            errorMessage = errorMessage,
             originalContentHash = originalContentHash,
             provider = provider
         )
         val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
         chunkFile.parentFile?.mkdirs()
         chunkFile.appendText(gson.toJson(chunk) + "\n")
-    }
-
-    override suspend fun updateChunkStatus(
-        book: Book,
-        bookChapter: BookChapter,
-        targetLanguage: String,
-        chunkIndex: Int,
-        status: Int,
-        translatedContent: String?,
-        errorMessage: String?
-    ) = withContext(Dispatchers.IO) {
-        val allChunks = readAllChunks(book, bookChapter, targetLanguage)
-        val existing = allChunks[chunkIndex]
-        val updated = existing?.copy(
-            status = status,
-            translatedChunkContent = translatedContent,
-            errorMessage = errorMessage
-        ) ?: TranslationCache(
-            chunkIndex = chunkIndex,
-            originalChunkContent = "",
-            translatedChunkContent = translatedContent,
-            status = status,
-            errorMessage = errorMessage,
-            originalContentHash = ""
-        )
-        val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
-        chunkFile.parentFile?.mkdirs()
-        chunkFile.appendText(gson.toJson(updated) + "\n")
     }
 
     override suspend fun clearChunkCacheForChapter(

@@ -2,8 +2,8 @@ package io.legado.app.model.translation
 
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.repository.TranslationCacheRepository
 import io.legado.app.domain.usecase.TranslateChapterUseCase
-import io.legado.app.help.book.BookHelp
 import io.legado.app.ui.config.translation.TranslationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,8 +11,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-object TranslationManager {
+object TranslationManager : KoinComponent {
+
+    private val translationCacheRepository: TranslationCacheRepository by inject()
 
     private val _chapterStates = MutableStateFlow<Map<TranslationChapterKey, TranslationChapterState>>(emptyMap())
     val chapterStates: StateFlow<Map<TranslationChapterKey, TranslationChapterState>> = _chapterStates.asStateFlow()
@@ -37,13 +41,9 @@ object TranslationManager {
 
     /**
      * Get translated content from cache for a specific chapter.
-     * @param book The book
-     * @param chapter The chapter
-     * @param targetLanguage The target language code
-     * @return The translated content if cached, null otherwise
      */
     fun getChapterTranslatedContent(book: Book, chapter: BookChapter, targetLanguage: String): String? {
-        val cacheFile = getTranslationCacheFile(book, chapter, targetLanguage)
+        val cacheFile = translationCacheRepository.getCacheFile(book, chapter, targetLanguage)
         return if (cacheFile.exists()) cacheFile.readText() else null
     }
 
@@ -137,17 +137,8 @@ object TranslationManager {
         _isTranslationMode.value = false
     }
 
-    private fun getTranslationCacheFile(book: Book, bookChapter: BookChapter, targetLanguage: String): java.io.File {
-        val cacheDir = BookHelp.cachePath
-        val bookFolder = java.io.File(cacheDir, book.getFolderName())
-        val chapterFileName = bookChapter.getFileName()
-        val translationFileName = "$chapterFileName.$targetLanguage.nb"
-        return java.io.File(bookFolder, translationFileName)
-    }
-
     suspend fun deleteTranslationCache(book: Book, bookChapter: BookChapter) {
-        val cacheFile = getTranslationCacheFile(book, bookChapter, TranslationConfig.llmTargetLanguage)
-        cacheFile.delete()
+        translationCacheRepository.deleteTranslation(book, bookChapter, TranslationConfig.llmTargetLanguage)
         if (translatedChapterIndex == bookChapter.index) {
             translatedChapterIndex = null
             translatedContent = null

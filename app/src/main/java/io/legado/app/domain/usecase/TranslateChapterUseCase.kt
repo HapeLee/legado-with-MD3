@@ -194,18 +194,22 @@ class TranslateChapterUseCase(
             return Result.success(existingCache.translatedChunkContent)
         }
 
-        translationCacheRepository.saveChunk(
-            book, bookChapter, targetLanguage,
-            chunk.index, chunk.content, contentHash,
-            TranslationConfig.llmProvider
-        )
-
         val result = translateChunkWithRetry(chunk, targetLanguage, dictionaries, onDictionaryUpdate)
         if (result.isSuccess) {
-            translationCacheRepository.updateChunkStatus(book, bookChapter, targetLanguage, chunk.index, TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null)
+            translationCacheRepository.saveChunk(
+                book, bookChapter, targetLanguage,
+                chunk.index, chunk.content, contentHash,
+                TranslationConfig.llmProvider,
+                TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null
+            )
         } else {
             val errorMessage = result.exceptionOrNull()?.message ?: "Translation failed"
-            translationCacheRepository.updateChunkStatus(book, bookChapter, targetLanguage, chunk.index, TranslationCache.STATUS_FAILED, null, errorMessage)
+            translationCacheRepository.saveChunk(
+                book, bookChapter, targetLanguage,
+                chunk.index, chunk.content, contentHash,
+                TranslationConfig.llmProvider,
+                TranslationCache.STATUS_FAILED, null, errorMessage
+            )
         }
         return result
     }
