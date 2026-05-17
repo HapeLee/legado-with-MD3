@@ -142,24 +142,30 @@ fun BookshelfConfigSheet(
                         val folderListCount =
                             if (isLandscape) BookshelfConfig.bookshelfFolderLayoutListLandscape
                             else BookshelfConfig.bookshelfFolderLayoutListPortrait
-                        CompactSliderSettingItem(
-                            title = stringResource(R.string.number_rows_columns),
-                            value = folderListCount.toFloat(),
-                            valueRange = 1f..5f,
-                            steps = 4,
-                            onValueChange = {
-                                if (isLandscape) BookshelfConfig.bookshelfFolderLayoutListLandscape = it.toInt()
-                                else BookshelfConfig.bookshelfFolderLayoutListPortrait = it.toInt()
-                            }
-                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CompactSliderSettingItem(
+                                title = stringResource(R.string.number_rows_columns),
+                                value = folderListCount.toFloat(),
+                                valueRange = 1f..5f,
+                                steps = 4,
+                                onValueChange = {
+                                    if (isLandscape) BookshelfConfig.bookshelfFolderLayoutListLandscape =
+                                        it.toInt()
+                                    else BookshelfConfig.bookshelfFolderLayoutListPortrait =
+                                        it.toInt()
+                                }
+                            )
 
-                        CompactSliderSettingItem(
-                            title = "列表封面宽度",
-                            value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
-                            valueRange = 40f..120f,
-                            steps = 80,
-                            onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
-                        )
+                            CompactSliderSettingItem(
+                                title = "列表封面宽度",
+                                value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
+                                valueRange = 40f..120f,
+                                steps = 80,
+                                onValueChange = {
+                                    BookshelfConfig.bookshelfListCoverWidth = it.toInt()
+                                }
+                            )
+                        }
                     }
 
                     AnimatedVisibility(
