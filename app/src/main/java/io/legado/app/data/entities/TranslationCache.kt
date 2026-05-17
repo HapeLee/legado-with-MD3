@@ -1,33 +1,17 @@
 package io.legado.app.data.entities
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
-
-@Entity(
-    tableName = "translationCache",
-    indices = [
-        Index(value = ["cacheKey"], unique = true),
-        Index(value = ["bookUrl", "chapterIndex"]),
-        Index(value = ["originalContentHash"])
-    ]
-)
+/**
+ * Chunk-level translation cache record stored in .chunks.jsonl files.
+ * File path already contains bookUrl/chapterIndex/targetLanguage — chunkIndex is the key.
+ */
 data class TranslationCache(
-    @PrimaryKey
-    val cacheKey: String,
-    val bookUrl: String,
-    val chapterIndex: Int,
-    val chapterTitleMD5: String,
-    val originalContentHash: String,
-    val targetLanguage: String,
-    val provider: String,
     val chunkIndex: Int,
     val originalChunkContent: String,
     val translatedChunkContent: String?,
     val status: Int = STATUS_PENDING,
     val errorMessage: String? = null,
-    val createTime: Long = System.currentTimeMillis(),
-    val updateTime: Long = System.currentTimeMillis()
+    val originalContentHash: String,
+    val provider: String = ""
 ) {
     companion object {
         const val STATUS_PENDING = 0

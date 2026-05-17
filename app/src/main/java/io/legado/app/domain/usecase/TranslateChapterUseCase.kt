@@ -13,7 +13,6 @@ import io.legado.app.model.translation.RetryReason
 import io.legado.app.model.translation.TextChunk
 import io.legado.app.model.translation.Translation
 import io.legado.app.ui.config.translation.TranslationConfig
-import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -52,17 +51,15 @@ class TranslateChapterUseCase(
         }
 
         val contentHash = translationCacheRepository.computeContentHash(originalContent)
-        val chapterTitleMD5 = MD5Utils.md5Encode(bookChapter.title)
 
         // Load book dictionary for consistent terminology
         val bookDictionary = Translation.getBookDictionaries(book)
         val dictionaries = bookDictionary.pairs.toMutableList()
-        var dictionaryChanged = false
 
-        // Callback to update dictionary pairs
+        // Callback to update dictionary pairs immediately (persist as soon as discovered)
         val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
             if (mergeDictionaryPairs(dictionaries, newPairs)) {
-                dictionaryChanged = true
+                Translation.updateBookDic(book, dictionaries)
             }
         }
 
@@ -114,7 +111,7 @@ class TranslateChapterUseCase(
             for ((groupIndex, group) in chunkGroups.withIndex()) {
                 val results = group.map { chunk ->
                     async {
-                        translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, chapterTitleMD5, dictionaries, onDictionaryUpdate)
+                        translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, dictionaries, onDictionaryUpdate)
                     }
                 }.awaitAll()
 
@@ -147,11 +144,6 @@ class TranslateChapterUseCase(
         translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
         translationCacheRepository.clearChunkCacheForChapter(book, bookChapter, targetLanguage)
 
-        // Save updated dictionary if any changes were made
-        if (dictionaryChanged) {
-            Translation.updateBookDic(book, dictionaries)
-        }
-
         onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
         Result.success(mergedContent)
     }
@@ -160,7 +152,7 @@ class TranslateChapterUseCase(
      * Merge new pairs into existing list:
      * - If original exists, replace the translation
      * - If new, add to list
-     * - Keep at most MAX_DICTIONARY_PAIRS (20)
+     * - Keep at most MAX_DICTIONARY_PAIRS
      * @return true if any changes were made
      */
     private fun mergeDictionaryPairs(existing: MutableList<DictPair>, newPairs: List<DictPair>): Boolean {
@@ -180,7 +172,7 @@ class TranslateChapterUseCase(
 
         // Keep only the most recent MAX_DICTIONARY_PAIRS
         if (existing.size > MAX_DICTIONARY_PAIRS) {
-            val sortedByRecency = existing.takeLast(MAX_DICTIONARY_PAIRS)
+            val sortedByRecency = existing.take(MAX_DICTIONARY_PAIRS)
             existing.clear()
             existing.addAll(sortedByRecency)
             changed = true
@@ -194,37 +186,26 @@ class TranslateChapterUseCase(
         bookChapter: BookChapter,
         targetLanguage: String,
         contentHash: String,
-        chapterTitleMD5: String,
         dictionaries: MutableList<DictPair>,
         onDictionaryUpdate: (List<DictPair>) -> Unit
     ): Result<String> {
-        val cacheKey = translationCacheRepository.computeCacheKey(book.bookUrl, bookChapter.index, chunk.index, targetLanguage)
-        val existingCache = translationCacheRepository.getCachedChunk(cacheKey)
+        val existingCache = translationCacheRepository.getCachedChunk(book, bookChapter, targetLanguage, chunk.index)
         if (existingCache?.isSuccess == true && existingCache.translatedChunkContent != null) {
             return Result.success(existingCache.translatedChunkContent)
         }
 
-        val translationCache = TranslationCache(
-            cacheKey = cacheKey,
-            bookUrl = book.bookUrl,
-            chapterIndex = bookChapter.index,
-            chapterTitleMD5 = chapterTitleMD5,
-            originalContentHash = contentHash,
-            targetLanguage = targetLanguage,
-            provider = TranslationConfig.llmProvider,
-            chunkIndex = chunk.index,
-            originalChunkContent = chunk.content,
-            translatedChunkContent = null,
-            status = TranslationCache.STATUS_PENDING
+        translationCacheRepository.saveChunk(
+            book, bookChapter, targetLanguage,
+            chunk.index, chunk.content, contentHash,
+            TranslationConfig.llmProvider
         )
-        translationCacheRepository.saveChunk(translationCache)
 
         val result = translateChunkWithRetry(chunk, targetLanguage, dictionaries, onDictionaryUpdate)
         if (result.isSuccess) {
-            translationCacheRepository.updateChunkStatus(cacheKey, TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null)
+            translationCacheRepository.updateChunkStatus(book, bookChapter, targetLanguage, chunk.index, TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null)
         } else {
             val errorMessage = result.exceptionOrNull()?.message ?: "Translation failed"
-            translationCacheRepository.updateChunkStatus(cacheKey, TranslationCache.STATUS_FAILED, null, errorMessage)
+            translationCacheRepository.updateChunkStatus(book, bookChapter, targetLanguage, chunk.index, TranslationCache.STATUS_FAILED, null, errorMessage)
         }
         return result
     }

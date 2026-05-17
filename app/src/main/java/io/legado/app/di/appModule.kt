@@ -144,7 +144,7 @@ val appModule = module {
     singleOf(::BookshelfManageScreenConfig)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
-    single<TranslationCacheRepository> { TranslationCacheRepositoryImpl(get()) }
+    single<TranslationCacheRepository> { TranslationCacheRepositoryImpl() }
     single<AppStartupGateway> { AppStartupRepository(get()) }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }

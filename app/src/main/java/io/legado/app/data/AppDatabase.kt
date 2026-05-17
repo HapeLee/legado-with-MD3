@@ -29,7 +29,6 @@ import io.legado.app.data.dao.SearchContentHistoryDao
 import io.legado.app.data.dao.SearchKeywordDao
 import io.legado.app.data.dao.ServerDao
 import io.legado.app.data.dao.TxtTocRuleDao
-import io.legado.app.data.dao.TranslationCacheDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookGroup
@@ -52,7 +51,6 @@ import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.data.entities.Server
 import io.legado.app.data.entities.TxtTocRule
-import io.legado.app.data.entities.TranslationCache
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
@@ -79,7 +77,7 @@ val appDb by lazy {
         RssReadRecord::class, ReadRecordDetail::class, ReadRecordSession::class,
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
-        SearchContentHistory::class, TranslationCache::class],
+        SearchContentHistory::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -124,9 +122,7 @@ val appDb by lazy {
         AutoMigration(from = 82, to = 83),
         AutoMigration(from = 83, to = 84),
         AutoMigration(from = 84, to = 85),
-        AutoMigration(from = 85, to = 86),
-        AutoMigration(from = 86, to = 87),
-        AutoMigration(from = 87, to = 88)
+        AutoMigration(from = 85, to = 86)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -153,8 +149,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val keyboardAssistsDao: KeyboardAssistsDao
     abstract val serverDao: ServerDao
     abstract val searchContentHistoryDao: SearchContentHistoryDao
-    abstract val translationCacheDao: TranslationCacheDao
-
+    
     companion object {
 
         const val DATABASE_NAME = "legado.db"

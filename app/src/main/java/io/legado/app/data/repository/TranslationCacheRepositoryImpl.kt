@@ -1,11 +1,13 @@
 package io.legado.app.data.repository
 
-import io.legado.app.data.dao.TranslationCacheDao
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
 import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.MD5Utils
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
 
 interface TranslationCacheRepository {
@@ -19,34 +21,40 @@ interface TranslationCacheRepository {
     fun computeContentHash(content: String): String
     fun computeCacheKey(bookUrl: String, chapterIndex: Int, chunkIndex: Int, targetLanguage: String): String
     suspend fun getCachedChunks(book: Book, bookChapter: BookChapter, targetLanguage: String, contentHash: String): List<TranslationCache>
-    suspend fun getCachedChunk(cacheKey: String): TranslationCache?
-    suspend fun saveChunk(translationCache: TranslationCache)
-    suspend fun updateChunkStatus(cacheKey: String, status: Int, translatedContent: String?, errorMessage: String?)
+    suspend fun getCachedChunk(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int): TranslationCache?
+    suspend fun saveChunk(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int, originalChunkContent: String, originalContentHash: String, provider: String)
+    suspend fun updateChunkStatus(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int, status: Int, translatedContent: String?, errorMessage: String?)
     suspend fun clearChunkCacheForChapter(book: Book, bookChapter: BookChapter, targetLanguage: String)
     suspend fun clearChunkCacheForBook(book: Book, targetLanguage: String)
     suspend fun clearAllChunkCache()
 }
 
-class TranslationCacheRepositoryImpl(
-    private val translationCacheDao: TranslationCacheDao
-) : TranslationCacheRepository {
+class TranslationCacheRepositoryImpl : TranslationCacheRepository {
 
     private val cacheDir: File = File(BookHelp.cachePath)
+    private val gson = Gson()
 
     override fun getCacheFile(book: Book, bookChapter: BookChapter, targetLanguage: String): File {
         val bookFolder = File(cacheDir, book.getFolderName())
-        val chapterFileName = bookChapter.getFileName()
+        // getFileName() returns "{index}-{titleMD5}.nb", remove .nb to avoid double extension
+        val chapterFileName = bookChapter.getFileName().removeSuffix(".nb")
         val translationFileName = "$chapterFileName.$targetLanguage.nb"
         return File(bookFolder, translationFileName)
+    }
+
+    private fun getChunkFile(book: Book, bookChapter: BookChapter, targetLanguage: String): File {
+        val bookFolder = File(cacheDir, book.getFolderName())
+        val chapterFileName = bookChapter.getFileName().removeSuffix(".nb")
+        return File(bookFolder, "$chapterFileName.$targetLanguage.chunks.jsonl")
     }
 
     override suspend fun readTranslation(
         book: Book,
         bookChapter: BookChapter,
         targetLanguage: String
-    ): String? {
+    ): String? = withContext(Dispatchers.IO) {
         val cacheFile = getCacheFile(book, bookChapter, targetLanguage)
-        return if (cacheFile.exists()) {
+        if (cacheFile.exists()) {
             val content = cacheFile.readText()
             if (content.isEmpty()) null else content
         } else {
@@ -59,7 +67,7 @@ class TranslationCacheRepositoryImpl(
         bookChapter: BookChapter,
         targetLanguage: String,
         content: String
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val cacheFile = getCacheFile(book, bookChapter, targetLanguage)
         cacheFile.parentFile?.mkdirs()
         cacheFile.writeText(content)
@@ -69,22 +77,25 @@ class TranslationCacheRepositoryImpl(
         book: Book,
         bookChapter: BookChapter,
         targetLanguage: String
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val cacheFile = getCacheFile(book, bookChapter, targetLanguage)
         cacheFile.delete()
         clearChunkCacheForChapter(book, bookChapter, targetLanguage)
+        Unit
     }
 
-    override suspend fun deleteTranslationForBook(book: Book, targetLanguage: String) {
+    override suspend fun deleteTranslationForBook(book: Book, targetLanguage: String) = withContext(Dispatchers.IO) {
         val bookFolder = File(cacheDir, book.getFolderName())
         if (bookFolder.exists()) {
             bookFolder.listFiles()?.filter { it.name.endsWith(".$targetLanguage.nb") }?.forEach { it.delete() }
         }
         clearChunkCacheForBook(book, targetLanguage)
+        Unit
     }
 
-    override suspend fun deleteAllTranslation() {
+    override suspend fun deleteAllTranslation() = withContext(Dispatchers.IO) {
         clearAllChunkCache()
+        Unit
     }
 
     override fun getTranslationCacheSize(): Long {
@@ -110,54 +121,116 @@ class TranslationCacheRepositoryImpl(
         return "${bookUrl}_${chapterIndex}_${chunkIndex}_$targetLanguage"
     }
 
+    private suspend fun readAllChunks(book: Book, bookChapter: BookChapter, targetLanguage: String): Map<Int, TranslationCache> = withContext(Dispatchers.IO) {
+        val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
+        if (!chunkFile.exists()) return@withContext emptyMap()
+        val result = mutableMapOf<Int, TranslationCache>()
+        chunkFile.forEachLine { line ->
+            try {
+                val chunk = gson.fromJson(line, TranslationCache::class.java)
+                result[chunk.chunkIndex] = chunk
+            } catch (_: Exception) {
+                // skip malformed line
+            }
+        }
+        result
+    }
+
     override suspend fun getCachedChunks(
         book: Book,
         bookChapter: BookChapter,
         targetLanguage: String,
         contentHash: String
-    ): List<TranslationCache> {
-        return translationCacheDao.getByChapterAndHash(
-            book.bookUrl,
-            bookChapter.index,
-            targetLanguage,
-            contentHash
+    ): List<TranslationCache> = withContext(Dispatchers.IO) {
+        val allChunks = readAllChunks(book, bookChapter, targetLanguage)
+        allChunks.values
+            .filter { it.originalContentHash == contentHash && it.isSuccess }
+            .sortedBy { it.chunkIndex }
+    }
+
+    override suspend fun getCachedChunk(
+        book: Book,
+        bookChapter: BookChapter,
+        targetLanguage: String,
+        chunkIndex: Int
+    ): TranslationCache? = withContext(Dispatchers.IO) {
+        val allChunks = readAllChunks(book, bookChapter, targetLanguage)
+        allChunks[chunkIndex]
+    }
+
+    override suspend fun saveChunk(
+        book: Book,
+        bookChapter: BookChapter,
+        targetLanguage: String,
+        chunkIndex: Int,
+        originalChunkContent: String,
+        originalContentHash: String,
+        provider: String
+    ) = withContext(Dispatchers.IO) {
+        val chunk = TranslationCache(
+            chunkIndex = chunkIndex,
+            originalChunkContent = originalChunkContent,
+            translatedChunkContent = null,
+            status = TranslationCache.STATUS_PENDING,
+            errorMessage = null,
+            originalContentHash = originalContentHash,
+            provider = provider
         )
-    }
-
-    override suspend fun getCachedChunk(cacheKey: String): TranslationCache? {
-        return translationCacheDao.getByCacheKey(cacheKey)
-    }
-
-    override suspend fun saveChunk(translationCache: TranslationCache) {
-        translationCacheDao.insert(translationCache)
+        val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
+        chunkFile.parentFile?.mkdirs()
+        chunkFile.appendText(gson.toJson(chunk) + "\n")
     }
 
     override suspend fun updateChunkStatus(
-        cacheKey: String,
+        book: Book,
+        bookChapter: BookChapter,
+        targetLanguage: String,
+        chunkIndex: Int,
         status: Int,
         translatedContent: String?,
         errorMessage: String?
-    ) {
-        if (translatedContent != null) {
-            translationCacheDao.updateStatusAndContent(cacheKey, status, translatedContent)
-        } else {
-            translationCacheDao.updateStatusAndError(cacheKey, status, errorMessage)
-        }
+    ) = withContext(Dispatchers.IO) {
+        val allChunks = readAllChunks(book, bookChapter, targetLanguage)
+        val existing = allChunks[chunkIndex]
+        val updated = existing?.copy(
+            status = status,
+            translatedChunkContent = translatedContent,
+            errorMessage = errorMessage
+        ) ?: TranslationCache(
+            chunkIndex = chunkIndex,
+            originalChunkContent = "",
+            translatedChunkContent = translatedContent,
+            status = status,
+            errorMessage = errorMessage,
+            originalContentHash = ""
+        )
+        val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
+        chunkFile.parentFile?.mkdirs()
+        chunkFile.appendText(gson.toJson(updated) + "\n")
     }
 
     override suspend fun clearChunkCacheForChapter(
         book: Book,
         bookChapter: BookChapter,
         targetLanguage: String
-    ) {
-        translationCacheDao.deleteByChapter(book.bookUrl, bookChapter.index, targetLanguage)
+    ) = withContext(Dispatchers.IO) {
+        val chunkFile = getChunkFile(book, bookChapter, targetLanguage)
+        chunkFile.delete()
+        Unit
     }
 
-    override suspend fun clearChunkCacheForBook(book: Book, targetLanguage: String) {
-        translationCacheDao.deleteByBook(book.bookUrl, targetLanguage)
+    override suspend fun clearChunkCacheForBook(book: Book, targetLanguage: String) = withContext(Dispatchers.IO) {
+        val bookFolder = File(cacheDir, book.getFolderName())
+        if (bookFolder.exists()) {
+            bookFolder.listFiles()?.filter { it.name.endsWith(".$targetLanguage.chunks.jsonl") }?.forEach { it.delete() }
+        }
+        Unit
     }
 
-    override suspend fun clearAllChunkCache() {
-        translationCacheDao.deleteAll()
+    override suspend fun clearAllChunkCache() = withContext(Dispatchers.IO) {
+        cacheDir.listFiles()?.forEach { bookFolder ->
+            bookFolder.listFiles()?.filter { it.name.endsWith(".chunks.jsonl") }?.forEach { it.delete() }
+        }
+        Unit
     }
 }
