@@ -187,7 +187,6 @@ class LlmTranslateClient : LlmGateway {
         // Determine translated text
         val translatedText = when {
             resultSection != null -> resultSection.trim()
-            dictionarySection != null -> dictionarySection.trim() // fallback: dictionary might contain the translation
             else -> rawOutput.trim() // ultimate fallback: return raw output
         }
 

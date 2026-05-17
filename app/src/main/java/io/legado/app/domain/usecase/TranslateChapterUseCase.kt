@@ -174,8 +174,10 @@ class TranslateChapterUseCase(
 
         // Keep only the most recent MAX_DICTIONARY_PAIRS
         if (existing.size > MAX_DICTIONARY_PAIRS) {
-            val sortedByRecency = existing.take(MAX_DICTIONARY_PAIRS)
+            val sortedByOlder = existing.take(MAX_DICTIONARY_PAIRS / 2)
+            val sortedByRecency = existing.takeLast(MAX_DICTIONARY_PAIRS / 2)
             existing.clear()
+            existing.addAll(sortedByOlder)
             existing.addAll(sortedByRecency)
             changed = true
         }
