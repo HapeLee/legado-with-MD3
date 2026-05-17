@@ -63,7 +63,7 @@ object TranslationConfig {
     val providerValues = listOf(PROVIDER_OPENAI, PROVIDER_GOOGLE)
 
     val targetLanguages = listOf(
-        "zh" to "中文",
+        "zh" to "简体中文",
         "en" to "English",
         "ja" to "日本語",
         "ko" to "한국어",
@@ -74,13 +74,30 @@ object TranslationConfig {
         "ar" to "العربية"
     )
 
-    const val DEFAULT_PROMPT = """You are a professional literary translator. Translate the following text accurately while:
-1. Preserving the original paragraph count and order
-2. Keeping all honorifics, numbers, and punctuation
-3. Maintaining the literary style and tone
-4. Not summarizing, condensing, or omitting any content
-5. Translating only, no commentary or explanations
+    const val DEFAULT_PROMPT = """You are a professional literary translator, please translate according to the following requirements:
+                                                                                                                                                                               
+1. Keep the original paragraph count and order unchanged                                                                                                                     
+2. Maintain the literary style and tone of the original text                                                                                                                 
+3. Do not summarize, condense, or omit any content                                                                                                                           
+4. Only output the translation result, do not add comments or explanations
 
-Original text:"""
+"""
+
+    const val OUTPUT_FORMAT = """Output is divided into two parts:
+
+**New** proper nouns, place names and terminology that need to be recorded for context, and the translation result.
+
+Only select the most common and important terms (max 10) to include in the dictionary.
+
+Output format as follows:
+<example>
+[dictionary]
+Jack -> 杰克
+Harry Port -> 哈利波特
+
+[result]
+...
+</example>
+    """
 
 }

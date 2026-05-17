@@ -7,8 +7,11 @@ import io.legado.app.data.repository.TranslationCacheRepository
 import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.help.book.BookHelp
 import io.legado.app.model.translation.ContentChunker
+import io.legado.app.model.translation.DictPair
 import io.legado.app.model.translation.PartialTranslationAssembler
+import io.legado.app.model.translation.RetryReason
 import io.legado.app.model.translation.TextChunk
+import io.legado.app.model.translation.Translation
 import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.utils.MD5Utils
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,10 @@ class TranslateChapterUseCase(
         val translatedChunkIndices: Set<Int> = emptySet()
     )
 
+    companion object {
+        private const val MAX_DICTIONARY_PAIRS = 50
+    }
+
     suspend fun execute(
         book: Book,
         bookChapter: BookChapter,
@@ -46,6 +53,18 @@ class TranslateChapterUseCase(
 
         val contentHash = translationCacheRepository.computeContentHash(originalContent)
         val chapterTitleMD5 = MD5Utils.md5Encode(bookChapter.title)
+
+        // Load book dictionary for consistent terminology
+        val bookDictionary = Translation.getBookDictionaries(book)
+        val dictionaries = bookDictionary.pairs.toMutableList()
+        var dictionaryChanged = false
+
+        // Callback to update dictionary pairs
+        val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
+            if (mergeDictionaryPairs(dictionaries, newPairs)) {
+                dictionaryChanged = true
+            }
+        }
 
         val chunks = ContentChunker.chunk(originalContent, TranslationConfig.llmMaxCharsPerChunk)
         if (chunks.isEmpty()) {
@@ -95,7 +114,7 @@ class TranslateChapterUseCase(
             for ((groupIndex, group) in chunkGroups.withIndex()) {
                 val results = group.map { chunk ->
                     async {
-                        translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, chapterTitleMD5)
+                        translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, chapterTitleMD5, dictionaries, onDictionaryUpdate)
                     }
                 }.awaitAll()
 
@@ -127,8 +146,46 @@ class TranslateChapterUseCase(
         val mergedContent = ContentChunker.merge(allTranslatedChunks)
         translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
         translationCacheRepository.clearChunkCacheForChapter(book, bookChapter, targetLanguage)
+
+        // Save updated dictionary if any changes were made
+        if (dictionaryChanged) {
+            Translation.updateBookDic(book, dictionaries)
+        }
+
         onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
         Result.success(mergedContent)
+    }
+
+    /**
+     * Merge new pairs into existing list:
+     * - If original exists, replace the translation
+     * - If new, add to list
+     * - Keep at most MAX_DICTIONARY_PAIRS (20)
+     * @return true if any changes were made
+     */
+    private fun mergeDictionaryPairs(existing: MutableList<DictPair>, newPairs: List<DictPair>): Boolean {
+        var changed = false
+        for (newPair in newPairs) {
+            val existingIndex = existing.indexOfFirst { it.original == newPair.original }
+            if (existingIndex >= 0) {
+                if (existing[existingIndex].translation != newPair.translation) {
+                    existing[existingIndex] = newPair
+                    changed = true
+                }
+            } else {
+                existing.add(newPair)
+                changed = true
+            }
+        }
+
+        // Keep only the most recent MAX_DICTIONARY_PAIRS
+        if (existing.size > MAX_DICTIONARY_PAIRS) {
+            val sortedByRecency = existing.takeLast(MAX_DICTIONARY_PAIRS)
+            existing.clear()
+            existing.addAll(sortedByRecency)
+            changed = true
+        }
+        return changed
     }
 
     private suspend fun translateAndCacheChunk(
@@ -137,7 +194,9 @@ class TranslateChapterUseCase(
         bookChapter: BookChapter,
         targetLanguage: String,
         contentHash: String,
-        chapterTitleMD5: String
+        chapterTitleMD5: String,
+        dictionaries: MutableList<DictPair>,
+        onDictionaryUpdate: (List<DictPair>) -> Unit
     ): Result<String> {
         val cacheKey = translationCacheRepository.computeCacheKey(book.bookUrl, bookChapter.index, chunk.index, targetLanguage)
         val existingCache = translationCacheRepository.getCachedChunk(cacheKey)
@@ -160,7 +219,7 @@ class TranslateChapterUseCase(
         )
         translationCacheRepository.saveChunk(translationCache)
 
-        val result = translateChunkWithRetry(chunk, targetLanguage)
+        val result = translateChunkWithRetry(chunk, targetLanguage, dictionaries, onDictionaryUpdate)
         if (result.isSuccess) {
             translationCacheRepository.updateChunkStatus(cacheKey, TranslationCache.STATUS_SUCCESS, result.getOrThrow(), null)
         } else {
@@ -170,8 +229,14 @@ class TranslateChapterUseCase(
         return result
     }
 
-    private suspend fun translateChunkWithRetry(chunk: TextChunk, targetLanguage: String): Result<String> {
+    private suspend fun translateChunkWithRetry(
+        chunk: TextChunk,
+        targetLanguage: String,
+        dictionaries: MutableList<DictPair>,
+        onDictionaryUpdate: (List<DictPair>) -> Unit
+    ): Result<String> {
         var lastError: Exception? = null
+        var lastRetryReason: RetryReason? = null
         for (attempt in 0..TranslationConfig.llmRetryCount) {
             val result = llmGateway.translate(
                 text = chunk.content,
@@ -180,13 +245,29 @@ class TranslateChapterUseCase(
                 baseUrl = TranslationConfig.llmBaseUrl,
                 apiKey = TranslationConfig.llmApiKey,
                 model = TranslationConfig.llmModel,
-                prompt = TranslationConfig.llmPrompt
+                prompt = TranslationConfig.llmPrompt,
+                dictionaries = dictionaries.toList(),
+                onUpdate = onDictionaryUpdate,
+                retryReason = lastRetryReason
             )
             if (result.isSuccess) {
                 return result
             }
             lastError = result.exceptionOrNull() as? Exception
+            lastRetryReason = parseRetryReason(lastError)
         }
         return Result.failure(lastError ?: Exception("Translation failed after retries"))
+    }
+
+    private fun parseRetryReason(error: Exception?): RetryReason? {
+        val message = error?.message ?: return null
+        return when {
+            message.contains("429") -> RetryReason.RATE_LIMIT
+            message.contains("500") || message.contains("502") || message.contains("503") || message.contains("504") -> RetryReason.SERVER_ERROR
+            message.contains("401") || message.contains("403") -> RetryReason.AUTH_ERROR
+            message.contains("timeout", ignoreCase = true) -> RetryReason.TIMEOUT
+            message.contains("HTTP") -> RetryReason.UNKNOWN
+            else -> null
+        }
     }
 }
