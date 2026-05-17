@@ -61,7 +61,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
+import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.catch

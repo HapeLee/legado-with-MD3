@@ -144,6 +144,7 @@ fun <T> AppAlertDialog(
     onDismissRequest: () -> Unit,
     title: String? = null,
     text: String? = null,
+    textProvider: @Composable (T.() -> String)? = null,
     confirmText: String = "确定",
     onConfirm: ((T) -> Unit)? = null,
     dismissText: String = "取消",
@@ -159,11 +160,17 @@ fun <T> AppAlertDialog(
 
     val currentData = cachedData
     if (currentData != null) {
+        val currentText = text ?: textProvider?.invoke(currentData)
+        var cachedText by remember { mutableStateOf(currentText) }
+        if (currentText != null) {
+            cachedText = currentText
+        }
+
         AppAlertDialog(
             show = data != null,
             onDismissRequest = onDismissRequest,
             title = title,
-            text = text,
+            text = currentText ?: cachedText,
             modifier = modifier,
             confirmText = confirmText,
             onConfirm = onConfirm?.let { { it(currentData) } },

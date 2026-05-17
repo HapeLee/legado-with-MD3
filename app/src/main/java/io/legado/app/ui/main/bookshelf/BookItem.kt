@@ -50,9 +50,9 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.cover.BookshelfCover
-import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.image.cover.BookshelfCover
+import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toTimeAgo
 
@@ -214,7 +214,7 @@ fun BookshelfItem(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(top = 4.dp, bottom = 4.dp, end = 4.dp),
+                            .padding(top = 4.dp, bottom = 4.dp, end = 8.dp, start = 4.dp),
                         verticalArrangement = Arrangement.Center
                     ) {
                     Row(
@@ -232,7 +232,7 @@ fun BookshelfItem(
                             modifier = Modifier.weight(1f)
                         )
                         titleEnd?.let {
-                            Box(modifier = Modifier.padding(top = 4.dp)) {
+                            Box(modifier = Modifier.padding(top = 4.dp, start = 4.dp)) {
                                 it.invoke()
                             }
                         }
@@ -523,7 +523,7 @@ fun BookGroupItemHorizontalCovers(
         ) {
             Column(
                 modifier = Modifier
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 8.dp, horizontal = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(

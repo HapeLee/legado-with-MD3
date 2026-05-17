@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.explore
+package io.legado.app.domain.usecase
 
 import androidx.appcompat.app.AppCompatActivity
 import com.script.rhino.runScriptWithContext
@@ -10,7 +10,7 @@ import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.utils.InfoMap
-import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
@@ -76,7 +76,7 @@ class ExploreKindUiUseCase(
                 override fun reUiView() = onRefreshKinds()
             }
         )
-        withContext(IO) {
+        withContext(Dispatchers.IO) {
             evalButtonClick(actionText, source, effectiveInfoMap, title, sourceJsExtensions)
         }
     }
@@ -92,7 +92,7 @@ class ExploreKindUiUseCase(
 
     private suspend fun getOrLoadBookSource(sourceUrl: String): BookSource? {
         sourceCache[sourceUrl]?.let { return it }
-        return withContext(IO) {
+        return withContext(Dispatchers.IO) {
             bookSourceDao.getBookSource(sourceUrl)
         }?.also { source ->
             sourceCache[sourceUrl] = source

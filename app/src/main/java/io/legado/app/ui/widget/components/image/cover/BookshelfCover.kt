@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.cover
+package io.legado.app.ui.widget.components.image.cover
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -14,8 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

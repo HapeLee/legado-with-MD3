@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.cover
+package io.legado.app.ui.widget.components.image.cover
 
 import android.content.Context
 import coil.request.ImageRequest

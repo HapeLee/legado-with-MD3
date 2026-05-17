@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components.image.sourceIcon
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
