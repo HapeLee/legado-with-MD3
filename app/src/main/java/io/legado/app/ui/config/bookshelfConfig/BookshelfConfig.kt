@@ -288,11 +288,18 @@ object BookshelfConfig {
     val bookshelfGroupListStyleState: State<Int> get() = _bookshelfGroupListStyle.state
 
     /**
-     * 文件夹在列表模式下横排封面的数量
+     * 书架文件夹在列表模式下横排封面的数量
      */
     private val _bookshelfGroupCoverCount = prefStateDelegate(PreferKey.bookshelfGroupCoverCount, 4)
     var bookshelfGroupCoverCount by _bookshelfGroupCoverCount
     val bookshelfGroupCoverCountState: State<Int> get() = _bookshelfGroupCoverCount.state
+
+    /**
+     * 书架列表模式下封面宽度
+     */
+    private val _bookshelfListCoverWidth = prefStateDelegate(PreferKey.bookshelfListCoverWidth, 84)
+    var bookshelfListCoverWidth by _bookshelfListCoverWidth
+    val bookshelfListCoverWidthState: State<Int> get() = _bookshelfListCoverWidth.state
 
     /**
      * 书架搜索按钮是否直接跳转搜索页

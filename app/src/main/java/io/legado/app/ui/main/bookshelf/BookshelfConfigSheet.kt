@@ -152,6 +152,14 @@ fun BookshelfConfigSheet(
                                 else BookshelfConfig.bookshelfFolderLayoutListPortrait = it.toInt()
                             }
                         )
+
+                        CompactSliderSettingItem(
+                            title = "列表封面宽度",
+                            value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
+                            valueRange = 40f..120f,
+                            steps = 80,
+                            onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
+                        )
                     }
 
                     AnimatedVisibility(
@@ -301,14 +309,20 @@ fun BookshelfConfigSheet(
                         }
                     )
 
-                    if (BookshelfConfig.bookGroupStyle != 2) {
-                        CompactSwitchSettingItem(
-                            title = stringResource(R.string.compact_mode),
-                            checked = BookshelfConfig.bookshelfLayoutCompact,
-                            color = LegadoTheme.colorScheme.surface,
-                            onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
-                        )
-                    }
+                    CompactSliderSettingItem(
+                        title = "列表封面宽度",
+                        value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
+                        valueRange = 40f..120f,
+                        steps = 80,
+                        onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
+                    )
+
+                    CompactSwitchSettingItem(
+                        title = "精简详情",
+                        checked = BookshelfConfig.bookshelfLayoutCompact,
+                        color = LegadoTheme.colorScheme.surface,
+                        onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
+                    )
 
                     val listColCount =
                         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait

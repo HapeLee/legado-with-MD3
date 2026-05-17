@@ -83,6 +83,7 @@ fun BookshelfItem(
     coverShadow: Boolean = false,
     titleColor: Color? = null,
     descAnnotated: AnnotatedString? = null,
+    coverWidth: Int = 84,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) {
@@ -193,7 +194,7 @@ fun BookshelfItem(
                     Box(
                         modifier = Modifier
                             .align(Alignment.Top)
-                            .width(if (!isCompact) 84.dp else 56.dp)
+                            .width(coverWidth.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -433,6 +434,7 @@ fun BookGroupItemGrid(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
+        coverWidth = 84,
         onClick = onClick,
         onLongClick = onLongClick
     )
@@ -488,6 +490,7 @@ fun BookGroupItemList(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
+        coverWidth = BookshelfConfig.bookshelfListCoverWidth,
         modifier = modifier,
         onClick = onClick,
         onLongClick = onLongClick
@@ -754,6 +757,7 @@ fun BookItem(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
+        coverWidth = if (layoutMode == 0) BookshelfConfig.bookshelfListCoverWidth else 84,
         onClick = onClick,
         onLongClick = onLongClick
     )

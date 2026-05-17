@@ -272,6 +272,7 @@ object PreferKey {
     const val bookshelfCardColorDark = "bookshelfCardColorDark"
     const val bookshelfGroupListStyle = "bookshelfGroupListStyle"
     const val bookshelfGroupCoverCount = "bookshelfGroupCoverCount"
+    const val bookshelfListCoverWidth = "bookshelfListCoverWidth"
 
     const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
 
