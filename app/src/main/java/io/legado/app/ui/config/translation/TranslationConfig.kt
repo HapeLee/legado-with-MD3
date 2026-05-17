@@ -12,7 +12,7 @@ object TranslationConfig {
 
     var llmProvider by prefDelegate(
         PreferKey.llmProvider,
-        "openai"
+        "google"
     )
 
     var llmBaseUrl by prefDelegate(
@@ -59,8 +59,8 @@ object TranslationConfig {
     const val PROVIDER_OPENAI = "openai"
     const val PROVIDER_GOOGLE = "google"
 
-    val providerDisplayNames = listOf("OpenAI", "Google Translate")
-    val providerValues = listOf(PROVIDER_OPENAI, PROVIDER_GOOGLE)
+    val providerDisplayNames = listOf("Google Translate", "OpenAI适配接口")
+    val providerValues = listOf(PROVIDER_GOOGLE, PROVIDER_OPENAI)
 
     val targetLanguages = listOf(
         "zh" to "简体中文",

@@ -720,10 +720,6 @@ class ReadBookActivity : BaseReadBookActivity(),
     }
 
     override fun onTranslationClick() {
-        if (!TranslationConfig.llmTranslateEnabled) {
-            toastOnUi(R.string.llm_translate_enabled)
-            return
-        }
         val book = ReadBook.book ?: return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
 
@@ -736,10 +732,6 @@ class ReadBookActivity : BaseReadBookActivity(),
     }
 
     override fun onTranslationLongClick() {
-        if (!TranslationConfig.llmTranslateEnabled) {
-            toastOnUi(R.string.llm_translate_enabled)
-            return
-        }
         val book = ReadBook.book ?: return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
 

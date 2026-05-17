@@ -39,6 +39,7 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
+import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
@@ -152,7 +153,8 @@ fun MainActivity.mainEntryProvider(
             onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
             onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
             onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
-            onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) }
+            onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
+            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
         )
     }
 
@@ -182,6 +184,10 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSettingsDownloadCache> {
         DownloadCacheConfigScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsTranslation> {
+        TranslationConfigScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsCustomTheme> {
