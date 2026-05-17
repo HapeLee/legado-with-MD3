@@ -39,7 +39,8 @@ class TranslateChapterUseCase(
         book: Book,
         bookChapter: BookChapter,
         targetLanguage: String,
-        onProgress: (TranslationProgress) -> Unit
+        onProgress: (TranslationProgress) -> Unit,
+        onTranslateStarted: () -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         val originalContent = BookHelp.getContent(book, bookChapter)
             ?: return@withContext Result.failure(Exception("Failed to read original content"))
@@ -104,6 +105,7 @@ class TranslateChapterUseCase(
             return@withContext Result.success(mergedContent)
         }
 
+        onTranslateStarted()
         coroutineScope {
             val concurrentChunks = TranslationConfig.llmConcurrentChunks.coerceIn(1, 4)
             val chunkGroups = pendingChunks.chunked(concurrentChunks)
@@ -126,7 +128,7 @@ class TranslateChapterUseCase(
                             translatedChunks.keys
                         ))
                     } else {
-                        val error = result.exceptionOrNull() ?: Exception("Translation failed for chunk ${chunk.index}")
+                        val error = result.exceptionOrNull() ?: Exception("Translation failed")
                         return@coroutineScope
                     }
                 }
@@ -134,7 +136,7 @@ class TranslateChapterUseCase(
         }
 
         if (translatedChunks.size != chunks.size) {
-            return@withContext Result.failure(Exception("Translation incomplete: ${translatedChunks.size}/${chunks.size} chunks translated"))
+            return@withContext Result.failure(Exception("Translation incomplete"))
         }
 
         val allTranslatedChunks = chunks.sortedBy { it.index }.mapNotNull { chunk ->

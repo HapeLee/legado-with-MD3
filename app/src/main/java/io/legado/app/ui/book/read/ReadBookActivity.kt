@@ -775,7 +775,12 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
 
         lifecycleScope.launch {
-            val result = TranslationManager.translateChapter(book, chapter, viewModel.translateChapterUseCase)
+            val result = TranslationManager.translateChapter(
+                book,
+                chapter,
+                viewModel.translateChapterUseCase,
+                onTranslateStarted = { longToastOnUi(R.string.translation_started) }
+            )
             translationJob.cancel()
             result.onSuccess { content ->
                 ReadBook.contentLoadFinish(book, chapter, content, upContent = true, resetPageOffset = false)

@@ -1566,4 +1566,5 @@
     <string name="translate">Translate</string>
     <string name="return_to_original">Return to Original</string>
     <string name="translation_progress">Translating %1$d%%</string>
+    <string name="translation_started">Translation started, please wait…</string>
 </resources>

@@ -1560,4 +1560,5 @@
     <string name="translation_cache">翻译缓存</string>
     <string name="return_to_original">返回原文</string>
     <string name="translation_progress">翻译中 %1$d%%</string>
+    <string name="translation_started">开始进行翻译，请耐心等待……</string>
 </resources>

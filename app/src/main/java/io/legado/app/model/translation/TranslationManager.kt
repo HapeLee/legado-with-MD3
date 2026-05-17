@@ -104,7 +104,8 @@ object TranslationManager : KoinComponent {
     suspend fun translateChapter(
         book: Book,
         bookChapter: BookChapter,
-        translateChapterUseCase: TranslateChapterUseCase
+        translateChapterUseCase: TranslateChapterUseCase,
+        onTranslateStarted: () -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
         updateChapterDisplayState(book, bookChapter, TranslationDisplayState.Translating)
 
@@ -114,7 +115,8 @@ object TranslationManager : KoinComponent {
             targetLanguage = TranslationConfig.llmTargetLanguage,
             onProgress = { progress ->
                 updateChapterProgress(book, bookChapter, progress.currentChunk, progress.totalChunks, progress.mixedContent)
-            }
+            },
+            onTranslateStarted = onTranslateStarted
         )
 
         result.onSuccess { content ->
