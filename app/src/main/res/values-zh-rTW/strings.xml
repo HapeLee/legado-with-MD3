@@ -67,6 +67,7 @@
     <string name="setting">設定</string>
     <string name="theme_setting">主題設定</string>
     <string name="theme_setting_s">與介面/顏色相關的一些設定</string>
+    <string name="dash_gap">虚线间隔</string>
     <string name="other_setting">其它設定</string>
     <string name="other_setting_s">與功能相關的一些設定</string>
     <string name="about">關於</string>
@@ -77,6 +78,7 @@
     <string name="version">版本</string>
     <string name="local">本機</string>
     <string name="search">搜尋</string>
+    <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">來源：%s</string>
     <string name="read_dur_progress">最近：%s</string>
     <string name="book_name">書名</string>
@@ -591,6 +593,7 @@
     <string name="bg_image">背景圖片</string>
     <string name="bg_color">背景顏色</string>
     <string name="text_color">文字顏色</string>
+    <string name="footer_font_size">页脚字号</string>
     <string name="select_image">選擇圖片</string>
     <string name="group_manage">分組管理</string>
     <string name="group_select">分組選擇</string>
@@ -728,6 +731,7 @@
     <!--color-->
     <string name="primary">主色調</string>
     <string name="accent">強調色</string>
+    <string name="font_color">字体颜色</string>
     <string name="background_color">背景色</string>
     <string name="navbar_color">底部操作欄顏色</string>
     <string name="day">白天</string>
@@ -1109,6 +1113,7 @@
     <string name="clear_webview_data">清除 WebView 数据</string>
     <string name="clear_webview_data_summary">清除内置浏览器所有数据</string>
     <string name="source_tab_list">列表</string>
+    <string name="layout_type">布局</string>
     <string name="dict_rule">字典规则</string>
     <string name="config_dict_rule">配置字典规则</string>
     <string name="create">新建</string>
@@ -1275,4 +1280,36 @@
     <string name="bookshelf_empty_global_search">沒有書籍，嘗試全域搜尋</string>
     <string name="global_search">全域搜尋</string>
     <string name="cache_management">快取管理</string>
+    <string name="appearance_setting">外观设置</string>
+    <string name="personalization_setting">深度个性化设置</string>
+    <string name="personalization_setting_s">字体等深度个性化设置</string>
+    <string name="theme_pack">主题管理</string>
+    <string name="theme_pack_s">管理、导入导出完整主题包</string>
+    <string name="font_setting">字体设置</string>
+    <string name="font_setting_s">选择应用字体</string>
+    <string name="color_setting">颜色设置</string>
+    <string name="reset_color">重置颜色</string>
+    <string name="top_bar_color">应用栏颜色</string>
+    <string name="nav_bar_color">导航栏颜色</string>
+    <string name="border_setting">边框设置</string>
+    <string name="show_container_border">显示容器边框</string>
+    <string name="border_width">边框粗细</string>
+    <string name="border_style">边框样式</string>
+    <string name="solid_border">实线</string>
+    <string name="dashed_border">虚线</string>
+    <string name="header_color">页眉</string>
+    <string name="footer_color">页脚</string>
+    <string name="header_font">设置字体</string>
+    <string name="footer_font">页脚字体</string>
+    <string name="header_font_size">设置字号</string>
+    <string name="source_tab_start">启动</string>
+    <string name="r_startHtml">启动页html文本</string>
+    <string name="r_startStyle">启动页style文本</string>
+    <string name="r_startJs">启动页Js（startJs）</string>
+    <string name="r_preloadJs">预注入Js（preloadJs）</string>
+    <string name="enable_preload">预加载</string>
+    <string name="load_with_web_log">显示WebView日志</string>
+    <string name="cache_first">优先缓存</string>
+    <string name="refresh_limit_unlimited">无限制</string>
+    <string name="refresh_limit_books">%1$d 本</string>
 </resources>

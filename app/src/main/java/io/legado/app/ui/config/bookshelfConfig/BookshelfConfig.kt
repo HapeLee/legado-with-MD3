@@ -92,6 +92,13 @@ object BookshelfConfig {
     val bookshelfShowTagState: State<Boolean> get() = _bookshelfShowTag.state
 
     /**
+     * 是否显示最新章节
+     */
+    private val _bookshelfShowLatestChapter = prefStateDelegate(PreferKey.bookshelfShowLatestChapter, true)
+    var bookshelfShowLatestChapter by _bookshelfShowLatestChapter
+    val bookshelfShowLatestChapterState: State<Boolean> get() = _bookshelfShowLatestChapter.state
+
+    /**
      * 列表模式下简介显示行数 (0为显示全部)
      */
     private val _bookshelfIntroMaxLines = prefStateDelegate(PreferKey.bookshelfIntroMaxLines, 0)
@@ -262,11 +269,16 @@ object BookshelfConfig {
     /**
      * 书架卡片背景颜色
      */
-    private val _bookshelfCardColor = prefStateDelegate(PreferKey.bookshelfCardColor, 0) {
-        postEvent(EventBus.NOTIFY_MAIN, false)
-    }
+    private val _bookshelfCardColor = prefStateDelegate(PreferKey.bookshelfCardColor, 0)
     var bookshelfCardColor by _bookshelfCardColor
     val bookshelfCardColorState: State<Int> get() = _bookshelfCardColor.state
+
+    /**
+     * 书架卡片背景颜色 (夜间)
+     */
+    private val _bookshelfCardColorDark = prefStateDelegate(PreferKey.bookshelfCardColorDark, 0)
+    var bookshelfCardColorDark by _bookshelfCardColorDark
+    val bookshelfCardColorDarkState: State<Int> get() = _bookshelfCardColorDark.state
 
     /**
      * 文件夹在列表模式下的样式: 0: 默认, 2: 横排封面

@@ -13,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.datepicker.MaterialDatePicker
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
@@ -48,6 +49,7 @@ import io.legado.app.utils.isTv
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import kotlinx.coroutines.launch
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -304,7 +306,9 @@ abstract class BaseReadBookActivity :
                         val end = editEnd.text!!.toString().let {
                             if (it.isEmpty()) book.totalChapterNum else it.toInt()
                         }
-                        CacheBook.start(this@BaseReadBookActivity, book, start - 1, end - 1)
+                        lifecycleScope.launch {
+                            CacheBook.start(this@BaseReadBookActivity, book, start - 1, end - 1)
+                        }
                     }
                 }
                 cancelButton()

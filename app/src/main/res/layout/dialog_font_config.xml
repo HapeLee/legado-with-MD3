@@ -45,6 +45,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
         android:gravity="center_horizontal">
 
         <com.google.android.material.button.MaterialButton
@@ -73,6 +74,14 @@
             app:icon="@drawable/ic_format_italic"
             android:checkable="true"
             android:focusable="true"/>
+
+    </com.google.android.material.button.MaterialButtonGroup>
+
+    <com.google.android.material.button.MaterialButtonGroup
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="center_horizontal">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/textFontWeightConverter"

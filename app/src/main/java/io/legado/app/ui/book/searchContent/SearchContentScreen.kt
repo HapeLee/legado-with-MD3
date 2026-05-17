@@ -37,8 +37,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
@@ -175,7 +175,7 @@ fun SearchContentScreen(
                 }
 
                 AnimatedVisibility(visible = isSearching) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    AppLinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
         },

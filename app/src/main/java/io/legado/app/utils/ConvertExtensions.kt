@@ -90,7 +90,7 @@ object ConvertUtils {
         //计算单位的，原理是利用lg,公式是 lg(1024^n) = nlg(1024)，最后 nlg(1024)/lg(1024) = n。
         val digitGroups = (log10(length.toDouble()) / log10(1024.0)).toInt()
         //计算原理是，size/单位值。单位值指的是:比如说b = 1024,KB = 1024^2
-        return DecimalFormat("#,##0.##").format(length / 1024.0.pow(digitGroups.toDouble())) + " " + units[digitGroups]
+        return DecimalFormat("#.##").format(length / 1024.0.pow(digitGroups.toDouble())) + " " + units[digitGroups]
     }
 
     @JvmOverloads

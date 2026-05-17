@@ -52,9 +52,10 @@ class ReadRecordOverviewViewModel(
         _period,
         _referenceDate,
         repository.getAllRecordDetails(""),
-        repository.getLatestReadRecords("")
-    ) { period, refDate, details, latestRecords ->
-        getReadRecordOverviewUseCase(period, refDate, details, latestRecords)
+        repository.getLatestReadRecords(""),
+        bookRepository.getAllBooks()
+    ) { period, refDate, details, latestRecords, allBooks ->
+        getReadRecordOverviewUseCase(period, refDate, details, latestRecords, allBooks)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),

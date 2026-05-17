@@ -5,12 +5,17 @@ import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookDao
 import io.legado.app.data.entities.Book
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class BookRepository(
     private val bookDao: BookDao,
     private val bookChapterDao: BookChapterDao
 ) {
+    fun getAllBooks(): Flow<List<Book>> {
+        return bookDao.flowAll()
+    }
+
     suspend fun getBookCoverByNameAndAuthor(bookName: String, bookAuthor: String): String? {
         return withContext(Dispatchers.IO) {
             bookDao.getBook(bookName, bookAuthor)?.getDisplayCover()

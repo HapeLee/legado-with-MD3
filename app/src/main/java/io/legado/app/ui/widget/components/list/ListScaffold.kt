@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults.ScreenOffset
-import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.animateFloatingActionButton
@@ -64,10 +63,9 @@ fun <T> ListScaffold(
                     visible = state.selectedIds.isEmpty(),
                     alignment = Alignment.BottomEnd,
                 ),
-                tooltipText = "添加"
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
-            }
+                tooltipText = "添加",
+                icon = Icons.Default.Add
+            )
         }
     },
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },

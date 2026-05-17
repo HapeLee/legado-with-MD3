@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,8 +22,6 @@ import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Button as MiuixButton
-import top.yukonga.miuix.kmp.basic.ButtonDefaults as MiuixButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
 
 @Composable
@@ -85,7 +81,7 @@ fun SmallTextButton(
 
 @Composable
 fun SmallTonalTextButton(
-    text: String,
+    text: String? = null,
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -111,10 +107,12 @@ fun SmallTonalTextButton(
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
-                AppText(
-                    text = text,
-                    style = LegadoTheme.typography.labelMedium
-                )
+                if (text != null) {
+                    AppText(
+                        text = text,
+                        style = LegadoTheme.typography.labelMedium
+                    )
+                }
             }
         }
     } else {
@@ -129,10 +127,12 @@ fun SmallTonalTextButton(
                 modifier = Modifier.size(16.dp)
             )
             Spacer(Modifier.width(4.dp))
-            AppText(
-                text = text,
-                style = LegadoTheme.typography.labelMedium
-            )
+            if (text != null) {
+                AppText(
+                    text = text,
+                    style = LegadoTheme.typography.labelMedium
+                )
+            }
         }
     }
 }

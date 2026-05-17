@@ -32,15 +32,12 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.FolderZip
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,10 +46,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -74,7 +69,6 @@ import io.legado.app.ui.book.search.ScopeSelectSheet
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -87,7 +81,8 @@ import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.startActivity
@@ -104,7 +99,11 @@ fun WebFileSheet(
 ) {
     AppModalBottomSheet(show = show, onDismissRequest = onDismissRequest, title = title) {
         if (files.isEmpty()) {
-            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp), contentAlignment = Alignment.Center
+            ) {
                 Text(text = stringResource(R.string.empty))
             }
         } else {
@@ -112,7 +111,9 @@ fun WebFileSheet(
                 items(files, key = { it.name }) { file ->
                     GlassCard(onClick = { onSelect(file) }) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -234,7 +235,7 @@ fun ChangeCoverSheet(
         }
     ) {
         if (isSearching) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            AppLinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(12.dp))
         }
         LazyVerticalGrid(columns = GridCells.Fixed(3), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -267,6 +268,31 @@ fun ChangeCoverSheet(
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+fun ChangeSourceSheet(
+    data: Book?,
+    onDismissRequest: () -> Unit,
+    onReplace: (BookSource, Book, List<BookChapter>, ChangeSourceMigrationOptions) -> Unit,
+    onAddAsNew: (Book, List<BookChapter>) -> Unit,
+) {
+    var cachedData by remember { mutableStateOf(data) }
+
+    if (data != null) {
+        cachedData = data
+    }
+
+    val currentData = cachedData
+    if (currentData != null) {
+        ChangeSourceSheet(
+            show = data != null,
+            oldBook = currentData,
+            onDismissRequest = onDismissRequest,
+            onReplace = onReplace,
+            onAddAsNew = onAddAsNew,
+        )
     }
 }
 
@@ -427,7 +453,9 @@ fun ChangeSourceSheet(
 
         if (items.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 40.dp),
                 contentAlignment = Alignment.Center
             ) {
                 EmptyMessage(
@@ -588,7 +616,7 @@ fun ChangeSourceSheet(
         onDismissRequest = {},
         content = {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                AppCircularProgressIndicator()
             }
         }
     )

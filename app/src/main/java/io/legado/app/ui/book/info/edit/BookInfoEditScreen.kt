@@ -1,9 +1,9 @@
 package io.legado.app.ui.book.info.edit
 
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -13,14 +13,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.ImageSearch
 import androidx.compose.material.icons.filled.Replay
@@ -30,8 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,27 +42,37 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
+import io.legado.app.ui.widget.components.text.AnimatedTextLine
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.SelectImageContract
 import io.legado.app.utils.launch
 import io.legado.app.utils.showDialogFragment
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -214,6 +225,7 @@ fun BookInfoEditContent(
         KindEditor(
             kindList = uiState.kindList,
             onKindListChange = { viewModel.onKindListChange(it) },
+            onReset = { viewModel.resetKinds() },
             backgroundColor = inputBackgroundColor
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -298,89 +310,146 @@ fun BookTypeDropdown(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun KindEditor(
     kindList: List<String>,
     onKindListChange: (List<String>) -> Unit,
+    onReset: () -> Unit,
     backgroundColor: Color
 ) {
-    var newKindText by remember { mutableStateOf("") }
+    var editingIndex by remember { mutableStateOf<Int?>(null) }
+    var editText by remember { mutableStateOf("") }
+    val hapticFeedback = LocalHapticFeedback.current
 
-    Column(
-        modifier = Modifier.fillMaxWidth()
+    val listState = rememberLazyListState()
+    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
+        val mutable = kindList.toMutableList()
+        mutable.add(to.index, mutable.removeAt(from.index))
+        onKindListChange(mutable)
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+        LazyRow(
+            state = listState,
+            modifier = Modifier
+                .weight(1f)
+                .fadingEdge(listState),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AppTextField(
-                value = newKindText,
-                onValueChange = { newKindText = it },
-                label = "标签",
-                backgroundColor = backgroundColor,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            MediumOutlinedIconButton(
-                onClick = {
-                    val trimmed = newKindText.trim()
-                    val tag = if (trimmed.startsWith("#")) trimmed else "#$trimmed"
-                    if (tag.isNotBlank() && tag !in kindList) {
-                        val sortedList = (kindList + tag).sortedWith(
-                            compareBy<String> { !it.startsWith("#") }.thenBy { it }
-                        )
-                        onKindListChange(sortedList)
-                        newKindText = ""
-                    }
-                },
-                imageVector = Icons.Default.Add
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        if (kindList.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                kindList.forEach { kind ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppTextField(
-                            value = kind,
-                            onValueChange = { newValue ->
-                                val index = kindList.indexOf(kind)
-                                if (index >= 0) {
-                                    val newList = kindList.toMutableList()
-                                    newList[index] = newValue
-                                    onKindListChange(newList)
+            items(kindList.size, key = { kindList[it] }) { index ->
+                val kind = kindList[index]
+                ReorderableItem(reorderableState, key = kind) { isDragging ->
+                    KindChip(
+                        text = kind,
+                        isDragging = isDragging,
+                        onClick = {
+                            editingIndex = index
+                            editText = kind
+                        },
+                        modifier = Modifier
+                            .longPressDraggableHandle(
+                                onDragStarted = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                },
+                                onDragStopped = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureEnd)
                                 }
-                            },
-                            label = null,
-                            backgroundColor = backgroundColor,
-                            singleLine = true,
-                            maxLines = 1,
-                            modifier = Modifier.width(80.dp)
-                        )
-                        IconButton(
-                            onClick = {
-                                onKindListChange(kindList - kind)
-                            },
-                            modifier = Modifier.padding(0.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "删除标签",
-                                tint = Color.Red.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(4.dp)
                             )
-                        }
-                    }
+                            .animateItem()
+                    )
                 }
             }
         }
+        Spacer(modifier = Modifier.width(8.dp))
+        MediumOutlinedIconButton(
+            onClick = {
+                onReset()
+            },
+            imageVector = Icons.Default.Replay
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        MediumOutlinedIconButton(
+            onClick = {
+                editingIndex = -1
+                editText = ""
+            },
+            imageVector = Icons.Default.Add
+        )
+    }
+
+    if (editingIndex != null) {
+        val isAdding = editingIndex == -1
+        AppAlertDialog(
+            show = true,
+            onDismissRequest = { editingIndex = null },
+            title = if (isAdding) "添加标签" else "编辑标签",
+            content = {
+                AppTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    label = "标签",
+                    backgroundColor = backgroundColor,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmText = stringResource(android.R.string.ok),
+            onConfirm = {
+                val trimmed = editText.trim()
+                if (trimmed.isNotBlank()) {
+                    val mutable = kindList.toMutableList()
+                    if (isAdding) {
+                        if (trimmed !in kindList) mutable.add(trimmed)
+                    } else {
+                        mutable[editingIndex!!] = trimmed
+                    }
+                    onKindListChange(mutable)
+                }
+                editingIndex = null
+            },
+            dismissText = if (isAdding) stringResource(android.R.string.cancel) else stringResource(
+                R.string.delete
+            ),
+            onDismiss = if (isAdding) {
+                { editingIndex = null }
+            } else {
+                {
+                    onKindListChange(kindList.toMutableList().apply { removeAt(editingIndex!!) })
+                    editingIndex = null
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun KindChip(
+    text: String,
+    isDragging: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = LegadoTheme.colorScheme.surfaceContainer,
+        contentColor = LegadoTheme.colorScheme.onSurface,
+        shadowElevation = if (isDragging) 8.dp else 0.dp,
+        modifier = modifier
+            .zIndex(if (isDragging) 1f else 0f)
+            .clickable(onClick = onClick)
+    ) {
+        AnimatedTextLine(
+            text = text,
+            style = LegadoTheme.typography.labelLargeEmphasized,
+            color = LegadoTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }

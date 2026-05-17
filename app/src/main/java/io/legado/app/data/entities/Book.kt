@@ -33,7 +33,10 @@ import kotlin.math.max
 @TypeConverters(Book.Converters::class)
 @Entity(
     tableName = "books",
-    indices = [Index(value = ["name", "author"], unique = false)]
+    indices = [
+        Index(value = ["name", "author"], unique = false),
+        Index(value = ["durChapterTime"], unique = false)
+    ]
 )
 data class Book(
     // 详情页Url(本地书源存储完整文件路径)
@@ -352,6 +355,9 @@ data class Book(
             newBook.type = type
         }
         newBook.readConfig = readConfig
+        if (newBook.wordCount.isNullOrBlank()) {
+            newBook.wordCount = wordCount
+        }
         return newBook
     }
 

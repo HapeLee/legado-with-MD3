@@ -1,20 +1,47 @@
 package io.legado.app.ui.book.readRecord
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowLeft
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +58,7 @@ import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.cover.CoilBookCover
 import io.legado.app.ui.widget.components.heatmap.HeatmapMode
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -83,8 +111,11 @@ fun ReadRecordOverviewScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
-                item {
-                    HeatmapCard(state)
+
+                if (state.period != ReadPeriod.ALL && state.dailyTimeData.isNotEmpty()) {
+                    item {
+                        ReadingTimeBarChartCard(data = state.dailyTimeData, period = state.period)
+                    }
                 }
 
                 item {
@@ -99,10 +130,8 @@ fun ReadRecordOverviewScreen(
                     StatsGridCard(title = "阅读数据", items = stats)
                 }
 
-                if (state.period != ReadPeriod.ALL && state.dailyTimeData.isNotEmpty()) {
-                    item {
-                        ReadingTimeBarChartCard(data = state.dailyTimeData, period = state.period)
-                    }
+                item {
+                    HeatmapCard(state)
                 }
 
                 if (state.topBooks.isNotEmpty()) {
@@ -124,27 +153,22 @@ fun PeriodSelector(
     selectedPeriod: ReadPeriod,
     onPeriodSelected: (ReadPeriod) -> Unit
 ) {
-    val periods = listOf(
-        ReadPeriod.DAY to "日",
-        ReadPeriod.WEEK to "周",
-        ReadPeriod.MONTH to "月",
-        ReadPeriod.YEAR to "年",
-        ReadPeriod.ALL to "总"
-    )
-
-    PrimaryTabRow(
-        selectedTabIndex = periods.indexOfFirst { it.first == selectedPeriod },
-        containerColor = Color.Transparent,
-        divider = {}
-    ) {
-        periods.forEach { (period, label) ->
-            Tab(
-                selected = selectedPeriod == period,
-                onClick = { onPeriodSelected(period) },
-                text = { AppText(label) }
-            )
-        }
+    val periods = remember {
+        listOf(
+            ReadPeriod.DAY to "日",
+            ReadPeriod.WEEK to "周",
+            ReadPeriod.MONTH to "月",
+            ReadPeriod.YEAR to "年",
+            ReadPeriod.ALL to "总"
+        )
     }
+
+    AppTabRow(
+        tabTitles = periods.map { it.second },
+        selectedTabIndex = periods.indexOfFirst { it.first == selectedPeriod },
+        onTabSelected = { index -> onPeriodSelected(periods[index].first) },
+        isScrollable = false
+    )
 }
 
 @Composable
@@ -156,34 +180,50 @@ fun DateNavigator(
 ) {
     if (period == ReadPeriod.ALL) return
 
-    val dateText = when (period) {
-        ReadPeriod.DAY -> referenceDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))
-        ReadPeriod.WEEK -> {
-            val start = referenceDate.with(java.time.DayOfWeek.MONDAY)
-            val end = referenceDate.with(java.time.DayOfWeek.SUNDAY)
-            "${start.format(DateTimeFormatter.ofPattern("M.d"))} - ${end.format(DateTimeFormatter.ofPattern("M.d"))}"
-        }
-        ReadPeriod.MONTH -> referenceDate.format(DateTimeFormatter.ofPattern("yyyy年M月"))
-        ReadPeriod.YEAR -> referenceDate.format(DateTimeFormatter.ofPattern("yyyy年"))
-        ReadPeriod.ALL -> ""
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.Center,
+            .padding(vertical = 8.dp, horizontal = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         MediumIconButton(
             onClick = onPrevClick,
             imageVector = Icons.AutoMirrored.Filled.ArrowLeft
         )
-        AppText(
-            text = dateText,
-            style = LegadoTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
+        AnimatedContent(
+            targetState = referenceDate,
+            transitionSpec = {
+                if (targetState.isAfter(initialState)) {
+                    (slideInHorizontally { it / 2 } + fadeIn()).togetherWith(slideOutHorizontally { -it / 2 } + fadeOut())
+                } else {
+                    (slideInHorizontally { -it / 2 } + fadeIn()).togetherWith(slideOutHorizontally { it / 2 } + fadeOut())
+                }.using(SizeTransform(clip = false))
+            },
+            label = "DateNavigator"
+        ) { targetDate ->
+            val text = when (period) {
+                ReadPeriod.DAY -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))
+                ReadPeriod.WEEK -> {
+                    val start = targetDate.with(java.time.DayOfWeek.MONDAY)
+                    val end = targetDate.with(java.time.DayOfWeek.SUNDAY)
+                    "${start.format(DateTimeFormatter.ofPattern("M.d"))} - ${
+                        end.format(
+                            DateTimeFormatter.ofPattern("M.d")
+                        )
+                    }"
+                }
+
+                ReadPeriod.MONTH -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年M月"))
+                ReadPeriod.YEAR -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年"))
+                ReadPeriod.ALL -> ""
+            }
+            AppText(
+                text = text,
+                style = LegadoTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        }
         MediumIconButton(
             onClick = onNextClick,
             imageVector = Icons.AutoMirrored.Filled.ArrowRight
@@ -199,7 +239,16 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            AppText("阅读热力图", style = LegadoTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.GridOn,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                AppText("阅读热力图", style = LegadoTheme.typography.titleMedium)
+            }
             Spacer(modifier = Modifier.height(8.dp))
             HeatmapCalendarSection(
                 dailyReadCounts = state.allReadCounts,
@@ -224,11 +273,22 @@ fun TopReadingListCard(
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
         Column(modifier = Modifier.padding(vertical = 16.dp)) {
-            AppText(
+            Row(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                text = "阅读时长榜",
-                style = LegadoTheme.typography.titleMedium
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Leaderboard,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                AppText(
+                    text = "阅读时长榜",
+                    style = LegadoTheme.typography.titleMedium
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
             
             topBooks.forEachIndexed { index, book ->
@@ -247,7 +307,7 @@ fun TopReadingListCard(
                     AppText(
                         text = "${index + 1}",
                         style = LegadoTheme.typography.titleMedium,
-                        modifier = Modifier.width(32.dp),
+                        modifier = Modifier.padding(start = 12.dp, end = 16.dp),
                         textAlign = TextAlign.Center,
                         color = if (index < 3) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.onSurfaceVariant
                     )
@@ -259,6 +319,12 @@ fun TopReadingListCard(
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
+                        AppText(
+                            modifier = Modifier.padding(end = 8.dp),
+                            text = ReadRecordFormatter.formatDuration(book.readTime),
+                            style = LegadoTheme.typography.bodySmall,
+                            color = LegadoTheme.colorScheme.primary
+                        )
                         AppText(
                             text = book.bookName,
                             style = LegadoTheme.typography.bodyMedium,
@@ -272,12 +338,6 @@ fun TopReadingListCard(
                             color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    AppText(
-                        modifier = Modifier.padding(end = 8.dp),
-                        text = ReadRecordFormatter.formatDuration(book.readTime),
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.primary
-                    )
                 }
             }
         }
@@ -300,7 +360,16 @@ fun ReadingCalendarCard(
             .adaptiveHorizontalPadding(vertical = 8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            AppText("读书日历", style = LegadoTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                AppText("读书日历", style = LegadoTheme.typography.titleMedium)
+            }
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth()) {

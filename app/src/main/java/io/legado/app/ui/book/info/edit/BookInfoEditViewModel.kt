@@ -19,7 +19,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.inputStream
-import io.legado.app.utils.splitNotBlank
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,6 +32,7 @@ data class BookInfoEditUiState(
     val intro: String? = null,
     val remark: String? = null,
     val kindList: List<String> = emptyList(),
+    val originalKindList: List<String> = emptyList(),
     val selectedType: String = "文本",
     val bookTypes: List<String> = listOf("文本", "音频", "图片"),
     val fixedType: Boolean = false,
@@ -53,19 +53,26 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     it.isAudio -> 1
                     else -> 0
                 }
+                val kinds =
+                    it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty()
                 _uiState.value = BookInfoEditUiState(
                     name = it.name,
                     author = it.author,
                     coverUrl = it.getDisplayCover(),
                     intro = it.getDisplayIntro(),
                     remark = it.remark,
-                    kindList = it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty(),
+                    kindList = kinds,
+                    originalKindList = kinds,
                     selectedType = _uiState.value.bookTypes[selectedTypeIndex],
                     fixedType = it.config.fixedType,
                     book = it
                 )
             }
         }
+    }
+
+    fun resetKinds() {
+        _uiState.value = _uiState.value.copy(kindList = _uiState.value.originalKindList.toList())
     }
 
     fun onNameChange(name: String) {

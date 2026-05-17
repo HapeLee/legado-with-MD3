@@ -90,7 +90,6 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
 
         val pageUrl = nextPageUrl
         if (pageUrl.isNullOrEmpty()) {
-            _loadState.value = currentState.copy(hasMore = false)
             return
         }
 

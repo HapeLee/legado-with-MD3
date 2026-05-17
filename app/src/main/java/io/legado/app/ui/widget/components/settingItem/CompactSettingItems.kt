@@ -48,7 +48,7 @@ fun CompactDropdownSettingItem(
     entryValues: Array<String>,
     description: String? = null,
     imageVector: ImageVector? = null,
-    color: Color? = LegadoTheme.colorScheme.surface,
+    color: Color? = LegadoTheme.colorScheme.onSheetContent,
     shape: Shape = MaterialTheme.shapes.small,
     onValueChange: (String) -> Unit
 ) {
@@ -126,7 +126,7 @@ fun CompactSliderSettingItem(
     steps: Int = 0,
     description: String? = null,
     imageVector: ImageVector? = null,
-    color: Color? = MaterialTheme.colorScheme.surface,
+    color: Color? = LegadoTheme.colorScheme.onSheetContent,
     shape: Shape = MaterialTheme.shapes.small,
     onValueChange: (Float) -> Unit
 ) {
@@ -222,7 +222,7 @@ fun CompactSwitchSettingItem(
     checked: Boolean,
     description: String? = null,
     imageVector: ImageVector? = null,
-    color: Color? = MaterialTheme.colorScheme.surface,
+    color: Color? = LegadoTheme.colorScheme.onSheetContent,
     shape: Shape = MaterialTheme.shapes.small,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit
@@ -260,7 +260,7 @@ fun CompactClickableSettingItem(
     title: String,
     description: String? = null,
     imageVector: ImageVector? = null,
-    color: Color? = MaterialTheme.colorScheme.surface,
+    color: Color? = LegadoTheme.colorScheme.onSheetContent,
     shape: Shape = MaterialTheme.shapes.small,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit

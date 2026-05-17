@@ -4,8 +4,8 @@ import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
@@ -42,9 +42,6 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,29 +60,30 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
+import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.book.SearchBookGridItem
+import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.button.AnimatedTextButton
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
+import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
+import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.book.SearchBookGridItem
-import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 
@@ -136,7 +134,6 @@ fun ExploreShowScreen(
     }
 
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val pullToRefreshState = rememberPullToRefreshState()
 
     val hazeState = remember { HazeState() }
     val shouldLoadMoreList = remember {
@@ -409,20 +406,11 @@ fun ExploreShowScreen(
             )
         }
     ) { paddingValues ->
-        PullToRefreshBox(
+        AppPullToRefresh(
             modifier = Modifier.fillMaxSize(),
             isRefreshing = isRefreshing,
-            state = pullToRefreshState,
             onRefresh = { viewModel.loadMore(isRefresh = true) },
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isRefreshing,
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = paddingValues.calculateTopPadding())
-                )
-            }
+            topPadding = paddingValues.calculateTopPadding()
         ) {
             Crossfade(
                 targetState = isGridMode,

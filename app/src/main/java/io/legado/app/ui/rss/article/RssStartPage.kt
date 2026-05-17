@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -78,8 +78,8 @@ fun RssStartPage(
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         if (isLoading && progress < 100) {
-            LinearProgressIndicator(
-                progress = { progress / 100f },
+            AppLinearProgressIndicator(
+                progress = progress / 100f,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp)

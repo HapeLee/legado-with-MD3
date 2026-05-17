@@ -607,12 +607,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val paddingDisplayCutouts
         get() = appCtx.getPrefBoolean(PreferKey.paddingDisplayCutouts, false)
 
-    val delayBookLoadEnable
-        get() = appCtx.getPrefBoolean(PreferKey.delayBookLoadEnable, true)
-
-    val sharedElementEnterTransitionEnable
-        get() = appCtx.getPrefBoolean(PreferKey.sharedElementEnterTransitionEnable, false)
-
     var searchScope: String
         get() = appCtx.getPrefString("searchScope") ?: ""
         set(value) {

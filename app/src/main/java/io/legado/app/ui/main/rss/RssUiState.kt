@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.rss
 
+import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList
@@ -7,6 +8,7 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
 
+@Stable
 data class RssUiState(
     override val items: ImmutableList<RssSource> = persistentListOf(),
     override val selectedIds: ImmutableSet<String> = persistentSetOf(),

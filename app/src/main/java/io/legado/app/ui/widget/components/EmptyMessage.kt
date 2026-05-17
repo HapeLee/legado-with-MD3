@@ -9,8 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material3.ContainedLoadingIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +28,6 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.button.SmallTonalTextButton
 import io.legado.app.ui.widget.components.text.AnimatedTextLine
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun EmptyMessage(
     message: String,
@@ -58,7 +56,7 @@ fun EmptyMessage(
             label = "LoadingStateAnimation"
         ) { loading ->
             if (loading) {
-                ContainedLoadingIndicator()
+                AppContainedLoadingIndicator()
             } else {
                 AnimatedTextLine(
                     text = currentFace,

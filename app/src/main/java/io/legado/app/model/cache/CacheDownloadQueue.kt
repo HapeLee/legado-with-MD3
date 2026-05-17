@@ -172,7 +172,21 @@ class CacheDownloadQueue {
         val indexCount = indices.count {
             !emittedIndices.contains(it) && !removedIndices.contains(it)
         }
-        val rangeCount = ranges.sumOf { it.remainingCount(emittedIndices, removedIndices) }
+        val rangeCount = if (ranges.size <= 1) {
+            ranges.sumOf { it.remainingCount(emittedIndices, removedIndices) }
+        } else {
+            val seen = mutableSetOf<Int>()
+            ranges.forEach { cursor ->
+                var i = cursor.next
+                while (i <= cursor.end) {
+                    if (!emittedIndices.contains(i) && !removedIndices.contains(i)) {
+                        seen.add(i)
+                    }
+                    i++
+                }
+            }
+            seen.size
+        }
         return indexCount + rangeCount
     }
 

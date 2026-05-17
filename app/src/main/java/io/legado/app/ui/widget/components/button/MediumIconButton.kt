@@ -93,7 +93,8 @@ fun MediumOutlinedIconButton(
         ) {
             Icon(
                 imageVector = imageVector,
-                contentDescription = contentDescription
+                contentDescription = contentDescription,
+                tint = LegadoTheme.colorScheme.onSurface
             )
         }
     }

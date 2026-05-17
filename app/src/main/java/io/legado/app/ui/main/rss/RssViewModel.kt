@@ -116,6 +116,26 @@ class RssViewModel(
         }
     }
 
+    fun openSourceEdit(rssSource: RssSource) {
+        _effects.tryEmit(RssEffect.OpenSourceEdit(rssSource.sourceUrl))
+    }
+
+    fun login(rssSource: RssSource) {
+        _effects.tryEmit(RssEffect.Login(rssSource.sourceUrl))
+    }
+
+    fun openRuleSub() {
+        _effects.tryEmit(RssEffect.OpenRuleSub)
+    }
+
+    fun openFavorites() {
+        _effects.tryEmit(RssEffect.OpenFavorites)
+    }
+
+    fun openSourceManage() {
+        _effects.tryEmit(RssEffect.OpenSourceManage)
+    }
+
     fun openSource(rssSource: RssSource) {
         if (!rssSource.singleUrl) {
             _effects.tryEmit(RssEffect.OpenSort(rssSource.sourceUrl, null, null))
@@ -186,4 +206,9 @@ sealed interface RssEffect {
     ) : RssEffect
 
     data class OpenExternalUrl(val url: String) : RssEffect
+    data class OpenSourceEdit(val sourceUrl: String) : RssEffect
+    data class Login(val sourceUrl: String) : RssEffect
+    data object OpenRuleSub : RssEffect
+    data object OpenFavorites : RssEffect
+    data object OpenSourceManage : RssEffect
 }

@@ -1,5 +1,6 @@
 package io.legado.app.domain.usecase.readRecord
 
+import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.ui.book.readRecord.ReadBookRanking
@@ -16,7 +17,8 @@ class GetReadRecordOverviewUseCase {
         period: ReadPeriod,
         refDate: LocalDate,
         details: List<ReadRecordDetail>,
-        latestRecords: List<ReadRecord>
+        latestRecords: List<ReadRecord>,
+        allBooks: List<Book>
     ): ReadRecordOverviewUiState {
         val (startDate, endDate) = getPeriodRange(period, refDate)
 
@@ -41,10 +43,23 @@ class GetReadRecordOverviewUseCase {
         val totalBooks = periodBooks.size
 
         val shelfBooksMap = latestRecords.associateBy { it.bookName to it.bookAuthor }
+        val allShelfBooksMap = allBooks.associateBy { it.name to it.author }
+        
         var readingCount = 0
+        var finishedCount = 0
+        
         periodBooks.keys.forEach { key ->
             if (shelfBooksMap.containsKey(key)) {
                 readingCount++
+            }
+            // 判断是否读完
+            allShelfBooksMap[key]?.let { book ->
+                if (book.totalChapterNum > 0 &&
+                    book.durChapterIndex >= book.totalChapterNum - 1 &&
+                    book.durChapterPos != 0
+                ) {
+                    finishedCount++
+                }
             }
         }
 
@@ -122,7 +137,7 @@ class GetReadRecordOverviewUseCase {
             totalTime = totalTime,
             readingDays = readingDays,
             totalBooks = totalBooks,
-            finishedBooks = 0, // Placeholder
+            finishedBooks = finishedCount,
             readingBooks = readingCount,
             totalWords = totalWords,
             dailyTimeData = dailyTimeData,

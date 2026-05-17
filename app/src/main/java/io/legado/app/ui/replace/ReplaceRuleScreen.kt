@@ -19,8 +19,6 @@ import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import io.legado.app.ui.widget.components.AppFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHostState
@@ -52,6 +50,7 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.ActionItem
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.GroupManageBottomSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -335,10 +334,9 @@ fun ReplaceRuleScreen(
                 onClick = {
                     onNavigateToEdit(ReplaceEditRoute(id = -1))
                 },
-                tooltipText = "Localized description"
-            ) {
-                AppIcon(Icons.Default.Add, contentDescription = "Add Rule")
-            }
+                tooltipText = stringResource(R.string.add),
+                icon = Icons.Default.Add
+            )
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
@@ -456,4 +454,3 @@ fun ReplaceRuleScreen(
         }
     }
 }
-

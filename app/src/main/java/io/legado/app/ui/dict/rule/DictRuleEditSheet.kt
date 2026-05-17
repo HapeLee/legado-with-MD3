@@ -35,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.DictRule
 import io.legado.app.ui.widget.components.AppFloatingActionButton
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
@@ -161,10 +160,9 @@ fun DictRuleEditSheet(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                AppIcon(Icons.Default.Save, contentDescription = "Save")
-            }
+                    .padding(16.dp),
+                icon = Icons.Default.Save
+            )
         }
     }
 }
