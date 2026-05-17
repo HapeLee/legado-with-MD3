@@ -89,7 +89,7 @@ object TranslationConfig {
 
 Only select the most common and important terms (max 10) to include in the dictionary.
 
-Output format as follows, IMPORTANT, **dictionary** part must begin with english word **[dictionary]**, MUST NOT start with any other words. **resul** part must begin with english word **[resul]**,  MUST NOT start with any other words:
+Output format as follows, IMPORTANT, **dictionary** part must begin with english word **[dictionary]**, MUST NOT start with any other words. **result** part must begin with english word **[resul]**,  MUST NOT start with any other words:
 <example>
 [dictionary]
 Jack -> 杰克
