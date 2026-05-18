@@ -4,8 +4,8 @@ package io.legado.app.ui.book.read
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Bundle
+import android.os.Looper
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.InputDevice
@@ -22,8 +22,6 @@ import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.get
 import androidx.core.view.size
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.transition.platform.MaterialContainerTransform
-import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import com.script.rhino.runScriptWithContext
 import io.legado.app.BuildConfig
@@ -84,14 +82,14 @@ import io.legado.app.ui.book.read.config.FontConfigDialog.Companion.TEXT_COLOR
 import io.legado.app.ui.book.read.config.FontSelectDialog
 import io.legado.app.ui.book.read.config.ReadAloudDialog
 import io.legado.app.ui.book.read.config.ReadStyleDialog
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_HEADER_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_FOOTER_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
-import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TITLE_COLOR
 import io.legado.app.ui.book.read.config.RegexColorConfigDialog
 import io.legado.app.ui.book.read.config.RegexColorConfigDialog.Companion.REGEX_RULE_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.A_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.B_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_DIVIDER_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_FOOTER_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TIP_HEADER_COLOR
+import io.legado.app.ui.book.read.config.TipConfigDialog.Companion.TITLE_COLOR
 import io.legado.app.ui.book.read.config.ToolButtonConfigDialog
 import io.legado.app.ui.book.read.config.UnderlineConfigDialog.Companion.U_COLOR
 import io.legado.app.ui.book.read.page.ContentTextView
@@ -99,8 +97,8 @@ import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
+import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.searchContent.SearchContentActivity
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
@@ -139,11 +137,9 @@ import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.sysScreenOffTime
-import io.legado.app.utils.themeColor
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
@@ -295,31 +291,9 @@ class ReadBookActivity : BaseReadBookActivity(),
     private var justInitData: Boolean = false
     private var syncDialog: AlertDialog? = null
 
-    private val delayMillis: Long = 500
-    private var hasLoadedBook = false
-
-    private fun ensureLoadBook() {
-        if (!hasLoadedBook) {
-            hasLoadedBook = true
-            loadBook()
-        }
-    }
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
-        setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-        setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-        val transform = MaterialContainerTransform().apply {
-            addTarget(binding.root)
-            scrimColor = Color.TRANSPARENT
-            duration = delayMillis
-        }
-        window.sharedElementEnterTransition = transform
-        window.sharedElementReturnTransition = transform
-
         super.onCreate(savedInstanceState)
-
-        binding.rootView.transitionName = intent.getStringExtra("transitionName")
 
         upScreenTimeOut()
         ReadBook.register(this)
@@ -364,13 +338,12 @@ class ReadBookActivity : BaseReadBookActivity(),
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-        if (!AppConfig.sharedElementEnterTransitionEnable || !AppConfig.delayBookLoadEnable) {
-            ensureLoadBook()
+        viewModel.initReadBookConfig(intent)
+        Looper.myQueue().addIdleHandler {
+            viewModel.initData(intent)
+            false
         }
-        //虽然很扯但有用
-        binding.rootView.postDelayed({
-            ensureLoadBook()
-        }, delayMillis)
+        justInitData = true
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -486,16 +459,6 @@ class ReadBookActivity : BaseReadBookActivity(),
         menu.findItem(R.id.menu_same_title_removed)?.isChecked =
             ReadBook.curTextChapter?.sameTitleRemoved == true
         return super.onMenuOpened(featureId, menu)
-    }
-
-    private fun loadBook() {
-        lifecycleScope.launch(Dispatchers.Default) {
-            viewModel.initReadBookConfig(intent)
-            viewModel.initData(intent)
-            withContext(Main) {
-                justInitData = true
-            }
-        }
     }
 
     /**

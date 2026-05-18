@@ -6,15 +6,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.material3.ContainedLoadingIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.TextButton
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import io.legado.app.ui.widget.components.text.AppText
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AnimatedTextButton(
     isLoading: Boolean,
@@ -36,7 +34,7 @@ fun AnimatedTextButton(
             label = "ButtonLoading"
         ) { loading ->
             if (loading) {
-                ContainedLoadingIndicator()
+                AppContainedLoadingIndicator()
             } else {
                 AppText(text)
             }

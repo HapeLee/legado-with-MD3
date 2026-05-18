@@ -2,24 +2,25 @@ package io.legado.app.ui.main
 
 import android.app.Application
 import android.content.SharedPreferences
+import androidx.compose.runtime.Stable
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.PreferKey
 import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
-import io.legado.app.ui.config.mainConfig.MainConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefString
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.toImmutableList
 
 class MainViewModel(
     application: Application,
@@ -87,7 +88,7 @@ class MainViewModel(
     fun setNavExtended(expanded: Boolean) {
         if (_uiState.value.navExtended == expanded) return
         _uiState.update { it.copy(navExtended = expanded) }
-        MainConfig.navExtended = expanded
+        ThemeConfig.navExtended = expanded
     }
 
     fun onPrefClickEvent(event: PrefClickEvent) {
@@ -112,6 +113,10 @@ class MainViewModel(
 
             PrefClickEvent.ExitApp -> _effects.tryEmit(MainEffect.ExitApp)
 
+            PrefClickEvent.OpenReadRecord -> _effects.tryEmit(MainEffect.NavigateToReadRecord)
+
+            PrefClickEvent.OpenAbout -> _effects.tryEmit(MainEffect.NavigateToAbout)
+
             else -> Unit
         }
     }
@@ -128,8 +133,11 @@ sealed interface MainEffect {
     ) : MainEffect
 
     data object ExitApp : MainEffect
+    data object NavigateToReadRecord : MainEffect
+    data object NavigateToAbout : MainEffect
 }
 
+@Stable
 data class MainUiState(
     val destinations: ImmutableList<MainDestination> = MainDestination.mainDestinations,
     val defaultHomePage: String = "bookshelf",

@@ -39,7 +39,7 @@ private fun BaseCard(
     alpha: Float = 1f,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.secondaryContainer)
+    val resolvedContainerColor = (containerColor ?: LegadoTheme.colorScheme.surfaceContainer)
         .let { it.copy(alpha = it.alpha * alpha) }
     val isTransparent = containerColor == Color.Transparent
     val shape = RoundedCornerShape(cornerRadius)

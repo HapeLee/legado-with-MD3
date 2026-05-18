@@ -42,6 +42,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.ui.res.stringResource
+import io.legado.app.R
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -162,10 +164,9 @@ fun ReplaceEditScreen(
                         alignment = Alignment.BottomEnd,
                     ),
                 onClick = { viewModel.save(onSaveSuccess) },
-                tooltipText = "添加"
-            ) {
-                AppIcon(Icons.Default.Save, contentDescription = "保存")
-            }
+                tooltipText = stringResource(R.string.action_save),
+                icon = Icons.Default.Save
+            )
         }, contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Box(

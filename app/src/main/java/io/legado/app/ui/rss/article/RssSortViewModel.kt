@@ -1,7 +1,6 @@
 package io.legado.app.ui.rss.article
 
 import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.MutableLiveData
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
@@ -21,23 +20,15 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
     val isGridLayout get() = rssSource?.articleStyle == 2
     val isWaterLayout get() = rssSource?.articleStyle == 3
 
-    fun initData(intent: Intent, finally: () -> Unit) {
-        initData(intent.getStringExtra("url") ?: intent.getStringExtra("sourceUrl"), finally)
-    }
-
-    fun initData(sourceUrl: String?, finally: () -> Unit) {
-        execute {
-            url = sourceUrl
-            url?.let { sourceUrl ->
-                rssSource = appDb.rssSourceDao.getByKey(sourceUrl)
-                rssSource?.let {
-                    titleLiveData.postValue(it.sourceName)
-                } ?: let {
-                    rssSource = RssSource(sourceUrl = sourceUrl)
-                }
+    fun initDataSource(sourceUrl: String?) {
+        url = sourceUrl
+        url?.let { src ->
+            rssSource = appDb.rssSourceDao.getByKey(src)
+            rssSource?.let {
+                titleLiveData.postValue(it.sourceName)
+            } ?: run {
+                rssSource = RssSource(sourceUrl = src)
             }
-        }.onFinally {
-            finally()
         }
     }
 
@@ -80,12 +71,8 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun clearSortCache(onFinally: () -> Unit) {
-        execute {
-            rssSource?.removeSortCache()
-        }.onFinally {
-            onFinally.invoke()
-        }
+    suspend fun clearSortCache() {
+        rssSource?.removeSortCache()
     }
 
     fun getRecords(): List<RssReadRecord> {

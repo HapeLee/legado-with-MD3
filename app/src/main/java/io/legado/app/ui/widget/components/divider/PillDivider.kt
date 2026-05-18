@@ -27,12 +27,18 @@ fun PillDivider(
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     if (isMiuix) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
-                .padding(vertical = 2.dp)
-                .height(4.dp)
-                .background(MiuixTheme.colorScheme.dividerLine)
-        )
+                .padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(thickness)
+                    .background(MiuixTheme.colorScheme.dividerLine)
+            )
+        }
     } else {
         Box(
             modifier = modifier

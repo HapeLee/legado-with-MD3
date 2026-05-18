@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -52,10 +51,10 @@ fun NavIconManageSheet(
     var activeDest by remember { mutableStateOf<String?>(null) }
 
     val destinations = listOf(
-        NavIconDestination("bookshelf", "书架", MainConfig.navIconBookshelf) { MainConfig.navIconBookshelf = it },
-        NavIconDestination("explore", "发现", MainConfig.navIconExplore) { MainConfig.navIconExplore = it },
-        NavIconDestination("rss", "订阅", MainConfig.navIconRss) { MainConfig.navIconRss = it },
-        NavIconDestination("my", "我的", MainConfig.navIconMy) { MainConfig.navIconMy = it },
+        NavIconDestination("bookshelf", "书架", ThemeConfig.navIconBookshelf) { ThemeConfig.navIconBookshelf = it },
+        NavIconDestination("explore", "发现", ThemeConfig.navIconExplore) { ThemeConfig.navIconExplore = it },
+        NavIconDestination("rss", "订阅", ThemeConfig.navIconRss) { ThemeConfig.navIconRss = it },
+        NavIconDestination("my", "我的", ThemeConfig.navIconMy) { ThemeConfig.navIconMy = it },
     )
 
     val selectImage = rememberLauncherForActivityResult(

@@ -44,8 +44,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomThemeScreen(
-    onBackClick: () -> Unit,
-    onNavigateToThemePack: () -> Unit
+    onBackClick: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var showColorPicker by remember { mutableStateOf(false) }
@@ -73,7 +72,7 @@ fun CustomThemeScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = stringResource(R.string.custom_theme),
+                title = "自定义颜色",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -296,17 +295,6 @@ fun CustomThemeScreen(
                             onValueChange = { ThemeConfig.materialVersion = it }
                         )
                     }
-                }
-            }
-
-            // Theme Pack entry
-            item {
-                SplicedColumnGroup {
-                    ClickableSettingItem(
-                        title = stringResource(R.string.theme_pack),
-                        description = stringResource(R.string.theme_pack_s),
-                        onClick = onNavigateToThemePack
-                    )
                 }
             }
 

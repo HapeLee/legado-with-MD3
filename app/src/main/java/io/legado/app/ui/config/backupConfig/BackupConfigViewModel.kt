@@ -46,10 +46,10 @@ class BackupConfigViewModel(
         }
     }
 
-    fun backup(backupPath: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    fun backup(backupPath: String, mode: String = "both", onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                Backup.backupLocked(appCtx, backupPath)
+                Backup.backupLocked(appCtx, backupPath, mode)
                 withContext(Dispatchers.Main) {
                     onSuccess()
                 }

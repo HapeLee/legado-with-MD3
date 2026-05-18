@@ -6,6 +6,7 @@ import android.app.Activity
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,26 +53,25 @@ fun RssSortRouteScreen(
     var showReadRecordSheet by remember { mutableStateOf(false) }
     var readRecords by remember { mutableStateOf<List<RssReadRecord>>(emptyList()) }
 
-    fun reloadSourceState() {
-        viewModel.initData(sourceUrl) {
-            scope.launch {
-                sortList = viewModel.loadSorts()
-                articleStyle = viewModel.currentArticleStyle()
-                screenTitle = viewModel.rssSource?.sourceName.orEmpty()
-                redirectPolicy = RedirectPolicy.fromString(viewModel.rssSource?.redirectPolicy)
-            }
+    suspend fun reloadSourceState() {
+        withContext(Dispatchers.IO) {
+            viewModel.initDataSource(sourceUrl)
         }
+        sortList = viewModel.loadSorts()
+        articleStyle = viewModel.currentArticleStyle()
+        screenTitle = viewModel.rssSource?.sourceName.orEmpty()
+        redirectPolicy = RedirectPolicy.fromString(viewModel.rssSource?.redirectPolicy)
     }
 
     val editSourceResult = rememberLauncherForActivityResult(
         StartActivityContract(RssSourceEditActivity::class.java)
     ) {
         if (it.resultCode == Activity.RESULT_OK) {
-            reloadSourceState()
+            scope.launch { reloadSourceState() }
         }
     }
 
-    androidx.compose.runtime.LaunchedEffect(sourceUrl) {
+    LaunchedEffect(sourceUrl) {
         reloadSourceState()
     }
 
@@ -91,8 +91,9 @@ fun RssSortRouteScreen(
             }
         },
         onRefreshSort = {
-            viewModel.clearSortCache {
-                scope.launch { sortList = viewModel.loadSorts() }
+            scope.launch {
+                viewModel.clearSortCache()
+                sortList = viewModel.loadSorts()
             }
         },
         onSetSourceVariable = {

@@ -2,6 +2,7 @@ package io.legado.app.ui.config
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -21,7 +22,12 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 interface PrefDelegate<T> : ReadWriteProperty<Any?, T> {
+    val state: State<T>
     fun dispose()
+}
+
+class PrefStateDelegate<T>(private val delegate: PrefDelegate<T>) : ReadWriteProperty<Any?, T> by delegate {
+    val state: State<T> get() = delegate.state
 }
 
 fun <T> prefDelegate(
@@ -32,6 +38,7 @@ fun <T> prefDelegate(
 ): PrefDelegate<T> {
     return object : PrefDelegate<T>, SharedPreferences.OnSharedPreferenceChangeListener, DefaultLifecycleObserver {
         private var _value: MutableState<T> = mutableStateOf(readInitialValue())
+        override val state: State<T> get() = _value
 
         init {
             if (lifecycleOwner != null) {
@@ -98,4 +105,14 @@ fun <T> prefDelegate(
             }
         }
     }
+}
+
+fun <T> prefStateDelegate(
+    key: String,
+    defaultValue: T,
+    lifecycleOwner: LifecycleOwner? = null,
+    onValueChange: ((T) -> Unit)? = null
+): PrefStateDelegate<T> {
+    val delegate = prefDelegate(key, defaultValue, lifecycleOwner, onValueChange)
+    return PrefStateDelegate(delegate)
 }

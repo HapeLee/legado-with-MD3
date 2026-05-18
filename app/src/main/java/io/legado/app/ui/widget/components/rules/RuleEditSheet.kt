@@ -164,10 +164,9 @@ fun <T> RuleEditSheet(
                 onClick = { onSave(getCurrentEntity()) },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-            ) {
-                AppIcon(Icons.Default.Save, contentDescription = "Save")
-            }
+                    .padding(16.dp),
+                icon = Icons.Default.Save
+            )
         }
     }
 }

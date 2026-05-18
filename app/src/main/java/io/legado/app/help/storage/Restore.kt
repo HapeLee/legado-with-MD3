@@ -28,13 +28,13 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.upType
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.OldThemeConfig
-import io.legado.app.help.config.PersonalizationThemeConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.BookCover
 import io.legado.app.model.localBook.LocalBook
@@ -58,6 +58,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileInputStream
@@ -65,8 +67,9 @@ import java.io.FileInputStream
 /**
  * 恢复
  */
-object Restore {
+object Restore : KoinComponent {
 
+    private val settingsRepository: SettingsRepository by inject()
     private val mutex = Mutex()
 
     private const val TAG = "Restore"
@@ -130,13 +133,22 @@ object Restore {
             appDb.bookDao.insert(*newBooks.toTypedArray())
         }
         fileToListT<Bookmark>(path, "bookmark.json")?.let {
-            appDb.bookmarkDao.insert(*it.toTypedArray())
+            try {
+                appDb.bookmarkDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<BookGroup>(path, "bookGroup.json")?.let {
-            appDb.bookGroupDao.insert(*it.toTypedArray())
+            try {
+                appDb.bookGroupDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<BookSource>(path, "bookSource.json")?.let {
-            appDb.bookSourceDao.insert(*it.toTypedArray())
+            try {
+                appDb.bookSourceDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         } ?: run {
             val bookSourceFile = File(path, "bookSource.json")
             if (bookSourceFile.exists()) {
@@ -145,54 +157,92 @@ object Restore {
             }
         }
         fileToListT<RssSource>(path, "rssSources.json")?.let {
-            appDb.rssSourceDao.insert(*it.toTypedArray())
+            try {
+                appDb.rssSourceDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<RssStar>(path, "rssStar.json")?.let {
-            appDb.rssStarDao.insert(*it.toTypedArray())
+            try {
+                appDb.rssStarDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<ReplaceRule>(path, "replaceRule.json")?.let {
-            appDb.replaceRuleDao.insert(*it.toTypedArray())
+            try {
+                appDb.replaceRuleDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<SearchKeyword>(path, "searchHistory.json")?.let {
-            appDb.searchKeywordDao.insert(*it.toTypedArray())
+            try {
+                appDb.searchKeywordDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<RuleSub>(path, "sourceSub.json")?.let {
-            appDb.ruleSubDao.insert(*it.toTypedArray())
+            try {
+                appDb.ruleSubDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<TxtTocRule>(path, "txtTocRule.json")?.let {
-            appDb.txtTocRuleDao.insert(*it.toTypedArray())
+            try {
+                appDb.txtTocRuleDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<HttpTTS>(path, "httpTTS.json")?.let {
-            appDb.httpTTSDao.insert(*it.toTypedArray())
+            try {
+                appDb.httpTTSDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<DictRule>(path, "dictRule.json")?.let {
-            appDb.dictRuleDao.insert(*it.toTypedArray())
+            try {
+                appDb.dictRuleDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<KeyboardAssist>(path, "keyboardAssists.json")?.let {
-            appDb.keyboardAssistsDao.insert(*it.toTypedArray())
+            try {
+                appDb.keyboardAssistsDao.insert(*it.toTypedArray())
+            } catch (_: SQLiteConstraintException) {
+            }
         }
         fileToListT<ReadRecord>(path, "readRecord.json")?.let {
             it.forEach { readRecord ->
-                //判断是不是本机记录
                 if (readRecord.deviceId != androidId) {
-                    appDb.readRecordDao.insert(readRecord)
+                    try {
+                        appDb.readRecordDao.insert(readRecord)
+                    } catch (_: SQLiteConstraintException) {
+                    }
                 } else {
                     val time = appDb.readRecordDao
                         .getReadTime(readRecord.deviceId, readRecord.bookName, readRecord.bookAuthor)
                     if (time == null || time < readRecord.readTime) {
-                        appDb.readRecordDao.insert(readRecord)
+                        try {
+                            appDb.readRecordDao.insert(readRecord)
+                        } catch (_: SQLiteConstraintException) {
+                        }
                     }
                 }
             }
         }
         fileToListT<ReadRecordDetail>(path, "readRecordDetail.json")?.let {
             it.forEach { detail ->
-                appDb.readRecordDao.insertDetail(detail)
+                try {
+                    appDb.readRecordDao.insertDetail(detail)
+                } catch (_: SQLiteConstraintException) {
+                }
             }
         }
         fileToListT<ReadRecordSession>(path, "readRecordSession.json")?.let {
             it.forEach { session ->
-                appDb.readRecordDao.insertSession(session)
+                try {
+                    appDb.readRecordDao.insertSession(session)
+                } catch (_: SQLiteConstraintException) {
+                }
             }
         }
         File(path, "servers.json").takeIf {
@@ -203,7 +253,10 @@ object Restore {
                 json = aes.decryptStr(json)
             }
             GSON.fromJsonArray<Server>(json).getOrNull()?.let {
-                appDb.serverDao.insert(*it.toTypedArray())
+                try {
+                    appDb.serverDao.insert(*it.toTypedArray())
+                } catch (_: SQLiteConstraintException) {
+                }
             }
         }?.onFailure {
             AppLog.put("恢复服务器配置出错\n${it.localizedMessage}", it)
@@ -234,16 +287,6 @@ object Restore {
         }?.onFailure {
             AppLog.put("恢复封面规则出错\n${it.localizedMessage}", it)
         }
-        if (!BackupConfig.ignorePersonalizationThemeConfig) {
-            File(path, PersonalizationThemeConfig.configFileName).takeIf {
-                it.exists()
-            }?.runCatching {
-                val json = readText()
-                PersonalizationThemeConfig.fromJson(json)
-            }?.onFailure {
-                AppLog.put("恢复个性化主题出错\n${it.localizedMessage}", it)
-            }
-        }
         if (!BackupConfig.ignoreReadConfig) {
             //恢复阅读界面配置
             File(path, ReadBookConfig.configFileName).takeIf {
@@ -267,36 +310,40 @@ object Restore {
         }
         //AppWebDav.downBgs()
         appCtx.getSharedPreferences(path, "config")?.all?.let { map ->
+            val finalMap = mutableMapOf<String, Any>()
             appCtx.defaultSharedPreferences.edit {
-
                 map.forEach { (key, value) ->
                     if (BackupConfig.keyIsNotIgnore(key)) {
                         when (key) {
                             PreferKey.webDavPassword -> {
-                                kotlin.runCatching {
+                                val password = kotlin.runCatching {
                                     aes.decryptStr(value.toString())
-                                }.getOrNull()?.let {
+                                }.getOrNull() ?: let {
+                                    if (appCtx.getPrefString(PreferKey.webDavPassword).isNullOrBlank()) {
+                                        value.toString()
+                                    } else null
+                                }
+                                password?.let {
                                     putString(key, it)
-                                } ?: let {
-                                    if (appCtx.getPrefString(PreferKey.webDavPassword)
-                                            .isNullOrBlank()
-                                    ) {
-                                        putString(key, value.toString())
-                                    }
+                                    finalMap[key] = it
                                 }
                             }
 
-                            else -> when (value) {
-                                is Int -> putInt(key, value)
-                                is Boolean -> putBoolean(key, value)
-                                is Long -> putLong(key, value)
-                                is Float -> putFloat(key, value)
-                                is String -> putString(key, value)
+                            else -> {
+                                when (value) {
+                                    is Int -> { putInt(key, value); finalMap[key] = value }
+                                    is Boolean -> { putBoolean(key, value); finalMap[key] = value }
+                                    is Long -> { putLong(key, value); finalMap[key] = value }
+                                    is Float -> { putFloat(key, value); finalMap[key] = value }
+                                    is String -> { putString(key, value); finalMap[key] = value }
+                                }
                             }
                         }
                     }
                 }
             }
+            // 同步恢复到 DataStore
+            settingsRepository.batchPutFromMap(finalMap)
         }
         ReadBookConfig.apply {
             comicStyleSelect = appCtx.getPrefInt(PreferKey.comicStyleSelect)

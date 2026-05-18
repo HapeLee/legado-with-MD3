@@ -101,7 +101,7 @@ class AudioPlayActivity :
     private var secondaryContainerFinalColor: Int = 0
     private var currentJob: Job? = null
     private var wrappedContext: Context? = null
-    private val lyricViewX by lazy { binding.lyricViewX }
+    // private val lyricViewX by lazy { binding.lyricViewX }
     private var lyricOn = false
     private var oldLyric: String? = null
 
@@ -530,7 +530,7 @@ class AudioPlayActivity :
                 binding.tvDurTime.setTextColor(color)
                 binding.tvAllTime.setTextColor(color)
                 // 更新歌词高亮颜色
-                binding.lyricViewX.setCurrentColor(color)
+                // binding.lyricViewX.setCurrentColor(color)
             }
         }
 
@@ -733,6 +733,7 @@ class AudioPlayActivity :
     }
 
     override fun upLyric(lyric: String?) {
+        /*
         if (oldLyric == lyric) return
         oldLyric = lyric
         if (lyric.isNullOrBlank()) {
@@ -776,10 +777,13 @@ class AudioPlayActivity :
                 upLyricP(AudioPlay.durChapterPos)
             }, 100)
         }
+        */
     }
 
     override fun upLyricP(position: Int) {
+        /*
         lyricViewX.updateTime(position.toLong(), false)
+        */
     }
 
     override fun addToBookshelf(book: Book, toc: List<BookChapter>) {

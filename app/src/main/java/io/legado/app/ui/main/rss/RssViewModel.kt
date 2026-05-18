@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
@@ -35,6 +36,7 @@ class RssViewModel(
     val effects = _effects.asSharedFlow()
 
     init {
+        _uiState.update { it.copy(isLoading = true) }
         initGroupData()
         initRssData()
     }
@@ -62,7 +64,10 @@ class RssViewModel(
             }
             .flowOn(IO)
             .onEach { sources ->
-                _uiState.update { state -> state.copy(items = sources.toImmutableList()) }
+                _uiState.update { state -> state.copy(items = sources.toImmutableList(), isLoading = false) }
+            }
+            .catch {
+                _uiState.update { it.copy(isLoading = false) }
             }
             .launchIn(viewModelScope)
     }
@@ -109,6 +114,26 @@ class RssViewModel(
         execute {
             rssRepository.disableSource(rssSource)
         }
+    }
+
+    fun openSourceEdit(rssSource: RssSource) {
+        _effects.tryEmit(RssEffect.OpenSourceEdit(rssSource.sourceUrl))
+    }
+
+    fun login(rssSource: RssSource) {
+        _effects.tryEmit(RssEffect.Login(rssSource.sourceUrl))
+    }
+
+    fun openRuleSub() {
+        _effects.tryEmit(RssEffect.OpenRuleSub)
+    }
+
+    fun openFavorites() {
+        _effects.tryEmit(RssEffect.OpenFavorites)
+    }
+
+    fun openSourceManage() {
+        _effects.tryEmit(RssEffect.OpenSourceManage)
     }
 
     fun openSource(rssSource: RssSource) {
@@ -181,4 +206,9 @@ sealed interface RssEffect {
     ) : RssEffect
 
     data class OpenExternalUrl(val url: String) : RssEffect
+    data class OpenSourceEdit(val sourceUrl: String) : RssEffect
+    data class Login(val sourceUrl: String) : RssEffect
+    data object OpenRuleSub : RssEffect
+    data object OpenFavorites : RssEffect
+    data object OpenSourceManage : RssEffect
 }

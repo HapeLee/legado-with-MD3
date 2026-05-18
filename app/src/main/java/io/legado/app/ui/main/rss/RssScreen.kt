@@ -5,40 +5,37 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
-import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,17 +48,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.rss.favorites.RssFavoritesActivity
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.ui.rss.source.manage.RssSourceActivity
-import io.legado.app.ui.rss.subscription.RuleSubActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
-import io.legado.app.ui.widget.components.SourceIcon
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -77,7 +73,9 @@ import org.koin.androidx.compose.koinViewModel
 fun RssScreen(
     viewModel: RssViewModel = koinViewModel(),
     onOpenSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
-    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit
+    onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
+    onOpenRuleSub: () -> Unit,
+    onOpenFavorites: () -> Unit,
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -88,6 +86,8 @@ fun RssScreen(
     val currentContext by rememberUpdatedState(context)
     val currentOnOpenSort by rememberUpdatedState(onOpenSort)
     val currentOnOpenRead by rememberUpdatedState(onOpenRead)
+    val currentOnOpenRuleSub by rememberUpdatedState(onOpenRuleSub)
+    val currentOnOpenFavorites by rememberUpdatedState(onOpenFavorites)
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collectLatest { effect ->
@@ -103,20 +103,32 @@ fun RssScreen(
                 is RssEffect.OpenExternalUrl -> {
                     currentContext.openUrl(effect.url)
                 }
+
+                is RssEffect.OpenSourceEdit -> {
+                    currentContext.startActivity<RssSourceEditActivity> {
+                        putExtra("sourceUrl", effect.sourceUrl)
+                    }
+                }
+
+                is RssEffect.Login -> {
+                    currentContext.startActivity<SourceLoginActivity> {
+                        putExtra("type", "rssSource")
+                        putExtra("key", effect.sourceUrl)
+                    }
+                }
+
+                RssEffect.OpenRuleSub -> {
+                    currentOnOpenRuleSub()
+                }
+
+                RssEffect.OpenFavorites -> {
+                    currentOnOpenFavorites()
+                }
+
+                RssEffect.OpenSourceManage -> {
+                    currentContext.startActivity<RssSourceActivity>()
+                }
             }
-        }
-    }
-
-    val edit: (RssSource) -> Unit = { rssSource ->
-        context.startActivity<RssSourceEditActivity> {
-            putExtra("sourceUrl", rssSource.sourceUrl)
-        }
-    }
-
-    val login: (RssSource) -> Unit = { rssSource ->
-        context.startActivity<SourceLoginActivity> {
-            putExtra("type", "rssSource")
-            putExtra("key", rssSource.sourceUrl)
         }
     }
 
@@ -128,22 +140,10 @@ fun RssScreen(
         onSearchToggle = { viewModel.toggleSearchVisible(it) },
         onSearchQueryChange = { viewModel.search(it) },
         searchPlaceholder = stringResource(R.string.search_rss_source),
-        topBarActions = {
-            TopBarActionButton(
-                onClick = { context.startActivity<RuleSubActivity>() },
-                imageVector = Icons.Default.Subscriptions,
-                contentDescription = stringResource(R.string.rule_subscription)
-            )
-            TopBarActionButton(
-                onClick = { context.startActivity<RssFavoritesActivity>() },
-                imageVector = Icons.Default.Star,
-                contentDescription = stringResource(R.string.favorite)
-            )
-        },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 onClick = {
-                    context.startActivity<RssSourceActivity>()
+                    viewModel.openSourceManage()
                     dismiss()
                 },
                 text = stringResource(R.string.rss_feed_management),
@@ -177,16 +177,68 @@ fun RssScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    GlassCard(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.openRuleSub() }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(all = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            AppIcon(
+                                imageVector = Icons.Default.Subscriptions,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            AppText(
+                                text = stringResource(R.string.rule_subscription),
+                                style = LegadoTheme.typography.labelMediumEmphasized
+                            )
+                        }
+                    }
+                    GlassCard(
+                        modifier = Modifier.weight(1f),
+                        onClick = { viewModel.openFavorites() }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(all = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            AppIcon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            AppText(
+                                text = stringResource(R.string.favorite),
+                                style = LegadoTheme.typography.labelMediumEmphasized
+                            )
+                        }
+                    }
+                }
+            }
+
             items(uiState.items, key = { it.sourceUrl }) { source ->
                 RssSourceGridItem(
                     modifier = Modifier.animateItem(),
                     source = source,
                     onClick = { viewModel.openSource(source) },
                     onTop = { viewModel.topSource(source) },
-                    onEdit = { edit(source) },
+                    onEdit = { viewModel.openSourceEdit(source) },
                     onDelete = { sourceToDeleteUrl = source.sourceUrl },
                     onDisable = { viewModel.disable(source) },
-                    onLogin = { login(source) }
+                    onLogin = { viewModel.login(source) }
                 )
             }
         }

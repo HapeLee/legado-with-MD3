@@ -1,11 +1,11 @@
 package io.legado.app.ui.main.explore
 
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VerticalAlignTop
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -41,8 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -53,31 +52,31 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
-import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.login.SourceLoginActivity
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
-import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
 import io.legado.app.ui.widget.components.list.ListScaffold
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.startActivity
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -104,10 +103,12 @@ fun ExploreScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is ExploreEffect.ExecuteKindAction -> {
+                    val infoMap = getExploreInfoMap(effect.sourceUrl)
                     exploreKindUseCase.executeAction(
                         action = effect.kind.action,
                         title = effect.kind.title,
                         sourceUrl = effect.sourceUrl,
+                        infoMap = infoMap,
                         activity = activity,
                         onRefreshKinds = { viewModel.refreshExploreKinds(effect.sourceUrl) }
                     )
@@ -116,37 +117,12 @@ fun ExploreScreen(
         }
     }
 
-    val expandedHeader = remember(uiState.expandedId, uiState.listItems) {
-        val expandedId = uiState.expandedId ?: return@remember null
-        val headerIndex = uiState.listItems.indexOfFirst {
-            it is ExploreListItem.Header && it.source.bookSourceUrl == expandedId
-        }
-        val headerItem = uiState.listItems.getOrNull(headerIndex) as? ExploreListItem.Header
-        if (headerItem != null) {
-            ExpandedExploreHeader(
-                source = headerItem.source,
-                headerIndex = headerIndex,
-                contentRowCount = uiState.listItems.count {
-                    it is ExploreListItem.KindRow && it.sourceUrl == expandedId
-                }
-            )
-        } else {
-            null
-        }
-    }
-
-    LaunchedEffect(expandedHeader?.headerIndex) {
-        expandedHeader?.let { listState.animateScrollToItem(it.headerIndex) }
-    }
-
-    val stickyHeaderSource by remember(expandedHeader) {
+    val stickyHeaderSource by remember(uiState.listItems, uiState.items) {
         derivedStateOf {
-            val header = expandedHeader ?: return@derivedStateOf null
-            val lastContentIndex = header.headerIndex + header.contentRowCount
-            val firstVisible = listState.firstVisibleItemIndex
-
-            if (firstVisible in (header.headerIndex + 1)..lastContentIndex) {
-                header.source
+            val firstIndex = listState.firstVisibleItemIndex
+            val item = uiState.listItems.getOrNull(firstIndex)
+            if (item is ExploreListItem.KindRow) {
+                uiState.items.find { it.bookSourceUrl == item.sourceUrl }
             } else {
                 null
             }
@@ -201,13 +177,7 @@ fun ExploreScreen(
             ) {
                 items(
                     items = uiState.listItems,
-                    key = { it.key },
-                    contentType = {
-                        when (it) {
-                            is ExploreListItem.Header -> "source-header"
-                            is ExploreListItem.KindRow -> "kind-row"
-                        }
-                    }
+                    key = { it.key }
                 ) { listItem ->
                     when (listItem) {
                         is ExploreListItem.Header -> {
@@ -288,26 +258,17 @@ fun ExploreScreen(
                     .align(Alignment.TopStart)
                     .padding(top = paddingValues.calculateTopPadding() + 4.dp, start = 8.dp)
             ) { item ->
-                val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
-                val borderWidth = ThemeConfig.containerBorderWidth.dp
-                val borderColor = if (ThemeConfig.containerBorderColor != 0) {
-                    Color(ThemeConfig.containerBorderColor)
-                } else {
-                    LegadoTheme.colorScheme.outline
-                }
                 TextCard(
                     text = item.bookSourceName,
                     textStyle = LegadoTheme.typography.labelMediumEmphasized,
                     cornerRadius = 12.dp,
                     horizontalPadding = 12.dp,
                     verticalPadding = 8.dp,
-                    border = if (enableBorder) {
-                        BorderStroke(borderWidth, borderColor)
-                    } else null,
                     onClick = {
                         scope.launch {
-                            val index =
-                                uiState.items.indexOfFirst { it.bookSourceUrl == item.bookSourceUrl }
+                            val index = uiState.listItems.indexOfFirst {
+                                it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
+                            }
                             if (index >= 0) listState.animateScrollToItem(index)
                         }
                     }
@@ -331,11 +292,6 @@ fun ExploreScreen(
     )
 }
 
-private data class ExpandedExploreHeader(
-    val source: BookSourcePart,
-    val headerIndex: Int,
-    val contentRowCount: Int
-)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -374,23 +330,12 @@ fun ExploreSourceHeader(
         label = "CardColor"
     )
 
-    val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
-    val borderWidth = ThemeConfig.containerBorderWidth.dp
-    val borderColor = if (ThemeConfig.containerBorderColor != 0) {
-        Color(ThemeConfig.containerBorderColor)
-    } else {
-        LegadoTheme.colorScheme.outline
-    }
-
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         cornerRadius = 12.dp,
         containerColor = containerColor,
-        border = if (enableBorder) {
-            BorderStroke(borderWidth, borderColor)
-        } else null
     ) {
         ListItem(
             modifier = Modifier
@@ -410,20 +355,24 @@ fun ExploreSourceHeader(
                 )
             },
             trailingContent = {
-                if (loadingKinds) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .rotate(rotation)
-                            .size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                AnimatedContent(
+                    targetState = loadingKinds,
+                    label = "LoadingSwitch"
+                ) { loading ->
+                    if (loading) {
+                        AppContainedLoadingIndicator(
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .rotate(rotation)
+                                .size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     PillHeaderDivider(title = item.bookSourceName)

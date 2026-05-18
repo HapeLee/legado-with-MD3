@@ -11,6 +11,10 @@ class BookGroupRepository(private val bookGroupDao: BookGroupDao) {
         return bookGroupDao.flowAll()
     }
 
+    fun flowSelect(): Flow<List<BookGroup>> {
+        return bookGroupDao.flowSelect()
+    }
+
     fun flowShow(): Flow<List<BookGroup>> {
         return bookGroupDao.show.asFlow()
     }

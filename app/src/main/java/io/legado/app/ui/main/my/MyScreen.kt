@@ -3,20 +3,20 @@ package io.legado.app.ui.main.my
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -45,9 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.ui.about.AboutActivity
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
-import io.legado.app.ui.book.readRecord.ReadRecordActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.dict.rule.DictRuleActivity
@@ -186,7 +184,7 @@ fun MyScreen(
                     title = stringResource(R.string.read_record),
                     imageVector = Icons.Default.History,
                     onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(ReadRecordActivity::class.java))
+                        onNavigate(PrefClickEvent.OpenReadRecord)
                     }
                 )
                 ClickableSettingItem(
@@ -207,7 +205,7 @@ fun MyScreen(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
                     onClick = {
-                        onNavigate(PrefClickEvent.StartActivity(AboutActivity::class.java))
+                        onNavigate(PrefClickEvent.OpenAbout)
                     }
                 )
                 ClickableSettingItem(

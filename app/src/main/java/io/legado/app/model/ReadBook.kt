@@ -30,6 +30,7 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.utils.postEvent
@@ -42,17 +43,17 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import splitties.init.appCtx
@@ -750,7 +751,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         val book = book ?: return removeLoading(chapter.index)
         val bookSource = bookSource
         if (bookSource != null) {
-            CacheBook.getOrCreate(bookSource, book).download(scope, chapter, semaphore)
+            val started =
+                CacheBook.getOrCreate(bookSource, book).download(scope, chapter, semaphore)
+            if (!started) {
+                removeLoading(chapter.index)
+            }
         } else {
             val msg = if (book.isLocal) "无内容" else "没有书源"
             contentLoadFinish(
@@ -824,7 +829,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     }
                     callBack?.upMenuView()
                     var available = false
-                    for (page in textChapter.layoutChannel) {
+                    collectLayoutPages(textChapter) { page ->
                         val index = page.index
                         if (!available && page.containPos(durChapterPos)) {
                             if (upContent) {
@@ -849,7 +854,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         ensureActive()
                         prevTextChapter = textChapter
                     }
-                    textChapter.layoutChannel.receiveAsFlow().collect()
+                    collectLayoutPages(textChapter) {}
                     if (upContent) callBack?.upContent(offset, resetPageOffset)
                 }
 
@@ -858,10 +863,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         ensureActive()
                         nextTextChapter = textChapter
                     }
-                    for (page in textChapter.layoutChannel) {
-                        if (page.index > 1) {
-                            continue
-                        }
+                    collectLayoutPages(textChapter) { page ->
+                        if (page.index > 1) return@collectLayoutPages
                         if (upContent) callBack?.upContent(offset, resetPageOffset)
                     }
                 }
@@ -879,6 +882,26 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
         chapterLoadingJobs[chapter.index] = job
         job.start()
+    }
+
+    /**
+     * Safely collect pages from a TextChapterLayout's channel with timeout protection.
+     * Prevents indefinite blocking if the layout job hangs without closing the channel.
+     */
+    private suspend fun collectLayoutPages(
+        textChapter: TextChapter,
+        onPage: (TextPage) -> Unit,
+    ) {
+        try {
+            withTimeout(30_000L) {
+                for (page in textChapter.layoutChannel) {
+                    ensureActive()
+                    onPage(page)
+                }
+            }
+        } catch (_: TimeoutCancellationException) {
+            AppLog.put("Layout channel timeout for chapter ${textChapter.chapter.index}")
+        }
     }
 
     suspend fun contentLoadFinishAwait(
@@ -911,7 +934,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     }
                     callBack?.upMenuView()
                     var available = false
-                    for (page in textChapter.layoutChannel) {
+                    collectLayoutPages(textChapter) { page ->
                         val index = page.index
                         if (!available && page.containPos(durChapterPos)) {
                             if (upContent) {
@@ -936,7 +959,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     withContext(Main) {
                         prevTextChapter = textChapter
                     }
-                    textChapter.layoutChannel.receiveAsFlow().collect()
+                    collectLayoutPages(textChapter) {}
                     if (upContent) callBack?.upContent(offset, resetPageOffset)
                 }
 
@@ -945,10 +968,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     withContext(Main) {
                         nextTextChapter = textChapter
                     }
-                    for (page in textChapter.layoutChannel) {
-                        if (page.index > 1) {
-                            continue
-                        }
+                    collectLayoutPages(textChapter) { page ->
+                        if (page.index > 1) return@collectLayoutPages
                         if (upContent) callBack?.upContent(offset, resetPageOffset)
                     }
                 }
@@ -1108,10 +1129,13 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         preDownloadTask?.cancel()
         downloadScope.coroutineContext.cancelChildren()
         coroutineContext.cancelChildren()
-        ImageProvider.clear()
         clearExpiredChapterLoadingJob(true)
-        if (!CacheBookService.isRun) {
-            CacheBook.close()
+        // Move expensive cleanup off the main thread
+        CoroutineScope(SupervisorJob() + IO).launch {
+            ImageProvider.clear()
+            if (!CacheBookService.isRun) {
+                CacheBook.close()
+            }
         }
     }
 

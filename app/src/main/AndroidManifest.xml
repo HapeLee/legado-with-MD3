@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-sdk tools:overrideLibrary="top.yukonga.miuix.kmp.blur" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -193,11 +195,6 @@
             android:name=".ui.qrcode.QrCodeActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
-        <!-- 规则订阅 -->
-        <activity
-            android:name=".ui.rss.subscription.RuleSubActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask" />
         <!-- 书源编辑 -->
         <activity
             android:name=".ui.book.source.edit.BookSourceEditActivity"
@@ -217,11 +214,6 @@
             android:name=".ui.book.search.SearchActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="standard" />
-        <!-- 关于界面 -->
-        <activity
-            android:name=".ui.about.AboutActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask" />
         <activity
             android:name=".ui.about.CrashReportActivity"
             android:enableOnBackInvokedCallback="true"
@@ -268,11 +260,6 @@
             android:name=".ui.rss.source.debug.RssSourceDebugActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- Rss收藏 -->
-        <activity
-            android:name=".ui.rss.favorites.RssFavoritesActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 书签 -->
         <activity
             android:name=".ui.book.bookmark.AllBookmarkActivity"
@@ -291,12 +278,6 @@
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true"
             android:theme="@style/AppTheme.Transparent" />
-        <!-- 阅读记录 -->
-        <activity
-            android:name=".ui.book.readRecord.ReadRecordActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:configChanges="orientation|screenSize"
-            android:hardwareAccelerated="true" />
         <!-- 字典管理 -->
         <activity
             android:name=".ui.dict.rule.DictRuleActivity"

@@ -173,6 +173,16 @@ interface BookSourceDao {
     fun getEnabledPartByGroup(group: String): List<BookSourcePart>
 
     @Query(
+        """select * from book_sources_part 
+        where bookSourceGroup = :group
+        or bookSourceGroup like :group || ',%' 
+        or bookSourceGroup like  '%,' || :group
+        or bookSourceGroup like  '%,' || :group || ',%'
+        order by customOrder asc"""
+    )
+    fun getPartByGroup(group: String): List<BookSourcePart>
+
+    @Query(
         """select * from book_sources 
         where bookUrlPattern != 'NONE' and bookSourceType = :type order by customOrder asc"""
     )

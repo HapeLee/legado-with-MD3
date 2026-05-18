@@ -16,13 +16,13 @@ import io.legado.app.utils.LogUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
 
 abstract class BaseService : LifecycleService() {
 
     private val simpleName = this::class.simpleName.toString()
+    @Volatile
     private var isForeground = false
 
     fun <T> execute(
@@ -37,6 +37,8 @@ abstract class BaseService : LifecycleService() {
     @CallSuper
     override fun onCreate() {
         super.onCreate()
+        startForegroundNotification()
+        isForeground = true
         LifecycleHelp.onServiceCreate(this)
         if (!AppConfig.permissionChecked) {
             AppConfig.permissionChecked = true
@@ -48,10 +50,6 @@ abstract class BaseService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         LogUtils.d(simpleName) {
             "onStartCommand $intent ${intent?.toUri(0)}"
-        }
-        if (!isForeground) {
-            startForegroundNotification()
-            isForeground = true
         }
         return super.onStartCommand(intent, flags, startId)
     }
@@ -95,11 +93,6 @@ abstract class BaseService : LifecycleService() {
         PermissionsCompat.Builder()
             .addPermissions(Permissions.POST_NOTIFICATIONS)
             .rationale(R.string.notification_permission_rationale)
-            .onGranted {
-                if (lifecycleScope.isActive) {
-                    startForegroundNotification()
-                }
-            }
             .request()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PermissionsCompat.Builder()

@@ -1,6 +1,5 @@
 package io.legado.app.model.localBook
 
-import io.legado.app.ui.config.otherConfig.OtherConfig
 import android.net.Uri
 import android.util.Base64
 import androidx.core.net.toUri
@@ -36,11 +35,13 @@ import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isUmd
 import io.legado.app.help.book.removeLocalUriCache
 import io.legado.app.help.book.simulatedTotalChapterNum
+import io.legado.app.help.book.upKind
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.CustomUrl
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -252,14 +253,17 @@ object LocalBook {
                 order = appDb.bookDao.minOrder - 1
             )
             upBookInfo(book)
+            book.upKind()
             appDb.bookDao.insert(book)
         } else {
             deleteBook(book, false)
             upBookInfo(book)
+            book.upKind()
             // 触发 isLocalModified
             book.latestChapterTime = 0
             //已有书籍说明是更新,删除原有目录
             appDb.bookChapterDao.delByBook(bookUrl)
+            appDb.bookDao.update(book)
         }
         return book
     }
@@ -290,6 +294,7 @@ object LocalBook {
                     //附加压缩包名称 以便解压文件被删后再解压
                     origin = "${BookType.localTag}::${archiveFileDoc.name}"
                     addType(BookType.archive)
+                    upKind()
                     save()
                 }
             }

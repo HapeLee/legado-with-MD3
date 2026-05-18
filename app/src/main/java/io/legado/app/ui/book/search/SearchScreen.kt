@@ -1,10 +1,10 @@
 package io.legado.app.ui.book.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,38 +14,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -54,20 +36,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -78,23 +63,23 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
-import io.legado.app.ui.widget.components.button.ToggleChip
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
-import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -113,8 +98,8 @@ fun SearchScreen(
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val lifecycleOwner = LocalLifecycleOwner.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
-    var scopeSheetTab by rememberSaveable { mutableStateOf(0) }
     var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
@@ -135,12 +120,6 @@ fun SearchScreen(
     LaunchedEffect(state.query) {
         if (state.query != queryInput) {
             queryInput = state.query
-        }
-    }
-
-    LaunchedEffect(state.showScopeSheet, state.isSourceScope) {
-        if (state.showScopeSheet) {
-            scopeSheetTab = if (state.isSourceScope) 1 else 0
         }
     }
 
@@ -190,9 +169,50 @@ fun SearchScreen(
         }
     }
 
+    // Activity lifecycle (e.g., Home button, switching apps)
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> viewModel.onIntent(SearchIntent.ResumeEngine)
+                Lifecycle.Event.ON_PAUSE -> viewModel.onIntent(SearchIntent.PauseEngine)
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Composition lifecycle (e.g., navigating to BookInfo and back)
     DisposableEffect(viewModel) {
         onDispose {
-            viewModel.onIntent(SearchIntent.StopSearch)
+            viewModel.onIntent(SearchIntent.PauseEngine)
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.onIntent(SearchIntent.ResumeEngine)
+    }
+
+    // Save scroll position before composable leaves composition (e.g., navigating to BookInfo)
+    DisposableEffect(viewModel) {
+        onDispose {
+            val first = listState.firstVisibleItemIndex
+            val offset = listState.firstVisibleItemScrollOffset
+            if (first > 0 || offset > 0) {
+                viewModel.onIntent(SearchIntent.SaveScrollState(first, offset))
+            }
+        }
+    }
+
+    // Restore scroll position when composable re-enters with saved state
+    LaunchedEffect(state.savedScrollIndex, state.savedScrollOffset) {
+        val idx = state.savedScrollIndex
+        val off = state.savedScrollOffset
+        if (idx > 0 || off > 0) {
+            listState.scrollToItem(idx, off)
+            viewModel.onIntent(SearchIntent.SaveScrollState(0, 0))
         }
     }
 
@@ -207,6 +227,11 @@ fun SearchScreen(
             viewModel.onIntent(SearchIntent.SubmitSearch)
         }
     }
+
+    BackHandler {
+        onBack()
+    }
+
     val searchLabel = stringResource(R.string.search_book_key)
     val showResultCountCard = state.committedQuery.isNotBlank() || state.isSearching
     val showSourceProgressCard = state.totalSources > 0
@@ -224,6 +249,13 @@ fun SearchScreen(
                         )
                     },
                     actions = {
+                        TopBarActionButton(
+                            onClick = {
+                                viewModel.onIntent(SearchIntent.OpenSourceManage)
+                            },
+                            imageVector = AppIcons.Settings,
+                            contentDescription = stringResource(R.string.book_source_manage)
+                        )
                         TopBarAnimatedActionButton(
                             checked = state.isPrecisionSearch,
                             onCheckedChange = { checked ->
@@ -235,6 +267,16 @@ fun SearchScreen(
                             inactiveText = stringResource(R.string.search),
                         )
                         TopBarAnimatedActionButton(
+                            checked = state.selectedSourceTypes.isNotEmpty(),
+                            onCheckedChange = {
+                                viewModel.onIntent(SearchIntent.SetTypeSheetVisible(true))
+                            },
+                            iconChecked = Icons.Default.Layers,
+                            iconUnchecked = Icons.Default.Layers,
+                            activeText = "搜素类型",
+                            inactiveText = "搜素类型",
+                        )
+                        TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
                             onCheckedChange = {
                                 viewModel.onIntent(SearchIntent.SetScopeSheetVisible(true))
@@ -243,13 +285,6 @@ fun SearchScreen(
                             iconUnchecked = AppIcons.Filter,
                             activeText = stringResource(R.string.screen),
                             inactiveText = stringResource(R.string.screen),
-                        )
-                        TopBarActionButton(
-                            onClick = {
-                                viewModel.onIntent(SearchIntent.OpenSourceManage)
-                            },
-                            imageVector = AppIcons.Settings,
-                            contentDescription = "书源管理"
                         )
                     },
                     scrollBehavior = scrollBehavior
@@ -292,13 +327,10 @@ fun SearchScreen(
                         } else {
                             viewModel.onIntent(SearchIntent.LoadMore)
                         }
-                    }
-                ) {
-                    AppIcon(
-                        imageVector = if (state.isSearching) Icons.Default.Stop else Icons.Default.PlayArrow,
-                        contentDescription = if (state.isSearching) stringResource(R.string.stop) else stringResource(R.string.start),
-                    )
-                }
+                    },
+                    icon = if (state.isSearching) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    tooltipText = if (state.isSearching) stringResource(R.string.stop) else stringResource(R.string.start)
+                )
             }
         }
     ) { paddingValues ->
@@ -390,8 +422,8 @@ fun SearchScreen(
                         TopFloatingStickyItem(
                             item = if (showResultCountCard || showSourceProgressCard) {
                                 SearchFloatingSummary(
-                                    resultText = if (showResultCountCard) "结果 ${state.results.size}" else null,
-                                    sourceText = if (showSourceProgressCard) " · 进度 ${state.processedSources}/${state.totalSources}" else null,
+                                    resultText = if (showResultCountCard) stringResource(R.string.search_result_count, state.results.size) else null,
+                                    sourceText = if (showSourceProgressCard) stringResource(R.string.search_source_progress, state.processedSources, state.totalSources) else null,
                                 )
                             } else {
                                 null
@@ -444,95 +476,70 @@ fun SearchScreen(
             viewModel.onIntent(SearchIntent.DismissEmptyScopeAction)
         },
         title = stringResource(R.string.draw),
+        textProvider = {
+            if (wasPrecisionSearch) {
+                stringResource(R.string.search_empty_scope_disable_precision, scopeDisplay)
+            } else {
+                stringResource(R.string.search_empty_scope_switch_all, scopeDisplay)
+            }
+        },
         confirmText = stringResource(R.string.ok),
         onConfirm = { viewModel.onIntent(SearchIntent.ConfirmEmptyScopeAction) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { viewModel.onIntent(SearchIntent.DismissEmptyScopeAction) },
-        content = {
-            Text(
-                text = if (it.wasPrecisionSearch) {
-                    "${it.scopeDisplay}分组搜索结果为空，是否关闭精准搜索？"
-                } else {
-                    "${it.scopeDisplay}分组搜索结果为空，是否切换到全部分组？"
-                }
-            )
-        }
+    )
+
+    ScopeSelectSheet(
+        show = state.showScopeSheet,
+        onDismissRequest = { viewModel.onIntent(SearchIntent.SetScopeSheetVisible(false)) },
+        isAll = state.isAllScope,
+        onSelectAll = { viewModel.onIntent(SearchIntent.SelectAllScope) },
+        groups = state.enabledGroups,
+        selectedGroups = state.scopeDisplayNames,
+        onToggleGroup = { viewModel.onIntent(SearchIntent.ToggleScopeGroup(it)) },
+        sources = state.enabledSources,
+        selectedSources = state.selectedScopeSourceUrls,
+        onToggleSource = { viewModel.onIntent(SearchIntent.ToggleScopeSource(it)) },
+        isSourceScope = state.isSourceScope
     )
 
     AppModalBottomSheet(
-        show = state.showScopeSheet,
-        onDismissRequest = { viewModel.onIntent(SearchIntent.SetScopeSheetVisible(false)) },
-        title = stringResource(R.string.search_select_group),
+        show = state.showTypeSheet,
+        onDismissRequest = { viewModel.onIntent(SearchIntent.SetTypeSheetVisible(false)) },
+        title = "搜素类型",
     ) {
         Column {
             SelectionItemCard(
-                title = stringResource(R.string.all_source),
-                isSelected = state.isAllScope,
-                containerColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.6f),
+                title = stringResource(R.string.all),
+                isSelected = state.selectedSourceTypes.isEmpty(),
+                containerColor = LegadoTheme.colorScheme.onSheetContent,
                 inSelectionMode = true,
                 onToggleSelection = {
-                    viewModel.onIntent(SearchIntent.SelectAllScope)
+                    if (state.selectedSourceTypes.isNotEmpty()) {
+                        state.selectedSourceTypes.forEach {
+                            viewModel.onIntent(SearchIntent.ToggleSourceType(it))
+                        }
+                    }
                 }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
-            AppTabRow(
-                tabTitles = listOf(
-                    stringResource(R.string.group),
-                    stringResource(R.string.book_source),
-                ),
-                selectedTabIndex = scopeSheetTab,
-                onTabSelected = { scopeSheetTab = it },
-            )
-            Spacer(modifier = Modifier.height(6.dp))
 
-            if (scopeSheetTab == 0) {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    items(state.enabledGroups, key = { it }) {
-                        val selected = !state.isSourceScope && state.scopeDisplayNames.contains(it)
-                        SelectionItemCard(
-                            title = it,
-                            isSelected = selected,
-                            containerColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.6f),
-                            inSelectionMode = true,
-                            onToggleSelection = {
-                                viewModel.onIntent(SearchIntent.ToggleScopeGroup(it))
-                            }
-                        )
+            listOf(
+                0 to stringResource(R.string.noval),
+                2 to stringResource(R.string.manga),
+                1 to stringResource(R.string.audio),
+            ).forEach { (type, label) ->
+                SelectionItemCard(
+                    title = label,
+                    isSelected = state.selectedSourceTypes.contains(type),
+                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                    inSelectionMode = true,
+                    onToggleSelection = {
+                        viewModel.onIntent(SearchIntent.ToggleSourceType(type))
                     }
-                }
-            } else {
-                if (state.enabledSources.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.search_empty),
-                        style = LegadoTheme.typography.bodyMedium,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                    )
-                } else {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        items(state.enabledSources, key = { it.bookSourceUrl }) {
-                            val selected = state.selectedScopeSourceUrls.contains(it.bookSourceUrl)
-                            SelectionItemCard(
-                                title = it.bookSourceName,
-                                subtitle = it.bookSourceGroup?.takeIf { group -> group.isNotBlank() },
-                                containerColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.6f),
-                                isSelected = selected,
-                                inSelectionMode = true,
-                                onToggleSelection = {
-                                    viewModel.onIntent(SearchIntent.ToggleScopeSource(it))
-                                }
-                            )
-                        }
-                    }
-                }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -668,12 +675,8 @@ private fun SearchResultFooter(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.size(18.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    AppCircularProgressIndicator()
+                    Spacer(modifier = Modifier.padding(horizontal = 8.dp))
                     AppText(text = stringResource(R.string.is_loading))
                 }
             }

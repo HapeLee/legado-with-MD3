@@ -12,10 +12,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -45,9 +49,20 @@ fun SearchBar(
     scrollState: LazyListState? = null,
     scope: CoroutineScope = rememberCoroutineScope(),
     trailingIcon: @Composable (() -> Unit)? = null,
+    autoFocus: Boolean = true,
     dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null
 ) {
     val textFieldState = rememberTextFieldState(initialText = query)
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(autoFocus) {
+        if (autoFocus) {
+            focusRequester.requestFocus()
+            // 某些情况下需要手动调用 show() 确保键盘弹出
+            keyboardController?.show()
+        }
+    }
 
     LaunchedEffect(query) {
         if (query != textFieldState.text.toString()) {
@@ -78,7 +93,8 @@ fun SearchBar(
             state = textFieldState,
             modifier = modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 4.dp)
+                .focusRequester(focusRequester),
             placeholder = { AppText(placeholder) },
             leadingIcon = leadingIcon,
             trailingIcon = trailingIcon,
@@ -102,7 +118,9 @@ fun SearchBar(
         ) {
             AppDenseTextField(
                 state = textFieldState,
-                modifier = modifier.fillMaxWidth(),
+                modifier = modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
                 placeholder = { AppText(placeholder) },
                 leadingIcon = leadingIcon,
                 trailingIcon = trailingIcon,

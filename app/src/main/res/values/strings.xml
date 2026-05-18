@@ -804,7 +804,12 @@
     <string name="auto_page_speed">Auto scroll speed</string>
     <string name="sort_by_url">Sort by URL</string>
     <string name="backup_summary">Backup the local and WebDAV simultaneously</string>
-    <string name="restore_summary">Restore from WebDAV first, Restore form the local backup on long click</string>
+    <string name="backup_sync_mode">Auto Backup Sync</string>
+    <string name="backup_sync_mode_summary">Choose sync behavior for automatic backup</string>
+    <string name="backup_to_local_and_network">Backup to Local &amp; Network</string>
+    <string name="backup_to_local">Backup to Local</string>
+    <string name="backup_to_network">Backup to Network</string>
+    <string name="restore_summary">Choose to restore from local or network backup</string>
     <string name="import_old_summary">Select a legacy backup folder</string>
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
@@ -1390,8 +1395,8 @@
     <string name="menu_alpha_sum">Current %d%%</string>
     <string name="menu_alpha">Menu Transparency</string>
     <string name="change_source_option_title">请选择操作</string>
-    <string name="replace_current_book">替换当前书籍</string>
-    <string name="add_as_new_book">新增书籍到书架</string>
+    <string name="replace_current_book">替换本书</string>
+    <string name="add_as_new_book">新增书籍</string>
     <string name="quick_add_to_shelf">快速添加到书架</string>
     <string name="book_added_to_shelf">书籍已添加到书架</string>
     <string name="seed_photo_summary">使用图片生成主题颜色</string>
@@ -1518,4 +1523,16 @@
     <string name="bookshelf_empty_global_search">No books here. Try global search.</string>
     <string name="global_search">Global search</string>
     <string name="cache_management">Cache management</string>
+    <string name="search_result_count">Results %1$d</string>
+    <string name="search_source_progress"> · Progress %1$d/%2$d</string>
+    <string name="search_empty_scope_disable_precision">%1$s group search returned no results. Disable precise search?</string>
+    <string name="search_empty_scope_switch_all">%1$s group search returned no results. Switch to all groups?</string>
+    <string name="download_cache_config">Download &amp; Cache</string>
+    <string name="http_cache">HTTP Cache</string>
+    <string name="cover_cache">Cover Cache</string>
+    <string name="manga_cache">Manga Cache</string>
+    <string name="cache_size_mb">%1$.1f MB</string>
+    <string name="download_setting">Download</string>
+    <string name="image_cache">Image Cache</string>
+    <string name="network">Network</string>
 </resources>

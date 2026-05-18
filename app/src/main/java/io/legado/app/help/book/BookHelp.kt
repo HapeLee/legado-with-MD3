@@ -215,10 +215,6 @@ object BookHelp {
         val uri = book.getLocalUri()
         val charset = book.fileCharset()
         val oldTitle = bookChapter.title
-        val newContent = oldTitle + "\n" + content
-        val newBytes = newContent.toByteArray(charset)
-        val oldLength = end - start
-        val diff = newBytes.size - oldLength
 
         val pfd = if (uri.isContentScheme()) {
             appCtx.contentResolver.openFileDescriptor(uri, "rw")
@@ -230,6 +226,21 @@ object BookHelp {
             val fd = it.fileDescriptor
             try {
                 val totalLength = Os.fstat(fd).st_size
+
+                // 尝试保留章节末尾的换行符
+                val oldLength = end - start
+                val readLen = if (oldLength > 32) 32 else oldLength.toInt()
+                var gap = ""
+                if (readLen > 0) {
+                    val lastBytes = ByteArray(readLen)
+                    Os.pread(fd, lastBytes, 0, readLen, end - readLen)
+                    val lastString = String(lastBytes, charset)
+                    gap = lastString.takeLastWhile { c -> c == '\n' || c == '\r' }
+                }
+
+                val newContent = oldTitle + "\n" + content + gap
+                val newBytes = newContent.toByteArray(charset)
+                val diff = newBytes.size - oldLength
 
                 if (diff != 0L) {
                     val remaining = totalLength - end

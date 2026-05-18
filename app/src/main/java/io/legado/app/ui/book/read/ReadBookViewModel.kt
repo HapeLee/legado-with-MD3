@@ -93,7 +93,16 @@ class ReadBookViewModel(
             } ?: ReadBook.book
             when {
                 book != null -> initBook(book)
-                else -> ReadBook.upMsg(context.getString(R.string.no_book))
+                else -> {
+                    ReadBook.upMsg(context.getString(R.string.no_book))
+                    AppLog.put("未找到书籍\nbookUrl:$bookUrl")
+                }
+            }
+            val index = intent.getIntExtra("index", -1)
+            val chapterPos = intent.getIntExtra("chapterPos", -1)
+            if (index >= 0 && chapterPos >= 0) { //从书签打开的正文，有进度传递
+                ReadBook.saveCurrentBookProgress() //启用恢复进度提示
+                openChapter(index, chapterPos)
             }
         }.onSuccess {
             success?.invoke()

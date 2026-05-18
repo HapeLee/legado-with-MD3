@@ -14,6 +14,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.Lan
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -54,7 +58,10 @@ import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionCard
+import io.legado.app.ui.widget.components.modalBottomSheet.OptionSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -90,6 +97,8 @@ fun BackupConfigScreen(
     var showBackupFilePicker by remember { mutableStateOf(false) }
     var showRestoreFilePicker by remember { mutableStateOf(false) }
     var showRestoreSheet by remember { mutableStateOf(false) }
+    var showRestoreOptionSheet by remember { mutableStateOf(false) }
+    var showBackupOptionSheet by remember { mutableStateOf(false) }
     var backupNames by remember { mutableStateOf<List<String>>(emptyList()) }
 
     var showLoadingDialog by remember { mutableStateOf(false) }
@@ -134,7 +143,7 @@ fun BackupConfigScreen(
             }
             BackupConfig.backupPath = path
             if (path.isNotEmpty()) {
-                startBackup(path, context, viewModel, {
+                startBackup(path, context, viewModel, "both", {
                     showLoadingDialog = false
                     scope.launch {
                         snackbarHostState.showSnackbar(context.getString(R.string.backup_success))
@@ -285,6 +294,15 @@ fun BackupConfigScreen(
                     checked = BackupConfig.autoCheckNewBackup,
                     onCheckedChange = { BackupConfig.autoCheckNewBackup = it }
                 )
+
+                DropdownListSettingItem(
+                    title = stringResource(R.string.backup_sync_mode),
+                    description = stringResource(R.string.backup_sync_mode_summary),
+                    selectedValue = BackupConfig.backupSyncMode,
+                    displayEntries = stringArrayResource(R.array.backup_sync_mode),
+                    entryValues = stringArrayResource(R.array.backup_sync_mode_value),
+                    onValueChange = { BackupConfig.backupSyncMode = it }
+                )
             }
 
                 SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
@@ -295,94 +313,16 @@ fun BackupConfigScreen(
                     onClick = { showBackupFilePicker = true }
                 )
 
-                val backupText = stringResource(R.string.backup)
-
                 ClickableSettingItem(
                     title = stringResource(R.string.backup),
                     description = stringResource(R.string.backup_summary),
-                    onClick = {
-                        val backupPath = BackupConfig.backupPath
-                        if (backupPath.isNullOrEmpty()) {
-                            showRestoreFilePicker = true
-                        } else {
-                            confirmDialogTitle = backupText
-                            confirmDialogText = "确定要备份吗？"
-                            onConfirmAction = {
-                                if (backupPath.isContentScheme()) {
-                                    startBackup(backupPath, context, viewModel, {
-                                        showLoadingDialog = false
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(context.getString(R.string.backup_success))
-                                        }
-                                    }, { error ->
-                                        showLoadingDialog = false
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar(
-                                                context.getString(
-                                                    R.string.backup_fail,
-                                                    error
-                                                )
-                                            )
-                                        }
-                                    })
-                                } else {
-                                    PermissionsCompat.Builder()
-                                        .addPermissions(*Permissions.Group.STORAGE)
-                                        .rationale(R.string.tip_perm_request_storage)
-                                        .onGranted {
-                                            startBackup(backupPath, context, viewModel, {
-                                                showLoadingDialog = false
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        context.getString(
-                                                            R.string.backup_success
-                                                        )
-                                                    )
-                                                }
-                                            }, { error ->
-                                                showLoadingDialog = false
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar(
-                                                        context.getString(
-                                                            R.string.backup_fail,
-                                                            error
-                                                        )
-                                                    )
-                                                }
-                                            })
-                                        }
-                                        .request()
-                                }
-                            }
-                            showConfirmDialog = true
-                        }
-                    }
+                    onClick = { showBackupOptionSheet = true }
                 )
 
                 ClickableSettingItem(
                     title = stringResource(R.string.restore),
                     description = stringResource(R.string.restore_summary),
-                    onClick = {
-                        scope.launch {
-                            showLoadingDialog = true
-                            loadingText = "加载中"
-                            try {
-                                val names = viewModel.getBackupNames()
-                                backupNames = names
-                                showRestoreSheet = true
-                            } catch (e: Exception) {
-                                confirmDialogTitle = "恢复"
-                                confirmDialogText =
-                                    "WebDavError\n${e.localizedMessage}\n将从本地备份恢复。"
-                                onConfirmAction = {
-                                    restoreFileLauncher.launch(arrayOf("application/zip"))
-                                }
-                                showConfirmDialog = true
-                            } finally {
-                                showLoadingDialog = false
-                            }
-                        }
-                    }
+                    onClick = { showRestoreOptionSheet = true }
                 )
 
                 ClickableSettingItem(
@@ -498,6 +438,84 @@ fun BackupConfigScreen(
             }
         }
     )
+
+    OptionSheet(
+        show = showBackupOptionSheet,
+        onDismissRequest = { showBackupOptionSheet = false },
+        title = stringResource(R.string.backup)
+    ) {
+        OptionCard(
+            icon = Icons.Default.PhoneAndroid,
+            text = stringResource(R.string.backup_to_local),
+            onClick = {
+                showBackupOptionSheet = false
+                executeBackup("local", context, viewModel, scope, snackbarHostState, {
+                    showLoadingDialog = false
+                }, { showLoadingDialog = true; loadingText = it })
+            }
+        )
+        OptionCard(
+            icon = Icons.Default.Cloud,
+            text = stringResource(R.string.backup_to_network),
+            onClick = {
+                showBackupOptionSheet = false
+                executeBackup("webdav", context, viewModel, scope, snackbarHostState, {
+                    showLoadingDialog = false
+                }, { showLoadingDialog = true; loadingText = it })
+            }
+        )
+        OptionCard(
+            icon = Icons.Default.Lan,
+            text = stringResource(R.string.backup_to_local_and_network),
+            onClick = {
+                showBackupOptionSheet = false
+                executeBackup("both", context, viewModel, scope, snackbarHostState, {
+                    showLoadingDialog = false
+                }, { showLoadingDialog = true; loadingText = it })
+            }
+        )
+    }
+
+    OptionSheet(
+        show = showRestoreOptionSheet,
+        onDismissRequest = { showRestoreOptionSheet = false },
+        title = stringResource(R.string.restore)
+    ) {
+        OptionCard(
+            icon = Icons.Default.PhoneAndroid,
+            text = "本地恢复",
+            onClick = {
+                showRestoreOptionSheet = false
+                restoreFileLauncher.launch(arrayOf("application/zip"))
+            }
+        )
+        OptionCard(
+            icon = Icons.Default.Cloud,
+            text = "网络恢复",
+            onClick = {
+                showRestoreOptionSheet = false
+                scope.launch {
+                    showLoadingDialog = true
+                    loadingText = "加载中"
+                    try {
+                        val names = viewModel.getBackupNames()
+                        backupNames = names
+                        showRestoreSheet = true
+                    } catch (e: Exception) {
+                        confirmDialogTitle = "恢复"
+                        confirmDialogText =
+                            "WebDavError\n${e.localizedMessage}\n将从本地备份恢复。"
+                        onConfirmAction = {
+                            restoreFileLauncher.launch(arrayOf("application/zip"))
+                        }
+                        showConfirmDialog = true
+                    } finally {
+                        showLoadingDialog = false
+                    }
+                }
+            }
+        )
+    }
 
     AppModalBottomSheet(
         show = showRestoreSheet && backupNames.isNotEmpty(),
@@ -621,8 +639,57 @@ private fun startBackup(
     path: String,
     context: Context,
     viewModel: BackupConfigViewModel,
+    mode: String = "both",
     onSuccess: () -> Unit,
     onError: (String) -> Unit
 ) {
-    viewModel.backup(path, onSuccess, onError)
+    viewModel.backup(path, mode, onSuccess, onError)
+}
+
+private fun executeBackup(
+    mode: String,
+    context: Context,
+    viewModel: BackupConfigViewModel,
+    scope: kotlinx.coroutines.CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    hideLoading: () -> Unit,
+    showLoading: (String) -> Unit
+) {
+    val backupPath = BackupConfig.backupPath
+    if (backupPath.isNullOrEmpty() && mode != "webdav") {
+        return
+    }
+    val path = backupPath ?: ""
+    showLoading(context.getString(R.string.backup))
+    if (path.isNotEmpty() && !path.isContentScheme()) {
+        PermissionsCompat.Builder()
+            .addPermissions(*Permissions.Group.STORAGE)
+            .rationale(R.string.tip_perm_request_storage)
+            .onGranted {
+                startBackup(path, context, viewModel, mode, {
+                    hideLoading()
+                    scope.launch {
+                        snackbarHostState.showSnackbar(context.getString(R.string.backup_success))
+                    }
+                }, { error ->
+                    hideLoading()
+                    scope.launch {
+                        snackbarHostState.showSnackbar(context.getString(R.string.backup_fail, error))
+                    }
+                })
+            }
+            .request()
+    } else {
+        startBackup(path, context, viewModel, mode, {
+            hideLoading()
+            scope.launch {
+                snackbarHostState.showSnackbar(context.getString(R.string.backup_success))
+            }
+        }, { error ->
+            hideLoading()
+            scope.launch {
+                snackbarHostState.showSnackbar(context.getString(R.string.backup_fail, error))
+            }
+        })
+    }
 }

@@ -21,7 +21,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.model.CacheBook
 import io.legado.app.service.WebService
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
@@ -29,15 +28,14 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.InputSettingItem
-import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import org.koin.androidx.compose.koinViewModel
@@ -58,8 +56,6 @@ fun OtherConfigScreen(
 
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
-    var showClearCacheDialog by remember { mutableStateOf(false) }
-    var showShrinkDbDialog by remember { mutableStateOf(false) }
     var showClearWebViewDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var showCheckSourceSheet by remember { mutableStateOf(false) }
@@ -194,44 +190,6 @@ fun OtherConfigScreen(
                     onCheckedChange = { OtherConfig.antiAlias = it }
                 )
 
-                SliderSettingItem(
-                    title = stringResource(R.string.bitmap_cache_size),
-                    description = stringResource(
-                        R.string.bitmap_cache_size_summary,
-                        OtherConfig.bitmapCacheSize
-                    ),
-                    value = OtherConfig.bitmapCacheSize.toFloat(),
-                    defaultValue = 32f,
-                    valueRange = 1f..2047f,
-                    onValueChange = {
-                        viewModel.updateBitmapCacheSize(it.toInt())
-                    }
-                )
-
-                SliderSettingItem(
-                    title = stringResource(R.string.image_retain_number),
-                    description = stringResource(
-                        R.string.image_retain_number_summary,
-                        OtherConfig.imageRetainNum
-                    ),
-                    value = OtherConfig.imageRetainNum.toFloat(),
-                    defaultValue = 10f,
-                    valueRange = 0f..100f,
-                    onValueChange = { OtherConfig.imageRetainNum = it.toInt() }
-                )
-
-                SliderSettingItem(
-                    title = stringResource(R.string.pre_download),
-                    description = stringResource(
-                        R.string.pre_download_s,
-                        OtherConfig.preDownloadNum
-                    ),
-                    value = OtherConfig.preDownloadNum.toFloat(),
-                    defaultValue = 10f,
-                    valueRange = 0f..100f,
-                    onValueChange = { OtherConfig.preDownloadNum = it.toInt() }
-                )
-
                 SwitchSettingItem(
                     title = stringResource(R.string.replace_enable_default_t),
                     description = stringResource(R.string.replace_enable_default_s),
@@ -284,26 +242,6 @@ fun OtherConfigScreen(
                 SplicedColumnGroup(title = stringResource(R.string.other_setting)) {
 
                 SwitchSettingItem(
-                    title = stringResource(R.string.use_animation),
-                    description = stringResource(R.string.opt_animation),
-                    checked = OtherConfig.sharedElementEnterTransitionEnable,
-                    onCheckedChange = { OtherConfig.sharedElementEnterTransitionEnable = it }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.delay_book_load),
-                    description = stringResource(R.string.reduce_stutter),
-                    checked = OtherConfig.delayBookLoadEnable,
-                    onCheckedChange = { OtherConfig.delayBookLoadEnable = it }
-                )
-
-                InputSettingItem(
-                    title = stringResource(R.string.user_agent),
-                    value = OtherConfig.userAgent,
-                    onConfirm = { viewModel.saveUserAgent(it) }
-                )
-
-                SwitchSettingItem(
                     title = stringResource(R.string.web_service_wake_lock),
                     description = stringResource(R.string.web_service_wake_lock_summary),
                     checked = OtherConfig.webServiceWakeLock,
@@ -328,13 +266,6 @@ fun OtherConfigScreen(
                     onClick = { showDirectLinkUploadSheet = true }
                 )
 
-                SwitchSettingItem(
-                    title = "Cronet",
-                    description = stringResource(R.string.pref_cronet_summary),
-                    checked = OtherConfig.cronetEnable,
-                    onCheckedChange = { OtherConfig.cronetEnable = it }
-                )
-
                 InputSettingItem(
                     title = stringResource(R.string.web_port_title),
                     value = OtherConfig.webPort.toString(),
@@ -348,44 +279,9 @@ fun OtherConfigScreen(
                 )
 
                 ClickableSettingItem(
-                    title = stringResource(R.string.clear_cache),
-                    description = stringResource(R.string.clear_cache_summary),
-                    onClick = { showClearCacheDialog = true }
-                )
-
-                ClickableSettingItem(
                     title = stringResource(R.string.clear_webview_data),
                     description = stringResource(R.string.clear_webview_data_summary),
                     onClick = { showClearWebViewDialog = true }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.shrink_database),
-                    description = stringResource(R.string.shrink_database_summary),
-                    onClick = { showShrinkDbDialog = true }
-                )
-
-                SliderSettingItem(
-                    title = stringResource(R.string.threads_num_title),
-                    description = stringResource(R.string.threads_num_summary),
-                    value = OtherConfig.threadCount.toFloat(),
-                    defaultValue = 8f,
-                    valueRange = 1f..256f,
-                    onValueChange = { OtherConfig.threadCount = it.toInt() }
-                )
-
-                SliderSettingItem(
-                    title = stringResource(R.string.cache_book_threads_num_title),
-                    description = stringResource(R.string.cache_book_threads_num_summary),
-                    value = OtherConfig.cacheBookThreadCount
-                        .coerceIn(1, CacheBook.maxDownloadConcurrency)
-                        .toFloat(),
-                    defaultValue = CacheBook.maxDownloadConcurrency.toFloat(),
-                    valueRange = 1f..CacheBook.maxDownloadConcurrency.toFloat(),
-                    onValueChange = {
-                        OtherConfig.cacheBookThreadCount =
-                            it.toInt().coerceIn(1, CacheBook.maxDownloadConcurrency)
-                    }
                 )
 
                 SwitchSettingItem(
@@ -435,30 +331,6 @@ fun OtherConfigScreen(
             show = showDirectLinkUploadSheet,
             viewModel = viewModel,
             onDismiss = { showDirectLinkUploadSheet = false }
-        )
-
-        AppAlertDialog(
-            show = showClearCacheDialog,
-            onDismissRequest = { showClearCacheDialog = false },
-            title = stringResource(R.string.clear_cache),
-            text = stringResource(R.string.sure_del),
-            onConfirm = {
-                viewModel.clearCache(context)
-                showClearCacheDialog = false
-            },
-            onDismiss = { showClearCacheDialog = false }
-        )
-
-        AppAlertDialog(
-            show = showShrinkDbDialog,
-            onDismissRequest = { showShrinkDbDialog = false },
-            title = stringResource(R.string.shrink_database),
-            text = stringResource(R.string.sure),
-            onConfirm = {
-                viewModel.shrinkDatabase()
-                showShrinkDbDialog = false
-            },
-            onDismiss = { showShrinkDbDialog = false }
         )
 
         AppAlertDialog(

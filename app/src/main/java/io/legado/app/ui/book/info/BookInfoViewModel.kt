@@ -3,8 +3,12 @@ package io.legado.app.ui.book.info
 import android.app.Activity.RESULT_OK
 import android.app.Application
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewModelScope
+import coil.ImageLoader
+import coil.request.SuccessResult
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
@@ -16,10 +20,11 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecordTimelineDay
-import io.legado.app.domain.usecase.ChangeBookSourceUseCase
-import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
+import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
+import io.legado.app.domain.usecase.ChangeBookSourceUseCase
+import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.exception.NoBooksDirException
 import io.legado.app.exception.NoStackTraceException
@@ -31,8 +36,8 @@ import io.legado.app.help.book.isNotShelf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.removeType
+import io.legado.app.help.book.upKind
 import io.legado.app.help.book.updateTo
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.webdav.ObjectNotFoundException
@@ -44,32 +49,39 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
-import io.legado.app.utils.ConvertUtils
-import io.legado.app.utils.FileDoc
 import io.legado.app.utils.GSON
+import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.postEvent
+import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 
 class BookInfoViewModel(
     application: Application,
     private val remoteBookRepository: RemoteBookRepository,
     private val readRecordRepository: ReadRecordRepository,
     private val changeBookSourceUseCase: ChangeBookSourceUseCase,
-    private val clearBookCacheUseCase: ClearBookCacheUseCase
+    private val clearBookCacheUseCase: ClearBookCacheUseCase,
+    private val bookGroupRepository: BookGroupRepository,
+    private val imageLoader: ImageLoader,
 ) : BaseViewModel(application) {
+
+    val allGroups = bookGroupRepository.flowAll()
 
     private val _uiState = MutableStateFlow(BookInfoUiState())
     val uiState = _uiState.asStateFlow()
@@ -163,6 +175,9 @@ class BookInfoViewModel(
             BookInfoIntent.ChangeSourceClick -> setSheet(BookInfoSheet.SourcePicker)
             BookInfoIntent.ReadRecordClick -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoIntent.RemarkClick -> showDialog(BookInfoDialog.EditRemark(currentBook?.remark))
+            is BookInfoIntent.SaveCover -> {
+                saveCoverToGallery(intent.path)
+            }
             is BookInfoIntent.ConfirmDelete -> {
                 dismissDialog()
                 deleteBook(intent.deleteOriginal)
@@ -441,6 +456,41 @@ class BookInfoViewModel(
         }
     }
 
+    private fun saveCoverToGallery(path: String) {
+        val book = currentBook
+        val sourceOrigin = if (book?.getDisplayCover() == path) book.origin else null
+        execute {
+            setBusy(true)
+            val request = buildCoverImageRequest(
+                context = context,
+                data = path,
+                sourceOrigin = sourceOrigin,
+                loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                crossfade = false
+            )
+            val result = imageLoader.execute(request)
+            if (result is SuccessResult) {
+                val bitmap = result.drawable.toBitmap()
+                val outputStream = ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                val byteArray = outputStream.toByteArray()
+                ImageSaveUtils.saveImageToGallery(context, byteArray, "Cover_")
+            } else {
+                false
+            }
+        }.onSuccess { success ->
+            if (success) {
+                context.toastOnUi("保存成功")
+            } else {
+                context.toastOnUi("保存失败")
+            }
+        }.onFinally {
+            setBusy(false)
+        }.onError {
+            context.toastOnUi("保存出错: ${it.localizedMessage}")
+        }
+    }
+
     fun saveRemark(remark: String, success: (() -> Unit)? = null) {
         currentBook?.let { book ->
             execute {
@@ -709,29 +759,14 @@ class BookInfoViewModel(
 
     private fun refreshMeta(book: Book) {
         execute {
-            val allKinds = book.getKindList()
-            val customKinds = allKinds.filter { it.startsWith("#") }
-            val sourceKinds = allKinds.filter { !it.startsWith("#") }.toMutableList()
-            if (book.isLocal) {
-                val size = FileDoc.fromFile(book.bookUrl).size
-                if (size > 0) {
-                    sourceKinds.add(ConvertUtils.formatFileSize(size))
-                }
-            }
-            val mergedKinds = (customKinds + sourceKinds).distinct()
+            book.upKind()
             val userGroupIds = appDb.bookGroupDao.idsSum
             val groupAnd = userGroupIds and book.group
             val hasCustomGroup = book.group > 0L && groupAnd != 0L
             val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
             val normalizedGroupNames = groupNames.ifBlank { null }
-            val persistedCustomKinds = currentKindLabels.filter { it.startsWith("#") }
-            val finalKinds = if (persistedCustomKinds.isNotEmpty()) {
-                (persistedCustomKinds + sourceKinds).distinct()
-            } else {
-                mergedKinds
-            }
-            book.kind = finalKinds.joinToString(",")
             appDb.bookDao.update(book)
+            val finalKinds = book.kind?.splitNotBlank(",", "\n").orEmpty().toList()
             Triple(finalKinds, normalizedGroupNames, hasCustomGroup)
         }.onSuccess {
             currentKindLabels = it.first

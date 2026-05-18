@@ -2,8 +2,6 @@ package io.legado.app.ui.book.readRecord
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,14 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -68,20 +61,20 @@ import androidx.compose.ui.zIndex
 import cn.hutool.core.date.DateUtil
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
+import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
-import io.legado.app.ui.widget.CollapsibleHeader
+import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.CollapsibleHeader
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.AppIconButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
-import io.legado.app.ui.widget.components.cover.Cover
 import io.legado.app.ui.widget.components.heatmap.HEATMAP_CALENDAR_TITLE
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarStartAction
@@ -95,6 +88,7 @@ import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.swipe.SwipeAction
@@ -102,20 +96,27 @@ import io.legado.app.ui.widget.components.swipe.SwipeActionContainer
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.utils.formatReadDuration
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.StringUtils.formatFriendlyDate
+import io.legado.app.utils.formatReadDuration
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
 
+data class TimelineItem(
+    val session: ReadRecordSession,
+    val showHeader: Boolean
+)
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ReadRecordScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
     onBackClick: () -> Unit,
-    onBookClick: (String, String) -> Unit
+    onBookClick: (String, String) -> Unit,
+    onSummaryClick: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -283,7 +284,7 @@ fun ReadRecordScreen(
                             )
                         ) {
                             item(key = "summary_card") {
-                                SummarySection(state, viewModel)
+                                SummarySection(state, viewModel, onSummaryClick)
                             }
                             renderListByMode(
                                 displayMode = displayMode,
@@ -446,7 +447,8 @@ fun ReadRecordScreen(
 @Composable
 fun SummarySection(
     state: ReadRecordUiState,
-    viewModel: ReadRecordViewModel
+    viewModel: ReadRecordViewModel,
+    onSummaryClick: () -> Unit
 ) {
     val selectedDate = state.selectedDate
 
@@ -464,7 +466,7 @@ fun SummarySection(
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
                 viewModel = viewModel,
-                onClick = { }
+                onClick = onSummaryClick
             )
         }
     } else {
@@ -478,7 +480,7 @@ fun SummarySection(
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
                 viewModel = viewModel,
-                onClick = {  }
+                onClick = onSummaryClick
             )
         }
     }
@@ -507,29 +509,6 @@ fun HeatmapCalendarSection(
         }
     }
 
-    val showLeftGradient by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-        }
-    }
-    val showRightGradient by remember {
-        derivedStateOf {
-            listState.canScrollForward
-        }
-    }
-
-    val leftAlpha by animateFloatAsState(
-        targetValue = if (showLeftGradient) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "LeftGradientAlpha"
-    )
-
-    val rightAlpha by animateFloatAsState(
-        targetValue = if (showRightGradient) 1f else 0f,
-        animationSpec = tween(durationMillis = 200),
-        label = "RightGradientAlpha"
-    )
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -547,31 +526,7 @@ fun HeatmapCalendarSection(
                 horizontalArrangement = Arrangement.spacedBy(config.cellSpacing),
                 modifier = Modifier
                     .weight(1f)
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                    .drawWithContent {
-                        drawContent()
-
-                        val width = size.width
-                        val gradientWidthPx = config.gradientWidth.toPx()
-                        val leftStop = gradientWidthPx / width
-                        val rightStop = 1f - (gradientWidthPx / width)
-
-                        val colorStops = arrayOf(
-                            0f to Color.Black.copy(alpha = 1f - leftAlpha),
-                            leftStop to Color.Black,
-                            rightStop to Color.Black,
-                            1f to Color.Black.copy(alpha = 1f - rightAlpha)
-                        )
-
-                        drawRect(
-                            brush = Brush.horizontalGradient(
-                                colorStops = colorStops,
-                                startX = 0f,
-                                endX = width
-                            ),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
+                    .fadingEdge(listState, config.gradientWidth)
             ) {
                 val firstReadDate = listOfNotNull(
                     dailyReadCounts.filterValues { it > 0 }.keys.minOrNull(),
@@ -719,7 +674,12 @@ fun LatestReadItem(
             .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(coverPath)
+        CoilBookCover(
+            name = record.bookName,
+            author = record.bookAuthor,
+            path = coverPath,
+            modifier = Modifier.width(44.dp)
+        )
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -830,7 +790,12 @@ fun TimelineSessionItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Cover(coverPath)
+                CoilBookCover(
+                    name = session.bookName,
+                    author = session.bookAuthor,
+                    path = coverPath,
+                    modifier = Modifier.width(44.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     AppText(
@@ -880,7 +845,12 @@ fun ReadRecordItem(
             .adaptiveHorizontalPadding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Cover(coverPath)
+        CoilBookCover(
+            name = detail.bookName,
+            author = detail.bookAuthor,
+            path = coverPath,
+            modifier = Modifier.width(44.dp)
+        )
 
         Spacer(modifier = Modifier.width(16.dp))
 
@@ -1008,24 +978,25 @@ fun ReadingSummaryCard(
             }
 
             if (bookNamesForCover.isNotEmpty()) {
-                BookStackView(coverPaths = coverPaths)
+                val combined = bookNamesForCover.zip(coverPaths)
+                BookStackView(books = combined)
             }
         }
     }
 }
 
 @Composable
-fun BookStackView(coverPaths: List<String?>) {
+fun BookStackView(books: List<Pair<Pair<String, String>, String?>>) {
     val xOffsetStep = 12.dp
-    val stackWidth = 48.dp + (xOffsetStep * (coverPaths.size - 1).coerceAtLeast(0))
+    val stackWidth = 44.dp + (xOffsetStep * (books.size - 1).coerceAtLeast(0))
 
     Box(
         modifier = Modifier
             .width(stackWidth)
-            .height(72.dp),
+            .height(64.dp),
         contentAlignment = Alignment.CenterStart
     ) {
-        coverPaths.forEachIndexed { index, path ->
+        books.forEachIndexed { index, (info, path) ->
             Box(
                 modifier = Modifier
                     .padding(start = xOffsetStep * index)
@@ -1037,7 +1008,12 @@ fun BookStackView(coverPaths: List<String?>) {
                     shape = RoundedCornerShape(4.dp),
                     color = Color.Transparent
                 ) {
-                    Cover(path = path)
+                    CoilBookCover(
+                        name = info.first,
+                        author = info.second,
+                        path = path,
+                        modifier = Modifier.width(44.dp)
+                    )
                 }
             }
         }

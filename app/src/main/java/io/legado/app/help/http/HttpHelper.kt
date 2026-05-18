@@ -52,16 +52,12 @@ val cookieJar by lazy {
 }
 
 /**
- * 强制缓存拦截器，对于图片资源，如果没有缓存头，则强制缓存30天
+ * 强制缓存拦截器，对于封面请求（由CoverFetcher标记），强制缓存30天
  */
 private val cacheControlInterceptor = Interceptor { chain ->
     val request = chain.request()
     val response = chain.proceed(request)
-    val url = request.url.toString()
-    if (url.contains("image", true) || url.endsWith(".jpg") || url.endsWith(".png") || url.endsWith(
-            ".webp"
-        ) || url.endsWith(".jpeg")
-    ) {
+    if (request.tag() === io.legado.app.help.coil.CoverFetcher.COVER_REQUEST_TAG) {
         response.newBuilder()
             .header("Cache-Control", "public, max-age=2592000")
             .removeHeader("Pragma")
@@ -149,6 +145,7 @@ val okHttpClient: OkHttpClient by lazy {
 
 val okHttpClientManga by lazy {
     okHttpClient.newBuilder().run {
+        cache(Cache(File(appCtx.cacheDir, "manga_cache"), 100L * 1024L * 1024L))
         val interceptors = interceptors()
         interceptors.add(1) { chain ->
             val request = chain.request()
@@ -164,6 +161,24 @@ val okHttpClientManga by lazy {
             }
         }
         build()
+    }
+}
+
+enum class HttpCacheType(val dirName: String, val maxSize: Long) {
+    COVER("http_cache", 100L * 1024 * 1024),
+    MANGA("manga_cache", 100L * 1024 * 1024),
+}
+
+fun getHttpCacheSize(type: HttpCacheType): Long {
+    val dir = File(appCtx.cacheDir, type.dirName)
+    if (!dir.exists()) return 0
+    return dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+}
+
+fun clearHttpCache(type: HttpCacheType) {
+    when (type) {
+        HttpCacheType.COVER -> okHttpClient.cache?.delete()
+        HttpCacheType.MANGA -> okHttpClientManga.cache?.delete()
     }
 }
 

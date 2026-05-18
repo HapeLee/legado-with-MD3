@@ -1,7 +1,6 @@
 package io.legado.app.ui.rss.article
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,8 +33,6 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -61,17 +58,15 @@ import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.card.GlassCard
-import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
+import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.toastOnUi
-import io.legado.app.ui.config.themeConfig.ThemeConfig
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import org.koin.compose.koinInject
 
 private enum class RssArticleLayout {
@@ -123,28 +118,23 @@ fun RssArticlesPage(
     val articles by articleFlow.collectAsStateWithLifecycle(initialValue = emptyList())
 
     LaunchedEffect(rssSource?.sourceUrl, sortName, sortUrl) {
-        rssSource?.let { source ->
-            if (isPreload) {
-                viewModel.loadArticles(source)
-            }
-        }
+        rssSource?.let(viewModel::loadArticles)
     }
 
     LaunchedEffect(loadState.errorMessage) {
         loadState.errorMessage?.takeIf { it.isNotBlank() }?.let(context::toastOnUi)
     }
 
-    val refreshState = rememberPullToRefreshState()
     val contentPadding = adaptiveContentPadding(
         top = paddingValues.calculateTopPadding(),
         bottom = 120.dp
     )
 
-    PullToRefreshBox(
+    AppPullToRefresh(
         isRefreshing = loadState.isRefreshing,
         onRefresh = { rssSource?.let(viewModel::loadArticles) },
-        state = refreshState,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize(),
+        topPadding = paddingValues.calculateTopPadding()
     ) {
         when (layout) {
             RssArticleLayout.List, RssArticleLayout.LargeCard -> {
@@ -313,7 +303,7 @@ private fun LoadMoreFooter(
     onRetry: () -> Unit
 ) {
     val text = when {
-        state.isLoadingMore -> "加载中..."
+        state.isRefreshing || state.isLoadingMore -> "加载中..."
         !state.hasMore -> "没有更多了"
         state.errorMessage != null -> "加载失败，点击重试"
         else -> "上拉加载更多"
@@ -331,7 +321,7 @@ private fun LoadMoreFooter(
     ) {
         EmptyMessage(
             message = text,
-            isLoading = state.isLoadingMore,
+            isLoading = state.isRefreshing || state.isLoadingMore,
             modifier = contentModifier
         )
     }
@@ -356,22 +346,11 @@ private fun RssArticleItem(
         RssArticleLayout.Waterfall -> 3
     }
 
-    // 边框设置
-    val borderModifier = if (ThemeConfig.enableContainerBorder) {
-        Modifier.border(
-            width = Dp(ThemeConfig.containerBorderWidth),
-            color = Color(ThemeConfig.containerBorderColor),
-            shape = RoundedCornerShape(12.dp)
-        )
-    } else {
-        Modifier
-    }
-
     GlassCard(
         onClick = { onClick(article) },
         cornerRadius = 12.dp,
         containerColor = containerColor,
-        modifier = Modifier.fillMaxWidth().then(borderModifier)
+        modifier = Modifier.fillMaxWidth()
     ) {
         when (layout) {
             RssArticleLayout.List -> {
@@ -412,7 +391,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.LargeCard -> {
-                Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = false,
@@ -441,7 +422,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.GridCard -> {
-                Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = true,
@@ -470,7 +453,9 @@ private fun RssArticleItem(
             }
 
             RssArticleLayout.Waterfall -> {
-                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Column(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)) {
                     RssArticleImage(
                         article = article,
                         showPlaceholder = false,

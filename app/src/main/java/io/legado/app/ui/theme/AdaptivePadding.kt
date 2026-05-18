@@ -55,7 +55,7 @@ fun adaptiveContentPadding(
     bottom: Dp
 ): PaddingValues {
     val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 12.dp else 16.dp
-    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 8.dp else top
+    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 16.dp
     return PaddingValues(
         top = adjustedTop,
         bottom = bottom,
@@ -70,7 +70,7 @@ fun adaptiveContentPadding(
     bottom: Dp,
     horizontal: Dp
 ): PaddingValues {
-    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 6.dp else top + 4.dp
+    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 16.dp
     return PaddingValues(
         top = adjustedTop,
         bottom = bottom,
@@ -86,7 +86,8 @@ fun adaptiveContentPaddingBookshelf(
     horizontal: Dp
 ): PaddingValues {
     val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 8.dp
-    val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 12.dp + horizontal else 4.dp + horizontal
+    val horizontal =
+        if (ThemeResolver.isMiuixEngine(composeEngine)) 6.dp + horizontal else 4.dp + horizontal
     return PaddingValues(
         top = adjustedTop,
         bottom = bottom,

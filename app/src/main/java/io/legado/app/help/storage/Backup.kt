@@ -14,7 +14,6 @@ import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.OldThemeConfig
-import io.legado.app.help.config.PersonalizationThemeConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.BookCover
@@ -84,7 +83,6 @@ object Backup {
             ReadBookConfig.configFileName,
             ReadBookConfig.shareConfigFileName,
             OldThemeConfig.configFileName,
-            PersonalizationThemeConfig.configFileName,
             BookCover.configFileName,
             "config.xml"
         )
@@ -125,15 +123,15 @@ object Backup {
         }
     }
 
-    suspend fun backupLocked(context: Context, path: String?) {
+    suspend fun backupLocked(context: Context, path: String?, mode: String = "both") {
         mutex.withLock {
             withContext(IO) {
-                backup(context, path)
+                backup(context, path, mode)
             }
         }
     }
 
-    private suspend fun backup(context: Context, path: String?) {
+    private suspend fun backup(context: Context, path: String?, mode: String = "both") {
         LogUtils.d(TAG, "开始备份 path:$path")
         LocalConfig.lastBackup = System.currentTimeMillis()
         val aes = BackupAES()
@@ -183,8 +181,6 @@ object Backup {
             FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
                 .writeText(GSON.toJson(it))
         }
-        FileUtils.createFileIfNotExist(backupPath + File.separator + PersonalizationThemeConfig.configFileName)
-            .writeText(PersonalizationThemeConfig.toJson())
         currentCoroutineContext().ensureActive()
         appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
             sp.edit(commit = true) {
@@ -223,23 +219,27 @@ object Backup {
             zipFileName
         }
         if (ZipUtils.zipFiles(paths, zipFilePath)) {
-            when {
-                path.isNullOrBlank() -> {
-                    copyBackup(context.getExternalFilesDir(null)!!, backupFileName)
-                }
+            if (mode == "both" || mode == "local") {
+                when {
+                    path.isNullOrBlank() -> {
+                        copyBackup(context.getExternalFilesDir(null)!!, backupFileName)
+                    }
 
-                path.isContentScheme() -> {
-                    copyBackup(context, path.toUri(), backupFileName)
-                }
+                    path.isContentScheme() -> {
+                        copyBackup(context, path.toUri(), backupFileName)
+                    }
 
-                else -> {
-                    copyBackup(File(path), backupFileName)
+                    else -> {
+                        copyBackup(File(path), backupFileName)
+                    }
                 }
             }
-            try {
-                AppWebDav.backUpWebDav(zipFileName)
-            } catch (e: Exception) {
-                AppLog.put("上传备份至webdav失败\n$e", e)
+            if (mode == "both" || mode == "webdav") {
+                try {
+                    AppWebDav.backUpWebDav(zipFileName)
+                } catch (e: Exception) {
+                    AppLog.put("上传备份至webdav失败\n$e", e)
+                }
             }
         }
         FileUtils.delete(backupPath)

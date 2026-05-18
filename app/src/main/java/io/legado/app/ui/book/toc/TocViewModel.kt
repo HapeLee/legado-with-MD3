@@ -4,7 +4,7 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.graphics.vector.ImageVector
+
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseRuleViewModel
@@ -108,8 +108,6 @@ private data class TitleCacheKey(
     val chineseConverterType: Int,
     val chapterCount: Int
 )
-
-data class FabAction(val icon: ImageVector, val label: String, val action: () -> Unit)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TocViewModel(

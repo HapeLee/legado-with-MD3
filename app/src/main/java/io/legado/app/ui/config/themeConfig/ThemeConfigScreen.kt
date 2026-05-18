@@ -79,7 +79,6 @@ import com.google.android.material.color.DynamicColorsOptions
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.PreferKey
-import io.legado.app.ui.config.mainConfig.MainConfig
 import io.legado.app.constant.EventBus
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.loadFontFiles
@@ -124,6 +123,7 @@ import top.yukonga.miuix.kmp.basic.Text as MiuixText
 fun ThemeConfigScreen(
     onBackClick: () -> Unit,
     onNavigateToCustomTheme: () -> Unit,
+    onNavigateToThemeManage: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel()
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -136,7 +136,6 @@ fun ThemeConfigScreen(
     var showRestartDialog by remember { mutableStateOf(false) }
     var showLauncherIconPicker by remember { mutableStateOf(false) }
     var showBorderColorPicker by remember { mutableStateOf(false) }
-    var currentBorderColorKey by remember { mutableStateOf("containerBorderColor") }
     var showNavIconSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
@@ -411,20 +410,25 @@ fun ThemeConfigScreen(
                         onCheckedChange = { ThemeConfig.useFloatingBottomBar = it }
                     )
                     AnimatedVisibility(visible = ThemeConfig.useFloatingBottomBar) {
-                        SwitchSettingItem(
-                            title = stringResource(R.string.floating_bottom_bar_liquid_glass),
-                            description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
-                            checked = ThemeConfig.useFloatingBottomBarLiquidGlass,
-                            onCheckedChange = { ThemeConfig.useFloatingBottomBarLiquidGlass = it }
-                        )
-                        SliderSettingItem(
-                            title = "底栏模糊强度",
-                            description = "控制液态玻璃的扭曲程度",
-                            value = ThemeConfig.bottomBarLensRadius,
-                            defaultValue = 24f,
-                            valueRange = 0f..50f,
-                            onValueChange = { ThemeConfig.bottomBarLensRadius = it }
-                        )
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            SwitchSettingItem(
+                                title = stringResource(R.string.floating_bottom_bar_liquid_glass),
+                                description = stringResource(R.string.floating_bottom_bar_liquid_glass_summary),
+                                checked = ThemeConfig.useFloatingBottomBarLiquidGlass,
+                                onCheckedChange = { ThemeConfig.useFloatingBottomBarLiquidGlass = it }
+                            )
+                            SliderSettingItem(
+                                title = "底栏模糊强度",
+                                description = "控制液态玻璃的扭曲程度",
+                                value = ThemeConfig.bottomBarLensRadius,
+                                defaultValue = 24f,
+                                valueRange = 0f..50f,
+                                onValueChange = { ThemeConfig.bottomBarLensRadius = it }
+                            )
+                        }
+
                     }
                     DropdownListSettingItem(
                         title = stringResource(R.string.tabletInterface),
@@ -604,62 +608,9 @@ fun ThemeConfigScreen(
                 }
             }
 
-            // Border settings
+            // Container settings
             item {
                 SplicedColumnGroup(title = "容器设置") {
-                    SwitchSettingItem(
-                        title = "显示容器边框",
-                        checked = ThemeConfig.enableContainerBorder,
-                        onCheckedChange = { ThemeConfig.enableContainerBorder = it }
-                    )
-                    if (ThemeConfig.enableContainerBorder) {
-                        SliderSettingItem(
-                            title = "边框粗细",
-                            description = "${ThemeConfig.containerBorderWidth}dp",
-                            value = ThemeConfig.containerBorderWidth,
-                            defaultValue = 1f,
-                            valueRange = 0f..5f,
-                            steps = 49,
-                            onValueChange = { ThemeConfig.containerBorderWidth = it }
-                        )
-                        DropdownListSettingItem(
-                            title = "边框样式",
-                            selectedValue = ThemeConfig.containerBorderStyle,
-                            displayEntries = arrayOf("实线", "虚线"),
-                            entryValues = arrayOf("solid", "dashed"),
-                            onValueChange = { ThemeConfig.containerBorderStyle = it }
-                        )
-                        if (ThemeConfig.containerBorderStyle == "dashed") {
-                            SliderSettingItem(
-                                title = "虚线间隔",
-                                description = "${ThemeConfig.containerBorderDashWidth}dp",
-                                value = ThemeConfig.containerBorderDashWidth,
-                                defaultValue = 4f,
-                                valueRange = 1f..10f,
-                                steps = 89,
-                                onValueChange = { ThemeConfig.containerBorderDashWidth = it }
-                            )
-                        }
-                        ClickableSettingItem(
-                            title = "边框颜色",
-                            option = if (ThemeConfig.containerBorderColor != 0) "#${Integer.toHexString(ThemeConfig.containerBorderColor).uppercase()}" else stringResource(R.string.click_to_select),
-                            onClick = {
-                                currentBorderColorKey = "containerBorderColor"
-                                showBorderColorPicker = true
-                            },
-                            trailingContent = {
-                                if (ThemeConfig.containerBorderColor != 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(ThemeConfig.containerBorderColor))
-                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                                    )
-                                }
-                            }
-                        )
-                    }
                     SwitchSettingItem(
                         title = "显示分割线",
                         checked = ThemeConfig.enableItemDivider,
@@ -688,7 +639,6 @@ fun ThemeConfigScreen(
                             title = "分割线颜色",
                             option = if (ThemeConfig.itemDividerColor != 0) "#${Integer.toHexString(ThemeConfig.itemDividerColor).uppercase()}" else stringResource(R.string.click_to_select),
                             onClick = {
-                                currentBorderColorKey = "itemDividerColor"
                                 showBorderColorPicker = true
                             },
                             trailingContent = {
@@ -711,15 +661,26 @@ fun ThemeConfigScreen(
             item {
                 SplicedColumnGroup(title = "导航栏图标设置") {
                     val customCount = listOf(
-                        MainConfig.navIconBookshelf,
-                        MainConfig.navIconExplore,
-                        MainConfig.navIconRss,
-                        MainConfig.navIconMy
+                        ThemeConfig.navIconBookshelf,
+                        ThemeConfig.navIconExplore,
+                        ThemeConfig.navIconRss,
+                        ThemeConfig.navIconMy
                     ).count { it.isNotEmpty() }
                     ClickableSettingItem(
                         title = "导航栏图标",
                         description = if (customCount > 0) "已设置 $customCount 个自定义图标" else "使用默认图标",
                         onClick = { showNavIconSheet = true }
+                    )
+                }
+            }
+
+            // Theme management
+            item {
+                SplicedColumnGroup(title = "主题管理") {
+                    ClickableSettingItem(
+                        title = "主题管理",
+                        description = "保存、导入、导出主题配置",
+                        onClick = onNavigateToThemeManage
                     )
                 }
             }
@@ -774,17 +735,11 @@ fun ThemeConfigScreen(
 
     ColorPickerSheet(
         show = showBorderColorPicker,
-        initialColor = when (currentBorderColorKey) {
-            "containerBorderColor" -> ThemeConfig.containerBorderColor
-            "itemDividerColor" -> ThemeConfig.itemDividerColor
-            else -> 0
-        },
+        initialColor = ThemeConfig.itemDividerColor,
         onDismissRequest = { showBorderColorPicker = false },
         onColorSelected = {
-            when (currentBorderColorKey) {
-                "containerBorderColor" -> ThemeConfig.containerBorderColor = it
-                "itemDividerColor" -> ThemeConfig.itemDividerColor = it
-            }
+            ThemeConfig.itemDividerColor = it
+            showBorderColorPicker = false
         }
     )
 
@@ -797,10 +752,7 @@ fun ThemeConfigScreen(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "清除",
                 onClick = {
-                    fontFolderUri = null
-                    context.putPrefString(PreferKey.fontFolder, "")
                     ThemeConfig.appFontPath = null
-                    fontItems = emptyList()
                     showFontSheet = false
                 }
             )

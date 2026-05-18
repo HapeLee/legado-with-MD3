@@ -367,8 +367,8 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (durChapterIndex < simulatedChapterSize - 1) {
             if (toFirst) {
                 mCallback?.showLoading()
-                durChapterPos = 0
             }
+            durChapterPos = 0
             durChapterIndex++
             prevMangaChapter = curMangaChapter
             curMangaChapter = nextMangaChapter
@@ -394,8 +394,8 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (durChapterIndex > 0) {
             if (toFirst) {
                 mCallback?.showLoading()
-                durChapterPos = 0
             }
+            durChapterPos = 0
             durChapterIndex--
             nextMangaChapter = curMangaChapter
             curMangaChapter = prevMangaChapter

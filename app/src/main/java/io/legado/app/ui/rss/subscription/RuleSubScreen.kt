@@ -4,8 +4,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +16,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHostState
@@ -37,7 +34,6 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.legado.app.R
 import io.legado.app.data.entities.RuleSub
 import io.legado.app.data.entities.RuleSubType
@@ -45,6 +41,8 @@ import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.ui.association.ImportReplaceRuleDialog
 import io.legado.app.ui.association.ImportRssSourceDialog
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -56,12 +54,13 @@ import io.legado.app.ui.widget.components.rules.RuleListScaffold
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RuleSubScreen(
     onBackClick: () -> Unit,
-    viewModel: RuleSubViewModel = viewModel()
+    viewModel: RuleSubViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
@@ -85,11 +84,7 @@ fun RuleSubScreen(
             RoundDropdownMenuItem(
                 text = stringResource(R.string.sort),
                 leadingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(12.dp))
-                        AppText(stringResource(R.string.sort))
-                    }
+                    Icon(Icons.AutoMirrored.Filled.Sort, null, modifier = Modifier.size(18.dp))
                 },
                 onClick = {
                     viewModel.resetOrder()
@@ -107,10 +102,9 @@ fun RuleSubScreen(
                 onClick = {
                     showEditDialog = RuleSub(customOrder = state.items.size + 1)
                 },
-                tooltipText = "Localized description"
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Rule")
-            }
+                tooltipText = stringResource(R.string.add),
+                icon = Icons.Default.Add
+            )
         }
     ) { paddingValues ->
         if (state.items.isEmpty()) {
@@ -129,7 +123,10 @@ fun RuleSubScreen(
             val typeArray = stringArrayResource(R.array.rule_type)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = paddingValues,
+                contentPadding = adaptiveContentPadding(
+                    top = paddingValues.calculateTopPadding(),
+                    bottom = paddingValues.calculateBottomPadding() + 120.dp
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(state.items, key = { it.id }) { ruleSub ->
@@ -228,12 +225,14 @@ fun RuleSubEditDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = stringResource(R.string.name),
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     modifier = Modifier.fillMaxWidth()
                 )
                 AppTextField(
                     value = url,
                     onValueChange = { url = it },
                     label = "URL",
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     modifier = Modifier.fillMaxWidth()
                 )
 

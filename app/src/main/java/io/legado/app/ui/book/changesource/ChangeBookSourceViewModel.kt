@@ -38,6 +38,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,6 +98,8 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             .thenBy { it.originOrder }
     }
     private var task: Job? = null
+    private var isPaused = false
+    private var wasSearching = false
     val bookMap = ConcurrentHashMap<String, Book>()
     val searchDataFlow = callbackFlow {
 
@@ -119,13 +122,14 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
 
         }
 
-        getDbSearchBooks().let {
-            searchBooks.clear()
-            searchBooks.addAll(it)
-            trySend(arrayOf(searchBooks))
-        }
-
         if (searchBooks.isEmpty()) {
+            getDbSearchBooks().let {
+                searchBooks.addAll(it)
+            }
+        }
+        trySend(arrayOf(searchBooks))
+
+        if (searchBooks.isEmpty() && !_isSearching.value) {
             startSearch()
         }
 
@@ -207,18 +211,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             bookMap.clear()
             tocMapChapterCount = 0
             _changeSourceProgress.value = 0 to ""
-            val searchGroup = AppConfig.searchGroup
-            if (searchGroup.isBlank()) {
-                bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
-            } else {
-                val sources = appDb.bookSourceDao.getEnabledPartByGroup(searchGroup)
-                if (sources.isEmpty()) {
-                    AppConfig.searchGroup = ""
-                    bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
-                } else {
-                    bookSourceParts.addAll(sources)
-                }
-            }
+            bookSourceParts.addAll(io.legado.app.ui.book.search.SearchScope(ChangeSourceConfig.searchScope).getBookSourceParts())
             initSearchPool()
             search()
         }
@@ -250,6 +243,9 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 searchStateData.postValue(true)
                 _isSearching.value = true
             }.mapParallel(threadCount) {
+                while (isPaused) {
+                    kotlinx.coroutines.delay(100)
+                }
                 try {
                     withTimeout(60000L) {
                         search(it)
@@ -465,6 +461,17 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         searchPool?.close()
         searchStateData.postValue(false)
         _isSearching.value = false
+        wasSearching = false
+    }
+
+    fun pause() {
+        isPaused = true
+        wasSearching = _isSearching.value
+    }
+
+    fun resume() {
+        isPaused = false
+        wasSearching = false
     }
 
     fun getToc(

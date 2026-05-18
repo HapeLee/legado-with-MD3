@@ -17,7 +17,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -44,6 +43,7 @@ fun AppScaffold(
     contentColor: Color = contentColorFor(MiuixTheme.colorScheme.surface),
     contentWindowInsets: WindowInsets = ScaffoldDefaults.contentWindowInsets,
     alwaysDrawBehindBars: Boolean = false,
+    disableHazeSource: Boolean = false,
     content: @Composable (PaddingValues) -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -89,17 +89,25 @@ fun AppScaffold(
                         containerColor = miuixContainerColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
+                        val scaffoldPadding = if (ThemeConfig.useFloatingBottomBar) {
+                            PaddingValues(top = paddingValues.calculateTopPadding())
+                        } else {
+                            paddingValues
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (!disableHazeSource) Modifier.responsiveHazeSource(hazeState)
+                                    else Modifier
+                                )
                                 .then(
                                     if (contentDrawsBehindBars) Modifier
-                                    else Modifier.padding(paddingValues)
+                                    else Modifier.padding(scaffoldPadding)
                                 )
                         ) {
                             content(
-                                if (contentDrawsBehindBars) paddingValues
+                                if (contentDrawsBehindBars) scaffoldPadding
                                 else PaddingValues(0.dp)
                             )
                         }
@@ -123,17 +131,25 @@ fun AppScaffold(
                         contentColor = contentColor,
                         contentWindowInsets = contentWindowInsets
                     ) { paddingValues ->
+                        val scaffoldPadding = if (ThemeConfig.useFloatingBottomBar) {
+                            PaddingValues(top = paddingValues.calculateTopPadding())
+                        } else {
+                            paddingValues
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .responsiveHazeSource(hazeState)
+                                .then(
+                                    if (!disableHazeSource) Modifier.responsiveHazeSource(hazeState)
+                                    else Modifier
+                                )
                                 .then(
                                     if (contentDrawsBehindBars) Modifier
-                                    else Modifier.padding(paddingValues)
+                                    else Modifier.padding(scaffoldPadding)
                                 )
                         ) {
                             content(
-                                if (contentDrawsBehindBars) paddingValues
+                                if (contentDrawsBehindBars) scaffoldPadding
                                 else PaddingValues(0.dp)
                             )
                         }

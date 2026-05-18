@@ -2,9 +2,7 @@ package io.legado.app.ui.widget.components.explore
 
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,13 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.UnfoldMore
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -27,32 +21,28 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import io.legado.app.App
 import io.legado.app.data.entities.rule.ExploreKind
-import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.getExploreInfoMap
-import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.dialog.TextDialog
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.utils.showDialogFragment
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.ArrowUpDown
 
 @Composable
 fun ExploreKindMultiTypeItem(
@@ -320,17 +310,7 @@ private fun ExploreKindCompactTextField(
     isMiuix: Boolean
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val isFocused by interactionSource.collectIsFocusedAsState()
     val shape = RoundedCornerShape(10.dp)
-    val enableBorder = ThemeConfig.enableDeepPersonalization && ThemeConfig.enableContainerBorder
-    val borderWidth = ThemeConfig.containerBorderWidth.dp
-    val borderColor = if (ThemeConfig.containerBorderColor != 0) {
-        Color(ThemeConfig.containerBorderColor)
-    } else if (isFocused) {
-        LegadoTheme.colorScheme.primary
-    } else {
-        Color.Transparent
-    }
 
     BasicTextField(
         value = value,
@@ -342,8 +322,7 @@ private fun ExploreKindCompactTextField(
         modifier = modifier
             .height(34.dp)
             .clip(shape)
-            .background(backgroundColor)
-            .border(width = borderWidth, color = borderColor, shape = shape),
+            .background(backgroundColor),
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier

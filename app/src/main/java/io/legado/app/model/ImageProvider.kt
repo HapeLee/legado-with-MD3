@@ -207,8 +207,10 @@ object ImageProvider {
         }.getOrDefault(errorBitmap)
     }
 
-    fun clear() {
-        bitmapLruCache.evictAll()
+    suspend fun clear() {
+        withContext(IO) {
+            bitmapLruCache.evictAll()
+        }
     }
 
 }

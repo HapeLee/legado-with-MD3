@@ -1,6 +1,8 @@
 package io.legado.app.model
 
 import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -12,9 +14,10 @@ import io.legado.app.model.cache.CacheDownloadStateStore
 import io.legado.app.model.cache.ChapterSelection
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.onEachParallel
-import io.legado.app.utils.startService
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -32,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -74,7 +78,7 @@ object CacheBook {
                     }
                     var emitted = false
                     taskMap.forEach { (_, model) ->
-                        if (model.hasRunnableDownloads()) {
+                        if (model.hasLaunchableChapters()) {
                             emit(model)
                             emitted = true
                         }
@@ -123,6 +127,10 @@ object CacheBook {
     val downloadErrorFlow = _downloadErrorFlow.asStateFlow()
     @Volatile
     private var lastQueueStats = QueueStats(0, 0)
+
+    @Volatile
+    private var lastSummaryUpdateTime = 0L
+    private const val SUMMARY_UPDATE_THROTTLE_MS = 100L
 
     private val successDownloadCount = AtomicInteger(0)
 
@@ -173,21 +181,30 @@ object CacheBook {
     }
 
     private fun updateSummary() {
+        val now = System.currentTimeMillis()
+        if (now - lastSummaryUpdateTime < SUMMARY_UPDATE_THROTTLE_MS) {
+            return
+        }
+        lastSummaryUpdateTime = now
         val stats = collectQueueStats()
         lastQueueStats = stats
         _downloadSummaryFlow.value = buildSummary(stats)
     }
 
-    @Synchronized
-    fun getOrCreate(bookUrl: String): CacheBookModel? {
-        val book = appDb.bookDao.getBook(bookUrl) ?: return null
-        val source = appDb.bookSourceDao.getBookSource(book.origin) ?: return null
-        return getOrCreate(source, book)
+    private fun updateSummaryImmediate() {
+        val stats = collectQueueStats()
+        lastQueueStats = stats
+        _downloadSummaryFlow.value = buildSummary(stats)
+    }
+
+    suspend fun getOrCreate(bookUrl: String): CacheBookModel? = withContext(Dispatchers.IO) {
+        val book = appDb.bookDao.getBook(bookUrl) ?: return@withContext null
+        val source = appDb.bookSourceDao.getBookSource(book.origin) ?: return@withContext null
+        getOrCreate(source, book)
     }
 
     @Synchronized
     fun getOrCreate(bookSource: BookSource, book: Book): CacheBookModel {
-        updateBookSource(bookSource)
         cacheBookMap[book.bookUrl]?.let { model ->
             model.bookSource = bookSource
             model.book = book
@@ -200,14 +217,16 @@ object CacheBook {
     }
 
     private fun updateBookSource(newBookSource: BookSource) {
-        cacheBookMap.forEach { (_, model) ->
-            if (model.bookSource.bookSourceUrl == newBookSource.bookSourceUrl) {
+        // 只有在必要时才更新，且避免在 getOrCreate 中高频调用
+        val sourceUrl = newBookSource.bookSourceUrl
+        cacheBookMap.values.forEach { model ->
+            if (model.bookSource.bookSourceUrl == sourceUrl && model.bookSource != newBookSource) {
                 model.bookSource = newBookSource
             }
         }
     }
 
-    fun start(context: Context, book: Book, selectedIndices: List<Int>) {
+    suspend fun start(context: Context, book: Book, selectedIndices: List<Int>) {
         start(
             context = context,
             request = CacheDownloadRequest(
@@ -218,7 +237,7 @@ object CacheBook {
         )
     }
 
-    fun start(context: Context, book: Book, startIndex: Int, endIndex: Int) {
+    suspend fun start(context: Context, book: Book, startIndex: Int, endIndex: Int) {
         start(
             context = context,
             request = CacheDownloadRequest(
@@ -233,25 +252,34 @@ object CacheBook {
         if (isLocal) return
         if (!request.hasValidSelection()) return
         isPaused = false
-        context.startService<CacheBookService> {
+        startCacheBookService(context) {
             action = IntentAction.start
             putRequestExtras(request)
         }
     }
 
-    fun start(context: Context, requests: List<CacheDownloadRequest>) {
-        requests.asSequence()
-            .filter { it.hasValidSelection() }
-            .filter { request ->
-                appDb.bookDao.getBook(request.bookUrl)?.isLocal != true
+    suspend fun start(context: Context, requests: List<CacheDownloadRequest>) = withContext(Dispatchers.IO) {
+        val validRequests = requests.filter { it.hasValidSelection() }
+        if (validRequests.isEmpty()) return@withContext
+        
+        val urls = validRequests.map { it.bookUrl }.toSet()
+        val localBookUrls = appDb.bookDao.getCacheableBooks(urls)
+            .filter { it.isLocal }
+            .map { it.bookUrl }
+            .toSet()
+
+        val finalRequests = validRequests.filterNot { it.bookUrl in localBookUrls }
+        if (finalRequests.isEmpty()) return@withContext
+
+        isPaused = false
+        // 如果请求较多，可以通过 Intent 传递一个特殊的标志让 Service 自己去检查队列，
+        // 或者分批发送。这里我们先简单处理，但确保不在主线程做数据库查询。
+        finalRequests.forEach { request ->
+            startCacheBookService(context) {
+                action = IntentAction.start
+                putRequestExtras(request)
             }
-            .forEach { request ->
-                isPaused = false
-                context.startService<CacheBookService> {
-                    action = IntentAction.start
-                    putRequestExtras(request)
-                }
-            }
+        }
     }
 
     private fun android.content.Intent.putRequestExtras(request: CacheDownloadRequest) {
@@ -272,14 +300,28 @@ object CacheBook {
         }
     }
 
+    private fun startCacheBookService(context: Context, configIntent: Intent.() -> Unit = {}): Boolean {
+        val intent = Intent(context, CacheBookService::class.java).apply(configIntent)
+        return try {
+            ContextCompat.startForegroundService(context, intent)
+            true
+        } catch (e: Exception) {
+            LogUtils.e("CacheBook", "启动下载服务失败: ${e.localizedMessage}")
+            false
+        }
+    }
+
     fun remove(context: Context, bookUrl: String) {
         if (!CacheBookService.isRun) {
             removeBookFromService(bookUrl)
             return
         }
-        context.startService<CacheBookService> {
+        val started = startCacheBookService(context) {
             action = IntentAction.remove
             putExtra("bookUrl", bookUrl)
+        }
+        if (!started) {
+            removeBookFromService(bookUrl)
         }
     }
 
@@ -290,15 +332,14 @@ object CacheBook {
         val requestId = pendingRequestId.incrementAndGet()
         val removeRequest = CompletableDeferred<Boolean>()
         pendingRemoveRequests[requestId] = removeRequest
-        runCatching {
-            context.startService<CacheBookService> {
-                action = IntentAction.remove
-                putExtra("bookUrl", bookUrl)
-                putExtra("removeRequestId", requestId)
-            }
-        }.onFailure {
+        val started = startCacheBookService(context) {
+            action = IntentAction.remove
+            putExtra("bookUrl", bookUrl)
+            putExtra("removeRequestId", requestId)
+        }
+        if (!started) {
             pendingRemoveRequests.remove(requestId)
-            removeRequest.completeExceptionally(it)
+            return removeBookFromService(bookUrl)
         }
         return try {
             withTimeout(30_000L) {
@@ -340,16 +381,22 @@ object CacheBook {
 
     fun stop(context: Context) {
         if (CacheBookService.isRun) {
-            context.startService<CacheBookService> {
+            val started = startCacheBookService(context) {
                 action = IntentAction.stop
+            }
+            if (!started) {
+                close(clearFailureState = false)
             }
         }
     }
 
     fun pause(context: Context) {
         if (CacheBookService.isRun) {
-            context.startService<CacheBookService> {
+            val started = startCacheBookService(context) {
                 action = IntentAction.pause
+            }
+            if (!started) {
+                pauseAllFromService()
             }
         } else {
             pauseAllFromService()
@@ -359,8 +406,11 @@ object CacheBook {
     fun resume(context: Context): Boolean {
         if (!hasQueuedDownloads) return false
         isPaused = false
-        context.startService<CacheBookService> {
+        val started = startCacheBookService(context) {
             action = IntentAction.resume
+        }
+        if (!started) {
+            resumeFromService()
         }
         return true
     }
@@ -399,8 +449,11 @@ object CacheBook {
             isPaused = false
             updateSummary()
             _queueChangedFlow.tryEmit(bookUrl)
-            context.startService<CacheBookService> {
+            val started = startCacheBookService(context) {
                 action = IntentAction.resume
+            }
+            if (!started) {
+                resumeFromService()
             }
         }
         return resumed
@@ -421,8 +474,11 @@ object CacheBook {
             isPaused = false
             updateSummary()
             _queueChangedFlow.tryEmit(bookUrl)
-            context.startService<CacheBookService> {
+            val started = startCacheBookService(context) {
                 action = IntentAction.resume
+            }
+            if (!started) {
+                resumeFromService()
             }
         }
         return resumed
@@ -441,7 +497,27 @@ object CacheBook {
         } else {
             stateStore.clearRuntimeState()
         }
-        updateSummary()
+        updateSummaryImmediate()
+    }
+
+    fun shutdownPreservingPaused() {
+        isPaused = false
+        val toRemove = ArrayList<String>()
+        cacheBookMap.forEach { (bookUrl, model) ->
+            val keep = synchronized(model) {
+                model.isPaused() || model.pausedIndices().isNotEmpty()
+            }
+            if (keep) return@forEach
+            toRemove.add(bookUrl)
+            model.stop()
+        }
+        toRemove.forEach { cacheBookMap.remove(it) }
+        successDownloadCount.set(0)
+        pendingRemoveRequests.values.forEach { it.complete(false) }
+        pendingRemoveRequests.clear()
+        clearPendingAdmissions()
+        stateStore.clearRuntimeState()
+        updateSummaryImmediate()
     }
 
     fun setWorkingState(value: Boolean) {

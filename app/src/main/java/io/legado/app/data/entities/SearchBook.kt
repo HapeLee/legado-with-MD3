@@ -54,6 +54,12 @@ data class SearchBook(
     var respondTime: Int = -1
 ) : Parcelable, BaseBook, Comparable<SearchBook> {
 
+    init {
+        kind = kind?.take(1000)
+        intro = intro?.take(5000)
+        latestChapterTitle = latestChapterTitle?.take(200)
+    }
+
     @Ignore
     @IgnoredOnParcel
     override var infoHtml: String? = null

@@ -170,9 +170,9 @@ inline fun <reified T : BroadcastReceiver> Context.broadcastPendingIntent(
 
 fun Context.startForegroundServiceCompat(intent: Intent) {
     try {
-        startService(intent)
-    } catch (e: IllegalStateException) {
         ContextCompat.startForegroundService(this, intent)
+    } catch (e: Exception) {
+        startService(intent)
     }
 }
 

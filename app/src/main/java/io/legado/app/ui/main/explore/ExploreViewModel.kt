@@ -6,10 +6,10 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.help.source.getExploreInfoMap
-import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList
@@ -21,8 +21,6 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,10 +28,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -53,8 +47,7 @@ class ExploreViewModel(
     private val _effects = MutableSharedFlow<ExploreEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
-    private val searchKeyFlow = MutableStateFlow("")
-    private val groupFlow = MutableStateFlow("")
+    private var exploreJob: Job? = null
     private var kindsJob: Job? = null
 
     init {
@@ -73,13 +66,13 @@ class ExploreViewModel(
     }
 
     fun search(key: String) {
-        searchKeyFlow.value = key
         _uiState.update { it.copy(searchKey = key, expandedId = null) }
+        observeExplore()
     }
 
     fun setGroup(group: String) {
-        groupFlow.value = group
         _uiState.update { it.copy(selectedGroup = group, expandedId = null) }
+        observeExplore()
     }
 
     fun toggleSearchVisible(visible: Boolean) {
@@ -89,20 +82,14 @@ class ExploreViewModel(
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     private fun observeExplore() {
-        viewModelScope.launch {
-            combine(
-                searchKeyFlow
-                    .debounce(250)
-                    .distinctUntilChanged(),
-                groupFlow
-            ) { query, selectedGroup ->
-                query to selectedGroup
-            }
-                .flatMapLatest { (query, selectedGroup) ->
-                    exploreRepository.getExploreSources(query, selectedGroup)
-                }
+        exploreJob?.cancel()
+        exploreJob = viewModelScope.launch {
+            val state = _uiState.value
+            val query = state.searchKey
+            val selectedGroup = state.selectedGroup
+
+            exploreRepository.getExploreSources(query, selectedGroup)
                 .flowOn(IO)
                 .collectLatest { items ->
                     _uiState.update { it.copy(items = items.toImmutableList()) }

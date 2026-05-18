@@ -8,6 +8,7 @@ import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.exception.EmptyFileException
 import io.legado.app.help.DefaultData
 import io.legado.app.help.book.isLocalModified
+import io.legado.app.help.book.upKind
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
@@ -94,6 +95,7 @@ class TextFile(private var book: Book) {
         }
         val (toc, wordCount) = analyze(book.tocUrl.toPattern(Pattern.MULTILINE))
         book.wordCount = StringUtils.wordCountFormat(wordCount)
+        book.upKind()
         toc.forEachIndexed { index, bookChapter ->
             bookChapter.index = index
             bookChapter.bookUrl = book.bookUrl

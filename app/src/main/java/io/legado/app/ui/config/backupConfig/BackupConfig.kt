@@ -50,6 +50,11 @@ object BackupConfig {
         true
     )
 
+    var backupSyncMode by prefDelegate(
+        PreferKey.backupSyncMode,
+        "both"
+    )
+
     var backupPath by prefDelegate<String?>(
         PreferKey.backupPath,
         null
