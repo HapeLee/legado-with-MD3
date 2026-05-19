@@ -2,6 +2,7 @@ package io.legado.app.model.translation
 
 /**
  * Key for per-chapter translation display state.
+ * Used as task key for looking up ongoing translation tasks in TranslationManager.
  */
 data class TranslationChapterKey(
     val bookUrl: String,
@@ -9,20 +10,22 @@ data class TranslationChapterKey(
 )
 
 /**
- * Display state for a chapter's translation mode.
+ * Per-chapter translation status.
  */
-enum class TranslationDisplayState {
-    Original,
+enum class TranslationChapterStatus {
+    Idle,
     Translating,
-    Translated
+    Translated,
+    Failed
 }
 
 /**
  * Per-chapter translation state stored in TranslationManager.
+ * Runtime-only, derived from translation cache on app restart.
  */
 data class TranslationChapterState(
     val key: TranslationChapterKey,
-    var displayState: TranslationDisplayState = TranslationDisplayState.Original,
+    var status: TranslationChapterStatus = TranslationChapterStatus.Idle,
     var currentChunk: Int = 0,
     var totalChunks: Int = 0,
     var mixedContent: String? = null,

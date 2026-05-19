@@ -768,22 +768,34 @@ class ReadMenu @JvmOverloads constructor(
         }
     }
 
-    fun updateTranslationButton(displayState: io.legado.app.model.translation.TranslationDisplayState, current: Int = 0, total: Int = 0) {
+    fun updateTranslationButton(translationMode: Boolean, status: io.legado.app.model.translation.TranslationChapterStatus, current: Int = 0, total: Int = 0) {
         val btn = buttonMap["translate"] ?: return
         val ctx = context
         val percent = if (total > 0) (current * 100 / total) else 0
-        when (displayState) {
-            io.legado.app.model.translation.TranslationDisplayState.Original -> {
-                btn.contentDescription = ctx.getString(R.string.translate)
-                btn.tooltipText = ctx.getString(R.string.translate)
+
+        // Update icon based on mode
+        if (translationMode) {
+            btn.setIconResource(R.drawable.ic_return)
+        } else {
+            btn.setIconResource(R.drawable.ic_translate)
+        }
+
+        when (status) {
+            io.legado.app.model.translation.TranslationChapterStatus.Idle -> {
+                btn.contentDescription = if (translationMode) ctx.getString(R.string.return_to_original) else ctx.getString(R.string.translate)
+                btn.tooltipText = if (translationMode) ctx.getString(R.string.return_to_original) else ctx.getString(R.string.translate)
             }
-            io.legado.app.model.translation.TranslationDisplayState.Translating -> {
+            io.legado.app.model.translation.TranslationChapterStatus.Translating -> {
                 btn.contentDescription = ctx.getString(R.string.translation_progress, percent)
                 btn.tooltipText = ctx.getString(R.string.translation_progress, percent)
             }
-            io.legado.app.model.translation.TranslationDisplayState.Translated -> {
+            io.legado.app.model.translation.TranslationChapterStatus.Translated -> {
                 btn.contentDescription = ctx.getString(R.string.return_to_original)
                 btn.tooltipText = ctx.getString(R.string.return_to_original)
+            }
+            io.legado.app.model.translation.TranslationChapterStatus.Failed -> {
+                btn.contentDescription = ctx.getString(R.string.translation_failed, "")
+                btn.tooltipText = ctx.getString(R.string.translation_failed, "")
             }
         }
     }

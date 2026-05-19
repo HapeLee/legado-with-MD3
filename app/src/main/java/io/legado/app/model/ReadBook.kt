@@ -26,6 +26,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.localBook.TextFile
+import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.CacheBookService
@@ -672,18 +673,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 return@async
             }
             if (addLoading(index)) {
-                // Check translation display state to determine which content to load
-                val displayState = io.legado.app.model.translation.TranslationManager.getChapterDisplayState(book, chapter)
-                val content = when (displayState) {
-                    io.legado.app.model.translation.TranslationDisplayState.Translated,
-                    io.legado.app.model.translation.TranslationDisplayState.Translating -> {
-                        // Load translated content if available
-                        val translatedContent = io.legado.app.model.translation.TranslationManager.getChapterTranslatedContent(
-                            book, chapter, io.legado.app.ui.config.translation.TranslationConfig.llmTargetLanguage
-                        )
-                        translatedContent ?: BookHelp.getContent(book, chapter)
-                    }
-                    else -> BookHelp.getContent(book, chapter)
+                // Use translation content when book is in translation mode
+                val content = if (book.getTranslationMode()) {
+                    TranslationManager.getChapterContentForReading(book, chapter)
+                        ?: BookHelp.getContent(book, chapter)
+                } else {
+                    BookHelp.getContent(book, chapter)
                 }
                 content?.let {
                     contentLoadFinish(
@@ -719,7 +714,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             try {
                 val book = book!!
                 val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index)!!
-                val content = BookHelp.getContent(book, chapter) ?: downloadAwait(chapter)
+                val content = if (book.getTranslationMode()) {
+                    TranslationManager.getChapterContentForReading(book, chapter)
+                        ?: BookHelp.getContent(book, chapter) ?: downloadAwait(chapter)
+                } else {
+                    BookHelp.getContent(book, chapter) ?: downloadAwait(chapter)
+                }
                 contentLoadFinishAwait(book, chapter, content, upContent, resetPageOffset)
                 success?.invoke()
             } catch (e: Exception) {

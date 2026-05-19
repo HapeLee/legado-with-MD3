@@ -100,7 +100,6 @@ class TranslateChapterUseCase(
             val sortedChunks = chunks.sortedBy { it.index }.mapNotNull { translatedChunks[it.index]?.let { content -> TextChunk(it.index, content, it.paragraphIndices) } }
             val mergedContent = ContentChunker.merge(sortedChunks)
             translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
-            translationCacheRepository.clearChunkCacheForChapter(book, bookChapter, targetLanguage)
             onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
             return@withContext Result.success(mergedContent)
         }
@@ -144,7 +143,6 @@ class TranslateChapterUseCase(
         }
         val mergedContent = ContentChunker.merge(allTranslatedChunks)
         translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
-        translationCacheRepository.clearChunkCacheForChapter(book, bookChapter, targetLanguage)
 
         onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
         Result.success(mergedContent)
