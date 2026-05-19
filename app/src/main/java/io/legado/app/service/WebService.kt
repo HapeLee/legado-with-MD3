@@ -29,8 +29,7 @@ import io.legado.app.utils.startForegroundServiceCompat
 import io.legado.app.utils.startService
 import io.legado.app.utils.stopService
 import io.legado.app.utils.toastOnUi
-import io.legado.app.web.HttpServer
-import io.legado.app.web.WebSocketServer
+import io.legado.app.web.KtorServer
 import splitties.init.appCtx
 import splitties.systemservices.powerManager
 import splitties.systemservices.wifiManager
@@ -76,8 +75,7 @@ class WebService : BaseService() {
                 setReferenceCounted(false)
             }
     }
-    private var httpServer: HttpServer? = null
-    private var webSocketServer: WebSocketServer? = null
+    private var ktorServer: KtorServer? = null
     private var notificationList = mutableListOf(appCtx.getString(R.string.service_starting))
     private val networkChangedListener by lazy {
         NetworkChangedListener(this)
@@ -143,32 +141,21 @@ class WebService : BaseService() {
         }
         networkChangedListener.unRegister()
         isRun = false
-        if (httpServer?.isAlive == true) {
-            httpServer?.stop()
-        }
-        if (webSocketServer?.isAlive == true) {
-            webSocketServer?.stop()
-        }
+        ktorServer?.stop()
         postEvent(EventBus.WEB_SERVICE, "")
         FlowEventBus.post(EventBus.WEB_SERVICE, "")
         upTile(false)
     }
 
     private fun upWebServer() {
-        if (httpServer?.isAlive == true) {
-            httpServer?.stop()
-        }
-        if (webSocketServer?.isAlive == true) {
-            webSocketServer?.stop()
-        }
+        ktorServer?.stop()
         val addressList = NetworkUtils.getLocalIPAddress()
         if (addressList.any()) {
             val port = getPort()
-            httpServer = HttpServer(port)
-            webSocketServer = WebSocketServer(port + 1)
+            ktorServer = KtorServer(port)
             try {
-                httpServer?.start()
-                webSocketServer?.start(1000 * 30) // 通信超时设置
+                ktorServer?.start()
+                ktorServer?.startWebSocket(port + 1)
                 notificationList.clear()
                 notificationList.addAll(addressList.map { address ->
                     getString(
