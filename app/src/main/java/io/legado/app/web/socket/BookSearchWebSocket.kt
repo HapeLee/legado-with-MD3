@@ -13,7 +13,6 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.consumeEach
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
@@ -28,13 +27,13 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
 
     suspend fun handle() {
         try {
-            session.incoming.consumeEach { frame ->
+            for (frame in session.incoming) {
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
                         session.send("数据必须为Json格式")
                         session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
-                        return@consumeEach
+                        break
                     }
                     val searchMap = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
                     if (searchMap != null) {
@@ -42,7 +41,7 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
                         if (key.isNullOrBlank()) {
                             session.send(appCtx.getString(R.string.cannot_empty))
                             session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
-                            return@consumeEach
+                            break
                         }
                         startSearch(key)
                     }
