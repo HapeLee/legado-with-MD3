@@ -3,6 +3,7 @@ package io.legado.app.ui.book.toc.rule
 import android.app.Application
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.data.repository.TxtTocRuleRepository
@@ -147,13 +148,13 @@ class TxtTocRuleViewModel(
     fun pasteRule(): TxtTocRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            context.toastOnUi(R.string.clipboard_empty)
             return null
         }
         return try {
             GSON.fromJsonObject<TxtTocRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            context.toastOnUi(R.string.invalid_format)
             null
         }
     }

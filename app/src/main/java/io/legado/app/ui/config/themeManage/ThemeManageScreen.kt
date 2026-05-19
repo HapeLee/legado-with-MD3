@@ -83,14 +83,14 @@ fun ThemeManageScreen(
             if (target != null) {
                 exportTarget = null
                 if (ThemeImportExport.exportSavedThemeToFile(context, target, it)) {
-                    context.toastOnUi("主题导出成功")
+                    context.toastOnUi(R.string.theme_manage_export_success)
                 } else {
-                    context.toastOnUi("主题导出失败")
+                    context.toastOnUi(R.string.theme_manage_export_failed)
                 }
             } else if (ThemeImportExport.exportToFile(context, it)) {
-                context.toastOnUi("主题导出成功")
+                context.toastOnUi(R.string.theme_manage_export_success)
             } else {
-                context.toastOnUi("主题导出失败")
+                context.toastOnUi(R.string.theme_manage_export_failed)
             }
         }
     }
@@ -100,10 +100,10 @@ fun ThemeManageScreen(
     ) { uri ->
         uri?.let {
             if (ThemeImportExport.importFromUri(context, it)) {
-                context.toastOnUi("主题导入成功，部分设置需要重启生效")
+                context.toastOnUi(R.string.theme_manage_import_success)
                 showRestartDialog = true
             } else {
-                context.toastOnUi("主题导入失败")
+                context.toastOnUi(R.string.theme_manage_import_failed)
             }
         }
     }
@@ -112,7 +112,7 @@ fun ThemeManageScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "主题管理",
+                title = stringResource(R.string.theme_pack),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -133,24 +133,24 @@ fun ThemeManageScreen(
             item(span = { GridItemSpan(maxLineSpan) }) {
                 SplicedColumnGroup {
                     ClickableSettingItem(
-                        title = "保存当前设置",
-                        description = "保存当前主题配置为新主题",
+                        title = stringResource(R.string.theme_manage_save_current),
+                        description = stringResource(R.string.theme_manage_save_current_summary),
                         onClick = {
                             newThemeName = ""
                             showSaveDialog = true
                         }
                     )
                     ClickableSettingItem(
-                        title = "导出当前主题",
-                        description = "将当前主题配置导出为JSON文件",
+                        title = stringResource(R.string.theme_manage_export_current),
+                        description = stringResource(R.string.theme_manage_export_current_summary),
                         onClick = {
                             exportTarget = null
                             exportLauncher.launch("legado_theme_${System.currentTimeMillis()}.json")
                         }
                     )
                     ClickableSettingItem(
-                        title = "导入主题配置",
-                        description = "从JSON文件导入主题配置",
+                        title = stringResource(R.string.theme_manage_import_config),
+                        description = stringResource(R.string.theme_manage_import_config_summary),
                         onClick = {
                             importLauncher.launch(arrayOf("application/json"))
                         }
@@ -161,7 +161,7 @@ fun ThemeManageScreen(
             if (savedThemes.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     AppText(
-                        text = "已保存的主题",
+                        text = stringResource(R.string.theme_manage_saved_themes),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
@@ -207,8 +207,8 @@ fun ThemeManageScreen(
     AppAlertDialog(
         show = showSaveDialog,
         onDismissRequest = { showSaveDialog = false },
-        title = "保存主题",
-        confirmText = "保存",
+        title = stringResource(R.string.theme_manage_save_theme),
+        confirmText = stringResource(R.string.theme_manage_save),
         onConfirm = {
             if (newThemeName.isNotBlank()) {
                 ThemeImportExport.saveCurrentAsTheme(newThemeName)
@@ -216,13 +216,13 @@ fun ThemeManageScreen(
                 showSaveDialog = false
             }
         },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { showSaveDialog = false },
         content = {
             AppTextField(
                 value = newThemeName,
                 onValueChange = { newThemeName = it },
-                placeholder = { AppText(text = "请输入主题名称") },
+                placeholder = { AppText(text = stringResource(R.string.theme_manage_name_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -233,8 +233,8 @@ fun ThemeManageScreen(
     AppAlertDialog(
         show = applyTarget != null,
         onDismissRequest = { applyTarget = null },
-        title = "应用主题",
-        confirmText = "应用",
+        title = stringResource(R.string.theme_manage_apply_theme),
+        confirmText = stringResource(R.string.theme_manage_apply),
         onConfirm = {
             applyTarget?.let { theme ->
                 ThemeImportExport.applySavedTheme(theme)
@@ -242,17 +242,17 @@ fun ThemeManageScreen(
             }
             applyTarget = null
         },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { applyTarget = null },
-        text = "确定应用主题「${applyTarget?.name}」？应用后需要重启才能完全生效。"
+        text = stringResource(R.string.theme_manage_apply_message, applyTarget?.name.orEmpty())
     )
 
     // Delete theme dialog
     AppAlertDialog(
         show = deleteTarget != null,
         onDismissRequest = { deleteTarget = null },
-        title = "删除主题",
-        confirmText = "删除",
+        title = stringResource(R.string.theme_manage_delete_theme),
+        confirmText = stringResource(R.string.delete),
         onConfirm = {
             deleteTarget?.let { theme ->
                 ThemeImportExport.deleteSavedTheme(theme)
@@ -260,9 +260,9 @@ fun ThemeManageScreen(
             }
             deleteTarget = null
         },
-        dismissText = "取消",
+        dismissText = stringResource(R.string.cancel),
         onDismiss = { deleteTarget = null },
-        text = "确定删除主题「${deleteTarget?.name}」？此操作不可恢复。"
+        text = stringResource(R.string.theme_manage_delete_message, deleteTarget?.name.orEmpty())
     )
 
     // Edit theme sheet
@@ -323,7 +323,7 @@ private fun SavedThemeItem(
                         .background(lightBg)
                 ) {
                     AppText(
-                        text = "日间",
+                        text = stringResource(R.string.theme_manage_preview_day),
                         style = MaterialTheme.typography.labelMediumEmphasized,
                         color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
                         else Color.Black.copy(alpha = 0.5f),
@@ -355,7 +355,7 @@ private fun SavedThemeItem(
                         .background(darkBg)
                 ) {
                     AppText(
-                        text = "夜间",
+                        text = stringResource(R.string.theme_manage_preview_night),
                         style = MaterialTheme.typography.labelMediumEmphasized,
                         color = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier

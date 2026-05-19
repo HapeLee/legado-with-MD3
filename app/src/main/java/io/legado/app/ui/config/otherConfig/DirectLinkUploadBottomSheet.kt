@@ -88,7 +88,7 @@ fun DirectLinkUploadBottomSheet(
                     onDismissRequest = { showMenu = false }
                 ) {
                     RoundDropdownMenuItem(
-                        text = "导入默认",
+                        text = stringResource(R.string.import_default_rule),
                         leadingIcon = { Icon(Icons.Default.Download, null) },
                         onClick = {
                             showMenu = false
@@ -124,7 +124,7 @@ fun DirectLinkUploadBottomSheet(
                                     viewModel.upView(rule)
                                 }
                             }.onFailure {
-                                context.toastOnUi("剪贴板为空或格式不对")
+                                context.toastOnUi(R.string.clipboard_empty_or_invalid)
                             }
                         }
                     )
@@ -186,7 +186,7 @@ fun DirectLinkUploadBottomSheet(
                     if (viewModel.saveDirectLinkRule()) {
                         onDismiss()
                     } else {
-                        context.toastOnUi("请填写完整信息")
+                        context.toastOnUi(R.string.complete_required_information)
                     }
                 },
                 dismissText = stringResource(R.string.cancel),

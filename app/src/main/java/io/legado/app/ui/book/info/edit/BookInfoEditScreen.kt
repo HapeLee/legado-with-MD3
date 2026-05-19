@@ -178,7 +178,11 @@ fun BookInfoEditContent(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 BookTypeDropdown(
-                    bookTypes = uiState.bookTypes,
+                    bookTypes = listOf(
+                        BookInfoEditType.TEXT to stringResource(R.string.book_type_text),
+                        BookInfoEditType.AUDIO to stringResource(R.string.book_type_audio),
+                        BookInfoEditType.IMAGE to stringResource(R.string.book_type_image)
+                    ),
                     selectedType = uiState.selectedType,
                     onTypeSelected = { viewModel.onBookTypeChange(it) }
                 )
@@ -186,8 +190,8 @@ fun BookInfoEditContent(
         }
         Spacer(modifier = Modifier.height(16.dp))
         SwitchSettingItem(
-            title = "固定书籍类型",
-            description = "书籍更新后不覆盖书籍类型",
+            title = stringResource(R.string.fixed_book_type),
+            description = stringResource(R.string.fixed_book_type_summary),
             checked = uiState.fixedType,
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
@@ -201,7 +205,7 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            label = "书名",
+            label = stringResource(R.string.book_name),
             backgroundColor = inputBackgroundColor,
             modifier = Modifier.fillMaxWidth()
         )
@@ -209,7 +213,7 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
-            label = "作者",
+            label = stringResource(R.string.author),
             backgroundColor = inputBackgroundColor,
             modifier = Modifier.fillMaxWidth()
         )
@@ -217,7 +221,7 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
-            label = "封面链接",
+            label = stringResource(R.string.cover_url),
             backgroundColor = inputBackgroundColor,
             modifier = Modifier.fillMaxWidth()
         )
@@ -232,7 +236,7 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
-            label = "简介",
+            label = stringResource(R.string.book_intro),
             backgroundColor = inputBackgroundColor,
             modifier = Modifier.fillMaxWidth()
         )
@@ -240,7 +244,7 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
-            label = "备注",
+            label = stringResource(R.string.book_remark),
             backgroundColor = inputBackgroundColor,
             modifier = Modifier.fillMaxWidth()
         )
@@ -250,18 +254,19 @@ fun BookInfoEditContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookTypeDropdown(
-    bookTypes: List<String>,
-    selectedType: String,
-    onTypeSelected: (String) -> Unit
+    bookTypes: List<Pair<BookInfoEditType, String>>,
+    selectedType: BookInfoEditType,
+    onTypeSelected: (BookInfoEditType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val selectedTypeLabel = bookTypes.firstOrNull { it.first == selectedType }?.second.orEmpty()
 
     val textFieldState = rememberTextFieldState(
-        initialText = selectedType
+        initialText = selectedTypeLabel
     )
 
-    LaunchedEffect(selectedType) {
-        textFieldState.setTextAndPlaceCursorAtEnd(selectedType)
+    LaunchedEffect(selectedTypeLabel) {
+        textFieldState.setTextAndPlaceCursorAtEnd(selectedTypeLabel)
     }
 
     val bookInfoInputColor = ThemeConfig.bookInfoInputColor
@@ -280,7 +285,7 @@ fun BookTypeDropdown(
             state = textFieldState,
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
-            label = "书籍类型",
+            label = stringResource(R.string.book_type_label),
             backgroundColor = inputBackgroundColor,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -297,11 +302,11 @@ fun BookTypeDropdown(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            bookTypes.forEach { option ->
+            bookTypes.forEach { (type, label) ->
                 RoundDropdownMenuItem(
-                    text = option,
+                    text = label,
                     onClick = {
-                        onTypeSelected(option)
+                        onTypeSelected(type)
                         expanded = false
                     }
                 )
@@ -387,12 +392,16 @@ fun KindEditor(
         AppAlertDialog(
             show = true,
             onDismissRequest = { editingIndex = null },
-            title = if (isAdding) "添加标签" else "编辑标签",
+            title = if (isAdding) {
+                stringResource(R.string.add_tag)
+            } else {
+                stringResource(R.string.edit_tag)
+            },
             content = {
                 AppTextField(
                     value = editText,
                     onValueChange = { editText = it },
-                    label = "标签",
+                    label = stringResource(R.string.tag),
                     backgroundColor = backgroundColor,
                     modifier = Modifier.fillMaxWidth()
                 )

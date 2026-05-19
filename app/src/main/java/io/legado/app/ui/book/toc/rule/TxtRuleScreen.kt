@@ -186,7 +186,7 @@ fun TxtRuleScreen(
     )
 
     BatchImportDialog(
-        title = "导入词典规则",
+        title = stringResource(R.string.import_txt_toc_rule),
         importState = importState,
         onDismissRequest = { viewModel.cancelImport() },
         onToggleItem = { viewModel.toggleImportSelection(it) },
@@ -262,7 +262,11 @@ fun TxtRuleScreen(
     )
 
     RuleListScaffold(
-        title = if (isPickMode) "选择目录规则" else "目录规则",
+        title = if (isPickMode) {
+            stringResource(R.string.select_toc_rule)
+        } else {
+            stringResource(R.string.txt_toc_rule)
+        },
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->
