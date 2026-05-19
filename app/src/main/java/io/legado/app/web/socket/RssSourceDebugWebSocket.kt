@@ -7,7 +7,6 @@ import io.legado.app.data.appDb
 import io.legado.app.model.Debug
 import io.legado.app.utils.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.consumeEach
 import splitties.init.appCtx
 
 /**
@@ -21,13 +20,13 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
 
     suspend fun handle() {
         try {
-            session.incoming.consumeEach { frame ->
+            for (frame in session.incoming) {
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
                         session.send("数据必须为Json格式")
                         session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
-                        return@consumeEach
+                        break
                     }
                     val debugBean = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
                     if (debugBean != null) {
@@ -35,7 +34,7 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
                         if (tag.isNullOrBlank()) {
                             session.send(appCtx.getString(R.string.cannot_empty))
                             session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
-                            return@consumeEach
+                            break
                         }
                         appDb.rssSourceDao.getByKey(tag)?.let {
                             Debug.callback = this@RssSourceDebugWebSocket

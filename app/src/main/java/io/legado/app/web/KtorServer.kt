@@ -14,6 +14,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.util.pipeline.*
+import io.ktor.util.toMap
 import io.legado.app.api.ReturnData
 import io.legado.app.api.controller.BookController
 import io.legado.app.api.controller.BookSourceController
@@ -29,7 +30,9 @@ import io.legado.app.web.socket.RssSourceDebugWebSocket
 import io.legado.app.web.utils.AssetsWeb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 class KtorServer(private val port: Int) {
     private var server: ApplicationEngine? = null
@@ -62,32 +65,46 @@ class KtorServer(private val port: Int) {
                     WebService.serve()
                     val multipart = call.receiveMultipart()
                     var fileName: String? = null
-                    var fileBytes: ByteArray? = null
-                    multipart.forEachPart { part ->
-                        when (part) {
-                            is PartData.FormItem -> {
-                                if (part.name == "fileName") fileName = part.value
+                    val tempFile = File(appCtx.cacheDir, "upload_${System.currentTimeMillis()}")
+                    try {
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    if (part.name == "fileName") fileName = part.value
+                                }
+                                is PartData.FileItem -> {
+                                    part.streamProvider().use { input ->
+                                        tempFile.outputStream().use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                    if (fileName == null) {
+                                        fileName = part.originalFileName
+                                    }
+                                }
+                                else -> {}
                             }
-                            is PartData.FileItem -> {
-                                fileBytes = part.streamProvider().readBytes()
-                            }
-                            else -> {}
+                            part.dispose()
                         }
-                        part.dispose()
-                    }
-                    if (fileName != null && fileBytes != null) {
-                        val returnData = withContext(Dispatchers.IO) {
-                            kotlin.runCatching {
-                                val uri = LocalBook.saveBookFile(fileBytes!!.inputStream(), fileName!!)
-                                LocalBook.importFile(uri)
-                                ReturnData().setData(true)
-                            }.getOrElse {
-                                ReturnData().setErrorMsg(it.localizedMessage ?: "Save book error")
+                        if (fileName != null && tempFile.exists()) {
+                            val returnData = withContext(Dispatchers.IO) {
+                                kotlin.runCatching {
+                                    tempFile.inputStream().use {
+                                        val uri = LocalBook.saveBookFile(it, fileName!!)
+                                        LocalBook.importFile(uri)
+                                        ReturnData().setData(true)
+                                    }
+                                }.getOrElse {
+                                    LogUtils.e(TAG, it.stackTraceStr)
+                                    ReturnData().setErrorMsg(it.localizedMessage ?: "Save book error")
+                                }
                             }
+                            respondReturnData(returnData)
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest, "Missing fileName or fileData")
                         }
-                        respondReturnData(returnData)
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, "Missing fileName or fileData")
+                    } finally {
+                        if (tempFile.exists()) tempFile.delete()
                     }
                 }
                 post("/saveReadConfig") { handlePost { BookController.saveWebReadConfig(it) } }
@@ -113,12 +130,14 @@ class KtorServer(private val port: Int) {
 
                 get("{...}") {
                     WebService.serve()
-                    var uri = call.request.uri.substringBefore("?")
+                    var uri = call.request.path()
                     if (uri.endsWith("/")) uri += "index.html"
                     val inputStream = assetsWeb.getInputStream(uri)
                     if (inputStream != null) {
-                        call.respondOutputStream(ContentType.parse(assetsWeb.getMimeType(uri))) {
-                            inputStream.copyTo(this)
+                        inputStream.use { stream ->
+                            call.respondOutputStream(ContentType.parse(assetsWeb.getMimeType(uri))) {
+                                stream.copyTo(this)
+                            }
                         }
                     } else {
                         call.respond(HttpStatusCode.NotFound)
@@ -193,12 +212,6 @@ class KtorServer(private val port: Int) {
         } else {
             call.respond(returnData)
         }
-    }
-
-    private fun Parameters.toMap(): Map<String, List<String>> {
-        val map = mutableMapOf<String, List<String>>()
-        this.forEach { s, list -> map[s] = list }
-        return map
     }
 
     companion object {
