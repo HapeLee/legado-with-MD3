@@ -2,6 +2,7 @@ package io.legado.app.ui.config.themeConfig
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -36,7 +39,7 @@ import java.io.File
 
 private data class NavIconDestination(
     val key: String,
-    val label: String,
+    @param:StringRes val labelRes: Int,
     val path: String,
     val onSetPath: (String) -> Unit,
 )
@@ -51,10 +54,10 @@ fun NavIconManageSheet(
     var activeDest by remember { mutableStateOf<String?>(null) }
 
     val destinations = listOf(
-        NavIconDestination("bookshelf", "书架", ThemeConfig.navIconBookshelf) { ThemeConfig.navIconBookshelf = it },
-        NavIconDestination("explore", "发现", ThemeConfig.navIconExplore) { ThemeConfig.navIconExplore = it },
-        NavIconDestination("rss", "订阅", ThemeConfig.navIconRss) { ThemeConfig.navIconRss = it },
-        NavIconDestination("my", "我的", ThemeConfig.navIconMy) { ThemeConfig.navIconMy = it },
+        NavIconDestination("bookshelf", R.string.bookshelf, ThemeConfig.navIconBookshelf) { ThemeConfig.navIconBookshelf = it },
+        NavIconDestination("explore", R.string.discovery, ThemeConfig.navIconExplore) { ThemeConfig.navIconExplore = it },
+        NavIconDestination("rss", R.string.rss, ThemeConfig.navIconRss) { ThemeConfig.navIconRss = it },
+        NavIconDestination("my", R.string.my, ThemeConfig.navIconMy) { ThemeConfig.navIconMy = it },
     )
 
     val selectImage = rememberLauncherForActivityResult(
@@ -79,7 +82,7 @@ fun NavIconManageSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "导航栏图标",
+        title = stringResource(R.string.theme_config_nav_icons),
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Row(
@@ -89,6 +92,7 @@ fun NavIconManageSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 destinations.forEach { dest ->
+                    val label = stringResource(dest.labelRes)
                     Column(
                         modifier = Modifier.weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -108,7 +112,7 @@ fun NavIconManageSheet(
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     AsyncImage(
                                         model = dest.path,
-                                        contentDescription = dest.label,
+                                        contentDescription = label,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Fit
                                     )
@@ -128,7 +132,10 @@ fun NavIconManageSheet(
                                 ) {
                                     AppIcon(
                                         imageVector = Icons.Default.Add,
-                                        contentDescription = "添加${dest.label}图标",
+                                        contentDescription = stringResource(
+                                            R.string.theme_config_add_nav_icon,
+                                            label
+                                        ),
                                         modifier = Modifier.size(32.dp),
                                         tint = LegadoTheme.colorScheme.primary
                                     )
@@ -136,7 +143,7 @@ fun NavIconManageSheet(
                             }
                         }
                         AppText(
-                            text = dest.label,
+                            text = label,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }

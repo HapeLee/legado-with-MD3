@@ -227,7 +227,7 @@ fun ThemeConfigScreen(
                             contentColor = MiuixTheme.colorScheme.onPrimary
                         )
                     ) {
-                        MiuixText("Miuix 目前为测试主题，且不对基于View的界面生效！")
+                        MiuixText(stringResource(R.string.theme_config_miuix_experimental_warning))
                     }
                 }
 
@@ -420,8 +420,8 @@ fun ThemeConfigScreen(
                                 onCheckedChange = { ThemeConfig.useFloatingBottomBarLiquidGlass = it }
                             )
                             SliderSettingItem(
-                                title = "底栏模糊强度",
-                                description = "控制液态玻璃的扭曲程度",
+                                title = stringResource(R.string.theme_config_bottom_bar_lens_radius),
+                                description = stringResource(R.string.theme_config_bottom_bar_lens_radius_summary),
                                 value = ThemeConfig.bottomBarLensRadius,
                                 defaultValue = 24f,
                                 valueRange = 0f..50f,
@@ -483,30 +483,30 @@ fun ThemeConfigScreen(
                     }
                     if (ThemeConfig.enableBlur) {
                         SliderSettingItem(
-                            title = "顶栏模糊半径",
-                            description = "模糊半径越大，系统运行越卡顿",
+                            title = stringResource(R.string.theme_manage_top_bar_blur_radius),
+                            description = stringResource(R.string.theme_config_blur_radius_performance_summary),
                             value = ThemeConfig.topBarBlurRadius.toFloat(),
                             defaultValue = 24f,
                             valueRange = 0f..30f,
                             onValueChange = { ThemeConfig.topBarBlurRadius = it.toInt() }
                         )
                         SliderSettingItem(
-                            title = "底栏模糊半径",
-                            description = "模糊半径越大，系统运行越卡顿",
+                            title = stringResource(R.string.theme_manage_bottom_bar_blur_radius),
+                            description = stringResource(R.string.theme_config_blur_radius_performance_summary),
                             value = ThemeConfig.bottomBarBlurRadius.toFloat(),
                             defaultValue = 8f,
                             valueRange = 0f..10f,
                             onValueChange = { ThemeConfig.bottomBarBlurRadius = it.toInt() }
                         )
                         SliderSettingItem(
-                            title = "顶栏模糊透明度",
+                            title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
                             value = ThemeConfig.topBarBlurAlpha.toFloat(),
                             defaultValue = 73f,
                             valueRange = 0f..100f,
                             onValueChange = { ThemeConfig.topBarBlurAlpha = it.toInt() }
                         )
                         SliderSettingItem(
-                            title = "底栏模糊透明度",
+                            title = stringResource(R.string.theme_manage_bottom_bar_blur_opacity),
                             value = ThemeConfig.bottomBarBlurAlpha.toFloat(),
                             defaultValue = 40f,
                             valueRange = 0f..100f,
@@ -610,15 +610,15 @@ fun ThemeConfigScreen(
 
             // Container settings
             item {
-                SplicedColumnGroup(title = "容器设置") {
+                SplicedColumnGroup(title = stringResource(R.string.theme_manage_section_container)) {
                     SwitchSettingItem(
-                        title = "显示分割线",
+                        title = stringResource(R.string.show_divider_line),
                         checked = ThemeConfig.enableItemDivider,
                         onCheckedChange = { ThemeConfig.enableItemDivider = it }
                     )
                     if (ThemeConfig.enableItemDivider) {
                         SliderSettingItem(
-                            title = "分割线粗细",
+                            title = stringResource(R.string.theme_config_divider_width),
                             description = "${ThemeConfig.itemDividerWidth}dp",
                             value = ThemeConfig.itemDividerWidth,
                             defaultValue = 1f,
@@ -627,7 +627,7 @@ fun ThemeConfigScreen(
                             onValueChange = { ThemeConfig.itemDividerWidth = it }
                         )
                         SliderSettingItem(
-                            title = "分割线长度",
+                            title = stringResource(R.string.theme_config_divider_length),
                             description = "${ThemeConfig.itemDividerLength.toInt()}%",
                             value = ThemeConfig.itemDividerLength,
                             defaultValue = 80f,
@@ -636,7 +636,7 @@ fun ThemeConfigScreen(
                             onValueChange = { ThemeConfig.itemDividerLength = it }
                         )
                         ClickableSettingItem(
-                            title = "分割线颜色",
+                            title = stringResource(R.string.tip_divider_color),
                             option = if (ThemeConfig.itemDividerColor != 0) "#${Integer.toHexString(ThemeConfig.itemDividerColor).uppercase()}" else stringResource(R.string.click_to_select),
                             onClick = {
                                 showBorderColorPicker = true
@@ -659,7 +659,7 @@ fun ThemeConfigScreen(
 
             // Nav icon settings
             item {
-                SplicedColumnGroup(title = "导航栏图标设置") {
+                SplicedColumnGroup(title = stringResource(R.string.theme_config_nav_icon_settings)) {
                     val customCount = listOf(
                         ThemeConfig.navIconBookshelf,
                         ThemeConfig.navIconExplore,
@@ -667,8 +667,12 @@ fun ThemeConfigScreen(
                         ThemeConfig.navIconMy
                     ).count { it.isNotEmpty() }
                     ClickableSettingItem(
-                        title = "导航栏图标",
-                        description = if (customCount > 0) "已设置 $customCount 个自定义图标" else "使用默认图标",
+                        title = stringResource(R.string.theme_config_nav_icons),
+                        description = if (customCount > 0) {
+                            stringResource(R.string.theme_config_nav_icons_custom_count, customCount)
+                        } else {
+                            stringResource(R.string.theme_config_nav_icons_default)
+                        },
                         onClick = { showNavIconSheet = true }
                     )
                 }
@@ -676,10 +680,10 @@ fun ThemeConfigScreen(
 
             // Theme management
             item {
-                SplicedColumnGroup(title = "主题管理") {
+                SplicedColumnGroup(title = stringResource(R.string.theme_pack)) {
                     ClickableSettingItem(
-                        title = "主题管理",
-                        description = "保存、导入、导出主题配置",
+                        title = stringResource(R.string.theme_pack),
+                        description = stringResource(R.string.theme_pack_s),
                         onClick = onNavigateToThemeManage
                     )
                 }
@@ -750,7 +754,7 @@ fun ThemeConfigScreen(
         startAction = {
             SmallIconButton(
                 imageVector = Icons.Default.Delete,
-                contentDescription = "清除",
+                contentDescription = stringResource(R.string.clear),
                 onClick = {
                     ThemeConfig.appFontPath = null
                     showFontSheet = false
@@ -760,7 +764,7 @@ fun ThemeConfigScreen(
         endAction = {
             SmallIconButton(
                 imageVector = Icons.Default.Add,
-                contentDescription = "选择文件夹",
+                contentDescription = stringResource(R.string.select_folder),
                 onClick = { fontFolderLauncher.launch(null) }
             )
         },
@@ -771,7 +775,7 @@ fun ThemeConfigScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "没有字体文件",
+                        text = stringResource(R.string.theme_config_no_font_files),
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }

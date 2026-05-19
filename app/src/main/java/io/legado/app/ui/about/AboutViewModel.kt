@@ -152,17 +152,17 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
     private fun saveLog() {
         execute {
             val backupPath = AppConfig.backupPath ?: run {
-                _effects.tryEmit(AboutEffect.ShowToast("未设置备份目录"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_backup_dir_not_set)))
                 return@execute
             }
             if (!AppConfig.recordLog) {
-                _effects.tryEmit(AboutEffect.ShowToast("未开启日志记录，请去其他设置里打开记录日志"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_log_recording_disabled)))
                 delay(3000)
             }
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             copyLogs(doc)
             copyHeapDump(doc)
-            _effects.tryEmit(AboutEffect.ShowToast("已保存至备份目录"))
+            _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_saved_to_backup_dir)))
         }.onError {
             AppLog.put("保存日志出错\n${it.localizedMessage}", it, true)
         }
@@ -171,21 +171,21 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
     private fun createHeapDump() {
         execute {
             val backupPath = AppConfig.backupPath ?: run {
-                _effects.tryEmit(AboutEffect.ShowToast("未设置备份目录"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_backup_dir_not_set)))
                 return@execute
             }
             if (!AppConfig.recordHeapDump) {
-                _effects.tryEmit(AboutEffect.ShowToast("未开启堆转储记录，请去其他设置里打开记录堆转储"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_heap_dump_recording_disabled)))
                 delay(3000)
             }
-            _effects.tryEmit(AboutEffect.ShowToast("开始创建堆转储"))
+            _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_heap_dump_creating)))
             System.gc()
             CrashHandler.doHeapDump(true)
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             if (!copyHeapDump(doc)) {
-                _effects.tryEmit(AboutEffect.ShowToast("未找到堆转储文件"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_heap_dump_not_found)))
             } else {
-                _effects.tryEmit(AboutEffect.ShowToast("已保存至备份目录"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_saved_to_backup_dir)))
             }
         }.onError {
             AppLog.put("保存堆转储失败\n${it.localizedMessage}", it)
@@ -197,7 +197,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
         if (sheet is AboutSheet.Update) {
             val info = sheet.updateInfo
             if (info.downloadUrl.isBlank() || info.fileName.isBlank()) {
-                _effects.tryEmit(AboutEffect.ShowToast("下载信息不完整"))
+                _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_download_info_incomplete)))
             } else {
                 _effects.tryEmit(AboutEffect.StartDownload(info.downloadUrl, info.fileName))
             }

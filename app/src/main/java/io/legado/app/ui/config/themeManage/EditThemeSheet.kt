@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.ThemeExportData
@@ -58,7 +59,7 @@ fun EditThemeSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "编辑主题",
+        title = stringResource(R.string.theme_manage_edit_theme),
         endAction = {
             MediumIconButton(
                 onClick = {
@@ -92,30 +93,30 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Basic settings
-            SectionTitle("基础设置")
+            SectionTitle(stringResource(R.string.theme_manage_section_basic))
             CompactDropdownSettingItem(
-                title = "主题模式",
+                title = stringResource(R.string.theme_mode),
                 selectedValue = data.themeMode,
                 displayEntries = stringArrayResource(R.array.theme_mode),
                 entryValues = stringArrayResource(R.array.theme_mode_v),
                 onValueChange = { data = data.copy(themeMode = it) }
             )
             CompactDropdownSettingItem(
-                title = "调色板风格",
+                title = stringResource(R.string.palette_style),
                 selectedValue = data.paletteStyle,
                 displayEntries = stringArrayResource(R.array.paletteStyle),
                 entryValues = stringArrayResource(R.array.paletteStyle_value),
                 onValueChange = { data = data.copy(paletteStyle = it) }
             )
             CompactDropdownSettingItem(
-                title = "Material 版本",
+                title = stringResource(R.string.material_version),
                 selectedValue = data.materialVersion,
                 displayEntries = stringArrayResource(R.array.materialVersion),
                 entryValues = stringArrayResource(R.array.materialVersion_value),
                 onValueChange = { data = data.copy(materialVersion = it) }
             )
             CompactDropdownSettingItem(
-                title = "对比度偏好",
+                title = stringResource(R.string.preferred_contrast),
                 selectedValue = data.customContrast,
                 displayEntries = stringArrayResource(R.array.customContrast),
                 entryValues = stringArrayResource(R.array.customContrast_value),
@@ -125,36 +126,36 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Colors
-            SectionTitle("颜色设置")
+            SectionTitle(stringResource(R.string.theme_manage_section_colors))
             CompactSwitchSettingItem(
-                title = "使用色板生成颜色",
+                title = stringResource(R.string.theme_manage_use_palette_colors),
                 checked = !data.enableDeepPersonalization,
                 onCheckedChange = { data = data.copy(enableDeepPersonalization = !it) }
             )
             if (data.enableDeepPersonalization) {
-                ColorItem("主题色", data.themeColor) {
+                ColorItem(stringResource(R.string.theme_manage_primary_color), data.themeColor) {
                     currentColorKey = "themeColor"; showColorPicker = true
                 }
-                ColorItem("次要主题色", data.secondaryThemeColor) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_color), data.secondaryThemeColor) {
                     currentColorKey = "secondaryThemeColor"; showColorPicker = true
                 }
-                ColorItem("主要字体色", data.primaryTextColor) {
+                ColorItem(stringResource(R.string.theme_manage_primary_text_color), data.primaryTextColor) {
                     currentColorKey = "primaryTextColor"; showColorPicker = true
                 }
-                ColorItem("次要字体色", data.secondaryTextColor) {
+                ColorItem(stringResource(R.string.theme_manage_secondary_text_color), data.secondaryTextColor) {
                     currentColorKey = "secondaryTextColor"; showColorPicker = true
                 }
-                ColorItem("背景色", data.themeBackgroundColor) {
+                ColorItem(stringResource(R.string.theme_manage_background_color), data.themeBackgroundColor) {
                     currentColorKey = "themeBackgroundColor"; showColorPicker = true
                 }
-                ColorItem("标签容器色", data.labelContainerColor) {
+                ColorItem(stringResource(R.string.theme_manage_label_container_color), data.labelContainerColor) {
                     currentColorKey = "labelContainerColor"; showColorPicker = true
                 }
             } else {
-                ColorItem("日间种子色", data.cPrimary) {
+                ColorItem(stringResource(R.string.theme_manage_day_seed_color), data.cPrimary) {
                     currentColorKey = "cPrimary"; showColorPicker = true
                 }
-                ColorItem("夜间种子色", data.cNPrimary) {
+                ColorItem(stringResource(R.string.theme_manage_night_seed_color), data.cNPrimary) {
                     currentColorKey = "cNPrimary"; showColorPicker = true
                 }
             }
@@ -162,9 +163,9 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Interface layout
-            SectionTitle("界面布局")
+            SectionTitle(stringResource(R.string.theme_manage_section_layout))
             CompactSwitchSettingItem(
-                title = "发现",
+                title = stringResource(R.string.theme_manage_show_discovery),
                 checked = data.showDiscovery,
                 onCheckedChange = { data = data.copy(showDiscovery = it) }
             )
@@ -174,41 +175,41 @@ fun EditThemeSheet(
                 onCheckedChange = { data = data.copy(showRss = it) }
             )
             CompactSwitchSettingItem(
-                title = "显示底栏",
+                title = stringResource(R.string.show_bottom_nav),
                 checked = data.showBottomView,
                 onCheckedChange = { data = data.copy(showBottomView = it) }
             )
             CompactSwitchSettingItem(
-                title = "浮动底栏",
+                title = stringResource(R.string.floating_bottom_bar),
                 checked = data.useFloatingBottomBar,
                 onCheckedChange = { data = data.copy(useFloatingBottomBar = it) }
             )
             CompactSwitchSettingItem(
-                title = "状态栏",
+                title = stringResource(R.string.theme_manage_status_bar),
                 checked = data.showStatusBar,
                 onCheckedChange = { data = data.copy(showStatusBar = it) }
             )
             CompactSwitchSettingItem(
-                title = "翻页动画",
+                title = stringResource(R.string.theme_manage_page_turn_animation),
                 checked = data.swipeAnimation,
                 onCheckedChange = { data = data.copy(swipeAnimation = it) }
             )
             CompactDropdownSettingItem(
-                title = "平板模式",
+                title = stringResource(R.string.tabletInterface),
                 selectedValue = data.tabletInterface,
                 displayEntries = stringArrayResource(R.array.tabletInterface),
                 entryValues = stringArrayResource(R.array.tabletInterface_value),
                 onValueChange = { data = data.copy(tabletInterface = it) }
             )
             CompactDropdownSettingItem(
-                title = "标签显示",
+                title = stringResource(R.string.theme_manage_label_visibility),
                 selectedValue = data.labelVisibilityMode,
                 displayEntries = stringArrayResource(R.array.label_vis_mode),
                 entryValues = stringArrayResource(R.array.label_vis_mode_value),
                 onValueChange = { data = data.copy(labelVisibilityMode = it) }
             )
             CompactDropdownSettingItem(
-                title = "默认主页",
+                title = stringResource(R.string.default_home_page),
                 selectedValue = data.defaultHomePage,
                 displayEntries = stringArrayResource(R.array.default_home_page),
                 entryValues = stringArrayResource(R.array.default_home_page_value),
@@ -218,33 +219,33 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Blur
-            SectionTitle("模糊效果")
+            SectionTitle(stringResource(R.string.theme_manage_section_blur))
             CompactSwitchSettingItem(
-                title = "启用模糊",
+                title = stringResource(R.string.is_blur_enable),
                 checked = data.enableBlur,
                 onCheckedChange = { data = data.copy(enableBlur = it) }
             )
             if (data.enableBlur) {
                 CompactSliderSettingItem(
-                    title = "顶栏模糊半径",
+                    title = stringResource(R.string.theme_manage_top_bar_blur_radius),
                     value = data.topBarBlurRadius.toFloat(),
                     valueRange = 1f..60f,
                     onValueChange = { data = data.copy(topBarBlurRadius = it.toInt()) }
                 )
                 CompactSliderSettingItem(
-                    title = "底栏模糊半径",
+                    title = stringResource(R.string.theme_manage_bottom_bar_blur_radius),
                     value = data.bottomBarBlurRadius.toFloat(),
                     valueRange = 1f..60f,
                     onValueChange = { data = data.copy(bottomBarBlurRadius = it.toInt()) }
                 )
                 CompactSliderSettingItem(
-                    title = "顶栏透明度",
+                    title = stringResource(R.string.theme_manage_top_bar_blur_opacity),
                     value = data.topBarBlurAlpha.toFloat(),
                     valueRange = 0f..255f,
                     onValueChange = { data = data.copy(topBarBlurAlpha = it.toInt()) }
                 )
                 CompactSliderSettingItem(
-                    title = "底栏透明度",
+                    title = stringResource(R.string.theme_manage_bottom_bar_blur_opacity),
                     value = data.bottomBarBlurAlpha.toFloat(),
                     valueRange = 0f..255f,
                     onValueChange = { data = data.copy(bottomBarBlurAlpha = it.toInt()) }
@@ -254,15 +255,15 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Opacity
-            SectionTitle("透明度")
+            SectionTitle(stringResource(R.string.theme_manage_section_opacity))
             CompactSliderSettingItem(
-                title = "顶栏透明度",
+                title = stringResource(R.string.top_bar_opacity),
                 value = data.topBarOpacity.toFloat(),
                 valueRange = 0f..100f,
                 onValueChange = { data = data.copy(topBarOpacity = it.toInt()) }
             )
             CompactSliderSettingItem(
-                title = "底栏透明度",
+                title = stringResource(R.string.bottom_bar_opacity),
                 value = data.bottomBarOpacity.toFloat(),
                 valueRange = 0f..100f,
                 onValueChange = { data = data.copy(bottomBarOpacity = it.toInt()) }
@@ -271,9 +272,9 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Container
-            SectionTitle("容器设置")
+            SectionTitle(stringResource(R.string.theme_manage_section_container))
             CompactSliderSettingItem(
-                title = "容器不透明度",
+                title = stringResource(R.string.container_opacity),
                 value = data.containerOpacity.toFloat(),
                 valueRange = 0f..100f,
                 onValueChange = { data = data.copy(containerOpacity = it.toInt()) }
@@ -282,14 +283,14 @@ fun EditThemeSheet(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Other
-            SectionTitle("其他")
+            SectionTitle(stringResource(R.string.other))
             CompactSwitchSettingItem(
-                title = "纯黑模式",
+                title = stringResource(R.string.pure_black),
                 checked = data.isPureBlack,
                 onCheckedChange = { data = data.copy(isPureBlack = it) }
             )
             CompactSwitchSettingItem(
-                title = "弹性顶栏",
+                title = stringResource(R.string.use_flexible_top_bar),
                 checked = data.useFlexibleTopAppBar,
                 onCheckedChange = { data = data.copy(useFlexibleTopAppBar = it) }
             )

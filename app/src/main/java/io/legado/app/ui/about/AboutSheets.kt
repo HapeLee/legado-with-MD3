@@ -80,7 +80,7 @@ fun UpdateSheet(
 ) {
     val title = when (mode) {
         UpdateMode.UPDATE -> stringResource(R.string.check_update)
-        UpdateMode.VIEW_LOG -> "已经更新至"
+        UpdateMode.VIEW_LOG -> stringResource(R.string.about_installed_version_title)
     }
 
     AppModalBottomSheet(
@@ -99,7 +99,7 @@ fun UpdateSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppText(
-                        text = "当前版本",
+                        text = stringResource(R.string.about_current_version),
                         style = LegadoTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -114,7 +114,7 @@ fun UpdateSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppText(
-                        text = "新版本",
+                        text = stringResource(R.string.about_new_version),
                         style = LegadoTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -144,7 +144,7 @@ fun UpdateSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     AppText(
-                        text = "渠道",
+                        text = stringResource(R.string.about_update_channel),
                         style = LegadoTheme.typography.bodyMedium,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -182,7 +182,7 @@ fun UpdateSheet(
                 Spacer(modifier = Modifier.height(16.dp))
                 PrimaryButton(
                     onClick = onStartDownload,
-                    text = "更新",
+                    text = stringResource(R.string.about_update_action),
                     modifier = Modifier.fillMaxWidth()
                 )
             }

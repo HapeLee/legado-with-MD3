@@ -97,7 +97,7 @@ fun BackgroundImageManageSheet(
                     ) {
                         AppIcon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add",
+                            contentDescription = stringResource(R.string.add),
                             modifier = Modifier.size(48.dp),
                             tint = LegadoTheme.colorScheme.primary
                         )

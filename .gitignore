@@ -17,3 +17,4 @@ package-lock.json
 # Kotlin 2.0
 .kotlin/
 /.vscode/settings.json
+/.codex/skills

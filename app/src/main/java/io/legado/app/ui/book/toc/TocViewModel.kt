@@ -7,6 +7,7 @@ import androidx.compose.runtime.snapshotFlow
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -424,9 +425,13 @@ class TocViewModel(
         val book = bookState.value ?: return
         book.tocUrl = newRegex
         upBookTocRule(book) { error ->
-            if (error != null) context.toastOnUi("更新目录规则失败: ${error.localizedMessage}")
+            if (error != null) {
+                context.toastOnUi(
+                    context.getString(R.string.toc_rule_update_failed, error.localizedMessage)
+                )
+            }
             else {
-                context.toastOnUi("目录规则已更新")
+                context.toastOnUi(R.string.toc_rule_updated)
                 if (ReadBook.book?.bookUrl == book.bookUrl) ReadBook.upMsg(null)
             }
         }
@@ -437,8 +442,14 @@ class TocViewModel(
         val newState = !isSplitLongChapter
         book.setSplitLongChapter(newState)
         upBookTocRule(book) { error ->
-            if (error != null) context.toastOnUi("设置失败: ${error.localizedMessage}")
-            else context.toastOnUi(if (newState) "已开启长章节拆分" else "已关闭长章节拆分")
+            if (error != null) {
+                context.toastOnUi(context.getString(R.string.setting_failed, error.localizedMessage))
+            } else {
+                context.toastOnUi(
+                    if (newState) R.string.split_long_chapters_enabled
+                    else R.string.split_long_chapters_disabled
+                )
+            }
         }
     }
 
@@ -467,16 +478,16 @@ class TocViewModel(
             val book = bookState.value ?: return@launch
             val bookmarks = appDb.bookmarkDao.getByBook(book.name, book.author)
             if (bookmarks.isEmpty()) {
-                context.toastOnUi("没有可导出的书签")
+                context.toastOnUi(R.string.no_bookmarks_to_export)
                 return@launch
             }
             BookmarkExporter.exportToUri(
                 context = getApplication(), fileUri = fileUri, bookmarks = bookmarks,
                 isMd = isMd, bookName = book.name, author = book.author
             )
-            context.toastOnUi("保存成功")
+            context.toastOnUi(R.string.save_success)
         } catch (e: Exception) {
-            context.toastOnUi("保存失败: ${e.message}")
+            context.toastOnUi(context.getString(R.string.save_failed_with_error, e.message))
         }
     }
 
@@ -495,7 +506,7 @@ class TocViewModel(
             .toList()
 
         if (selectedItems.isEmpty()) {
-            context.toastOnUi("请选择章节")
+            context.toastOnUi(R.string.select_chapters)
             return@launch
         }
 
@@ -512,7 +523,7 @@ class TocViewModel(
         }
 
         appDb.bookmarkDao.insert(*bookmarks.toTypedArray())
-        context.toastOnUi("已添加 ${bookmarks.size} 个书签")
+        context.toastOnUi(context.getString(R.string.bookmarks_added_count, bookmarks.size))
         withContext(Dispatchers.Main) {
             clearSelection()
         }
@@ -525,7 +536,9 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, indices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi("开始下载 $count 个章节")
+            getApplication<Application>().toastOnUi(
+                context.getString(R.string.start_downloading_chapters, count)
+            )
             clearSelection()
         }
     }
@@ -535,7 +548,7 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
         }.onSuccess {
-            getApplication<Application>().toastOnUi("开始下载章节")
+            getApplication<Application>().toastOnUi(R.string.start_downloading_chapter)
         }
     }
 
@@ -546,14 +559,16 @@ class TocViewModel(
             .map { it.id }
 
         if (targetIndices.isEmpty()) {
-            getApplication<Application>().toastOnUi("所有章节已缓存")
+            getApplication<Application>().toastOnUi(R.string.all_chapters_cached)
             return
         }
 
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi("开始下载剩余 $count 个章节")
+            getApplication<Application>().toastOnUi(
+                context.getString(R.string.start_downloading_remaining_chapters, count)
+            )
         }
     }
 

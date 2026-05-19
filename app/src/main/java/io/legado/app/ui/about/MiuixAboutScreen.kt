@@ -89,6 +89,7 @@ fun MiuixAboutScreen(
     val topAppBarScrollBehavior = MiuixScrollBehavior()
     val lazyListState = rememberLazyListState()
     val isWideScreen = shouldShowSplitPane()
+    val licenseTitle = stringResource(R.string.about_license_title)
 
     val scrollProgress by remember {
         derivedStateOf {
@@ -119,7 +120,7 @@ fun MiuixAboutScreen(
         if (scrollProgress == 1f) MiuixTheme.colorScheme.surface else Color.Transparent
     }
 
-    val navigator = remember {
+    val navigator = remember(licenseTitle) {
         object : MiuixNavigator {
             override fun pop() {
                 onBack()
@@ -127,7 +128,7 @@ fun MiuixAboutScreen(
 
             override fun push(route: Any) {
                 if (route == "License") {
-                    onIntent(AboutIntent.ShowMdFile("许可证", "LICENSE.md"))
+                    onIntent(AboutIntent.ShowMdFile(licenseTitle, "LICENSE.md"))
                 }
             }
         }
@@ -180,6 +181,9 @@ private fun AboutContent(
 ) {
     val appState = LocalAppState.current
     val isWideScreen = LocalIsWideScreen.current
+    val privacyPolicyTitle = stringResource(R.string.about_privacy_policy_title)
+    val licenseTitle = stringResource(R.string.about_license_title)
+    val disclaimerTitle = stringResource(R.string.about_disclaimer_title)
 
     val backdrop = rememberBlurBackdrop()
     var blurRadius by remember { mutableFloatStateOf(60f) }
@@ -427,7 +431,7 @@ private fun AboutContent(
                             onClick = {
                                 onIntent(
                                     AboutIntent.ShowMdFile(
-                                        "隐私政策",
+                                        privacyPolicyTitle,
                                         "privacyPolicy.md"
                                     )
                                 )
@@ -435,14 +439,14 @@ private fun AboutContent(
                         )
                         ArrowPreference(
                             title = stringResource(R.string.license),
-                            onClick = { onIntent(AboutIntent.ShowMdFile("许可证", "LICENSE.md")) },
+                            onClick = { onIntent(AboutIntent.ShowMdFile(licenseTitle, "LICENSE.md")) },
                         )
                         ArrowPreference(
                             title = stringResource(R.string.disclaimer),
                             onClick = {
                                 onIntent(
                                     AboutIntent.ShowMdFile(
-                                        "免责声明",
+                                        disclaimerTitle,
                                         "disclaimer.md"
                                     )
                                 )

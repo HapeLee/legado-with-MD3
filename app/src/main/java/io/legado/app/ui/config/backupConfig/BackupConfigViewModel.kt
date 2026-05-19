@@ -2,6 +2,7 @@ package io.legado.app.ui.config.backupConfig
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.help.storage.Backup
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +56,7 @@ class BackupConfigViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError(e.localizedMessage ?: "备份出错")
+                    onError(e.localizedMessage ?: appCtx.getString(R.string.backup_error))
                 }
             }
         }
@@ -76,7 +77,7 @@ class BackupConfigViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError(e.localizedMessage ?: "恢复出错")
+                    onError(e.localizedMessage ?: appCtx.getString(R.string.restore_error))
                 }
             }
         }
