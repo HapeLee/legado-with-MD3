@@ -54,7 +54,6 @@ material3IconsExtended = "1.7.8"
 materialKolor = "4.1.1"
 media = "1.8.0"
 media3 = "1.8.0"
-nanoHttpd = "2.3.1"
 navigationCompose = "2.9.8"
 okhttp = "5.3.2"
 palette = "1.0.0"
@@ -187,9 +186,6 @@ ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negoti
 ktor-serialization-gson = { module = "io.ktor:ktor-serialization-gson", version.ref = "ktor" }
 ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.ref = "ktor" }
-
-nanohttpd-nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanoHttpd" }
-nanohttpd-websocket = { module = "org.nanohttpd:nanohttpd-websocket", version.ref = "nanoHttpd" }
 
 navigation-compose = { module = "androidx.navigation:navigation-compose" }
 preference-preference = { module = "androidx.preference:preference", version.ref = "preference" }

@@ -30,7 +30,7 @@
 - 书籍文件支持 TXT、EPUB、PDF、UMD，解析入口为 `model/localBook/LocalBook.kt`。
 
 ## 外部依赖与集成
-- 主要依赖：JsoupXpath、json-path、rhino-android、okhttp、glide、nanohttpd、bga-qrcode-zxing、colorpicker、commons-text、markwon、hanlp、epublib-core 等。
+- 主要依赖：JsoupXpath、json-path、rhino-android、okhttp、glide、ktor、bga-qrcode-zxing、colorpicker、commons-text、markwon、hanlp、epublib-core 等。
 - 依赖声明见 `build.gradle`、`app/build.gradle`，部分第三方库源码在 `lib/`。
 
 ## 典型开发场景示例
