@@ -1,8 +1,10 @@
-package io.legado.app.ui.widget.components.cover
+package io.legado.app.ui.widget.components.image.cover
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -14,8 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -50,6 +52,18 @@ fun BookshelfCover(
             sharedCoverKey = sharedCoverKey,
         )
 
+        // 使用 animatedVisibilityScope 的 animateEnterExit 为叠加层添加同步动画
+        val overlayModifier = Modifier.then(
+            if (animatedVisibilityScope != null) {
+                with(animatedVisibilityScope) {
+                    Modifier.animateEnterExit(
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    )
+                }
+            } else Modifier
+        )
+
         if (!badgeText.isNullOrEmpty()) {
             TextCard(
                 text = badgeText,
@@ -57,7 +71,8 @@ fun BookshelfCover(
                 iconSize = 12.dp,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(2.dp),
+                    .padding(2.dp)
+                    .then(overlayModifier),
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
                 verticalPadding = 2.dp
@@ -71,7 +86,8 @@ fun BookshelfCover(
                 contentColor = LegadoTheme.colorScheme.onCardContainer,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(2.dp),
+                    .padding(2.dp)
+                    .then(overlayModifier),
                 cornerRadius = 4.dp,
                 horizontalPadding = 4.dp,
                 verticalPadding = 2.dp
@@ -85,6 +101,7 @@ fun BookshelfCover(
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 6.dp)
                     .height(3.dp)
+                    .then(overlayModifier)
             )
         }
     }

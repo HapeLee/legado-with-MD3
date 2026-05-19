@@ -1,5 +1,5 @@
 {
-  "enable": false,
-  "searchUrl": "",
-  "coverRule": ""
+  "enable": true,
+  "searchUrl": "data:;base64,{{java.base64Encode(key)}},{\"type\":\"lyc\"}",
+  "coverRule": "@js:\nvar key = java.hexDecodeToString(result);\nvar url1 = `https://pre-api.tuishujun.com/api/searchBook?search_value=${key}&page=1&pageSize=20`;\nvar url2 = `http://m.ypshuo.com/api/novel/search?keyword=${key}&searchType=1&page=1`;\nvar [rr1, rr2] = java.ajaxAll([url1, url2]).map(r => r.body());\nfunction jjson(str, rule) {\n    try {\n        return com.jayway.jsonpath.JsonPath.read(str, rule);\n    } catch (e) {\n        return [];\n    }\n}\nrr1 = jjson(rr1, '$.data.data[*]');\nrr2 = jjson(rr2, '$.data.data[*]');\nvar na = String(book.name),\n    au = String(book.author);\nfunction search() {\n    for (let char of rr1) {\n        //本地书名包含搜索结果书名\n        if (na.includes(char.title + '')) {\n            let au2 = char.author_nickname + '';\n            //作者匹配\n            if (au.includes(au2) || au2.includes(au)) {\n                return char.cover;\n            }\n        }\n    }\n    for (let char of rr2) {\n        if (na.includes(char.novel_name + '')) {\n            let au2 = char.author_name + '';\n            if (au.includes(au2) || au2.includes(au)) {\n                return char.novel_img;\n            }\n        }\n    }\n    return '';\n}\nsearch()"
 }

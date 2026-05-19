@@ -6,10 +6,10 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
+import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.help.source.getExploreInfoMap
-import io.legado.app.ui.widget.components.explore.ExploreKindUiUseCase
 import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.list.ListUiState
 import kotlinx.collections.immutable.ImmutableList

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,17 +22,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
-import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
-import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,9 +36,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -58,6 +52,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -68,22 +63,23 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
+import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.book.search.ScopeSelectSheet
-import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
-import io.legado.app.ui.widget.components.tabRow.AppTabRow
-import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -480,19 +476,17 @@ fun SearchScreen(
             viewModel.onIntent(SearchIntent.DismissEmptyScopeAction)
         },
         title = stringResource(R.string.draw),
+        textProvider = {
+            if (wasPrecisionSearch) {
+                stringResource(R.string.search_empty_scope_disable_precision, scopeDisplay)
+            } else {
+                stringResource(R.string.search_empty_scope_switch_all, scopeDisplay)
+            }
+        },
         confirmText = stringResource(R.string.ok),
         onConfirm = { viewModel.onIntent(SearchIntent.ConfirmEmptyScopeAction) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { viewModel.onIntent(SearchIntent.DismissEmptyScopeAction) },
-        content = {
-            Text(
-                text = if (it.wasPrecisionSearch) {
-                    stringResource(R.string.search_empty_scope_disable_precision, it.scopeDisplay)
-                } else {
-                    stringResource(R.string.search_empty_scope_switch_all, it.scopeDisplay)
-                }
-            )
-        }
     )
 
     ScopeSelectSheet(
@@ -681,12 +675,8 @@ private fun SearchResultFooter(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.size(18.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AppCircularProgressIndicator()
-                    }
+                    AppCircularProgressIndicator()
+                    Spacer(modifier = Modifier.padding(horizontal = 8.dp))
                     AppText(text = stringResource(R.string.is_loading))
                 }
             }

@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.cover
+package io.legado.app.ui.widget.components.image.cover
 
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -82,6 +82,17 @@ fun CoilBookCover(
         modifier = modifier
             .aspectRatio(5f / 7f)
             .then(
+                with(sharedTransitionScope) {
+                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(sharedCoverKey),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            renderInOverlayDuringTransition = true
+                        )
+                    } else Modifier
+                }
+            )
+            .then(
                 if (CoverConfig.coverShowShadow) {
                     Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
                 } else Modifier
@@ -94,63 +105,53 @@ fun CoilBookCover(
             )
             .clip(RoundedCornerShape(4.dp))
     ) {
-        val imageContentModifier = Modifier
-            .fillMaxSize()
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(sharedCoverKey),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            renderInOverlayDuringTransition = true
-                        )
-                    } else Modifier
-                }
+        if (hasCustomDefault && !isOnlineCoverLoaded) {
+            AsyncImage(
+                model = buildCoverImageRequest(
+                    context = context,
+                    data = randomPath,
+                    sourceOrigin = null,
+                    loadOnlyWifi = false,
+                    crossfade = showLoadingPlaceholder,
+                    memoryCacheKey = randomPath,
+                ),
+                contentDescription = null,
+                imageLoader = koinInject(),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(4.dp))
             )
+        }
 
-        Box(modifier = imageContentModifier) {
-            if (hasCustomDefault && !isOnlineCoverLoaded) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = randomPath,
-                        sourceOrigin = null,
-                        loadOnlyWifi = false,
-                        crossfade = showLoadingPlaceholder,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-
-            if (finalPath != null) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = finalPath,
-                        sourceOrigin = sourceOrigin,
-                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                        crossfade = showLoadingPlaceholder,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                    onSuccess = {
-                        isOnlineCoverLoaded = true
-                        onLoadFinish?.invoke()
-                    },
-                    onError = {
-                        isOnlineCoverLoaded = false
-                        onLoadFinish?.invoke()
-                    }
-                )
-            } else {
-                LaunchedEffect(Unit) {
+        if (finalPath != null) {
+            AsyncImage(
+                model = buildCoverImageRequest(
+                    context = context,
+                    data = finalPath,
+                    sourceOrigin = sourceOrigin,
+                    loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                    crossfade = showLoadingPlaceholder,
+                    memoryCacheKey = finalPath,
+                ),
+                contentDescription = null,
+                imageLoader = koinInject(),
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(4.dp)),
+                onSuccess = {
+                    isOnlineCoverLoaded = true
+                    onLoadFinish?.invoke()
+                },
+                onError = {
+                    isOnlineCoverLoaded = false
                     onLoadFinish?.invoke()
                 }
+            )
+        } else {
+            LaunchedEffect(Unit) {
+                onLoadFinish?.invoke()
             }
         }
 

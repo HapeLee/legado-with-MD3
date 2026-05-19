@@ -50,7 +50,7 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.coverConfig.CoverConfig
-import io.legado.app.ui.widget.components.cover.buildCoverImageRequest
+import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils

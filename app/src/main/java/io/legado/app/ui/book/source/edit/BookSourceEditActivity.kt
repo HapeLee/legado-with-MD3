@@ -352,7 +352,7 @@ class BookSourceEditActivity :
             add(EditEntity("imageDecode", cr.imageDecode, R.string.rule_image_decode))
             add(EditEntity("payAction", cr.payAction, R.string.rule_pay_action))
         }
-        // 段评
+
 //        val rr = bs.getReviewRule()
 //        reviewEntities.clear()
 //        reviewEntities.apply {
