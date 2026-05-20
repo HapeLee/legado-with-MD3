@@ -53,7 +53,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         execute {
             book = appDb.bookDao.getBook(bookUrl)
             book?.let {
-                val selectedTypeIndex = when {
+                val selectedType = when {
                     it.isImage -> BookInfoEditType.IMAGE
                     it.isAudio -> BookInfoEditType.AUDIO
                     else -> BookInfoEditType.TEXT
@@ -68,7 +68,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     remark = it.remark,
                     kindList = kinds,
                     originalKindList = kinds,
-                    selectedType = selectedTypeIndex,
+                    selectedType = selectedType,
                     fixedType = it.config.fixedType,
                     book = it
                 )

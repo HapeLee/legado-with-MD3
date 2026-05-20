@@ -1305,7 +1305,7 @@
     <string name="about_heap_dump_not_found">Heap dump file not found</string>
     <string name="about_download_info_incomplete">Update download information is incomplete</string>
     <string name="about_no_data">No update log available</string>
-    <string name="about_start_download">Downloading %s</string>
+    <string name="about_start_download">Downloading %1$s</string>
     <string name="crash_report">Crash report</string>
     <string name="crash_report_message">The app crashed. Copy the error information below when reporting the issue.</string>
     <string name="crash_report_empty">No crash information found.</string>
@@ -1383,9 +1383,9 @@
     <string name="theme_manage_name_hint">Enter a theme name</string>
     <string name="theme_manage_apply_theme">Apply Theme</string>
     <string name="theme_manage_apply">Apply</string>
-    <string name="theme_manage_apply_message">Apply theme \"%s\"? A restart is required for all changes to take effect.</string>
+    <string name="theme_manage_apply_message">Apply theme \"%1$s\"? A restart is required for all changes to take effect.</string>
     <string name="theme_manage_delete_theme">Delete Theme</string>
-    <string name="theme_manage_delete_message">Delete theme \"%s\"? This cannot be undone.</string>
+    <string name="theme_manage_delete_message">Delete theme \"%1$s\"? This cannot be undone.</string>
     <string name="theme_manage_preview_day">Day</string>
     <string name="theme_manage_preview_night">Night</string>
     <string name="theme_manage_edit_theme">Edit Theme</string>
@@ -1640,7 +1640,7 @@
     <string name="read_aloud_preload">Read-Aloud Preload Count</string>
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">Audio Cache Retention Time (minutes)</string>
-    <string name="audio_cache_clean_time_summary">Current: %d. Enter 0 to clear immediately on exit.</string>
+    <string name="audio_cache_clean_time_summary">Current: %1$d. Enter 0 to clear immediately on exit.</string>
     <string name="show_swipe_animation">Enable Animation While Swiping</string>
     <string name="click_image_way">Image Tap Action</string>
     <string name="show_web_log">Output Logs</string>
