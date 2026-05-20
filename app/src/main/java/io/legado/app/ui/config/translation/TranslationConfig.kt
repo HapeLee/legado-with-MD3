@@ -80,6 +80,7 @@ object TranslationConfig {
 2. Maintain the literary style and tone of the original text                                                                                                                 
 3. Do not summarize, condense, or omit any content                                                                                                                           
 4. Only output the translation result, do not add comments or explanations
+5. Keep name consistency across abbreviations/nicknames (e.g., Alexander → Alex → same name). Add nickname mapping to dictionary.
 
 """
 

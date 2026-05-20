@@ -33,6 +33,16 @@ class LlmTranslateClient : LlmGateway {
         onUpdate: ((List<DictPair>) -> Unit)?,
         retryReason: RetryReason?
     ): Result<String> = withContext(Dispatchers.IO) {
+        // 如果目标语言是英语，且文本已经是英文（英文字符及标点占比超过80%），跳过翻译直接返回原文
+        if (targetLanguage == "en" && isMostlyEnglish(text)) {
+            return@withContext Result.success(text)
+        }
+
+        // 如果目标语言是其他语言（如中文），且文本已经是该语言，跳过翻译直接返回原文
+        if (targetLanguage == "zh" && isMostlyChinese(text)) {
+            return@withContext Result.success(text)
+        }
+
         try {
             when (provider) {
                 TranslationConfig.PROVIDER_GOOGLE -> translateWithGoogle(text, targetLanguage)
@@ -42,6 +52,37 @@ class LlmTranslateClient : LlmGateway {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    /**
+     * 判断文本是否大部分为英文（英文字母及标点符号占比超过80%）
+     */
+    private fun isMostlyEnglish(text: String): Boolean {
+        if (text.isEmpty()) return false
+        val englishChars = text.count { it in 'A'..'Z' || it in 'a'..'z' || it in ".,!?;:'\"-()[]{}–—…" }
+        return englishChars.toDouble() / text.length > 0.8
+    }
+
+    /**
+     * 判断文本是否大部分为中文（中文及中文标点占比超过80%）
+     */
+    private fun isMostlyChinese(text: String): Boolean {
+        if (text.isEmpty()) return false
+        val chineseChars = text.count {
+            it in '\u4e00'..'\u9fff' || it in "。，！？；：“”‘’（）【】《》——…".toSet()
+        }
+        return chineseChars.toDouble() / text.length > 0.8
+    }
+
+    /**
+     * 如果翻译结果是中文，删除其中英文含量超过80%的段落（LLM可能生成中英对照内容）
+     */
+    private fun filterHighEnglishParagraphs(text: String): String {
+        val paragraphs = text.split("\n")
+        val filtered = paragraphs.filter { paragraph ->
+            !isMostlyEnglish(paragraph)
+        }
+        return filtered.joinToString("\n")
     }
 
     private suspend fun translateWithGoogle(text: String, targetLanguage: String): Result<String> {
@@ -122,7 +163,12 @@ class LlmTranslateClient : LlmGateway {
                     }
 
                     // Always return the result, even if dictionary parsing failed
-                    Result.success(parseResult.translatedText)
+                    val finalText = if (targetLanguage == "zh") {
+                        filterHighEnglishParagraphs(parseResult.translatedText)
+                    } else {
+                        parseResult.translatedText
+                    }
+                    Result.success(finalText)
                 } else {
                     Result.failure(Exception("Empty translation result"))
                 }

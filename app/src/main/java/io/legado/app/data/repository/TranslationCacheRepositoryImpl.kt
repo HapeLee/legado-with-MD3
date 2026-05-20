@@ -66,7 +66,7 @@ class TranslationCacheRepositoryImpl : TranslationCacheRepository {
         val cacheFile = getCacheFile(book, bookChapter, targetLanguage)
         if (cacheFile.exists()) {
             val content = cacheFile.readText()
-            if (content.isEmpty()) null else content
+            content.ifEmpty { null }
         } else {
             null
         }

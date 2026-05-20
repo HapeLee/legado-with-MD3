@@ -291,7 +291,6 @@ class ReadBookActivity : BaseReadBookActivity(),
     private val networkChangedListener by lazy {
         NetworkChangedListener(this)
     }
-    private var translationObserveJob: Job? = null
     private var justInitData: Boolean = false
     private var syncDialog: AlertDialog? = null
 
@@ -720,36 +719,17 @@ class ReadBookActivity : BaseReadBookActivity(),
 
     override fun onTranslationClick() {
         val book = ReadBook.book ?: return
-        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
-
-        if (book.getTranslationMode()) {
-            // Currently in translation mode - disable it and show original
-            book.setTranslationMode(false)
-            book.save()
-            ReadBook.loadContent(false)
-            updateTranslationButtonState()
-        } else {
-            // Currently in original mode - enable translation mode
-            book.setTranslationMode(true)
-            book.save()
-            // Start translation if needed, or pre-translate next chapter
-            if (TranslationManager.hasTranslatedCache(book, chapter)) {
-                ReadBook.loadContent(false)
-                // Start pre-translation for next chapter
-                TranslationManager.preTranslateNextChapter(book, chapter.index)
-            } else {
-                // Need to translate current chapter
-                startTranslationIfNeeded(book, chapter.index)
-            }
-        }
+        book.setTranslationMode(!book.getTranslationMode())
+        book.save()
+        binding.readMenu.updateTranslationButton(book.getTranslationMode())
+        ReadBook.loadContent(false)
     }
 
     override fun onTranslationLongClick() {
         val book = ReadBook.book ?: return
         val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
 
-        val displayState = TranslationManager.getChapterDisplayState(book, chapter)
-        if (displayState == TranslationChapterStatus.Translated) {
+        if (TranslationManager.hasTranslatedCache(book, chapter)) {
             alert(title = getString(R.string.retranslate_chapter), message = getString(R.string.retranslate_confirm)) {
                 positiveButton(getString(R.string.ok)) { retranslateCurrentChapter() }
                 negativeButton(getString(R.string.cancel))
@@ -757,72 +737,13 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
     }
 
-    /**
-     * Start translation for a chapter if not already running.
-     * Observes the task for mixed content updates and triggers pre-translation on completion.
-     */
-    private fun startTranslationIfNeeded(book: Book, chapterIndex: Int) {
-        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: return
-        // Check if already translating
-        val existingFlow = TranslationManager.getChapterTaskStateFlow(book.bookUrl, chapterIndex)
-        if (existingFlow != null && existingFlow.value.status == TranslationChapterStatus.Translating) {
-            // Already translating - just observe it (don't start a new task)
-            observeTranslationTask(book.bookUrl, chapter)
-            return
-        }
-
-        // Start new translation
-        lifecycleScope.launch {
-            val result = TranslationManager.translateChapter(
-                book,
-                chapter,
-                viewModel.translateChapterUseCase,
-                onTranslateStarted = { longToastOnUi(R.string.translation_started) }
-            )
-            result.onSuccess {
-                // Pre-translate next chapter after successful translation
-                TranslationManager.preTranslateNextChapter(book, chapterIndex)
-            }.onFailure { error ->
-                updateTranslationButtonState()
-                longToastOnUi(getString(R.string.translation_failed, error.message ?: ""))
-            }
-        }
-
-        // Observe the task for mixed content updates
-        observeTranslationTask(book.bookUrl, chapter)
-    }
-
-    /**
-     * Observe the translation task for a chapter, updating the UI with mixed content.
-     */
-    private fun observeTranslationTask(bookUrl: String, chapter: BookChapter) {
-        val book = ReadBook.book ?: return
-        translationObserveJob?.cancel()
-        translationObserveJob = lifecycleScope.launch {
-            val taskFlow = TranslationManager.getChapterTaskStateFlow(bookUrl, chapter.index) ?: return@launch
-            taskFlow.collect { state ->
-                when (state.status) {
-                    TranslationChapterStatus.Translating -> {
-                        state.mixedContent?.let { mixed ->
-                            ReadBook.contentLoadFinish(ReadBook.book!!, chapter, mixed, upContent = true, resetPageOffset = false)
-                        }
-                    }
-                    else -> {
-                        // No-op
-                    }
-                }
-            }
-        }
-    }
-
     fun retranslateCurrentChapter() {
         val book = ReadBook.book ?: return
-        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
         lifecycleScope.launch {
-            TranslationManager.deleteTranslationCache(book, chapter)
+            TranslationManager.deleteTranslationCache(book, appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return@launch)
             book.setTranslationMode(true)
             book.save()
-            startTranslationIfNeeded(book, chapter.index)
+            ReadBook.loadContent(false)
         }
     }
 
@@ -1230,7 +1151,6 @@ class ReadBookActivity : BaseReadBookActivity(),
         handler.post {
             upMenu()
             binding.readMenu.upBookView()
-            updateTranslationButtonState()
         }
     }
 
@@ -1264,48 +1184,8 @@ class ReadBookActivity : BaseReadBookActivity(),
                 upSeekBarProgress()
             }
             loadStates = false
-            // Update translation button state when content changes
-            updateTranslationButtonState()
-            // Trigger translation for current chapter if in translation mode and no cache
-            if (relativePosition == 0) {
-                // Pass the chapter index explicitly to avoid race conditions with ReadBook.durChapterIndex
-                onCurrentChapterContentUpdated(ReadBook.durChapterIndex)
-            }
             success?.invoke()
         }
-    }
-
-    /**
-     * Called after current chapter content is updated.
-     * If in translation mode, starts translation if no cache, or pre-translates next chapter.
-     * @param chapterIndex The chapter index that was just loaded (captured at call site to avoid stale reads)
-     */
-    private fun onCurrentChapterContentUpdated(chapterIndex: Int) {
-        val book = ReadBook.book ?: return
-        if (!book.getTranslationMode()) return
-        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: return
-
-        // Attach to any ongoing translation task for this chapter (e.g. from pre-translation)
-        observeTranslationTask(book.bookUrl, chapter)
-
-        // Check if translation cache exists for current chapter
-        if (TranslationManager.hasTranslatedCache(book, chapter)) {
-            // Already has translation - pre-translate next chapter
-            TranslationManager.preTranslateNextChapter(book, chapterIndex)
-            return
-        }
-
-        // No cache - start translation for this chapter
-        startTranslationIfNeeded(book, chapterIndex)
-    }
-
-    private fun updateTranslationButtonState() {
-        val book = ReadBook.book ?: return
-        val chapterIndex = ReadBook.durChapterIndex
-        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, chapterIndex) ?: return
-        val status = TranslationManager.getChapterDisplayState(book, chapter)
-        val state = TranslationManager.getChapterState(book.bookUrl, chapterIndex)
-        binding.readMenu.updateTranslationButton(book.getTranslationMode(), status, state.currentChunk, state.totalChunks)
     }
 
     override suspend fun upContentAwait(
