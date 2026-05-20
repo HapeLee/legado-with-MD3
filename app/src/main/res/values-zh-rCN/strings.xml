@@ -1273,7 +1273,7 @@
     <string name="about_heap_dump_not_found">未找到堆转储文件</string>
     <string name="about_download_info_incomplete">下载信息不完整</string>
     <string name="about_no_data">没有数据</string>
-    <string name="about_start_download">开始下载: %s</string>
+    <string name="about_start_download">开始下载: %1$s</string>
     <string name="crash_report">崩溃报告</string>
     <string name="crash_report_message">应用发生崩溃。报告问题时，请复制以下错误信息。</string>
     <string name="crash_report_empty">未找到崩溃信息。</string>
@@ -1351,9 +1351,9 @@
     <string name="theme_manage_name_hint">请输入主题名称</string>
     <string name="theme_manage_apply_theme">应用主题</string>
     <string name="theme_manage_apply">应用</string>
-    <string name="theme_manage_apply_message">确定应用主题「%s」？应用后需要重启才能完全生效。</string>
+    <string name="theme_manage_apply_message">确定应用主题「%1$s」？应用后需要重启才能完全生效。</string>
     <string name="theme_manage_delete_theme">删除主题</string>
-    <string name="theme_manage_delete_message">确定删除主题「%s」？此操作不可恢复。</string>
+    <string name="theme_manage_delete_message">确定删除主题「%1$s」？此操作不可恢复。</string>
     <string name="theme_manage_preview_day">日间</string>
     <string name="theme_manage_preview_night">夜间</string>
     <string name="theme_manage_edit_theme">编辑主题</string>
@@ -1606,7 +1606,7 @@
     <string name="read_aloud_preload">听书预加载数量</string>
     <string name="read_aloud_preload_summary">%d</string>
     <string name="audio_cache_clean_time">音频缓存保留时间(分钟)</string>
-    <string name="audio_cache_clean_time_summary">当前%d, 输入 0 代表退出即刻清理。</string>
+    <string name="audio_cache_clean_time_summary">当前%1$d, 输入 0 代表退出即刻清理。</string>
     <string name="show_swipe_animation">启用滑动时动画</string>
     <string name="click_image_way">点击图片行为</string>
     <string name="show_web_log">输出日志</string>
