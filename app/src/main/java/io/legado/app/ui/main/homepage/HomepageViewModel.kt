@@ -2,6 +2,7 @@ package io.legado.app.ui.main.homepage
 
 import android.app.Application
 import androidx.lifecycle.viewModelScope
+import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
@@ -90,6 +91,7 @@ class HomepageViewModel(
 
     private val localModulesFlow = gateway.flowEnabled()
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSource>>(emptyMap())
+    private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
 
     val allModulesCache = gateway.flowAll()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
@@ -115,8 +117,8 @@ class HomepageViewModel(
     ) { grouped, contentStates, flags, sourcesCache, customSets ->
         val setNames = customSets.associate { it.id to it.name }
         val sortedSetIds = customSets.sortedBy { it.sortOrder }.map { it.id }
+        val configCache = _layoutConfigCache.value
 
-        // 按照集排序设置来排布模块
         val displayModules = sortedSetIds.flatMap { setId ->
             val setUrl = customSetUrl(setId)
             val mods = grouped[setUrl] ?: emptyList()
@@ -125,17 +127,7 @@ class HomepageViewModel(
                 val sourceName = source?.bookSourceName ?: module.sourceUrl
                 val setName = module.customSetId?.let { setNames[it] } ?: sourceName
                 val exploreUrl = module.url ?: source?.exploreUrl
-
-                val configMap = mutableMapOf<String, String>()
-                module.layoutConfig?.let { configStr ->
-                    try {
-                        val json = GSON.fromJson(configStr, Map::class.java)
-                        json?.forEach { (k, v) ->
-                            configMap["layout_$k"] = v.toString()
-                        }
-                    } catch (_: Exception) {
-                    }
-                }
+                val configMap = configCache[module.id] ?: emptyMap()
 
                 HomepageModuleUi(
                     sourceUrl = module.sourceUrl,
@@ -203,6 +195,26 @@ class HomepageViewModel(
     private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
 
     init {
+        // 解析并缓存模块 layoutConfig，避免在 combine 中重复解析
+        viewModelScope.launch {
+            localModulesFlow.collect { modules ->
+                val cache = mutableMapOf<String, Map<String, String>>()
+                for (module in modules) {
+                    val configStr = module.layoutConfig ?: continue
+                    try {
+                        val json = GSON.fromJson(configStr, Map::class.java)
+                        if (json != null) {
+                            val map = mutableMapOf<String, String>()
+                            json.forEach { (k, v) -> map["layout_$k"] = v.toString() }
+                            cache[module.id] = map
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
+                _layoutConfigCache.value = cache
+            }
+        }
+
         // sync: 只处理有 homepageModules 的书源
         viewModelScope.launch {
             initModulesSyncFlow.collect { sources ->
@@ -438,7 +450,14 @@ class HomepageViewModel(
                         states[globalId] as? ModuleLoadState.Loaded ?: return@update states
                     states + (globalId to lastState.copy(isLoadingMore = false))
                 }
-                _effects.tryEmit(HomepageEffect.ShowSnackbar("加载更多失败: ${e.message}"))
+                _effects.tryEmit(
+                    HomepageEffect.ShowSnackbar(
+                        getApplication<Application>().getString(
+                            R.string.homepage_load_more_failed,
+                            e.message ?: ""
+                        )
+                    )
+                )
             }
         }
     }
@@ -529,7 +548,13 @@ class HomepageViewModel(
             }
             if (hasInfinite) {
                 viewModelScope.launch {
-                    _effects.emit(HomepageEffect.ShowSnackbar("该分组已存在无限加载模块"))
+                    _effects.emit(
+                        HomepageEffect.ShowSnackbar(
+                            getApplication<Application>().getString(
+                                R.string.homepage_module_duplicate_infinite
+                            )
+                        )
+                    )
                 }
                 return
             }
@@ -603,19 +628,18 @@ class HomepageViewModel(
 
     fun reorderJoinedModules(orderedIds: List<String>) {
         viewModelScope.launch {
-            orderedIds.forEachIndexed { index, id ->
-                gateway.setSortOrder(id, index)
-            }
+            val orders = orderedIds.mapIndexed { index, id -> id to index }.toMap()
+            gateway.batchSetSortOrders(orders)
             notifyConfigChanged()
         }
     }
 
     fun reorderCustomSets(orderedUrls: List<String>) {
         viewModelScope.launch {
-            orderedUrls.forEachIndexed { index, url ->
-                val id = customSetIdFromUrl(url)
-                gateway.setCustomSetSortOrder(id, index)
-            }
+            val orders = orderedUrls.mapIndexed { index, url ->
+                customSetIdFromUrl(url) to index
+            }.toMap()
+            gateway.batchSetCustomSetSortOrders(orders)
             notifyConfigChanged()
         }
     }
@@ -749,7 +773,13 @@ class HomepageViewModel(
             }
             if (hasInfinite) {
                 viewModelScope.launch {
-                    _effects.emit(HomepageEffect.ShowSnackbar("该分组已存在无限加载模块"))
+                    _effects.emit(
+                        HomepageEffect.ShowSnackbar(
+                            getApplication<Application>().getString(
+                                R.string.homepage_module_duplicate_infinite
+                            )
+                        )
+                    )
                 }
                 return
             }

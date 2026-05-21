@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 
@@ -34,13 +36,16 @@ fun <T> HomepageLayoutSheet(
     AppModalBottomSheet(
         data = data,
         onDismissRequest = onDismissRequest,
-        title = "布局设置",
+        title = stringResource(R.string.homepage_layout_settings),
     ) {
         Column {
             DropdownListSettingItem(
-                title = "首页布局模式",
+                title = stringResource(R.string.homepage_layout_mode),
                 selectedValue = layoutMode.toString(),
-                displayEntries = arrayOf("混合列表", "分源Tab"),
+                displayEntries = arrayOf(
+                    stringResource(R.string.homepage_layout_mixed),
+                    stringResource(R.string.homepage_layout_tabs)
+                ),
                 entryValues = arrayOf("0", "1"),
                 onValueChange = { onLayoutModeChange(it.toInt()) }
             )

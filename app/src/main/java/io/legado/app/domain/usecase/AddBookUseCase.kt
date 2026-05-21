@@ -33,8 +33,9 @@ class AddBookUseCase(
             if (source == null) {
                 for (bookSourcePart in hasBookUrlPattern) {
                     try {
-                        val bs = bookSourcePart.getBookSource()!!
-                        if (bookUrl.matches(bs.bookUrlPattern!!.toRegex())) {
+                        val bs = bookSourcePart.getBookSource() ?: continue
+                        val pattern = bs.bookUrlPattern ?: continue
+                        if (bookUrl.matches(pattern.toRegex())) {
                             source = bs
                             break
                         }
@@ -50,17 +51,16 @@ class AddBookUseCase(
             )
 
             kotlin.runCatching {
-                WebBook.getBookInfoAwait(bookSource, book)
-            }.onSuccess {
-                val dbBook = bookRepository.getBook(it.name, it.author)
+                val bookInfo = WebBook.getBookInfoAwait(bookSource, book)
+                val dbBook = bookRepository.getBook(bookInfo.name, bookInfo.author)
                 if (dbBook != null) {
-                    val toc = WebBook.getChapterListAwait(bookSource, it).getOrThrow()
-                    dbBook.migrateTo(it, toc)
-                    bookRepository.insert(it)
+                    val toc = WebBook.getChapterListAwait(bookSource, bookInfo).getOrThrow()
+                    dbBook.migrateTo(bookInfo, toc)
+                    bookRepository.insert(bookInfo)
                     bookRepository.insertChapters(*toc.toTypedArray())
                 } else {
-                    it.order = bookRepository.getMinOrder() - 1
-                    bookRepository.insert(it)
+                    bookInfo.order = bookRepository.getMinOrder() - 1
+                    bookRepository.insert(bookInfo)
                 }
                 successCount++
                 onProgress(successCount)

@@ -34,6 +34,8 @@ class HomepageModulesRepository(
         moduleDao.setEnabled(id, enabled)
 
     override suspend fun setSortOrder(id: String, order: Int) = moduleDao.setSortOrder(id, order)
+    override suspend fun batchSetSortOrders(orders: Map<String, Int>) =
+        moduleDao.batchSetSortOrders(orders)
     override suspend fun setCustomSetId(id: String, setId: String?) =
         moduleDao.setCustomSetId(id, setId)
 
@@ -55,6 +57,8 @@ class HomepageModulesRepository(
 
     override suspend fun setCustomSetSortOrder(id: String, order: Int) =
         customSetDao.setSortOrder(id, order)
+    override suspend fun batchSetCustomSetSortOrders(orders: Map<String, Int>) =
+        customSetDao.batchSetSortOrders(orders)
 
     override suspend fun createCustomSet(name: String): CustomSetItem {
         val entity = HomepageCustomSet(

@@ -22,10 +22,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
@@ -93,7 +95,9 @@ fun RankingModule(
                             modifier = Modifier.size(20.dp)
                         )
                         AppText(
-                            text = if (isExpanded) "收起" else "显示全部",
+                            text = if (isExpanded) stringResource(R.string.homepage_collapse) else stringResource(
+                                R.string.homepage_show_all
+                            ),
                             style = LegadoTheme.typography.labelMediumEmphasized,
                             color = if (isExpanded) LegadoTheme.colorScheme.outline else LegadoTheme.colorScheme.primary,
                             modifier = Modifier.padding(start = 4.dp)
