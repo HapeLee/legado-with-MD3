@@ -4,12 +4,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationSearching
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Explore
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.RssFeed
 import androidx.compose.runtime.Composable
@@ -37,6 +40,7 @@ import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Pin
 import top.yukonga.miuix.kmp.icon.extended.Refresh
 import top.yukonga.miuix.kmp.icon.extended.Settings
@@ -81,6 +85,10 @@ object AppIcons {
         @Composable
         get() = if (isMiuix) MiuixIcons.Settings else Icons.Default.Settings
 
+    val BugReport: ImageVector
+        @Composable
+        get() = Icons.Default.BugReport
+
     val PrecisionSearch: ImageVector
         @Composable
         get() = if (isMiuix) MiuixIcons.Pin else Icons.Default.MyLocation
@@ -100,8 +108,14 @@ object AppIcons {
     @Composable
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {
         return when (destination) {
-            MainDestination.Bookshelf -> if (isMiuix) {
+            MainDestination.Home -> if (isMiuix) {
                 if (selected) MiuixIcons.Regular.ContactsBook else MiuixIcons.Regular.ContactsBook
+            } else {
+                if (selected) Icons.Default.Home else Icons.Outlined.Home
+            }
+
+            MainDestination.Bookshelf -> if (isMiuix) {
+                if (selected) MiuixIcons.Regular.Notes else MiuixIcons.Regular.Notes
             } else {
                 if (selected) Icons.AutoMirrored.Filled.LibraryBooks else Icons.AutoMirrored.Outlined.LibraryBooks
             }
