@@ -45,7 +45,7 @@ fun HomepageSourceSelectSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "筛选书源",
+        title = stringResource(R.string.homepage_filter_sources),
     ) {
         Column {
             SearchBar(

@@ -133,7 +133,7 @@ fun ButtonGroupModule(
                             verticalArrangement = Arrangement.Center,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(vertical = 12.dp, horizontal = 4.dp)
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
                         ) {
                             if (hasIcon) {
                                 SourceIcon(
@@ -143,12 +143,12 @@ fun ButtonGroupModule(
 
                                     }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Spacer(modifier = Modifier.height(6.dp))
                             }
 
                             AppText(
                                 text = displayName,
-                                style = LegadoTheme.typography.labelMedium,
+                                style = LegadoTheme.typography.labelSmallEmphasized,
                                 textAlign = TextAlign.Center,
                                 maxLines = 1,
                                 overflow = TextOverflow.Clip,

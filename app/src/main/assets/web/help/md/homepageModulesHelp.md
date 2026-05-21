@@ -1,240 +1,115 @@
-# 首页模块 (homepageModules)
+# 首页模块 (Homepage Modules) 配置规范
 
-在书源编辑页的「发现」Tab 中，可以配置 `首页模块 (JSON)` 字段，声明该书源为首页提供哪些内容模块。
+书源的 `homepageModules` 字段允许开发者声明该书源在首页展示的内容模块。这些模块通过 JSON
+数组进行定义，支持高度自定义的布局和数据来源。
 
-## 概述
+---
 
-- 每个模块代表首页上的一个内容区块（如轮播图、排行榜、网格书架等）
-- 一个书源可以声明多个模块（例如同时提供"热门推荐"Banner 和"周榜"排行榜）
-- 用户在首页可以自由拖拽排序、隐藏/显示各个模块
-- 模块内容来自书源的**发现（explore）**接口，通过 `kindTitle` 匹配分类URL
+## 1. 数据结构 (Data Structure)
 
-## JSON 格式
+`homepageModules` 是一个包含多个模块定义对象的 JSON 数组。
 
-`homepageModules` 是一个 JSON 数组，每个元素定义一个模块：
+### 模块通用字段
 
-```json
-[
-  {
-    "key": "模块唯一标识",
-    "type": "模块类型",
-    "title": "模块标题",
-    "kindTitle": "匹配的分类标题（可选）",
-    "url": "覆盖分类URL（可选）",
-    "args": "特殊参数（可选）",
-    "layoutConfig": {
-      "columns": 2,
-      "rows": 3
-    }
-  }
-]
-```
+| 字段               | 类型       | 必须 | 说明                                                    |
+|:-----------------|:---------|:---|:------------------------------------------------------|
+| **key**          | `String` | 是  | 模块唯一标识。建议使用 `[a-z0-9_]` 字符。用于保存用户的排序/显隐设置。            |
+| **type**         | `Enum`   | 是  | 模块类型。定义了渲染方式和交互逻辑。详见 [模块类型](#2-模块类型-module-types)。    |
+| **title**        | `String` | 是  | 模块默认标题。用户可在本地自定义覆盖。                                   |
+| **kindTitle**    | `String` | 否  | 用于匹配书源「发现」规则中的分类标题。匹配成功后自动继承其 URL 和规则。                |
+| **url**          | `String` | 否  | 显式指定数据接口 URL。优先级高于 `kindTitle`。支持变量替换。                |
+| **args**         | `String` | 否  | 附加参数。在 `buttonGroup` 类型中为 JSON 数组字符串。                 |
+| **layoutConfig** | `Object` | 否  | 布局配置对象，用于调整列数、行数、图标等。详见 [布局配置](#3-布局配置-layoutconfig)。 |
 
-### 字段说明
+---
 
-| 字段             | 类型        | 必填 | 说明                                                                                                    |
-|----------------|-----------|----|-------------------------------------------------------------------------------------------------------|
-| `key`          | `String`  | 是  | 模块在书源内的唯一标识，用于关联用户偏好。建议使用英文，如 `"hot"`, `"rank_week"`                                                  |
-| `type`         | `String`  | 是  | 模块类型，可选值：`"banner"`, `"ranking"`, `"gridRanking"`, `"grid"`, `"card"`, `"waterfall"`, `"buttonGroup"` |
-| `title`        | `String`  | 是  | 模块标题，会在首页模块头部展示                                                                                       |
-| `kindTitle`    | `String?` | 否  | 用于匹配该书源「发现」中的分类标题。不填则使用默认 `exploreUrl`                                                                |
-| `url`          | `String?` | 否  | 显式指定该模块的 URL，优先级高于 `kindTitle` 匹配到的 URL                                                               |
-| `args`         | `String?` | 否  | 模块特有参数。在 `buttonGroup` 中为包含分类标题的 JSON 数组字符串                                                           |
-| `layoutConfig` | `Object?` | 否  | 布局配置对象。支持 `columns` (列数), `rows` (行数)                                                                 |
+## 2. 模块类型 (Module Types)
 
-## 模块类型
+### 列表与轮播类
 
-### banner — 横滑轮播图
+| 类型 (Type) | 描述    | 特点                     |
+|:----------|:------|:-----------------------|
+| `banner`  | 横滑轮播图 | 适合展示高权重的精品推荐，使用大图封面。   |
+| `ranking` | 排行榜列表 | 垂直列表展示，带排名序号。          |
+| `card`    | 推荐卡片  | 横向滑动的卡片流，同时显示封面、标题及简介。 |
 
-适合展示热门推荐、本周强推等内容。以大图封面横向滑动展示。
+### 网格类
 
-```json
-{
-  "key": "hot_banner",
-  "type": "banner",
-  "title": "热门推荐",
-  "kindTitle": "热门",
-  "displayCount": 6
-}
-```
+| 类型 (Type)      | 描述    | 特点                |
+|:---------------|:------|:------------------|
+| `grid`         | 标准网格  | 最常用的展示形式。支持自定义行列。 |
+| `gridRanking`  | 网格排行榜 | 多行多列的排行展示。横向翻页。   |
+| `infiniteGrid` | 无限网格  | 垂直滚动的网格流。无限加载。    |
+| `waterfall`    | 错位瀑布流 | 垂直错位排列的书架流。无限加载。  |
 
-### ranking — 排行榜
+### 功能类
 
-带排名序号的列表。前三名高亮为橙色，其余为灰色。默认折叠显示前 5 本，末尾有"展开更多"按钮。
+| 类型 (Type)     | 描述    | 特点                                          |
+|:--------------|:------|:--------------------------------------------|
+| `buttonGroup` | 快捷按钮组 | 渲染为一组圆形/图标按钮，支持自动填充宽度与自动分列。通常用于放置常用分类或功能入口。 |
 
-```json
-{
-  "key": "week_rank",
-  "type": "ranking",
-  "title": "周排行榜",
-  "kindTitle": "周榜",
-  "displayCount": 10
-}
-```
+---
 
-### gridRanking — 网格排行
+## 3. 布局配置 (LayoutConfig)
 
-4×4 列式排列（可通过 `layoutConfig.rows` 修改行数），每页多本书，可横向翻页。封面较小，仅显示书名和作者。适合作为首页入口展示大量书籍。
+通过 `layoutConfig` 对象，可以精细化控制模块的表现。
 
-```json
-{
-  "key": "all_grid",
-  "type": "gridRanking",
-  "title": "全部分类",
-  "kindTitle": "全部分类",
-  "layoutConfig": {
-    "rows": 4
-  }
-}
-```
+| 属性 (Property) | 类型       | 适用类型                                | 默认值 | 说明                                       |
+|:--------------|:---------|:------------------------------------|:----|:-----------------------------------------|
+| `columns`     | `Int`    | `grid`, `waterfall`, `infiniteGrid` | 3   | 每行显示的列数。                                 |
+| `icon`        | `String` | `buttonGroup`                       | -   | 按钮组的默认统一图标 URL。                          |
+| `icons`       | `Object` | `buttonGroup`                       | -   | 图标映射表。例：`{"排行": "http://path/to/icon"}`。 |
 
-### grid — 网格书架
+---
 
-网格布局，适合展示分类书单。支持自定义行列。
+## 4. 数据绑定逻辑 (Data Binding)
 
-- `columns`: 默认 3
-- `rows`: 默认 2。若设置为 `0`，则显示为平铺列表并支持下拉加载更多。
+1. **自动匹配**：如果提供了 `kindTitle`，系统会遍历书源 `exploreKinds()` 返回的列表。如果某个分类的
+   `title` 与之完全一致，该模块将自动使用该分类的 `url`。
+2. **静态指定**：如果提供了 `url`，系统将直接请求该 URL。
+3. **降级逻辑**：若 `kindTitle` 未匹配且无 `url`，模块将回退至书源的主 `exploreUrl`。
 
-```json
-{
-  "key": "scifi_grid",
-  "type": "grid",
-  "title": "科幻精选",
-  "kindTitle": "科幻",
-  "layoutConfig": {
-    "columns": 3,
-    "rows": 2
-  }
-}
-```
+---
 
-### card — 推荐卡片
-
-大图横向滑动卡片，展示封面 + 书名 + 简介。适合需要更多信息展示的场景。
-
-```json
-{
-  "key": "editor_pick",
-  "type": "card",
-  "title": "编辑推荐",
-  "kindTitle": "编辑推荐"
-}
-```
-
-### waterfall — 错位瀑布流
-
-瀑布流布局，展示封面 + 书名 + 简介。支持 `layoutConfig.columns` 自定义列数（默认 2）。支持无限加载更多。
-
-```json
-{
-  "key": "hot_wf",
-  "type": "waterfall",
-  "title": "大家都在看",
-  "kindTitle": "热门",
-  "layoutConfig": {
-    "columns": 2
-  }
-}
-```
-
-### buttonGroup — 按钮组
-
-显示为网格排列的分类按钮。适合放置常用的分类或动作入口。
-
-- **布局特性**：自动平衡每行按钮数量（例如 6 个按钮显示为 3+3，8 个显示为 4+4）。每行最多 5 个。
-- **args**: 可选。由分类标题组成的 JSON 数组字符串，如 `["排行", "分类", "完本"]`。若不填则默认显示该书源前
-  5 个分类。
-- **layoutConfig**:
-    - `icon`: 全局默认图标。支持网络图片 URL。
-    - `icons`: 图标映射对象。以分类标题为键，网络图片 URL 为值。
-
-```json
-{
-  "key": "entry_buttons",
-  "type": "buttonGroup",
-  "title": "快捷入口",
-  "args": "[\"排行\", \"分类\", \"我的\"]",
-  "layoutConfig": {
-    "icon": "https://example.com/default.png",
-    "icons": {
-      "排行": "https://example.com/rank.png",
-      "我的": "https://example.com/my.png"
-    }
-  }
-}
-```
-
-## kindTitle 匹配规则
-
-模块加载时，系统会根据 `kindTitle` 在书源的「发现」分类列表中进行匹配：
-
-1. 在 `exploreKinds()`（即发现页的分类列表）中查找 `title` 等于 `kindTitle` 的分类
-2. 如果匹配成功，使用该分类的 `url` 来加载数据
-3. 如果匹配失败，或 `kindTitle` 为空，则使用书源的默认 `exploreUrl`
-4. 如果两个 URL 都没有，该模块将显示加载错误
-
-**建议**：确保 `kindTitle` 的值与发现页分类的标题**完全一致**（包括大小写和标点）。
-
-## 完整示例
-
-以下是一个书源配置了多种模块的完整 JSON：
+## 5. 完整 JSON 示例
 
 ```json
 [
   {
-    "key": "hot",
+    "key": "top_banner",
     "type": "banner",
-    "title": "热门推荐",
-    "kindTitle": "热门",
-    "displayCount": 6
+    "title": "精品强推",
+    "kindTitle": "首页推荐"
   },
   {
-    "key": "rank_week",
+    "key": "quick_nav",
+    "type": "buttonGroup",
+    "title": "分类导航",
+    "args": "[\"武侠\", \"仙侠\", \"都市\", \"历史\"]",
+    "layoutConfig": {
+      "icon": "https://example.com/icons/default.png",
+      "icons": {
+        "武侠": "https://example.com/icons/wuxia.png"
+      }
+    }
+  },
+  {
+    "key": "hot_rank",
     "type": "ranking",
-    "title": "周榜",
-    "kindTitle": "周排行",
-    "displayCount": 10
+    "title": "热门榜单",
+    "kindTitle": "排行榜",
+    "layoutConfig": {
+      "rows": 5
+    }
   },
   {
-    "key": "rank_month",
-    "type": "ranking",
-    "title": "月榜",
-    "kindTitle": "月排行",
-    "displayCount": 10
-  },
-  {
-    "key": "scifi",
-    "type": "grid",
-    "title": "科幻精选",
-    "kindTitle": "科幻",
-    "displayCount": 6
-  },
-  {
-    "key": "new_book",
-    "type": "card",
-    "title": "新书上架",
-    "kindTitle": "新书",
-    "displayCount": 8
+    "key": "explore_waterfall",
+    "type": "waterfall",
+    "title": "发现更多",
+    "kindTitle": "全部",
+    "layoutConfig": {
+      "columns": 2
+    }
   }
 ]
 ```
-
-每个 `key` 必须唯一，系统会按 JSON 数组中的声明顺序创建模块标识。
-
-## 用户体验
-
-- **发现模块**：首页会自动出现配置了 `homepageModules` 的已启用书源所声明的模块
-- **拖拽排序**：长按模块标题旁的拖拽手柄可调整顺序
-- **隐藏模块**：编辑模式下可隐藏不需要的模块
-- **下拉刷新**：刷新后所有模块重新加载数据
-- **点击书籍**：跳转到书籍详情页
-- **点击模块标题**：跳转到该书源的完整发现页
-
-## 注意事项
-
-- JSON 格式必须**严格有效**，建议使用在线 JSON 校验工具检查
-- 如果 JSON 解析失败，该书源的所有模块将被静默跳过
-- 模块使用的图片从书籍封面（`coverUrl`）获取，请确保发现规则正确提取了封面
-- `homepageModules` 为空的旧书源不会报错，也不会有首页模块展示
-- 同一书源可配置多个同类型模块（如多个排行榜），只需 `key` 不同即可
-- 模块标识全局唯一 ID 格式为 `"{setId}::{书源URL}::{key}"`，其中 `setId` 用于区分模块所属的集（书源集或自定义集）。

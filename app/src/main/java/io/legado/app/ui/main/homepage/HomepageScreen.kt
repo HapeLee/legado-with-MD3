@@ -44,11 +44,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.legado.app.R
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -102,6 +104,7 @@ fun HomepageScreen(
     })
 
     val mixedGridState = rememberLazyStaggeredGridState()
+    val homeString = stringResource(R.string.home)
     val currentTitle by remember(
         layoutMode,
         pagerState.currentPage,
@@ -110,16 +113,16 @@ fun HomepageScreen(
     ) {
         derivedStateOf {
             if (layoutMode == 1) {
-                "首页"
+                homeString
             } else {
                 val firstHeader = mixedGridState.layoutInfo.visibleItemsInfo.firstOrNull {
                     (it.key as? String)?.startsWith("header_") == true
                 }
                 if (firstHeader != null) {
                     val id = (firstHeader.key as? String).orEmpty().substringAfter("header_", "")
-                    uiState.modules.find { it.globalId == id }?.setName ?: "首页"
+                    uiState.modules.find { it.globalId == id }?.setName ?: homeString
                 } else {
-                    "首页"
+                    homeString
                 }
             }
         }
@@ -198,7 +201,7 @@ fun HomepageScreen(
             } else {
                 if (selectedSets.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        AppText("未选择任何书源集")
+                        AppText(stringResource(R.string.homepage_no_source_sets_selected))
                     }
                 } else {
                     HorizontalPager(
@@ -234,13 +237,13 @@ fun HomepageScreen(
         AppAlertDialog(
             data = errorMsg,
             onDismissRequest = { errorMsg = null },
-            title = "模块错误",
-            confirmText = "复制",
+            title = stringResource(R.string.homepage_module_error),
+            confirmText = stringResource(R.string.copy_text),
             onConfirm = {
                 context.sendToClip(it)
                 errorMsg = null
             },
-            dismissText = "关闭",
+            dismissText = stringResource(R.string.close),
             onDismiss = { errorMsg = null }
         )
 
@@ -316,7 +319,7 @@ private fun ModuleList(
 ) {
     if (modules.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
-            AppText("请在书源中添加首页模块定义")
+            AppText(stringResource(R.string.homepage_add_module_definition))
         }
     } else {
         // 1. 过滤和重排模块：每个集只能有一个无限流模块，且必须在最下面
@@ -403,7 +406,7 @@ private fun ModuleList(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 SecondaryButton(
-                                    text = "重试",
+                                    text = stringResource(R.string.retry),
                                     onClick = {
                                         viewModel.retryModule(moduleUi.globalId)
                                     }

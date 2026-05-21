@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.DriveFileRenameOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,14 +30,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.gson.JsonParser
+import io.legado.app.R
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.JsonConfigEditor
-import io.legado.app.ui.widget.components.JsonKeyEditorConfig
 import io.legado.app.ui.widget.components.JsonRawEditor
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SecondaryButton
@@ -104,7 +103,8 @@ fun <T> HomepageModuleManageSheet(
     var selectedKindTitles by remember(data != null) { mutableStateOf<Set<String>>(emptySet()) }
     var showCustomSetAddModules by remember(data != null) { mutableStateOf(false) }
     var showAddButtonGroupDialog by remember(data != null) { mutableStateOf(false) }
-    var tempButtonGroupTitle by remember(data != null) { mutableStateOf("快捷操作") }
+    val defaultQuickActionsTitle = stringResource(R.string.homepage_quick_actions)
+    var tempButtonGroupTitle by remember(data != null) { mutableStateOf(defaultQuickActionsTitle) }
 
     val currentTargetSetId = remember(selectingSetUrl) {
         selectingSetUrl?.let { HomepageViewModel.customSetIdFromUrl(it) }
@@ -130,15 +130,17 @@ fun <T> HomepageModuleManageSheet(
             groupFilter = null
         },
         title = when {
-            showCustomSetAddModules -> "添加模块"
+            showCustomSetAddModules -> stringResource(R.string.homepage_add_module)
             browsingSourceUrl != null && browsingDetail ->
-                browseSources.find { it.sourceUrl == browsingSourceUrl }?.sourceName ?: "模块列表"
+                browseSources.find { it.sourceUrl == browsingSourceUrl }?.sourceName
+                    ?: stringResource(R.string.homepage_module_list)
 
-            showSourceBrowser || browsingSourceUrl != null -> "浏览书源模块"
+            showSourceBrowser || browsingSourceUrl != null -> stringResource(R.string.homepage_browse_source_modules)
             selectingSetUrl != null && HomepageViewModel.isCustomSetUrl(selectingSetUrl!!) ->
-                (sets.find { it.sourceUrl == selectingSetUrl }?.sourceName ?: "集详情")
+                (sets.find { it.sourceUrl == selectingSetUrl }?.sourceName
+                    ?: stringResource(R.string.homepage_set_detail))
 
-            else -> "首页模块管理"
+            else -> stringResource(R.string.homepage_module_manage)
         },
         startAction = {
             if (showCustomSetAddModules) {
@@ -179,7 +181,7 @@ fun <T> HomepageModuleManageSheet(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }) {
                         RoundDropdownMenuItem(
-                            text = "全部分组",
+                            text = stringResource(R.string.homepage_all_groups),
                             onClick = { groupFilter = null; expanded = false },
                             trailingIcon = if (groupFilter == null) {
                                 { AppIcon(Icons.Default.Check, null, Modifier.size(18.dp)) }
@@ -221,7 +223,11 @@ fun <T> HomepageModuleManageSheet(
 
                 Column {
                     AppTabRow(
-                        tabTitles = listOf("已加入", "书源模块", "发现"),
+                        tabTitles = listOf(
+                            stringResource(R.string.homepage_tab_joined),
+                            stringResource(R.string.homepage_tab_source_modules),
+                            stringResource(R.string.homepage_tab_discover)
+                        ),
                         selectedTabIndex = browseTab,
                         onTabSelected = { browseTab = it }
                     )
@@ -234,7 +240,7 @@ fun <T> HomepageModuleManageSheet(
                                         .padding(24.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    AppText("暂无已加入的模块")
+                                    AppText(stringResource(R.string.homepage_no_joined_modules))
                                 }
                             } else {
                                 var listData by remember(displaySetUrl) {
@@ -271,9 +277,9 @@ fun <T> HomepageModuleManageSheet(
                                 ) {
                                     item(key = "header_standard") {
                                         AppText(
-                                            text = "标准模块 (可拖拽排序)",
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            text = stringResource(R.string.homepage_standard_modules_sortable),
+                                            style = LegadoTheme.typography.labelMedium,
+                                            color = LegadoTheme.colorScheme.primary,
                                             modifier = Modifier.padding(
                                                 horizontal = 16.dp,
                                                 vertical = 4.dp
@@ -318,9 +324,8 @@ fun <T> HomepageModuleManageSheet(
                                                 )
                                             )
                                             AppText(
-                                                text = "底栏无限模块",
-                                                style = MaterialTheme.typography.labelMedium,
-                                                color = MaterialTheme.colorScheme.secondary,
+                                                text = stringResource(R.string.homepage_infinite_module_bottom),
+                                                style = LegadoTheme.typography.labelMedium,
                                                 modifier = Modifier.padding(
                                                     horizontal = 16.dp,
                                                     vertical = 4.dp
@@ -333,7 +338,9 @@ fun <T> HomepageModuleManageSheet(
                                                 infiniteModules.firstOrNull() == module
                                             SelectionItemCard(
                                                 title = module.title,
-                                                subtitle = HomepageModuleType.fromKey(module.type).title + if (isEffective) " · 当前生效" else " · 已被屏蔽",
+                                                subtitle = HomepageModuleType.fromKey(module.type).title + if (isEffective) stringResource(
+                                                    R.string.homepage_status_in_effect
+                                                ) else stringResource(R.string.homepage_status_blocked),
                                                 isEnabled = module.isVisible,
                                                 containerColor = if (isEffective) LegadoTheme.colorScheme.surfaceContainerHigh else LegadoTheme.colorScheme.onSheetContent,
                                                 onEnabledChange = { onToggleModule(module.id, it) },
@@ -363,7 +370,7 @@ fun <T> HomepageModuleManageSheet(
                                         .padding(24.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    AppText("该书源的 homepageModules JSON 为空")
+                                    AppText(stringResource(R.string.homepage_source_json_empty))
                                 }
                             } else {
                                 LazyColumn(
@@ -376,7 +383,9 @@ fun <T> HomepageModuleManageSheet(
                                         val isJoined = joinedKeys.contains(module.moduleKey)
                                         SelectionItemCard(
                                             title = module.title,
-                                            subtitle = module.moduleKey + if (isJoined) " · 已加入" else "",
+                                            subtitle = module.moduleKey + if (isJoined) stringResource(
+                                                R.string.homepage_status_joined
+                                            ) else "",
                                             containerColor = LegadoTheme.colorScheme.onSheetContent,
                                             isSelected = isJoined,
                                             inSelectionMode = true,
@@ -405,7 +414,7 @@ fun <T> HomepageModuleManageSheet(
                                     HomepageModuleType.entries.filter { it != HomepageModuleType.Unknown }
                                 }
                                 CompactDropdownSettingItem(
-                                    title = "模块类型",
+                                    title = stringResource(R.string.homepage_module_type),
                                     selectedValue = browseModuleType,
                                     displayEntries = typeList.map { it.title }.toTypedArray(),
                                     entryValues = typeList.map { it.key }.toTypedArray(),
@@ -421,14 +430,14 @@ fun <T> HomepageModuleManageSheet(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         AppText(
-                                            "该书源暂无发现项",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            stringResource(R.string.homepage_source_no_discover),
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 } else {
                                     AppText(
-                                        "选择项",
-                                        style = MaterialTheme.typography.labelMedium,
+                                        stringResource(R.string.homepage_select_items),
+                                        style = LegadoTheme.typography.labelMedium,
                                         modifier = Modifier.padding(
                                             horizontal = 16.dp,
                                             vertical = 4.dp
@@ -462,7 +471,9 @@ fun <T> HomepageModuleManageSheet(
                                                 val isJoined = joinedKeys.contains(kindTitle)
                                                 SelectionItemCard(
                                                     title = kindTitle,
-                                                    subtitle = kindUrl.take(60) + if (isJoined) " · 已加入" else "",
+                                                    subtitle = kindUrl.take(60) + if (isJoined) stringResource(
+                                                        R.string.homepage_status_joined
+                                                    ) else "",
                                                     containerColor = LegadoTheme.colorScheme.onSheetContent,
                                                     isSelected = isJoined,
                                                     inSelectionMode = true,
@@ -482,7 +493,7 @@ fun <T> HomepageModuleManageSheet(
                                 }
                                 Spacer(modifier = Modifier.height(12.dp))
                                 SecondaryButton(
-                                    text = "+ 手动添加",
+                                    text = stringResource(R.string.homepage_manual_add),
                                     onClick = {
                                         addDialogPrefill = AddDialogPrefill(type = browseModuleType)
                                     },
@@ -511,7 +522,7 @@ fun <T> HomepageModuleManageSheet(
                         item(key = "header_$sourceUrl") {
                             AppText(
                                 text = onGetSourceName(sourceUrl),
-                                style = MaterialTheme.typography.labelLarge,
+                                style = LegadoTheme.typography.labelLarge,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
@@ -551,7 +562,7 @@ fun <T> HomepageModuleManageSheet(
                         val moduleCount = onGetSourceModules(source.sourceUrl, null).size
                         SelectionItemCard(
                             title = source.sourceName,
-                            subtitle = "$moduleCount 个模块",
+                            subtitle = stringResource(R.string.homepage_n_modules, moduleCount),
                             containerColor = LegadoTheme.colorScheme.onSheetContent,
                             onToggleSelection = {
                                 browsingSourceUrl = source.sourceUrl
@@ -580,9 +591,9 @@ fun <T> HomepageModuleManageSheet(
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        AppText("暂无模块")
+                        AppText(stringResource(R.string.homepage_no_modules))
                         SecondaryButton(
-                            text = "浏览书源模块添加",
+                            text = stringResource(R.string.homepage_browse_to_add),
                             onClick = {
                                 if (setId.startsWith("src_")) {
                                     browsingSourceUrl = setId.removePrefix("src_")
@@ -623,8 +634,8 @@ fun <T> HomepageModuleManageSheet(
                         if (listData.isNotEmpty()) {
                             item(key = "header_std_detail") {
                                 AppText(
-                                    text = "标准模块",
-                                    style = MaterialTheme.typography.labelMedium,
+                                    text = stringResource(R.string.homepage_standard_module),
+                                    style = LegadoTheme.typography.labelMedium,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
@@ -659,16 +670,10 @@ fun <T> HomepageModuleManageSheet(
 
                         if (infiniteModules.isNotEmpty()) {
                             item(key = "header_inf_detail") {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(
-                                        vertical = 8.dp,
-                                        horizontal = 16.dp
-                                    )
-                                )
+                                PillDivider()
                                 AppText(
-                                    text = "无限模块槽位",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.secondary,
+                                    text = stringResource(R.string.homepage_infinite_module_slot),
+                                    style = LegadoTheme.typography.labelMedium,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                                 )
                             }
@@ -697,7 +702,7 @@ fun <T> HomepageModuleManageSheet(
 
                         item(key = "browse_from_set") {
                             SecondaryButton(
-                                text = "浏览书源模块",
+                                text = stringResource(R.string.homepage_browse_source_modules),
                                 onClick = {
                                     if (setId.startsWith("src_")) {
                                         browsingSourceUrl = setId.removePrefix("src_")
@@ -746,7 +751,7 @@ fun <T> HomepageModuleManageSheet(
                             state = setsReorderableState,
                             key = set.sourceUrl,
                             title = set.sourceName,
-                            subtitle = "${set.moduleCount} 个模块",
+                            subtitle = stringResource(R.string.homepage_n_modules, set.moduleCount),
                             containerColor = LegadoTheme.colorScheme.onSheetContent,
                             isEnabled = set.isSelected,
                             onToggleSelection = { selectingSetUrl = set.sourceUrl },
@@ -771,14 +776,14 @@ fun <T> HomepageModuleManageSheet(
                     }
                     item(key = "create_set") {
                         SecondaryButton(
-                            text = "+ 新建自定义集",
+                            text = stringResource(R.string.homepage_new_custom_set),
                             onClick = { showCreateSetDialog = true },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
                     item(key = "browse_sources") {
                         SecondaryButton(
-                            text = "浏览书源模块",
+                            text = stringResource(R.string.homepage_browse_source_modules),
                             onClick = { showSourceBrowser = true },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -792,7 +797,7 @@ fun <T> HomepageModuleManageSheet(
     AppAlertDialog(
         data = renameSetId,
         onDismissRequest = { renameSetId = null },
-        title = "重命名自定义集",
+        title = stringResource(R.string.homepage_rename_custom_set),
         content = { setId ->
             val currentName =
                 remember(setId) { sets.find { it.sourceUrl == setId }?.sourceName ?: "" }
@@ -800,7 +805,7 @@ fun <T> HomepageModuleManageSheet(
             AppTextField(
                 value = tempName,
                 onValueChange = { tempName = it },
-                label = "名称",
+                label = stringResource(R.string.homepage_name_label),
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -811,21 +816,21 @@ fun <T> HomepageModuleManageSheet(
             )
             renameSetId = null
         },
-        confirmText = "确定",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.dialog_confirm),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { renameSetId = null }
     )
 
     AppAlertDialog(
         data = if (showCreateSetDialog) Unit else null,
         onDismissRequest = { showCreateSetDialog = false },
-        title = "新建自定义集",
+        title = stringResource(R.string.homepage_new_custom_set_title),
         content = {
             LaunchedEffect(Unit) { tempName = "" }
             AppTextField(
                 value = tempName,
                 onValueChange = { tempName = it },
-                label = "名称",
+                label = stringResource(R.string.homepage_name_label),
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -833,36 +838,36 @@ fun <T> HomepageModuleManageSheet(
             if (tempName.isNotBlank()) onCreateCustomSet(tempName)
             showCreateSetDialog = false
         },
-        confirmText = "确定",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.dialog_confirm),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { showCreateSetDialog = false }
     )
 
     AppAlertDialog(
         data = deleteSetConfirmId,
         onDismissRequest = { deleteSetConfirmId = null },
-        title = "删除自定义集",
-        text = "确定要删除该集及其包含的所有模块副本吗？",
+        title = stringResource(R.string.homepage_delete_custom_set),
+        text = stringResource(R.string.homepage_delete_custom_set_confirm),
         onConfirm = { setId ->
             onDeleteCustomSet(HomepageViewModel.customSetIdFromUrl(setId))
             deleteSetConfirmId = null
         },
-        confirmText = "删除",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.delete),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { deleteSetConfirmId = null }
     )
 
     AppAlertDialog(
         data = deleteConfirmId,
         onDismissRequest = { deleteConfirmId = null },
-        title = "移除模块",
-        text = "确定要从当前集中移除该模块吗？",
+        title = stringResource(R.string.homepage_remove_module),
+        text = stringResource(R.string.homepage_remove_module_confirm),
         onConfirm = { id ->
             onDeleteModule(id)
             deleteConfirmId = null
         },
-        confirmText = "移除",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.remove),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { deleteConfirmId = null }
     )
 
@@ -900,13 +905,14 @@ fun <T> HomepageModuleManageSheet(
     AppAlertDialog(
         data = if (showAddButtonGroupDialog) Unit else null,
         onDismissRequest = { showAddButtonGroupDialog = false },
-        title = "添加按钮组",
+        title = stringResource(R.string.homepage_add_button_group),
         content = {
-            LaunchedEffect(Unit) { tempButtonGroupTitle = "快捷操作" }
+            val quickActionsLabel = stringResource(R.string.homepage_quick_actions)
+            LaunchedEffect(Unit) { tempButtonGroupTitle = quickActionsLabel }
             AppTextField(
                 value = tempButtonGroupTitle,
                 onValueChange = { tempButtonGroupTitle = it },
-                label = "模块标题",
+                label = stringResource(R.string.homepage_module_title_label),
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -920,21 +926,21 @@ fun <T> HomepageModuleManageSheet(
             selectedKindTitles = emptySet()
             showAddButtonGroupDialog = false
         },
-        confirmText = "确定",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.dialog_confirm),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { showAddButtonGroupDialog = false }
     )
 
     AppAlertDialog(
         data = customSetTitleEdit,
         onDismissRequest = { customSetTitleEdit = null },
-        title = "自定义标题",
+        title = stringResource(R.string.homepage_custom_title),
         content = { (_, title) ->
             LaunchedEffect(title) { titleState = title }
             AppTextField(
                 value = titleState,
                 onValueChange = { titleState = it },
-                label = "标题",
+                label = stringResource(R.string.homepage_title_label),
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -942,8 +948,8 @@ fun <T> HomepageModuleManageSheet(
             onSetCustomSetTitle(id, titleState.takeIf { it.isNotBlank() })
             customSetTitleEdit = null
         },
-        confirmText = "确定",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.dialog_confirm),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = { customSetTitleEdit = null }
     )
 }
@@ -974,24 +980,11 @@ fun <T> AddCustomModuleDialog(
     var layoutConfig by remember(data) { mutableStateOf(prefillLayoutConfig) }
     var showRawLayoutConfig by remember(data) { mutableStateOf(false) }
 
-    val layoutKeyConfigs = remember {
-        mapOf(
-            "fullWidth" to JsonKeyEditorConfig.Switch,
-            "showTitle" to JsonKeyEditorConfig.Switch,
-            "showMore" to JsonKeyEditorConfig.Switch,
-            "isInfinite" to JsonKeyEditorConfig.Switch,
-            "aspectRatio" to JsonKeyEditorConfig.Dropdown(
-                displayEntries = arrayOf("默认", "1:1", "3:4", "2:3", "16:9"),
-                entryValues = arrayOf("", "1:1", "3:4", "2:3", "16:9")
-            )
-        )
-    }
-
     val hasVisualizableKeys = remember(layoutConfig) {
         runCatching {
             val jsonObject = JsonParser.parseString(layoutConfig).asJsonObject
             jsonObject.keySet().any { key ->
-                key == "columns" || key == "rows" || layoutKeyConfigs.containsKey(key)
+                key == "columns" || key == "rows"
             }
         }.getOrElse { false }
     }
@@ -999,7 +992,9 @@ fun <T> AddCustomModuleDialog(
     AppAlertDialog(
         data = data,
         onDismissRequest = onDismissRequest,
-        title = if (prefillTitle.isEmpty()) "添加模块" else "编辑模块",
+        title = if (prefillTitle.isEmpty()) stringResource(R.string.homepage_add_module) else stringResource(
+            R.string.homepage_edit_module
+        ),
         content = {
             Column(
                 modifier = Modifier
@@ -1011,7 +1006,7 @@ fun <T> AddCustomModuleDialog(
                 AppTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = "标题",
+                    label = stringResource(R.string.homepage_title_label),
                     modifier = Modifier.fillMaxWidth()
                 )
                 AppTextField(
@@ -1024,7 +1019,7 @@ fun <T> AddCustomModuleDialog(
                     HomepageModuleType.entries.filter { it != HomepageModuleType.Unknown }
                 }
                 DropdownListSettingItem(
-                    title = "类型",
+                    title = stringResource(R.string.homepage_type_label),
                     selectedValue = type,
                     displayEntries = typeList.map { it.title }.toTypedArray(),
                     entryValues = typeList.map { it.key }.toTypedArray(),
@@ -1037,20 +1032,18 @@ fun <T> AddCustomModuleDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 AppText(
-                    text = "布局配置",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    text = stringResource(R.string.homepage_layout_config_label),
+                    style = LegadoTheme.typography.labelMedium,
                     modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
                 )
                 if (hasVisualizableKeys) {
                     JsonConfigEditor(
                         jsonString = layoutConfig,
                         onJsonStringChange = { layoutConfig = it },
-                        keyConfigs = layoutKeyConfigs,
                         modifier = Modifier.fillMaxWidth()
                     )
                     CompactClickableSettingItem(
-                        title = "编辑原始 JSON (LayoutConfig)",
+                        title = stringResource(R.string.homepage_edit_raw_json),
                         onClick = { showRawLayoutConfig = !showRawLayoutConfig }
                     )
                     if (showRawLayoutConfig) {
@@ -1082,8 +1075,8 @@ fun <T> AddCustomModuleDialog(
                 )
             )
         },
-        confirmText = "确定",
-        dismissText = "取消",
+        confirmText = stringResource(R.string.dialog_confirm),
+        dismissText = stringResource(R.string.dialog_cancel),
         onDismiss = onDismissRequest
     )
 }

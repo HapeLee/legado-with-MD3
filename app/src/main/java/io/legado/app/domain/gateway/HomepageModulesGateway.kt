@@ -15,6 +15,7 @@ interface HomepageModulesGateway {
     suspend fun upsertAll(modules: List<ModuleItem>)
     suspend fun setEnabled(id: String, enabled: Boolean)
     suspend fun setSortOrder(id: String, order: Int)
+    suspend fun batchSetSortOrders(orders: Map<String, Int>)
     suspend fun setCustomSetId(id: String, setId: String?)
     suspend fun setCustomSetTitle(id: String, title: String?)
     suspend fun delete(id: String)
@@ -27,6 +28,7 @@ interface HomepageModulesGateway {
     // Custom set mutations
     suspend fun upsertCustomSet(set: CustomSetItem)
     suspend fun setCustomSetSortOrder(id: String, order: Int)
+    suspend fun batchSetCustomSetSortOrders(orders: Map<String, Int>)
     suspend fun createCustomSet(name: String): CustomSetItem
     suspend fun renameCustomSet(id: String, name: String)
     suspend fun deleteCustomSet(id: String)

@@ -25,6 +25,11 @@ interface HomepageCustomSetDao {
     @Query("UPDATE homepage_custom_sets SET sortOrder = :order WHERE id = :id")
     suspend fun setSortOrder(id: String, order: Int)
 
+    @androidx.room.Transaction
+    suspend fun batchSetSortOrders(orders: Map<String, Int>) {
+        orders.forEach { (id, order) -> setSortOrder(id, order) }
+    }
+
     @Query("DELETE FROM homepage_custom_sets WHERE id = :id")
     suspend fun delete(id: String)
 }

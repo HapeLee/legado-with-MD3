@@ -28,6 +28,11 @@ interface HomepageModuleDao {
     @Query("UPDATE homepage_modules SET sortOrder = :order WHERE id = :id")
     suspend fun setSortOrder(id: String, order: Int)
 
+    @androidx.room.Transaction
+    suspend fun batchSetSortOrders(orders: Map<String, Int>) {
+        orders.forEach { (id, order) -> setSortOrder(id, order) }
+    }
+
     @Query("UPDATE homepage_modules SET customSetTitle = :title WHERE id = :id")
     suspend fun setCustomSetTitle(id: String, title: String?)
 
