@@ -71,6 +71,7 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreScreen
+import io.legado.app.ui.main.homepage.HomepageScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
@@ -366,6 +367,17 @@ fun MainScreen(
                     ) { page ->
                         val destination = destinations.getOrNull(page) ?: return@HorizontalPager
                         when (destination) {
+                            MainDestination.Home -> HomepageScreen(
+                                onBookClick = { name, author, bookUrl ->
+                                    onNavigateToBookInfo(name ?: "", author ?: "", bookUrl)
+                                },
+                                onModuleHeaderClick = { title, sourceUrl, exploreUrl ->
+                                    onNavigateToExploreShow(title, sourceUrl, exploreUrl)
+                                },
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+
                             MainDestination.Bookshelf -> BookshelfScreen(
                                 onBookClick = { book ->
                                     context.startActivityForBook(book)

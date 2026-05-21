@@ -63,6 +63,8 @@
     <string name="enable">启用</string>
     <string name="replace_purify_search">搜索</string>
     <string name="bookshelf">书架</string>
+    <string name="home">首页</string>
+    <string name="homepage_modules">首页模块 (JSON)</string>
     <string name="favorites">收藏夹</string>
     <string name="favorite">收藏</string>
     <string name="in_favorites">已收藏</string>
@@ -583,6 +585,7 @@
     <string name="source_tab_base">基本</string>
     <string name="source_tab_search">搜索</string>
     <string name="source_tab_find">发现</string>
+    <string name="source_tab_homepage">主页</string>
     <string name="source_tab_info">详情</string>
     <string name="source_tab_toc">目录</string>
     <string name="source_tab_content">正文</string>

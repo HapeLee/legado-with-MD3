@@ -64,6 +64,8 @@
     <string name="enable">Enable</string>
     <string name="replace_purify_search">Search Replacement</string>
     <string name="bookshelf">Bookshelf</string>
+    <string name="home">Home</string>
+    <string name="homepage_modules">Homepage Modules (JSON)</string>
     <string name="favorites">Favorites</string>
     <string name="favorite">Favorite</string>
     <string name="in_favorites">in Favorites</string>
@@ -604,6 +606,7 @@
     <string name="source_tab_base">Basic</string>
     <string name="source_tab_search">Search</string>
     <string name="source_tab_find">Discovery</string>
+    <string name="source_tab_homepage">Homepage</string>
     <string name="source_tab_info">Information</string>
     <string name="source_tab_toc">Chapters</string>
     <string name="source_tab_content">Content</string>

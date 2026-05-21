@@ -170,6 +170,8 @@ object ThemeConfig {
 
     var autoCheckNewBackup by prefDelegate(PreferKey.autoCheckNewBackup, true)
 
+    var navIconHome by prefDelegate(PreferKey.navIconHome, "")
+
     var navIconBookshelf by prefDelegate(PreferKey.navIconBookshelf, "")
 
     var navIconExplore by prefDelegate(PreferKey.navIconExplore, "")

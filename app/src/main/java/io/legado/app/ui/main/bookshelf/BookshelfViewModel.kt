@@ -4,54 +4,38 @@ import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
-import com.google.gson.stream.JsonWriter
 import io.legado.app.R
 import io.legado.app.base.BaseRuleEvent
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.repository.BookGroupRepository
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.UploadRepository
+import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.ExportBookshelfUseCase
+import io.legado.app.domain.usecase.ImportBookshelfUseCase
+import io.legado.app.domain.usecase.RefreshTocUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.book.BookHelp
-import io.legado.app.help.book.addType
-import io.legado.app.help.book.isUpError
-import io.legado.app.help.book.removeType
-import io.legado.app.help.book.sync
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.http.decompressed
-import io.legado.app.help.http.newCallResponseBody
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.http.text
 import io.legado.app.model.CacheBook
-import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
-import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.CacheBookService
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.GSON
-import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.cnCompare
 import io.legado.app.utils.eventBus.FlowEventBus
-import io.legado.app.utils.fromJsonArray
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.move
 import io.legado.app.utils.onEachParallel
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.readText
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -64,9 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,23 +69,24 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
 import java.util.LinkedList
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.max
 import kotlin.math.min
 
 class BookshelfViewModel(
     application: Application,
+    private val bookRepository: BookRepository,
     private val bookGroupRepository: BookGroupRepository,
+    private val bookSourceRepository: BookSourceRepository,
+    private val bookshelfRepository: BookshelfRepository,
     private val uploadRepository: UploadRepository,
     private val batchCacheDownloadUseCase: BatchCacheDownloadUseCase,
-    private val updateBooksGroupUseCase: UpdateBooksGroupUseCase
+    private val updateBooksGroupUseCase: UpdateBooksGroupUseCase,
+    private val refreshTocUseCase: RefreshTocUseCase,
+    private val addBookUseCase: AddBookUseCase,
+    private val importBookshelfUseCase: ImportBookshelfUseCase,
+    private val exportBookshelfUseCase: ExportBookshelfUseCase
 ) : BaseViewModel(application) {
     private var addBookJob: Coroutine<*>? = null
 
@@ -199,14 +182,15 @@ class BookshelfViewModel(
     val booksFlow: Flow<List<BookUiItem>> = groupIdFlow
         .flatMapLatest { groupId ->
             combine(
-                appDb.bookDao.flowBookShelfByGroup(groupId),
+                bookRepository.flowBookShelfByGroup(groupId),
                 groupsFlow,
                 sortConfigFlow
             ) { list, groups, sortConfig ->
-                sortBooks(
+                bookshelfRepository.sortBooks(
                     list,
                     groups.find { it.groupId == groupId },
-                    sortConfig
+                    sortConfig.sort,
+                    sortConfig.sortOrder
                 ).map { it.toUiItem() }
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
@@ -221,8 +205,13 @@ class BookshelfViewModel(
             flowOf(emptyMap())
         } else {
             val flows = groups.map { group ->
-                appDb.bookDao.flowBookShelfByGroup(group.groupId).map { books ->
-                    group.groupId to sortBooks(books, group, sortConfig).map { it.toUiItem() }
+                bookRepository.flowBookShelfByGroup(group.groupId).map { books ->
+                    group.groupId to bookshelfRepository.sortBooks(
+                        books,
+                        group,
+                        sortConfig.sort,
+                        sortConfig.sortOrder
+                    ).map { it.toUiItem() }
                 }
             }
             combine(flows) { it.toMap() }
@@ -269,8 +258,8 @@ class BookshelfViewModel(
     private val groupPreviewsFlow = combine(
         groupsFlow,
         bookGroupStyleFlow,
-        appDb.bookDao.flowSystemGroupCounts(),
-        appDb.bookDao.flowAllBookShelfCount()
+        bookRepository.flowSystemGroupCounts(),
+        bookRepository.flowAllBookShelfCount()
     ) { groups, bookGroupStyle, systemCounts, totalCount ->
         DataForPreviews(
             groups,
@@ -291,11 +280,11 @@ class BookshelfViewModel(
         } else {
             val groupFlows = groups.map { group ->
                 val countFlow: Flow<Int> = if (group.groupId > 0) {
-                    appDb.bookDao.flowUserGroupBookCount(group.groupId)
+                    bookRepository.flowUserGroupBookCount(group.groupId)
                 } else {
                     flowOf(systemCountsMap[group.groupId] ?: 0)
                 }
-                val previewFlow = appDb.bookDao.flowGroupPreview(group.groupId)
+                val previewFlow = bookRepository.flowGroupPreview(group.groupId)
                 combine(countFlow, previewFlow) { count, preview ->
                     Triple(group.groupId, count, preview.map { it.toUiItem() })
                 }
@@ -572,48 +561,6 @@ class BookshelfViewModel(
         }
     }
 
-    private fun sortBooks(
-        list: List<BookShelfItem>,
-        group: BookGroup?,
-        sortConfig: BookshelfSortConfig
-    ): List<BookShelfItem> {
-        val bookSort = if (group != null && group.bookSort >= 0) {
-            group.bookSort
-        } else {
-            sortConfig.sort
-        }
-        val isDescending = sortConfig.sortOrder == 1
-
-        return when (bookSort) {
-            1 -> if (isDescending) list.sortedByDescending { it.latestChapterTime }
-            else list.sortedBy { it.latestChapterTime }
-
-            2 -> if (isDescending)
-                list.sortedWith { o1, o2 -> o2.name.cnCompare(o1.name) }
-            else
-                list.sortedWith { o1, o2 -> o1.name.cnCompare(o2.name) }
-
-            3 -> if (isDescending) list.sortedByDescending { it.order }
-            else list.sortedBy { it.order }
-
-            4 -> if (isDescending) list.sortedByDescending {
-                max(
-                    it.latestChapterTime,
-                    it.durChapterTime
-                )
-            }
-            else list.sortedBy { max(it.latestChapterTime, it.durChapterTime) }
-
-            5 -> if (isDescending)
-                list.sortedWith { o1, o2 -> o2.author.cnCompare(o1.author) }
-            else
-                list.sortedWith { o1, o2 -> o1.author.cnCompare(o2.author) }
-
-            else -> if (isDescending) list.sortedByDescending { it.durChapterTime }
-            else list.sortedBy { it.durChapterTime }
-        }
-    }
-
     private fun buildTitle(
         bookGroupStyle: Int,
         isInFolderRoot: Boolean,
@@ -824,8 +771,6 @@ class BookshelfViewModel(
     fun gotoTop() {
         scrollTrigger.tryEmit(Unit)
     }
-
-    // 更新逻辑移入
     fun upAllBookToc() {
         execute {
             addToWaitUp(appDb.bookDao.hasUpdateBooks)
@@ -951,51 +896,8 @@ class BookshelfViewModel(
     }
 
     private suspend fun updateToc(bookUrl: String) {
-        val book = appDb.bookDao.getBook(bookUrl) ?: return
-        val source = appDb.bookSourceDao.getBookSource(book.origin)
-        if (source == null) {
-            if (!book.isUpError) {
-                book.addType(BookType.updateError)
-                appDb.bookDao.update(book)
-            }
-            return
-        }
-        if (source.eventListener) {
-            if (eventListenerSource.putIfAbsent(source, true) == null) {
-                SourceCallBack.callBackSource(
-                    viewModelScope,
-                    SourceCallBack.START_SHELF_REFRESH,
-                    source
-                )
-            }
-        }
-        kotlin.runCatching {
-            val oldBook = book.copy()
-            if (book.tocUrl.isBlank()) {
-                WebBook.getBookInfoAwait(source, book)
-            } else {
-                WebBook.runPreUpdateJs(source, book)
-            }
-            val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
-            book.sync(oldBook)
-            book.removeType(BookType.updateError)
-            if (book.bookUrl == bookUrl) {
-                appDb.bookDao.update(book)
-            } else {
-                appDb.bookDao.replace(oldBook, book)
-                BookHelp.updateCacheFolder(oldBook, book)
-            }
-            appDb.bookChapterDao.delByBook(bookUrl)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
-            ReadBook.onChapterListUpdated(book)
+        refreshTocUseCase.execute(bookUrl) { source, book ->
             addDownload(source, book)
-        }.onFailure {
-            currentCoroutineContext().ensureActive()
-            AppLog.put("${book.name} 更新目录失败\n${it.localizedMessage}", it)
-            appDb.bookDao.getBook(book.bookUrl)?.let { book ->
-                book.addType(BookType.updateError)
-                appDb.bookDao.update(book)
-            }
         }
     }
 
@@ -1045,58 +947,11 @@ class BookshelfViewModel(
     }
 
     fun addBookByUrl(bookUrls: String) {
-        var successCount = 0
         loadingTextFlow.value = "添加中..."
         addBookJob = execute {
-            val hasBookUrlPattern: List<BookSourcePart> by lazy {
-                appDb.bookSourceDao.hasBookUrlPattern
+            val successCount = addBookUseCase.execute(bookUrls) {
+                loadingTextFlow.value = "添加中... ($it)"
             }
-            val urls = bookUrls.split("\n")
-            for (url in urls) {
-                val bookUrl = url.trim()
-                if (bookUrl.isEmpty()) continue
-                if (appDb.bookDao.getBook(bookUrl) != null) {
-                    successCount++
-                    continue
-                }
-                val baseUrl = NetworkUtils.getBaseUrl(bookUrl) ?: continue
-                var source = appDb.bookSourceDao.getBookSourceAddBook(baseUrl)
-                if (source == null) {
-                    for (bookSource in hasBookUrlPattern) {
-                        try {
-                            val bs = bookSource.getBookSource()!!
-                            if (bookUrl.matches(bs.bookUrlPattern!!.toRegex())) {
-                                source = bs
-                                break
-                            }
-                        } catch (_: Exception) {
-                        }
-                    }
-                }
-                val bookSource = source ?: continue
-                val book = Book(
-                    bookUrl = bookUrl,
-                    origin = bookSource.bookSourceUrl,
-                    originName = bookSource.bookSourceName
-                )
-                kotlin.runCatching {
-                    WebBook.getBookInfoAwait(bookSource, book)
-                }.onSuccess {
-                    val dbBook = appDb.bookDao.getBook(it.name, it.author)
-                    if (dbBook != null) {
-                        val toc = WebBook.getChapterListAwait(bookSource, it).getOrThrow()
-                        dbBook.migrateTo(it, toc)
-                        appDb.bookDao.insert(it)
-                        appDb.bookChapterDao.insert(*toc.toTypedArray())
-                    } else {
-                        it.order = appDb.bookDao.minOrder - 1
-                        it.save()
-                    }
-                    successCount++
-                    loadingTextFlow.value = "添加中... ($successCount)"
-                }
-            }
-        }.onSuccess {
             if (successCount > 0) {
                 context.toastOnUi(R.string.success)
             } else {
@@ -1111,23 +966,7 @@ class BookshelfViewModel(
 
     fun exportToUri(uri: Uri, items: List<BookUiItem>) {
         execute {
-            context.contentResolver.openOutputStream(uri)?.use { out ->
-                val writer = JsonWriter(OutputStreamWriter(out, "UTF-8"))
-                writer.setIndent("  ")
-                writer.beginArray()
-                items.forEach {
-                    val bookMap = hashMapOf<String, String?>()
-                    bookMap["name"] = it.book.name
-                    bookMap["author"] = it.book.author
-                    // intro is not in BookShelfItem, fetch from DB if needed or skip
-                    // For now, let's keep it simple and skip intro or fetch it
-                    val fullBook = appDb.bookDao.getBook(it.book.bookUrl)
-                    bookMap["intro"] = fullBook?.getDisplayIntro()
-                    GSON.toJson(bookMap, bookMap::class.java, writer)
-                }
-                writer.endArray()
-                writer.close()
-            }
+            exportBookshelfUseCase.exportToUri(uri, items).getOrThrow()
         }.onSuccess {
             _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出成功"))
         }.onError {
@@ -1137,17 +976,7 @@ class BookshelfViewModel(
 
     fun uploadBookshelf(items: List<BookUiItem>) {
         execute {
-            val json = withContext(Dispatchers.Default) {
-                val list = items.map {
-                    val bookMap = hashMapOf<String, String?>()
-                    bookMap["name"] = it.book.name
-                    bookMap["author"] = it.book.author
-                    val fullBook = appDb.bookDao.getBook(it.book.bookUrl)
-                    bookMap["intro"] = fullBook?.getDisplayIntro()
-                    bookMap
-                }
-                GSON.toJson(list)
-            }
+            val json = exportBookshelfUseCase.exportToJson(items).getOrThrow()
             uploadRepository.upload(
                 fileName = "bookshelf.json",
                 file = json,
@@ -1172,27 +1001,8 @@ class BookshelfViewModel(
 
     fun exportBookshelf(items: List<BookUiItem>?, success: (file: File) -> Unit) {
         execute {
-            items?.let {
-                val path = "${context.filesDir}/books.json"
-                FileUtils.delete(path)
-                val file = FileUtils.createFileWithReplace(path)
-                FileOutputStream(file).use { out ->
-                    val writer = JsonWriter(OutputStreamWriter(out, "UTF-8"))
-                    writer.setIndent("  ")
-                    writer.beginArray()
-                    items.forEach {
-                        val bookMap = hashMapOf<String, String?>()
-                        bookMap["name"] = it.book.name
-                        bookMap["author"] = it.book.author
-                        val fullBook = appDb.bookDao.getBook(it.book.bookUrl)
-                        bookMap["intro"] = fullBook?.getDisplayIntro()
-                        GSON.toJson(bookMap, bookMap::class.java, writer)
-                    }
-                    writer.endArray()
-                    writer.close()
-                }
-                file
-            } ?: throw NoStackTraceException("书籍不能为空")
+            items ?: throw NoStackTraceException("书籍不能为空")
+            exportBookshelfUseCase.exportToFile(items).getOrThrow()
         }.onSuccess {
             success(it)
         }.onError {
@@ -1202,70 +1012,29 @@ class BookshelfViewModel(
 
     fun importBookshelf(str: String, groupId: Long) {
         execute {
-            val text = str.trim()
-            when {
-                text.isAbsUrl() -> {
-                    okHttpClient.newCallResponseBody {
-                        url(text)
-                    }.decompressed().text().let {
-                        importBookshelf(it, groupId)
-                    }
-                }
-
-                text.isJsonArray() -> {
-                    importBookshelfByJson(text, groupId)
-                }
-
-                else -> {
-                    throw NoStackTraceException("格式不对")
-                }
-            }
+            importBookshelfUseCase.import(str, groupId) {
+                loadingTextFlow.value = it
+            }.getOrThrow()
+        }.onSuccess {
+            context.toastOnUi(R.string.success)
         }.onError {
             context.toastOnUi(it.localizedMessage ?: "ERROR")
+        }.onFinally {
+            loadingTextFlow.value = null
         }
     }
 
     fun importBookshelf(uri: Uri, groupId: Long) {
         execute {
-            uri.readText(context)
+            importBookshelfUseCase.import(uri, groupId) {
+                loadingTextFlow.value = it
+            }.getOrThrow()
         }.onSuccess {
-            importBookshelf(it, groupId)
+            context.toastOnUi(R.string.success)
         }.onError {
             context.toastOnUi(it.localizedMessage ?: "ERROR")
-        }
-    }
-
-    private fun importBookshelfByJson(json: String, groupId: Long) {
-        loadingTextFlow.value = "导入中..."
-        execute {
-            val bookSourceParts = appDb.bookSourceDao.allEnabledPart
-            val semaphore = Semaphore(AppConfig.threadCount)
-            GSON.fromJsonArray<Map<String, String?>>(json).getOrThrow().forEach { bookInfo ->
-                val name = bookInfo["name"] ?: ""
-                val author = bookInfo["author"] ?: ""
-                if (name.isEmpty() || appDb.bookDao.has(name, author)) {
-                    return@forEach
-                }
-                semaphore.withPermit {
-                    WebBook.preciseSearch(
-                        this, bookSourceParts, name, author,
-                        semaphore = semaphore
-                    ).onSuccess {
-                        val book = it.first
-                        if (groupId > 0) {
-                            book.group = groupId
-                        }
-                        book.save()
-                    }.onError { e ->
-                        context.toastOnUi(e.localizedMessage)
-                    }
-                }
-            }
-        }.onError {
-            it.printOnDebug()
         }.onFinally {
             loadingTextFlow.value = null
-            context.toastOnUi(R.string.success)
         }
     }
 

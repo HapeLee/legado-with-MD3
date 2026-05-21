@@ -101,7 +101,8 @@
       "Read(//c/Users/**)",
       "Bash(Get-ChildItem -Path \"D:\\\\AndroidPrj\\\\legado-with-MD3\" -Directory -Depth 0)",
       "Bash(Select-Object Name)",
-      "PowerShell(Get-ChildItem -Path \"D:\\\\AndroidPrj\\\\legado-with-MD3\\\\app\\\\src\\\\main\\\\java\\\\io\\\\legado\\\\app\" -Directory -Depth 1 | ForEach-Object { $_.FullName.Replace\\(\"D:\\\\AndroidPrj\\\\legado-with-MD3\\\\app\\\\src\\\\main\\\\java\\\\io\\\\legado\\\\app\\\\\", \"\"\\) })"
+      "PowerShell(Get-ChildItem -Path \"D:\\\\AndroidPrj\\\\legado-with-MD3\\\\app\\\\src\\\\main\\\\java\\\\io\\\\legado\\\\app\" -Directory -Depth 1 | ForEach-Object { $_.FullName.Replace\\(\"D:\\\\AndroidPrj\\\\legado-with-MD3\\\\app\\\\src\\\\main\\\\java\\\\io\\\\legado\\\\app\\\\\", \"\"\\) })",
+      "Bash(powershell *)"
     ]
   }
 }

@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
@@ -51,6 +53,7 @@ fun CoilBookCover(
     name: String?,
     author: String?,
     path: String?,
+    radius: Dp = 4.dp,
     modifier: Modifier = Modifier.width(64.dp),
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
@@ -75,7 +78,7 @@ fun CoilBookCover(
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
     var isOnlineCoverLoaded by remember(path) {
-        mutableStateOf(sharedCoverKey != null && finalPath != null)
+        mutableStateOf(false)
     }
 
     Box(
@@ -94,61 +97,65 @@ fun CoilBookCover(
             )
             .then(
                 if (CoverConfig.coverShowShadow) {
-                    Modifier.shadow(4.dp, RoundedCornerShape(4.dp))
+                    Modifier.shadow(4.dp, RoundedCornerShape(radius))
                 } else Modifier
             )
             .background(
                 if (!hasCustomDefault && !isOnlineCoverLoaded) {
                     LegadoTheme.colorScheme.surfaceContainerLow
                 } else Color.Transparent,
-                RoundedCornerShape(4.dp)
+                RoundedCornerShape(radius)
             )
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(radius))
     ) {
         if (hasCustomDefault && !isOnlineCoverLoaded) {
-            AsyncImage(
-                model = buildCoverImageRequest(
-                    context = context,
-                    data = randomPath,
-                    sourceOrigin = null,
-                    loadOnlyWifi = false,
-                    crossfade = showLoadingPlaceholder,
-                    memoryCacheKey = randomPath,
-                ),
-                contentDescription = null,
-                imageLoader = koinInject(),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(4.dp))
-            )
+            key(randomPath) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = randomPath,
+                        sourceOrigin = null,
+                        loadOnlyWifi = false,
+                        crossfade = showLoadingPlaceholder,
+                        memoryCacheKey = randomPath,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(radius))
+                )
+            }
         }
 
         if (finalPath != null) {
-            AsyncImage(
-                model = buildCoverImageRequest(
-                    context = context,
-                    data = finalPath,
-                    sourceOrigin = sourceOrigin,
-                    loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                    crossfade = showLoadingPlaceholder,
-                    memoryCacheKey = finalPath,
-                ),
-                contentDescription = null,
-                imageLoader = koinInject(),
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(4.dp)),
-                onSuccess = {
-                    isOnlineCoverLoaded = true
-                    onLoadFinish?.invoke()
-                },
-                onError = {
-                    isOnlineCoverLoaded = false
-                    onLoadFinish?.invoke()
-                }
-            )
+            key(finalPath) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = finalPath,
+                        sourceOrigin = sourceOrigin,
+                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                        crossfade = showLoadingPlaceholder,
+                        memoryCacheKey = finalPath,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(4.dp)),
+                    onSuccess = {
+                        isOnlineCoverLoaded = true
+                        onLoadFinish?.invoke()
+                    },
+                    onError = {
+                        isOnlineCoverLoaded = false
+                        onLoadFinish?.invoke()
+                    }
+                )
+            }
         } else {
             LaunchedEffect(Unit) {
                 onLoadFinish?.invoke()

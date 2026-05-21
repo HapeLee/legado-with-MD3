@@ -9,6 +9,11 @@ sealed class MainDestination(
     val route: String,
     @StringRes val labelId: Int
 ) {
+    object Home : MainDestination(
+        route = "home",
+        labelId = R.string.home
+    )
+
     object Bookshelf : MainDestination(
         route = "bookshelf",
         labelId = R.string.bookshelf
@@ -30,12 +35,13 @@ sealed class MainDestination(
     )
 
     companion object {
-        val mainDestinations = persistentListOf<MainDestination>(Bookshelf, Explore, Rss, My)
+        val mainDestinations = persistentListOf<MainDestination>(Home, Bookshelf, Explore, Rss, My)
     }
 }
 
 val MainDestination.customIconPath: String
     get() = when (this) {
+        MainDestination.Home -> ThemeConfig.navIconHome
         MainDestination.Bookshelf -> ThemeConfig.navIconBookshelf
         MainDestination.Explore -> ThemeConfig.navIconExplore
         MainDestination.Rss -> ThemeConfig.navIconRss

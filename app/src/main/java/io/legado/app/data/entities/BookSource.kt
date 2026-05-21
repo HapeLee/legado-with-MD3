@@ -98,7 +98,9 @@ data class BookSource(
     @ColumnInfo(defaultValue = "0")
     var eventListener: Boolean = false, // 是否监听事件来执行回调规则
     @ColumnInfo(defaultValue = "0")
-    var customButton: Boolean = false //由书源控制的自定义按钮
+    var customButton: Boolean = false, //由书源控制的自定义按钮
+    // 首页模块定义，JSON数组。每个元素: key, type(banner/ranking/grid/card/filter), title, args?, url?
+    var homepageModules: String? = null
 ) : Parcelable, BaseSource {
 
     override fun getTag(): String {
@@ -254,6 +256,7 @@ data class BookSource(
                 && equal(loginUi, source.loginUi)
                 && equal(loginCheckJs, source.loginCheckJs)
                 && equal(coverDecodeJs, source.coverDecodeJs)
+                && equal(homepageModules, source.homepageModules)
                 && equal(exploreUrl, source.exploreUrl)
                 && equal(searchUrl, source.searchUrl)
                 && getSearchRule() == source.getSearchRule()

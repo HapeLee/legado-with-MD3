@@ -319,4 +319,9 @@ object PreferKey {
     const val navIconExplore = "navIconExplore"
     const val navIconRss = "navIconRss"
     const val navIconMy = "navIconMy"
+
+    const val homepageModuleOrder = "homepageModuleOrder"
+    const val homepageModuleHidden = "homepageModuleHidden"
+    const val homepageLayoutMode = "homepageLayoutMode"
+    const val navIconHome = "navIconHome"
 }

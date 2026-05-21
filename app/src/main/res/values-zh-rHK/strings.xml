@@ -37,6 +37,8 @@
     <string name="replace_purify_search">替換淨化-搜尋</string>
     <string name="custom_export_section">自定義Epub導出章節</string>
     <string name="bookshelf">書架</string>
+    <string name="home">首頁</string>
+    <string name="homepage_modules">首頁模塊 (JSON)</string>
     <string name="favorites">收藏夾</string>
     <string name="favorite">收藏</string>
     <string name="in_favorites">已收藏</string>
@@ -546,6 +548,7 @@
     <string name="source_tab_base">基本</string>
     <string name="source_tab_search">搜索</string>
     <string name="source_tab_find">發現</string>
+    <string name="source_tab_homepage">主頁</string>
     <string name="source_tab_info">詳情</string>
     <string name="source_tab_toc">目錄</string>
     <string name="source_tab_content">正文</string>
