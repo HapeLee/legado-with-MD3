@@ -87,6 +87,7 @@ fun <T> HomepageModuleManageSheet(
     onGetAllModulesGroupedBySource: () -> Map<String, List<HomepageModuleManageUi>> = { emptyMap() },
     onGetSourceName: (String) -> String = { it },
     onAssignModuleToCustomSet: (String, String?) -> Unit = { _, _ -> },
+    onSyncSourceModules: (String) -> Unit = {},
 ) {
     var selectingSetUrl by remember(data != null) { mutableStateOf<String?>(null) }
     var browsingSourceUrl by remember(data != null) { mutableStateOf<String?>(null) }
@@ -208,18 +209,27 @@ fun <T> HomepageModuleManageSheet(
         val setUrl = selectingSetUrl
         val browseUrl = browsingSourceUrl
         val isBrowsing = showSourceBrowser || browseUrl != null
+
+        LaunchedEffect(browseUrl) {
+            browseUrl?.let { onSyncSourceModules(it) }
+        }
+
         when {
             browseUrl != null && browsingDetail -> {
                 // 三级：浏览书源的模块列表（已加入 / 书源模块 / 发现）
                 val displaySetUrl =
                     selectingSetUrl ?: HomepageViewModel.customSetUrl("src_$browseUrl")
                 val currentSetId = HomepageViewModel.customSetIdFromUrl(displaySetUrl)
-                val joinedModules = onGetModulesInSet(displaySetUrl)
+                val joinedModules = remember(displaySetUrl, sets, browseSources) {
+                    onGetModulesInSet(displaySetUrl).distinctBy { it.id }
+                }
 
-                val standardModules =
+                val standardModules = remember(joinedModules) {
                     joinedModules.filter { !HomepageViewModel.isInfinite(it.type, it.layoutConfig) }
-                val infiniteModules =
+                }
+                val infiniteModules = remember(joinedModules) {
                     joinedModules.filter { HomepageViewModel.isInfinite(it.type, it.layoutConfig) }
+                }
 
                 val joinedKeys = joinedModules.map { it.moduleKey }.toSet()
                 val sourceModules = onGetSourceModules(browseUrl, currentSetId)
@@ -247,9 +257,9 @@ fun <T> HomepageModuleManageSheet(
                                     AppText(stringResource(R.string.homepage_no_joined_modules))
                                 }
                             } else {
-                                var listData by remember(displaySetUrl) {
+                                var listData by remember(displaySetUrl, standardModules) {
                                     mutableStateOf(
-                                        standardModules
+                                        standardModules.distinctBy { it.id }
                                     )
                                 }
                                 val listState = rememberLazyListState()
@@ -268,7 +278,7 @@ fun <T> HomepageModuleManageSheet(
                                 LaunchedEffect(reorderableState.isAnyItemDragging) {
                                     if (!reorderableState.isAnyItemDragging) {
                                         val orderedIds =
-                                            listData.map { it.id } + infiniteModules.map { it.id }
+                                            (listData.map { it.id } + infiniteModules.map { it.id }).distinct()
                                         if (orderedIds != joinedModules.map { it.id }) {
                                             onReorderModules(orderedIds)
                                         }
@@ -513,7 +523,7 @@ fun <T> HomepageModuleManageSheet(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
-                        items(modules, key = { it.sourceUrl + it.moduleKey }) { module ->
+                        items(modules, key = { it.id }) { module ->
                             val instanceIdInCurrentSet = joinedInCurrent[module.moduleKey]
                             val inCurrentSet = instanceIdInCurrentSet != null
                             SelectionItemCard(
@@ -540,11 +550,14 @@ fun <T> HomepageModuleManageSheet(
 
             isBrowsing -> {
                 // 二级：浏览书源列表
+                val sources = remember(filteredBrowseSources) {
+                    filteredBrowseSources.distinctBy { it.sourceUrl }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredBrowseSources, key = { it.sourceUrl }) { source ->
+                    items(sources, key = { it.sourceUrl }) { source ->
                         val moduleCount = onGetSourceModules(source.sourceUrl, null).size
                         SelectionItemCard(
                             title = source.sourceName,
@@ -562,12 +575,16 @@ fun <T> HomepageModuleManageSheet(
             setUrl != null && HomepageViewModel.isCustomSetUrl(setUrl) -> {
                 // 二级：集详情
                 val setId = HomepageViewModel.customSetIdFromUrl(setUrl)
-                val modules = onGetModulesInSet(setUrl)
+                val modules = remember(setUrl, sets) {
+                    onGetModulesInSet(setUrl).distinctBy { it.id }
+                }
 
-                val standardModules =
+                val standardModules = remember(modules) {
                     modules.filter { !HomepageViewModel.isInfinite(it.type, it.layoutConfig) }
-                val infiniteModules =
+                }
+                val infiniteModules = remember(modules) {
                     modules.filter { HomepageViewModel.isInfinite(it.type, it.layoutConfig) }
+                }
 
                 if (modules.isEmpty()) {
                     Column(
@@ -590,7 +607,9 @@ fun <T> HomepageModuleManageSheet(
                         )
                     }
                 } else {
-                    var listData by remember(setUrl) { mutableStateOf(standardModules) }
+                    var listData by remember(setUrl, standardModules) {
+                        mutableStateOf(standardModules)
+                    }
                     val listState = rememberLazyListState()
                     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
                         listData = listData.toMutableList().apply {
@@ -602,11 +621,12 @@ fun <T> HomepageModuleManageSheet(
 
                     LaunchedEffect(standardModules) {
                         if (!reorderableState.isAnyItemDragging) listData =
-                            standardModules.distinctBy { it.id }
+                            standardModules
                     }
                     LaunchedEffect(reorderableState.isAnyItemDragging) {
                         if (!reorderableState.isAnyItemDragging) {
-                            val orderedIds = listData.map { it.id } + infiniteModules.map { it.id }
+                            val orderedIds =
+                                (listData.map { it.id } + infiniteModules.map { it.id }).distinct()
                             if (orderedIds != modules.map { it.id }) onReorderModules(orderedIds)
                         }
                     }
@@ -703,7 +723,9 @@ fun <T> HomepageModuleManageSheet(
 
             else -> {
                 // 一级：集列表
-                var localSets by remember(data != null) { mutableStateOf(sets) }
+                var localSets by remember(data != null, sets) {
+                    mutableStateOf(sets.distinctBy { it.sourceUrl })
+                }
                 val setsListState = rememberLazyListState()
                 val setsReorderableState =
                     rememberReorderableLazyListState(setsListState) { from, to ->

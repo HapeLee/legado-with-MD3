@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 class HomepageViewModel(
     application: Application,
@@ -80,7 +81,7 @@ class HomepageViewModel(
     private val _effects = MutableSharedFlow<HomepageEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
-    private val loadJobs = mutableMapOf<String, Job>()
+    private val loadJobs = ConcurrentHashMap<String, Job>()
     private val initModulesSyncFlow = bookSourceRepository.flowHomepageModules()
     private val exploreSourcesFlow = bookSourceRepository.flowExploreSources()
 
@@ -688,17 +689,18 @@ class HomepageViewModel(
         }
     }
 
+    fun syncSourceModules(sourceUrl: String) {
+        viewModelScope.launch {
+            resolveBookSource(sourceUrl)?.let { syncModulesFromSource(it) }
+        }
+    }
+
     /** 「书源模块」tab：仅 JSON，纯参考 */
     fun getSourceModules(
         sourceUrl: String,
         targetSetId: String? = null
     ): List<HomepageModuleManageUi> {
         val source = resolveBookSource(sourceUrl) ?: return emptyList()
-
-        // 按需同步：只有进入该源的管理页才同步其 JSON 定义
-        viewModelScope.launch {
-            syncModulesFromSource(source)
-        }
 
         val json = source.homepageModules ?: return emptyList()
         val jsonDefs = parseBookSourceModules(source, json)
