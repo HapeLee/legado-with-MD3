@@ -90,7 +90,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 fun SearchScreen(
     viewModel: SearchViewModel,
     onBack: () -> Unit,
-    onOpenBookInfo: (name: String, author: String, bookUrl: String) -> Unit,
+    onOpenBookInfo: (name: String, author: String, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
     onOpenSourceManage: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -160,7 +160,14 @@ fun SearchScreen(
         viewModel.effects.collect { effect ->
             when (effect) {
                 is SearchEffect.OpenBookInfo -> {
-                    onOpenBookInfo(effect.name, effect.author, effect.bookUrl)
+                    onOpenBookInfo(
+                        effect.name,
+                        effect.author,
+                        effect.bookUrl,
+                        effect.origin,
+                        effect.coverPath,
+                        effect.sharedCoverKey
+                    )
                 }
 
                 SearchEffect.OpenSourceManage -> onOpenSourceManage()
@@ -394,16 +401,25 @@ fun SearchScreen(
                                 itemsIndexed(
                                     items = state.results,
                                     key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
-                                ) { _, item ->
+                                ) { index, item ->
+                                    val sharedCoverKey = bookCoverSharedElementKey(
+                                        item.book.bookUrl,
+                                        "search:${item.book.origin}:$index"
+                                    )
                                     SearchBookListItem(
                                         book = item.book,
                                         shelfState = item.shelfState,
                                         onClick = {
-                                            viewModel.onIntent(SearchIntent.OpenSearchBook(item.book))
+                                            viewModel.onIntent(
+                                                SearchIntent.OpenSearchBook(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            )
                                         },
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
-                                        sharedCoverKey = bookCoverSharedElementKey(item.book.bookUrl)
+                                        sharedCoverKey = sharedCoverKey
                                     )
                                 }
 

@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.ThemeExportData
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.MediumIconButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -163,6 +162,11 @@ fun EditThemeSheet(
 
             // Interface layout
             SectionTitle("界面布局")
+            CompactSwitchSettingItem(
+                title = "首页",
+                checked = data.showHome,
+                onCheckedChange = { data = data.copy(showHome = it) }
+            )
             CompactSwitchSettingItem(
                 title = "发现",
                 checked = data.showDiscovery,

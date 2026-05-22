@@ -69,7 +69,7 @@ fun AppFloatingActionButton(
                 MiuixIcon(
                     imageVector = icon,
                     contentDescription = tooltipText,
-                    tint = Color.White
+                    tint = containerColor
                 )
             } else {
                 Icon(
@@ -87,7 +87,8 @@ fun AppFloatingActionButton(
         MiuixFloatingActionButton(
             onClick = onClick,
             modifier = modifier,
-            content = fabContent
+            content = fabContent,
+            containerColor = LegadoTheme.colorScheme.surfaceContainer
         )
     } else {
         if (tooltipText != null) {

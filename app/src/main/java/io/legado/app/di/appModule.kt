@@ -6,6 +6,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.repository.AppStartupRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
@@ -137,6 +138,7 @@ val appModule = module {
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
+    singleOf(::LocalPreferencesRepository)
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
     singleOf(::SaveSearchBooksUseCase)

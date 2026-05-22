@@ -37,11 +37,12 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun GridRankingModule(
     books: ImmutableList<SearchBook>,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     modifier: Modifier = Modifier,
     rows: Int = 4,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKeySourceId: String? = null,
 ) {
     if (books.isEmpty()) return
     // 限制最多显示 20 项
@@ -70,13 +71,19 @@ fun GridRankingModule(
                     .fillMaxWidth()
                     .padding(vertical = 12.dp, horizontal = 12.dp)
             ) {
-                for (book in page) {
+                for ((rowIndex, book) in page.withIndex()) {
+                    val itemIndex = pageIndex * rows + rowIndex
+                    val sharedCoverKey = bookCoverSharedElementKey(
+                        book.bookUrl,
+                        sharedCoverKeySourceId?.let { "$it:$itemIndex" }
+                    )
                     GridRankingItem(
                         rank = pages.flatten().indexOf(book) + 1,
                         book = book,
-                        onClick = { onClick(book) },
+                        onClick = { onClick(book, sharedCoverKey) },
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
+                        sharedCoverKey = sharedCoverKey,
                     )
                 }
                 // 占位逻辑
@@ -96,6 +103,7 @@ private fun GridRankingItem(
     onClick: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     Row(
         modifier = Modifier
@@ -114,7 +122,7 @@ private fun GridRankingItem(
             modifier = Modifier.width(48.dp),
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
-            sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+            sharedCoverKey = sharedCoverKey
         )
 
         // 2. 排名

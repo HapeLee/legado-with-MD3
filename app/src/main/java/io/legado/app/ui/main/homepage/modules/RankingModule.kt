@@ -45,10 +45,11 @@ private const val MAX_COUNT = 20
 @Composable
 fun RankingModule(
     books: ImmutableList<SearchBook>,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKeySourceId: String? = null,
 ) {
     var visibleCount by rememberSaveable { mutableIntStateOf(INITIAL_COUNT) }
     val displayBooks = books.take(visibleCount)
@@ -72,6 +73,10 @@ fun RankingModule(
                     onClick = onClick,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
+                    sharedCoverKey = bookCoverSharedElementKey(
+                        book.bookUrl,
+                        sharedCoverKeySourceId?.let { "$it:$index" }
+                    )
                 )
             }
 
@@ -114,14 +119,15 @@ fun RankingModule(
 private fun RankingItem(
     rank: Int,
     book: SearchBook,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick(book) }
+            .clickable { onClick(book, sharedCoverKey) }
             .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -144,7 +150,7 @@ private fun RankingItem(
             modifier = Modifier.weight(1f),
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
-            sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+            sharedCoverKey = sharedCoverKey
         )
     }
 }

@@ -2,6 +2,7 @@ package io.legado.app.ui.theme
 
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.theme.TextStyles
@@ -66,7 +67,7 @@ fun Typography.toLegadoTypography(): LegadoTypography {
     )
 }
 
-fun LegadoTypography.withFont(fontFamily: androidx.compose.ui.text.font.FontFamily?): LegadoTypography {
+fun LegadoTypography.withFont(fontFamily: FontFamily?): LegadoTypography {
     if (fontFamily == null) return this
     return copy(
         headlineLarge = headlineLarge.copy(fontFamily = fontFamily),

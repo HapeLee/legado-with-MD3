@@ -3,6 +3,7 @@ package io.legado.app.ui.main.homepage.modules
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,12 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,14 +22,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
-import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -51,10 +47,7 @@ fun ButtonGroupModule(
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val useCase: ExploreKindUiUseCase = koinInject()
-    val scope = rememberCoroutineScope()
-    val infoMap = remember(sourceUrl) {
-        sourceUrl.takeIf { it.isNotBlank() }?.let { getExploreInfoMap(it) }
-    }
+    val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
 
     // 解析图标映射表和默认图标
     val (iconMap, defaultIcon) = remember(layoutConfig) {
@@ -90,74 +83,76 @@ fun ButtonGroupModule(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 rowKinds.forEach { kind ->
-                    var displayName by remember(kind.title) { mutableStateOf(kind.title) }
-
-                    LaunchedEffect(kind, sourceUrl, infoMap) {
-                        displayName = useCase.resolveDisplayName(kind, sourceUrl, infoMap)
-                    }
-
                     val buttonIcon = iconMap[kind.title] ?: defaultIcon
                     val hasIcon = !buttonIcon.isNullOrBlank()
 
-                    GlassCard(
-                        onClick = {
-                            when (kind.type) {
-                                ExploreKind.Type.url -> {
-                                    kind.url?.takeIf { it.isNotBlank() }?.let {
-                                        viewModel.onKindUrlClick(sourceUrl, it, kind.title)
-                                    }
-                                }
+                    ExploreKindMultiTypeItem(
+                        kind = kind,
+                        sourceUrl = sourceUrl,
+                        activity = activity,
+                        onOpenUrl = { url ->
+                            viewModel.onKindUrlClick(sourceUrl, url, kind.title)
+                        },
+                        onRefreshKinds = {
+                            viewModel.refreshButtonGroup(globalId)
+                        },
+                        useCase = useCase,
+                        isMiuix = isMiuix,
+                        modifier = Modifier.weight(1f),
+                        content = { displayName, isSelected, onClick, trailingIcon ->
+                            GlassCard(
+                                onClick = onClick,
+                                cornerRadius = 8.dp,
+                                containerColor = if (isSelected) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainerLow,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(vertical = 8.dp, horizontal = 4.dp)
+                                ) {
+                                    if (hasIcon) {
+                                        SourceIcon(
+                                            path = buttonIcon!!,
+                                            modifier = Modifier.size(20.dp),
+                                            placeholderIcon = {
 
-                                ExploreKind.Type.button -> {
-                                    scope.launch {
-                                        useCase.executeAction(
-                                            action = kind.action,
-                                            title = kind.title,
-                                            sourceUrl = sourceUrl,
-                                            infoMap = infoMap,
-                                            activity = activity,
-                                            onRefreshKinds = {
-                                                viewModel.refreshButtonGroup(globalId)
                                             }
                                         )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                    }
+
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AppText(
+                                            text = displayName,
+                                            style = LegadoTheme.typography.labelSmallEmphasized,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Clip,
+                                            modifier = Modifier
+                                                .padding(horizontal = 4.dp)
+                                                .basicMarquee()
+                                        )
+
+                                        if (trailingIcon != null) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .padding(end = 2.dp)
+                                            ) {
+                                                trailingIcon()
+                                            }
+                                        }
                                     }
                                 }
                             }
-                        },
-                        cornerRadius = 8.dp,
-                        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(vertical = 8.dp, horizontal = 4.dp)
-                        ) {
-                            if (hasIcon) {
-                                SourceIcon(
-                                    path = buttonIcon,
-                                    modifier = Modifier.size(20.dp),
-                                    placeholderIcon = {
-
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-
-                            AppText(
-                                text = displayName,
-                                style = LegadoTheme.typography.labelSmallEmphasized,
-                                textAlign = TextAlign.Center,
-                                maxLines = 1,
-                                overflow = TextOverflow.Clip,
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .basicMarquee()
-                            )
                         }
-                    }
+                    )
                 }
 
                 if (rowKinds.size < actualColumns) {

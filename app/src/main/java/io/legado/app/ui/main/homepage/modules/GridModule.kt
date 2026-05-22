@@ -21,12 +21,13 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun GridModule(
     books: ImmutableList<SearchBook>,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     modifier: Modifier = Modifier,
     columns: Int = 3,
     maxRows: Int? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKeySourceId: String? = null,
 ) {
     if (books.isEmpty()) return
     var rows = books.toList().chunked(columns)
@@ -37,20 +38,25 @@ fun GridModule(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        for (row in rows) {
+        for ((rowIndex, row) in rows.withIndex()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                for (book in row) {
+                for ((columnIndex, book) in row.withIndex()) {
+                    val itemIndex = rowIndex * columns + columnIndex
+                    val sharedCoverKey = bookCoverSharedElementKey(
+                        book.bookUrl,
+                        sharedCoverKeySourceId?.let { "$it:$itemIndex" }
+                    )
                     SearchBookGridItem(
                         book = book,
                         shelfState = BookShelfState.NOT_IN_SHELF,
-                        onClick = { onClick(book) },
+                        onClick = { onClick(book, sharedCoverKey) },
                         modifier = Modifier.weight(1f),
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+                        sharedCoverKey = sharedCoverKey
                     )
                 }
                 repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }

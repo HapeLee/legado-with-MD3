@@ -153,7 +153,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (book: BookShelfItem, sharedCoverKey: String?) -> Unit,
     onNavigateToSearch: (String) -> Unit,
     onNavigateToRemoteImport: () -> Unit,
     onNavigateToLocalImport: () -> Unit,
@@ -1253,7 +1253,7 @@ fun BookshelfPage(
     onDragFinished: () -> Unit,
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (BookShelfItem, String?) -> Unit,
     isCurrentPage: Boolean = true,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -1369,6 +1369,14 @@ fun BookshelfPage(
         ) {
             items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
+                val sharedCoverKey = if (isCurrentPage) {
+                    bookCoverSharedElementKey(
+                        bookUi.book.bookUrl,
+                        "bookshelf:${uiState.selectedGroupId}"
+                    )
+                } else {
+                    null
+                }
                 ReorderableItem(
                     state = reorderableState,
                     key = bookUi.book.bookUrl,
@@ -1408,7 +1416,7 @@ fun BookshelfPage(
                         searchKey = uiState.searchKey,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = if (isCurrentPage) bookCoverSharedElementKey(bookUi.book.bookUrl) else null,
+                        sharedCoverKey = sharedCoverKey,
                         onClick = {
                             if (uiState.isEditMode) {
                                 onToggleBookSelection(bookUi)
@@ -1423,7 +1431,7 @@ fun BookshelfPage(
                                 if (uiState.isEditMode) {
                                     onToggleBookSelection(bookUi)
                                 } else {
-                                    onBookLongClick(bookUi.book)
+                                    onBookLongClick(bookUi.book, sharedCoverKey)
                                 }
                             }
                         }

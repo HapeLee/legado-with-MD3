@@ -3,6 +3,8 @@ package io.legado.app.domain.usecase
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.model.webBook.WebBook
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ExploreBooksUseCase(
     private val bookSourceRepository: BookSourceRepository,
@@ -20,7 +22,7 @@ class ExploreBooksUseCase(
         moduleUrl: String?,
         args: String?,
         page: Int = 1
-    ): ExploreResult {
+    ): ExploreResult = withContext(Dispatchers.IO) {
         val base = bookSourceRepository.getBookSource(sourceUrl)
             ?: throw SourceNotFound(sourceUrl)
         val source = args?.let { base.copy().also { s -> s.setVariable(it) } } ?: base
@@ -33,14 +35,14 @@ class ExploreBooksUseCase(
             throw InvalidUrl(resolvedUrl)
         }
         val books = WebBook.exploreBookSuspend(source, resolvedUrl, page)
-        return ExploreResult(resolvedUrl, books)
+        ExploreResult(resolvedUrl, books)
     }
 
     suspend fun executeForRanking(
         sourceUrl: String,
         moduleUrl: String?,
         args: String?
-    ): List<SearchBook> {
+    ): List<SearchBook> = withContext(Dispatchers.IO) {
         val result = execute(sourceUrl, moduleUrl, args)
         var books = result.books
         var page = 1
@@ -50,7 +52,7 @@ class ExploreBooksUseCase(
                 WebBook.exploreBookSuspend(
                     bookSourceRepository.getBookSource(sourceUrl)
                         ?.let { s -> args?.let { s.copy().also { x -> x.setVariable(it) } } ?: s }
-                        ?: return books.take(MAX_RANKING_BOOKS),
+                        ?: return@withContext books.take(MAX_RANKING_BOOKS),
                     result.resolvedUrl,
                     page,
                 )
@@ -60,7 +62,7 @@ class ExploreBooksUseCase(
             if (next.isEmpty()) break
             books = (books + next)
         }
-        return books.take(MAX_RANKING_BOOKS)
+        books.take(MAX_RANKING_BOOKS)
     }
 
     data class ExploreResult(val resolvedUrl: String, val books: List<SearchBook>)

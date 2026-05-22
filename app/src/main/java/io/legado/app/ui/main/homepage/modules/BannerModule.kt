@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,10 +23,11 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun BannerModule(
     books: ImmutableList<SearchBook>,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKeySourceId: String? = null,
 ) {
     if (books.isEmpty()) return
 
@@ -38,7 +39,11 @@ fun BannerModule(
             .fadingEdge(lazyListState, gradientWidth = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(books) { book ->
+        itemsIndexed(books, key = { index, book -> "${book.bookUrl}:$index" }) { index, book ->
+            val sharedCoverKey = bookCoverSharedElementKey(
+                book.bookUrl,
+                sharedCoverKeySourceId?.let { "$it:$index" }
+            )
             CoilBookCover(
                 name = book.name,
                 author = book.author,
@@ -47,10 +52,10 @@ fun BannerModule(
                 sourceOrigin = book.origin,
                 modifier = Modifier
                     .width(96.dp)
-                    .clickable { onClick(book) },
+                    .clickable { onClick(book, sharedCoverKey) },
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
-                sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+                sharedCoverKey = sharedCoverKey
             )
         }
     }

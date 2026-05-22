@@ -20,7 +20,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,7 +46,6 @@ import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,7 +55,6 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,31 +70,29 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
-import com.google.android.material.color.DynamicColors
-import com.google.android.material.color.DynamicColorsOptions
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
-import io.legado.app.constant.PreferKey
 import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
-import io.legado.app.help.loadFontFiles
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
-import io.legado.app.lib.theme.ThemeStore
-import io.legado.app.lib.theme.primaryColor
+import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.icon.AppIcons
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
@@ -105,7 +100,7 @@ import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
-import io.legado.app.utils.FileDoc
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.putPrefString
@@ -113,10 +108,6 @@ import io.legado.app.utils.restart
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
-import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.basic.Card as MiuixCard
-import top.yukonga.miuix.kmp.basic.CardDefaults as MiuixCardDefaults
-import top.yukonga.miuix.kmp.basic.Text as MiuixText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -138,16 +129,16 @@ fun ThemeConfigScreen(
     var showBorderColorPicker by remember { mutableStateOf(false) }
     var showNavIconSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
-    var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
-    var fontFolderUri by remember { mutableStateOf<Uri?>(null) }
+    val showThemeRefactorTip by viewModel.showThemeRefactorTip.collectAsStateWithLifecycle()
 
-    fun loadFonts() {
-        fontItems = loadFontFiles(context, fontFolderUri)
+    var fontFolderUri by remember {
+        mutableStateOf(
+            context.getPrefString(PreferKey.fontFolder)?.let { Uri.parse(it) }
+        )
     }
-    remember {
-        val saved = context.getPrefString(PreferKey.fontFolder)
-        if (!saved.isNullOrEmpty()) fontFolderUri = Uri.parse(saved)
-        loadFonts()
+
+    val fontItems = remember(fontFolderUri) {
+        loadFontFiles(context, fontFolderUri)
     }
 
     val fontFolderLauncher = rememberLauncherForActivityResult(
@@ -157,7 +148,6 @@ fun ThemeConfigScreen(
             fontFolderUri = uri
             uri.takePersistablePermissionSafely(context, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             context.putPrefString(PreferKey.fontFolder, uri.toString())
-            loadFonts()
         }
     }
 
@@ -218,16 +208,28 @@ fun ThemeConfigScreen(
                     themeItems.zip(themeValues).toList()
                 }
 
-                if (isMiuixEngine) {
-                    MiuixCard(
+                AnimatedVisibility(visible = showThemeRefactorTip) {
+                    GlassCard(
                         cornerRadius = 16.dp,
-                        insideMargin = PaddingValues(16.dp),
-                        colors = MiuixCardDefaults.defaultColors(
-                            color = MiuixTheme.colorScheme.primaryVariant,
-                            contentColor = MiuixTheme.colorScheme.onPrimary
-                        )
+                        modifier = Modifier.padding(bottom = 16.dp)
                     ) {
-                        MiuixText("Miuix 目前为测试主题，且不对基于View的界面生效！")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            AppText(
+                                text = "仍有部分界面未用Compose重构，这些界面会与大部分界面有较大差异。",
+                                style = LegadoTheme.typography.labelLargeEmphasized,
+                                modifier = Modifier.weight(1f)
+                            )
+                            SmallIconButton(
+                                imageVector = AppIcons.Close,
+                                contentDescription = "关闭",
+                                onClick = {
+                                    viewModel.setShowThemeRefactorTip(false)
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -376,6 +378,11 @@ fun ThemeConfigScreen(
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.main_activity)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.show_home),
+                        checked = ThemeConfig.showHome,
+                        onCheckedChange = { ThemeConfig.showHome = it }
+                    )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_discovery),
                         checked = ThemeConfig.showDiscovery,
@@ -648,7 +655,11 @@ fun ThemeConfigScreen(
                                             .size(28.dp)
                                             .clip(CircleShape)
                                             .background(Color(ThemeConfig.itemDividerColor))
-                                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                            .border(
+                                                1.dp,
+                                                MaterialTheme.colorScheme.outlineVariant,
+                                                CircleShape
+                                            )
                                     )
                                 }
                             }
@@ -767,7 +778,9 @@ fun ThemeConfigScreen(
         content = {
             if (fontItems.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(120.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -785,7 +798,9 @@ fun ThemeConfigScreen(
                     fontItems.forEach { fontDoc ->
                         item {
                             Card(
-                                modifier = Modifier.fillMaxWidth().height(100.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(100.dp),
                                 onClick = {
                                     ThemeConfig.appFontPath = fontDoc.uri.toString()
                                     showFontSheet = false

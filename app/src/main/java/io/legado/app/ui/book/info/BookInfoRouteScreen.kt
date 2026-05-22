@@ -40,6 +40,10 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun BookInfoRouteScreen(
     bookUrl: String,
+    name: String? = null,
+    author: String? = null,
+    origin: String? = null,
+    coverPath: String? = null,
     viewModel: BookInfoViewModel,
     onBack: () -> Unit,
     onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
@@ -80,8 +84,14 @@ fun BookInfoRouteScreen(
         viewModel.onReaderResult(it.resultCode)
     }
 
-    LaunchedEffect(bookUrl, viewModel) {
-        viewModel.initData(bookUrl)
+    LaunchedEffect(bookUrl, name, author, origin, coverPath, viewModel) {
+        viewModel.initData(
+            bookUrl = bookUrl,
+            name = name,
+            author = author,
+            origin = origin,
+            coverPath = coverPath
+        )
     }
 
     DisposableEffect(viewModel) {

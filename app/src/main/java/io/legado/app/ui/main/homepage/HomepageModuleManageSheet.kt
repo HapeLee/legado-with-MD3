@@ -43,9 +43,12 @@ import io.legado.app.ui.widget.components.JsonRawEditor
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.SecondaryButton
 import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.divider.PillHeaderDivider
+import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -102,6 +105,7 @@ fun <T> HomepageModuleManageSheet(
     var browseModuleType by remember(data != null) { mutableStateOf("card") }
     var selectedKindTitles by remember(data != null) { mutableStateOf<Set<String>>(emptySet()) }
     var showCustomSetAddModules by remember(data != null) { mutableStateOf(false) }
+    var showKindSelect by remember(data != null) { mutableStateOf(false) }
     var showAddButtonGroupDialog by remember(data != null) { mutableStateOf(false) }
     val defaultQuickActionsTitle = stringResource(R.string.homepage_quick_actions)
     var tempButtonGroupTitle by remember(data != null) { mutableStateOf(defaultQuickActionsTitle) }
@@ -310,8 +314,7 @@ fun <T> HomepageModuleManageSheet(
                                                     onClick = { deleteConfirmId = module.id },
                                                     imageVector = Icons.Default.Delete
                                                 )
-                                            },
-                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                            }
                                         )
                                     }
 
@@ -353,8 +356,7 @@ fun <T> HomepageModuleManageSheet(
                                                         onClick = { deleteConfirmId = module.id },
                                                         imageVector = Icons.Default.Delete
                                                     )
-                                                },
-                                                modifier = Modifier.padding(horizontal = 4.dp)
+                                                }
                                             )
                                         }
                                     }
@@ -398,8 +400,7 @@ fun <T> HomepageModuleManageSheet(
                                                         sourceUrl = browseUrl,
                                                     )
                                                 )
-                                            },
-                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                            }
                                         )
                                     }
                                 }
@@ -408,90 +409,76 @@ fun <T> HomepageModuleManageSheet(
 
                         2 -> {
                             val isButtonGroup = browseModuleType == "buttonGroup"
-                            val selectableKinds = exploreKinds
                             Column {
                                 val typeList = remember {
                                     HomepageModuleType.entries.filter { it != HomepageModuleType.Unknown }
                                 }
-                                CompactDropdownSettingItem(
-                                    title = stringResource(R.string.homepage_module_type),
-                                    selectedValue = browseModuleType,
-                                    displayEntries = typeList.map { it.title }.toTypedArray(),
-                                    entryValues = typeList.map { it.key }.toTypedArray(),
-                                    onValueChange = {
-                                        browseModuleType = it; selectedKindTitles = emptySet()
+
+                                GlassCard(
+                                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                                    cornerRadius = 12.dp
+                                ) {
+                                    CompactDropdownSettingItem(
+                                        title = stringResource(R.string.homepage_module_type),
+                                        selectedValue = browseModuleType,
+                                        displayEntries = typeList.map { it.title }.toTypedArray(),
+                                        entryValues = typeList.map { it.key }.toTypedArray(),
+                                        onValueChange = {
+                                            browseModuleType = it; selectedKindTitles = emptySet()
+                                        }
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                SelectionItemCard(
+                                    title = stringResource(R.string.homepage_select_from_kinds),
+                                    subtitle = if (isButtonGroup) {
+                                        if (selectedKindTitles.isEmpty()) stringResource(R.string.homepage_select_multiple_kinds)
+                                        else stringResource(
+                                            R.string.homepage_n_selected,
+                                            selectedKindTitles.size
+                                        )
+                                    } else {
+                                        stringResource(R.string.homepage_select_one_kind)
+                                    },
+                                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                                    onToggleSelection = { showKindSelect = true },
+                                    trailingAction = {
+                                        if (isButtonGroup && selectedKindTitles.isNotEmpty()) {
+                                            SmallIconButton(
+                                                onClick = { showAddButtonGroupDialog = true },
+                                                imageVector = Icons.Default.Check
+                                            )
+                                        }
                                     }
                                 )
-                                if (selectableKinds.isEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(24.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        AppText(
-                                            stringResource(R.string.homepage_source_no_discover),
-                                            color = LegadoTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                } else {
-                                    AppText(
-                                        stringResource(R.string.homepage_select_items),
-                                        style = LegadoTheme.typography.labelMedium,
-                                        modifier = Modifier.padding(
-                                            horizontal = 16.dp,
-                                            vertical = 4.dp
-                                        )
-                                    )
-                                    LazyColumn(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        items(
-                                            selectableKinds.distinctBy { it.first + it.second },
-                                            key = { it.first + it.second }) { (kindTitle, kindUrl) ->
-                                            if (isButtonGroup) {
-                                                val isSelected = kindTitle in selectedKindTitles
-                                                SelectionItemCard(
-                                                    title = kindTitle,
-                                                    subtitle = kindUrl.take(60),
-                                                    containerColor = LegadoTheme.colorScheme.onSheetContent,
-                                                    isSelected = isSelected,
-                                                    inSelectionMode = true,
-                                                    onToggleSelection = {
-                                                        selectedKindTitles =
-                                                            if (isSelected) selectedKindTitles - kindTitle
-                                                            else selectedKindTitles + kindTitle
-                                                    },
-                                                    modifier = Modifier.padding(horizontal = 4.dp)
-                                                )
-                                            } else {
-                                                val isJoined = joinedKeys.contains(kindTitle)
-                                                SelectionItemCard(
-                                                    title = kindTitle,
-                                                    subtitle = kindUrl.take(60) + if (isJoined) stringResource(
-                                                        R.string.homepage_status_joined
-                                                    ) else "",
-                                                    containerColor = LegadoTheme.colorScheme.onSheetContent,
-                                                    isSelected = isJoined,
-                                                    inSelectionMode = true,
-                                                    onToggleSelection = {
-                                                        if (!isJoined) addDialogPrefill =
-                                                            AddDialogPrefill(
-                                                                kindTitle,
-                                                                kindUrl,
-                                                                browseModuleType
-                                                            )
-                                                    },
-                                                    modifier = Modifier.padding(horizontal = 4.dp)
+
+                                ExploreKindSelectSheet(
+                                    show = showKindSelect,
+                                    onDismissRequest = { showKindSelect = false },
+                                    sourceUrl = browseUrl,
+                                    multiple = isButtonGroup,
+                                    initialSelectedTitles = selectedKindTitles.toList(),
+                                    onSelected = { kinds ->
+                                        if (isButtonGroup) {
+                                            selectedKindTitles = kinds.map { it.title }.toSet()
+                                        } else {
+                                            kinds.firstOrNull()?.let { kind ->
+                                                addDialogPrefill = AddDialogPrefill(
+                                                    title = kind.title,
+                                                    url = kind.url ?: "",
+                                                    type = browseModuleType
                                                 )
                                             }
                                         }
                                     }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
+                                )
+
+                                PillDivider(
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                )
+
                                 SecondaryButton(
                                     text = stringResource(R.string.homepage_manual_add),
                                     onClick = {
@@ -544,8 +531,7 @@ fun <T> HomepageModuleManageSheet(
                                         joinedInCurrent =
                                             joinedInCurrent + (module.moduleKey to "temp_${module.id}")
                                     }
-                                },
-                                modifier = Modifier.padding(horizontal = 4.dp)
+                                }
                             )
                         }
                     }
@@ -567,8 +553,7 @@ fun <T> HomepageModuleManageSheet(
                             onToggleSelection = {
                                 browsingSourceUrl = source.sourceUrl
                                 browsingDetail = true
-                            },
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            }
                         )
                     }
                 }
@@ -662,8 +647,7 @@ fun <T> HomepageModuleManageSheet(
                                             onClick = { deleteConfirmId = module.id },
                                             imageVector = Icons.Default.Delete
                                         )
-                                    },
-                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                    }
                                 )
                             }
                         }
@@ -694,8 +678,7 @@ fun <T> HomepageModuleManageSheet(
                                             onClick = { deleteConfirmId = module.id },
                                             imageVector = Icons.Default.Delete
                                         )
-                                    },
-                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                    }
                                 )
                             }
                         }
@@ -770,8 +753,12 @@ fun <T> HomepageModuleManageSheet(
                                     onClick = { deleteSetConfirmId = set.sourceUrl },
                                     imageVector = Icons.Default.Delete
                                 )
-                            },
-                            modifier = Modifier.padding(horizontal = 4.dp)
+                            }
+                        )
+                    }
+                    item {
+                        PillDivider(
+                            modifier = Modifier.padding(vertical = 12.dp)
                         )
                     }
                     item(key = "create_set") {
@@ -1001,41 +988,51 @@ fun <T> AddCustomModuleDialog(
                     .fillMaxWidth()
                     .height(400.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 AppTextField(
                     value = title,
                     onValueChange = { title = it },
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     label = stringResource(R.string.homepage_title_label),
                     modifier = Modifier.fillMaxWidth()
                 )
                 AppTextField(
                     value = url,
                     onValueChange = { url = it },
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     label = "URL",
                     modifier = Modifier.fillMaxWidth()
                 )
                 val typeList = remember {
                     HomepageModuleType.entries.filter { it != HomepageModuleType.Unknown }
                 }
-                DropdownListSettingItem(
-                    title = stringResource(R.string.homepage_type_label),
-                    selectedValue = type,
-                    displayEntries = typeList.map { it.title }.toTypedArray(),
-                    entryValues = typeList.map { it.key }.toTypedArray(),
-                    onValueChange = { type = it }
-                )
+
+                GlassCard(
+                    containerColor = LegadoTheme.colorScheme.onSheetContent
+                ) {
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.homepage_type_label),
+                        selectedValue = type,
+                        displayEntries = typeList.map { it.title }.toTypedArray(),
+                        entryValues = typeList.map { it.key }.toTypedArray(),
+                        onValueChange = { type = it }
+                    )
+                }
+
                 AppTextField(
                     value = args,
                     onValueChange = { args = it },
+                    backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                     label = "Args (JSON)",
                     modifier = Modifier.fillMaxWidth()
                 )
-                AppText(
-                    text = stringResource(R.string.homepage_layout_config_label),
-                    style = LegadoTheme.typography.labelMedium,
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+
+                PillHeaderDivider(
+                    title = stringResource(R.string.homepage_layout_config_label)
                 )
+
                 if (hasVisualizableKeys) {
                     JsonConfigEditor(
                         jsonString = layoutConfig,
