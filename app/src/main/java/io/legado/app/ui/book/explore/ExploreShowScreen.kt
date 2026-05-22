@@ -1,8 +1,6 @@
 package io.legado.app.ui.book.explore
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
@@ -13,8 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,9 +23,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
@@ -52,9 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
@@ -69,13 +63,11 @@ import io.legado.app.ui.theme.responsiveHazeEffect
 import io.legado.app.ui.theme.responsiveHazeSource
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
-import io.legado.app.ui.widget.components.button.AnimatedTextButton
 import io.legado.app.ui.widget.components.card.TextCard
-import io.legado.app.ui.widget.components.explore.ExploreKindMultiTypeItem
-import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
+import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -98,7 +90,7 @@ fun ExploreShowScreen(
     sourceUrl: String?,
     exploreUrl: String?,
     onBack: () -> Unit,
-    onBookClick: (SearchBook) -> Unit,
+    onBookClick: (SearchBook, String?) -> Unit,
     viewModel: ExploreShowViewModel = koinViewModel(),
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -111,7 +103,6 @@ fun ExploreShowScreen(
     val books by viewModel.uiBooks.collectAsState()
     val isBookEnd by viewModel.isEnd.collectAsState()
     val shouldTriggerAutoLoad by viewModel.shouldTriggerAutoLoad.collectAsState()
-    val kinds by viewModel.kinds.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMsg by viewModel.errorMsg.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
@@ -125,8 +116,6 @@ fun ExploreShowScreen(
     var showGridCountSheet by remember { mutableStateOf(false) }
     val gridColumnCount by viewModel.gridCount.collectAsState()
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
-    val context = LocalContext.current
-    val activity = context as? AppCompatActivity
     val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
 
     LaunchedEffect(sourceUrl) {
@@ -233,73 +222,16 @@ fun ExploreShowScreen(
     }
 
 
-    AppModalBottomSheet(
+    ExploreKindSelectSheet(
         show = showKindSheet,
-        onDismissRequest = { showKindSheet = false }
-    ) {
-
-        var kindQuery by remember { mutableStateOf("") }
-
-        SearchBar(
-            query = kindQuery,
-            backgroundColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.5f),
-            onQueryChange = { kindQuery = it },
-            placeholder = "选择或搜索分类",
-        )
-
-        val filteredKinds = remember(kindQuery, kinds) {
-            if (kindQuery.isBlank()) kinds
-            else kinds.filter { kind ->
-                kind.title.contains(kindQuery, ignoreCase = true) ||
-                        (kind.url?.contains(kindQuery, ignoreCase = true) == true)
+        onDismissRequest = { showKindSheet = false },
+        sourceUrl = sourceUrl,
+        onSelected = { selectedKinds ->
+            selectedKinds.firstOrNull()?.let { kind ->
+                viewModel.switchExploreUrl(kind)
             }
         }
-        val kindRows = remember(filteredKinds) {
-            calculateExploreKindRows(filteredKinds, 6)
-        }
-
-        LazyColumn(
-            contentPadding = PaddingValues(vertical = 16.dp),
-            modifier = Modifier.weight(1f, fill = false)
-        ) {
-            items(kindRows) { rowItems ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .animateItem()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowItems.forEach { (kind, span) ->
-                        ExploreKindMultiTypeItem(
-                            modifier = Modifier
-                                .weight(span.toFloat())
-                                .animateItem(),
-                            kind = kind,
-                            sourceUrl = sourceUrl,
-                            activity = activity,
-                            onOpenUrl = { url ->
-                                showKindSheet = false
-                                viewModel.switchExploreUrl(kind.copy(url = url))
-                            },
-                            onRefreshKinds = viewModel::refreshKinds,
-                            backgroundColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.5f),
-                            isMiuix = isMiuix,
-                            useCase = exploreKindUseCase
-                        )
-                    }
-
-                    val totalSpan = rowItems.sumOf { it.second }
-                    if (totalSpan < 6) {
-                        Spacer(
-                            modifier = Modifier.weight((6 - totalSpan).toFloat())
-                        )
-                    }
-                }
-            }
-        }
-    }
-
+    )
 
     AppScaffold(
         modifier = Modifier
@@ -433,17 +365,22 @@ fun ExploreShowScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(
+                        itemsIndexed(
                             items = books,
-                            key = { it.book.bookUrl }
-                        ) { item ->
+                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                        ) { index, item ->
+                            val sharedCoverKey = bookCoverSharedElementKey(
+                                item.book.bookUrl,
+                                "explore:grid:$index"
+                            )
                             ExploreBookGridItem(
                                 book = item.book,
                                 shelfState = item.shelfState,
-                                onClick = { onBookClick(item.book) },
+                                onClick = { onBookClick(item.book, sharedCoverKey) },
                                 modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
+                                sharedCoverKey = sharedCoverKey,
                             )
                         }
 
@@ -467,17 +404,22 @@ fun ExploreShowScreen(
                             bottom = paddingValues.calculateBottomPadding() + 16.dp
                         )
                     ) {
-                        items(
+                        itemsIndexed(
                             items = books,
-                            key = { it.book.bookUrl }
-                        ) { item ->
+                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                        ) { index, item ->
+                            val sharedCoverKey = bookCoverSharedElementKey(
+                                item.book.bookUrl,
+                                "explore:list:$index"
+                            )
                             ExploreBookItem(
                                 book = item.book,
                                 shelfState = item.shelfState,
-                                onClick = { onBookClick(item.book) },
+                                onClick = { onBookClick(item.book, sharedCoverKey) },
                                 modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
+                                sharedCoverKey = sharedCoverKey,
                             )
                         }
 
@@ -506,6 +448,7 @@ fun ExploreBookItem(
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     SearchBookListItem(
         book = book,
@@ -514,7 +457,7 @@ fun ExploreBookItem(
         modifier = modifier,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+        sharedCoverKey = sharedCoverKey
     )
 }
 
@@ -527,6 +470,7 @@ fun ExploreBookGridItem(
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     SearchBookGridItem(
         book = book,
@@ -535,60 +479,7 @@ fun ExploreBookGridItem(
         modifier = modifier,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+        sharedCoverKey = sharedCoverKey
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun LoadMoreFooter(
-    isLoading: Boolean,
-    errorMsg: String?,
-    isEnd: Boolean,
-    onRetry: () -> Unit
-) {
-
-    LaunchedEffect(isLoading, errorMsg, isEnd) {
-        if (!isLoading && errorMsg == null && !isEnd) {
-            onRetry()
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-            AnimatedContent(
-                targetState = when {
-                    isLoading -> "加载中…"
-                    errorMsg != null -> "加载失败: $errorMsg"
-                    isEnd -> "已经到底了~"
-                    else -> "我爱你"
-                },
-                label = "FooterTextChange"
-            ) { text ->
-                AppText(
-                    text = text,
-                    color = when {
-                        errorMsg != null -> Color.Red
-                        else -> Color.Gray
-                    },
-                    style = LegadoTheme.typography.bodySmall
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            AnimatedTextButton(
-                isLoading = isLoading,
-                onClick = onRetry,
-                text = if (errorMsg != null) "重试" else "再试一次",
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-    }
-}

@@ -952,6 +952,7 @@
     <string name="hide_when_status_bar_show">状态栏显示时隐藏</string>
     <string name="reverse_toc">反转目录</string>
     <string name="show_discovery">显示发现</string>
+    <string name="show_home">显示首页</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
     <string name="export_file_name">导出文件名</string>
@@ -1710,6 +1711,11 @@
     <string name="homepage_delete_custom_set_confirm">确定要删除该集及其包含的所有模块副本吗？</string>
     <string name="homepage_remove_module">移除模块</string>
     <string name="homepage_remove_module_confirm">确定要从当前集中移除该模块吗？</string>
+    <string name="homepage_select_from_kinds">从发现分类选择</string>
+    <string name="homepage_select_multiple_kinds">选择多个分类</string>
+    <string name="homepage_n_selected">已选择 %1$d 个</string>
+    <string name="homepage_select_one_kind">选择一个分类</string>
+    <string name="or">或</string>
     <string name="homepage_add_button_group">添加按钮组</string>
     <string name="homepage_module_title_label">模块标题</string>
     <string name="homepage_custom_title">自定义标题</string>

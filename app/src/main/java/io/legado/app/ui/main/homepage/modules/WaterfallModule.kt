@@ -17,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.book.SearchBookTagChip
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -36,6 +35,7 @@ fun WaterfallItem(
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKey: String? = null,
 ) {
     GlassCard(
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
@@ -55,7 +55,7 @@ fun WaterfallItem(
                     .fillMaxWidth(),
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
-                sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+                sharedCoverKey = sharedCoverKey
             )
 
             Spacer(modifier = Modifier.height(8.dp))

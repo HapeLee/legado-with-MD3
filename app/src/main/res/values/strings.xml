@@ -982,6 +982,7 @@
     <string name="hide_when_status_bar_show">Hide when status bar show</string>
     <string name="reverse_toc">Reverse toc</string>
     <string name="show_discovery">Show Discovery</string>
+    <string name="show_home">Show Homepage</string>
     <string name="style">Style</string>
     <string name="group_style">Group style</string>
     <string name="export_file_name">Export file name</string>
@@ -1716,6 +1717,11 @@
     <string name="homepage_delete_custom_set_confirm">Are you sure you want to delete this set and all its module copies?</string>
     <string name="homepage_remove_module">Remove Module</string>
     <string name="homepage_remove_module_confirm">Are you sure you want to remove this module from the current set?</string>
+    <string name="homepage_select_from_kinds">Select from Kinds</string>
+    <string name="homepage_select_multiple_kinds">Select multiple kinds</string>
+    <string name="homepage_n_selected">%1$d selected</string>
+    <string name="homepage_select_one_kind">Select one kind</string>
+    <string name="or">OR</string>
     <string name="homepage_add_button_group">Add Button Group</string>
     <string name="homepage_module_title_label">Module Title</string>
     <string name="homepage_custom_title">Custom Title</string>

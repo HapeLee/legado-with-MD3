@@ -893,6 +893,7 @@
     <string name="hide_when_status_bar_show">狀態欄顯示時隱藏</string>
     <string name="reverse_toc">反轉目錄</string>
     <string name="show_discovery">顯示發現</string>
+    <string name="show_home">顯示首頁</string>
     <string name="style">樣式</string>
     <string name="group_style">分組樣式</string>
     <string name="export_file_name">匯出檔案名</string>

@@ -13,6 +13,7 @@ import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.exploreLayoutGrid
+import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -222,7 +223,7 @@ class ExploreShowViewModel(
                 }
             }
                 .onFailure {
-                    _errorMsg.value = it.localizedMessage
+                    _errorMsg.value = it.stackTraceStr
                 }
 
             _isLoading.value = false

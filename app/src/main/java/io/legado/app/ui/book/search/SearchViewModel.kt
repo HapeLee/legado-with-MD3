@@ -15,7 +15,6 @@ import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SearchRunEvent
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.putPrefBoolean
 import kotlinx.coroutines.CancellationException
@@ -107,6 +106,9 @@ class SearchViewModel(
                         name = intent.book.name,
                         author = intent.book.author,
                         bookUrl = intent.book.bookUrl,
+                        origin = intent.book.origin,
+                        coverPath = intent.book.coverUrl,
+                        sharedCoverKey = intent.sharedCoverKey,
                     )
                 )
             }
@@ -117,6 +119,9 @@ class SearchViewModel(
                         name = intent.book.name,
                         author = intent.book.author,
                         bookUrl = intent.book.bookUrl,
+                        origin = intent.book.origin,
+                        coverPath = intent.book.getDisplayCover(),
+                        sharedCoverKey = null,
                     )
                 )
             }

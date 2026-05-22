@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -35,10 +35,11 @@ import kotlinx.collections.immutable.ImmutableList
 @Composable
 fun CardModule(
     books: ImmutableList<SearchBook>,
-    onClick: (SearchBook) -> Unit,
+    onClick: (SearchBook, String?) -> Unit,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    sharedCoverKeySourceId: String? = null,
 ) {
     if (books.isEmpty()) return
     val lazyListState = rememberLazyListState()
@@ -49,13 +50,17 @@ fun CardModule(
             .fadingEdge(lazyListState, gradientWidth = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(books, key = { it.bookUrl }) { book ->
+        itemsIndexed(books, key = { index, book -> "${book.bookUrl}:$index" }) { index, book ->
+            val sharedCoverKey = bookCoverSharedElementKey(
+                book.bookUrl,
+                sharedCoverKeySourceId?.let { "$it:$index" }
+            )
             Column(
                 modifier = Modifier
                     .width(120.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(LegadoTheme.colorScheme.surfaceContainerLow)
-                    .clickable { onClick(book) }
+                    .clickable { onClick(book, sharedCoverKey) }
             ) {
                 CoilBookCover(
                     name = book.name,
@@ -67,19 +72,20 @@ fun CardModule(
                         .wrapContentWidth(),
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    sharedCoverKey = bookCoverSharedElementKey(book.bookUrl)
+                    sharedCoverKey = sharedCoverKey
                 )
 
                 AppText(
                     text = book.name,
                     style = LegadoTheme.typography.labelLargeEmphasized,
                     maxLines = 2,
+                    minLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(
                         start = 8.dp,
                         end = 8.dp,
                         top = 8.dp,
-                        bottom = 2.dp
+                        bottom = 8.dp
                     ),
                 )
 
@@ -88,7 +94,7 @@ fun CardModule(
                 if (intro != null) {
                     AppText(
                         text = intro,
-                        style = LegadoTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.labelSmallEmphasized,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,

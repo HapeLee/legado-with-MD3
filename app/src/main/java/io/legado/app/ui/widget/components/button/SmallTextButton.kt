@@ -82,7 +82,7 @@ fun SmallTextButton(
 @Composable
 fun SmallTonalTextButton(
     text: String? = null,
-    imageVector: ImageVector,
+    imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -102,11 +102,13 @@ fun SmallTonalTextButton(
                 horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MiuixIcon(
-                    imageVector = imageVector,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
+                if (imageVector != null) {
+                    MiuixIcon(
+                        imageVector = imageVector,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 if (text != null) {
                     AppText(
                         text = text,
@@ -121,11 +123,13 @@ fun SmallTonalTextButton(
             modifier = modifier,
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Icon(
-                imageVector = imageVector,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
+            if (imageVector != null) {
+                Icon(
+                    imageVector = imageVector,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
             Spacer(Modifier.width(4.dp))
             if (text != null) {
                 AppText(

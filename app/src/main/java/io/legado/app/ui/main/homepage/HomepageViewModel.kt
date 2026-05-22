@@ -17,6 +17,7 @@ import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 class HomepageViewModel(
     application: Application,
@@ -79,7 +81,7 @@ class HomepageViewModel(
     private val _effects = MutableSharedFlow<HomepageEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
-    private val loadJobs = mutableMapOf<String, Job>()
+    private val loadJobs = ConcurrentHashMap<String, Job>()
     private val initModulesSyncFlow = bookSourceRepository.flowHomepageModules()
     private val exploreSourcesFlow = bookSourceRepository.flowExploreSources()
 
@@ -215,28 +217,10 @@ class HomepageViewModel(
             }
         }
 
-        // sync: 只处理有 homepageModules 的书源
-        viewModelScope.launch {
-            initModulesSyncFlow.collect { sources ->
-                sources.forEach { source -> syncModulesFromSource(source) }
-            }
-        }
-
-        // cache: 所有启用发现的书源（包括无 homepageModules 的）
+        // 清理 _pendingUserModules 中已入库的条目
         viewModelScope.launch {
             exploreSourcesFlow.collect { sources ->
                 _bookSourcesCache.value = sources.associateBy { it.bookSourceUrl }
-                val kindsCache = mutableMapOf<String, List<Pair<String, String>>>()
-                for (source in sources) {
-                    kindsCache[source.bookSourceUrl] = try {
-                        withContext(Dispatchers.IO) {
-                            source.exploreKinds().map { it.title to (it.url ?: "") }
-                        }
-                    } catch (_: Exception) {
-                        emptyList()
-                    }
-                }
-                _exploreKindsCache.value = kindsCache
             }
         }
 
@@ -367,7 +351,7 @@ class HomepageViewModel(
                 }.onFailure { e ->
                     _moduleContentStates.update {
                         it + (module.id to ModuleLoadState.Error(
-                            e.message ?: "Unknown error"
+                            e.stackTraceStr
                         ))
                     }
                 }
@@ -404,7 +388,7 @@ class HomepageViewModel(
             }.onFailure { e ->
                 _moduleContentStates.update {
                     it + (module.id to ModuleLoadState.Error(
-                        e.message ?: "Unknown error"
+                        e.stackTraceStr
                     ))
                 }
             }
@@ -454,7 +438,7 @@ class HomepageViewModel(
                     HomepageEffect.ShowSnackbar(
                         getApplication<Application>().getString(
                             R.string.homepage_load_more_failed,
-                            e.message ?: ""
+                            e.stackTraceStr
                         )
                     )
                 )
@@ -477,6 +461,13 @@ class HomepageViewModel(
             _isRefreshing.value = true
             loadJobs.values.forEach { it.cancel() }
             loadJobs.clear()
+
+            // 刷新时同步当前已启用模块所属书源的定义
+            val activeSourceUrls = uiState.value.modules.map { it.sourceUrl }.distinct()
+            activeSourceUrls.forEach { url ->
+                resolveBookSource(url)?.let { syncModulesFromSource(it) }
+            }
+
             _moduleContentStates.value = emptyMap()
             uiState.map { it.modules }.first { modules ->
                 modules.all { it.state !is ModuleLoadState.Loading }
@@ -698,12 +689,19 @@ class HomepageViewModel(
         }
     }
 
+    fun syncSourceModules(sourceUrl: String) {
+        viewModelScope.launch {
+            resolveBookSource(sourceUrl)?.let { syncModulesFromSource(it) }
+        }
+    }
+
     /** 「书源模块」tab：仅 JSON，纯参考 */
     fun getSourceModules(
         sourceUrl: String,
         targetSetId: String? = null
     ): List<HomepageModuleManageUi> {
         val source = resolveBookSource(sourceUrl) ?: return emptyList()
+
         val json = source.homepageModules ?: return emptyList()
         val jsonDefs = parseBookSourceModules(source, json)
 
@@ -850,10 +848,19 @@ class HomepageViewModel(
         }
     }
 
-    fun onBookClick(book: SearchBook) {
+    fun onBookClick(book: SearchBook, sharedCoverKey: String?) {
         viewModelScope.launch {
             saveSearchBooksUseCase.save(book)
-            _effects.emit(HomepageEffect.NavigateToBookInfo(book.name, book.author, book.bookUrl))
+            _effects.emit(
+                HomepageEffect.NavigateToBookInfo(
+                    name = book.name,
+                    author = book.author,
+                    bookUrl = book.bookUrl,
+                    origin = book.origin,
+                    coverPath = book.coverUrl,
+                    sharedCoverKey = sharedCoverKey
+                )
+            )
         }
     }
 
