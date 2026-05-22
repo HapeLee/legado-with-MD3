@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.AnimatedTextButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
@@ -157,7 +156,7 @@ fun LoadMoreFooter(
                         AppContainedLoadingIndicator()
 
                         AppText(
-                            text = "正在加载更多内容…",
+                            text = "正在加载…",
                             color = LegadoTheme.colorScheme.outline,
                             style = LegadoTheme.typography.bodySmall
                         )
@@ -239,11 +238,6 @@ fun LoadMoreFooter(
                             }
                         }
                     }
-                    AnimatedTextButton(
-                        isLoading = false,
-                        onClick = onRetry,
-                        text = "尝试加载更多"
-                    )
                 }
             }
         }

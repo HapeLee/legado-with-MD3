@@ -266,6 +266,7 @@ fun HomepageScreen(
             onToggleSet = { url, isEnabled -> viewModel.toggleSourceFilter(url, isEnabled) },
             onGetModulesInSet = { viewModel.getJoinedModules(it) },
             onGetSourceModules = { url, setId -> viewModel.getSourceModules(url, setId) },
+            onSyncSourceModules = { viewModel.syncSourceModules(it) },
             onToggleModule = { id, visible -> viewModel.setModuleVisible(id, visible) },
             onJoinModule = { sourceUrl, targetSetId, def ->
                 viewModel.joinModule(
