@@ -254,7 +254,9 @@ object MainNavigator {
                     MainRouteBookInfo(
                         name = intent.getStringExtra(MainIntent.EXTRA_BOOK_NAME),
                         author = intent.getStringExtra(MainIntent.EXTRA_BOOK_AUTHOR),
-                        bookUrl = bookUrl
+                        bookUrl = bookUrl,
+                        origin = intent.getStringExtra(MainIntent.EXTRA_BOOK_ORIGIN),
+                        coverPath = intent.getStringExtra(MainIntent.EXTRA_BOOK_COVER)
                     )
                 } ?: MainRouteHome
 

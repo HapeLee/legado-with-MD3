@@ -50,6 +50,7 @@ import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.main.MainIntent
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.GSON
@@ -113,12 +114,37 @@ class BookInfoViewModel(
     private var readRecordObserveJob: Job? = null
 
     fun initData(intent: Intent) {
-        initData(intent.getStringExtra("bookUrl") ?: "")
+        initData(
+            bookUrl = intent.getStringExtra(MainIntent.EXTRA_BOOK_URL) ?: "",
+            name = intent.getStringExtra(MainIntent.EXTRA_BOOK_NAME),
+            author = intent.getStringExtra(MainIntent.EXTRA_BOOK_AUTHOR),
+            origin = intent.getStringExtra(MainIntent.EXTRA_BOOK_ORIGIN),
+            coverPath = intent.getStringExtra(MainIntent.EXTRA_BOOK_COVER)
+        )
     }
 
-    fun initData(bookUrl: String) {
+    fun initData(
+        bookUrl: String,
+        name: String? = null,
+        author: String? = null,
+        origin: String? = null,
+        coverPath: String? = null
+    ) {
         if (currentBook?.bookUrl == bookUrl) return
-        currentBook = null
+        _uiState.value = BookInfoUiState() // 立即重置 UI 状态
+        currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
+            Book(
+                bookUrl = bookUrl,
+                name = name,
+                author = author,
+                origin = origin ?: BookType.localTag,
+                coverUrl = coverPath
+            ).apply {
+                addType(BookType.notShelf)
+            }
+        } else {
+            null
+        }
         currentChapterList = emptyList()
         currentWebFiles = emptyList()
         currentKindLabels = emptyList()
@@ -128,24 +154,32 @@ class BookInfoViewModel(
         bookSource = null
         chapterChanged = false
         clearReadRecordObserve()
-        _uiState.value = BookInfoUiState()
+        syncUiState()
         execute {
-            val book = appDb.bookDao.getBook(bookUrl)?.let {
-                inBookshelf = !it.isNotShelf
-                it
-            } ?: appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()?.let {
-                inBookshelf = false
-                it
-            } ?: throw NoStackTraceException("未找到书籍")
-
+            val dbBook = appDb.bookDao.getBook(bookUrl)
+            if (dbBook != null) {
+                inBookshelf = !dbBook.isNotShelf
+                dbBook
+            } else {
+                val searchBook = appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()
+                if (searchBook != null) {
+                    inBookshelf = false
+                    searchBook
+                } else {
+                    currentBook ?: throw NoStackTraceException("未找到书籍")
+                }
+            }
+        }.onSuccess { book ->
+            // 如果从数据库/搜索中拿到的书没有封面，但我们有传入的封面，则保留传入的封面
+            if (book.coverUrl.isNullOrBlank() && !coverPath.isNullOrBlank()) {
+                book.coverUrl = coverPath
+            }
             val source = if (book.isLocal) {
                 null
             } else {
                 appDb.bookSourceDao.getBookSource(book.origin)
             }
-            book to source
-        }.onSuccess {
-            upBook(it.first, it.second)
+            upBook(book, source)
         }.onError {
             context.toastOnUi(it.localizedMessage ?: "未找到书籍")
             emitEffect(BookInfoEffect.Finish(afterTransition = true))

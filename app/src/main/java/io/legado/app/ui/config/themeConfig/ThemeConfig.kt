@@ -141,6 +141,8 @@ object ThemeConfig {
 
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
 
+    var showHome by prefDelegate(PreferKey.showHome, true)
+
     var showRss by prefDelegate(PreferKey.showRss, true)
 
     var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)

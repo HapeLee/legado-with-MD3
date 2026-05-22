@@ -12,6 +12,8 @@ object MainIntent {
     const val EXTRA_BOOK_NAME = "name"
     const val EXTRA_BOOK_AUTHOR = "author"
     const val EXTRA_BOOK_URL = "bookUrl"
+    const val EXTRA_BOOK_ORIGIN = "origin"
+    const val EXTRA_BOOK_COVER = "coverPath"
     const val EXTRA_EXPLORE_NAME = "exploreName"
     const val EXTRA_SOURCE_URL = "sourceUrl"
     const val EXTRA_EXPLORE_URL = "exploreUrl"
@@ -114,13 +116,17 @@ object MainIntent {
         context: Context,
         name: String? = null,
         author: String? = null,
-        bookUrl: String
+        bookUrl: String,
+        origin: String? = null,
+        coverPath: String? = null
     ): Intent {
         return createLauncherIntent(context).apply {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_BOOK_INFO)
             putExtra(EXTRA_BOOK_NAME, name)
             putExtra(EXTRA_BOOK_AUTHOR, author)
             putExtra(EXTRA_BOOK_URL, bookUrl)
+            putExtra(EXTRA_BOOK_ORIGIN, origin)
+            putExtra(EXTRA_BOOK_COVER, coverPath)
         }
     }
 

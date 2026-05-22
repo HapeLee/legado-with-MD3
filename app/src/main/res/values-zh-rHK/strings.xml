@@ -890,6 +890,7 @@
     <string name="diy_edit_source_group">輸入自訂源分組名稱</string>
     <string name="reverse_toc">反轉目錄</string>
     <string name="show_discovery">顯示發現</string>
+    <string name="show_home">顯示首頁</string>
     <string name="style">樣式</string>
     <string name="group_style">分組樣式</string>
     <string name="export_file_name">導出文件名</string>

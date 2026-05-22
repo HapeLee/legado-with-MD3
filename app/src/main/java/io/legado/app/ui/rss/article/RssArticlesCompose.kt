@@ -1,7 +1,6 @@
 package io.legado.app.ui.rss.article
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,7 +58,7 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppPullToRefresh
-import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.toastOnUi
@@ -163,7 +162,9 @@ fun RssArticlesPage(
                     }
                     item {
                         LoadMoreFooter(
-                            state = loadState,
+                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
+                            errorMsg = loadState.errorMessage,
+                            isEnd = !loadState.hasMore,
                             onRetry = { rssSource?.let(viewModel::loadMore) }
                         )
                     }
@@ -198,7 +199,9 @@ fun RssArticlesPage(
                     }
                     item(span = { GridItemSpan(maxLineSpan) }) {
                         LoadMoreFooter(
-                            state = loadState,
+                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
+                            errorMsg = loadState.errorMessage,
+                            isEnd = !loadState.hasMore,
                             onRetry = { rssSource?.let(viewModel::loadMore) }
                         )
                     }
@@ -233,7 +236,9 @@ fun RssArticlesPage(
                     }
                     item(span = StaggeredGridItemSpan.FullLine) {
                         LoadMoreFooter(
-                            state = loadState,
+                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
+                            errorMsg = loadState.errorMessage,
+                            isEnd = !loadState.hasMore,
                             onRetry = { rssSource?.let(viewModel::loadMore) }
                         )
                     }
@@ -297,35 +302,6 @@ private fun StaggeredLoadMoreDetector(
     }
 }
 
-@Composable
-private fun LoadMoreFooter(
-    state: RssArticlesLoadState,
-    onRetry: () -> Unit
-) {
-    val text = when {
-        state.isRefreshing || state.isLoadingMore -> "加载中..."
-        !state.hasMore -> "没有更多了"
-        state.errorMessage != null -> "加载失败，点击重试"
-        else -> "上拉加载更多"
-    }
-    val contentModifier = if (state.errorMessage != null) {
-        Modifier.clickable(onClick = onRetry)
-    } else {
-        Modifier
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        EmptyMessage(
-            message = text,
-            isLoading = state.isRefreshing || state.isLoadingMore,
-            modifier = contentModifier
-        )
-    }
-}
 
 @Composable
 private fun RssArticleItem(
