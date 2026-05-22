@@ -7,8 +7,10 @@ import android.text.StaticLayout
 import android.text.TextPaint
 import android.text.TextUtils
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -25,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +49,9 @@ import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
 import org.koin.compose.koinInject
 import io.legado.app.model.BookCover as BookCoverModel
+
+private const val SharedCoverRadiusCacheMaxSize = 256
+private val sharedCoverRadiusCache = mutableStateMapOf<String, Dp>()
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -81,105 +87,150 @@ fun CoilBookCover(
         mutableStateOf(sharedCoverKey != null && finalPath != null)
     }
 
-    Box(
-        modifier = modifier
-            .aspectRatio(5f / 7f)
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState(sharedCoverKey),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            renderInOverlayDuringTransition = true
-                        )
-                    } else Modifier
-                }
-            )
-            .then(
-                if (CoverConfig.coverShowShadow) {
-                    Modifier.shadow(4.dp, RoundedCornerShape(radius))
-                } else Modifier
-            )
-            .background(
-                if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                    LegadoTheme.colorScheme.surfaceContainerLow
-                } else Color.Transparent,
-                RoundedCornerShape(radius)
-            )
-            .clip(RoundedCornerShape(radius))
-    ) {
-        if (hasCustomDefault && !isOnlineCoverLoaded) {
-            key(randomPath) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = randomPath,
-                        sourceOrigin = null,
-                        loadOnlyWifi = false,
-                        crossfade = showLoadingPlaceholder,
-                        memoryCacheKey = randomPath,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(radius))
-                )
-            }
-        }
+    val transitionRadius = rememberSharedCoverTransitionRadius(
+        sharedCoverKey = sharedCoverKey,
+        radius = radius,
+        animatedVisibilityScope = animatedVisibilityScope
+    )
+    val shape = remember(transitionRadius) { RoundedCornerShape(transitionRadius) }
 
-        if (finalPath != null) {
-            key(finalPath) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = finalPath,
-                        sourceOrigin = sourceOrigin,
-                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                        crossfade = showLoadingPlaceholder,
-                        memoryCacheKey = finalPath,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(4.dp)),
-                    onSuccess = {
-                        isOnlineCoverLoaded = true
-                        onLoadFinish?.invoke()
-                    },
-                    onError = {
-                        isOnlineCoverLoaded = false
-                        onLoadFinish?.invoke()
+    key(path, sharedCoverKey) {
+        Box(
+            modifier = modifier
+                .aspectRatio(5f / 7f)
+                .then(
+                    with(sharedTransitionScope) {
+                        if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState(sharedCoverKey),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                clipInOverlayDuringTransition = OverlayClip(shape)
+                            )
+                        } else Modifier
                     }
                 )
-            }
-        } else {
-            LaunchedEffect(Unit) {
-                onLoadFinish?.invoke()
-            }
-        }
+                .then(
+                    if (CoverConfig.coverShowShadow) {
+                        Modifier.shadow(4.dp, shape)
+                    } else Modifier
+                )
+                .background(
+                    if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                        LegadoTheme.colorScheme.surfaceContainerLow
+                    } else Color.Transparent,
+                    shape
+                )
+                .clip(shape)
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                if (hasCustomDefault && !isOnlineCoverLoaded) {
+                    AsyncImage(
+                        model = buildCoverImageRequest(
+                            context = context,
+                            data = randomPath,
+                            sourceOrigin = null,
+                            loadOnlyWifi = false,
+                            crossfade = showLoadingPlaceholder,
+                            memoryCacheKey = randomPath,
+                        ),
+                        contentDescription = null,
+                        imageLoader = koinInject(),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                    )
+                }
 
-        if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
-            if (!hasCustomDefault) {
-                Icon(
-                    Icons.Default.Book,
-                    contentDescription = null,
-                    tint = LegadoTheme.colorScheme.secondary,
-                    modifier = Modifier
-                        .fillMaxSize(0.35f)
-                        .align(Alignment.Center)
+                if (finalPath != null) {
+                    AsyncImage(
+                        model = buildCoverImageRequest(
+                            context = context,
+                            data = finalPath,
+                            sourceOrigin = sourceOrigin,
+                            loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                            crossfade = showLoadingPlaceholder,
+                            memoryCacheKey = finalPath,
+                        ),
+                        contentDescription = null,
+                        imageLoader = koinInject(),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        onSuccess = {
+                            isOnlineCoverLoaded = true
+                            onLoadFinish?.invoke()
+                        },
+                        onError = {
+                            isOnlineCoverLoaded = false
+                            onLoadFinish?.invoke()
+                        }
+                    )
+                } else {
+                    LaunchedEffect(Unit) {
+                        onLoadFinish?.invoke()
+                    }
+                }
+            }
+
+            if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
+                if (!hasCustomDefault) {
+                    Icon(
+                        Icons.Default.Book,
+                        contentDescription = null,
+                        tint = LegadoTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .fillMaxSize(0.35f)
+                            .align(Alignment.Center)
+                    )
+                }
+                CoverTextOverlay(
+                    name = name,
+                    author = author,
+                    isNight = isNight
                 )
             }
-            CoverTextOverlay(
-                name = name,
-                author = author,
-                isNight = isNight
-            )
         }
     }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun rememberSharedCoverTransitionRadius(
+    sharedCoverKey: String?,
+    radius: Dp,
+    animatedVisibilityScope: AnimatedVisibilityScope?
+): Dp {
+    if (sharedCoverKey == null || animatedVisibilityScope == null) {
+        return radius
+    }
+
+    val transition = animatedVisibilityScope.transition
+    val startRadius = sharedCoverRadiusCache[sharedCoverKey] ?: radius
+    val animatedRadiusValue by transition.animateFloat(
+        label = "book-cover-corner-radius"
+    ) { state ->
+        if (state == EnterExitState.Visible) radius.value else startRadius.value
+    }
+
+    LaunchedEffect(
+        sharedCoverKey,
+        radius,
+        transition.currentState,
+        transition.targetState
+    ) {
+        if (
+            transition.currentState == EnterExitState.Visible &&
+            transition.targetState == EnterExitState.Visible
+        ) {
+            sharedCoverRadiusCache[sharedCoverKey] = radius
+            if (sharedCoverRadiusCache.size > SharedCoverRadiusCacheMaxSize) {
+                sharedCoverRadiusCache.keys
+                    .firstOrNull { it != sharedCoverKey }
+                    ?.let(sharedCoverRadiusCache::remove)
+            }
+        }
+    }
+
+    return animatedRadiusValue.dp
 }
 
 @Composable
