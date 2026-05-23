@@ -274,6 +274,7 @@ object PreferKey {
     const val bookshelfGroupListStyle = "bookshelfGroupListStyle"
     const val bookshelfGroupCoverCount = "bookshelfGroupCoverCount"
     const val bookshelfListCoverWidth = "bookshelfListCoverWidth"
+    const val bookshelfGridCoverWidth = "bookshelfGridCoverWidth"
 
     const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
 

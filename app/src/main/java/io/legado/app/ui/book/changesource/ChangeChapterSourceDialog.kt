@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.changesource
 
+//import io.legado.app.lib.theme.primaryColor
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -13,7 +14,6 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
@@ -29,8 +29,8 @@ import io.legado.app.databinding.DialogChapterChangeSourceBinding
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
-//import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.widget.recycler.VerticalDivider
@@ -88,14 +88,15 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
     private var searchBook: SearchBook? = null
     private val searchFinishCallback: (isEmpty: Boolean) -> Unit = {
         if (it) {
-            val searchGroup = AppConfig.searchGroup
-            if (searchGroup.isNotEmpty()) {
+            val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+            val group = searchScope.display
+            if (!searchScope.isAll()) {
                 lifecycleScope.launch {
                     context?.alert("搜索结果为空") {
-                        setMessage("${searchGroup}分组搜索结果为空,是否切换到全部分组")
+                        setMessage("${group}分组搜索结果为空,是否切换到全部分组")
                         noButton()
                         yesButton {
-                            AppConfig.searchGroup = ""
+                            ChangeSourceConfig.searchScope = ""
                             upGroupMenu()
                             viewModel.startSearch()
                         }
@@ -282,9 +283,9 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             else -> if (item?.groupId == R.id.source_group && !item.isChecked) {
                 item.isChecked = true
                 if (item.title.toString() == getString(R.string.all_source)) {
-                    AppConfig.searchGroup = ""
+                    ChangeSourceConfig.searchScope = ""
                 } else {
-                    AppConfig.searchGroup = item.title.toString()
+                    ChangeSourceConfig.searchScope = item.title.toString()
                 }
                 lifecycleScope.launch(IO) {
                     viewModel.stopSearch()
@@ -380,7 +381,8 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
      */
     private fun upGroupMenu() {
         binding.toolBar.menu.findItem(R.id.menu_group)?.subMenu?.transaction { menu ->
-            val selectedGroup = AppConfig.searchGroup
+            val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+            val selectedGroup = searchScope.displayNames.firstOrNull() ?: ""
             menu.removeGroup(R.id.source_group)
             val allItem = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, R.string.all_source)
             var hasSelectedGroup = false

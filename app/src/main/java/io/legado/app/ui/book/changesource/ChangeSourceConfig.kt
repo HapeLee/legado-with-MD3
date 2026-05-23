@@ -6,11 +6,6 @@ import io.legado.app.ui.config.prefDelegate
 
 object ChangeSourceConfig {
 
-    var searchGroup by prefDelegate(
-        key = "searchGroup",
-        defaultValue = ""
-    )
-
     var searchScope by prefDelegate(
         key = "changeSourceSearchScope",
         defaultValue = ""

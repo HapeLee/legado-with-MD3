@@ -760,7 +760,7 @@ fun ChapterItem(
                         text = item.title,
                         style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -779,7 +779,7 @@ fun ChapterItem(
             val showStatusIcon =
                 remember(item.isDur, item.downloadState, item.wordCount, showWordCount) {
                     if (item.downloadState == DownloadState.LOCAL) {
-                        showWordCount && !item.wordCount.isNullOrEmpty()
+                        item.isDur || (showWordCount && !item.wordCount.isNullOrEmpty())
                     } else {
                         true
                     }
@@ -888,15 +888,12 @@ private fun StatusIcon(
 ) {
 
     val targetState = when {
-        downloadState == DownloadState.LOCAL -> {
-            if (showWordCount && !wordCount.isNullOrEmpty()) "SUCCESS_WORD_COUNT" else "EMPTY"
-        }
-
+        showWordCount && !wordCount.isNullOrEmpty() && (downloadState == DownloadState.LOCAL || downloadState == DownloadState.SUCCESS) -> "SUCCESS_WORD_COUNT"
         isDur -> "DUR"
         downloadState == DownloadState.DOWNLOADING -> "LOADING"
-        downloadState == DownloadState.SUCCESS && showWordCount && !wordCount.isNullOrEmpty() -> "SUCCESS_WORD_COUNT"
         downloadState == DownloadState.SUCCESS -> "SUCCESS_ICON"
         downloadState == DownloadState.ERROR -> "ERROR"
+        downloadState == DownloadState.LOCAL -> "EMPTY"
         else -> "NONE"
     }
 
@@ -933,7 +930,7 @@ private fun StatusIcon(
             "SUCCESS_WORD_COUNT" -> {
                 NormalCard(
                     cornerRadius = 12.dp,
-                    containerColor = LegadoTheme.colorScheme.surfaceContainer
+                    containerColor = if (isDur) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer
                 ) {
                     if (wordCount != null) {
                         AppText(
@@ -941,7 +938,7 @@ private fun StatusIcon(
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             text = wordCount,
                             style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            color = LegadoTheme.colorScheme.onSurfaceVariant
+                            color = if (isDur) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

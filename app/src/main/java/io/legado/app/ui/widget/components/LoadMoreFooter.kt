@@ -7,11 +7,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,14 +57,24 @@ fun LoadMoreFooter(
         data = showFullError,
         onDismissRequest = { showFullError = null },
         title = "错误详情",
-        textProvider = { this },
         confirmText = "复制",
         onConfirm = { error ->
             context.sendToClip(error)
             showFullError = null
         },
         dismissText = "关闭",
-        onDismiss = { showFullError = null }
+        onDismiss = { showFullError = null },
+        content = { error ->
+            SelectionContainer {
+                Text(
+                    text = error,
+                    style = LegadoTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+            }
+        }
     )
 
     Box(

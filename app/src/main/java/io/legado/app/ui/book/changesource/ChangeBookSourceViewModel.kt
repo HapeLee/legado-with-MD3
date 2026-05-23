@@ -38,7 +38,6 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -411,25 +410,24 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     private fun getDbSearchBooks(): List<SearchBook> {
+        val searchScope = io.legado.app.ui.book.search.SearchScope(
+            ChangeSourceConfig.searchScope
+        )
+        val group = when {
+            searchScope.isAll() || searchScope.isSource() -> ""
+            else -> searchScope.displayNames.firstOrNull() ?: ""
+        }
         return if (screenKey.isEmpty()) {
             if (AppConfig.changeSourceCheckAuthor) {
-                appDb.searchBookDao.changeSourceByGroup(
-                    name, author, AppConfig.searchGroup
-                )
+                appDb.searchBookDao.changeSourceByGroup(name, author, group)
             } else {
-                appDb.searchBookDao.changeSourceByGroup(
-                    name, "", AppConfig.searchGroup
-                )
+                appDb.searchBookDao.changeSourceByGroup(name, "", group)
             }
         } else {
             if (AppConfig.changeSourceCheckAuthor) {
-                appDb.searchBookDao.changeSourceSearch(
-                    name, author, screenKey, AppConfig.searchGroup
-                )
+                appDb.searchBookDao.changeSourceSearch(name, author, screenKey, group)
             } else {
-                appDb.searchBookDao.changeSourceSearch(
-                    name, "", screenKey, AppConfig.searchGroup
-                )
+                appDb.searchBookDao.changeSourceSearch(name, "", screenKey, group)
             }
         }
     }

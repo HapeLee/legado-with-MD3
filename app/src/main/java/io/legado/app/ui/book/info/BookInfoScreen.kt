@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.outlined.Book
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -938,16 +936,12 @@ private fun BookInfoSummary(
         }
         Spacer(modifier = Modifier.height(4.dp))
         book.remark?.takeIf { it.isNotBlank() }?.let { remark ->
-            ElevatedCard(
+            GlassCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onRemarkClick,
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
-                    contentColor = LegadoTheme.colorScheme.onSurface,
-                )
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    AppText(text = stringResource(R.string.book_remark), style = LegadoTheme.typography.titleSmall)
                     AppText(text = remark, style = LegadoTheme.typography.labelMediumEmphasized)
                 }
             }

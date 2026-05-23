@@ -1,9 +1,14 @@
 package io.legado.app.ui.widget.components.explore
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Refresh
@@ -18,17 +23,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
-import io.legado.app.ui.widget.dialog.TextDialog
-import io.legado.app.utils.showDialogFragment
+import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.sendToClip
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,84 +59,55 @@ fun ExploreKindMultiTypeItem(
     onClick: (() -> Unit)? = null,
     content: (@Composable (displayName: String, isSelected: Boolean, onClick: () -> Unit, trailingIcon: @Composable (() -> Unit)?) -> Unit)? = null
 ) {
-    val state = rememberExploreKindItemState(kind, sourceUrl, useCase, activity, onRefreshKinds)
+    val context = LocalContext.current
+    val currentActivity = remember(context, activity) { activity ?: context.findActivity() }
+    val state =
+        rememberExploreKindItemState(kind, sourceUrl, useCase, currentActivity, onRefreshKinds)
     state.ResolveDisplayName(displayNameOverride)
 
+    var showFullError by remember { mutableStateOf<String?>(null) }
+    val errorMsg = remember(kind) { kind.errorMsg }
     val trailingIcon = rememberTrailingIcon(kind.type, isSelected)
 
-    if (onClick != null) {
+    val BaseItem = @Composable { text: String, click: () -> Unit ->
         if (content != null) {
-            content(state.displayName, isSelected, onClick, trailingIcon)
+            content(text, isSelected, click, trailingIcon)
         } else {
             ExploreKindItem(
                 kind = kind,
                 isClickable = true,
-                onClick = onClick,
+                onClick = click,
                 modifier = modifier,
                 backgroundColor = backgroundColor,
                 isMiuix = isMiuix,
-                displayText = state.displayName,
+                displayText = text,
                 isSelected = isSelected,
                 trailingIcon = trailingIcon
             )
         }
-        return
     }
 
-    when (kind.type) {
-        ExploreKind.Type.url -> {
-            val url = kind.url?.takeIf { it.isNotBlank() }
-            val internalOnClick = {
-                if (!url.isNullOrBlank()) {
-                    if (kind.title.startsWith("ERROR:")) {
-                        activity?.showDialogFragment(TextDialog("ERROR", url))
-                    } else {
-                        onOpenUrl(url)
-                    }
+    when {
+        errorMsg != null -> BaseItem(state.displayName) { showFullError = errorMsg }
+
+        onClick != null -> BaseItem(state.displayName, onClick)
+
+        else -> when (kind.type) {
+            ExploreKind.Type.url -> {
+                val url = kind.url?.takeIf { it.isNotBlank() }
+                BaseItem(state.displayName) {
+                    if (!url.isNullOrBlank()) onOpenUrl(url)
                 }
             }
-            if (content != null) {
-                content(state.displayName, isSelected, internalOnClick, trailingIcon)
-            } else {
-                ExploreKindItem(
-                    kind = kind,
-                    isClickable = !url.isNullOrBlank(),
-                    onClick = internalOnClick,
-                    modifier = modifier,
-                    backgroundColor = backgroundColor,
-                    isMiuix = isMiuix,
-                    displayText = state.displayName,
-                    isSelected = isSelected
-                )
-            }
-        }
 
-        ExploreKind.Type.button -> {
-            val internalOnClick = {
-                if (onRunAction != null) onRunAction()
-                else state.executeAction(kind.action)
+            ExploreKind.Type.button -> {
+                BaseItem(state.displayName) {
+                    if (onRunAction != null) onRunAction()
+                    else state.executeAction(kind.action)
+                }
             }
-            if (content != null) {
-                content(state.displayName, isSelected, internalOnClick, trailingIcon)
-            } else {
-                ExploreKindItem(
-                    kind = kind,
-                    isClickable = !kind.action.isNullOrBlank(),
-                    onClick = internalOnClick,
-                    modifier = modifier,
-                    backgroundColor = backgroundColor,
-                    isMiuix = isMiuix,
-                    displayText = state.displayName,
-                    isSelected = isSelected,
-                    trailingIcon = trailingIcon
-                )
-            }
-        }
 
-        ExploreKind.Type.text -> {
-            if (content != null) {
-                content(state.displayName, isSelected, {}, null)
-            } else {
+            ExploreKind.Type.text -> {
                 TextTypeItem(
                     kind,
                     sourceUrl,
@@ -140,56 +118,73 @@ fun ExploreKindMultiTypeItem(
                     backgroundColor
                 )
             }
-        }
 
-        ExploreKind.Type.toggle -> {
-            ToggleTypeItem(
-                kind,
-                sourceUrl,
-                state,
-                valueOverride,
-                onValueChange,
-                isSelected,
-                modifier,
-                backgroundColor,
-                isMiuix,
-                trailingIcon,
-                content
-            )
-        }
+            ExploreKind.Type.toggle -> {
+                ToggleTypeItem(kind, sourceUrl, state, valueOverride, onValueChange, BaseItem)
+            }
 
-        ExploreKind.Type.select -> {
-            SelectTypeItem(
-                kind,
-                sourceUrl,
-                state,
-                valueOverride,
-                onValueChange,
-                isSelected,
-                modifier,
-                backgroundColor,
-                isMiuix,
-                trailingIcon,
-                content
-            )
-        }
+            ExploreKind.Type.select -> {
+                SelectTypeItem(kind, sourceUrl, state, valueOverride, onValueChange, BaseItem)
+            }
 
-        else -> {
-            if (content != null) {
-                content(state.displayName, isSelected, {}, null)
-            } else {
-                ExploreKindItem(
-                    kind = kind,
-                    isClickable = false,
-                    onClick = {},
-                    modifier = modifier,
-                    backgroundColor = backgroundColor,
-                    isMiuix = isMiuix,
-                    displayText = state.displayName
-                )
+            else -> {
+                if (content != null) {
+                    content(state.displayName, isSelected, {}, null)
+                } else {
+                    ExploreKindItem(
+                        kind = kind,
+                        isClickable = false,
+                        onClick = {},
+                        modifier = modifier,
+                        backgroundColor = backgroundColor,
+                        isMiuix = isMiuix,
+                        displayText = state.displayName
+                    )
+                }
             }
         }
     }
+
+    AppAlertDialog(
+        data = showFullError,
+        onDismissRequest = { showFullError = null },
+        title = "错误详情",
+        confirmText = "复制",
+        onConfirm = { error ->
+            context.sendToClip(error)
+            showFullError = null
+        },
+        dismissText = "关闭",
+        onDismiss = { showFullError = null },
+        content = { error ->
+            SelectionContainer {
+                AppText(
+                    text = error,
+                    style = LegadoTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+            }
+        }
+    )
+}
+
+private val ExploreKind.errorMsg: String?
+    get() = when {
+        title.startsWith("ERROR:", ignoreCase = true) -> url ?: title
+        url?.contains("Exception") == true -> url
+        title.contains("Exception") -> title
+        else -> null
+    }
+
+private fun Context.findActivity(): AppCompatActivity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is AppCompatActivity) return context
+        context = context.baseContext
+    }
+    return null
 }
 
 @Composable
@@ -236,12 +231,7 @@ private fun ToggleTypeItem(
     state: ExploreKindItemState,
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
-    isSelected: Boolean,
-    modifier: Modifier,
-    backgroundColor: Color,
-    isMiuix: Boolean,
-    trailingIcon: @Composable (() -> Unit)?,
-    content: (@Composable (displayName: String, isSelected: Boolean, onClick: () -> Unit, trailingIcon: @Composable (() -> Unit)?) -> Unit)?
+    BaseItem: @Composable (String, () -> Unit) -> Unit
 ) {
     val chars = remember(kind.chars) {
         kind.chars?.filterNotNull().takeUnless { it.isNullOrEmpty() } ?: listOf("chars", "is null")
@@ -269,21 +259,7 @@ private fun ToggleTypeItem(
         state.executeAction(kind.action)
     }
 
-    if (content != null) {
-        content(text, isSelected, internalOnClick, trailingIcon)
-    } else {
-        ExploreKindItem(
-            kind = kind,
-            isClickable = true,
-            onClick = internalOnClick,
-            modifier = modifier,
-            backgroundColor = backgroundColor,
-            isMiuix = isMiuix,
-            displayText = text,
-            isSelected = isSelected,
-            trailingIcon = trailingIcon
-        )
-    }
+    BaseItem(text, internalOnClick)
 }
 
 @Composable
@@ -293,12 +269,7 @@ private fun SelectTypeItem(
     state: ExploreKindItemState,
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
-    isSelected: Boolean,
-    modifier: Modifier,
-    backgroundColor: Color,
-    isMiuix: Boolean,
-    trailingIcon: @Composable (() -> Unit)?,
-    content: (@Composable (displayName: String, isSelected: Boolean, onClick: () -> Unit, trailingIcon: @Composable (() -> Unit)?) -> Unit)?
+    BaseItem: @Composable (String, () -> Unit) -> Unit
 ) {
     val chars = remember(kind.chars) {
         kind.chars?.filterNotNull().takeUnless { it.isNullOrEmpty() } ?: listOf("chars", "is null")
@@ -318,25 +289,11 @@ private fun SelectTypeItem(
     }
     var showSelector by remember(sourceUrl, kind.title) { mutableStateOf(false) }
 
-    Box(modifier = modifier) {
+    Box {
         val internalOnClick = { showSelector = true }
         val displayText = "${state.displayName} $selected"
 
-        if (content != null) {
-            content(displayText, isSelected, internalOnClick, trailingIcon)
-        } else {
-            ExploreKindItem(
-                kind = kind,
-                isClickable = chars.isNotEmpty(),
-                onClick = internalOnClick,
-                modifier = Modifier.fillMaxWidth(),
-                backgroundColor = backgroundColor,
-                isMiuix = isMiuix,
-                displayText = displayText,
-                isSelected = isSelected,
-                trailingIcon = trailingIcon
-            )
-        }
+        BaseItem(displayText, internalOnClick)
 
         RoundDropdownMenu(
             expanded = showSelector,

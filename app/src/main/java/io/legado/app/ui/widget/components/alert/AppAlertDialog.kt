@@ -54,6 +54,7 @@ fun AppAlertDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp)
+                            .verticalScroll(rememberScrollState())
                     ) {
                         content()
                     }
