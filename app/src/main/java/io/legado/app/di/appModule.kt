@@ -39,6 +39,7 @@ import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
+import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomepageModulesGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
@@ -173,7 +174,9 @@ val appModule = module {
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
-    single<ExploreRepository> { ExploreRepositoryImpl(get()) }
+    single { ExploreRepositoryImpl(get()) }
+    single<ExploreRepository> { get<ExploreRepositoryImpl>() }
+    single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
     single {
         SearchRepositoryImpl(get())

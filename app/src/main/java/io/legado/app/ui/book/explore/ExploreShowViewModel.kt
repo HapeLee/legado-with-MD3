@@ -136,6 +136,7 @@ class ExploreShowViewModel(
         sourceUrl = incomingSourceUrl
         exploreUrl = incomingExploreUrl
         page = 1
+        bookSource = null
         _rawBooks.value = emptyList()
         _isEndStateFlow.value = false
         _errorMsg.value = null
