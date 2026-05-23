@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.util.concurrent.ConcurrentHashMap
 
 object TranslationManager : KoinComponent {
 
@@ -21,7 +22,8 @@ object TranslationManager : KoinComponent {
     private val translateChapterUseCase: TranslateChapterUseCase by inject()
 
     /** Per-chapter task state flows: bookUrl+chapterIndex -> StateFlow (only for in-progress tasks) */
-    private val _taskStateFlows = mutableMapOf<TranslationChapterKey, MutableStateFlow<TranslationChapterState>>()
+    private val _taskStateFlows =
+        ConcurrentHashMap<TranslationChapterKey, MutableStateFlow<TranslationChapterState>>()
 
     private fun getChapterKey(book: Book, chapter: BookChapter): TranslationChapterKey {
         return TranslationChapterKey(book.bookUrl, chapter.index)
@@ -59,6 +61,7 @@ object TranslationManager : KoinComponent {
      * - If original content doesn't exist, return null.
      * The returned flow updates with mixedContent during translation.
      */
+    @Synchronized
     fun startTranslation(
         book: Book,
         chapter: BookChapter,

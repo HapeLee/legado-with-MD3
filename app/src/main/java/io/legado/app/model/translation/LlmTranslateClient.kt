@@ -10,7 +10,6 @@ import io.legado.app.ui.config.translation.TranslationConfig.OUTPUT_FORMAT
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.concurrent.TimeUnit
 
 class LlmTranslateClient : LlmGateway {
 
@@ -123,9 +122,6 @@ class LlmTranslateClient : LlmGateway {
             return Result.failure(IllegalArgumentException("OpenAI configuration incomplete: baseUrl, apiKey, and model are required"))
         }
 
-        // Apply retry reason specific handling
-//        applyRetryStrategy(retryReason)
-
         // Build dictionary instruction for consistent terminology
         val dictionaryInstruction = buildDictionaryInstruction(dictionaries)
 
@@ -176,7 +172,6 @@ class LlmTranslateClient : LlmGateway {
                 Result.failure(e)
             }
         } else {
-            val parsedRetryReason = parseErrorForRetry(response.code())
             val errorMsg = "HTTP ${response.code()}: ${response.message()}"
             Result.failure(Exception(errorMsg))
         }
@@ -289,30 +284,6 @@ class LlmTranslateClient : LlmGateway {
     }
 
     /**
-     * Apply specific handling based on retry reason.
-     * For example, add delay for rate limiting, use longer timeout for server errors, etc.
-     */
-    private suspend fun applyRetryStrategy(retryReason: RetryReason?) {
-        when (retryReason) {
-            RetryReason.RATE_LIMIT -> {
-                // Add delay for rate limiting
-                kotlinx.coroutines.delay(TimeUnit.SECONDS.toMillis(5))
-            }
-            RetryReason.SERVER_ERROR -> {
-                // Add delay for server errors
-                kotlinx.coroutines.delay(TimeUnit.SECONDS.toMillis(2))
-            }
-            RetryReason.TIMEOUT -> {
-                // Could increase timeout here if we had access to the OkHttpClient config
-                kotlinx.coroutines.delay(TimeUnit.SECONDS.toMillis(1))
-            }
-            else -> {
-                // No special handling needed
-            }
-        }
-    }
-
-    /**
      * Build a dictionary instruction string for consistent terminology.
      */
     private fun buildDictionaryInstruction(dictionaries: List<DictPair>): String {
@@ -342,18 +313,6 @@ $terms
                 append(dictionaryInstruction)
             }
             append("\n ").append(outputFormat)
-        }
-    }
-
-    /**
-     * Parse HTTP error code to determine retry reason.
-     */
-    private fun parseErrorForRetry(code: Int): RetryReason {
-        return when (code) {
-            429 -> RetryReason.RATE_LIMIT
-            500, 502, 503, 504 -> RetryReason.SERVER_ERROR
-            401, 403 -> RetryReason.AUTH_ERROR
-            else -> RetryReason.UNKNOWN
         }
     }
 }

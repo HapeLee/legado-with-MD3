@@ -35,6 +35,8 @@ class TranslateChapterUseCase(
         private const val MAX_DICTIONARY_PAIRS = 50
     }
 
+    private val dictionaryLock = Any()
+
     suspend fun execute(
         book: Book,
         bookChapter: BookChapter,
@@ -59,8 +61,13 @@ class TranslateChapterUseCase(
 
         // Callback to update dictionary pairs immediately (persist as soon as discovered)
         val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
-            if (mergeDictionaryPairs(dictionaries, newPairs)) {
-                Translation.updateBookDic(book, dictionaries)
+            val merged = synchronized(dictionaryLock) {
+                mergeDictionaryPairs(dictionaries, newPairs)
+            }
+            if (merged) {
+                synchronized(dictionaryLock) {
+                    Translation.updateBookDic(book, dictionaries.toList())
+                }
             }
         }
 
@@ -172,11 +179,9 @@ class TranslateChapterUseCase(
 
         // Keep only the most recent MAX_DICTIONARY_PAIRS
         if (existing.size > MAX_DICTIONARY_PAIRS) {
-            val sortedByOlder = existing.take(MAX_DICTIONARY_PAIRS / 2)
-            val sortedByRecency = existing.takeLast(MAX_DICTIONARY_PAIRS / 2)
+            val trimmed = existing.takeLast(MAX_DICTIONARY_PAIRS)
             existing.clear()
-            existing.addAll(sortedByOlder)
-            existing.addAll(sortedByRecency)
+            existing.addAll(trimmed)
             changed = true
         }
         return changed
@@ -225,6 +230,7 @@ class TranslateChapterUseCase(
         var lastError: Exception? = null
         var lastRetryReason: RetryReason? = null
         for (attempt in 0..TranslationConfig.llmRetryCount) {
+            val dictSnapshot = synchronized(dictionaryLock) { dictionaries.toList() }
             val result = llmGateway.translate(
                 text = chunk.content,
                 targetLanguage = targetLanguage,
@@ -233,7 +239,7 @@ class TranslateChapterUseCase(
                 apiKey = TranslationConfig.llmApiKey,
                 model = TranslationConfig.llmModel,
                 prompt = TranslationConfig.llmPrompt,
-                dictionaries = dictionaries.toList(),
+                dictionaries = dictSnapshot,
                 onUpdate = onDictionaryUpdate,
                 retryReason = lastRetryReason
             )

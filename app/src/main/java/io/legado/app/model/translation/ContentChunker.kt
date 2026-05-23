@@ -73,11 +73,7 @@ object ContentChunker {
                 result.addAll(splitOversizedParagraph(paragraph, chunk.paragraphIndices.getOrElse(idx) { idx }, subChunkIndex, maxCharsPerChunk))
                 subChunkIndex += 100
             } else if (currentSubChunk.length + paragraph.length + 2 <= maxCharsPerChunk) {
-                if (currentSubChunk.isEmpty()) {
-                    currentParagraphIndices.add(chunk.paragraphIndices.getOrElse(idx) { idx })
-                } else {
-                    currentParagraphIndices.add(chunk.paragraphIndices.getOrElse(idx) { idx })
-                }
+                currentParagraphIndices.add(chunk.paragraphIndices.getOrElse(idx) { idx })
                 if (currentSubChunk.isNotEmpty()) {
                     currentSubChunk.append("\n\n")
                 }
