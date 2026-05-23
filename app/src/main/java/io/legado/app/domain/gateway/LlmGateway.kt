@@ -1,7 +1,7 @@
 package io.legado.app.domain.gateway
 
-import io.legado.app.model.translation.DictPair
-import io.legado.app.model.translation.RetryReason
+import io.legado.app.domain.model.DictPair
+import io.legado.app.domain.model.RetryReason
 
 interface LlmGateway {
     suspend fun translate(

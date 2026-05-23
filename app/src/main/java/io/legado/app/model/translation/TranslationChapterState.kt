@@ -25,10 +25,10 @@ enum class TranslationChapterStatus {
  */
 data class TranslationChapterState(
     val key: TranslationChapterKey,
-    var status: TranslationChapterStatus = TranslationChapterStatus.Idle,
-    var currentChunk: Int = 0,
-    var totalChunks: Int = 0,
-    var mixedContent: String? = null,
-    var translatedContent: String? = null,
-    var errorMessage: String? = null
+    val status: TranslationChapterStatus = TranslationChapterStatus.Idle,
+    val currentChunk: Int = 0,
+    val totalChunks: Int = 0,
+    val mixedContent: String? = null,
+    val translatedContent: String? = null,
+    val errorMessage: String? = null
 )

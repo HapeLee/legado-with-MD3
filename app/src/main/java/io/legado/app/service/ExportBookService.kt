@@ -16,7 +16,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.repository.TranslationCacheRepository
+import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
@@ -104,7 +104,7 @@ class ExportBookService : BaseService(), KoinComponent {
         Translation
     }
 
-    private val translationCacheRepository: TranslationCacheRepository by inject()
+    private val translationCacheRepository: TranslationCacheGateway by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()

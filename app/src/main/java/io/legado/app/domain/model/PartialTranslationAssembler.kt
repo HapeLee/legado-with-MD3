@@ -1,4 +1,4 @@
-package io.legado.app.model.translation
+package io.legado.app.domain.model
 
 /**
  * Assembles mixed original/translated content as translation progresses.

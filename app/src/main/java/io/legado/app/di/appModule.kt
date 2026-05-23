@@ -17,12 +17,13 @@ import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
 import io.legado.app.data.repository.DatabaseMaintenanceRepository
-import io.legado.app.data.repository.DirectLinkUploadRepository
-import io.legado.app.data.repository.UploadRepository
 import io.legado.app.data.repository.DictRuleRepository
+import io.legado.app.data.repository.DictionaryRepositoryImpl
+import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HomepageModulesRepository
+import io.legado.app.data.repository.LlmTranslateRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
@@ -31,8 +32,8 @@ import io.legado.app.data.repository.SearchContentRepository
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.data.repository.SearchRepositoryImpl
 import io.legado.app.data.repository.SettingsRepository
-import io.legado.app.data.repository.TranslationCacheRepository
 import io.legado.app.data.repository.TranslationCacheRepositoryImpl
+import io.legado.app.data.repository.UploadRepository
 import io.legado.app.data.repository.WebDavBackupRepository
 import io.legado.app.data.repository.WebDavReadingProgressRepository
 import io.legado.app.domain.gateway.AppStartupGateway
@@ -41,10 +42,13 @@ import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
+import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
+import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
@@ -64,13 +68,11 @@ import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
-import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
+import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
-import io.legado.app.domain.usecase.TranslateChapterUseCase
-import io.legado.app.model.translation.LlmTranslateClient
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
 import io.legado.app.help.coil.CoverFetcher
 import io.legado.app.help.coil.CoverInterceptor
@@ -169,7 +171,7 @@ val appModule = module {
     singleOf(::BookshelfManageScreenConfig)
 
     single<UploadRepository> { DirectLinkUploadRepository() }
-    single<TranslationCacheRepository> { TranslationCacheRepositoryImpl() }
+    single<TranslationCacheGateway> { TranslationCacheRepositoryImpl() }
     single<AppStartupGateway> { AppStartupRepository(get()) }
     single<BookCacheDownloadGateway> { CacheBookDownloadRepository(get()) }
     single<BookCacheCleanupGateway> { BookCacheCleanupRepository(get()) }
@@ -190,7 +192,8 @@ val appModule = module {
     single<SearchRepository> { get<SearchRepositoryImpl>() }
     single<BookSearchGateway> { get<SearchRepositoryImpl>() }
     singleOf(::SearchBooksUseCase)
-    single<LlmGateway> { LlmTranslateClient() }
+    single<LlmGateway> { LlmTranslateRepositoryImpl() }
+    single<DictionaryGateway> { DictionaryRepositoryImpl() }
     singleOf(::TranslateChapterUseCase)
 
     single<ImageLoader> {

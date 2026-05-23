@@ -1,45 +1,17 @@
 package io.legado.app.data.repository
 
+import com.google.gson.Gson
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
+import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.MD5Utils
-import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
-interface TranslationCacheRepository {
-    fun getCacheFile(book: Book, bookChapter: BookChapter, targetLanguage: String): File
-    suspend fun readTranslation(book: Book, bookChapter: BookChapter, targetLanguage: String): String?
-    suspend fun writeTranslation(book: Book, bookChapter: BookChapter, targetLanguage: String, content: String)
-    suspend fun deleteTranslation(book: Book, bookChapter: BookChapter, targetLanguage: String)
-    suspend fun deleteTranslationForBook(book: Book, targetLanguage: String)
-    suspend fun deleteAllTranslation()
-    fun getTranslationCacheSize(): Long
-    fun computeContentHash(content: String): String
-    fun computeCacheKey(bookUrl: String, chapterIndex: Int, chunkIndex: Int, targetLanguage: String): String
-    suspend fun getCachedChunks(book: Book, bookChapter: BookChapter, targetLanguage: String, contentHash: String): List<TranslationCache>
-    suspend fun getCachedChunk(book: Book, bookChapter: BookChapter, targetLanguage: String, chunkIndex: Int): TranslationCache?
-    suspend fun saveChunk(
-        book: Book,
-        bookChapter: BookChapter,
-        targetLanguage: String,
-        chunkIndex: Int,
-        originalChunkContent: String,
-        originalContentHash: String,
-        provider: String,
-        status: Int,
-        translatedContent: String?,
-        errorMessage: String?
-    )
-    suspend fun clearChunkCacheForChapter(book: Book, bookChapter: BookChapter, targetLanguage: String)
-    suspend fun clearChunkCacheForBook(book: Book, targetLanguage: String)
-    suspend fun clearAllChunkCache()
-}
-
-class TranslationCacheRepositoryImpl : TranslationCacheRepository {
+class TranslationCacheRepositoryImpl : TranslationCacheGateway {
 
     private val cacheDir: File = File(BookHelp.cachePath)
     private val gson = Gson()

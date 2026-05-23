@@ -2,7 +2,7 @@ package io.legado.app.model.translation
 
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.repository.TranslationCacheRepository
+import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.coroutine.Coroutine
@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object TranslationManager : KoinComponent {
 
-    private val translationCacheRepository: TranslationCacheRepository by inject()
+    private val translationCacheGateway: TranslationCacheGateway by inject()
     private val translateChapterUseCase: TranslateChapterUseCase by inject()
 
     /** Per-chapter task state flows: bookUrl+chapterIndex -> StateFlow (only for in-progress tasks) */
@@ -42,7 +42,8 @@ object TranslationManager : KoinComponent {
      * Check if translated cache file exists for a chapter.
      */
     fun hasTranslatedCache(book: Book, chapter: BookChapter): Boolean {
-        val cacheFile = translationCacheRepository.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
+        val cacheFile =
+            translationCacheGateway.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
         return cacheFile.exists()
     }
 
@@ -50,7 +51,8 @@ object TranslationManager : KoinComponent {
      * Get finished cached translation for a chapter.
      */
     fun getCachedTranslation(book: Book, chapter: BookChapter): String? {
-        val cacheFile = translationCacheRepository.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
+        val cacheFile =
+            translationCacheGateway.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage)
         return if (cacheFile.exists()) cacheFile.readText() else null
     }
 
@@ -161,8 +163,16 @@ object TranslationManager : KoinComponent {
      * Delete translation cache and state for a chapter.
      */
     suspend fun deleteTranslationCache(book: Book, bookChapter: BookChapter) {
-        translationCacheRepository.deleteTranslation(book, bookChapter, TranslationConfig.llmTargetLanguage)
-        translationCacheRepository.clearChunkCacheForChapter(book, bookChapter, TranslationConfig.llmTargetLanguage)
+        translationCacheGateway.deleteTranslation(
+            book,
+            bookChapter,
+            TranslationConfig.llmTargetLanguage
+        )
+        translationCacheGateway.clearChunkCacheForChapter(
+            book,
+            bookChapter,
+            TranslationConfig.llmTargetLanguage
+        )
         clearChapterState(book.bookUrl, bookChapter.index)
     }
 

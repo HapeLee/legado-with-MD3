@@ -1,4 +1,31 @@
-package io.legado.app.model.translation
+package io.legado.app.domain.model
+
+/**
+ * A pair of original text and its translation, used for maintaining
+ * consistent terminology across multiple translation chunks.
+ */
+data class DictPair(
+    val original: String,
+    val translation: String
+)
+
+/**
+ * Collection of dictionary pairs with metadata.
+ */
+data class BookDictionary(
+    val bookUrl: String,
+    val pairs: List<DictPair> = emptyList(),
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * A chunk of text for translation, with its index and paragraph mapping.
+ */
+data class TextChunk(
+    val index: Int,
+    val content: String,
+    val paragraphIndices: List<Int>
+)
 
 /**
  * Reasons for retrying a translation request.

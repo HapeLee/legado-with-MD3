@@ -3,15 +3,15 @@ package io.legado.app.domain.usecase
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TranslationCache
-import io.legado.app.data.repository.TranslationCacheRepository
+import io.legado.app.domain.gateway.DictionaryGateway
 import io.legado.app.domain.gateway.LlmGateway
+import io.legado.app.domain.gateway.TranslationCacheGateway
+import io.legado.app.domain.model.ContentChunker
+import io.legado.app.domain.model.DictPair
+import io.legado.app.domain.model.PartialTranslationAssembler
+import io.legado.app.domain.model.RetryReason
+import io.legado.app.domain.model.TextChunk
 import io.legado.app.help.book.BookHelp
-import io.legado.app.model.translation.ContentChunker
-import io.legado.app.model.translation.DictPair
-import io.legado.app.model.translation.PartialTranslationAssembler
-import io.legado.app.model.translation.RetryReason
-import io.legado.app.model.translation.TextChunk
-import io.legado.app.model.translation.Translation
 import io.legado.app.ui.config.translation.TranslationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -21,7 +21,8 @@ import kotlinx.coroutines.withContext
 
 class TranslateChapterUseCase(
     private val llmGateway: LlmGateway,
-    private val translationCacheRepository: TranslationCacheRepository
+    private val translationCacheGateway: TranslationCacheGateway,
+    private val dictionaryGateway: DictionaryGateway
 ) {
 
     data class TranslationProgress(
@@ -47,16 +48,17 @@ class TranslateChapterUseCase(
         val originalContent = BookHelp.getContent(book, bookChapter)
             ?: return@withContext Result.failure(Exception("Failed to read original content"))
 
-        val cachedTranslation = translationCacheRepository.readTranslation(book, bookChapter, targetLanguage)
+        val cachedTranslation =
+            translationCacheGateway.readTranslation(book, bookChapter, targetLanguage)
         if (cachedTranslation != null) {
             onProgress(TranslationProgress(1, 1, cachedTranslation, emptySet()))
             return@withContext Result.success(cachedTranslation)
         }
 
-        val contentHash = translationCacheRepository.computeContentHash(originalContent)
+        val contentHash = translationCacheGateway.computeContentHash(originalContent)
 
         // Load book dictionary for consistent terminology
-        val bookDictionary = Translation.getBookDictionaries(book)
+        val bookDictionary = dictionaryGateway.getBookDictionaries(book)
         val dictionaries = bookDictionary.pairs.toMutableList()
 
         // Callback to update dictionary pairs immediately (persist as soon as discovered)
@@ -66,7 +68,7 @@ class TranslateChapterUseCase(
             }
             if (merged) {
                 synchronized(dictionaryLock) {
-                    Translation.updateBookDic(book, dictionaries.toList())
+                    dictionaryGateway.updateBookDic(book, dictionaries.toList())
                 }
             }
         }
@@ -76,7 +78,8 @@ class TranslateChapterUseCase(
             return@withContext Result.failure(Exception("Failed to chunk content"))
         }
 
-        val cachedChunks = translationCacheRepository.getCachedChunks(book, bookChapter, targetLanguage, contentHash)
+        val cachedChunks =
+            translationCacheGateway.getCachedChunks(book, bookChapter, targetLanguage, contentHash)
         val cachedChunkMap = cachedChunks.filter { it.isSuccess }.associateBy { it.chunkIndex }
 
         val translatedChunks = mutableMapOf<Int, String>()
@@ -106,7 +109,12 @@ class TranslateChapterUseCase(
         if (pendingChunks.isEmpty()) {
             val sortedChunks = chunks.sortedBy { it.index }.mapNotNull { translatedChunks[it.index]?.let { content -> TextChunk(it.index, content, it.paragraphIndices) } }
             val mergedContent = ContentChunker.merge(sortedChunks)
-            translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
+            translationCacheGateway.writeTranslation(
+                book,
+                bookChapter,
+                targetLanguage,
+                mergedContent
+            )
             onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
             return@withContext Result.success(mergedContent)
         }
@@ -149,7 +157,7 @@ class TranslateChapterUseCase(
             translatedChunks[chunk.index]?.let { content -> TextChunk(chunk.index, content, chunk.paragraphIndices) }
         }
         val mergedContent = ContentChunker.merge(allTranslatedChunks)
-        translationCacheRepository.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
+        translationCacheGateway.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
 
         onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
         Result.success(mergedContent)
@@ -196,14 +204,15 @@ class TranslateChapterUseCase(
         dictionaries: MutableList<DictPair>,
         onDictionaryUpdate: (List<DictPair>) -> Unit
     ): Result<String> {
-        val existingCache = translationCacheRepository.getCachedChunk(book, bookChapter, targetLanguage, chunk.index)
+        val existingCache =
+            translationCacheGateway.getCachedChunk(book, bookChapter, targetLanguage, chunk.index)
         if (existingCache?.isSuccess == true && existingCache.translatedChunkContent != null) {
             return Result.success(existingCache.translatedChunkContent)
         }
 
         val result = translateChunkWithRetry(chunk, targetLanguage, dictionaries, onDictionaryUpdate)
         if (result.isSuccess) {
-            translationCacheRepository.saveChunk(
+            translationCacheGateway.saveChunk(
                 book, bookChapter, targetLanguage,
                 chunk.index, chunk.content, contentHash,
                 TranslationConfig.llmProvider,
@@ -211,7 +220,7 @@ class TranslateChapterUseCase(
             )
         } else {
             val errorMessage = result.exceptionOrNull()?.message ?: "Translation failed"
-            translationCacheRepository.saveChunk(
+            translationCacheGateway.saveChunk(
                 book, bookChapter, targetLanguage,
                 chunk.index, chunk.content, contentHash,
                 TranslationConfig.llmProvider,

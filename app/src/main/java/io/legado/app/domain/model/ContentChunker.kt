@@ -1,10 +1,4 @@
-package io.legado.app.model.translation
-
-data class TextChunk(
-    val index: Int,
-    val content: String,
-    val paragraphIndices: List<Int>
-)
+package io.legado.app.domain.model
 
 object ContentChunker {
 
@@ -32,7 +26,13 @@ object ContentChunker {
                 currentChunkParagraphCount++
             } else {
                 if (currentChunk.isNotEmpty()) {
-                    chunks.add(TextChunk(chunks.size, currentChunk.toString(), currentParagraphIndices.toList()))
+                    chunks.add(
+                        TextChunk(
+                            chunks.size,
+                            currentChunk.toString(),
+                            currentParagraphIndices.toList()
+                        )
+                    )
                 }
                 currentChunk = StringBuilder(paragraph)
                 currentParagraphIndices = mutableListOf(paragraphIndex)
@@ -41,7 +41,13 @@ object ContentChunker {
         }
 
         if (currentChunk.isNotEmpty()) {
-            chunks.add(TextChunk(chunks.size, currentChunk.toString(), currentParagraphIndices.toList()))
+            chunks.add(
+                TextChunk(
+                    chunks.size,
+                    currentChunk.toString(),
+                    currentParagraphIndices.toList()
+                )
+            )
         }
 
         val result = mutableListOf<TextChunk>()
@@ -66,11 +72,24 @@ object ContentChunker {
         for ((idx, paragraph) in paragraphs.withIndex()) {
             if (paragraph.length > maxCharsPerChunk) {
                 if (currentSubChunk.isNotEmpty()) {
-                    result.add(TextChunk(subChunkIndex++, currentSubChunk.toString(), currentParagraphIndices.toList()))
+                    result.add(
+                        TextChunk(
+                            subChunkIndex++,
+                            currentSubChunk.toString(),
+                            currentParagraphIndices.toList()
+                        )
+                    )
                     currentSubChunk = StringBuilder()
                     currentParagraphIndices = mutableListOf()
                 }
-                result.addAll(splitOversizedParagraph(paragraph, chunk.paragraphIndices.getOrElse(idx) { idx }, subChunkIndex, maxCharsPerChunk))
+                result.addAll(
+                    splitOversizedParagraph(
+                        paragraph,
+                        chunk.paragraphIndices.getOrElse(idx) { idx },
+                        subChunkIndex,
+                        maxCharsPerChunk
+                    )
+                )
                 subChunkIndex += 100
             } else if (currentSubChunk.length + paragraph.length + 2 <= maxCharsPerChunk) {
                 currentParagraphIndices.add(chunk.paragraphIndices.getOrElse(idx) { idx })
@@ -80,21 +99,39 @@ object ContentChunker {
                 currentSubChunk.append(paragraph)
             } else {
                 if (currentSubChunk.isNotEmpty()) {
-                    result.add(TextChunk(subChunkIndex++, currentSubChunk.toString(), currentParagraphIndices.toList()))
+                    result.add(
+                        TextChunk(
+                            subChunkIndex++,
+                            currentSubChunk.toString(),
+                            currentParagraphIndices.toList()
+                        )
+                    )
                 }
                 currentSubChunk = StringBuilder(paragraph)
-                currentParagraphIndices = mutableListOf(chunk.paragraphIndices.getOrElse(idx) { idx })
+                currentParagraphIndices =
+                    mutableListOf(chunk.paragraphIndices.getOrElse(idx) { idx })
             }
         }
 
         if (currentSubChunk.isNotEmpty()) {
-            result.add(TextChunk(subChunkIndex, currentSubChunk.toString(), currentParagraphIndices.toList()))
+            result.add(
+                TextChunk(
+                    subChunkIndex,
+                    currentSubChunk.toString(),
+                    currentParagraphIndices.toList()
+                )
+            )
         }
 
         return result
     }
 
-    private fun splitOversizedParagraph(paragraph: String, paragraphIndex: Int, startIndex: Int, maxCharsPerChunk: Int): List<TextChunk> {
+    private fun splitOversizedParagraph(
+        paragraph: String,
+        paragraphIndex: Int,
+        startIndex: Int,
+        maxCharsPerChunk: Int
+    ): List<TextChunk> {
         val result = mutableListOf<TextChunk>()
         val sentences = mutableListOf<String>()
         var currentSentence = StringBuilder()
@@ -120,13 +157,25 @@ object ContentChunker {
                 currentChunkSentences++
             } else {
                 if (currentChunk.isNotEmpty()) {
-                    result.add(TextChunk(subIndex++, currentChunk.toString(), listOf(paragraphIndex)))
+                    result.add(
+                        TextChunk(
+                            subIndex++,
+                            currentChunk.toString(),
+                            listOf(paragraphIndex)
+                        )
+                    )
                     currentChunkSentences = 0
                 }
                 if (sentence.length > maxCharsPerChunk) {
                     var remaining = sentence
                     while (remaining.length > maxCharsPerChunk) {
-                        result.add(TextChunk(subIndex++, remaining.substring(0, maxCharsPerChunk), listOf(paragraphIndex)))
+                        result.add(
+                            TextChunk(
+                                subIndex++,
+                                remaining.substring(0, maxCharsPerChunk),
+                                listOf(paragraphIndex)
+                            )
+                        )
                         remaining = remaining.substring(maxCharsPerChunk)
                     }
                     currentChunk = StringBuilder(remaining)

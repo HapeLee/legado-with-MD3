@@ -1,23 +1,25 @@
-package io.legado.app.model.translation
+package io.legado.app.data.repository
 
 import io.legado.app.domain.gateway.LlmGateway
+import io.legado.app.domain.model.DictPair
+import io.legado.app.domain.model.RetryReason
+import io.legado.app.domain.model.TranslationConstants
+import io.legado.app.domain.model.TranslationConstants.OUTPUT_FORMAT
 import io.legado.app.help.http.addHeaders
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.postJson
-import io.legado.app.ui.config.translation.TranslationConfig
-import io.legado.app.ui.config.translation.TranslationConfig.OUTPUT_FORMAT
 import io.legado.app.utils.GSON
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class LlmTranslateClient : LlmGateway {
+class LlmTranslateRepositoryImpl : LlmGateway {
 
     /**
      * Get display name for a language code, e.g., "zh" -> "简体中文"
      */
     private fun getLanguageDisplayName(code: String): String {
-        return TranslationConfig.targetLanguages.find { it.first == code }?.second ?: code
+        return TranslationConstants.targetLanguages.find { it.first == code }?.second ?: code
     }
 
     override suspend fun translate(
@@ -44,8 +46,19 @@ class LlmTranslateClient : LlmGateway {
 
         try {
             when (provider) {
-                TranslationConfig.PROVIDER_GOOGLE -> translateWithGoogle(text, targetLanguage)
-                TranslationConfig.PROVIDER_OPENAI -> translateWithOpenAI(text, targetLanguage, baseUrl, apiKey, model, prompt, dictionaries, onUpdate, retryReason)
+                TranslationConstants.PROVIDER_GOOGLE -> translateWithGoogle(text, targetLanguage)
+                TranslationConstants.PROVIDER_OPENAI -> translateWithOpenAI(
+                    text,
+                    targetLanguage,
+                    baseUrl,
+                    apiKey,
+                    model,
+                    prompt,
+                    dictionaries,
+                    onUpdate,
+                    retryReason
+                )
+
                 else -> Result.failure(IllegalArgumentException("Unknown provider: $provider"))
             }
         } catch (e: Exception) {
@@ -58,7 +71,8 @@ class LlmTranslateClient : LlmGateway {
      */
     private fun isMostlyEnglish(text: String): Boolean {
         if (text.isEmpty()) return false
-        val englishChars = text.count { it in 'A'..'Z' || it in 'a'..'z' || it in ".,!?;:'\"-()[]{}–—…" }
+        val englishChars =
+            text.count { it in 'A'..'Z' || it in 'a'..'z' || it in ".,!?;:'\"-()[]{}–—…" }
         return englishChars.toDouble() / text.length > 0.8
     }
 
@@ -67,8 +81,9 @@ class LlmTranslateClient : LlmGateway {
      */
     private fun isMostlyChinese(text: String): Boolean {
         if (text.isEmpty()) return false
+        val chinesePunctuation = "。，！？；：“”‘’（）【】《》——…"
         val chineseChars = text.count {
-            it in '\u4e00'..'\u9fff' || it in "。，！？；：“”‘’（）【】《》——…".toSet()
+            it in '一'..'鿿' || it in chinesePunctuation
         }
         return chineseChars.toDouble() / text.length > 0.8
     }
@@ -86,7 +101,8 @@ class LlmTranslateClient : LlmGateway {
 
     private suspend fun translateWithGoogle(text: String, targetLanguage: String): Result<String> {
         val encodedText = java.net.URLEncoder.encode(text, "UTF-8")
-        val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLanguage&dj=1&dt=t&ie=UTF-8&q=$encodedText"
+        val url =
+            "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLanguage&dj=1&dt=t&ie=UTF-8&q=$encodedText"
         val response = okHttpClient.newCallStrResponse {
             url(url)
         }
@@ -125,7 +141,8 @@ class LlmTranslateClient : LlmGateway {
         // Build dictionary instruction for consistent terminology
         val dictionaryInstruction = buildDictionaryInstruction(dictionaries)
 
-        val systemPrompt = buildSystemPrompt(prompt, targetLanguage, dictionaryInstruction, OUTPUT_FORMAT)
+        val systemPrompt =
+            buildSystemPrompt(prompt, targetLanguage, dictionaryInstruction, OUTPUT_FORMAT)
         val requestBody = mapOf(
             "model" to model,
             "messages" to listOf(
@@ -139,10 +156,12 @@ class LlmTranslateClient : LlmGateway {
         val response = okHttpClient.newCallStrResponse {
             url(fullUrl)
             postJson(jsonBody)
-            addHeaders(mapOf(
-                "Authorization" to "Bearer $apiKey",
-                "Content-Type" to "application/json"
-            ))
+            addHeaders(
+                mapOf(
+                    "Authorization" to "Bearer $apiKey",
+                    "Content-Type" to "application/json"
+                )
+            )
         }
         return if (response.isSuccessful()) {
             try {
@@ -190,7 +209,10 @@ class LlmTranslateClient : LlmGateway {
      * Fallback: if parsing fails or format is wrong, still return the result part.
      * Don't use regex for parsing.
      */
-    private fun parseLlmOutput(rawOutput: String, existingDictionaries: List<DictPair>): ParseOutputResult {
+    private fun parseLlmOutput(
+        rawOutput: String,
+        existingDictionaries: List<DictPair>
+    ): ParseOutputResult {
         val existingOriginals = existingDictionaries.map { it.original }.toSet()
 
         var dictionarySection: String? = null
@@ -207,12 +229,15 @@ class LlmTranslateClient : LlmGateway {
                 trimmedLine.startsWith("[dictionary]", ignoreCase = true) -> {
                     currentSection = "dictionary"
                 }
+
                 trimmedLine.startsWith("[result]", ignoreCase = true) -> {
                     currentSection = "result"
                 }
+
                 currentSection == "dictionary" -> {
                     dictionarySection = (dictionarySection ?: "") + line + "\n"
                 }
+
                 currentSection == "result" -> {
                     resultSection = (resultSection ?: "") + line + "\n"
                 }
@@ -238,7 +263,10 @@ class LlmTranslateClient : LlmGateway {
      * Parse dictionary section line by line without regex.
      * Format: "Original -> Translation" or "Original: Translation"
      */
-    private fun parseDictionarySection(section: String, existingOriginals: Set<String>): List<DictPair> {
+    private fun parseDictionarySection(
+        section: String,
+        existingOriginals: Set<String>
+    ): List<DictPair> {
         val pairs = mutableListOf<DictPair>()
         val lines = section.split('\n')
 
@@ -247,7 +275,11 @@ class LlmTranslateClient : LlmGateway {
             if (trimmedLine.isEmpty()) continue
 
             // Skip section headers
-            if (trimmedLine.startsWith("[") || trimmedLine.startsWith("dictionary", ignoreCase = true)) {
+            if (trimmedLine.startsWith("[") || trimmedLine.startsWith(
+                    "dictionary",
+                    ignoreCase = true
+                )
+            ) {
                 continue
             }
 
