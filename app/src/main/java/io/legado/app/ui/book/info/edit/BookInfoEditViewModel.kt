@@ -25,6 +25,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.io.FileOutputStream
 
+enum class BookInfoEditType {
+    TEXT,
+    AUDIO,
+    IMAGE
+}
+
 data class BookInfoEditUiState(
     val name: String = "",
     val author: String = "",
@@ -33,8 +39,7 @@ data class BookInfoEditUiState(
     val remark: String? = null,
     val kindList: List<String> = emptyList(),
     val originalKindList: List<String> = emptyList(),
-    val selectedType: String = "文本",
-    val bookTypes: List<String> = listOf("文本", "音频", "图片"),
+    val selectedType: BookInfoEditType = BookInfoEditType.TEXT,
     val fixedType: Boolean = false,
     val book: Book? = null,
 )
@@ -48,10 +53,10 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         execute {
             book = appDb.bookDao.getBook(bookUrl)
             book?.let {
-                val selectedTypeIndex = when {
-                    it.isImage -> 2
-                    it.isAudio -> 1
-                    else -> 0
+                val selectedType = when {
+                    it.isImage -> BookInfoEditType.IMAGE
+                    it.isAudio -> BookInfoEditType.AUDIO
+                    else -> BookInfoEditType.TEXT
                 }
                 val kinds =
                     it.kind?.split(",", "\n")?.filter { kind -> kind.isNotBlank() }.orEmpty()
@@ -63,7 +68,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                     remark = it.remark,
                     kindList = kinds,
                     originalKindList = kinds,
-                    selectedType = _uiState.value.bookTypes[selectedTypeIndex],
+                    selectedType = selectedType,
                     fixedType = it.config.fixedType,
                     book = it
                 )
@@ -99,7 +104,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         _uiState.value = _uiState.value.copy(kindList = kindList)
     }
 
-    fun onBookTypeChange(bookType: String) {
+    fun onBookTypeChange(bookType: BookInfoEditType) {
         _uiState.value = _uiState.value.copy(selectedType = bookType)
     }
 
@@ -121,8 +126,8 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 book.remark = currentState.remark
                 val local = if (book.isLocal) BookType.local else 0
                 val bookType = when (currentState.selectedType) {
-                    currentState.bookTypes[2] -> BookType.image or local
-                    currentState.bookTypes[1] -> BookType.audio or local
+                    BookInfoEditType.IMAGE -> BookType.image or local
+                    BookInfoEditType.AUDIO -> BookType.audio or local
                     else -> BookType.text or local
                 }
                 book.removeType(BookType.local, BookType.image, BookType.audio, BookType.text)

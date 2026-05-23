@@ -24,8 +24,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
+import io.legado.app.R
 import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
@@ -53,7 +55,7 @@ fun LabelColorManageSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "管理标签颜色",
+        title = stringResource(R.string.theme_config_manage_label_colors),
         startAction = {
             MediumOutlinedIconButton(
                 onClick = {
@@ -84,7 +86,7 @@ fun LabelColorManageSheet(
         ) {
             items(tagColors.size) { index ->
                 val colorPair = tagColors[index]
-                val label = "标签 ${index + 1}"
+                val label = stringResource(R.string.theme_config_label_color_name, index + 1)
                 NormalCard(
                     modifier = Modifier.fillMaxWidth(),
                     containerColor = LegadoTheme.colorScheme.onSheetContent

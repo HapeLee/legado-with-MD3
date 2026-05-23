@@ -2,19 +2,40 @@ package io.legado.app.ui.config.themeConfig
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
 
-class ThemeConfigViewModel : ViewModel() {
+class ThemeConfigViewModel(
+    private val localPreferencesRepository: LocalPreferencesRepository
+) : ViewModel() {
+
+    val showThemeRefactorTip = localPreferencesRepository
+        .getPreference(LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    fun setShowThemeRefactorTip(show: Boolean) {
+        viewModelScope.launch {
+            localPreferencesRepository.updatePreference(
+                LocalPreferencesKeys.SHOW_THEME_REFACTOR_TIP,
+                show
+            )
+        }
+    }
 
     /**
      * 设置背景图片

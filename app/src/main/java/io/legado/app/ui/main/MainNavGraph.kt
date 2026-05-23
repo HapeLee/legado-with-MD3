@@ -91,12 +91,15 @@ fun MainActivity.mainEntryProvider(
             onNavigateToBookCacheManage = {
                 onNavigateToRoute(MainRouteBookCacheManage)
             },
-            onNavigateToBookInfo = { name, author, bookUrl ->
+            onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
                 onNavigateToRoute(
                     MainRouteBookInfo(
                         name = name,
                         author = author,
-                        bookUrl = bookUrl
+                        bookUrl = bookUrl,
+                        origin = origin,
+                        coverPath = coverPath,
+                        sharedCoverKey = sharedCoverKey
                     )
                 )
             },
@@ -252,12 +255,15 @@ fun MainActivity.mainEntryProvider(
                 searchViewModel.onIntent(SearchIntent.ClearSearchResults)
                 onNavigateBack()
             },
-            onOpenBookInfo = { name, author, bookUrl ->
+            onOpenBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
                 onNavigateToRoute(
                     MainRouteBookInfo(
                         name = name,
                         author = author,
-                        bookUrl = bookUrl
+                        bookUrl = bookUrl,
+                        origin = origin,
+                        coverPath = coverPath,
+                        sharedCoverKey = sharedCoverKey
                     )
                 )
             },
@@ -401,9 +407,13 @@ fun MainActivity.mainEntryProvider(
             } else null
         }
     ) { route ->
-        val bookInfoViewModel = koinViewModel<BookInfoViewModel>()
+        val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = route.bookUrl)
         BookInfoRouteScreen(
             bookUrl = route.bookUrl,
+            name = route.name,
+            author = route.author,
+            origin = route.origin,
+            coverPath = route.coverPath,
             viewModel = bookInfoViewModel,
             onBack = { onNavigateBack() },
             onFinish = { _, _ -> onNavigateBack() },
@@ -412,7 +422,7 @@ fun MainActivity.mainEntryProvider(
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-            sharedCoverKey = bookCoverSharedElementKey(route.bookUrl),
+            sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
             onRegisterVariableSetter = { setter ->
                 onRegisterVariableSetter(setter)
             }
@@ -425,12 +435,15 @@ fun MainActivity.mainEntryProvider(
             sourceUrl = route.sourceUrl,
             exploreUrl = route.exploreUrl,
             onBack = { onNavigateBack() },
-            onBookClick = { book ->
+            onBookClick = { book, sharedCoverKey ->
                 onNavigateToRoute(
                     MainRouteBookInfo(
                         name = book.name,
                         author = book.author,
-                        bookUrl = book.bookUrl
+                        bookUrl = book.bookUrl,
+                        origin = book.origin,
+                        coverPath = book.coverUrl,
+                        sharedCoverKey = sharedCoverKey
                     )
                 )
             },

@@ -72,7 +72,7 @@ fun CustomThemeScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "自定义颜色",
+                title = stringResource(R.string.custom_theme_colors),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -91,7 +91,7 @@ fun CustomThemeScreen(
             item {
                 SplicedColumnGroup {
                     SwitchSettingItem(
-                        title = "使用色板生成颜色",
+                        title = stringResource(R.string.theme_manage_use_palette_colors),
                         checked = !enableDeepPersonalization,
                         onCheckedChange = { ThemeConfig.enableDeepPersonalization = !it }
                     )
@@ -104,7 +104,7 @@ fun CustomThemeScreen(
                     SplicedColumnGroup(title = stringResource(R.string.color_setting)) {
                     // Primary colors
                     ClickableSettingItem(
-                        title = "主题色",
+                        title = stringResource(R.string.theme_manage_primary_color),
                         option = if (themeColor != 0) "#${Integer.toHexString(themeColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "themeColor"
@@ -128,7 +128,7 @@ fun CustomThemeScreen(
                     )
 
                     ClickableSettingItem(
-                        title = "次要主题色",
+                        title = stringResource(R.string.theme_manage_secondary_color),
                         option = if (secondaryThemeColor != 0) "#${Integer.toHexString(secondaryThemeColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "secondaryThemeColor"
@@ -152,7 +152,7 @@ fun CustomThemeScreen(
                     )
 
                     ClickableSettingItem(
-                        title = "主要字体色",
+                        title = stringResource(R.string.theme_manage_primary_text_color),
                         option = if (primaryTextColor != 0) "#${Integer.toHexString(primaryTextColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "primaryTextColor"
@@ -176,7 +176,7 @@ fun CustomThemeScreen(
                     )
 
                     ClickableSettingItem(
-                        title = "次要字体色",
+                        title = stringResource(R.string.theme_manage_secondary_text_color),
                         option = if (secondaryTextColor != 0) "#${Integer.toHexString(secondaryTextColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "secondaryTextColor"
@@ -200,7 +200,7 @@ fun CustomThemeScreen(
                     )
 
                     ClickableSettingItem(
-                        title = "背景色",
+                        title = stringResource(R.string.theme_manage_background_color),
                         option = if (themeBackgroundColor != 0) "#${Integer.toHexString(themeBackgroundColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "themeBackgroundColor"
@@ -224,7 +224,7 @@ fun CustomThemeScreen(
                     )
 
                     ClickableSettingItem(
-                        title = "标签容器色",
+                        title = stringResource(R.string.theme_manage_label_container_color),
                         option = if (labelContainerColor != 0) "#${Integer.toHexString(labelContainerColor).uppercase()}" else stringResource(R.string.click_to_select),
                         onClick = {
                             currentColorKey = "labelContainerColor"

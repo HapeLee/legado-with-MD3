@@ -36,4 +36,6 @@ val appDatabaseModule = module {
     factory<DictRuleDao> { get<AppDatabase>().dictRuleDao }
     factory<KeyboardAssistsDao> { get<AppDatabase>().keyboardAssistsDao }
     factory<ServerDao> { get<AppDatabase>().serverDao }
-    }
+    factory<HomepageModuleDao> { get<AppDatabase>().homepageModuleDao }
+    factory<HomepageCustomSetDao> { get<AppDatabase>().homepageCustomSetDao }
+}

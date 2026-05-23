@@ -68,6 +68,7 @@ class BookSourceEditActivity :
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
+    private val homepageEntities: ArrayList<EditEntity> = ArrayList()
     private val infoEntities: ArrayList<EditEntity> = ArrayList()
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
@@ -175,6 +176,9 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_find)
         })
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
+            setText(R.string.source_tab_homepage)
+        })
+        binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_info)
         })
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
@@ -234,10 +238,10 @@ class BookSourceEditActivity :
         adapter.editEntities = when (tabPosition) {
             1 -> searchEntities
             2 -> exploreEntities
-            3 -> infoEntities
-            4 -> tocEntities
-            5 -> contentEntities
-//            6 -> reviewEntities
+            3 -> homepageEntities
+            4 -> infoEntities
+            5 -> tocEntities
+            6 -> contentEntities
             else -> sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
@@ -305,6 +309,11 @@ class BookSourceEditActivity :
             add(EditEntity("intro", er.intro, R.string.rule_book_intro))
             add(EditEntity("coverUrl", er.coverUrl, R.string.rule_cover_url))
             add(EditEntity("bookUrl", er.bookUrl, R.string.r_book_url))
+        }
+        // 主页模块
+        homepageEntities.clear()
+        homepageEntities.apply {
+            add(EditEntity("homepageModules", bs.homepageModules, R.string.homepage_modules))
         }
         // 详情页
         val ir = bs.getBookInfoRule()
@@ -471,6 +480,12 @@ class BookSourceEditActivity :
 
                 "bookUrl" -> exploreRule.bookUrl =
                     viewModel.ruleComplete(it.value, exploreRule.bookList, 2)
+            }
+        }
+        homepageEntities.forEach {
+            it.value = it.value?.takeIf { s -> s.isNotBlank() }
+            when (it.key) {
+                "homepageModules" -> source.homepageModules = it.value
             }
         }
         infoEntities.forEach {

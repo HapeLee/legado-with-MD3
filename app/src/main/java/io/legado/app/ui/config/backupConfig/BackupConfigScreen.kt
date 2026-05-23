@@ -168,15 +168,17 @@ fun BackupConfigScreen(
     ) { uri ->
         uri?.let {
             showLoadingDialog = true
-            loadingText = "恢复中…"
+            loadingText = context.getString(R.string.on_restore)
             scope.launch {
                 try {
                     Restore.restore(context, uri)
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar("恢复成功")
+                    snackbarHostState.showSnackbar(context.getString(R.string.restore_success))
                 } catch (e: Exception) {
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar("恢复出错: ${e.localizedMessage}")
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.restore_fail_with_error, e.localizedMessage)
+                    )
                 }
             }
         }
@@ -360,20 +362,24 @@ fun BackupConfigScreen(
                     value = tempAccount,
                     onValueChange = { tempAccount = it },
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = "账号"
+                    label = stringResource(R.string.web_dav_account)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AppTextField(
                     value = tempPassword,
                     onValueChange = { tempPassword = it },
                     backgroundColor = MiuixTheme.colorScheme.surface,
-                    label = "密码",
+                    label = stringResource(R.string.web_dav_pw),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         val image =
                             if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (passwordVisible) "隐藏密码" else "显示密码"
+                        val description = if (passwordVisible) {
+                            stringResource(R.string.hide_password)
+                        } else {
+                            stringResource(R.string.show_password)
+                        }
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(imageVector = image, contentDescription = description)
                         }
@@ -387,13 +393,13 @@ fun BackupConfigScreen(
             showWebDavAuthDialog = false
             scope.launch {
                 showLoadingDialog = true
-                loadingText = "测试中…"
+                loadingText = context.getString(R.string.test_sync_loading_text)
                 val success = viewModel.testWebDav()
                 showLoadingDialog = false
                 if (success) {
-                    snackbarHostState.showSnackbar("WebDav 配置正确")
+                    snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_success))
                 } else {
-                    snackbarHostState.showSnackbar("WebDav 配置错误")
+                    snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_fail))
                 }
             }
         },
@@ -483,7 +489,7 @@ fun BackupConfigScreen(
     ) {
         OptionCard(
             icon = Icons.Default.PhoneAndroid,
-            text = "本地恢复",
+            text = stringResource(R.string.restore_from_local),
             onClick = {
                 showRestoreOptionSheet = false
                 restoreFileLauncher.launch(arrayOf("application/zip"))
@@ -491,20 +497,23 @@ fun BackupConfigScreen(
         )
         OptionCard(
             icon = Icons.Default.Cloud,
-            text = "网络恢复",
+            text = stringResource(R.string.restore_from_network),
             onClick = {
                 showRestoreOptionSheet = false
                 scope.launch {
                     showLoadingDialog = true
-                    loadingText = "加载中"
+                    loadingText = context.getString(R.string.loading)
                     try {
                         val names = viewModel.getBackupNames()
                         backupNames = names
                         showRestoreSheet = true
                     } catch (e: Exception) {
-                        confirmDialogTitle = "恢复"
+                        confirmDialogTitle = context.getString(R.string.restore)
                         confirmDialogText =
-                            "WebDavError\n${e.localizedMessage}\n将从本地备份恢复。"
+                            context.getString(
+                                R.string.webdav_restore_fallback_message,
+                                e.localizedMessage
+                            )
                         onConfirmAction = {
                             restoreFileLauncher.launch(arrayOf("application/zip"))
                         }
@@ -535,19 +544,21 @@ fun BackupConfigScreen(
                     onToggleSelection = {
                         showRestoreSheet = false
                         showLoadingDialog = true
-                        loadingText = "恢复中…"
+                        loadingText = context.getString(R.string.on_restore)
                         viewModel.restoreWebDav(
                             it,
                             {
                                 showLoadingDialog = false
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("恢复成功")
+                                    snackbarHostState.showSnackbar(context.getString(R.string.restore_success))
                                 }
                             },
                             { error ->
                                 showLoadingDialog = false
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("WebDav恢复出错\n$error")
+                                    snackbarHostState.showSnackbar(
+                                        context.getString(R.string.webdav_restore_fail, error)
+                                    )
                                 }
                             }
                         )

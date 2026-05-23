@@ -86,7 +86,9 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
                         context = requireContext(),
                         name = it.name,
                         author = it.author,
-                        bookUrl = it.bookUrl
+                        bookUrl = it.bookUrl,
+                        origin = it.origin,
+                        coverPath = it.coverUrl
                     )
                 )
                 dismiss()

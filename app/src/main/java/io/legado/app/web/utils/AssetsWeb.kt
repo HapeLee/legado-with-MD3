@@ -2,10 +2,9 @@ package io.legado.app.web.utils
 
 import android.content.res.AssetManager
 import android.text.TextUtils
-import fi.iki.elonen.NanoHTTPD
 import splitties.init.appCtx
 import java.io.File
-import java.io.IOException
+import java.io.InputStream
 
 
 class AssetsWeb(rootPath: String) {
@@ -18,20 +17,19 @@ class AssetsWeb(rootPath: String) {
         }
     }
 
-    @Throws(IOException::class)
-    fun getResponse(path: String): NanoHTTPD.Response {
-        var path1 = path
-        path1 = (rootPath + path1).replace("/+".toRegex(), File.separator)
-        val inputStream = assetManager.open(path1)
-        return NanoHTTPD.newChunkedResponse(
-            NanoHTTPD.Response.Status.OK,
-            getMimeType(path1),
-            inputStream
-        )
+    fun getInputStream(path: String): InputStream? {
+        val path1 = (rootPath + path).replace("/+".toRegex(), File.separator)
+        return try {
+            assetManager.open(path1)
+        } catch (e: Exception) {
+            null
+        }
     }
 
-    private fun getMimeType(path: String): String {
-        val suffix = path.substring(path.lastIndexOf("."))
+    fun getMimeType(path: String): String {
+        val lastDot = path.lastIndexOf(".")
+        if (lastDot == -1) return "text/html"
+        val suffix = path.substring(lastDot)
         return when {
             suffix.equals(".html", ignoreCase = true)
                     || suffix.equals(".htm", ignoreCase = true) -> "text/html"
@@ -39,6 +37,8 @@ class AssetsWeb(rootPath: String) {
             suffix.equals(".css", ignoreCase = true) -> "text/css"
             suffix.equals(".ico", ignoreCase = true) -> "image/x-icon"
             suffix.equals(".jpg", ignoreCase = true) -> "image/jpg"
+            suffix.equals(".png", ignoreCase = true) -> "image/png"
+            suffix.equals(".svg", ignoreCase = true) -> "image/svg+xml"
             else -> "text/html"
         }
     }

@@ -31,6 +31,7 @@ class MainViewModel(
     private val prefs = context.defaultSharedPreferences
     private val mainPreferenceKeys = setOf(
         PreferKey.showDiscovery,
+        PreferKey.showHome,
         PreferKey.showRss,
         PreferKey.showBottomView,
         PreferKey.useFloatingBottomBar,
@@ -152,10 +153,12 @@ private const val NAV_EXTENDED_KEY = "navExtended"
 
 private fun MainViewModel.readMainUiState(): MainUiState {
     val showDiscovery = context.getPrefBoolean(PreferKey.showDiscovery, true)
+    val showHome = context.getPrefBoolean(PreferKey.showHome, true)
     val showRss = context.getPrefBoolean(PreferKey.showRss, true)
     val destinations = MainDestination.mainDestinations.filter {
         when (it) {
             MainDestination.Explore -> showDiscovery
+            MainDestination.Home -> showHome
             MainDestination.Rss -> showRss
             else -> true
         }

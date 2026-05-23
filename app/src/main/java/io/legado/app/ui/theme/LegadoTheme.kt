@@ -74,7 +74,8 @@ data class LegadoColorScheme(
 
     val cardContainer: Color,
     val onCardContainer: Color,
-    val onSheetContent: Color
+    val onSheetContent: Color,
+    val cardPrimaryContainer: Color
 )
 
 data class LegadoTypography(

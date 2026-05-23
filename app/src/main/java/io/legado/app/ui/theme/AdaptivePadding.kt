@@ -68,6 +68,24 @@ fun adaptiveContentPadding(
 fun adaptiveContentPadding(
     top: Dp,
     bottom: Dp,
+    miuixHorizontal: Dp,
+    m3Horizontal: Dp
+): PaddingValues {
+    val horizontal =
+        if (ThemeResolver.isMiuixEngine(composeEngine)) miuixHorizontal else m3Horizontal
+    val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 16.dp
+    return PaddingValues(
+        top = adjustedTop,
+        bottom = bottom,
+        start = horizontal,
+        end = horizontal
+    )
+}
+
+@Composable
+fun adaptiveContentPadding(
+    top: Dp,
+    bottom: Dp,
     horizontal: Dp
 ): PaddingValues {
     val adjustedTop = if (ThemeResolver.isMiuixEngine(composeEngine)) top + 12.dp else top + 16.dp

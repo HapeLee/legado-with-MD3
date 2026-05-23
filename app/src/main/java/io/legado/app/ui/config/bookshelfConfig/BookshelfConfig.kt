@@ -302,6 +302,13 @@ object BookshelfConfig {
     val bookshelfListCoverWidthState: State<Int> get() = _bookshelfListCoverWidth.state
 
     /**
+     * 书架网格模式下封面宽度
+     */
+    private val _bookshelfGridCoverWidth = prefStateDelegate(PreferKey.bookshelfGridCoverWidth, 120)
+    var bookshelfGridCoverWidth by _bookshelfGridCoverWidth
+    val bookshelfGridCoverWidthState: State<Int> get() = _bookshelfGridCoverWidth.state
+
+    /**
      * 书架搜索按钮是否直接跳转搜索页
      */
     private val _bookshelfSearchActionDirectToSearch = prefStateDelegate(

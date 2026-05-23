@@ -40,13 +40,15 @@ class SearchActivity : BaseComposeActivity() {
         SearchScreen(
             viewModel = viewModel,
             onBack = { finish() },
-            onOpenBookInfo = { name, author, bookUrl ->
+            onOpenBookInfo = { name, author, bookUrl, origin, coverPath, _ ->
                 startActivity(
                     MainActivity.createBookInfoIntent(
                         context = this,
                         name = name,
                         author = author,
-                        bookUrl = bookUrl
+                        bookUrl = bookUrl,
+                        origin = origin,
+                        coverPath = coverPath
                     )
                 )
             },

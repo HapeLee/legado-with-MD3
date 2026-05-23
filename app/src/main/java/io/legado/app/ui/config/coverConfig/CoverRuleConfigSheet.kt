@@ -76,7 +76,7 @@ fun CoverRuleConfigSheet(
                 imageVector = Icons.Default.Save,
                 onClick = {
                     if (searchUrl.isBlank() || coverRule.isBlank()) {
-                        appCtx.toastOnUi("搜索url和cover规则不能为空")
+                        appCtx.toastOnUi(R.string.cover_rule_fields_required)
                     } else {
                         val newConfig = ruleState?.copy(
                             enable = enable,

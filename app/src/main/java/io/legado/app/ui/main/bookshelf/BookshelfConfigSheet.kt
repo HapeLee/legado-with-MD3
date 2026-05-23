@@ -8,8 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -63,9 +64,8 @@ fun BookshelfConfigSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .animateContentSize()
-                .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .animateContentSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             CompactDropdownSettingItem(
                 title = stringResource(R.string.group_style),
@@ -257,6 +257,14 @@ fun BookshelfConfigSheet(
                         color = LegadoTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
                     )
+
+                    CompactSliderSettingItem(
+                        title = "网格封面宽度",
+                        value = BookshelfConfig.bookshelfGridCoverWidth.toFloat(),
+                        valueRange = 40f..150f,
+                        steps = 110,
+                        onValueChange = { BookshelfConfig.bookshelfGridCoverWidth = it.toInt() }
+                    )
                 }
             }
 
@@ -315,14 +323,6 @@ fun BookshelfConfigSheet(
                         }
                     )
 
-                    CompactSliderSettingItem(
-                        title = "列表封面宽度",
-                        value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
-                        valueRange = 40f..120f,
-                        steps = 80,
-                        onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
-                    )
-
                     CompactSwitchSettingItem(
                         title = "精简详情",
                         checked = BookshelfConfig.bookshelfLayoutCompact,
@@ -332,6 +332,14 @@ fun BookshelfConfigSheet(
 
                     val listColCount =
                         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
+                    CompactSliderSettingItem(
+                        title = "列表封面宽度",
+                        value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
+                        valueRange = 40f..120f,
+                        steps = 80,
+                        onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
+                    )
+
                     CompactSliderSettingItem(
                         title = stringResource(R.string.number_rows_columns),
                         value = listColCount.toFloat(),
@@ -506,6 +514,9 @@ fun BookshelfConfigSheet(
                 steps = 100,
                 onValueChange = { BookshelfConfig.bookshelfRefreshingLimit = it.toInt() }
             )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
         }
 
         LabelColorManageSheet(

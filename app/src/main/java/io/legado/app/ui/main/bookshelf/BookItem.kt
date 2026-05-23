@@ -99,6 +99,7 @@ fun BookshelfItem(
     if (isGrid) {
         Box(
             modifier = modifier
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(4.dp))
                 .then(
                     if (isSelected) {
@@ -112,7 +113,12 @@ fun BookshelfItem(
                     onLongClick = onLongClick
                 )
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .width(coverWidth.dp)
+            ) {
 
                 Box(
                     modifier = Modifier
@@ -434,7 +440,7 @@ fun BookGroupItemGrid(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        coverWidth = 84,
+        coverWidth = BookshelfConfig.bookshelfGridCoverWidth,
         onClick = onClick,
         onLongClick = onLongClick
     )
@@ -757,7 +763,7 @@ fun BookItem(
         titleCenter = titleCenter,
         titleMaxLines = titleMaxLines,
         coverShadow = coverShadow,
-        coverWidth = if (layoutMode == 0) BookshelfConfig.bookshelfListCoverWidth else 84,
+        coverWidth = if (layoutMode == 0) BookshelfConfig.bookshelfListCoverWidth else BookshelfConfig.bookshelfGridCoverWidth,
         onClick = onClick,
         onLongClick = onLongClick
     )

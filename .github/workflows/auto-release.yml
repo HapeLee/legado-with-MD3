@@ -40,8 +40,9 @@ jobs:
       latest_tag: ${{ steps.set-ver.outputs.last_tag }}
       is_release: ${{ steps.set-ver.outputs.is_release }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: 计算版本号和构建号
@@ -248,8 +249,9 @@ jobs:
       success()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       # 1. 下载 build 任务上传的所有 APK

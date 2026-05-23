@@ -99,9 +99,10 @@ class ExploreKindUiUseCase(
         }
     }
 
-    private suspend fun evalUiJs(jsStr: String, sourceUrl: String, infoMap: InfoMap): String? {
-        val source = getOrLoadBookSource(sourceUrl) ?: return null
-        return runScriptWithContext {
+    private suspend fun evalUiJs(jsStr: String, sourceUrl: String, infoMap: InfoMap): String? =
+        withContext(Dispatchers.IO) {
+            val source = getOrLoadBookSource(sourceUrl) ?: return@withContext null
+            runScriptWithContext {
             source.evalJS(jsStr) {
                 put("infoMap", infoMap)
             }?.toString()

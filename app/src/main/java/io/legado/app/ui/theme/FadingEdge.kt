@@ -2,11 +2,11 @@ package io.legado.app.ui.theme
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -52,29 +52,62 @@ fun Modifier.fadingEdge(
 
 /**
  * Convenience overload that derives fade alphas from a [LazyListState].
- * Left fade appears when scrolled past the start; right fade appears when more content is available.
  */
 @Composable
 fun Modifier.fadingEdge(
     listState: LazyListState,
     gradientWidth: Dp = 24.dp
 ): Modifier {
-    val showLeft by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
-        }
-    }
-    val showRight by remember {
-        derivedStateOf { listState.canScrollForward }
-    }
     val leftAlpha by animateFloatAsState(
-        targetValue = if (showLeft) 1f else 0f,
-        animationSpec = tween(200),
+        targetValue = if (listState.canScrollBackward) 1f else 0f,
+        animationSpec = tween(300),
         label = "LeftFadeAlpha"
     )
     val rightAlpha by animateFloatAsState(
-        targetValue = if (showRight) 1f else 0f,
-        animationSpec = tween(200),
+        targetValue = if (listState.canScrollForward) 1f else 0f,
+        animationSpec = tween(300),
+        label = "RightFadeAlpha"
+    )
+    return fadingEdge(leftAlpha, rightAlpha, gradientWidth)
+}
+
+/**
+ * Convenience overload that derives fade alphas from a [PagerState].
+ */
+@Composable
+fun Modifier.fadingEdge(
+    pagerState: PagerState,
+    gradientWidth: Dp = 24.dp
+): Modifier {
+    val leftAlpha by animateFloatAsState(
+        targetValue = if (pagerState.canScrollBackward) 1f else 0f,
+        animationSpec = tween(300),
+        label = "LeftFadeAlpha"
+    )
+    val rightAlpha by animateFloatAsState(
+        targetValue = if (pagerState.canScrollForward) 1f else 0f,
+        animationSpec = tween(300),
+        label = "RightFadeAlpha"
+    )
+    return fadingEdge(leftAlpha, rightAlpha, gradientWidth)
+}
+
+/**
+ * Convenience overload that derives fade alphas from a [ScrollState].
+ */
+@Composable
+fun Modifier.fadingEdge(
+    scrollState: ScrollState,
+    gradientWidth: Dp = 24.dp
+): Modifier {
+    val leftAlpha by animateFloatAsState(
+        targetValue = if (scrollState.canScrollBackward) 1f else 0f,
+        animationSpec = tween(300),
+        label = "LeftFadeAlpha"
+    )
+    val rightAlpha by animateFloatAsState(
+        targetValue = if (scrollState.canScrollForward) 1f else 0f,
+        animationSpec = tween(300),
         label = "RightFadeAlpha"
     )
     return fadingEdge(leftAlpha, rightAlpha, gradientWidth)

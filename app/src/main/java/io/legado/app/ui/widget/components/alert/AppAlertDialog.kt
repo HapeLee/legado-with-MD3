@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -51,6 +54,7 @@ fun AppAlertDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 12.dp)
+                            .verticalScroll(rememberScrollState())
                     ) {
                         content()
                     }
@@ -98,12 +102,16 @@ fun AppAlertDialog(
                 tonalElevation = AlertDialogDefaults.TonalElevation,
                 title = title?.let { { Text(text = it) } },
                 text = {
-                    Column {
+                    Column(
+                        modifier = Modifier.verticalScroll(rememberScrollState())
+                    ) {
                         if (text != null) {
-                            Text(
-                                text = text,
-                                modifier = Modifier.padding(bottom = if (content != null) 16.dp else 0.dp)
-                            )
+                            SelectionContainer {
+                                Text(
+                                    text = text,
+                                    modifier = Modifier.padding(bottom = if (content != null) 16.dp else 0.dp)
+                                )
+                            }
                         }
                         if (content != null) {
                             content()
@@ -161,16 +169,17 @@ fun <T> AppAlertDialog(
     val currentData = cachedData
     if (currentData != null) {
         val currentText = text ?: textProvider?.invoke(currentData)
-        var cachedText by remember { mutableStateOf(currentText) }
+        var lastValidText by remember { mutableStateOf(currentText) }
+        
         if (currentText != null) {
-            cachedText = currentText
+            lastValidText = currentText
         }
 
         AppAlertDialog(
             show = data != null,
             onDismissRequest = onDismissRequest,
             title = title,
-            text = currentText ?: cachedText,
+            text = currentText ?: lastValidText,
             modifier = modifier,
             confirmText = confirmText,
             onConfirm = onConfirm?.let { { it(currentData) } },

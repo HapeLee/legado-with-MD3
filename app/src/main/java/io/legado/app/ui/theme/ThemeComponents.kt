@@ -12,12 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.ThemeController
-import top.yukonga.miuix.kmp.theme.TextStyles
 
 @Composable
 fun rememberCustomFont(fontPath: String?): FontFamily? {
@@ -180,7 +180,9 @@ fun MiuixThemeWrapper(
 
                 cardContainer = miuixColorScheme.surfaceContainer,
                 onCardContainer = miuixColorScheme.onSurface,
-                onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f)
+                onSheetContent = miuixColorScheme.surface.copy(alpha = 0.5f),
+                cardPrimaryContainer = miuixColorScheme.primary.copy(alpha = 0.1f)
+                    .compositeOver(miuixColorScheme.surface)
             )
         }
 

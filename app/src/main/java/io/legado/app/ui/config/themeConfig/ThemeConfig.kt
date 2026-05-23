@@ -141,6 +141,8 @@ object ThemeConfig {
 
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
 
+    var showHome by prefDelegate(PreferKey.showHome, true)
+
     var showRss by prefDelegate(PreferKey.showRss, true)
 
     var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
@@ -169,6 +171,8 @@ object ThemeConfig {
     var autoRefreshBook by prefDelegate(PreferKey.autoRefresh, false)
 
     var autoCheckNewBackup by prefDelegate(PreferKey.autoCheckNewBackup, true)
+
+    var navIconHome by prefDelegate(PreferKey.navIconHome, "")
 
     var navIconBookshelf by prefDelegate(PreferKey.navIconBookshelf, "")
 

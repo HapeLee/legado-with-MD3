@@ -15,9 +15,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -83,7 +85,11 @@ fun CollapsibleHeader(
             if (showIcon) {
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
-                    contentDescription = if (isCollapsed) "展开" else "折叠",
+                    contentDescription = if (isCollapsed) {
+                        stringResource(R.string.expand)
+                    } else {
+                        stringResource(R.string.collapse)
+                    },
                     modifier = Modifier.rotate(rotation),
                     tint = LegadoTheme.colorScheme.primary
                 )

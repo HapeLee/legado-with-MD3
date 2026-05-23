@@ -6,12 +6,15 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import io.legado.app.data.AppDatabase
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.repository.AppStartupRepository
 import io.legado.app.data.repository.BookCacheCleanupRepository
 import io.legado.app.data.repository.BookDomainRepositoryImpl
 import io.legado.app.data.repository.BookGroupRepository
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.BookSourceCallbackRepository
+import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.CacheBookDownloadRepository
 import io.legado.app.data.repository.DatabaseMaintenanceRepository
 import io.legado.app.data.repository.DirectLinkUploadRepository
@@ -19,6 +22,7 @@ import io.legado.app.data.repository.UploadRepository
 import io.legado.app.data.repository.DictRuleRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
+import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LocalBookRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.RemoteBookRepository
@@ -37,20 +41,28 @@ import io.legado.app.domain.gateway.BookCacheDownloadGateway
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.gateway.BookSourceCallbackGateway
 import io.legado.app.domain.gateway.DatabaseMaintenanceGateway
+import io.legado.app.domain.gateway.ExploreBooksGateway
+import io.legado.app.domain.gateway.HomepageModulesGateway
 import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
 import io.legado.app.domain.repository.BookDomainRepository
+import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.DeleteBooksUseCase
+import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
+import io.legado.app.domain.usecase.ImportBookshelfUseCase
+import io.legado.app.domain.usecase.RefreshTocUseCase
 import io.legado.app.domain.usecase.RemoveBookGroupAssignmentUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
@@ -98,6 +110,7 @@ import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
+import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -125,11 +138,16 @@ val appModule = module {
     singleOf(::ReadRecordRepository)
     singleOf(::BookRepository)
     singleOf(::BookGroupRepository)
+    singleOf(::BookSourceRepository)
+    singleOf(::BookshelfRepository)
     singleOf(::DictRuleRepository)
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
+    singleOf(::LocalPreferencesRepository)
+    singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
+    singleOf(::SaveSearchBooksUseCase)
     singleOf(::AppStartupMaintenanceUseCase)
     singleOf(::BatchCacheDownloadUseCase)
     singleOf(::CacheBookChaptersUseCase)
@@ -141,6 +159,10 @@ val appModule = module {
     singleOf(::UpdateBooksGroupUseCase)
     singleOf(::UploadReadingProgressUseCase)
     singleOf(::ResolveBookShelfStateUseCase)
+    singleOf(::RefreshTocUseCase)
+    singleOf(::AddBookUseCase)
+    singleOf(::ImportBookshelfUseCase)
+    singleOf(::ExportBookshelfUseCase)
     factory { GetReadRecordOverviewUseCase() }
     singleOf(::ShrinkDatabaseUseCase)
     singleOf(::WebDavBackupUseCase)
@@ -156,8 +178,11 @@ val appModule = module {
     single<DatabaseMaintenanceGateway> { DatabaseMaintenanceRepository(get()) }
     single<WebDavBackupGateway> { WebDavBackupRepository() }
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
+    single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
-    single<ExploreRepository> { ExploreRepositoryImpl(get()) }
+    single { ExploreRepositoryImpl(get()) }
+    single<ExploreRepository> { get<ExploreRepositoryImpl>() }
+    single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
     single {
         SearchRepositoryImpl(get())
@@ -198,6 +223,7 @@ val appModule = module {
     viewModelOf(::MyViewModel)
     viewModelOf(::BookshelfViewModel)
     viewModelOf(::MainViewModel)
+    viewModelOf(::HomepageViewModel)
     viewModelOf(::AboutViewModel)
     viewModelOf(::GroupViewModel)
     viewModelOf(::ReplaceRuleViewModel)
@@ -234,9 +260,9 @@ val appModule = module {
     viewModel {
         BookshelfManageScreenViewModel(
             application = get(),
-            bookDao = get(),
-            bookGroupDao = get(),
-            bookChapterDao = get(),
+            bookRepository = get(),
+            bookGroupRepository = get(),
+            searchRepository = get(),
             bookshelfManageScreenConfig = get(),
             batchCacheDownloadUseCase = get(),
             cacheBookChaptersUseCase = get(),

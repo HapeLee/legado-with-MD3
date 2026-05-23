@@ -41,7 +41,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.text.AppText
@@ -69,7 +71,7 @@ fun AppFloatingActionButton(
                 MiuixIcon(
                     imageVector = icon,
                     contentDescription = tooltipText,
-                    tint = Color.White
+                    tint = containerColor
                 )
             } else {
                 Icon(
@@ -87,7 +89,8 @@ fun AppFloatingActionButton(
         MiuixFloatingActionButton(
             onClick = onClick,
             modifier = modifier,
-            content = fabContent
+            content = fabContent,
+            containerColor = LegadoTheme.colorScheme.surfaceContainer
         )
     } else {
         if (tooltipText != null) {
@@ -193,7 +196,7 @@ fun AppFloatingActionButtonMenu(
                             tint = Color.White
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("菜单", color = Color.White)
+                        Text(stringResource(R.string.menu), color = Color.White)
                     }
                 }
             }

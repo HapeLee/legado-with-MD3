@@ -74,7 +74,8 @@ fun ColorScheme.toLegadoColorScheme(
         onTertiaryFixedVariant = onTertiaryFixedVariant,
         cardContainer = primaryContainer.copy(alpha = 0.5f),
         onCardContainer = primary,
-        onSheetContent = surface
+        onSheetContent = surface,
+        cardPrimaryContainer = primaryContainer
     )
 }
 

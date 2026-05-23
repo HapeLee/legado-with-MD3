@@ -58,7 +58,7 @@ sealed interface SearchIntent {
     data object PauseEngine : SearchIntent
     data object ResumeEngine : SearchIntent
     data class UseHistoryKeyword(val keyword: String) : SearchIntent
-    data class OpenSearchBook(val book: SearchBook) : SearchIntent
+    data class OpenSearchBook(val book: SearchBook, val sharedCoverKey: String?) : SearchIntent
     data class OpenBookshelfBook(val book: BookShelfItem) : SearchIntent
     data class DeleteHistory(val item: SearchKeyword) : SearchIntent
     data class SetClearHistoryDialogVisible(val visible: Boolean) : SearchIntent
@@ -82,6 +82,9 @@ sealed interface SearchEffect {
         val name: String,
         val author: String,
         val bookUrl: String,
+        val origin: String? = null,
+        val coverPath: String? = null,
+        val sharedCoverKey: String?,
     ) : SearchEffect
 
     data object OpenSourceManage : SearchEffect

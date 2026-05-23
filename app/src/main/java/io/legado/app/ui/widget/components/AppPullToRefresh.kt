@@ -15,8 +15,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import kotlinx.coroutines.delay
@@ -57,10 +59,10 @@ fun AppPullToRefresh(
             contentPadding = PaddingValues(top = topPadding + 16.dp),
             pullToRefreshState = miuixRememberPullToRefreshState(),
             refreshTexts = listOf(
-                "下拉刷新",
-                "松开刷新",
-                "正在刷新",
-                "正在刷新"
+                stringResource(R.string.pull_to_refresh),
+                stringResource(R.string.release_to_refresh),
+                stringResource(R.string.refreshing),
+                stringResource(R.string.refreshing)
             )
         ) {
             content()

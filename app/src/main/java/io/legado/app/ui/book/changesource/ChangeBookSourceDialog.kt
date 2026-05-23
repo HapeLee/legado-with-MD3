@@ -13,7 +13,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.os.bundleOf
 import androidx.core.view.isInvisible
-import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +33,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.widget.dialog.WaitDialog
@@ -83,14 +83,15 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     private var currentSelectedSearchBook: SearchBook? = null
     private val searchFinishCallback: (isEmpty: Boolean) -> Unit = {
         if (it) {
-            val searchGroup = AppConfig.searchGroup
-            if (searchGroup.isNotEmpty()) {
+            val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+            val group = searchScope.display
+            if (!searchScope.isAll()) {
                 lifecycleScope.launch {
                     context?.alert("搜索结果为空") {
-                        setMessage("${searchGroup}分组搜索结果为空,是否切换到全部分组")
+                        setMessage("${group}分组搜索结果为空,是否切换到全部分组")
                         cancelButton()
                         okButton {
-                            AppConfig.searchGroup = ""
+                            ChangeSourceConfig.searchScope = ""
                             upGroupMenuName()
                             viewModel.startSearch()
                         }
@@ -343,9 +344,9 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             else -> if (item?.groupId == R.id.source_group && !item.isChecked) {
                 item.isChecked = true
                 if (item.title.toString() == getString(R.string.all_source)) {
-                    AppConfig.searchGroup = ""
+                    ChangeSourceConfig.searchScope = ""
                 } else {
-                    AppConfig.searchGroup = item.title.toString()
+                    ChangeSourceConfig.searchScope = item.title.toString()
                 }
                 upGroupMenuName()
                 lifecycleScope.launch(IO) {
@@ -493,7 +494,8 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     private fun upGroupMenu() {
         binding.toolBar.menu.findItem(R.id.menu_group)?.run {
             subMenu?.transaction { menu ->
-                val selectedGroup = AppConfig.searchGroup
+                val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+                val selectedGroup = searchScope.displayNames.firstOrNull() ?: ""
                 menu.removeGroup(R.id.source_group)
                 val allItem = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, R.string.all_source)
                 var hasSelectedGroup = false
@@ -507,7 +509,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
                 }
                 menu.setGroupCheckable(R.id.source_group, true, true)
                 if (hasSelectedGroup) {
-                    title = getString(R.string.group) + "(" + AppConfig.searchGroup + ")"
+                    title = getString(R.string.group) + "(" + selectedGroup + ")"
                 } else {
                     allItem.isChecked = true
                     title = getString(R.string.group)
@@ -521,11 +523,11 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
      */
     private fun upGroupMenuName() {
         val menuGroup = binding.toolBar.menu.findItem(R.id.menu_group)
-        val searchGroup = AppConfig.searchGroup
-        if (searchGroup.isEmpty()) {
+        val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+        if (searchScope.isAll()) {
             menuGroup?.title = getString(R.string.group)
         } else {
-            menuGroup?.title = getString(R.string.group) + "($searchGroup)"
+            menuGroup?.title = getString(R.string.group) + "(${searchScope.display})"
         }
     }
 

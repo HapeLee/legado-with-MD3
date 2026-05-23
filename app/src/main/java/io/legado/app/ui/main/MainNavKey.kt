@@ -68,6 +68,9 @@ data class MainRouteBookInfo(
     val name: String?,
     val author: String?,
     val bookUrl: String,
+    val origin: String? = null,
+    val coverPath: String? = null,
+    val sharedCoverKey: String? = null,
 ) : MainRoute
 
 @Serializable

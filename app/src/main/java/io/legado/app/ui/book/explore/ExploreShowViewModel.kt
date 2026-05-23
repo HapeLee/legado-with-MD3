@@ -6,11 +6,14 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
-import io.legado.app.domain.usecase.BookShelfKey
-import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
-import io.legado.app.help.config.AppConfig
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.usecase.BookShelfKey
+import io.legado.app.domain.usecase.ExploreBooksUseCase
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
+import io.legado.app.domain.usecase.SaveSearchBooksUseCase
+import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.exploreLayoutGrid
+import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -50,7 +53,9 @@ data class ExploreBookItemUi(
 
 class ExploreShowViewModel(
     private val repository: ExploreRepository,
-    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
+    private val exploreBooksUseCase: ExploreBooksUseCase,
+    private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -124,6 +129,7 @@ class ExploreShowViewModel(
     }
 
     fun initData(incomingSourceUrl: String?, incomingExploreUrl: String?) {
+        // 允许 incomingExploreUrl 为空，此时加载书源默认发现页
         if (sourceUrl == incomingSourceUrl && exploreUrl == incomingExploreUrl && bookSource != null) {
             return
         }
@@ -139,8 +145,13 @@ class ExploreShowViewModel(
         viewModelScope.launch {
             if (bookSource == null && incomingSourceUrl != null) {
                 bookSource = repository.getBookSource(incomingSourceUrl)
-                loadKinds(incomingSourceUrl)
             }
+
+            // 如果仍然没有发现 URL，且书源已加载，尝试使用书源的默认发现页
+            if (exploreUrl == null && bookSource != null) {
+                loadKinds(incomingSourceUrl!!)
+            }
+
             loadMore(isRefresh = true)
         }
     }
@@ -175,7 +186,7 @@ class ExploreShowViewModel(
 
     fun loadMore(isRefresh: Boolean = false) {
         val source = bookSource
-        val url = exploreUrl
+        val url = exploreUrl ?: source?.exploreUrl
         if (source == null || url == null || _isLoading.value || (_isEndStateFlow.value && !isRefresh)) return
 
         viewModelScope.launch {
@@ -188,31 +199,32 @@ class ExploreShowViewModel(
                 _rawBooks.value = emptyList()
             }
 
-            repository.exploreBook(source, url, page)
-                .onSuccess { newBooks ->
-                    if (newBooks.isEmpty()) {
+            kotlin.runCatching {
+                exploreBooksUseCase.execute(source.bookSourceUrl, url, args = null, page)
+            }.onSuccess { result ->
+                if (result.books.isEmpty()) {
+                    _isEndStateFlow.value = true
+                } else {
+                    saveSearchBooksUseCase.save(result.books)
+
+                    val currentList = _rawBooks.value
+                    val existingUrls = currentList.map { it.bookUrl }.toSet()
+
+                    val uniqueNewBooks = result.books
+                        .filter { it.bookUrl !in existingUrls }
+                        .distinctBy { it.bookUrl }
+
+                    if (uniqueNewBooks.isEmpty()) {
                         _isEndStateFlow.value = true
                     } else {
-                        repository.saveSearchBooks(newBooks)
-
-                        val currentList = _rawBooks.value
-                        val existingUrls = currentList.map { it.bookUrl }.toSet()
-
-                        val uniqueNewBooks = newBooks
-                            .filter { it.bookUrl !in existingUrls }
-                            .distinctBy { it.bookUrl }
-
-                        if (uniqueNewBooks.isEmpty()) {
-                            _isEndStateFlow.value = true
-                        } else {
-                            _rawBooks.value = currentList + uniqueNewBooks
-                            page++
-                            _isEndStateFlow.value = false
-                        }
+                        _rawBooks.value = currentList + uniqueNewBooks
+                        page++
+                        _isEndStateFlow.value = false
                     }
                 }
+            }
                 .onFailure {
-                    _errorMsg.value = it.localizedMessage
+                    _errorMsg.value = it.stackTraceStr
                 }
 
             _isLoading.value = false

@@ -45,6 +45,7 @@ object PreferKey {
     const val prevKeys = "prevKeyCodes"
     const val nextKeys = "nextKeyCodes"
     const val showDiscovery = "showDiscovery"
+    const val showHome = "showHome"
     const val enableReview = "enableReview"
     const val showRss = "showRss"
     const val showStatusBar = "showStatusBar"
@@ -272,6 +273,7 @@ object PreferKey {
     const val bookshelfGroupListStyle = "bookshelfGroupListStyle"
     const val bookshelfGroupCoverCount = "bookshelfGroupCoverCount"
     const val bookshelfListCoverWidth = "bookshelfListCoverWidth"
+    const val bookshelfGridCoverWidth = "bookshelfGridCoverWidth"
 
     const val exploreLayoutGridLandscape = "exploreLayoutGridLandscape"
 
@@ -330,4 +332,9 @@ object PreferKey {
     const val llmConcurrentChunks = "llmConcurrentChunks"
     const val llmRetryCount = "llmRetryCount"
     const val llmPrompt = "llmPrompt"
-    }
+
+    const val homepageModuleOrder = "homepageModuleOrder"
+    const val homepageModuleHidden = "homepageModuleHidden"
+    const val homepageLayoutMode = "homepageLayoutMode"
+    const val navIconHome = "navIconHome"
+}

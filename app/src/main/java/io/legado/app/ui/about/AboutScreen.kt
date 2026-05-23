@@ -85,6 +85,9 @@ private fun MaterialAboutScreen(
     versionName: String,
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+    val privacyPolicyTitle = stringResource(R.string.about_privacy_policy_title)
+    val licenseTitle = stringResource(R.string.about_license_title)
+    val disclaimerTitle = stringResource(R.string.about_disclaimer_title)
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -178,7 +181,7 @@ private fun MaterialAboutScreen(
                         onClick = {
                             onIntent(
                                 AboutIntent.ShowMdFile(
-                                    "隐私政策",
+                                    privacyPolicyTitle,
                                     "privacyPolicy.md"
                                 )
                             )
@@ -188,13 +191,13 @@ private fun MaterialAboutScreen(
                 SettingItemWithDivider {
                     SettingItem(
                         title = stringResource(R.string.license),
-                        onClick = { onIntent(AboutIntent.ShowMdFile("许可证", "LICENSE.md")) }
+                        onClick = { onIntent(AboutIntent.ShowMdFile(licenseTitle, "LICENSE.md")) }
                     )
                 }
                 SettingItemWithDivider {
                     SettingItem(
                         title = stringResource(R.string.disclaimer),
-                        onClick = { onIntent(AboutIntent.ShowMdFile("免责声明", "disclaimer.md")) }
+                        onClick = { onIntent(AboutIntent.ShowMdFile(disclaimerTitle, "disclaimer.md")) }
                     )
                 }
                 SettingItemWithDivider {

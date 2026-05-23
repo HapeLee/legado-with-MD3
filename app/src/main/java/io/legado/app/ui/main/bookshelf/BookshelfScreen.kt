@@ -153,7 +153,7 @@ import sh.calvin.reorderable.rememberReorderableLazyGridState
 fun BookshelfScreen(
     viewModel: BookshelfViewModel = koinViewModel(),
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (book: BookShelfItem, sharedCoverKey: String?) -> Unit,
     onNavigateToSearch: (String) -> Unit,
     onNavigateToRemoteImport: () -> Unit,
     onNavigateToLocalImport: () -> Unit,
@@ -210,60 +210,6 @@ fun BookshelfScreen(
         }
     )
 
-    if (uiState.groups.isEmpty()) {
-        val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
-        val onSearchClick = {
-            if (BookshelfConfig.bookshelfSearchActionDirectToSearchState.value) {
-                onNavigateToSearch(uiState.searchKey.trim())
-            } else {
-                viewModel.setSearchMode(!uiState.isSearch)
-            }
-        }
-        AppScaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            contentWindowInsets = WindowInsets(0),
-            snackbarHost = {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier
-                        .padding(
-
-                            bottom = 72.dp + WindowInsets.navigationBars
-                                .asPaddingValues()
-                                .calculateBottomPadding()
-                        )
-                )
-            },
-            topBar = {
-                BookshelfTopBar(
-                    uiState = uiState,
-                    scrollBehavior = scrollBehavior,
-                    onSearchClick = onSearchClick,
-                    onSearchQueryChange = { viewModel.setSearchKey(it) },
-                    onSearchSubmit = { rawQuery ->
-                        rawQuery.trim()
-                            .takeIf { it.isNotEmpty() }
-                            ?.let(onNavigateToSearch)
-                    },
-                    onClearSearch = { viewModel.setSearchKey("") }
-                )
-            }
-        ) { paddingValues ->
-            if (!uiState.isInitialLoading) {
-                EmptyMessage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = 120.dp
-                        ),
-                    messageResId = R.string.bookshelf_empty
-                )
-            }
-        }
-        return
-    }
-
     val activeOverlay = uiState.activeOverlay
     val showGroupMenu = activeOverlay == BookshelfOverlay.GroupMenu
     val isEditMode = uiState.isEditMode
@@ -280,11 +226,20 @@ fun BookshelfScreen(
     }
 
     val pagerState = rememberPagerState(
-        initialPage = uiState.selectedGroupIndex,
+        initialPage = uiState.selectedGroupIndex.coerceAtLeast(0),
         pageCount = { uiState.groups.size }
     )
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
+
+    LaunchedEffect(uiState.selectedGroupIndex, uiState.groups.size) {
+        if (uiState.groups.isNotEmpty()
+            && uiState.selectedGroupIndex in uiState.groups.indices
+            && pagerState.currentPage != uiState.selectedGroupIndex
+        ) {
+            pagerState.scrollToPage(uiState.selectedGroupIndex)
+        }
+    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }
@@ -765,7 +720,19 @@ fun BookshelfScreen(
                     }
                 }
             ) { isRoot ->
-                if (bookGroupStyle == 2 && isRoot && !isUsingStandaloneSearchGroup) {
+                if (uiState.groups.isEmpty() && !uiState.isSearch) {
+                    if (!uiState.isInitialLoading) {
+                        EmptyMessage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(
+                                    top = paddingValues.calculateTopPadding(),
+                                    bottom = 120.dp
+                                ),
+                            messageResId = R.string.bookshelf_empty
+                        )
+                    }
+                } else if (bookGroupStyle == 2 && isRoot && !isUsingStandaloneSearchGroup) {
                     val folderColumns =
                         if (bookshelfFolderLayoutMode == 0) bookshelfFolderLayoutList else bookshelfFolderLayoutGrid
                     val isGridMode = bookshelfFolderLayoutMode != 0
@@ -1253,7 +1220,7 @@ fun BookshelfPage(
     onDragFinished: () -> Unit,
     onGlobalSearch: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
-    onBookLongClick: (BookShelfItem) -> Unit,
+    onBookLongClick: (BookShelfItem, String?) -> Unit,
     isCurrentPage: Boolean = true,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -1369,6 +1336,14 @@ fun BookshelfPage(
         ) {
             items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
+                val sharedCoverKey = if (isCurrentPage) {
+                    bookCoverSharedElementKey(
+                        bookUi.book.bookUrl,
+                        "bookshelf:${uiState.selectedGroupId}"
+                    )
+                } else {
+                    null
+                }
                 ReorderableItem(
                     state = reorderableState,
                     key = bookUi.book.bookUrl,
@@ -1408,7 +1383,7 @@ fun BookshelfPage(
                         searchKey = uiState.searchKey,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = if (isCurrentPage) bookCoverSharedElementKey(bookUi.book.bookUrl) else null,
+                        sharedCoverKey = sharedCoverKey,
                         onClick = {
                             if (uiState.isEditMode) {
                                 onToggleBookSelection(bookUi)
@@ -1423,7 +1398,7 @@ fun BookshelfPage(
                                 if (uiState.isEditMode) {
                                     onToggleBookSelection(bookUi)
                                 } else {
-                                    onBookLongClick(bookUi.book)
+                                    onBookLongClick(bookUi.book, sharedCoverKey)
                                 }
                             }
                         }

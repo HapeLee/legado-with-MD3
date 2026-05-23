@@ -100,8 +100,11 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             context: Context,
             name: String? = null,
             author: String? = null,
-            bookUrl: String
-        ): Intent = MainIntent.createBookInfoIntent(context, name, author, bookUrl)
+            bookUrl: String,
+            origin: String? = null,
+            coverPath: String? = null
+        ): Intent =
+            MainIntent.createBookInfoIntent(context, name, author, bookUrl, origin, coverPath)
 
         fun createExploreShowIntent(
             context: Context,

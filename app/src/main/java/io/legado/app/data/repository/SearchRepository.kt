@@ -7,7 +7,6 @@ import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.model.BookSearchScope
 import io.legado.app.domain.usecase.BookShelfKey
-import io.legado.app.help.book.isNotShelf
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +25,8 @@ interface SearchRepository {
     suspend fun saveSearchKeyword(keyword: String)
     suspend fun deleteSearchKeyword(item: SearchKeyword)
     suspend fun clearSearchKeywords()
+    suspend fun saveSearchBooks(books: List<SearchBook>)
+    suspend fun saveSearchBook(book: SearchBook)
 }
 
 class SearchRepositoryImpl(
@@ -59,7 +60,7 @@ class SearchRepositoryImpl(
         }
     }
 
-    override suspend fun saveSearchKeyword(keyword: String) = withContext(Dispatchers.IO) {
+    override suspend fun saveSearchKeyword(keyword: String): Unit = withContext(Dispatchers.IO) {
         val key = keyword.trim()
         if (key.isBlank()) return@withContext
 
@@ -70,11 +71,12 @@ class SearchRepositoryImpl(
         } ?: appDb.searchKeywordDao.insert(SearchKeyword(word = key, usage = 1))
     }
 
-    override suspend fun deleteSearchKeyword(item: SearchKeyword) = withContext(Dispatchers.IO) {
+    override suspend fun deleteSearchKeyword(item: SearchKeyword): Unit =
+        withContext(Dispatchers.IO) {
         appDb.searchKeywordDao.delete(item)
     }
 
-    override suspend fun clearSearchKeywords() = withContext(Dispatchers.IO) {
+    override suspend fun clearSearchKeywords(): Unit = withContext(Dispatchers.IO) {
         appDb.searchKeywordDao.deleteAll()
     }
 
@@ -103,9 +105,14 @@ class SearchRepositoryImpl(
         appDb.bookSourceDao.getBookSource(sourceUrl)
     }
 
-    override suspend fun saveSearchBooks(books: List<SearchBook>) = withContext(Dispatchers.IO) {
+    override suspend fun saveSearchBooks(books: List<SearchBook>): Unit =
+        withContext(Dispatchers.IO) {
         if (books.isNotEmpty()) {
             appDb.searchBookDao.insert(books)
         }
+    }
+
+    override suspend fun saveSearchBook(book: SearchBook): Unit = withContext(Dispatchers.IO) {
+        appDb.searchBookDao.insert(book)
     }
 }
