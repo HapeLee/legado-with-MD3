@@ -257,6 +257,14 @@ fun BookshelfConfigSheet(
                         color = LegadoTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfTitleCenter = it }
                     )
+
+                    CompactSliderSettingItem(
+                        title = "网格封面宽度",
+                        value = BookshelfConfig.bookshelfGridCoverWidth.toFloat(),
+                        valueRange = 40f..150f,
+                        steps = 110,
+                        onValueChange = { BookshelfConfig.bookshelfGridCoverWidth = it.toInt() }
+                    )
                 }
             }
 
@@ -315,14 +323,6 @@ fun BookshelfConfigSheet(
                         }
                     )
 
-                    CompactSliderSettingItem(
-                        title = "列表封面宽度",
-                        value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
-                        valueRange = 40f..120f,
-                        steps = 80,
-                        onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
-                    )
-
                     CompactSwitchSettingItem(
                         title = "精简详情",
                         checked = BookshelfConfig.bookshelfLayoutCompact,
@@ -332,6 +332,14 @@ fun BookshelfConfigSheet(
 
                     val listColCount =
                         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
+                    CompactSliderSettingItem(
+                        title = "列表封面宽度",
+                        value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
+                        valueRange = 40f..120f,
+                        steps = 80,
+                        onValueChange = { BookshelfConfig.bookshelfListCoverWidth = it.toInt() }
+                    )
+
                     CompactSliderSettingItem(
                         title = stringResource(R.string.number_rows_columns),
                         value = listColCount.toFloat(),

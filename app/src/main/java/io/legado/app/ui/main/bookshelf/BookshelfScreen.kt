@@ -232,6 +232,15 @@ fun BookshelfScreen(
     val latestGroups by rememberUpdatedState(uiState.groups)
     val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
 
+    LaunchedEffect(uiState.selectedGroupIndex, uiState.groups.size) {
+        if (uiState.groups.isNotEmpty()
+            && uiState.selectedGroupIndex in uiState.groups.indices
+            && pagerState.currentPage != uiState.selectedGroupIndex
+        ) {
+            pagerState.scrollToPage(uiState.selectedGroupIndex)
+        }
+    }
+
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
