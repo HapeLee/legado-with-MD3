@@ -233,6 +233,16 @@ private fun rememberSharedCoverTransitionRadius(
     return animatedRadiusValue.dp
 }
 
+/**
+ * Determine if text is primarily Latin-script.
+ * Returns true if more than 30% of characters are Latin letters.
+ */
+private fun isLatinBasedText(text: String?): Boolean {
+    if (text.isNullOrBlank()) return false
+    val latinRatio = text.count { it in 'A'..'Z' || it in 'a'..'z' }.toFloat() / text.length
+    return latinRatio > 0.3f
+}
+
 @Composable
 private fun CoverTextOverlay(
     name: String?,
@@ -251,7 +261,9 @@ private fun CoverTextOverlay(
         if (isNight) CoverConfig.coverTextColorN else CoverConfig.coverTextColor
     }
     val shadowColor = if (isNight) CoverConfig.coverShadowColorN else CoverConfig.coverShadowColor
-    val isHorizontal = CoverConfig.coverInfoOrientation == "1"
+    val configIsHorizontal = CoverConfig.coverInfoOrientation == "1"
+    // If text contains Latin letters, force horizontal layout
+    val isHorizontal = configIsHorizontal || isLatinBasedText(name)
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val viewWidth = size.width

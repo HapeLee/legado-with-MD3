@@ -293,6 +293,14 @@ data class Book(
         return this.durChapterIndex
     }
 
+    fun setTranslationMode(enabled: Boolean) {
+        config.translationMode = enabled
+    }
+
+    fun getTranslationMode(): Boolean {
+        return config.translationMode
+    }
+
     // dailyChapters 的 setter 和 getter
     fun setDailyChapters(dailyChapters: Int) {
         config.dailyChapters = dailyChapters
@@ -424,7 +432,9 @@ data class Book(
         var webtoonSidePaddingDp: Int? = null,
         var mangaBackground: String? = null,
 
-        var fixedType: Boolean = false // 固定书籍类型,不随书源更新
+        var fixedType: Boolean = false, // 固定书籍类型,不随书源更新
+
+        var translationMode: Boolean = false // 是否启用翻译阅读模式
 
     ) : Parcelable
 

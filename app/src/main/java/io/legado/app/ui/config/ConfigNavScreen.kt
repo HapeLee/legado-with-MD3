@@ -12,10 +12,10 @@ import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,7 +26,8 @@ fun ConfigNavScreen(
     onNavigateToCover: () -> Unit,
     onNavigateToTheme: () -> Unit,
     onNavigateToBackup: () -> Unit,
-    onNavigateToDownloadCache: () -> Unit
+    onNavigateToDownloadCache: () -> Unit,
+    onNavigateToTranslation: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -74,6 +75,10 @@ fun ConfigNavScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.backup_restore),
                         onClick = onNavigateToBackup
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.translation_config),
+                        onClick = onNavigateToTranslation
                     )
                 }
             }

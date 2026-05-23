@@ -2,29 +2,7 @@ package io.legado.app.di
 
 import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
-import io.legado.app.data.dao.BookChapterDao
-import io.legado.app.data.dao.BookDao
-import io.legado.app.data.dao.BookGroupDao
-import io.legado.app.data.dao.BookSourceDao
-import io.legado.app.data.dao.BookmarkDao
-import io.legado.app.data.dao.CacheDao
-import io.legado.app.data.dao.CookieDao
-import io.legado.app.data.dao.DictRuleDao
-import io.legado.app.data.dao.HomepageCustomSetDao
-import io.legado.app.data.dao.HomepageModuleDao
-import io.legado.app.data.dao.HttpTTSDao
-import io.legado.app.data.dao.KeyboardAssistsDao
-import io.legado.app.data.dao.ReadRecordDao
-import io.legado.app.data.dao.ReplaceRuleDao
-import io.legado.app.data.dao.RssArticleDao
-import io.legado.app.data.dao.RssReadRecordDao
-import io.legado.app.data.dao.RssSourceDao
-import io.legado.app.data.dao.RssStarDao
-import io.legado.app.data.dao.RuleSubDao
-import io.legado.app.data.dao.SearchBookDao
-import io.legado.app.data.dao.SearchKeywordDao
-import io.legado.app.data.dao.ServerDao
-import io.legado.app.data.dao.TxtTocRuleDao
+import io.legado.app.data.dao.*
 import org.koin.dsl.module
 
 /**

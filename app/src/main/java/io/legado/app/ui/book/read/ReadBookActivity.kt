@@ -60,6 +60,8 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.analyzeRule.AnalyzeRule
+import io.legado.app.model.translation.TranslationChapterStatus
+import io.legado.app.model.translation.TranslationManager
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setChapter
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl.Companion.paramPattern
@@ -139,6 +141,7 @@ import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
@@ -714,6 +717,36 @@ class ReadBookActivity : BaseReadBookActivity(),
         viewModel.refreshContentAll(book)
     }
 
+    override fun onTranslationClick() {
+        val book = ReadBook.book ?: return
+        book.setTranslationMode(!book.getTranslationMode())
+        book.save()
+        binding.readMenu.updateTranslationButton(book.getTranslationMode())
+        ReadBook.loadContent(false)
+    }
+
+    override fun onTranslationLongClick() {
+        val book = ReadBook.book ?: return
+        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return
+
+        if (TranslationManager.hasTranslatedCache(book, chapter)) {
+            alert(title = getString(R.string.retranslate_chapter), message = getString(R.string.retranslate_confirm)) {
+                positiveButton(getString(R.string.ok)) { retranslateCurrentChapter() }
+                negativeButton(getString(R.string.cancel))
+            }.show()
+        }
+    }
+
+    fun retranslateCurrentChapter() {
+        val book = ReadBook.book ?: return
+        lifecycleScope.launch {
+            TranslationManager.deleteTranslationCache(book, appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex) ?: return@launch)
+            book.setTranslationMode(true)
+            book.save()
+            ReadBook.loadContent(false)
+        }
+    }
+
     override fun onMenuItemClick(item: MenuItem): Boolean {
         return onCompatOptionsItemSelected(item)
     }
@@ -816,7 +849,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                 handleKeyPage(PageDirection.NEXT, longPress)
                 return true
             }
-             // 手柄方向键控制翻页
+            // 手柄方向键控制翻页
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_LEFT -> {
                 handleKeyPage(PageDirection.PREV, longPress)
                 return true

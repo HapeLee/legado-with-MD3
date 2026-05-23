@@ -62,7 +62,6 @@ object PreferKey {
     const val episodeExportFileName = "episodeExportFileName"
     const val recordLog = "recordLog"
     const val processText = "process_text"
-    const val cleanCache = "cleanCache"
     const val saveTabPosition = "saveTabPosition"
     const val fontFolder = "fontFolder"
     const val backupPath = "backupUri"
@@ -321,6 +320,18 @@ object PreferKey {
     const val navIconExplore = "navIconExplore"
     const val navIconRss = "navIconRss"
     const val navIconMy = "navIconMy"
+
+    // Translation
+    const val llmTranslateEnabled = "llmTranslateEnabled"
+    const val llmProvider = "llmProvider"
+    const val llmBaseUrl = "llmBaseUrl"
+    const val llmApiKey = "llmApiKey"
+    const val llmModel = "llmModel"
+    const val llmTargetLanguage = "llmTargetLanguage"
+    const val llmMaxCharsPerChunk = "llmMaxCharsPerChunk"
+    const val llmConcurrentChunks = "llmConcurrentChunks"
+    const val llmRetryCount = "llmRetryCount"
+    const val llmPrompt = "llmPrompt"
 
     const val homepageModuleOrder = "homepageModuleOrder"
     const val homepageModuleHidden = "homepageModuleHidden"

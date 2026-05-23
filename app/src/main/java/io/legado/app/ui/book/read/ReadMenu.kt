@@ -640,10 +640,11 @@ class ReadMenu @JvmOverloads constructor(
                 onClick = { runMenuOut{ callBack.openSearchActivity(null) } }
             ),
             ToolButton(
-                id = "auto_page",
-                iconRes = R.drawable.ic_auto_page,
-                description = context.getString(R.string.auto_next_page),
-                onClick = { runMenuOut { callBack.autoPage() } }
+                id = "translate",
+                iconRes = R.drawable.ic_translate,
+                description = context.getString(R.string.translate),
+                onClick = { runMenuOut { callBack.onTranslationClick() } },
+                onLongClick = { runMenuOut { callBack.onTranslationLongClick() } }
             ),
             ToolButton(
                 id = "catalog",
@@ -709,6 +710,12 @@ class ReadMenu @JvmOverloads constructor(
                 onLongClick = { runMenuOut { callBack.openReplaceRule() } },
                 onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
                 onClick = {  }
+            ),
+            ToolButton(
+                id = "auto_page",
+                iconRes = R.drawable.ic_auto_page,
+                description = context.getString(R.string.auto_next_page),
+                onClick = { runMenuOut { callBack.autoPage() } }
             )
         )
     }
@@ -758,6 +765,17 @@ class ReadMenu @JvmOverloads constructor(
             setIconResource(icon)
             contentDescription = desc
             tooltipText = desc
+        }
+    }
+
+    fun updateTranslationButton(translationMode: Boolean) {
+        val btn = buttonMap["translate"] ?: return
+
+        // Update icon based on mode
+        if (translationMode) {
+            btn.setIconResource(R.drawable.ic_return)
+        } else {
+            btn.setIconResource(R.drawable.ic_translate)
         }
     }
 
@@ -914,6 +932,8 @@ class ReadMenu @JvmOverloads constructor(
         fun onMenuShow()
         fun onMenuHide()
         fun changeReplaceRuleState()
+        fun onTranslationClick()
+        fun onTranslationLongClick()
     }
 
     data class ToolButton(

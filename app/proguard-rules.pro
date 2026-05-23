@@ -61,6 +61,9 @@
 -keep class * extends io.legado.app.help.JsExtensions{*;}
 # 数据类
 -keep class **.data.entities.**{*;}
+# Gson反序列化用的数据传输类
+-keep class io.legado.app.model.translation.**{*;}
+-keep class io.legado.app.data.entities.TranslationCache{*;}
 # hutool-core hutool-crypto
 -keep class
 !cn.hutool.core.util.RuntimeUtil,

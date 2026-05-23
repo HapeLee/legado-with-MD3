@@ -16,6 +16,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
@@ -25,6 +26,7 @@ import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
@@ -66,6 +68,8 @@ import me.ag2s.epublib.domain.TOCReference
 import me.ag2s.epublib.epub.EpubWriter
 import me.ag2s.epublib.epub.EpubWriterProcessor
 import me.ag2s.epublib.util.ResourceUtil
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.nio.charset.Charset
@@ -76,7 +80,7 @@ import kotlin.math.min
 /**
  * 导出书籍服务
  */
-class ExportBookService : BaseService() {
+class ExportBookService : BaseService(), KoinComponent {
 
     companion object {
         val exportProgress = ConcurrentHashMap<String, Int>()
@@ -91,6 +95,16 @@ class ExportBookService : BaseService() {
         val epubSize: Int = 1,
         val epubScope: String? = null
     )
+
+    /**
+     * Content source for export - Original or Translation with target language.
+     */
+    private enum class ContentSource {
+        Original,
+        Translation
+    }
+
+    private val translationCacheRepository: TranslationCacheGateway by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
@@ -199,6 +213,10 @@ class ExportBookService : BaseService() {
                     if (exportConfig.type == "epub") {
                         if (exportConfig.epubScope.isNullOrBlank()) {
                             exportEpub(exportConfig.path, book)
+                            // Also export translation if cache exists
+                            if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                                exportEpub(exportConfig.path, book, ContentSource.Translation)
+                            }
                         } else {
                             CustomExporter(
                                 exportConfig.epubScope,
@@ -207,6 +225,11 @@ class ExportBookService : BaseService() {
                         }
                     } else {
                         exportTxt(exportConfig.path, book)
+                        // Also export translation if cache exists
+                        if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                            val fileDoc = FileDoc.fromDir(exportConfig.path)
+                            exportTxt(fileDoc, book, ContentSource.Translation)
+                        }
                     }
                     exportMsg[book.bookUrl] = getString(R.string.export_success)
                 } catch (e: Throwable) {
@@ -245,29 +268,36 @@ class ExportBookService : BaseService() {
         exportMsg.remove(book.bookUrl)
         notifyExportBookChanged(book.bookUrl)
         val fileDoc = FileDoc.fromDir(path)
-        exportTxt(fileDoc, book)
+        exportTxt(fileDoc, book, ContentSource.Original)
     }
 
-    private suspend fun exportTxt(fileDoc: FileDoc, book: Book) {
-        val filename = book.getExportFileName("txt")
+    private suspend fun exportTxt(fileDoc: FileDoc, book: Book, source: ContentSource) {
+        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val filename = when (source) {
+            ContentSource.Original -> book.getExportFileName("txt")
+            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("txt"), targetLanguage)
+        }
         fileDoc.find(filename)?.delete()
 
         val bookDoc = fileDoc.createFileIfNotExist(filename)
         val charset = Charset.forName(AppConfig.exportCharset)
         bookDoc.openOutputStream().getOrThrow().bufferedWriter(charset).use { bw ->
-            getAllContents(book) { text, srcList ->
+            getAllContents(book, source) { text, srcList ->
                 bw.write(text)
-                srcList?.forEach {
-                    val vFile = BookHelp.getImage(book, it.src)
-                    if (vFile.exists()) {
-                        fileDoc.createFileIfNotExist(
-                            "${it.index}-${MD5Utils.md5Encode16(it.src)}.jpg",
-                            subDirs = arrayOf(
-                                "${book.name}_${book.author}",
-                                "images",
-                                it.chapterTitle
-                            )
-                        ).writeFile(vFile)
+                // Only export images for original source
+                if (source == ContentSource.Original) {
+                    srcList?.forEach {
+                        val vFile = BookHelp.getImage(book, it.src)
+                        if (vFile.exists()) {
+                            fileDoc.createFileIfNotExist(
+                                "${it.index}-${MD5Utils.md5Encode16(it.src)}.jpg",
+                                subDirs = arrayOf(
+                                    "${book.name}_${book.author}",
+                                    "images",
+                                    it.chapterTitle
+                                )
+                            ).writeFile(vFile)
+                        }
                     }
                 }
             }
@@ -278,8 +308,32 @@ class ExportBookService : BaseService() {
         }
     }
 
+    /**
+     * Get translated filename by inserting target language before extension.
+     * e.g., "book.txt" -> "book.zh.txt"
+     */
+    private fun getTranslatedFileName(originalName: String, targetLanguage: String): String {
+        val lastDot = originalName.lastIndexOf('.')
+        return if (lastDot > 0) {
+            "${originalName.substring(0, lastDot)}.$targetLanguage${originalName.substring(lastDot)}"
+        } else {
+            "$originalName.$targetLanguage"
+        }
+    }
+
+    /**
+     * Check if book has any translated chapters for the target language.
+     */
+    private suspend fun hasAnyTranslatedChapter(book: Book, targetLanguage: String): Boolean {
+        val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+        return chapters.any { chapter ->
+            translationCacheRepository.getCacheFile(book, chapter, targetLanguage).exists()
+        }
+    }
+
     private suspend fun getAllContents(
         book: Book,
+        source: ContentSource,
         append: (text: String, srcList: ArrayList<SrcData>?) -> Unit
     ) = coroutineScope {
         val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
@@ -303,7 +357,7 @@ class ExportBookService : BaseService() {
                 emit(chapter)
             }
         }.mapAsync(threads) { chapter ->
-            getExportData(book, chapter, contentProcessor, useReplace)
+            getExportData(book, chapter, contentProcessor, useReplace, source)
         }.collectIndexed { index, result ->
             notifyExportBookChanged(book.bookUrl)
             exportProgress[book.bookUrl] = index
@@ -317,14 +371,19 @@ class ExportBookService : BaseService() {
         _exportBookUpdateFlow.tryEmit(bookUrl)
     }
 
-    private fun getExportData(
+    private suspend fun getExportData(
         book: Book,
         chapter: BookChapter,
         contentProcessor: ContentProcessor,
-        useReplace: Boolean
+        useReplace: Boolean,
+        source: ContentSource
     ): Pair<String, ArrayList<SrcData>?> {
-        val content = BookHelp.getContent(book, chapter)
-        val content1 = contentProcessor
+        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val content = when (source) {
+            ContentSource.Original -> BookHelp.getContent(book, chapter)
+            ContentSource.Translation -> translationCacheRepository.readTranslation(book, chapter, targetLanguage)
+        }
+        val processedContent = contentProcessor
             .getContent(
                 book,
                 // 不导出vip标识
@@ -335,8 +394,8 @@ class ExportBookService : BaseService() {
                 chineseConvert = false,
                 reSegment = false
             ).toString()
-        if (AppConfig.exportPictureFile) {
-            //txt导出图片文件
+        if (AppConfig.exportPictureFile && source == ContentSource.Original) {
+            //txt导出图片文件 - only for original source
             val srcList = arrayListOf<SrcData>()
             content?.split("\n")?.forEachIndexed { index, text ->
                 val matcher = AppPattern.imgPattern.matcher(text)
@@ -347,9 +406,9 @@ class ExportBookService : BaseService() {
                     }
                 }
             }
-            return Pair("\n\n$content1", srcList)
+            return Pair("\n\n$processedContent", srcList)
         } else {
-            return Pair("\n\n$content1", null)
+            return Pair("\n\n$processedContent", null)
         }
     }
 
@@ -360,11 +419,22 @@ class ExportBookService : BaseService() {
         exportMsg.remove(book.bookUrl)
         postEvent(EventBus.EXPORT_BOOK, book.bookUrl)
         val fileDoc = FileDoc.fromDir(path)
-        exportEpub(fileDoc, book)
+        exportEpub(fileDoc, book, ContentSource.Original)
     }
 
-    private suspend fun exportEpub(fileDoc: FileDoc, book: Book) {
-        val filename = book.getExportFileName("epub")
+    private suspend fun exportEpub(path: String, book: Book, source: ContentSource) {
+        exportMsg.remove(book.bookUrl)
+        postEvent(EventBus.EXPORT_BOOK, book.bookUrl)
+        val fileDoc = FileDoc.fromDir(path)
+        exportEpub(fileDoc, book, source)
+    }
+
+    private suspend fun exportEpub(fileDoc: FileDoc, book: Book, source: ContentSource) {
+        val targetLanguage = TranslationConfig.llmTargetLanguage
+        val filename = when (source) {
+            ContentSource.Original -> book.getExportFileName("epub")
+            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("epub"), targetLanguage)
+        }
         fileDoc.find(filename)?.delete()
 
         val epubBook = EpubBook()
@@ -377,7 +447,7 @@ class ExportBookService : BaseService() {
         val contentModel = setAssets(fileDoc, book, epubBook)
 
         //设置正文
-        setEpubContent(contentModel, book, epubBook)
+        setEpubContent(contentModel, book, epubBook, source)
 
         val bookDoc = fileDoc.createFileIfNotExist(filename)
         bookDoc.openOutputStream().getOrThrow().buffered().use { bookOs ->
@@ -533,7 +603,8 @@ class ExportBookService : BaseService() {
     private suspend fun setEpubContent(
         contentModel: String,
         book: Book,
-        epubBook: EpubBook
+        epubBook: EpubBook,
+        source: ContentSource = ContentSource.Original
     ) = coroutineScope {
         //正文
         val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
@@ -543,18 +614,27 @@ class ExportBookService : BaseService() {
         } else {
             1
         }
+        val targetLanguage = TranslationConfig.llmTargetLanguage
         var parentSection: TOCReference? = null
         flow {
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
                 emit(chapter)
             }
         }.mapAsyncIndexed(threads) { index, chapter ->
-            val content = BookHelp.getContent(book, chapter)
-            val (contentFix, resources) = fixPic(
-                book,
-                content ?: if (chapter.isVolume) "" else "null",
-                chapter
-            )
+            val content = when (source) {
+                ContentSource.Original -> BookHelp.getContent(book, chapter)
+                ContentSource.Translation -> translationCacheRepository.readTranslation(book, chapter, targetLanguage)
+            }
+            // For translation source, don't extract images (skip fixPic)
+            val (contentFix, resources) = if (source == ContentSource.Translation) {
+                Pair(content ?: if (chapter.isVolume) "" else "null", arrayListOf())
+            } else {
+                fixPic(
+                    book,
+                    content ?: if (chapter.isVolume) "" else "null",
+                    chapter
+                )
+            }
             // 不导出vip标识
             chapter.isVip = false
             val content1 = contentProcessor
