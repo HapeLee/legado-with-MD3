@@ -229,6 +229,7 @@ fun SearchBookGridItem(
                 style = LegadoTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
+                minLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

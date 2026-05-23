@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.domain.model.HomepageModuleType
+import io.legado.app.domain.model.ModuleDef
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
@@ -13,6 +14,36 @@ data class HomepageUiState(
     val isManageMode: Boolean = false,
     val isConfigMode: Boolean = false,
     val isRefreshing: Boolean = false,
+    val manageState: HomepageManageUiState = HomepageManageUiState()
+)
+
+@Stable
+data class HomepageManageUiState(
+    val sets: ImmutableList<HomepageSourceManageUi> = persistentListOf(),
+    val browseSources: ImmutableList<HomepageSourceManageUi> = persistentListOf(),
+    val allJoinedModules: ImmutableList<HomepageModuleManageUi> = persistentListOf(),
+    val sourceNames: Map<String, String> = emptyMap()
+)
+
+@Stable
+data class HomepageManageActions(
+    val onToggleSet: (String, Boolean) -> Unit = { _, _ -> },
+    val onGetSourceModules: (String, String?) -> List<HomepageModuleManageUi> = { _, _ -> emptyList() },
+    val onSyncSourceModules: (String) -> Unit = {},
+    val onToggleModule: (String, Boolean) -> Unit = { _, _ -> },
+    val onJoinModule: (String, String?, ModuleDef) -> Unit = { _, _, _ -> },
+    val onAddCustomModule: (String, String?, ModuleDef) -> Unit = { _, _, _ -> },
+    val onAddButtonGroupFromKinds: (String, String?, String, List<String>) -> Unit = { _, _, _, _ -> },
+    val onGetExploreKinds: (String) -> List<Pair<String, String>> = { emptyList() },
+    val onUpdateModule: (String, ModuleDef) -> Unit = { _, _ -> },
+    val onDeleteModule: (String) -> Unit = {},
+    val onReorderModules: (List<String>) -> Unit = {},
+    val onReorderSets: (List<String>) -> Unit = {},
+    val onSetCustomSetTitle: (String, String?) -> Unit = { _, _ -> },
+    val onCreateCustomSet: (String) -> Unit = {},
+    val onRenameCustomSet: (String, String) -> Unit = { _, _ -> },
+    val onDeleteCustomSet: (String) -> Unit = {},
+    val onAssignModuleToCustomSet: (String, String?) -> Unit = { _, _ -> },
 )
 
 @Stable

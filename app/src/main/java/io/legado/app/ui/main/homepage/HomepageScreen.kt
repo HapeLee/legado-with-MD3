@@ -93,15 +93,16 @@ fun HomepageScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val allSets by viewModel.setsFlow.collectAsStateWithLifecycle()
-    val browseSources by viewModel.browseSourcesFlow.collectAsStateWithLifecycle()
+    // Removed allSets and browseSources as they are now part of uiState.manageState
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var errorMsg by remember { mutableStateOf<String?>(null) }
 
     val layoutMode = HomepageConfig.homepageLayoutModeState.value
 
-    val selectedSets = remember(allSets) { allSets.filter { it.isSelected } }
+    val selectedSets = remember(uiState.manageState.sets) {
+        uiState.manageState.sets.filter { it.isSelected }
+    }
     val pagerState = rememberPagerState(pageCount = {
         if (layoutMode == 1) selectedSets.size.coerceAtLeast(1) else 1
     })
@@ -261,50 +262,44 @@ fun HomepageScreen(
         HomepageModuleManageSheet(
             data = if (uiState.isManageMode) Unit else null,
             onDismissRequest = { viewModel.toggleManageMode() },
-            sets = allSets,
-            browseSources = browseSources,
-            onToggleSet = { url, isEnabled -> viewModel.toggleSourceFilter(url, isEnabled) },
-            onGetModulesInSet = { viewModel.getJoinedModules(it) },
-            onGetSourceModules = { url, setId -> viewModel.getSourceModules(url, setId) },
-            onSyncSourceModules = { viewModel.syncSourceModules(it) },
-            onToggleModule = { id, visible -> viewModel.setModuleVisible(id, visible) },
-            onJoinModule = { sourceUrl, targetSetId, def ->
-                viewModel.joinModule(
-                    sourceUrl,
-                    targetSetId,
-                    def
-                )
-            },
-            onAddCustomModule = { sourceUrl, targetSetId, def ->
-                viewModel.addCustomModule(
-                    sourceUrl,
-                    targetSetId,
-                    def
-                )
-            },
-            onAddButtonGroupFromKinds = { sourceUrl, targetSetId, title, kinds ->
-                viewModel.addButtonGroupFromKinds(
-                    sourceUrl,
-                    targetSetId,
-                    title,
-                    kinds
-                )
-            },
-            onGetExploreKinds = { viewModel.getSourceExploreKinds(it) },
-            onUpdateModule = { globalId, def -> viewModel.updateModule(globalId, def) },
-            onDeleteModule = { viewModel.deleteModule(it) },
-            onReorderModules = { ids -> viewModel.reorderJoinedModules(ids) },
-            onReorderSets = { urls -> viewModel.reorderCustomSets(urls) },
-            onSetCustomSetTitle = { id, title -> viewModel.setModuleCustomSetTitle(id, title) },
-            onCreateCustomSet = { viewModel.createCustomSet(it) },
-            onRenameCustomSet = { id, name -> viewModel.renameCustomSet(id, name) },
-            onDeleteCustomSet = { viewModel.deleteCustomSet(it) },
-            onGetAllModulesGroupedBySource = { viewModel.getAllModulesGroupedBySource() },
-            onGetSourceName = { viewModel.getSourceName(it) },
-            onAssignModuleToCustomSet = { id, setId ->
-                viewModel.assignModuleToCustomSet(
-                    id,
-                    setId
+            state = uiState.manageState,
+            actions = remember {
+                HomepageManageActions(
+                    onToggleSet = { url, isEnabled ->
+                        viewModel.toggleSourceFilter(
+                            url,
+                            isEnabled
+                        )
+                    },
+                    onGetSourceModules = { url, setId -> viewModel.getSourceModules(url, setId) },
+                    onSyncSourceModules = { viewModel.syncSourceModules(it) },
+                    onToggleModule = { id, visible -> viewModel.setModuleVisible(id, visible) },
+                    onJoinModule = { sourceUrl, targetSetId, def ->
+                        viewModel.joinModule(sourceUrl, targetSetId, def)
+                    },
+                    onAddCustomModule = { sourceUrl, targetSetId, def ->
+                        viewModel.addCustomModule(sourceUrl, targetSetId, def)
+                    },
+                    onAddButtonGroupFromKinds = { sourceUrl, targetSetId, title, kinds ->
+                        viewModel.addButtonGroupFromKinds(sourceUrl, targetSetId, title, kinds)
+                    },
+                    onGetExploreKinds = { viewModel.getSourceExploreKinds(it) },
+                    onUpdateModule = { globalId, def -> viewModel.updateModule(globalId, def) },
+                    onDeleteModule = { viewModel.deleteModule(it) },
+                    onReorderModules = { ids -> viewModel.reorderJoinedModules(ids) },
+                    onReorderSets = { urls -> viewModel.reorderCustomSets(urls) },
+                    onSetCustomSetTitle = { id, title ->
+                        viewModel.setModuleCustomSetTitle(
+                            id,
+                            title
+                        )
+                    },
+                    onCreateCustomSet = { viewModel.createCustomSet(it) },
+                    onRenameCustomSet = { id, name -> viewModel.renameCustomSet(id, name) },
+                    onDeleteCustomSet = { viewModel.deleteCustomSet(it) },
+                    onAssignModuleToCustomSet = { id, setId ->
+                        viewModel.assignModuleToCustomSet(id, setId)
+                    }
                 )
             }
         )

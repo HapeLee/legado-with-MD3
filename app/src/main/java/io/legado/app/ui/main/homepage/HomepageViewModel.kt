@@ -82,46 +82,113 @@ class HomepageViewModel(
     val effects = _effects.asSharedFlow()
 
     private val loadJobs = ConcurrentHashMap<String, Job>()
-    private val initModulesSyncFlow = bookSourceRepository.flowHomepageModules()
     private val exploreSourcesFlow = bookSourceRepository.flowExploreSources()
 
+    // 1. 基础原始状态
     private val _isRefreshing = MutableStateFlow(false)
     private val _isManageMode = MutableStateFlow(false)
     private val _isConfigMode = MutableStateFlow(false)
     private val _configVersion = MutableStateFlow(0L)
     private val _moduleContentStates = MutableStateFlow<Map<String, ModuleLoadState>>(emptyMap())
-
-    private val localModulesFlow = gateway.flowEnabled()
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSource>>(emptyMap())
     private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
+    private val _pendingEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+    private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
+    private val _exploreKindsCache =
+        MutableStateFlow<Map<String, List<Pair<String, String>>>>(emptyMap())
 
-    val allModulesCache = gateway.flowAll()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
+    // 2. 数据库同步流
+    private val localModulesFlow = gateway.flowEnabled()
+    val allModulesCache =
+        gateway.flowAll().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val customSetsFlow = gateway.flowCustomSets()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // 3. 业务加工流
     private val orderedModuleDefsFlow = combine(localModulesFlow, _configVersion) { modules, _ ->
         modules.groupBySourceOrdered()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
+    val setsFlow = combine(
+        localModulesFlow,
+        allModulesCache,
+        customSetsFlow,
+        _configVersion
+    ) { _, allModules, customSets, _ ->
+        val hiddenSourceUrls = GSON.fromJsonArray<String>(HomepageConfig.homepageSourceHidden)
+            .getOrDefault(emptyList()).toSet()
+        val moduleCountsBySet =
+            allModules.mapNotNull { it.customSetId }.groupBy { it }.mapValues { it.value.size }
+
+        customSets.sortedBy { it.sortOrder }.map { set ->
+            HomepageSourceManageUi(
+                sourceUrl = customSetUrl(set.id),
+                sourceName = set.name,
+                sourceGroup = null,
+                isSelected = customSetUrl(set.id) !in hiddenSourceUrls,
+                moduleCount = moduleCountsBySet[set.id] ?: 0,
+                isCustomSet = true,
+            )
+        }.toImmutableList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
+
+    val browseSourcesFlow = exploreSourcesFlow.map { sources ->
+        sources.map { source ->
+            HomepageSourceManageUi(
+                sourceUrl = source.bookSourceUrl,
+                sourceName = source.bookSourceName,
+                sourceGroup = source.bookSourceGroup,
+            )
+        }.toImmutableList()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
+
+    // 4. 聚合层
     private val uiFlagsFlow =
         combine(_isRefreshing, _isManageMode, _isConfigMode) { refreshing, manage, config ->
             HomepageUiFlags(refreshing, manage, config)
         }
 
-    val uiState: StateFlow<HomepageUiState> = combine(
+    private val manageStateFlow = combine(
+        setsFlow,
+        browseSourcesFlow,
+        allModulesCache,
+        _bookSourcesCache,
+        _pendingEnabled
+    ) { sets, browseSources, allModules, sourcesCache, pendingEnabled ->
+        HomepageManageUiState(
+            sets = sets,
+            browseSources = browseSources,
+            allJoinedModules = allModules.map { module ->
+                HomepageModuleManageUi(
+                    id = module.id,
+                    sourceUrl = module.sourceUrl,
+                    moduleKey = module.moduleKey,
+                    title = module.displayTitle,
+                    customSetTitle = module.customSetTitle,
+                    customSetId = module.customSetId,
+                    isVisible = pendingEnabled[module.id] ?: module.isEnabled,
+                    type = module.type,
+                    url = module.url,
+                    args = module.args,
+                    layoutConfig = module.layoutConfig,
+                    originalTitle = module.title,
+                )
+            }.toImmutableList(),
+            sourceNames = sourcesCache.mapValues { it.value.bookSourceName }
+        )
+    }
+
+    private val displayModulesFlow = combine(
         orderedModuleDefsFlow,
         _moduleContentStates,
-        uiFlagsFlow,
         _bookSourcesCache,
-        customSetsFlow
-    ) { grouped, contentStates, flags, sourcesCache, customSets ->
+        customSetsFlow,
+        _layoutConfigCache
+    ) { grouped, contentStates, sourcesCache, customSets, configCache ->
         val setNames = customSets.associate { it.id to it.name }
         val sortedSetIds = customSets.sortedBy { it.sortOrder }.map { it.id }
-        val configCache = _layoutConfigCache.value
 
-        val displayModules = sortedSetIds.flatMap { setId ->
+        sortedSetIds.flatMap { setId ->
             val setUrl = customSetUrl(setId)
             val mods = grouped[setUrl] ?: emptyList()
             mods.map { module ->
@@ -144,60 +211,26 @@ class HomepageViewModel(
                     config = configMap
                 )
             }
-        }
+        }.toImmutableList()
+    }
+
+    // 5. 最终 UI 状态
+    val uiState: StateFlow<HomepageUiState> = combine(
+        displayModulesFlow,
+        uiFlagsFlow,
+        manageStateFlow
+    ) { modules, flags, manageState ->
         HomepageUiState(
-            modules = displayModules.toImmutableList(),
+            modules = modules,
             isRefreshing = flags.isRefreshing,
             isManageMode = flags.isManageMode,
             isConfigMode = flags.isConfigMode,
+            manageState = manageState
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageUiState())
 
-    val setsFlow = combine(
-        localModulesFlow,
-        allModulesCache,
-        customSetsFlow,
-        _configVersion
-    ) { _, allModules, customSets, _ ->
-        val hiddenSourceUrls = GSON.fromJsonArray<String>(HomepageConfig.homepageSourceHidden)
-            .getOrDefault(emptyList()).toSet()
-        val moduleCountsBySet =
-            allModules.mapNotNull { it.customSetId }.groupBy { it }.mapValues { it.value.size }
-
-        val list = mutableListOf<HomepageSourceManageUi>()
-        customSets.sortedBy { it.sortOrder }.forEach { set ->
-            list.add(
-                HomepageSourceManageUi(
-                    sourceUrl = customSetUrl(set.id),
-                    sourceName = set.name,
-                    sourceGroup = null,
-                    isSelected = customSetUrl(set.id) !in hiddenSourceUrls,
-                    moduleCount = moduleCountsBySet[set.id] ?: 0,
-                    isCustomSet = true,
-                )
-            )
-        }
-        list.toImmutableList()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
-
-    /** 用于「浏览书源模块」：列出有 homepageModules 的书源 */
-    val browseSourcesFlow = exploreSourcesFlow.map { sources ->
-        sources.map { source ->
-            HomepageSourceManageUi(
-                sourceUrl = source.bookSourceUrl,
-                sourceName = source.bookSourceName,
-                sourceGroup = source.bookSourceGroup,
-            )
-        }.toImmutableList()
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
-
-    private val _exploreKindsCache =
-        MutableStateFlow<Map<String, List<Pair<String, String>>>>(emptyMap())
-    private val _pendingEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap())
-    private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
-
     init {
-        // 解析并缓存模块 layoutConfig，避免在 combine 中重复解析
+        // 解析并缓存模块 layoutConfig
         viewModelScope.launch {
             localModulesFlow.collect { modules ->
                 val cache = mutableMapOf<String, Map<String, String>>()
@@ -217,7 +250,6 @@ class HomepageViewModel(
             }
         }
 
-        // 清理 _pendingUserModules 中已入库的条目
         viewModelScope.launch {
             exploreSourcesFlow.collect { sources ->
                 _bookSourcesCache.value = sources.associateBy { it.bookSourceUrl }
@@ -235,7 +267,6 @@ class HomepageViewModel(
             }
         }
 
-        // 清理 _pendingUserModules 中已入库的条目
         viewModelScope.launch {
             allModulesCache.collect { modules ->
                 val dbIds = modules.map { it.id }.toSet()
@@ -243,7 +274,6 @@ class HomepageViewModel(
             }
         }
 
-        // 一次性迁移：将 customSetId=null 的存量模块归属到书源集，并确保所有集存在
         viewModelScope.launch {
             val allModules = allModulesCache.first()
             val orphans = allModules.filter { it.customSetId == null }
@@ -251,20 +281,15 @@ class HomepageViewModel(
                 orphans.groupBy { it.sourceUrl }.forEach { (sourceUrl, modules) ->
                     val source = bookSourceRepository.getBookSource(sourceUrl) ?: return@forEach
                     ensureSetForSource(sourceUrl, source.bookSourceName)
-                    modules.forEach { m ->
-                        gateway.setCustomSetId(m.id, "src_$sourceUrl")
-                    }
+                    modules.forEach { m -> gateway.setCustomSetId(m.id, "src_$sourceUrl") }
                 }
             }
-            // 确保所有 customSetId 对应的集都存在
             allModules.mapNotNull { it.customSetId }.distinct().forEach { setId ->
                 val isSrcSet = setId.startsWith("src_")
                 if (isSrcSet && gateway.getCustomSetById(setId) == null) {
                     val sourceUrl = setId.removePrefix("src_")
                     val source = bookSourceRepository.getBookSource(sourceUrl)
-                    if (source != null) {
-                        ensureSetForSource(sourceUrl, source.bookSourceName)
-                    }
+                    if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
                 }
             }
         }
@@ -281,22 +306,16 @@ class HomepageViewModel(
         val parsedIds = parsedDefs.map { it.globalId }.toSet()
 
         val toUpsert = mutableListOf<ModuleItem>()
-
         for (i in parsedDefs.indices) {
             val def = parsedDefs[i]
             val existing = existingById[def.globalId]
             if (existing != null) {
-                // 用户编辑过的模块不被 JSON 覆盖
                 if (existing.isUserCreated) continue
                 if (existing.sourceJsonHash == newHash) continue
                 toUpsert.add(
                     existing.copy(
-                        type = def.type,
-                        title = def.title,
-                        args = def.args,
-                        url = def.url,
-                        sourceJsonHash = newHash,
-                        syncedAt = System.currentTimeMillis(),
+                        type = def.type, title = def.title, args = def.args, url = def.url,
+                        sourceJsonHash = newHash, syncedAt = System.currentTimeMillis()
                     )
                 )
             } else {
@@ -313,19 +332,13 @@ class HomepageViewModel(
                         customSetId = "src_${source.bookSourceUrl}",
                         sortOrder = i,
                         sourceJsonHash = newHash,
-                        syncedAt = System.currentTimeMillis(),
+                        syncedAt = System.currentTimeMillis()
                     )
                 )
             }
         }
-
-        if (toUpsert.isNotEmpty()) {
-            gateway.upsertAll(toUpsert)
-        }
-
-        if (parsedIds.isNotEmpty()) {
-            gateway.deleteStale(source.bookSourceUrl, parsedIds.toList())
-        }
+        if (toUpsert.isNotEmpty()) gateway.upsertAll(toUpsert)
+        if (parsedIds.isNotEmpty()) gateway.deleteStale(source.bookSourceUrl, parsedIds.toList())
     }
 
     private fun loadModule(module: ModuleItem) {
@@ -336,74 +349,50 @@ class HomepageViewModel(
                     val source = bookSourceRepository.getBookSource(module.sourceUrl)
                         ?: throw Exception("Source not found")
                     val allKinds = withContext(Dispatchers.IO) { source.exploreKinds() }
-
-                    val selectedTitles = module.args?.let { argsStr ->
-                        GSON.fromJsonArray<String>(argsStr).getOrNull()
-                    }
-
-                    if (selectedTitles.isNullOrEmpty()) {
-                        allKinds.take(HOMEPAGE_MAX_BUTTON_GROUP_KINDS)
-                    } else {
-                        selectedTitles.mapNotNull { t -> allKinds.find { it.title == t } }
-                    }
+                    val selectedTitles =
+                        module.args?.let { GSON.fromJsonArray<String>(it).getOrNull() }
+                    if (selectedTitles.isNullOrEmpty()) allKinds.take(
+                        HOMEPAGE_MAX_BUTTON_GROUP_KINDS
+                    )
+                    else selectedTitles.mapNotNull { t -> allKinds.find { it.title == t } }
                 }.onSuccess { kinds ->
                     _moduleContentStates.update { it + (module.id to ModuleLoadState.Buttons(kinds.toImmutableList())) }
                 }.onFailure { e ->
-                    _moduleContentStates.update {
-                        it + (module.id to ModuleLoadState.Error(
-                            e.stackTraceStr
-                        ))
-                    }
+                    _moduleContentStates.update { it + (module.id to ModuleLoadState.Error(e.stackTraceStr)) }
                 }
-            }.also {
-                it.invokeOnCompletion { loadJobs.remove(module.id) }
-            }
+            }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
             return
         }
         loadJobs[module.id] = viewModelScope.launch {
             kotlin.runCatching {
-                val isRanking = module.type == HomepageModuleType.Ranking.key
-                        || module.type == HomepageModuleType.GridRanking.key
-                val books = if (isRanking) {
-                    exploreBooksUseCase.executeForRanking(module.sourceUrl, module.url, module.args)
-                } else {
-                    exploreBooksUseCase.execute(module.sourceUrl, module.url, module.args).books
-                }
-                val layout = try {
-                    GSON.fromJson(module.layoutConfig, Map::class.java)
-                } catch (_: Exception) {
-                    null
-                }
-                val rows = (layout?.get("rows") as? Number)?.toInt() ?: HOMEPAGE_DEFAULT_GRID_ROWS
+                val isRanking =
+                    module.type == HomepageModuleType.Ranking.key || module.type == HomepageModuleType.GridRanking.key
+                val books = if (isRanking) exploreBooksUseCase.executeForRanking(
+                    module.sourceUrl,
+                    module.url,
+                    module.args
+                )
+                else exploreBooksUseCase.execute(module.sourceUrl, module.url, module.args).books
                 val hasMore = isInfinite(module.type, module.layoutConfig) && books.isNotEmpty()
                 books to hasMore
             }.onSuccess { (books, hasMore) ->
                 _moduleContentStates.update {
                     it + (module.id to ModuleLoadState.Loaded(
                         books.toImmutableList(),
-                        hasMore = hasMore,
-                        page = 1
+                        hasMore = hasMore
                     ))
                 }
             }.onFailure { e ->
-                _moduleContentStates.update {
-                    it + (module.id to ModuleLoadState.Error(
-                        e.stackTraceStr
-                    ))
-                }
+                _moduleContentStates.update { it + (module.id to ModuleLoadState.Error(e.stackTraceStr)) }
             }
-        }.also {
-            it.invokeOnCompletion { loadJobs.remove(module.id) }
-        }
+        }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
     }
 
     fun loadMoreModule(globalId: String) {
         val currentState = _moduleContentStates.value[globalId] as? ModuleLoadState.Loaded ?: return
         if (currentState.isLoadingMore || !currentState.hasMore) return
-
         val nextPage = currentState.page + 1
         _moduleContentStates.update { it + (globalId to currentState.copy(isLoadingMore = true)) }
-
         viewModelScope.launch {
             kotlin.runCatching {
                 val module = gateway.getById(globalId) ?: throw Exception("Module not found")
@@ -414,18 +403,14 @@ class HomepageViewModel(
                     page = nextPage
                 )
             }.onSuccess { result ->
-                val newBooks = result.books
                 _moduleContentStates.update { states ->
                     val lastState =
                         states[globalId] as? ModuleLoadState.Loaded ?: return@update states
                     val existingUrls = lastState.books.map { it.bookUrl }.toSet()
-                    val deduped = newBooks.filter { it.bookUrl !in existingUrls }
-                    val combinedBooks = (lastState.books + deduped).toImmutableList()
+                    val deduped = result.books.filter { it.bookUrl !in existingUrls }
                     states + (globalId to ModuleLoadState.Loaded(
-                        books = combinedBooks,
-                        hasMore = deduped.isNotEmpty(),
-                        isLoadingMore = false,
-                        page = nextPage
+                        books = (lastState.books + deduped).toImmutableList(),
+                        hasMore = deduped.isNotEmpty(), isLoadingMore = false, page = nextPage
                     ))
                 }
             }.onFailure { e ->
@@ -461,17 +446,12 @@ class HomepageViewModel(
             _isRefreshing.value = true
             loadJobs.values.forEach { it.cancel() }
             loadJobs.clear()
-
-            // 刷新时同步当前已启用模块所属书源的定义
-            val activeSourceUrls = uiState.value.modules.map { it.sourceUrl }.distinct()
-            activeSourceUrls.forEach { url ->
+            uiState.value.modules.map { it.sourceUrl }.distinct().forEach { url ->
                 resolveBookSource(url)?.let { syncModulesFromSource(it) }
             }
-
             _moduleContentStates.value = emptyMap()
-            uiState.map { it.modules }.first { modules ->
-                modules.all { it.state !is ModuleLoadState.Loading }
-            }
+            uiState.map { it.modules }
+                .first { modules -> modules.all { it.state !is ModuleLoadState.Loading } }
             _isRefreshing.value = false
         }
     }
@@ -486,14 +466,11 @@ class HomepageViewModel(
     fun setModuleVisible(id: String, visible: Boolean) {
         _pendingEnabled.update { it + (id to visible) }
         viewModelScope.launch {
-            val existing = gateway.getById(id)
-            if (existing != null) {
-                gateway.setEnabled(id, visible)
-            } else {
-                // 如果模块尚未入库（虚拟状态），则根据 ID 规则解析并入库
+            if (gateway.getById(id) != null) gateway.setEnabled(id, visible)
+            else {
                 val parts = id.split("::")
                 if (parts.size >= 3) {
-                    val setId = parts[0]
+                    val setId = parts[0];
                     val sourceUrl = parts[1]
                     val key = parts.subList(2, parts.size).joinToString("::")
                     ensureModuleInDb(sourceUrl, key, id, setId)
@@ -520,24 +497,25 @@ class HomepageViewModel(
 
     private suspend fun ensureSetForSource(sourceUrl: String, sourceName: String): String {
         val setId = "src_$sourceUrl"
-        if (gateway.getCustomSetById(setId) == null) {
-            gateway.upsertCustomSet(CustomSetItem(id = setId, name = sourceName))
-        }
+        if (gateway.getCustomSetById(setId) == null) gateway.upsertCustomSet(
+            CustomSetItem(
+                id = setId,
+                name = sourceName
+            )
+        )
         return setId
     }
 
     fun addCustomModule(sourceUrl: String, targetSetId: String?, def: ModuleDef) {
-        val key = def.key.ifBlank { def.title }
+        val key = def.key.ifBlank { def.title };
         val setId = targetSetId ?: "src_$sourceUrl"
-
         if (isInfinite(def.type, def.layoutConfig)) {
-            val hasInfinite = allModulesCache.value.any {
-                it.customSetId == setId && isInfinite(
-                    it.type,
-                    it.layoutConfig
-                )
-            }
-            if (hasInfinite) {
+            if (allModulesCache.value.any {
+                    it.customSetId == setId && isInfinite(
+                        it.type,
+                        it.layoutConfig
+                    )
+                }) {
                 viewModelScope.launch {
                     _effects.emit(
                         HomepageEffect.ShowSnackbar(
@@ -550,21 +528,11 @@ class HomepageViewModel(
                 return
             }
         }
-
         val id = ModuleDef.globalIdOf(sourceUrl, key, setId)
         val module = ModuleItem(
-            id = id,
-            sourceUrl = sourceUrl,
-            moduleKey = key,
-            type = def.type,
-            title = def.title,
-            args = def.args,
-            layoutConfig = def.layoutConfig,
-            url = def.url,
-            isEnabled = true,
-            isUserCreated = true,
-            customSetId = setId,
-            syncedAt = System.currentTimeMillis(),
+            id = id, sourceUrl = sourceUrl, moduleKey = key, type = def.type, title = def.title,
+            args = def.args, layoutConfig = def.layoutConfig, url = def.url, isEnabled = true,
+            isUserCreated = true, customSetId = setId, syncedAt = System.currentTimeMillis()
         )
         viewModelScope.launch {
             val source = bookSourceRepository.getBookSource(sourceUrl)
@@ -575,23 +543,37 @@ class HomepageViewModel(
         }
     }
 
-    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> {
-        return _exploreKindsCache.value[sourceUrl].orEmpty()
-    }
+    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> =
+        _exploreKindsCache.value[sourceUrl].orEmpty()
 
     fun updateModule(globalId: String, def: ModuleDef) {
         viewModelScope.launch {
             val existing = gateway.getById(globalId) ?: return@launch
+            // 校验：如果是变更为无限流，检查集内是否已有其他无限流模块
+            if (isInfinite(def.type, def.layoutConfig)) {
+                val hasOtherInfinite = allModulesCache.value.any {
+                    it.customSetId == existing.customSetId && it.id != globalId && isInfinite(
+                        it.type,
+                        it.layoutConfig
+                    )
+                }
+                if (hasOtherInfinite) {
+                    _effects.emit(
+                        HomepageEffect.ShowSnackbar(
+                            getApplication<Application>().getString(
+                                R.string.homepage_module_duplicate_infinite
+                            )
+                        )
+                    )
+                    return@launch
+                }
+            }
             gateway.upsertAll(
                 listOf(
                     existing.copy(
-                        customTitle = def.title.takeIf { it != existing.title },
-                        type = def.type,
-                        url = def.url,
-                        args = def.args,
-                        layoutConfig = def.layoutConfig,
-                        isUserCreated = true,  // 标记为用户编辑，阻止 JSON 同步覆盖
-                        syncedAt = System.currentTimeMillis(),
+                        customTitle = def.title.takeIf { it != existing.title }, type = def.type,
+                        url = def.url, args = def.args, layoutConfig = def.layoutConfig,
+                        isUserCreated = true, syncedAt = System.currentTimeMillis()
                     )
                 )
             )
@@ -601,17 +583,17 @@ class HomepageViewModel(
 
     fun setModuleCustomSetTitle(globalId: String, customSetTitle: String?) {
         viewModelScope.launch {
-            gateway.setCustomSetTitle(globalId, customSetTitle)
-            notifyConfigChanged()
+            gateway.setCustomSetTitle(
+                globalId,
+                customSetTitle
+            ); notifyConfigChanged()
         }
     }
 
     fun deleteModule(globalId: String) {
         viewModelScope.launch {
-            gateway.delete(globalId)
-            _moduleContentStates.update { it - globalId }
-            loadJobs.remove(globalId)?.cancel()
-            _pendingEnabled.update { it - globalId }
+            gateway.delete(globalId); _moduleContentStates.update { it - globalId }
+            loadJobs.remove(globalId)?.cancel(); _pendingEnabled.update { it - globalId }
             _pendingUserModules.update { it.filter { m -> m.id != globalId } }
             notifyConfigChanged()
         }
@@ -620,30 +602,23 @@ class HomepageViewModel(
     fun reorderJoinedModules(orderedIds: List<String>) {
         viewModelScope.launch {
             val orders = orderedIds.mapIndexed { index, id -> id to index }.toMap()
-            gateway.batchSetSortOrders(orders)
-            notifyConfigChanged()
+            gateway.batchSetSortOrders(orders); notifyConfigChanged()
         }
     }
 
     fun reorderCustomSets(orderedUrls: List<String>) {
         viewModelScope.launch {
-            val orders = orderedUrls.mapIndexed { index, url ->
-                customSetIdFromUrl(url) to index
-            }.toMap()
-            gateway.batchSetCustomSetSortOrders(orders)
-            notifyConfigChanged()
+            val orders =
+                orderedUrls.mapIndexed { index, url -> customSetIdFromUrl(url) to index }.toMap()
+            gateway.batchSetCustomSetSortOrders(orders); notifyConfigChanged()
         }
     }
 
-    /** 获取指定集内的模块（sourceUrl 可以是书源 URL 或 custom://xxx） */
     fun getJoinedModules(sourceUrl: String): List<HomepageModuleManageUi> {
-        val isSet = isCustomSetUrl(sourceUrl)
+        val isSet = isCustomSetUrl(sourceUrl);
         val setId = if (isSet) customSetIdFromUrl(sourceUrl) else null
-        val dbModules = if (isSet) {
-            allModulesCache.value.filter { it.customSetId == setId }
-        } else {
-            allModulesCache.value.filter { it.sourceUrl == sourceUrl }
-        }
+        val dbModules =
+            if (isSet) allModulesCache.value.filter { it.customSetId == setId } else allModulesCache.value.filter { it.sourceUrl == sourceUrl }
         val dbIds = dbModules.map { it.id }.toSet()
         val pendingModules = _pendingUserModules.value.filter { pending ->
             val matches =
@@ -653,67 +628,70 @@ class HomepageViewModel(
         return (dbModules + pendingModules).map { uiFromModule(it) }
     }
 
-    /** 所有已添加的模块，按书源分组（用于自定义集添加模块） */
-    fun getAllModulesGroupedBySource(): Map<String, List<HomepageModuleManageUi>> {
-        return allModulesCache.value
-            .distinctBy { it.sourceUrl to it.moduleKey }
-            .map { uiFromModule(it) }
+    fun getAllModulesGroupedBySource(): Map<String, List<HomepageModuleManageUi>> =
+        allModulesCache.value.distinctBy { it.sourceUrl to it.moduleKey }.map { uiFromModule(it) }
             .groupBy { it.sourceUrl }
-    }
 
-    fun getSourceName(sourceUrl: String): String {
-        return _bookSourcesCache.value[sourceUrl]?.bookSourceName ?: sourceUrl
-    }
+    fun getSourceName(sourceUrl: String): String =
+        _bookSourcesCache.value[sourceUrl]?.bookSourceName ?: sourceUrl
 
     fun assignModuleToCustomSet(moduleId: String, customSetId: String?) {
         viewModelScope.launch {
             val existing = gateway.getById(moduleId) ?: return@launch
             if (customSetId == null) {
-                // 如果是取消分配，且它不是归属于书源默认集的，则直接删除该副本
-                if (existing.customSetId != "src_${existing.sourceUrl}") {
-                    gateway.delete(moduleId)
-                }
+                if (existing.customSetId != "src_${existing.sourceUrl}") gateway.delete(moduleId)
             } else {
-                // 核心逻辑：分配 = 复制。生成带新 setId 的 ID
+                // 校验：目标集是否已存在无限模块
+                if (isInfinite(existing.type, existing.layoutConfig)) {
+                    val hasInfinite = allModulesCache.value.any {
+                        it.customSetId == customSetId && isInfinite(it.type, it.layoutConfig)
+                    }
+                    if (hasInfinite) {
+                        _effects.emit(
+                            HomepageEffect.ShowSnackbar(
+                                getApplication<Application>().getString(
+                                    R.string.homepage_module_duplicate_infinite
+                                )
+                            )
+                        )
+                        return@launch
+                    }
+                }
                 val newId =
                     ModuleDef.globalIdOf(existing.sourceUrl, existing.moduleKey, customSetId)
-                val newModule = existing.copy(
-                    id = newId,
-                    customSetId = customSetId,
-                    isEnabled = true, // 分配到新集时默认开启
-                    isUserCreated = true // 标记为用户创建，避免被同步清理
+                gateway.upsertAll(
+                    listOf(
+                        existing.copy(
+                            id = newId,
+                            customSetId = customSetId,
+                            isEnabled = true,
+                            isUserCreated = true
+                        )
+                    )
                 )
-                gateway.upsertAll(listOf(newModule))
             }
             notifyConfigChanged()
         }
     }
 
     fun syncSourceModules(sourceUrl: String) {
-        viewModelScope.launch {
-            resolveBookSource(sourceUrl)?.let { syncModulesFromSource(it) }
-        }
+        viewModelScope.launch { resolveBookSource(sourceUrl)?.let { syncModulesFromSource(it) } }
     }
 
-    /** 「书源模块」tab：仅 JSON，纯参考 */
     fun getSourceModules(
         sourceUrl: String,
         targetSetId: String? = null
     ): List<HomepageModuleManageUi> {
         val source = resolveBookSource(sourceUrl) ?: return emptyList()
-
         val json = source.homepageModules ?: return emptyList()
-        val jsonDefs = parseBookSourceModules(source, json)
-
+        val jsonDefs = parseModuleDefs(source, json)
         val effectiveSetId = targetSetId ?: "src_$sourceUrl"
-        val joinedKeys = allModulesCache.value
-            .filter { it.sourceUrl == sourceUrl && it.customSetId == effectiveSetId }
-            .map { it.moduleKey }.toSet()
-
+        val joinedKeys =
+            allModulesCache.value.filter { it.sourceUrl == sourceUrl && it.customSetId == effectiveSetId }
+                .map { it.moduleKey }.toSet()
         return jsonDefs.map { def ->
-            val id = ModuleDef.globalIdOf(sourceUrl, def.key, effectiveSetId)
             HomepageModuleManageUi(
-                id = id,
+                id = ModuleDef.globalIdOf(sourceUrl, def.key, effectiveSetId),
                 sourceUrl = def.sourceUrl,
                 moduleKey = def.key,
                 title = def.title,
@@ -727,15 +705,13 @@ class HomepageViewModel(
         }
     }
 
-    /** 从书源模块「加入」→ 写入 DB，自动归属到该书源的集 */
-    /** 从发现页 Kind 创建一个 ButtonGroup 模块，args 存储选中 Kind 标题的 JSON 数组 */
     fun addButtonGroupFromKinds(
         sourceUrl: String,
         targetSetId: String?,
         title: String,
         kindTitles: List<String>
     ) {
-        val key = kindTitles.firstOrNull() ?: title
+        val key = kindTitles.firstOrNull() ?: title;
         val setId = targetSetId ?: "src_$sourceUrl"
         val id = ModuleDef.globalIdOf(sourceUrl, key, setId)
         val module = ModuleItem(
@@ -759,52 +735,8 @@ class HomepageViewModel(
         }
     }
 
-    fun joinModule(sourceUrl: String, targetSetId: String?, def: ModuleDef) {
-        val setId = targetSetId ?: "src_$sourceUrl"
-
-        if (isInfinite(def.type, def.layoutConfig)) {
-            val hasInfinite = allModulesCache.value.any {
-                it.customSetId == setId && isInfinite(
-                    it.type,
-                    it.layoutConfig
-                )
-            }
-            if (hasInfinite) {
-                viewModelScope.launch {
-                    _effects.emit(
-                        HomepageEffect.ShowSnackbar(
-                            getApplication<Application>().getString(
-                                R.string.homepage_module_duplicate_infinite
-                            )
-                        )
-                    )
-                }
-                return
-            }
-        }
-
-        val id = ModuleDef.globalIdOf(sourceUrl, def.key, setId)
-        val module = ModuleItem(
-            id = id,
-            sourceUrl = sourceUrl,
-            moduleKey = def.key,
-            type = def.type,
-            title = def.title,
-            args = def.args,
-            layoutConfig = def.layoutConfig,
-            url = def.url,
-            isEnabled = true,
-            customSetId = setId,
-            syncedAt = System.currentTimeMillis(),
-        )
-        viewModelScope.launch {
-            val source = bookSourceRepository.getBookSource(sourceUrl)
-            if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
-            gateway.upsertAll(listOf(module))
-            _pendingUserModules.update { list -> if (list.any { it.id == id }) list else list + module }
-            notifyConfigChanged()
-        }
-    }
+    fun joinModule(sourceUrl: String, targetSetId: String?, def: ModuleDef) =
+        addCustomModule(sourceUrl, targetSetId, def)
 
     private fun uiFromModule(module: ModuleItem) = HomepageModuleManageUi(
         id = module.id,
@@ -822,27 +754,19 @@ class HomepageViewModel(
     )
 
     fun createCustomSet(name: String) {
-        viewModelScope.launch {
-            gateway.createCustomSet(name)
-            notifyConfigChanged()
-        }
+        viewModelScope.launch { gateway.createCustomSet(name); notifyConfigChanged() }
     }
 
     fun renameCustomSet(id: String, name: String) {
-        viewModelScope.launch {
-            gateway.renameCustomSet(id, name)
-            notifyConfigChanged()
-        }
+        viewModelScope.launch { gateway.renameCustomSet(id, name); notifyConfigChanged() }
     }
-
     fun deleteCustomSet(id: String) {
         viewModelScope.launch {
-            val moduleIds = allModulesCache.value.filter { it.customSetId == id }.map { it.id }
+            val ids = allModulesCache.value.filter { it.customSetId == id }.map { it.id }
             gateway.deleteCustomSet(id)
-            moduleIds.forEach { mid ->
-                _moduleContentStates.update { it - mid }
-                loadJobs.remove(mid)?.cancel()
-                _pendingEnabled.update { it - mid }
+            ids.forEach { mid ->
+                _moduleContentStates.update { it - mid }; loadJobs.remove(mid)
+                ?.cancel(); _pendingEnabled.update { it - mid }
             }
             notifyConfigChanged()
         }
@@ -853,12 +777,12 @@ class HomepageViewModel(
             saveSearchBooksUseCase.save(book)
             _effects.emit(
                 HomepageEffect.NavigateToBookInfo(
-                    name = book.name,
-                    author = book.author,
-                    bookUrl = book.bookUrl,
-                    origin = book.origin,
-                    coverPath = book.coverUrl,
-                    sharedCoverKey = sharedCoverKey
+                    book.name,
+                    book.author,
+                    book.bookUrl,
+                    book.origin,
+                    book.coverUrl,
+                    sharedCoverKey
                 )
             )
         }
@@ -866,14 +790,18 @@ class HomepageViewModel(
 
     fun onModuleHeaderClick(sourceUrl: String, exploreUrl: String?, title: String?) {
         viewModelScope.launch {
-            _effects.emit(HomepageEffect.NavigateToExploreShow(title, sourceUrl, exploreUrl))
+            _effects.emit(
+                HomepageEffect.NavigateToExploreShow(
+                    title,
+                    sourceUrl,
+                    exploreUrl
+                )
+            )
         }
     }
 
-    private fun resolveBookSource(sourceUrl: String): BookSource? {
-        return _bookSourcesCache.value[sourceUrl]
-            ?: bookSourceRepository.getBookSourceSync(sourceUrl)
-    }
+    private fun resolveBookSource(sourceUrl: String): BookSource? =
+        _bookSourcesCache.value[sourceUrl] ?: bookSourceRepository.getBookSourceSync(sourceUrl)
 
     private suspend fun ensureModuleInDb(
         sourceUrl: String,
@@ -883,8 +811,7 @@ class HomepageViewModel(
     ) {
         if (gateway.getById(id) != null) return
         val source = resolveBookSource(sourceUrl) ?: return
-        val json = source.homepageModules ?: return
-        val defs = parseBookSourceModules(source, json)
+        val defs = parseModuleDefs(source, source.homepageModules ?: return)
         val def = defs.find { it.key == moduleKey } ?: return
         gateway.upsertAll(
             listOf(
@@ -906,10 +833,6 @@ class HomepageViewModel(
     private fun notifyConfigChanged() {
         _configVersion.update { it + 1 }
     }
-
-    private fun parseBookSourceModules(source: BookSource, json: String): List<ModuleDef> =
-        parseModuleDefs(source, json)
-
 }
 
 private data class HomepageUiFlags(

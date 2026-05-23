@@ -77,7 +77,7 @@ fun AppModalBottomSheet(
                     }
                 }
             },
-            insideMargin = DpSize(16.dp, 12.dp),
+            insideMargin = DpSize(16.dp, 0.dp),
             backgroundColor = sheetContainerColor,
             dragHandleColor = sheetDragHandleColor,
             onDismissRequest = onDismissRequest,
@@ -120,7 +120,7 @@ fun AppModalBottomSheet(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
                             .heightIn(max = maxHeight)
                             .animateContentSize()
                             .then(modifier)

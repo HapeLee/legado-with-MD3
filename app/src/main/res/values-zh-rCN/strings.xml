@@ -1689,7 +1689,7 @@
     <string name="homepage_tab_discover">发现</string>
     <string name="homepage_no_joined_modules">暂无已加入的模块</string>
     <string name="homepage_standard_modules_sortable">标准模块 (可拖拽排序)</string>
-    <string name="homepage_infinite_module_bottom">底栏无限模块</string>
+    <string name="homepage_infinite_module_bottom">底栏模块 (无限加载，仅可存在一个)</string>
     <string name="homepage_in_effect">当前生效</string>
     <string name="homepage_blocked">已被屏蔽</string>
     <string name="homepage_source_json_empty">该书源的 homepageModules JSON 为空</string>
