@@ -66,6 +66,7 @@ data class RelatedBooksUi(
     val key: String,
     val title: String,
     val url: String,
+    val resolvedUrl: String,
     val books: ImmutableList<SearchBook>,
 )
 

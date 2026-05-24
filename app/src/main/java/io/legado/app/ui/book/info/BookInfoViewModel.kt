@@ -1303,13 +1303,13 @@ class BookInfoViewModel(
         )
     }
 
-    private fun onRelatedBooksMore(title: String, url: String) {
+    private fun onRelatedBooksMore(title: String, resolvedUrl: String) {
         val source = bookSource ?: return
         emitEffect(
             BookInfoEffect.NavigateToExploreShow(
                 title = title,
                 sourceUrl = source.bookSourceUrl,
-                exploreUrl = url,
+                exploreUrl = resolvedUrl,
             )
         )
     }
@@ -1337,17 +1337,17 @@ class BookInfoViewModel(
         }
         execute {
             modules.map { def ->
-                val books = try {
+                val (resolvedUrl, books) = try {
                     resolveAndExplore(source, def.url!!, book)
-                        .filter { it.bookUrl != book.bookUrl }
                 } catch (e: Exception) {
-                    emptyList()
+                    def.url!! to emptyList()
                 }
                 RelatedBooksUi(
                     key = def.key ?: def.title.orEmpty(),
                     title = def.title.orEmpty(),
                     url = def.url!!,
-                    books = books.toImmutableList(),
+                    resolvedUrl = resolvedUrl,
+                    books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
                 )
             }.filter { it.books.isNotEmpty() }
         }.onSuccess { result ->
@@ -1363,8 +1363,8 @@ class BookInfoViewModel(
         source: BookSource,
         url: String,
         book: Book,
-    ): List<SearchBook> {
-        return WebBook.exploreBookSuspend(source, url, 1, book)
+    ): Pair<String, List<SearchBook>> {
+        return WebBook.exploreBookWithResolvedUrl(source, url, 1, book)
     }
 
     private fun emitEffect(effect: BookInfoEffect) {

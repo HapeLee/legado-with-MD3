@@ -150,6 +150,44 @@ object WebBook {
         return exploreBookAwait(bookSource, url, page, ruleData)
     }
 
+    suspend fun exploreBookWithResolvedUrl(
+        bookSource: BookSource,
+        url: String,
+        page: Int? = 1,
+        ruleData: RuleDataInterface = RuleData(),
+    ): Pair<String, ArrayList<SearchBook>> {
+        val analyzeUrl = AnalyzeUrl(
+            mUrl = url,
+            page = page,
+            baseUrl = bookSource.bookSourceUrl,
+            source = bookSource,
+            ruleData = ruleData,
+            coroutineContext = currentCoroutineContext()
+        )
+        var res = analyzeUrl.getStrResponseAwait()
+        bookSource.loginCheckJs?.let { checkJs ->
+            if (checkJs.isNotBlank()) {
+                res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
+            }
+        }
+        checkRedirect(bookSource, res)
+        val resolvedUrl = res.url
+        val listRuleData = when (ruleData) {
+            is RuleData -> ruleData
+            is Book -> RuleData()
+            else -> RuleData()
+        }
+        val books = BookList.analyzeBookList(
+            bookSource = bookSource,
+            ruleData = listRuleData,
+            analyzeUrl = analyzeUrl,
+            baseUrl = res.url,
+            body = res.body,
+            isSearch = false
+        )
+        return resolvedUrl to books
+    }
+
     suspend fun exploreBookWithRuleData(
         bookSource: BookSource,
         url: String,

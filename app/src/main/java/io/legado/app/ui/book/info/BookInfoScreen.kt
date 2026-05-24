@@ -246,7 +246,7 @@ private fun BookInfoScreenContent(
                                             onIntent(BookInfoIntent.RelatedBookClick(book))
                                         },
                                         onMoreClick = {
-                                            onIntent(BookInfoIntent.RelatedBooksMore(module.title, module.url))
+                                            onIntent(BookInfoIntent.RelatedBooksMore(module.title, module.resolvedUrl))
                                         },
                                     )
                                 }
