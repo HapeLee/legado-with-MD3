@@ -18,11 +18,11 @@ import io.legado.app.help.book.removeType
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
+import io.legado.app.utils.externalFiles
 import io.legado.app.utils.inputStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.File
 import java.io.FileOutputStream
 
 enum class BookInfoEditType {
@@ -157,20 +157,15 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
     fun coverChangeTo(context: Context, uri: Uri) {
         execute {
             runCatching {
-                context.externalCacheDir?.let { externalCacheDir ->
-                    val file = File(externalCacheDir, "covers")
-                    val suffix = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: "jpg"
-                    val fileName = uri.inputStream(context).getOrThrow().use { MD5Utils.md5Encode(it) } + ".$suffix"
-                    val coverFile = FileUtils.createFileIfNotExist(file, fileName)
-                    context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        FileOutputStream(coverFile).use { outputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
+                val suffix = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: "jpg"
+                val fileName = uri.inputStream(context).getOrThrow().use { MD5Utils.md5Encode(it) } + ".$suffix"
+                val coverFile = FileUtils.createFileIfNotExist(context.externalFiles, "covers", fileName)
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    FileOutputStream(coverFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
                     }
-                    _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
-                } ?: run {
-                    AppLog.put("External cache directory is null", Throwable("Null directory"), true)
                 }
+                _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
             }.onFailure {
                 AppLog.put("书籍封面保存失败\n$it", it, true)
             }
