@@ -31,6 +31,10 @@ class OtherConfigViewModel : ViewModel() {
         SharedReceiverActivity::class.java.name
     )
 
+    init {
+        OtherConfig.processText = isProcessTextEnabled()
+    }
+
     fun isProcessTextEnabled(): Boolean {
         return packageManager.getComponentEnabledSetting(componentName) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     }
@@ -41,11 +45,14 @@ class OtherConfigViewModel : ViewModel() {
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
-        packageManager.setComponentEnabledSetting(
-            componentName,
-            state,
-            PackageManager.DONT_KILL_APP
-        )
+        runCatching {
+            packageManager.setComponentEnabledSetting(
+                componentName,
+                state,
+                PackageManager.DONT_KILL_APP
+            )
+            OtherConfig.processText = enable
+        }
     }
 
     fun clearWebViewData(context: Context) {
