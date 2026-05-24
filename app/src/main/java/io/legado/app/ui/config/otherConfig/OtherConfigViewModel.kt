@@ -18,6 +18,7 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -32,7 +33,9 @@ class OtherConfigViewModel : ViewModel() {
     )
 
     init {
-        OtherConfig.processText = isProcessTextEnabled()
+        viewModelScope.launch(Dispatchers.IO) {
+            OtherConfig.processText = isProcessTextEnabled()
+        }
     }
 
     fun isProcessTextEnabled(): Boolean {
@@ -45,13 +48,17 @@ class OtherConfigViewModel : ViewModel() {
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
-        runCatching {
-            packageManager.setComponentEnabledSetting(
-                componentName,
-                state,
-                PackageManager.DONT_KILL_APP
-            )
-            OtherConfig.processText = enable
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                packageManager.setComponentEnabledSetting(
+                    componentName,
+                    state,
+                    PackageManager.DONT_KILL_APP
+                )
+                OtherConfig.processText = enable
+            }.onFailure {
+                appCtx.toastOnUi(it.localizedMessage)
+            }
         }
     }
 
