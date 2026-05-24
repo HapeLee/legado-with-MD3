@@ -976,6 +976,7 @@
     <string name="pref_anti_alias_summary">绘制图片时抗锯齿</string>
     <string name="upload_url">上传 URL</string>
     <string name="download_url_rule">下载 URL 规则</string>
+    <string name="related_books">关联书籍（relatedBooks）</string>
     <string name="clipboard_empty">剪贴板没有内容</string>
     <string name="clipboard_empty_or_invalid">剪贴板为空或格式不正确</string>
     <string name="invalid_format">格式不正确</string>

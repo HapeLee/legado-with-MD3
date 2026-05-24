@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import io.legado.app.base.BaseComposeActivity
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
+import io.legado.app.utils.startActivity
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
@@ -27,6 +28,20 @@ class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
             },
             onOpenSearch = { keyword ->
                 startActivity(MainActivity.createSearchIntent(this, key = keyword))
+            },
+            onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
+                startActivity<BookInfoActivity> {
+                    putExtra("bookUrl", bookUrl)
+                    putExtra("name", name)
+                    putExtra("author", author)
+                    putExtra("origin", origin)
+                    putExtra("coverPath", coverPath)
+                }
+            },
+            onNavigateToExploreShow = { title, sourceUrl, exploreUrl ->
+                startActivity(
+                    MainActivity.createExploreShowIntent(this, title, sourceUrl, exploreUrl)
+                )
             },
         )
     }

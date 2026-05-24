@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkAdd
@@ -70,10 +71,12 @@ import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.BookCover
 import io.legado.app.ui.config.coverConfig.CoverConfig
+import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
 import io.legado.app.ui.theme.ProvideThemeOverride
@@ -87,6 +90,7 @@ import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -104,6 +108,7 @@ import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -233,6 +238,18 @@ private fun BookInfoScreenContent(
                                     onSourceClick = { onIntent(BookInfoIntent.ChangeSourceClick) },
                                     onReadRecordClick = { onIntent(BookInfoIntent.ReadRecordClick) },
                                 )
+                                state.relatedBooks.forEach { module ->
+                                    RelatedBooksBanner(
+                                        title = module.title,
+                                        books = module.books,
+                                        onBookClick = { book, _ ->
+                                            onIntent(BookInfoIntent.RelatedBookClick(book))
+                                        },
+                                        onMoreClick = {
+                                            onIntent(BookInfoIntent.RelatedBooksMore(module.title, module.url))
+                                        },
+                                    )
+                                }
                                 BookInfoSummary(
                                     book = book,
                                     chapterList = state.chapterList,
@@ -1064,4 +1081,46 @@ private fun BookInfoDialogs(
     )
 
     AppLogSheet(show = state.showAppLogSheet, onDismissRequest = { onIntent(BookInfoIntent.DismissAppLogSheet) })
+}
+
+@Composable
+private fun RelatedBooksBanner(
+    title: String,
+    books: ImmutableList<SearchBook>,
+    onBookClick: (SearchBook, String?) -> Unit,
+    onMoreClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AppText(
+                    text = title,
+                    style = LegadoTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                SmallTonalIconButton(
+                    onClick = onMoreClick,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "more",
+                )
+            }
+        }
+        BannerModule(
+            books = books,
+            onClick = onBookClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+        )
+    }
 }
