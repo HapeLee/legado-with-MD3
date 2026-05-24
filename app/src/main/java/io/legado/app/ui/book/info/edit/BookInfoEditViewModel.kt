@@ -23,6 +23,7 @@ import io.legado.app.utils.inputStream
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 import java.io.FileOutputStream
 
 enum class BookInfoEditType {
@@ -158,12 +159,20 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
         execute {
             runCatching {
                 val suffix = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: "jpg"
-                val fileName = uri.inputStream(context).getOrThrow().use { MD5Utils.md5Encode(it) } + ".$suffix"
-                val coverFile = FileUtils.createFileIfNotExist(context.externalFiles, "covers", fileName)
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    FileOutputStream(coverFile).use { outputStream ->
+                val coversDir = FileUtils.createFolderIfNotExist(context.externalFiles, "covers")
+                val tempFile = File(coversDir, "${System.currentTimeMillis()}.tmp")
+                uri.inputStream(context).getOrThrow().use { inputStream ->
+                    FileOutputStream(tempFile).use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }
+                }
+                val md5 = tempFile.inputStream().use { MD5Utils.md5Encode(it) }
+                val coverFile = File(coversDir, "$md5.$suffix")
+                if (coverFile.exists()) {
+                    tempFile.delete()
+                } else if (!tempFile.renameTo(coverFile)) {
+                    tempFile.copyTo(coverFile, overwrite = true)
+                    tempFile.delete()
                 }
                 _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
             }.onFailure {
