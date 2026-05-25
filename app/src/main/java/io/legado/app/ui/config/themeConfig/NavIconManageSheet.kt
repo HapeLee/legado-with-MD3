@@ -54,6 +54,11 @@ fun NavIconManageSheet(
     var activeDest by remember { mutableStateOf<String?>(null) }
 
     val destinations = listOf(
+        NavIconDestination(
+            "home",
+            R.string.home,
+            ThemeConfig.navIconHome
+        ) { ThemeConfig.navIconHome = it },
         NavIconDestination("bookshelf", R.string.bookshelf, ThemeConfig.navIconBookshelf) { ThemeConfig.navIconBookshelf = it },
         NavIconDestination("explore", R.string.discovery, ThemeConfig.navIconExplore) { ThemeConfig.navIconExplore = it },
         NavIconDestination("rss", R.string.rss, ThemeConfig.navIconRss) { ThemeConfig.navIconRss = it },
@@ -84,7 +89,9 @@ fun NavIconManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_nav_icons),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

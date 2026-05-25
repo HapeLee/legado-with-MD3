@@ -672,6 +672,7 @@ fun ThemeConfigScreen(
             item {
                 SplicedColumnGroup(title = stringResource(R.string.theme_config_nav_icon_settings)) {
                     val customCount = listOf(
+                        ThemeConfig.navIconHome,
                         ThemeConfig.navIconBookshelf,
                         ThemeConfig.navIconExplore,
                         ThemeConfig.navIconRss,
@@ -722,20 +723,15 @@ fun ThemeConfigScreen(
     )
 
 
-    manageKey?.let { isDark ->
-        BackgroundImageManageSheet(
-            show = true,
-            isDarkTheme = isDark,
-            onDismissRequest = { manageKey = null }
-        )
-    }
+    BackgroundImageManageSheet(
+        isDarkTheme = manageKey,
+        onDismissRequest = { manageKey = null }
+    )
 
-    if (showNavIconSheet) {
-        NavIconManageSheet(
-            show = true,
-            onDismissRequest = { showNavIconSheet = false }
-        )
-    }
+    NavIconManageSheet(
+        show = showNavIconSheet,
+        onDismissRequest = { showNavIconSheet = false }
+    )
 
 
     LauncherIconPickerSheet(
