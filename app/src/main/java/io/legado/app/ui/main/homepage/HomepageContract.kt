@@ -3,10 +3,17 @@ package io.legado.app.ui.main.homepage
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+
+@Stable
+data class HomepageBookItemUi(
+    val book: SearchBook,
+    val shelfState: BookShelfState = BookShelfState.NOT_IN_SHELF,
+)
 
 @Stable
 data class HomepageUiState(
@@ -93,7 +100,7 @@ sealed interface ModuleLoadState {
 
     @Stable
     data class Loaded(
-        val books: ImmutableList<SearchBook>,
+        val books: ImmutableList<HomepageBookItemUi>,
         val hasMore: Boolean = false,
         val isLoadingMore: Boolean = false,
         val page: Int = 1

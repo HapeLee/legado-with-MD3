@@ -1656,6 +1656,11 @@
 
     <!-- Missing strings -->
     <string name="cover_info_orientation">Cover orientation</string>
+    <string name="network_book_badge_setting">Network Book Badge</string>
+    <string name="filter_show_all">Show All</string>
+    <string name="filter_hide_in_shelf">Hide Same Source Books in Shelf</string>
+    <string name="filter_hide_same_name_author">Hide Non-Same Source Books in Shelf</string>
+    <string name="filter_show_not_in_shelf_only">Show Only Books Not in Shelf</string>
     <string name="follow_read_background">Follow background</string>
     <string name="heading_spacing">Heading spacing</string>
     <string name="layout_setting">Layout settings</string>

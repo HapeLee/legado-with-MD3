@@ -682,6 +682,7 @@ fun BookItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
+                memoryCacheKey = book.bookUrl,
             )
         },
         title = book.name,

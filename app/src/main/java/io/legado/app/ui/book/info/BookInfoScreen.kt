@@ -1,9 +1,9 @@
 package io.legado.app.ui.book.info
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,7 +52,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -109,6 +108,7 @@ import io.legado.app.ui.widget.components.topbar.MiuixGlassScrollBehavior
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -418,23 +418,8 @@ private fun rememberBookInfoColorTheme(book: Book?): ThemeOverrideState? {
     if (useDefaultCover) return null
 
     val imageLoader = koinInject<ImageLoader>()
-    var shouldExtractColor by remember(book?.bookUrl) { mutableStateOf(false) }
-
-    LaunchedEffect(book?.bookUrl) {
-        shouldExtractColor = false
-        if (book != null) {
-            delay(520)
-            shouldExtractColor = true
-        }
-    }
-
-    val isNight = AppConfig.isNightTheme
-
-    val coverPath = if (shouldExtractColor) {
-        book?.getDisplayCover()
-    } else null
-
-    val sourceOrigin = if (shouldExtractColor) book?.origin else null
+    val coverPath = book?.getDisplayCover()
+    val sourceOrigin = book?.origin
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val requestKey = remember(coverPath, sourceOrigin, loadOnlyWifi) {
         listOf(coverPath, sourceOrigin, loadOnlyWifi)
@@ -492,58 +477,51 @@ private fun BookInfoBackdrop(book: Book) {
     val useDefaultCover = AppConfig.useDefaultCover || book.customCoverUrl == "use_default_cover"
     val isNight = AppConfig.isNightTheme
 
-    val cover = if (useDefaultCover) {
-        BookCover.getRandomDefaultPath(book.bookUrl, isNight)
-    } else {
-        book.getDisplayCover()
+    val cover = remember(book.bookUrl, book.customCoverUrl, book.coverUrl, isNight) {
+        if (useDefaultCover) {
+            BookCover.getRandomDefaultPath(book.bookUrl, isNight)
+        } else {
+            book.getDisplayCover()
+        }
     }
     val sourceOrigin = if (!useDefaultCover) book.origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val context = LocalContext.current
     val imageLoader = koinInject<ImageLoader>()
-    var showBackdropImage by remember(cover) { mutableStateOf(false) }
 
-    LaunchedEffect(cover) {
-        showBackdropImage = false
-        if (!cover.isNullOrBlank()) {
-            delay(520)
-            showBackdropImage = true
-        }
-    }
-
-    val backdropAlpha by animateFloatAsState(
-        targetValue = if (showBackdropImage) 1f else 0f,
-        animationSpec = tween(800),
-        label = "BackdropFade"
-    )
-
-    val backdropRequest = remember(cover, sourceOrigin, loadOnlyWifi, context) {
-        buildCoverImageRequest(
-            context = context,
-            data = cover,
-            sourceOrigin = sourceOrigin,
-            loadOnlyWifi = loadOnlyWifi,
-            crossfade = false,
-        )
-    }
     val seedOverlay = lerp(
         LegadoTheme.colorScheme.secondaryContainer,
         LegadoTheme.seedColor,
         0.42f
     )
     Box(modifier = Modifier.fillMaxSize()) {
-        if (!cover.isNullOrBlank()) {
-            AsyncImage(
-                model = backdropRequest,
-                imageLoader = imageLoader,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(480.dp)
-                    .blur(24.dp)
-                    .alpha(backdropAlpha),
-                contentScale = ContentScale.Crop,
-            )
+        Crossfade(
+            targetState = cover,
+            animationSpec = tween(800),
+            label = "BackdropCrossfade"
+        ) { currentCover ->
+            if (!currentCover.isNullOrBlank()) {
+                val backdropRequest = remember(currentCover, sourceOrigin, loadOnlyWifi, context) {
+                    buildCoverImageRequest(
+                        context = context,
+                        data = currentCover,
+                        sourceOrigin = sourceOrigin,
+                        loadOnlyWifi = loadOnlyWifi,
+                        crossfade = true,
+                        memoryCacheKey = book.bookUrl,
+                    )
+                }
+                AsyncImage(
+                    model = backdropRequest,
+                    imageLoader = imageLoader,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(480.dp)
+                        .blur(24.dp),
+                    contentScale = ContentScale.Crop,
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -716,6 +694,7 @@ private fun BookInfoHeader(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         sharedCoverKey = sharedCoverKey,
+                        memoryCacheKey = book.bookUrl,
                     )
                 }
                 Column(
@@ -1142,7 +1121,8 @@ private fun RelatedBooksBanner(
             }
         }
         BannerModule(
-            books = books,
+            books = books.map { io.legado.app.ui.main.homepage.HomepageBookItemUi(book = it) }
+                .toImmutableList(),
             onClick = onBookClick,
             modifier = Modifier
                 .fillMaxWidth()

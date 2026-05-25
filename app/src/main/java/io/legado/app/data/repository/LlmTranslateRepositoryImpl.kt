@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import androidx.annotation.Keep
 import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.domain.model.DictPair
 import io.legado.app.domain.model.RetryReason
@@ -349,30 +350,36 @@ $terms
     }
 }
 
+@Keep
 data class GoogleTranslateResponse(
     val sentences: List<GoogleSentence>,
     val src: String?,
     val spell: GoogleSpell?
 )
 
+@Keep
 data class GoogleSentence(
     val trans: String?,
     val orig: String?,
     val backend: Int?
 )
 
+@Keep
 data class GoogleSpell(
     val spell: String?
 )
 
+@Keep
 data class OpenAIResponse(
     val choices: List<OpenAIChoice>
 )
 
+@Keep
 data class OpenAIChoice(
     val message: OpenAIMessage
 )
 
+@Keep
 data class OpenAIMessage(
     val content: String
 )

@@ -11,17 +11,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.legado.app.data.entities.SearchBook
-import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import kotlinx.collections.immutable.ImmutableList
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun GridModule(
-    books: ImmutableList<SearchBook>,
-    onClick: (SearchBook, String?) -> Unit,
+    books: ImmutableList<HomepageBookItemUi>,
+    onClick: (io.legado.app.data.entities.SearchBook, String?) -> Unit,
+    onLongClick: ((io.legado.app.data.entities.SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     columns: Int = 3,
     maxRows: Int? = null,
@@ -43,16 +43,17 @@ fun GridModule(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                for ((columnIndex, book) in row.withIndex()) {
+                for ((columnIndex, item) in row.withIndex()) {
                     val itemIndex = rowIndex * columns + columnIndex
                     val sharedCoverKey = bookCoverSharedElementKey(
-                        book.bookUrl,
+                        item.book.bookUrl,
                         sharedCoverKeySourceId?.let { "$it:$itemIndex" }
                     )
                     SearchBookGridItem(
-                        book = book,
-                        shelfState = BookShelfState.NOT_IN_SHELF,
-                        onClick = { onClick(book, sharedCoverKey) },
+                        book = item.book,
+                        shelfState = item.shelfState,
+                        onClick = { onClick(item.book, sharedCoverKey) },
+                        onLongClick = onLongClick,
                         modifier = Modifier.weight(1f),
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,

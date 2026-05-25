@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,8 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
+import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -44,8 +46,9 @@ private const val MAX_COUNT = 20
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun RankingModule(
-    books: ImmutableList<SearchBook>,
+    books: ImmutableList<HomepageBookItemUi>,
     onClick: (SearchBook, String?) -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -66,15 +69,17 @@ fun RankingModule(
                 .animateContentSize()
         ) {
             // 显示书籍列表
-            displayBooks.forEachIndexed { index, book ->
+            displayBooks.forEachIndexed { index, item ->
                 RankingItem(
                     rank = index + 1,
-                    book = book,
+                    book = item.book,
+                    shelfState = item.shelfState,
                     onClick = onClick,
+                    onLongClick = onLongClick,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     sharedCoverKey = bookCoverSharedElementKey(
-                        book.bookUrl,
+                        item.book.bookUrl,
                         sharedCoverKeySourceId?.let { "$it:$index" }
                     )
                 )
@@ -114,12 +119,14 @@ fun RankingModule(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun RankingItem(
     rank: Int,
     book: SearchBook,
+    shelfState: io.legado.app.domain.model.BookShelfState,
     onClick: (SearchBook, String?) -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -127,8 +134,22 @@ private fun RankingItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick(book, sharedCoverKey) }
-            .padding(vertical = 4.dp, horizontal = 4.dp),
+            .combinedClickable(
+                onClick = { onClick(book, sharedCoverKey) },
+                onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
+            )
+            .padding(vertical = 4.dp, horizontal = 4.dp)
+            .then(
+                with(sharedTransitionScope) {
+                    if (this != null) {
+                        Modifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                                ?: return@with Modifier,
+                        )
+                    } else Modifier
+                }
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppText(
@@ -144,7 +165,7 @@ private fun RankingItem(
         )
         SearchBookListItem(
             book = book,
-            shelfState = BookShelfState.NOT_IN_SHELF,
+            shelfState = shelfState,
             onClick = null,
             showPadding = false,
             modifier = Modifier.weight(1f),

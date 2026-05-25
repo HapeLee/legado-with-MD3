@@ -68,6 +68,7 @@ fun CoilBookCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    memoryCacheKey: String? = null,
 ) {
     val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
@@ -83,8 +84,14 @@ fun CoilBookCover(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(path, sharedCoverKey, finalPath) {
+    var isOnlineCoverLoaded by remember {
         mutableStateOf(sharedCoverKey != null && finalPath != null)
+    }
+
+    LaunchedEffect(finalPath) {
+        if (finalPath == null) {
+            isOnlineCoverLoaded = false
+        }
     }
 
     val transitionRadius = rememberSharedCoverTransitionRadius(
@@ -149,7 +156,7 @@ fun CoilBookCover(
                             sourceOrigin = sourceOrigin,
                             loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
                             crossfade = showLoadingPlaceholder,
-                            memoryCacheKey = finalPath,
+                            memoryCacheKey = memoryCacheKey ?: finalPath,
                         ),
                         contentDescription = null,
                         imageLoader = koinInject(),

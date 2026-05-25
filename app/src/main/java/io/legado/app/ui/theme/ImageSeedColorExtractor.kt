@@ -5,8 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
@@ -55,15 +58,20 @@ fun rememberImageSeedColor(
     configureRequest: ImageRequest.Builder.() -> Unit = {},
 ): Color? {
     val context = LocalContext.current
-    val seedColor by produceState<Color?>(initialValue = null, imageLoader, requestKey) {
-        value = if (data == null) {
-            null
+    var seedColor by remember { mutableStateOf<Color?>(null) }
+
+    LaunchedEffect(imageLoader, requestKey) {
+        if (data == null) {
+            seedColor = null
         } else {
-            imageLoader.extractSeedColor(
+            val extracted = imageLoader.extractSeedColor(
                 context = context,
                 data = data,
                 configureRequest = configureRequest
             )
+            if (extracted != null) {
+                seedColor = extracted
+            }
         }
     }
     return seedColor

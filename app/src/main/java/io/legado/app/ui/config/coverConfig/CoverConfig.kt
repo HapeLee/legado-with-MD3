@@ -84,4 +84,9 @@ object CoverConfig {
         PreferKey.coverInfoOrientation,
         "0" // 0: vertical, 1: horizontal
     )
+
+    var exploreFilterState by prefDelegate(
+        PreferKey.exploreFilterState,
+        0
+    )
 }

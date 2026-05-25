@@ -1,9 +1,12 @@
 package io.legado.app.data.entities
 
+import androidx.annotation.Keep
+
 /**
  * Chunk-level translation cache record stored in .chunks.jsonl files.
  * File path already contains bookUrl/chapterIndex/targetLanguage — chunkIndex is the key.
  */
+@Keep
 data class TranslationCache(
     val chunkIndex: Int,
     val originalChunkContent: String,

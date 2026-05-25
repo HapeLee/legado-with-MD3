@@ -51,7 +51,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.theme.LegadoTheme
@@ -64,6 +66,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.book.SearchBookListItem
+import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.SmallIconButton
 import io.legado.app.ui.widget.components.button.SmallTextButton
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -97,6 +100,8 @@ fun SearchScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
@@ -417,6 +422,10 @@ fun SearchScreen(
                                                 )
                                             )
                                         },
+                                        onLongClick = { book, coverKey ->
+                                            previewBook = book
+                                            previewSharedCoverKey = coverKey
+                                        },
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         sharedCoverKey = sharedCoverKey
@@ -561,6 +570,24 @@ fun SearchScreen(
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
+
+    val previewShelfState = previewBook?.let { book ->
+        state.results.find { it.book.bookUrl == book.bookUrl }?.shelfState
+            ?: BookShelfState.NOT_IN_SHELF
+    }
+    SearchBookPreviewSheet(
+        data = previewBook,
+        shelfState = previewShelfState,
+        sharedCoverKey = previewSharedCoverKey,
+        onDismissRequest = { previewBook = null },
+        onOpenDetail = { book, sharedCoverKey ->
+            previewBook = null
+            viewModel.onIntent(SearchIntent.OpenSearchBook(book, sharedCoverKey))
+        },
+        onAddToShelf = { book ->
+            viewModel.onAddToShelf(book)
+        },
+    )
 }
 
 private data class SearchFloatingSummary(

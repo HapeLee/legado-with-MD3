@@ -3,7 +3,8 @@ package io.legado.app.ui.widget.components.book
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -40,12 +41,13 @@ import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun SearchBookListItem(
     book: SearchBook,
     shelfState: BookShelfState,
     onClick: (() -> Unit)?,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     showPadding: Boolean = true,
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -55,8 +57,24 @@ fun SearchBookListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null || onLongClick != null) Modifier.combinedClickable(
+                    onClick = onClick ?: {},
+                    onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
+                ) else Modifier
+            )
             .then(if (showPadding) Modifier.adaptiveHorizontalPadding(vertical = 8.dp) else Modifier)
+            .then(
+                with(sharedTransitionScope) {
+                    if (this != null) {
+                        Modifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                                ?: return@with Modifier,
+                        )
+                    } else Modifier
+                }
+            )
     ) {
         Box(modifier = Modifier
             .width(72.dp)
@@ -70,7 +88,8 @@ fun SearchBookListItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                memoryCacheKey = book.bookUrl
             )
 
             val shelfIcon = when (shelfState) {
@@ -166,12 +185,13 @@ fun SearchBookListItem(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun SearchBookGridItem(
     book: SearchBook,
     shelfState: BookShelfState,
     onClick: () -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -181,7 +201,21 @@ fun SearchBookGridItem(
         modifier = modifier
             .width(IntrinsicSize.Min)
             .clip(RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
+            )
+            .then(
+                with(sharedTransitionScope) {
+                    if (this != null) {
+                        Modifier.sharedBounds(
+                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
+                            animatedVisibilityScope = animatedVisibilityScope
+                                ?: return@with Modifier,
+                        )
+                    } else Modifier
+                }
+            )
     ) {
         Box(
             modifier = Modifier
@@ -197,7 +231,8 @@ fun SearchBookGridItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                memoryCacheKey = book.bookUrl
             )
 
             val shelfIcon = when (shelfState) {
