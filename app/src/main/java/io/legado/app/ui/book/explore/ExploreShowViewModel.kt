@@ -7,6 +7,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
@@ -56,10 +57,10 @@ class ExploreShowViewModel(
     private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
+    private val addToBookshelfUseCase: AddToBookshelfUseCase,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
-    private val _filterState = MutableStateFlow(BookFilterState.fromId(AppConfig.exploreFilterState))
     private val _isLoading = MutableStateFlow(false)
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMsg = MutableStateFlow<String?>(null)
@@ -88,12 +89,9 @@ class ExploreShowViewModel(
 
     val uiBooks = combine(
         _rawBooks,
-        _filterState,
         _bookshelf
-    ) { books, filter, bookshelf ->
-        books.filter { item ->
-            isBookValid(item, filter, bookshelf)
-        }.map { item ->
+    ) { books, bookshelf ->
+        books.map { item ->
             ExploreBookItemUi(
                 book = item,
                 shelfState = resolveBookShelfStateUseCase.execute(
@@ -117,7 +115,6 @@ class ExploreShowViewModel(
 
     val isLoading = _isLoading.asStateFlow()
     val errorMsg = _errorMsg.asStateFlow()
-    val filterState = _filterState.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -171,11 +168,6 @@ class ExploreShowViewModel(
         exploreUrl = kind.url
         _isEndStateFlow.value = false
         loadMore(isRefresh = true)
-    }
-
-    fun setFilterState(state: BookFilterState) {
-        _filterState.value = state
-        AppConfig.exploreFilterState = state.id
     }
 
     fun setLayout() {
@@ -240,22 +232,9 @@ class ExploreShowViewModel(
         )
     }
 
-    private fun isBookValid(
-        book: SearchBook,
-        filter: BookFilterState,
-        shelf: Set<BookShelfKey>
-    ): Boolean {
-        val state = resolveBookShelfStateUseCase.execute(
-            name = book.name,
-            author = book.author,
-            url = book.bookUrl,
-            shelf = shelf
-        )
-        return when (filter) {
-            BookFilterState.SHOW_ALL -> true
-            BookFilterState.HIDE_IN_SHELF -> state != BookShelfState.IN_SHELF
-            BookFilterState.HIDE_SAME_NAME_AUTHOR -> state != BookShelfState.SAME_NAME_AUTHOR
-            BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state == BookShelfState.NOT_IN_SHELF
+    fun onAddToShelf(book: SearchBook) {
+        viewModelScope.launch {
+            addToBookshelfUseCase.execute(book)
         }
     }
 }

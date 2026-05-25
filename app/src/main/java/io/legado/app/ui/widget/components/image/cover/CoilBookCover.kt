@@ -26,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,8 +82,14 @@ fun CoilBookCover(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(path, sharedCoverKey, finalPath) {
+    var isOnlineCoverLoaded by remember(finalPath) {
         mutableStateOf(sharedCoverKey != null && finalPath != null)
+    }
+
+    LaunchedEffect(finalPath) {
+        if (finalPath == null) {
+            isOnlineCoverLoaded = false
+        }
     }
 
     val transitionRadius = rememberSharedCoverTransitionRadius(
@@ -94,103 +99,102 @@ fun CoilBookCover(
     )
     val shape = remember(transitionRadius) { RoundedCornerShape(transitionRadius) }
 
-    key(path, sharedCoverKey) {
-        Box(
-            modifier = modifier
-                .aspectRatio(5f / 7f)
-                .then(
-                    with(sharedTransitionScope) {
-                        if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
-                            Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState(sharedCoverKey),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                clipInOverlayDuringTransition = OverlayClip(shape)
-                            )
-                        } else Modifier
-                    }
-                )
-                .then(
-                    if (CoverConfig.coverShowShadow) {
-                        Modifier.shadow(4.dp, shape)
+    Box(
+        modifier = modifier
+            .aspectRatio(5f / 7f)
+            .then(
+                with(sharedTransitionScope) {
+                    if (this != null && animatedVisibilityScope != null && sharedCoverKey != null) {
+                        Modifier.sharedElement(
+                            sharedContentState = rememberSharedContentState(sharedCoverKey),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            clipInOverlayDuringTransition = OverlayClip(shape)
+                        )
                     } else Modifier
-                )
-                .background(
-                    if (!hasCustomDefault && !isOnlineCoverLoaded) {
-                        LegadoTheme.colorScheme.surfaceContainerLow
-                    } else Color.Transparent,
-                    shape
-                )
-                .clip(shape)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                if (hasCustomDefault && !isOnlineCoverLoaded) {
-                    AsyncImage(
-                        model = buildCoverImageRequest(
-                            context = context,
-                            data = randomPath,
-                            sourceOrigin = null,
-                            loadOnlyWifi = false,
-                            crossfade = showLoadingPlaceholder,
-                            memoryCacheKey = randomPath,
-                        ),
-                        contentDescription = null,
-                        imageLoader = koinInject(),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                    )
                 }
+            )
+            .then(
+                if (CoverConfig.coverShowShadow) {
+                    Modifier.shadow(4.dp, shape)
+                } else Modifier
+            )
+            .background(
+                if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                    LegadoTheme.colorScheme.surfaceContainerLow
+                } else Color.Transparent,
+                shape
+            )
+            .clip(shape)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (hasCustomDefault && !isOnlineCoverLoaded) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = randomPath,
+                        sourceOrigin = null,
+                        loadOnlyWifi = false,
+                        crossfade = showLoadingPlaceholder,
+                        memoryCacheKey = randomPath,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                )
+            }
 
-                if (finalPath != null) {
-                    AsyncImage(
-                        model = buildCoverImageRequest(
-                            context = context,
-                            data = finalPath,
-                            sourceOrigin = sourceOrigin,
-                            loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                            crossfade = showLoadingPlaceholder,
-                            memoryCacheKey = finalPath,
-                        ),
-                        contentDescription = null,
-                        imageLoader = koinInject(),
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                        onSuccess = {
-                            isOnlineCoverLoaded = true
-                            onLoadFinish?.invoke()
-                        },
-                        onError = {
-                            isOnlineCoverLoaded = false
-                            onLoadFinish?.invoke()
-                        }
-                    )
-                } else {
-                    LaunchedEffect(Unit) {
+            if (finalPath != null) {
+                AsyncImage(
+                    model = buildCoverImageRequest(
+                        context = context,
+                        data = finalPath,
+                        sourceOrigin = sourceOrigin,
+                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                        crossfade = showLoadingPlaceholder,
+                        memoryCacheKey = finalPath,
+                    ),
+                    contentDescription = null,
+                    imageLoader = koinInject(),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                    onSuccess = {
+                        isOnlineCoverLoaded = true
+                        onLoadFinish?.invoke()
+                    },
+                    onError = {
+                        isOnlineCoverLoaded = false
                         onLoadFinish?.invoke()
                     }
+                )
+            } else {
+                LaunchedEffect(Unit) {
+                    onLoadFinish?.invoke()
                 }
             }
+        }
 
-            if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
-                if (!hasCustomDefault) {
-                    Icon(
-                        Icons.Default.Book,
-                        contentDescription = null,
-                        tint = LegadoTheme.colorScheme.secondary,
-                        modifier = Modifier
-                            .fillMaxSize(0.35f)
-                            .align(Alignment.Center)
-                    )
-                }
-                CoverTextOverlay(
-                    name = name,
-                    author = author,
-                    isNight = isNight
+        if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
+            if (!hasCustomDefault) {
+                Icon(
+                    Icons.Default.Book,
+                    contentDescription = null,
+                    tint = LegadoTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .fillMaxSize(0.35f)
+                        .align(Alignment.Center)
                 )
             }
+            CoverTextOverlay(
+                name = name,
+                author = author,
+                isNight = isNight
+            )
         }
     }
 }
+
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

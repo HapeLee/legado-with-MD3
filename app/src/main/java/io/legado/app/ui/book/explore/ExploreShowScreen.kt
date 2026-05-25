@@ -29,13 +29,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
@@ -56,6 +53,7 @@ import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -66,10 +64,9 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
+import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
-import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
@@ -95,17 +92,28 @@ fun ExploreShowScreen(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(sourceUrl, exploreUrl, viewModel) {
         viewModel.initData(sourceUrl, exploreUrl)
     }
 
-    val books by viewModel.uiBooks.collectAsState()
+    val rawBooks by viewModel.uiBooks.collectAsState()
+    val filterStateId = CoverConfig.exploreFilterState
+    val books = remember(rawBooks, filterStateId) {
+        val filter = BookFilterState.fromId(filterStateId)
+        when (filter) {
+            BookFilterState.SHOW_ALL -> rawBooks
+            BookFilterState.HIDE_IN_SHELF -> rawBooks.filter { it.shelfState != BookShelfState.IN_SHELF }
+            BookFilterState.HIDE_SAME_NAME_AUTHOR -> rawBooks.filter { it.shelfState != BookShelfState.SAME_NAME_AUTHOR }
+            BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> rawBooks.filter { it.shelfState == BookShelfState.NOT_IN_SHELF }
+        }
+    }
     val isBookEnd by viewModel.isEnd.collectAsState()
     val shouldTriggerAutoLoad by viewModel.shouldTriggerAutoLoad.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMsg by viewModel.errorMsg.collectAsState()
-    val filterState by viewModel.filterState.collectAsState()
     val selectedTitle by viewModel.selectedKindTitle.collectAsState()
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
@@ -140,7 +148,6 @@ fun ExploreShowScreen(
             total > 0 && last >= total - 1
         }
     }
-    var showMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(shouldLoadMoreList.value, isGridMode) {
         if (!isGridMode && shouldLoadMoreList.value) viewModel.loadMore()
@@ -251,12 +258,6 @@ fun ExploreShowScreen(
                         modifier = Modifier.animateContentSize(tween(300))
                     ) {
                         TopBarActionButton(
-                            onClick = { showMenu = true },
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter"
-                        )
-
-                        TopBarActionButton(
                             onClick = { showKindSheet = true },
                             imageVector = Icons.Outlined.FilterAlt,
                             contentDescription = "分类"
@@ -280,59 +281,6 @@ fun ExploreShowScreen(
                         imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
                         contentDescription = "切换布局"
                     )
-
-                    RoundDropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        RoundDropdownMenuItem(
-                            text = "全部显示",
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.SHOW_ALL)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.SHOW_ALL)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = "隐藏已在书架的同源书籍",
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.HIDE_IN_SHELF)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = "隐藏已在书架的非同源书籍",
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.HIDE_SAME_NAME_AUTHOR)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-
-                        RoundDropdownMenuItem(
-                            text = "只显示不在书架的书籍",
-                            onClick = {
-                                viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
-                                showMenu = false
-                            },
-                            trailingIcon = {
-                                if (filterState == BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
-                                    Icon(Icons.Default.Check, null)
-                            }
-                        )
-                    }
                 },
                 scrollBehavior = scrollBehavior
             )
@@ -377,6 +325,10 @@ fun ExploreShowScreen(
                                 book = item.book,
                                 shelfState = item.shelfState,
                                 onClick = { onBookClick(item.book, sharedCoverKey) },
+                                onLongClick = { book, coverKey ->
+                                    previewBook = book
+                                    previewSharedCoverKey = coverKey
+                                },
                                 modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
@@ -416,6 +368,10 @@ fun ExploreShowScreen(
                                 book = item.book,
                                 shelfState = item.shelfState,
                                 onClick = { onBookClick(item.book, sharedCoverKey) },
+                                onLongClick = { book, coverKey ->
+                                    previewBook = book
+                                    previewSharedCoverKey = coverKey
+                                },
                                 modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
@@ -437,6 +393,24 @@ fun ExploreShowScreen(
             }
         }
     }
+
+    val previewShelfState = previewBook?.let { book ->
+        books.find { it.book.bookUrl == book.bookUrl }?.shelfState
+            ?: BookShelfState.NOT_IN_SHELF
+    }
+    SearchBookPreviewSheet(
+        data = previewBook,
+        shelfState = previewShelfState,
+        sharedCoverKey = previewSharedCoverKey,
+        onDismissRequest = { previewBook = null },
+        onOpenDetail = { book, sharedCoverKey ->
+            previewBook = null
+            onBookClick(book, sharedCoverKey)
+        },
+        onAddToShelf = { book ->
+            viewModel.onAddToShelf(book)
+        },
+    )
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -445,6 +419,7 @@ fun ExploreBookItem(
     book: SearchBook,
     shelfState: BookShelfState,
     onClick: () -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -454,6 +429,7 @@ fun ExploreBookItem(
         book = book,
         shelfState = shelfState,
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
@@ -467,6 +443,7 @@ fun ExploreBookGridItem(
     book: SearchBook,
     onClick: () -> Unit,
     shelfState: BookShelfState,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -476,6 +453,7 @@ fun ExploreBookGridItem(
         book = book,
         shelfState = shelfState,
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,

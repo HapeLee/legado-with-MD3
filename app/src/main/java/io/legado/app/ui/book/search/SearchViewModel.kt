@@ -7,6 +7,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.BookSearchControl
 import io.legado.app.domain.usecase.BookSearchRequest
 import io.legado.app.domain.usecase.BookShelfKey
@@ -37,6 +38,7 @@ class SearchViewModel(
     private val repository: SearchRepository,
     private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
     private val searchBooksUseCase: SearchBooksUseCase,
+    private val addToBookshelfUseCase: AddToBookshelfUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -70,6 +72,12 @@ class SearchViewModel(
         observeBookshelf()
         observeQueryHistory()
         observeQueryBookshelfHints()
+    }
+
+    fun onAddToShelf(book: SearchBook) {
+        viewModelScope.launch {
+            addToBookshelfUseCase.execute(book)
+        }
     }
 
     fun onIntent(intent: SearchIntent) {

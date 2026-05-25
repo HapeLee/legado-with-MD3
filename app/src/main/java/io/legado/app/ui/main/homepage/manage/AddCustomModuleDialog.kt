@@ -29,7 +29,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.settingItem.CompactClickableSettingItem
-import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
+import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 
 data class AddDialogPrefill(
@@ -109,7 +109,7 @@ fun <T> AddCustomModuleDialog(
                 GlassCard(
                     containerColor = LegadoTheme.colorScheme.onSheetContent
                 ) {
-                    DropdownListSettingItem(
+                    CompactDropdownSettingItem(
                         title = stringResource(R.string.homepage_type_label),
                         selectedValue = type,
                         displayEntries = typeList.map { it.title }.toTypedArray(),

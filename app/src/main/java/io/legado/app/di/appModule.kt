@@ -52,6 +52,7 @@ import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
+import io.legado.app.domain.usecase.AddToBookshelfUseCase
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
@@ -163,6 +164,7 @@ val appModule = module {
     singleOf(::ResolveBookShelfStateUseCase)
     singleOf(::RefreshTocUseCase)
     singleOf(::AddBookUseCase)
+    singleOf(::AddToBookshelfUseCase)
     singleOf(::ImportBookshelfUseCase)
     singleOf(::ExportBookshelfUseCase)
     factory { GetReadRecordOverviewUseCase() }

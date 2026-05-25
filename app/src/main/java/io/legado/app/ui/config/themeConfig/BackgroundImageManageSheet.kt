@@ -9,15 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,15 +32,13 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundImageManageSheet(
-    show: Boolean,
-    isDarkTheme: Boolean,
+    isDarkTheme: Boolean?,
     onDismissRequest: () -> Unit,
     viewModel: ThemeConfigViewModel = koinViewModel()
 ) {
@@ -58,23 +51,23 @@ fun BackgroundImageManageSheet(
                 scope.launch {
                     viewModel.setBackgroundFromUri(
                         uri = it,
-                        isDarkTheme = isDarkTheme
+                        isDarkTheme = isDarkTheme == true
                     )
                 }
             }
         }
 
-    val currentPath = if (isDarkTheme) {
-        ThemeConfig.bgImageDark
-    } else {
-        ThemeConfig.bgImageLight
-    }
-
     AppModalBottomSheet(
-        show = show,
+        data = isDarkTheme,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.background_image),
-    ) {
+    ) { isDark ->
+        val currentPath = if (isDark) {
+            ThemeConfig.bgImageDark
+        } else {
+            ThemeConfig.bgImageLight
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -122,7 +115,7 @@ fun BackgroundImageManageSheet(
                         )
                     }
                     SmallTonalIconButton(
-                        onClick = { viewModel.removeBackground(isDarkTheme) },
+                        onClick = { viewModel.removeBackground(isDark) },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(8.dp)

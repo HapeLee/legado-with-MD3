@@ -1,5 +1,6 @@
 package io.legado.app.data.repository
 
+import androidx.annotation.Keep
 import io.legado.app.domain.gateway.LlmGateway
 import io.legado.app.domain.model.DictPair
 import io.legado.app.domain.model.RetryReason
@@ -109,7 +110,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         return if (response.isSuccessful()) {
             try {
                 val json = GSON.fromJson(response.body, GoogleTranslateResponse::class.java)
-                val translatedText = json.sentences.mapNotNull { it.trans }.joinToString("")
+                val translatedText = json?.sentences?.mapNotNull { it.trans }?.joinToString("") ?: ""
                 if (translatedText.isNotEmpty()) {
                     Result.success(translatedText)
                 } else {
@@ -166,7 +167,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         return if (response.isSuccessful()) {
             try {
                 val json = GSON.fromJson(response.body, OpenAIResponse::class.java)
-                val rawContent = json.choices.firstOrNull()?.message?.content
+                val rawContent = json?.choices?.firstOrNull()?.message?.content
                 if (rawContent != null) {
                     // Parse the output with [dictionary] and [result] sections
                     val parseResult = parseLlmOutput(rawContent, dictionaries)
@@ -349,30 +350,36 @@ $terms
     }
 }
 
+@Keep
 data class GoogleTranslateResponse(
     val sentences: List<GoogleSentence>,
     val src: String?,
     val spell: GoogleSpell?
 )
 
+@Keep
 data class GoogleSentence(
     val trans: String?,
     val orig: String?,
     val backend: Int?
 )
 
+@Keep
 data class GoogleSpell(
     val spell: String?
 )
 
+@Keep
 data class OpenAIResponse(
     val choices: List<OpenAIChoice>
 )
 
+@Keep
 data class OpenAIChoice(
     val message: OpenAIMessage
 )
 
+@Keep
 data class OpenAIMessage(
     val content: String
 )

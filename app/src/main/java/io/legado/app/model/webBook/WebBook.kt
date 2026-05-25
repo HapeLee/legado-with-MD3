@@ -17,9 +17,11 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleData
+import io.legado.app.model.analyzeRule.RuleDataInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Semaphore
 import kotlin.coroutines.CoroutineContext
@@ -106,6 +108,90 @@ object WebBook {
         bookSource: BookSource,
         url: String,
         page: Int? = 1,
+        ruleData: RuleDataInterface = RuleData(),
+    ): ArrayList<SearchBook> {
+        val analyzeUrl = AnalyzeUrl(
+            mUrl = url,
+            page = page,
+            baseUrl = bookSource.bookSourceUrl,
+            source = bookSource,
+            ruleData = ruleData,
+            coroutineContext = currentCoroutineContext()
+        )
+        var res = analyzeUrl.getStrResponseAwait()
+        //检测书源是否已登录
+        bookSource.loginCheckJs?.let { checkJs ->
+            if (checkJs.isNotBlank()) {
+                res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
+            }
+        }
+        checkRedirect(bookSource, res)
+        val listRuleData = when (ruleData) {
+            is RuleData -> ruleData
+            is Book -> RuleData()
+            else -> RuleData()
+        }
+        return BookList.analyzeBookList(
+            bookSource = bookSource,
+            ruleData = listRuleData,
+            analyzeUrl = analyzeUrl,
+            baseUrl = res.url,
+            body = res.body,
+            isSearch = false
+        )
+    }
+
+    suspend fun exploreBookSuspend(
+        bookSource: BookSource,
+        url: String,
+        page: Int? = 1,
+        ruleData: RuleDataInterface = RuleData(),
+    ): List<SearchBook> {
+        return exploreBookAwait(bookSource, url, page, ruleData)
+    }
+
+    suspend fun exploreBookWithResolvedUrl(
+        bookSource: BookSource,
+        url: String,
+        page: Int? = 1,
+        ruleData: RuleDataInterface = RuleData(),
+    ): Pair<String, ArrayList<SearchBook>> {
+        val analyzeUrl = AnalyzeUrl(
+            mUrl = url,
+            page = page,
+            baseUrl = bookSource.bookSourceUrl,
+            source = bookSource,
+            ruleData = ruleData,
+            coroutineContext = currentCoroutineContext()
+        )
+        var res = analyzeUrl.getStrResponseAwait()
+        bookSource.loginCheckJs?.let { checkJs ->
+            if (checkJs.isNotBlank()) {
+                res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
+            }
+        }
+        checkRedirect(bookSource, res)
+        val resolvedUrl = res.url
+        val listRuleData = when (ruleData) {
+            is RuleData -> ruleData
+            is Book -> RuleData()
+            else -> RuleData()
+        }
+        val books = BookList.analyzeBookList(
+            bookSource = bookSource,
+            ruleData = listRuleData,
+            analyzeUrl = analyzeUrl,
+            baseUrl = res.url,
+            body = res.body,
+            isSearch = false
+        )
+        return resolvedUrl to books
+    }
+
+    suspend fun exploreBookWithRuleData(
+        bookSource: BookSource,
+        url: String,
+        page: Int? = 1,
     ): ArrayList<SearchBook> {
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
@@ -114,10 +200,9 @@ object WebBook {
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = ruleData,
-            coroutineContext = coroutineContext
+            coroutineContext = currentCoroutineContext()
         )
         var res = analyzeUrl.getStrResponseAwait()
-        //检测书源是否已登录
         bookSource.loginCheckJs?.let { checkJs ->
             if (checkJs.isNotBlank()) {
                 res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
@@ -132,14 +217,6 @@ object WebBook {
             body = res.body,
             isSearch = false
         )
-    }
-
-    suspend fun exploreBookSuspend(
-        bookSource: BookSource,
-        url: String,
-        page: Int? = 1,
-    ): List<SearchBook> {
-        return exploreBookAwait(bookSource, url, page)
     }
 
     /**

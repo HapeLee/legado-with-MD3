@@ -3,23 +3,32 @@ package io.legado.app.ui.main.homepage.modules
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchBook
+import io.legado.app.domain.model.BookShelfState
+import io.legado.app.ui.main.homepage.HomepageBookItemUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.book.SearchBookTagChip
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 
@@ -27,36 +36,68 @@ import io.legado.app.ui.widget.components.text.AppText
  * 瀑布流单项组件
  * 建议直接在 LazyVerticalStaggeredGrid 的 items 中使用，以获得最佳回收性能
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun WaterfallItem(
-    book: SearchBook,
+    item: HomepageBookItemUi,
     onClick: () -> Unit,
+    onLongClick: ((SearchBook, String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
+    val book = item.book
     GlassCard(
+        modifier = with(sharedTransitionScope) {
+            if (this != null) {
+                Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
+                    animatedVisibilityScope = animatedVisibilityScope ?: return@with Modifier,
+                )
+            } else Modifier
+        },
         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
+                )
         ) {
-            CoilBookCover(
-                name = book.name,
-                author = book.author,
-                path = book.coverUrl,
-                radius = 16.dp,
-                sourceOrigin = book.origin,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                sharedCoverKey = sharedCoverKey
-            )
+            Box {
+                CoilBookCover(
+                    name = book.name,
+                    author = book.author,
+                    path = book.coverUrl,
+                    radius = 16.dp,
+                    sourceOrigin = book.origin,
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    sharedCoverKey = sharedCoverKey,
+                )
+
+                val shelfIcon = when (item.shelfState) {
+                    BookShelfState.IN_SHELF -> Icons.Default.Check
+                    BookShelfState.SAME_NAME_AUTHOR -> Icons.Default.Shuffle
+                    else -> null
+                }
+                if (shelfIcon != null) {
+                    TextCard(
+                        icon = shelfIcon,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp),
+                        cornerRadius = 4.dp,
+                        horizontalPadding = 2.dp,
+                        verticalPadding = 2.dp
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

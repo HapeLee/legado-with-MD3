@@ -48,6 +48,8 @@ fun BookInfoRouteScreen(
     onBack: () -> Unit,
     onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
     onOpenSearch: (String) -> Unit,
+    onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
+    onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
@@ -164,6 +166,14 @@ fun BookInfoRouteScreen(
                             effect.comment,
                         )
                     )
+                }
+
+                is BookInfoEffect.NavigateToBookInfo -> {
+                    onNavigateToBookInfo(effect.name, effect.author, effect.bookUrl, effect.origin, effect.coverPath)
+                }
+
+                is BookInfoEffect.NavigateToExploreShow -> {
+                    onNavigateToExploreShow(effect.title, effect.sourceUrl, effect.exploreUrl)
                 }
             }
         }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -72,6 +71,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
@@ -133,7 +133,7 @@ fun ThemeConfigScreen(
 
     var fontFolderUri by remember {
         mutableStateOf(
-            context.getPrefString(PreferKey.fontFolder)?.let { Uri.parse(it) }
+            context.getPrefString(PreferKey.fontFolder)?.toUri()
         )
     }
 
@@ -672,6 +672,7 @@ fun ThemeConfigScreen(
             item {
                 SplicedColumnGroup(title = stringResource(R.string.theme_config_nav_icon_settings)) {
                     val customCount = listOf(
+                        ThemeConfig.navIconHome,
                         ThemeConfig.navIconBookshelf,
                         ThemeConfig.navIconExplore,
                         ThemeConfig.navIconRss,
@@ -722,20 +723,15 @@ fun ThemeConfigScreen(
     )
 
 
-    manageKey?.let { isDark ->
-        BackgroundImageManageSheet(
-            show = true,
-            isDarkTheme = isDark,
-            onDismissRequest = { manageKey = null }
-        )
-    }
+    BackgroundImageManageSheet(
+        isDarkTheme = manageKey,
+        onDismissRequest = { manageKey = null }
+    )
 
-    if (showNavIconSheet) {
-        NavIconManageSheet(
-            show = true,
-            onDismissRequest = { showNavIconSheet = false }
-        )
-    }
+    NavIconManageSheet(
+        show = showNavIconSheet,
+        onDismissRequest = { showNavIconSheet = false }
+    )
 
 
     LauncherIconPickerSheet(

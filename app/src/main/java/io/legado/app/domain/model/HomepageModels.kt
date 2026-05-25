@@ -1,9 +1,11 @@
 package io.legado.app.domain.model
 
+import androidx.annotation.Keep
 import androidx.compose.runtime.Immutable
 
 /** 供 Gateway 和 ViewModel 使用的不可变模块模型 */
 @Immutable
+@Keep
 data class ModuleItem(
     val id: String = "",
     val sourceUrl: String = "",
@@ -26,6 +28,7 @@ data class ModuleItem(
 }
 
 @Immutable
+@Keep
 data class CustomSetItem(
     val id: String = "",
     val name: String = "",
@@ -33,6 +36,7 @@ data class CustomSetItem(
 )
 
 /** 模块定义（来自书源 JSON 解析或用户手动添加） */
+@Keep
 data class ModuleDef(
     val key: String = "",
     val type: String = "",

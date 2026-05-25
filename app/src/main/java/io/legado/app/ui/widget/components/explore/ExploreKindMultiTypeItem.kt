@@ -114,17 +114,34 @@ fun ExploreKindMultiTypeItem(
                     state,
                     valueOverride,
                     onValueChange,
+                    onRunAction,
                     modifier,
                     backgroundColor
                 )
             }
 
             ExploreKind.Type.toggle -> {
-                ToggleTypeItem(kind, sourceUrl, state, valueOverride, onValueChange, BaseItem)
+                ToggleTypeItem(
+                    kind,
+                    sourceUrl,
+                    state,
+                    valueOverride,
+                    onValueChange,
+                    onRunAction,
+                    BaseItem
+                )
             }
 
             ExploreKind.Type.select -> {
-                SelectTypeItem(kind, sourceUrl, state, valueOverride, onValueChange, BaseItem)
+                SelectTypeItem(
+                    kind,
+                    sourceUrl,
+                    state,
+                    valueOverride,
+                    onValueChange,
+                    onRunAction,
+                    BaseItem
+                )
             }
 
             else -> {
@@ -194,6 +211,7 @@ private fun TextTypeItem(
     state: ExploreKindItemState,
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
+    onRunAction: (() -> Unit)?,
     modifier: Modifier,
     backgroundColor: Color
 ) {
@@ -214,7 +232,7 @@ private fun TextTypeItem(
                 actionJob?.cancel()
                 actionJob = scope.launch {
                     delay(600)
-                    state.executeAction(kind.action)
+                    if (onRunAction != null) onRunAction() else state.executeAction(kind.action)
                 }
             }
         },
@@ -231,6 +249,7 @@ private fun ToggleTypeItem(
     state: ExploreKindItemState,
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
+    onRunAction: (() -> Unit)?,
     BaseItem: @Composable (String, () -> Unit) -> Unit
 ) {
     val chars = remember(kind.chars) {
@@ -256,7 +275,7 @@ private fun ToggleTypeItem(
         val nextIndex = if (currentIndex < 0) 0 else (currentIndex + 1) % chars.size
         char = chars.getOrElse(nextIndex) { "" }
         state.updateValue(char, onValueChange)
-        state.executeAction(kind.action)
+        if (onRunAction != null) onRunAction() else state.executeAction(kind.action)
     }
 
     BaseItem(text, internalOnClick)
@@ -269,6 +288,7 @@ private fun SelectTypeItem(
     state: ExploreKindItemState,
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
+    onRunAction: (() -> Unit)?,
     BaseItem: @Composable (String, () -> Unit) -> Unit
 ) {
     val chars = remember(kind.chars) {
@@ -307,7 +327,7 @@ private fun SelectTypeItem(
                         if (selected != option) {
                             selected = option
                             state.updateValue(option, onValueChange)
-                            state.executeAction(kind.action)
+                            if (onRunAction != null) onRunAction() else state.executeAction(kind.action)
                         }
                     }
                 )

@@ -7,12 +7,17 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
+import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.gateway.HomepageModulesGateway
+import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.CustomSetItem
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.domain.model.ModuleDef
 import io.legado.app.domain.model.ModuleItem
+import io.legado.app.domain.usecase.AddToBookshelfUseCase
+import io.legado.app.domain.usecase.BookShelfKey
 import io.legado.app.domain.usecase.ExploreBooksUseCase
+import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import io.legado.app.help.source.exploreKinds
 import io.legado.app.utils.GSON
@@ -41,9 +46,14 @@ class HomepageViewModel(
     application: Application,
     private val bookSourceRepository: BookSourceRepository,
     private val gateway: HomepageModulesGateway,
+    private val searchRepository: SearchRepository,
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
+    private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
+    private val addToBookshelfUseCase: AddToBookshelfUseCase,
 ) : BaseViewModel(application) {
+
+    private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
 
     companion object {
         private const val CUSTOM_SET_URL_PREFIX = "custom://"
@@ -178,7 +188,7 @@ class HomepageViewModel(
         )
     }
 
-    private val displayModulesFlow = combine(
+    private val rawModulesFlow = combine(
         orderedModuleDefsFlow,
         _moduleContentStates,
         _bookSourcesCache,
@@ -210,6 +220,33 @@ class HomepageViewModel(
                     state = contentStates[module.id] ?: ModuleLoadState.Loading,
                     config = configMap
                 )
+            }
+        }.toImmutableList()
+    }
+
+    private val displayModulesFlow = combine(
+        rawModulesFlow,
+        _bookshelf
+    ) { modules, bookshelf ->
+        modules.map { module ->
+            val state = module.state
+            if (state is ModuleLoadState.Loaded) {
+                module.copy(
+                    state = state.copy(
+                        books = state.books.map { item ->
+                            item.copy(
+                                shelfState = resolveBookShelfStateUseCase.execute(
+                                    name = item.book.name,
+                                    author = item.book.author,
+                                    url = item.book.bookUrl,
+                                    shelf = bookshelf
+                                )
+                            )
+                        }.toImmutableList()
+                    )
+                )
+            } else {
+                module
             }
         }.toImmutableList()
     }
@@ -291,6 +328,12 @@ class HomepageViewModel(
                     val source = bookSourceRepository.getBookSource(sourceUrl)
                     if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            searchRepository.bookshelfKeys.collect { keys ->
+                _bookshelf.value = keys
             }
         }
     }
@@ -376,9 +419,20 @@ class HomepageViewModel(
                 val hasMore = isInfinite(module.type, module.layoutConfig) && books.isNotEmpty()
                 books to hasMore
             }.onSuccess { (books, hasMore) ->
+                val shelf = _bookshelf.value
                 _moduleContentStates.update {
                     it + (module.id to ModuleLoadState.Loaded(
-                        books.toImmutableList(),
+                        books.map { book ->
+                            HomepageBookItemUi(
+                                book = book,
+                                shelfState = resolveBookShelfStateUseCase.execute(
+                                    name = book.name,
+                                    author = book.author,
+                                    url = book.bookUrl,
+                                    shelf = shelf
+                                )
+                            )
+                        }.toImmutableList(),
                         hasMore = hasMore
                     ))
                 }
@@ -406,8 +460,19 @@ class HomepageViewModel(
                 _moduleContentStates.update { states ->
                     val lastState =
                         states[globalId] as? ModuleLoadState.Loaded ?: return@update states
-                    val existingUrls = lastState.books.map { it.bookUrl }.toSet()
-                    val deduped = result.books.filter { it.bookUrl !in existingUrls }
+                    val existingUrls = lastState.books.map { it.book.bookUrl }.toSet()
+                    val shelf = _bookshelf.value
+                    val deduped = result.books.filter { it.bookUrl !in existingUrls }.map { book ->
+                        HomepageBookItemUi(
+                            book = book,
+                            shelfState = resolveBookShelfStateUseCase.execute(
+                                name = book.name,
+                                author = book.author,
+                                url = book.bookUrl,
+                                shelf = shelf
+                            )
+                        )
+                    }
                     states + (globalId to ModuleLoadState.Loaded(
                         books = (lastState.books + deduped).toImmutableList(),
                         hasMore = deduped.isNotEmpty(), isLoadingMore = false, page = nextPage
@@ -769,6 +834,21 @@ class HomepageViewModel(
                 ?.cancel(); _pendingEnabled.update { it - mid }
             }
             notifyConfigChanged()
+        }
+    }
+
+    fun getCurrentBookShelfState(book: SearchBook): BookShelfState {
+        return resolveBookShelfStateUseCase.execute(
+            name = book.name,
+            author = book.author,
+            url = book.bookUrl,
+            shelf = _bookshelf.value
+        )
+    }
+
+    fun onAddToShelf(book: SearchBook) {
+        execute {
+            addToBookshelfUseCase.execute(book)
         }
     }
 

@@ -35,7 +35,8 @@ class DictionaryRepositoryImpl : DictionaryGateway {
 
     override fun updateBookDic(book: Book, newPairs: List<DictPair>) {
         val existingDict = getBookDictionaries(book)
-        val updatedPairs = existingDict.pairs.toMutableList()
+        @Suppress("SENSELESS_COMPARISON")
+        val updatedPairs = (existingDict.pairs ?: emptyList()).toMutableList()
 
         for (newPair in newPairs) {
             val existingIndex = updatedPairs.indexOfFirst {

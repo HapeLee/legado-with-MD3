@@ -13,6 +13,7 @@ import io.legado.app.domain.model.RetryReason
 import io.legado.app.domain.model.TextChunk
 import io.legado.app.help.book.BookHelp
 import io.legado.app.ui.config.translation.TranslationConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -45,122 +46,134 @@ class TranslateChapterUseCase(
         onProgress: (TranslationProgress) -> Unit,
         onTranslateStarted: () -> Unit
     ): Result<String> = withContext(Dispatchers.IO) {
-        val originalContent = BookHelp.getContent(book, bookChapter)
-            ?: return@withContext Result.failure(Exception("Failed to read original content"))
+        try {
+            val originalContent = BookHelp.getContent(book, bookChapter)
+                ?: return@withContext Result.failure(Exception("Failed to read original content"))
 
-        val cachedTranslation =
-            translationCacheGateway.readTranslation(book, bookChapter, targetLanguage)
-        if (cachedTranslation != null) {
-            onProgress(TranslationProgress(1, 1, cachedTranslation, emptySet()))
-            return@withContext Result.success(cachedTranslation)
-        }
-
-        val contentHash = translationCacheGateway.computeContentHash(originalContent)
-
-        // Load book dictionary for consistent terminology
-        val bookDictionary = dictionaryGateway.getBookDictionaries(book)
-        val dictionaries = bookDictionary.pairs.toMutableList()
-
-        // Callback to update dictionary pairs immediately (persist as soon as discovered)
-        val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
-            val merged = synchronized(dictionaryLock) {
-                mergeDictionaryPairs(dictionaries, newPairs)
+            val cachedTranslation =
+                translationCacheGateway.readTranslation(book, bookChapter, targetLanguage)
+            if (cachedTranslation != null) {
+                onProgress(TranslationProgress(1, 1, cachedTranslation, emptySet()))
+                return@withContext Result.success(cachedTranslation)
             }
-            if (merged) {
-                synchronized(dictionaryLock) {
-                    dictionaryGateway.updateBookDic(book, dictionaries.toList())
+
+            val contentHash = translationCacheGateway.computeContentHash(originalContent)
+
+            // Load book dictionary for consistent terminology
+            val bookDictionary = dictionaryGateway.getBookDictionaries(book)
+            @Suppress("SENSELESS_COMPARISON")
+            val dictionaries = (bookDictionary.pairs ?: emptyList()).toMutableList()
+
+            // Callback to update dictionary pairs immediately (persist as soon as discovered)
+            val onDictionaryUpdate: (List<DictPair>) -> Unit = { newPairs ->
+                val merged = synchronized(dictionaryLock) {
+                    mergeDictionaryPairs(dictionaries, newPairs)
+                }
+                if (merged) {
+                    synchronized(dictionaryLock) {
+                        dictionaryGateway.updateBookDic(book, dictionaries.toList())
+                    }
                 }
             }
-        }
 
-        val chunks = ContentChunker.chunk(originalContent, TranslationConfig.llmMaxCharsPerChunk)
-        if (chunks.isEmpty()) {
-            return@withContext Result.failure(Exception("Failed to chunk content"))
-        }
-
-        val cachedChunks =
-            translationCacheGateway.getCachedChunks(book, bookChapter, targetLanguage, contentHash)
-        val cachedChunkMap = cachedChunks.filter { it.isSuccess }.associateBy { it.chunkIndex }
-
-        val translatedChunks = mutableMapOf<Int, String>()
-        val pendingChunks = mutableListOf<TextChunk>()
-
-        // Load already cached chunks
-        for (chunk in chunks) {
-            val cached = cachedChunkMap[chunk.index]
-            if (cached != null && cached.translatedChunkContent != null) {
-                translatedChunks[chunk.index] = cached.translatedChunkContent
-            } else {
-                pendingChunks.add(chunk)
+            val chunks = ContentChunker.chunk(originalContent, TranslationConfig.llmMaxCharsPerChunk)
+            if (chunks.isEmpty()) {
+                return@withContext Result.failure(Exception("Failed to chunk content"))
             }
-        }
 
-        // If we have partial cached chunks, report initial mixed content
-        if (translatedChunks.isNotEmpty()) {
-            val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
-            onProgress(TranslationProgress(
-                translatedChunks.size,
-                chunks.size,
-                mixedContent,
-                translatedChunks.keys
-            ))
-        }
+            val cachedChunks =
+                translationCacheGateway.getCachedChunks(book, bookChapter, targetLanguage, contentHash)
+            val cachedChunkMap = cachedChunks.filter { it.isSuccess }.associateBy { it.chunkIndex }
 
-        if (pendingChunks.isEmpty()) {
-            val sortedChunks = chunks.sortedBy { it.index }.mapNotNull { translatedChunks[it.index]?.let { content -> TextChunk(it.index, content, it.paragraphIndices) } }
-            val mergedContent = ContentChunker.merge(sortedChunks)
-            translationCacheGateway.writeTranslation(
-                book,
-                bookChapter,
-                targetLanguage,
-                mergedContent
-            )
+            val translatedChunks = mutableMapOf<Int, String>()
+            val pendingChunks = mutableListOf<TextChunk>()
+
+            // Load already cached chunks
+            for (chunk in chunks) {
+                val cached = cachedChunkMap[chunk.index]
+                if (cached != null && cached.translatedChunkContent != null) {
+                    translatedChunks[chunk.index] = cached.translatedChunkContent
+                } else {
+                    pendingChunks.add(chunk)
+                }
+            }
+
+            // If we have partial cached chunks, report initial mixed content
+            if (translatedChunks.isNotEmpty()) {
+                val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
+                onProgress(TranslationProgress(
+                    translatedChunks.size,
+                    chunks.size,
+                    mixedContent,
+                    translatedChunks.keys
+                ))
+            }
+
+            if (pendingChunks.isEmpty()) {
+                val sortedChunks = chunks.sortedBy { it.index }.mapNotNull { translatedChunks[it.index]?.let { content -> TextChunk(it.index, content, it.paragraphIndices) } }
+                val mergedContent = ContentChunker.merge(sortedChunks)
+                translationCacheGateway.writeTranslation(
+                    book,
+                    bookChapter,
+                    targetLanguage,
+                    mergedContent
+                )
+                onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
+                return@withContext Result.success(mergedContent)
+            }
+
+            onTranslateStarted()
+            var translationError: Throwable? = null
+            coroutineScope {
+                val concurrentChunks = TranslationConfig.llmConcurrentChunks.coerceIn(1, 4)
+                val chunkGroups = pendingChunks.chunked(concurrentChunks)
+
+                for ((groupIndex, group) in chunkGroups.withIndex()) {
+                    val results = group.map { chunk ->
+                        async {
+                            translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, dictionaries, onDictionaryUpdate)
+                        }
+                    }.awaitAll()
+
+                    for ((chunk, result) in group.zip(results)) {
+                        if (result.isSuccess) {
+                            translatedChunks[chunk.index] = result.getOrThrow()
+                            val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
+                            onProgress(TranslationProgress(
+                                translatedChunks.size + cachedChunkMap.size,
+                                chunks.size,
+                                mixedContent,
+                                translatedChunks.keys
+                            ))
+                        } else {
+                            translationError = result.exceptionOrNull() ?: Exception("Translation failed")
+                            return@coroutineScope
+                        }
+                    }
+                }
+            }
+
+            translationError?.let {
+                return@withContext Result.failure(it)
+            }
+
+            if (translatedChunks.size != chunks.size) {
+                return@withContext Result.failure(Exception("Translation incomplete"))
+            }
+
+            val allTranslatedChunks = chunks.sortedBy { it.index }.mapNotNull { chunk ->
+                translatedChunks[chunk.index]?.let { content -> TextChunk(chunk.index, content, chunk.paragraphIndices) }
+            }
+            val mergedContent = ContentChunker.merge(allTranslatedChunks)
+            translationCacheGateway.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
+
             onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
-            return@withContext Result.success(mergedContent)
+            Result.success(mergedContent)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.failure(e)
         }
-
-        onTranslateStarted()
-        coroutineScope {
-            val concurrentChunks = TranslationConfig.llmConcurrentChunks.coerceIn(1, 4)
-            val chunkGroups = pendingChunks.chunked(concurrentChunks)
-
-            for ((groupIndex, group) in chunkGroups.withIndex()) {
-                val results = group.map { chunk ->
-                    async {
-                        translateAndCacheChunk(chunk, book, bookChapter, targetLanguage, contentHash, dictionaries, onDictionaryUpdate)
-                    }
-                }.awaitAll()
-
-                for ((chunk, result) in group.zip(results)) {
-                    if (result.isSuccess) {
-                        translatedChunks[chunk.index] = result.getOrThrow()
-                        val mixedContent = PartialTranslationAssembler.assemble(chunks, translatedChunks)
-                        onProgress(TranslationProgress(
-                            translatedChunks.size + cachedChunkMap.size,
-                            chunks.size,
-                            mixedContent,
-                            translatedChunks.keys
-                        ))
-                    } else {
-                        val error = result.exceptionOrNull() ?: Exception("Translation failed")
-                        return@coroutineScope
-                    }
-                }
-            }
-        }
-
-        if (translatedChunks.size != chunks.size) {
-            return@withContext Result.failure(Exception("Translation incomplete"))
-        }
-
-        val allTranslatedChunks = chunks.sortedBy { it.index }.mapNotNull { chunk ->
-            translatedChunks[chunk.index]?.let { content -> TextChunk(chunk.index, content, chunk.paragraphIndices) }
-        }
-        val mergedContent = ContentChunker.merge(allTranslatedChunks)
-        translationCacheGateway.writeTranslation(book, bookChapter, targetLanguage, mergedContent)
-
-        onProgress(TranslationProgress(chunks.size, chunks.size, mergedContent, chunks.map { it.index }.toSet()))
-        Result.success(mergedContent)
     }
 
     /**

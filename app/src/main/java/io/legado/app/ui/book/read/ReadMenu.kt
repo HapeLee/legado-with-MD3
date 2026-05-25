@@ -637,14 +637,7 @@ class ReadMenu @JvmOverloads constructor(
                 id = "search",
                 iconRes = R.drawable.ic_search,
                 description = context.getString(R.string.search_content),
-                onClick = { runMenuOut{ callBack.openSearchActivity(null) } }
-            ),
-            ToolButton(
-                id = "translate",
-                iconRes = R.drawable.ic_translate,
-                description = context.getString(R.string.translate),
-                onClick = { runMenuOut { callBack.onTranslationClick() } },
-                onLongClick = { runMenuOut { callBack.onTranslationLongClick() } }
+                onClick = { runMenuOut { callBack.openSearchActivity(null) } }
             ),
             ToolButton(
                 id = "catalog",
@@ -706,7 +699,7 @@ class ReadMenu @JvmOverloads constructor(
             ToolButton(
                 id = "replace_badge",
                 iconRes = R.drawable.ic_find_replace,
-                description = context.getString(R.string.replace_purify),
+                description = context.getString(R.string.replace_purify_badge),
                 onLongClick = { runMenuOut { callBack.openReplaceRule() } },
                 onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
                 onClick = {  }
@@ -716,6 +709,13 @@ class ReadMenu @JvmOverloads constructor(
                 iconRes = R.drawable.ic_auto_page,
                 description = context.getString(R.string.auto_next_page),
                 onClick = { runMenuOut { callBack.autoPage() } }
+            ),
+            ToolButton(
+                id = "translate",
+                iconRes = R.drawable.ic_translate,
+                description = context.getString(R.string.translate),
+                onClick = { runMenuOut { callBack.onTranslationClick() } },
+                onLongClick = { runMenuOut { callBack.onTranslationLongClick() } }
             )
         )
     }

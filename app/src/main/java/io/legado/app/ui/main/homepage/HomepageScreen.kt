@@ -37,7 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -56,6 +55,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.HomepageModuleType
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.homepage.modules.BannerModule
@@ -71,6 +71,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
+import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.SmallTonalIconButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -98,6 +99,8 @@ fun HomepageScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var previewBook by remember { mutableStateOf<SearchBook?>(null) }
+    var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     // Removed allSets and browseSources as they are now part of uiState.manageState
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -113,11 +116,7 @@ fun HomepageScreen(
     })
 
     val homeString = stringResource(R.string.home)
-    val currentTitle by remember(
-        layoutMode,
-        pagerState.currentPage,
-        selectedSets,
-    ) {
+    val currentTitle by remember(layoutMode, selectedSets) {
         derivedStateOf {
             if (layoutMode == 1) {
                 homeString
@@ -177,7 +176,10 @@ fun HomepageScreen(
                     if (layoutMode == 1 && selectedSets.isNotEmpty()) {
                         AppTabRow(
                             tabTitles = selectedSets.map { it.sourceName },
-                            selectedTabIndex = pagerState.currentPage,
+                            selectedTabIndex = pagerState.currentPage.coerceIn(
+                                0,
+                                selectedSets.size - 1
+                            ),
                             onTabSelected = { index ->
                                 scope.launch { pagerState.animateScrollToPage(index) }
                             }
@@ -223,6 +225,10 @@ fun HomepageScreen(
                         onErrorClick = { errorMsg = it },
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
+                        onBookLongClick = { book, sharedCoverKey ->
+                            previewBook = book
+                            previewSharedCoverKey = sharedCoverKey
+                        },
                     )
                 }
             }
@@ -241,7 +247,7 @@ fun HomepageScreen(
             onDismiss = { errorMsg = null },
             content = { msg ->
                 SelectionContainer {
-                    Text(
+                    AppText(
                         text = msg,
                         style = LegadoTheme.typography.bodyMedium,
                         modifier = Modifier
@@ -303,6 +309,23 @@ fun HomepageScreen(
             layoutMode = layoutMode,
             onLayoutModeChange = { viewModel.setLayoutMode(it) },
         )
+
+        SearchBookPreviewSheet(
+            data = previewBook,
+            shelfState = previewBook?.let { viewModel.getCurrentBookShelfState(it) },
+            sharedCoverKey = previewSharedCoverKey,
+            onDismissRequest = { previewBook = null },
+            onOpenDetail = { book, sharedCoverKey ->
+                previewBook = null
+                onBookClick(
+                    book.name, book.author, book.bookUrl,
+                    book.origin, book.coverUrl, sharedCoverKey
+                )
+            },
+            onAddToShelf = { book ->
+                viewModel.onAddToShelf(book)
+            },
+        )
     }
 }
 
@@ -315,6 +338,7 @@ private fun ModuleList(
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    onBookLongClick: (SearchBook, String?) -> Unit = { _, _ -> },
     onErrorClick: (String) -> Unit
 ) {
     if (modules.isEmpty()) {
@@ -490,14 +514,20 @@ private fun ModuleList(
                             HomepageModuleType.Waterfall -> {
                                 itemsIndexed(
                                     state.books,
-                                    key = { index, book -> "wf_${moduleUi.globalId}_${book.bookUrl}_$index" }) { index, book ->
+                                    key = { index, item -> "wf_${moduleUi.globalId}_${item.book.bookUrl}_$index" }) { index, item ->
                                     val sharedCoverKey = bookCoverSharedElementKey(
-                                        book.bookUrl,
+                                        item.book.bookUrl,
                                         "home:${moduleUi.globalId}:waterfall:$index"
                                     )
                                     WaterfallItem(
-                                        book = book,
-                                        onClick = { viewModel.onBookClick(book, sharedCoverKey) },
+                                        item = item,
+                                        onClick = {
+                                            viewModel.onBookClick(
+                                                item.book,
+                                                sharedCoverKey
+                                            )
+                                        },
+                                        onLongClick = onBookLongClick,
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         sharedCoverKey = sharedCoverKey,
@@ -520,15 +550,21 @@ private fun ModuleList(
                             HomepageModuleType.InfiniteGrid -> {
                                 itemsIndexed(
                                     state.books,
-                                    key = { index, book -> "inf_grid_${moduleUi.globalId}_${book.bookUrl}_$index" }) { index, book ->
+                                    key = { index, item -> "inf_grid_${moduleUi.globalId}_${item.book.bookUrl}_$index" }) { index, item ->
                                     val sharedCoverKey = bookCoverSharedElementKey(
-                                        book.bookUrl,
+                                        item.book.bookUrl,
                                         "home:${moduleUi.globalId}:infinite:$index"
                                     )
                                     SearchBookGridItem(
-                                        book = book,
-                                        shelfState = io.legado.app.domain.model.BookShelfState.NOT_IN_SHELF,
-                                        onClick = { viewModel.onBookClick(book, sharedCoverKey) },
+                                        book = item.book,
+                                        shelfState = item.shelfState,
+                                        onClick = {
+                                            viewModel.onBookClick(
+                                                item.book,
+                                                sharedCoverKey
+                                            )
+                                        },
+                                        onLongClick = onBookLongClick,
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         sharedCoverKey = sharedCoverKey
@@ -560,6 +596,7 @@ private fun ModuleList(
                                         onClick = { book, sharedCoverKey ->
                                             viewModel.onBookClick(book, sharedCoverKey)
                                         },
+                                        onLongClick = onBookLongClick,
                                         modifier = Modifier.fillMaxWidth(),
                                         columns = columns,
                                         maxRows = rows,
@@ -582,6 +619,7 @@ private fun ModuleList(
                                                 onClick = { book, sharedCoverKey ->
                                                     viewModel.onBookClick(book, sharedCoverKey)
                                                 },
+                                                onLongClick = onBookLongClick,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 sharedTransitionScope = sharedTransitionScope,
                                                 animatedVisibilityScope = animatedVisibilityScope,
@@ -600,6 +638,7 @@ private fun ModuleList(
                                                 onClick = { book, sharedCoverKey ->
                                                     viewModel.onBookClick(book, sharedCoverKey)
                                                 },
+                                                onLongClick = onBookLongClick,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 sharedTransitionScope = sharedTransitionScope,
                                                 animatedVisibilityScope = animatedVisibilityScope,
@@ -618,6 +657,7 @@ private fun ModuleList(
                                                 onClick = { book, sharedCoverKey ->
                                                     viewModel.onBookClick(book, sharedCoverKey)
                                                 },
+                                                onLongClick = onBookLongClick,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 rows = config["layout_rows"]?.toIntOrNull() ?: 4,
                                                 sharedTransitionScope = sharedTransitionScope,
@@ -637,6 +677,7 @@ private fun ModuleList(
                                                 onClick = { book, sharedCoverKey ->
                                                     viewModel.onBookClick(book, sharedCoverKey)
                                                 },
+                                                onLongClick = onBookLongClick,
                                                 modifier = Modifier.fillMaxWidth(),
                                                 sharedTransitionScope = sharedTransitionScope,
                                                 animatedVisibilityScope = animatedVisibilityScope,
