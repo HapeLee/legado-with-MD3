@@ -113,11 +113,7 @@ fun HomepageScreen(
     })
 
     val homeString = stringResource(R.string.home)
-    val currentTitle by remember(
-        layoutMode,
-        pagerState.currentPage,
-        selectedSets,
-    ) {
+    val currentTitle by remember(layoutMode, selectedSets) {
         derivedStateOf {
             if (layoutMode == 1) {
                 homeString
@@ -177,7 +173,10 @@ fun HomepageScreen(
                     if (layoutMode == 1 && selectedSets.isNotEmpty()) {
                         AppTabRow(
                             tabTitles = selectedSets.map { it.sourceName },
-                            selectedTabIndex = pagerState.currentPage,
+                            selectedTabIndex = pagerState.currentPage.coerceIn(
+                                0,
+                                selectedSets.size - 1
+                            ),
                             onTabSelected = { index ->
                                 scope.launch { pagerState.animateScrollToPage(index) }
                             }
