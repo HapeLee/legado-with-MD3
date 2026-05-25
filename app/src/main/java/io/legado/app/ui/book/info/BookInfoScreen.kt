@@ -725,17 +725,40 @@ private fun BookInfoHeader(
                         .padding(top = 8.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    AppText(
-                        text = book.name,
-                        style = LegadoTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 3,
-                        modifier = Modifier.combinedClickable(
-                            onClick = { onBookNameClick(false) },
-                            onLongClick = { onBookNameClick(true) }
+                    var showTitleMenu by remember { mutableStateOf(false) }
+                    var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
+                    Box {
+                        AnimatedTextLine(
+                            text = book.name,
+                            style = LegadoTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
+                            modifier = Modifier.combinedClickable(
+                                onClick = { onBookNameClick(false) },
+                                onLongClick = { showTitleMenu = true }
+                            )
                         )
-                    )
-                    AppText(
+                        RoundDropdownMenu(
+                            expanded = showTitleMenu,
+                            onDismissRequest = { showTitleMenu = false }
+                        ) {
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.search),
+                                onClick = {
+                                    showTitleMenu = false
+                                    onBookNameClick(true)
+                                }
+                            )
+                            RoundDropdownMenuItem(
+                                text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
+                                onClick = {
+                                    showTitleMenu = false
+                                    isTitleExpanded = !isTitleExpanded
+                                }
+                            )
+                        }
+                    }
+                    AnimatedTextLine(
                         text = stringResource(R.string.author_show, book.getRealAuthor()),
                         style = LegadoTheme.typography.bodyLarge,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -744,7 +767,7 @@ private fun BookInfoHeader(
                             onLongClick = { onAuthorClick(true) }
                         )
                     )
-                    AppText(
+                    AnimatedTextLine(
                         text = stringResource(R.string.origin_show, book.originName),
                         style = LegadoTheme.typography.labelMedium,
                         color = LegadoTheme.colorScheme.primary,
@@ -913,12 +936,12 @@ private fun BookInfoSummary(
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        AppText(
+        AnimatedTextLine(
             text = stringResource(R.string.toc_s, book.durChapterTitle ?: stringResource(R.string.loading)),
             style = LegadoTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
-        AppText(
+        AnimatedTextLine(
             text = stringResource(R.string.lasted_show, book.latestChapterTitle ?: ""),
             style = LegadoTheme.typography.bodyMedium,
             color = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -928,7 +951,7 @@ private fun BookInfoSummary(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppText(
+            AnimatedTextLine(
                 text = stringResource(R.string.read_chapter_total, book.totalChapterNum),
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.primary,
@@ -938,14 +961,14 @@ private fun BookInfoSummary(
                 text = "|",
                 color = LegadoTheme.colorScheme.secondary
             )
-            AppText(
+            AnimatedTextLine(
                 text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "已读完" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.secondary,
             )
         }
         if (chapterList.isEmpty()) {
-            AppText(
+            AnimatedTextLine(
                 text = stringResource(R.string.error_load_toc),
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.error
@@ -959,12 +982,15 @@ private fun BookInfoSummary(
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    AppText(text = remark, style = LegadoTheme.typography.labelMediumEmphasized)
+                    AnimatedTextLine(
+                        text = remark,
+                        style = LegadoTheme.typography.labelMediumEmphasized
+                    )
                 }
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
-        AppText(
+        AnimatedTextLine(
             text = book.getDisplayIntro().orEmpty().ifBlank { stringResource(R.string.intro_show_null) },
             style = LegadoTheme.typography.bodyMedium,
         )
