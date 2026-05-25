@@ -3,10 +3,13 @@ package io.legado.app.help.config
 import android.content.Context
 import android.net.Uri
 import com.google.gson.GsonBuilder
+import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.GSON
 import splitties.init.appCtx
 import java.io.File
+import java.io.FileOutputStream
 
 /**
  * 轻量级主题导入导出系统
@@ -184,6 +187,7 @@ object ThemeImportExport {
             defaultHomePage = ThemeConfig.defaultHomePage,
 
             // 导航栏图标
+            navIconHome = ThemeConfig.navIconHome,
             navIconBookshelf = ThemeConfig.navIconBookshelf,
             navIconExplore = ThemeConfig.navIconExplore,
             navIconRss = ThemeConfig.navIconRss,
@@ -194,9 +198,68 @@ object ThemeImportExport {
 
             // 其他
             useFlexibleTopAppBar = ThemeConfig.useFlexibleTopAppBar,
+            bgImageLight = ThemeConfig.bgImageLight,
+            bgImageDark = ThemeConfig.bgImageDark,
             bgImageBlurring = ThemeConfig.bgImageBlurring,
-            bgImageNBlurring = ThemeConfig.bgImageNBlurring
+            bgImageNBlurring = ThemeConfig.bgImageNBlurring,
+            appFontPath = ThemeConfig.appFontPath,
+
+            // 封面配置 (CoverConfig)
+            coverLoadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+            coverUseDefault = CoverConfig.useDefaultCover,
+            coverShowShadow = CoverConfig.coverShowShadow,
+            coverShowStroke = CoverConfig.coverShowStroke,
+            coverDefaultColor = CoverConfig.coverDefaultColor,
+            coverDefaultImage = CoverConfig.defaultCover,
+            coverTextColor = CoverConfig.coverTextColor,
+            coverShadowColor = CoverConfig.coverShadowColor,
+            coverShowName = CoverConfig.coverShowName,
+            coverShowAuthor = CoverConfig.coverShowAuthor,
+            coverDefaultImageDark = CoverConfig.defaultCoverDark,
+            coverTextColorN = CoverConfig.coverTextColorN,
+            coverShadowColorN = CoverConfig.coverShadowColorN,
+            coverShowNameN = CoverConfig.coverShowNameN,
+            coverShowAuthorN = CoverConfig.coverShowAuthorN,
+            coverInfoOrientation = CoverConfig.coverInfoOrientation,
+            assets = exportAssets()
         )
+    }
+
+    /**
+     * 将相关的图片、字体资源转换为Base64
+     */
+    private fun exportAssets(): Map<String, String> {
+        val assets = mutableMapOf<String, String>()
+        val assetPaths = mapOf(
+            "bgImageLight" to ThemeConfig.bgImageLight,
+            "bgImageDark" to ThemeConfig.bgImageDark,
+            "navIconHome" to ThemeConfig.navIconHome,
+            "navIconBookshelf" to ThemeConfig.navIconBookshelf,
+            "navIconExplore" to ThemeConfig.navIconExplore,
+            "navIconRss" to ThemeConfig.navIconRss,
+            "navIconMy" to ThemeConfig.navIconMy,
+            "appFontPath" to ThemeConfig.appFontPath,
+            "coverDefaultImage" to CoverConfig.defaultCover,
+            "coverDefaultImageDark" to CoverConfig.defaultCoverDark
+        )
+
+        assetPaths.forEach { (key, path) ->
+            if (!path.isNullOrBlank()) {
+                try {
+                    val file = if (path.startsWith("content://")) {
+                        null // TODO: 处理 content uri
+                    } else {
+                        File(path)
+                    }
+                    if (file?.exists() == true) {
+                        assets[key] = EncoderUtils.base64Encode(file.readBytes())
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+        return assets
     }
 
     /**
@@ -268,6 +331,7 @@ object ThemeImportExport {
         ThemeConfig.defaultHomePage = data.defaultHomePage
 
         // 导航栏图标
+        ThemeConfig.navIconHome = data.navIconHome
         ThemeConfig.navIconBookshelf = data.navIconBookshelf
         ThemeConfig.navIconExplore = data.navIconExplore
         ThemeConfig.navIconRss = data.navIconRss
@@ -278,8 +342,88 @@ object ThemeImportExport {
 
         // 其他
         ThemeConfig.useFlexibleTopAppBar = data.useFlexibleTopAppBar
+        ThemeConfig.bgImageLight = data.bgImageLight
+        ThemeConfig.bgImageDark = data.bgImageDark
         ThemeConfig.bgImageBlurring = data.bgImageBlurring
         ThemeConfig.bgImageNBlurring = data.bgImageNBlurring
+        ThemeConfig.appFontPath = data.appFontPath
+
+        // 封面配置 (CoverConfig)
+        CoverConfig.loadCoverOnlyWifi = data.coverLoadOnlyWifi
+        CoverConfig.useDefaultCover = data.coverUseDefault
+        CoverConfig.coverShowShadow = data.coverShowShadow
+        CoverConfig.coverShowStroke = data.coverShowStroke
+        CoverConfig.coverDefaultColor = data.coverDefaultColor
+        CoverConfig.defaultCover = data.coverDefaultImage
+        CoverConfig.coverTextColor = data.coverTextColor
+        CoverConfig.coverShadowColor = data.coverShadowColor
+        CoverConfig.coverShowName = data.coverShowName
+        CoverConfig.coverShowAuthor = data.coverShowAuthor
+        CoverConfig.defaultCoverDark = data.coverDefaultImageDark
+        CoverConfig.coverTextColorN = data.coverTextColorN
+        CoverConfig.coverShadowColorN = data.coverShadowColorN
+        CoverConfig.coverShowNameN = data.coverShowNameN
+        CoverConfig.coverShowAuthorN = data.coverShowAuthorN
+        CoverConfig.coverInfoOrientation = data.coverInfoOrientation
+
+        // 应用嵌入的资源
+        data.assets?.let { assets ->
+            applyAssets(assets)
+        }
+    }
+
+    private fun applyAssets(assets: Map<String, String>) {
+        assets.forEach { (key, base64) ->
+            try {
+                val bytes = EncoderUtils.base64DecodeToByteArray(base64)
+                val destFile = when {
+                    key.startsWith("bgImage") -> {
+                        val folder = File(appCtx.getExternalFilesDir(null), key)
+                        folder.mkdirs()
+                        File(folder, "theme_asset_${System.currentTimeMillis()}.jpg")
+                    }
+
+                    key.startsWith("navIcon") -> {
+                        val folder = File(appCtx.filesDir, "nav_icons")
+                        folder.mkdirs()
+                        File(folder, "${key.removePrefix("navIcon").lowercase()}.png")
+                    }
+
+                    key == "appFontPath" -> {
+                        val folder = File(appCtx.filesDir, "fonts")
+                        folder.mkdirs()
+                        File(folder, "theme_font.ttf")
+                    }
+
+                    key.startsWith("coverDefaultImage") -> {
+                        val folder = File(appCtx.getExternalFilesDir(null), "covers")
+                        folder.mkdirs()
+                        File(folder, "${key}_${System.currentTimeMillis()}.jpg")
+                    }
+
+                    else -> null
+                }
+
+                destFile?.let { file ->
+                    FileOutputStream(file).use { it.write(bytes) }
+                    val path = file.absolutePath
+                    when (key) {
+                        "bgImageLight" -> ThemeConfig.bgImageLight = path
+                        "bgImageDark" -> ThemeConfig.bgImageDark = path
+                        "navIconHome" -> ThemeConfig.navIconHome = path
+                        "navIconBookshelf" -> ThemeConfig.navIconBookshelf = path
+                        "navIconExplore" -> ThemeConfig.navIconExplore = path
+                        "navIconRss" -> ThemeConfig.navIconRss = path
+                        "navIconMy" -> ThemeConfig.navIconMy = path
+                        "appFontPath" -> ThemeConfig.appFontPath = path
+                        "coverDefaultImage" -> CoverConfig.defaultCover = path
+                        "coverDefaultImageDark" -> CoverConfig.defaultCoverDark = path
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     /**
@@ -405,6 +549,7 @@ data class ThemeExportData(
     val defaultHomePage: String = "bookshelf",
 
     // 导航栏图标
+    val navIconHome: String = "",
     val navIconBookshelf: String = "",
     val navIconExplore: String = "",
     val navIconRss: String = "",
@@ -415,8 +560,32 @@ data class ThemeExportData(
 
     // 其他
     val useFlexibleTopAppBar: Boolean = true,
+    val bgImageLight: String? = null,
+    val bgImageDark: String? = null,
     val bgImageBlurring: Int = 0,
-    val bgImageNBlurring: Int = 0
+    val bgImageNBlurring: Int = 0,
+    val appFontPath: String? = null,
+
+    // 封面配置 (CoverConfig)
+    val coverLoadOnlyWifi: Boolean = false,
+    val coverUseDefault: Boolean = false,
+    val coverShowShadow: Boolean = false,
+    val coverShowStroke: Boolean = true,
+    val coverDefaultColor: Boolean = true,
+    val coverDefaultImage: String = "",
+    val coverTextColor: Int = -16777216,
+    val coverShadowColor: Int = -16777216,
+    val coverShowName: Boolean = true,
+    val coverShowAuthor: Boolean = true,
+    val coverDefaultImageDark: String = "",
+    val coverTextColorN: Int = -1,
+    val coverShadowColorN: Int = -1,
+    val coverShowNameN: Boolean = true,
+    val coverShowAuthorN: Boolean = true,
+    val coverInfoOrientation: String = "0",
+
+    // 嵌入的二进制资源 (Base64)
+    val assets: Map<String, String>? = null
 )
 
 /**
