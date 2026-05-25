@@ -83,7 +83,6 @@ fun BannerModule(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     sharedCoverKey = sharedCoverKey,
-                    memoryCacheKey = book.bookUrl
                 )
 
                 val shelfIcon = when (item.shelfState) {

@@ -165,7 +165,7 @@ fun SearchBookPreviewSheet(
                 ) {
                     AppText(
                         text = intro,
-                        style = LegadoTheme.typography.bodySmall,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }

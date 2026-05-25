@@ -88,8 +88,7 @@ fun SearchBookListItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null,
-                memoryCacheKey = book.bookUrl
+                showLoadingPlaceholder = sharedCoverKey == null
             )
 
             val shelfIcon = when (shelfState) {
@@ -231,8 +230,7 @@ fun SearchBookGridItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null,
-                memoryCacheKey = book.bookUrl
+                showLoadingPlaceholder = sharedCoverKey == null
             )
 
             val shelfIcon = when (shelfState) {

@@ -191,7 +191,12 @@ private fun BookInfoScreenContent(
             }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
-                BookInfoBackdrop(book)
+                BookInfoBackdrop(
+                    bookUrl = book.bookUrl,
+                    coverUrl = book.coverUrl,
+                    customCoverUrl = book.customCoverUrl,
+                    origin = book.origin,
+                )
                 AppPullToRefresh(
                     modifier = Modifier.fillMaxSize(),
                     isRefreshing = state.isTocLoading,
@@ -473,18 +478,23 @@ private fun BookInfoTopBarActions(
 }
 
 @Composable
-private fun BookInfoBackdrop(book: Book) {
-    val useDefaultCover = AppConfig.useDefaultCover || book.customCoverUrl == "use_default_cover"
+private fun BookInfoBackdrop(
+    bookUrl: String,
+    coverUrl: String?,
+    customCoverUrl: String?,
+    origin: String,
+) {
+    val useDefaultCover = AppConfig.useDefaultCover || customCoverUrl == "use_default_cover"
     val isNight = AppConfig.isNightTheme
 
-    val cover = remember(book.bookUrl, book.customCoverUrl, book.coverUrl, isNight) {
+    val cover = remember(bookUrl, customCoverUrl, coverUrl, isNight) {
         if (useDefaultCover) {
-            BookCover.getRandomDefaultPath(book.bookUrl, isNight)
+            BookCover.getRandomDefaultPath(bookUrl, isNight)
         } else {
-            book.getDisplayCover()
+            if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
         }
     }
-    val sourceOrigin = if (!useDefaultCover) book.origin else null
+    val sourceOrigin = if (!useDefaultCover) origin else null
     val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
     val context = LocalContext.current
     val imageLoader = koinInject<ImageLoader>()
@@ -508,7 +518,7 @@ private fun BookInfoBackdrop(book: Book) {
                         sourceOrigin = sourceOrigin,
                         loadOnlyWifi = loadOnlyWifi,
                         crossfade = true,
-                        memoryCacheKey = book.bookUrl,
+                        memoryCacheKey = currentCover,
                     )
                 }
                 AsyncImage(
@@ -693,8 +703,7 @@ private fun BookInfoHeader(
                         showLoadingPlaceholder = sharedCoverKey == null,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
-                        sharedCoverKey = sharedCoverKey,
-                        memoryCacheKey = book.bookUrl,
+                        sharedCoverKey = sharedCoverKey
                     )
                 }
                 Column(

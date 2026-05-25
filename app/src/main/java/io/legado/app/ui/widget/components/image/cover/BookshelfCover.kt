@@ -37,7 +37,6 @@ fun BookshelfCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
-    memoryCacheKey: String? = null,
 ) {
     Box(modifier = modifier) {
         CoilBookCover(
@@ -51,7 +50,6 @@ fun BookshelfCover(
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = animatedVisibilityScope,
             sharedCoverKey = sharedCoverKey,
-            memoryCacheKey = memoryCacheKey,
         )
 
         // 使用 animatedVisibilityScope 的 animateEnterExit 为叠加层添加同步动画
