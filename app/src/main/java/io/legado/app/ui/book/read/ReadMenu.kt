@@ -640,12 +640,6 @@ class ReadMenu @JvmOverloads constructor(
                 onClick = { runMenuOut { callBack.openSearchActivity(null) } }
             ),
             ToolButton(
-                id = "auto_page",
-                iconRes = R.drawable.ic_auto_page,
-                description = context.getString(R.string.auto_next_page),
-                onClick = { runMenuOut { callBack.autoPage() } }
-            ),
-            ToolButton(
                 id = "catalog",
                 iconRes = R.drawable.ic_toc,
                 description = context.getString(R.string.chapter_list),
@@ -709,6 +703,12 @@ class ReadMenu @JvmOverloads constructor(
                 onLongClick = { runMenuOut { callBack.openReplaceRule() } },
                 onCheck = { runMenuOut { callBack.changeReplaceRuleState() } },
                 onClick = {  }
+            ),
+            ToolButton(
+                id = "auto_page",
+                iconRes = R.drawable.ic_auto_page,
+                description = context.getString(R.string.auto_next_page),
+                onClick = { runMenuOut { callBack.autoPage() } }
             ),
             ToolButton(
                 id = "translate",

@@ -18,6 +18,7 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.restart
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -31,6 +32,12 @@ class OtherConfigViewModel : ViewModel() {
         SharedReceiverActivity::class.java.name
     )
 
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            OtherConfig.processText = isProcessTextEnabled()
+        }
+    }
+
     fun isProcessTextEnabled(): Boolean {
         return packageManager.getComponentEnabledSetting(componentName) != PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     }
@@ -41,11 +48,18 @@ class OtherConfigViewModel : ViewModel() {
         } else {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
-        packageManager.setComponentEnabledSetting(
-            componentName,
-            state,
-            PackageManager.DONT_KILL_APP
-        )
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                packageManager.setComponentEnabledSetting(
+                    componentName,
+                    state,
+                    PackageManager.DONT_KILL_APP
+                )
+                OtherConfig.processText = enable
+            }.onFailure {
+                appCtx.toastOnUi(it.localizedMessage)
+            }
+        }
     }
 
     fun clearWebViewData(context: Context) {

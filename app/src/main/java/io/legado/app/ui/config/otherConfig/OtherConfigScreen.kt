@@ -287,7 +287,7 @@ fun OtherConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.add_to_text_context_menu_t),
                     description = stringResource(R.string.add_to_text_context_menu_s),
-                    checked = viewModel.isProcessTextEnabled(),
+                    checked = OtherConfig.processText,
                     onCheckedChange = { viewModel.setProcessTextEnable(it) }
                 )
 
