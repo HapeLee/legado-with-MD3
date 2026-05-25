@@ -378,7 +378,8 @@ object ThemeImportExport {
                 val bytes = EncoderUtils.base64DecodeToByteArray(base64)
                 val destFile = when {
                     key.startsWith("bgImage") -> {
-                        val folder = File(appCtx.getExternalFilesDir(null), key)
+                        val baseDir = appCtx.getExternalFilesDir(null) ?: appCtx.filesDir
+                        val folder = File(baseDir, key)
                         folder.mkdirs()
                         File(folder, "theme_asset_${System.currentTimeMillis()}.jpg")
                     }
@@ -396,7 +397,8 @@ object ThemeImportExport {
                     }
 
                     key.startsWith("coverDefaultImage") -> {
-                        val folder = File(appCtx.getExternalFilesDir(null), "covers")
+                        val baseDir = appCtx.getExternalFilesDir(null) ?: appCtx.filesDir
+                        val folder = File(baseDir, "covers")
                         folder.mkdirs()
                         File(folder, "${key}_${System.currentTimeMillis()}.jpg")
                     }

@@ -7,7 +7,8 @@ object ContentChunker {
     fun chunk(text: String, maxCharsPerChunk: Int = 3000): List<TextChunk> {
         if (text.isBlank()) return emptyList()
 
-        val paragraphs = text.split("\n\n").filter { it.isNotBlank() }
+        val normalizedText = text.replace("\r\n", "\n")
+        val paragraphs = normalizedText.split("\n\n").filter { it.isNotBlank() }
         if (paragraphs.isEmpty()) return emptyList()
 
         val chunks = mutableListOf<TextChunk>()

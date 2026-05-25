@@ -65,6 +65,9 @@ import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -1336,20 +1339,24 @@ class BookInfoViewModel(
             return
         }
         execute {
-            modules.map { def ->
-                val (resolvedUrl, books) = try {
-                    resolveAndExplore(source, def.url!!, book)
-                } catch (e: Exception) {
-                    def.url!! to emptyList()
-                }
-                RelatedBooksUi(
-                    key = def.key ?: def.title.orEmpty(),
-                    title = def.title.orEmpty(),
-                    url = def.url!!,
-                    resolvedUrl = resolvedUrl,
-                    books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
-                )
-            }.filter { it.books.isNotEmpty() }
+            coroutineScope {
+                modules.map { def ->
+                    async {
+                        val (resolvedUrl, books) = try {
+                            resolveAndExplore(source, def.url!!, book)
+                        } catch (e: Exception) {
+                            def.url!! to emptyList()
+                        }
+                        RelatedBooksUi(
+                            key = def.key ?: def.title.orEmpty(),
+                            title = def.title.orEmpty(),
+                            url = def.url!!,
+                            resolvedUrl = resolvedUrl,
+                            books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
+                        )
+                    }
+                }.awaitAll().filter { it.books.isNotEmpty() }
+            }
         }.onSuccess { result ->
             currentRelatedBooks = result
             syncUiState()

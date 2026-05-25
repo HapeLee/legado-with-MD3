@@ -110,7 +110,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         return if (response.isSuccessful()) {
             try {
                 val json = GSON.fromJson(response.body, GoogleTranslateResponse::class.java)
-                val translatedText = json.sentences.mapNotNull { it.trans }.joinToString("")
+                val translatedText = json?.sentences?.mapNotNull { it.trans }?.joinToString("") ?: ""
                 if (translatedText.isNotEmpty()) {
                     Result.success(translatedText)
                 } else {
@@ -167,7 +167,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         return if (response.isSuccessful()) {
             try {
                 val json = GSON.fromJson(response.body, OpenAIResponse::class.java)
-                val rawContent = json.choices.firstOrNull()?.message?.content
+                val rawContent = json?.choices?.firstOrNull()?.message?.content
                 if (rawContent != null) {
                     // Parse the output with [dictionary] and [result] sections
                     val parseResult = parseLlmOutput(rawContent, dictionaries)
