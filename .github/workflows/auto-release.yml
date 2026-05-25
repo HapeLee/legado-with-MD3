@@ -340,7 +340,7 @@ jobs:
 
       # 4. 创建 Release 并上传
       - name: 创建 GitHub Release 并上传文件
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.prepare.outputs.versionL }}
           name: ${{ needs.prepare.outputs.is_release == 'true' && format('Release {0}', needs.prepare.outputs.versionL) || format('Pre-release {0}', needs.prepare.outputs.versionL) }}
