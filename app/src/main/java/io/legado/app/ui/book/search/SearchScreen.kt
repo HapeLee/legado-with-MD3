@@ -20,8 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -54,6 +56,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.entities.SearchKeyword
 import io.legado.app.domain.model.BookShelfState
+import io.legado.app.domain.model.MatchMode
 import io.legado.app.ui.main.bookCoverSharedElementKey
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import io.legado.app.ui.theme.LegadoTheme
@@ -63,12 +66,12 @@ import io.legado.app.ui.theme.adaptiveContentPaddingOnlyVertical
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
-import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.button.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -76,11 +79,11 @@ import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.M3GlassScrollBehavior
-import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.toastOnUi
@@ -100,6 +103,8 @@ fun SearchScreen(
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchLayoutMode by viewModel.searchLayoutMode.collectAsStateWithLifecycle()
+    val isSourceGroupedMode = searchLayoutMode == 1
     var previewBook by remember { mutableStateOf<SearchBook?>(null) }
     var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
@@ -149,13 +154,15 @@ fun SearchScreen(
         state.hasMore,
         state.isManualStop,
         state.showSuggestions,
+        isSourceGroupedMode,
     ) {
         if (
             shouldLoadMore &&
             !state.isSearching &&
             state.hasMore &&
             !state.isManualStop &&
-            !state.showSuggestions
+            !state.showSuggestions &&
+            !isSourceGroupedMode
         ) {
             viewModel.onIntent(SearchIntent.LoadMore)
         }
@@ -261,32 +268,15 @@ fun SearchScreen(
                         )
                     },
                     actions = {
-                        TopBarActionButton(
-                            onClick = {
-                                viewModel.onIntent(SearchIntent.OpenSourceManage)
-                            },
-                            imageVector = AppIcons.Settings,
-                            contentDescription = stringResource(R.string.book_source_manage)
-                        )
                         TopBarAnimatedActionButton(
-                            checked = state.isPrecisionSearch,
-                            onCheckedChange = { checked ->
-                                viewModel.onIntent(SearchIntent.TogglePrecision(checked))
-                            },
-                            iconChecked = AppIcons.PrecisionSearch,
-                            iconUnchecked = AppIcons.UnPrecisionSearch,
-                            activeText = stringResource(R.string.precision_search),
-                            inactiveText = stringResource(R.string.search),
-                        )
-                        TopBarAnimatedActionButton(
-                            checked = state.selectedSourceTypes.isNotEmpty(),
+                            checked = isSourceGroupedMode || state.matchMode == MatchMode.EXACT || state.selectedSourceTypes.isNotEmpty(),
                             onCheckedChange = {
-                                viewModel.onIntent(SearchIntent.SetTypeSheetVisible(true))
+                                viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(true))
                             },
-                            iconChecked = Icons.Default.Layers,
-                            iconUnchecked = Icons.Default.Layers,
-                            activeText = "搜素类型",
-                            inactiveText = "搜素类型",
+                            iconChecked = AppIcons.Settings,
+                            iconUnchecked = AppIcons.Settings,
+                            activeText = stringResource(R.string.setting),
+                            inactiveText = stringResource(R.string.setting),
                         )
                         TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
@@ -296,7 +286,7 @@ fun SearchScreen(
                             iconChecked = AppIcons.Filter,
                             iconUnchecked = AppIcons.Filter,
                             activeText = stringResource(R.string.screen),
-                            inactiveText = stringResource(R.string.screen),
+                            inactiveText = stringResource(R.string.screen)
                         )
                     },
                     scrollBehavior = scrollBehavior
@@ -315,12 +305,13 @@ fun SearchScreen(
                         placeholder = searchLabel,
                         trailingIcon = {
                             if (queryInput.isNotEmpty()) {
-                                TopBarActionButton(
+                                SmallPlainButton(
+                                    modifier = Modifier.padding(horizontal = 8.dp),
                                     onClick = {
                                         queryInput = ""
                                         viewModel.onIntent(SearchIntent.UpdateQuery(""))
                                     },
-                                    imageVector = AppIcons.Close,
+                                    icon = AppIcons.Close,
                                     contentDescription = stringResource(R.string.clear)
                                 )
                             }
@@ -394,52 +385,124 @@ fun SearchScreen(
                         }
 
                         if (state.results.isNotEmpty()) {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                state = listState,
-                                contentPadding = adaptiveContentPaddingOnlyVertical(
-                                    top = 48.dp,
-                                    bottom = 8.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                itemsIndexed(
-                                    items = state.results,
-                                    key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
-                                ) { index, item ->
-                                    val sharedCoverKey = bookCoverSharedElementKey(
-                                        item.book.bookUrl,
-                                        "search:${item.book.origin}:$index"
-                                    )
-                                    SearchBookListItem(
-                                        book = item.book,
-                                        shelfState = item.shelfState,
-                                        onClick = {
-                                            viewModel.onIntent(
-                                                SearchIntent.OpenSearchBook(
-                                                    item.book,
-                                                    sharedCoverKey
-                                                )
-                                            )
-                                        },
-                                        onLongClick = { book, coverKey ->
-                                            previewBook = book
-                                            previewSharedCoverKey = coverKey
-                                        },
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        sharedCoverKey = sharedCoverKey
-                                    )
-                                }
+                            val sourceGroupedResults = remember(state.results) {
+                                state.results
+                                    .groupBy { it.book.origin }
+                                    .map { (origin, books) ->
+                                        SourceGroup(
+                                            origin = origin,
+                                            sourceName = books.firstOrNull()?.book?.originName?.takeIf { it.isNotBlank() }
+                                                ?: origin,
+                                            items = books
+                                        )
+                                    }
+                            }
 
-                                item {
-                                    SearchResultFooter(
-                                        isSearching = state.isSearching,
-                                        hasMore = state.hasMore,
-                                        hasResult = true,
-                                        committedQuery = state.committedQuery,
-                                        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
-                                    )
+                            AnimatedContent(
+                                targetState = isSourceGroupedMode,
+                                label = "SearchLayoutTransition",
+                                modifier = Modifier.fillMaxSize(),
+                            ) { isSourceGrouped ->
+                                if (isSourceGrouped) {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                                            top = 48.dp,
+                                            bottom = 8.dp
+                                        ),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        sourceGroupedResults.forEachIndexed { groupIndex, group ->
+                                            item(key = "header_${group.origin}") {
+                                                SearchSourceSection(
+                                                    sourceName = group.sourceName,
+                                                    items = group.items,
+                                                    onClickBook = { book, coverKey ->
+                                                        viewModel.onIntent(
+                                                            SearchIntent.OpenSearchBook(
+                                                                book,
+                                                                coverKey
+                                                            )
+                                                        )
+                                                    },
+                                                    onLongClickBook = { book, coverKey ->
+                                                        previewBook = book
+                                                        previewSharedCoverKey = coverKey
+                                                    },
+                                                    onViewAll = {
+                                                        viewModel.onIntent(
+                                                            SearchIntent.ExpandSource(
+                                                                group.origin,
+                                                                group.sourceName
+                                                            )
+                                                        )
+                                                    },
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    sourceSectionIndex = groupIndex,
+                                                )
+                                            }
+                                        }
+
+                                        item {
+                                            SearchResultFooter(
+                                                isSearching = state.isSearching,
+                                                hasMore = state.hasMore,
+                                                hasResult = true,
+                                                committedQuery = state.committedQuery,
+                                                onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = listState,
+                                        contentPadding = adaptiveContentPaddingOnlyVertical(
+                                            top = 48.dp,
+                                            bottom = 8.dp
+                                        ),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        itemsIndexed(
+                                            items = state.results,
+                                            key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
+                                        ) { index, item ->
+                                            val sharedCoverKey = bookCoverSharedElementKey(
+                                                item.book.bookUrl,
+                                                "search:${item.book.origin}:$index"
+                                            )
+                                            SearchBookListItem(
+                                                book = item.book,
+                                                shelfState = item.shelfState,
+                                                onClick = {
+                                                    viewModel.onIntent(
+                                                        SearchIntent.OpenSearchBook(
+                                                            item.book,
+                                                            sharedCoverKey
+                                                        )
+                                                    )
+                                                },
+                                                onLongClick = { book, coverKey ->
+                                                    previewBook = book
+                                                    previewSharedCoverKey = coverKey
+                                                },
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope,
+                                                sharedCoverKey = sharedCoverKey
+                                            )
+                                        }
+
+                                        item {
+                                            SearchResultFooter(
+                                                isSearching = state.isSearching,
+                                                hasMore = state.hasMore,
+                                                hasResult = true,
+                                                committedQuery = state.committedQuery,
+                                                onLoadMore = { viewModel.onIntent(SearchIntent.LoadMore) },
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -502,7 +565,7 @@ fun SearchScreen(
         },
         title = stringResource(R.string.draw),
         textProvider = {
-            if (wasPrecisionSearch) {
+            if (wasMatchMode == MatchMode.EXACT) {
                 stringResource(R.string.search_empty_scope_disable_precision, scopeDisplay)
             } else {
                 stringResource(R.string.search_empty_scope_switch_all, scopeDisplay)
@@ -525,46 +588,101 @@ fun SearchScreen(
         sources = state.enabledSources,
         selectedSources = state.selectedScopeSourceUrls,
         onToggleSource = { viewModel.onIntent(SearchIntent.ToggleScopeSource(it)) },
-        isSourceScope = state.isSourceScope
+        isSourceScope = state.isSourceScope,
+        onConfirm = { viewModel.onIntent(SearchIntent.OpenSourceManage) },
     )
 
     AppModalBottomSheet(
-        show = state.showTypeSheet,
-        onDismissRequest = { viewModel.onIntent(SearchIntent.SetTypeSheetVisible(false)) },
-        title = "搜素类型",
+        show = state.showSettingsSheet,
+        onDismissRequest = { viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(false)) },
+        title = stringResource(R.string.setting),
     ) {
-        Column {
-            SelectionItemCard(
-                title = stringResource(R.string.all),
-                isSelected = state.selectedSourceTypes.isEmpty(),
-                containerColor = LegadoTheme.colorScheme.onSheetContent,
-                inSelectionMode = true,
-                onToggleSelection = {
-                    if (state.selectedSourceTypes.isNotEmpty()) {
-                        state.selectedSourceTypes.forEach {
-                            viewModel.onIntent(SearchIntent.ToggleSourceType(it))
-                        }
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CompactDropdownSettingItem(
+                title = stringResource(R.string.layout_mode),
+                selectedValue = searchLayoutMode.toString(),
+                displayEntries = arrayOf(
+                    stringResource(R.string.search_layout_source_grouped),
+                    stringResource(R.string.search_layout_list)
+                ),
+                entryValues = arrayOf("1", "0"),
+                imageVector = if (isSourceGroupedMode) Icons.Default.GridView else Icons.AutoMirrored.Outlined.FormatListBulleted,
+                onValueChange = { newValue ->
+                    if (newValue.toInt() != searchLayoutMode) {
+                        viewModel.toggleSearchLayout()
                     }
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            CompactDropdownSettingItem(
+                title = stringResource(R.string.precision_search),
+                selectedValue = state.matchMode.value.toString(),
+                displayEntries = arrayOf(
+                    stringResource(R.string.precision_search),
+                    stringResource(R.string.search)
+                ),
+                entryValues = arrayOf(
+                    MatchMode.EXACT.value.toString(),
+                    MatchMode.DEFAULT.value.toString()
+                ),
+                imageVector = if (state.matchMode == MatchMode.EXACT) AppIcons.PrecisionSearch else AppIcons.UnPrecisionSearch,
+                onValueChange = { newValue ->
+                    val mode = MatchMode.of(newValue.toInt())
+                    if (mode != state.matchMode) {
+                        viewModel.onIntent(SearchIntent.SetMatchMode(mode))
+                    }
+                }
+            )
 
-            listOf(
-                0 to stringResource(R.string.noval),
-                2 to stringResource(R.string.manga),
-                1 to stringResource(R.string.audio),
-            ).forEach { (type, label) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppIcon(Icons.Default.Layers, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                AppText(
+                    text = "搜索类型",
+                    style = LegadoTheme.typography.titleSmall
+                )
+            }
+
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 SelectionItemCard(
-                    title = label,
-                    isSelected = state.selectedSourceTypes.contains(type),
+                    title = stringResource(R.string.all),
+                    isSelected = state.selectedSourceTypes.isEmpty(),
                     containerColor = LegadoTheme.colorScheme.onSheetContent,
                     inSelectionMode = true,
                     onToggleSelection = {
-                        viewModel.onIntent(SearchIntent.ToggleSourceType(type))
+                        if (state.selectedSourceTypes.isNotEmpty()) {
+                            state.selectedSourceTypes.forEach {
+                                viewModel.onIntent(SearchIntent.ToggleSourceType(it))
+                            }
+                        }
                     }
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+
+                listOf(
+                    0 to stringResource(R.string.noval),
+                    2 to stringResource(R.string.manga),
+                    1 to stringResource(R.string.audio),
+                ).forEach { (type, label) ->
+                    SelectionItemCard(
+                        title = label,
+                        isSelected = state.selectedSourceTypes.contains(type),
+                        containerColor = LegadoTheme.colorScheme.onSheetContent,
+                        inSelectionMode = true,
+                        onToggleSelection = {
+                            viewModel.onIntent(SearchIntent.ToggleSourceType(type))
+                        }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -586,6 +704,24 @@ fun SearchScreen(
         },
         onAddToShelf = { book ->
             viewModel.onAddToShelf(book)
+        },
+    )
+
+    ExpandedSourceSheet(
+        show = state.expandedSourceUrl != null,
+        sourceName = state.expandedSourceName ?: "",
+        books = state.expandedSourceBooks,
+        isLoading = state.expandedSourceLoading,
+        isEnd = state.expandedSourceEnd,
+        errorMsg = state.expandedSourceError,
+        onDismiss = { viewModel.onIntent(SearchIntent.DismissExpandedSource) },
+        onLoadMore = { viewModel.onIntent(SearchIntent.LoadMoreExpandedSource) },
+        onBookClick = { book, coverKey ->
+            viewModel.onIntent(SearchIntent.OpenExpandedSourceBook(book, coverKey))
+        },
+        onBookLongClick = { book, coverKey ->
+            previewBook = book
+            previewSharedCoverKey = coverKey
         },
     )
 }
@@ -653,10 +789,10 @@ private fun SearchSuggestionPanel(
                 }
 
                 if (state.history.isNotEmpty()) {
-                    SmallTextButton(
+                    SmallPlainButton(
                         onClick = onClearHistory,
                         text = stringResource(R.string.clear_all),
-                        imageVector = Icons.Default.Close
+                        icon = Icons.Default.Close
                     )
                 }
             }
@@ -685,9 +821,9 @@ private fun SearchSuggestionPanel(
                     title = history.word,
                     onToggleSelection = { onUseHistory(history.word) },
                     trailingAction = {
-                        SmallIconButton(
+                        SmallPlainButton(
                             onClick = { onDeleteHistory(history) },
-                            imageVector = Icons.Default.Close,
+                            icon = Icons.Default.Close,
                             contentDescription = stringResource(R.string.delete)
                         )
                     }
@@ -742,6 +878,79 @@ private fun SearchResultFooter(
                 Text(
                     text = stringResource(R.string.search_empty),
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+private data class SourceGroup(
+    val origin: String,
+    val sourceName: String,
+    val items: List<SearchResultItemUi>,
+)
+
+@Composable
+private fun ExpandedSourceSheet(
+    show: Boolean,
+    sourceName: String,
+    books: List<SearchBook>,
+    isLoading: Boolean,
+    isEnd: Boolean,
+    errorMsg: String?,
+    onDismiss: () -> Unit,
+    onLoadMore: () -> Unit,
+    onBookClick: (SearchBook, String?) -> Unit,
+    onBookLongClick: ((SearchBook, String?) -> Unit)? = null,
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismiss,
+        title = sourceName,
+    ) {
+        val listState = rememberLazyListState()
+
+        val shouldLoadMore by remember {
+            derivedStateOf {
+                val total = listState.layoutInfo.totalItemsCount
+                val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                total > 0 && last >= total - 3
+            }
+        }
+
+        LaunchedEffect(shouldLoadMore, isLoading, isEnd) {
+            if (shouldLoadMore && !isLoading && !isEnd) {
+                onLoadMore()
+            }
+        }
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = adaptiveContentPaddingOnlyVertical(
+                top = 8.dp,
+                bottom = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(
+                items = books,
+                key = { it.bookUrl },
+            ) { book ->
+                SearchBookListItem(
+                    book = book,
+                    shelfState = BookShelfState.NOT_IN_SHELF,
+                    onClick = { onBookClick(book, null) },
+                    onLongClick = onBookLongClick,
+                )
+            }
+
+            item {
+                LoadMoreFooter(
+                    isLoading = isLoading,
+                    errorMsg = errorMsg,
+                    isEnd = isEnd,
+                    onRetry = onLoadMore,
                 )
             }
         }
