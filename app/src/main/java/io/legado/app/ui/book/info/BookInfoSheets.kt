@@ -72,8 +72,8 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.MediumIconButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
@@ -144,15 +144,15 @@ fun GroupSelectSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.group_select),
         startAction = {
-            MediumIconButton(
+            MediumPlainButton(
                 onClick = { editingGroup = BookGroup() },
-                imageVector = Icons.Default.Add
+                icon = Icons.Default.Add
             )
         },
         endAction = {
-            MediumIconButton(
+            MediumPlainButton(
                 onClick = { onConfirm(selectedGroupId) },
-                imageVector = Icons.Default.Check
+                icon = Icons.Default.Check
             )
         }
     ) {
@@ -186,9 +186,9 @@ fun GroupSelectSheet(
                             )
                         },
                         trailingAction = {
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = { editingGroup = group },
-                                imageVector = Icons.Default.Edit
+                                icon = Icons.Default.Edit
                             )
                         },
                         containerColor = LegadoTheme.colorScheme.surfaceContainerLow
@@ -228,9 +228,9 @@ fun ChangeCoverSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.change_cover_source),
         endAction = {
-            MediumIconButton(
+            MediumPlainButton(
                 onClick = { viewModel.startOrStopSearch() },
-                imageVector = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh
+                icon = if (isSearching) Icons.Default.MoreVert else Icons.Default.Refresh
             )
         }
     ) {
@@ -362,9 +362,9 @@ fun ChangeSourceSheet(
         startAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Box {
-                    MediumIconButton(
+                    MediumPlainButton(
                         onClick = { showOptionsMenu = true },
-                        imageVector = Icons.Default.MoreVert
+                        icon = Icons.Default.MoreVert
                     )
                     RoundDropdownMenu(
                         expanded = showOptionsMenu,
@@ -411,21 +411,21 @@ fun ChangeSourceSheet(
                         )
                     }
                 }
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = { showMigrationOptions = true },
-                    imageVector = Icons.Outlined.Settings
+                    icon = Icons.Outlined.Settings
                 )
             }
         },
         endAction = {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = { viewModel.startOrStopSearch() },
-                    imageVector = if (isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
+                    icon = if (isSearching) Icons.Default.PauseCircleOutline else Icons.Default.Refresh,
                 )
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = { showFilterSheet = true },
-                    imageVector = Icons.Default.FilterList
+                    icon = Icons.Default.FilterList
                 )
             }
         }
@@ -476,11 +476,11 @@ fun ChangeSourceSheet(
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
                         selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
                         leadingContent = {
-                            MediumIconButton(
+                            MediumPlainButton(
                                 onClick = {
                                     viewModel.onBookScoreClick(item)
                                 },
-                                imageVector = Icons.Default.PushPin,
+                                icon = Icons.Default.PushPin,
                                 tint = if (bookScore > 0) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.outline,
                                 contentDescription = null
                             )

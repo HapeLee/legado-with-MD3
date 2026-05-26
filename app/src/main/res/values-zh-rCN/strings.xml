@@ -24,7 +24,7 @@
     <string name="dialog_setting">去设置</string>
     <string name="tip_cannot_jump_setting_page">无法跳转至设置界面</string>
 
-    <string name="manual_input">手动输入</string>
+    <string name="manual_input">输入URL</string>
     <string name="preferred_contrast">偏好对比度</string>
     <string name="contrast_source_system_summary">来源：系统对比度</string>
     <string name="contrast_source_manual_summary">来源：手动输入</string>
@@ -897,7 +897,7 @@
     <string name="body_title">正文标题</string>
     <string name="show_hide">显示/隐藏</string>
     <string name="header_footer">页眉与页脚</string>
-    <string name="rule_subscription">规则订阅</string>
+    <string name="rule_subscription">规则</string>
     <string name="rule_sub_empty_msg">添加大佬们提供的规则导入地址\n添加后点击可导入规则</string>
     <string name="get_book_progress">拉取云端进度</string>
     <string name="cover_book_progress">覆盖云端进度</string>
@@ -1643,6 +1643,8 @@
     <string name="search_source_progress"> · 进度 %1$d/%2$d</string>
     <string name="search_empty_scope_disable_precision">%1$s分组搜索结果为空，是否关闭精准搜索？</string>
     <string name="search_empty_scope_switch_all">%1$s分组搜索结果为空，是否切换到全部分组？</string>
+    <string name="search_layout_list">列表布局</string>
+    <string name="search_layout_source_grouped">来源分组</string>
     <string name="download_cache_config">下载与缓存</string>
     <string name="http_cache">HTTP缓存</string>
     <string name="cover_cache">封面缓存</string>

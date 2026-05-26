@@ -23,7 +23,7 @@ import io.legado.app.R
 import io.legado.app.help.DefaultData
 import io.legado.app.model.BookCover
 import io.legado.app.ui.widget.components.AppTextField
-import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.toastOnUi
@@ -59,8 +59,8 @@ fun CoverRuleConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.cover_rule),
         startAction = {
-            MediumIconButton(
-                imageVector = Icons.Default.SettingsBackupRestore,
+            MediumPlainButton(
+                icon = Icons.Default.SettingsBackupRestore,
                 onClick = {
                     DefaultData.coverRule.let {
                         enable = it.enable
@@ -72,8 +72,8 @@ fun CoverRuleConfigSheet(
             )
         },
         endAction = {
-            MediumIconButton(
-                imageVector = Icons.Default.Save,
+            MediumPlainButton(
+                icon = Icons.Default.Save,
                 onClick = {
                     if (searchUrl.isBlank() || coverRule.isBlank()) {
                         appCtx.toastOnUi(R.string.cover_rule_fields_required)

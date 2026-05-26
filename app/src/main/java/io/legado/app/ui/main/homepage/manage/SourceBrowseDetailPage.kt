@@ -32,7 +32,7 @@ import io.legado.app.ui.main.homepage.HomepageModuleManageUi
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SecondaryButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.card.SelectionItemCard
@@ -170,13 +170,13 @@ fun SourceBrowseDetailPage(
                                     }
                                 },
                                 trailingAction = {
-                                    SmallIconButton(
+                                    SmallPlainButton(
                                         onClick = { onEditModule(module) },
-                                        imageVector = Icons.Default.Edit
+                                        icon = Icons.Default.Edit
                                     )
-                                    SmallIconButton(
+                                    SmallPlainButton(
                                         onClick = { onRequestDeleteModule(module.id) },
-                                        imageVector = Icons.Default.Delete
+                                        icon = Icons.Default.Delete
                                     )
                                 }
                             )
@@ -212,13 +212,13 @@ fun SourceBrowseDetailPage(
                                     containerColor = if (isEffective) LegadoTheme.colorScheme.surfaceContainerHigh else LegadoTheme.colorScheme.onSheetContent,
                                     onEnabledChange = { onToggleModule(module.id, it) },
                                     trailingAction = {
-                                        SmallIconButton(
+                                        SmallPlainButton(
                                             onClick = { onEditModule(module) },
-                                            imageVector = Icons.Default.Edit
+                                            icon = Icons.Default.Edit
                                         )
-                                        SmallIconButton(
+                                        SmallPlainButton(
                                             onClick = { onRequestDeleteModule(module.id) },
-                                            imageVector = Icons.Default.Delete
+                                            icon = Icons.Default.Delete
                                         )
                                     }
                                 )
@@ -334,9 +334,9 @@ fun SourceBrowseDetailPage(
                         onToggleSelection = { showKindSelect = true },
                         trailingAction = {
                             if (isButtonGroup && selectedKindTitles.isNotEmpty()) {
-                                SmallIconButton(
+                                SmallPlainButton(
                                     onClick = { onShowAddButtonGroupDialog() },
-                                    imageVector = Icons.Default.Check
+                                    icon = Icons.Default.Check
                                 )
                             }
                         }

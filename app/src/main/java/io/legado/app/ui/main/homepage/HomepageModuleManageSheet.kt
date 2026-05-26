@@ -37,7 +37,7 @@ import io.legado.app.ui.main.homepage.manage.SetListPage
 import io.legado.app.ui.main.homepage.manage.SourceBrowseDetailPage
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -127,38 +127,38 @@ fun <T> HomepageModuleManageSheet(
         },
         startAction = {
             if (showCustomSetAddModules) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = { showCustomSetAddModules = false },
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack
+                    icon = Icons.AutoMirrored.Filled.ArrowBack
                 )
             } else if (browsingSourceUrl != null || showSourceBrowser) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = {
                         if (browsingDetail) browsingDetail = false
                         else if (showSourceBrowser) showSourceBrowser = false
                         else browsingSourceUrl = null
                     },
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack
+                    icon = Icons.AutoMirrored.Filled.ArrowBack
                 )
             } else if (selectingSetUrl != null) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = { selectingSetUrl = null },
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack
+                    icon = Icons.AutoMirrored.Filled.ArrowBack
                 )
             }
         },
         endAction = {
             if (browsingDetail && browseTab == 2 && browseModuleType == "buttonGroup" && selectedKindTitles.isNotEmpty()) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = { showAddButtonGroupDialog = true },
-                    imageVector = Icons.Default.Check
+                    icon = Icons.Default.Check
                 )
             } else if ((showSourceBrowser || browsingSourceUrl != null) && !browsingDetail) {
                 var expanded by remember { mutableStateOf(false) }
                 Box {
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = { expanded = true },
-                        imageVector = Icons.Default.FilterList
+                        icon = Icons.Default.FilterList
                     )
                     RoundDropdownMenu(
                         expanded = expanded,

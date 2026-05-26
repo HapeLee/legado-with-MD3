@@ -33,7 +33,7 @@ import io.legado.app.data.entities.RssStar
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -229,9 +229,9 @@ fun RssFavoritesScreen(
                             val openAction = {
                                 onOpenRead(rssStar.title, rssStar.origin, rssStar.link, null)
                             }
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = openAction,
-                                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                icon = Icons.AutoMirrored.Filled.OpenInNew,
                                 contentDescription = "Open"
                             )
                         },

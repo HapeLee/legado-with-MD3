@@ -40,7 +40,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
@@ -347,7 +347,7 @@ private fun BookCacheBookCard(
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
                 if (item.hasDownloadTask || item.cachedCount < item.totalCount) {
-                    SmallTonalIconButton(
+                    SmallTonalButton(
                         onClick = {
                             if (item.hasActiveDownload) {
                                 onIntent(BookCacheManageIntent.StopBookDownload(item.bookUrl))
@@ -355,7 +355,7 @@ private fun BookCacheBookCard(
                                 onIntent(BookCacheManageIntent.StartBookDownload(item.bookUrl))
                             }
                         },
-                        imageVector = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        icon = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
                         contentDescription = when {
                             item.hasActiveDownload -> "暂停本书下载"
                             item.isPaused -> "继续本书下载"
@@ -363,9 +363,9 @@ private fun BookCacheBookCard(
                         }
                     )
                 }
-                SmallTonalIconButton(
+                SmallTonalButton(
                     onClick = { onDeleteBook(item) },
-                    imageVector = Icons.Default.Delete,
+                    icon = Icons.Default.Delete,
                     contentDescription = null
                 )
             }
@@ -412,21 +412,21 @@ private fun BookCacheChapterRow(
             )
         }
         if (item.isWaiting || item.isDownloading) {
-            SmallTonalIconButton(
+            SmallTonalButton(
                 onClick = onStop,
-                imageVector = Icons.Default.Stop,
+                icon = Icons.Default.Stop,
                 contentDescription = "暂停章节下载"
             )
         } else if (item.isPaused || !item.isCached) {
-            SmallTonalIconButton(
+            SmallTonalButton(
                 onClick = onDownload,
-                imageVector = Icons.Default.Download,
+                icon = Icons.Default.Download,
                 contentDescription = if (item.isPaused) "继续章节下载" else "下载章节"
             )
         }
-        SmallTonalIconButton(
+        SmallTonalButton(
             onClick = onDelete,
-            imageVector = Icons.Default.Delete,
+            icon = Icons.Default.Delete,
             contentDescription = null
         )
     }

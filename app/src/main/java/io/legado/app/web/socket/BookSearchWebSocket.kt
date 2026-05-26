@@ -1,24 +1,41 @@
 package io.legado.app.web.socket
 
-import io.ktor.server.websocket.*
-import io.ktor.websocket.*
+import io.ktor.server.websocket.DefaultWebSocketServerSession
+import io.ktor.websocket.CloseReason
+import io.ktor.websocket.Frame
+import io.ktor.websocket.close
+import io.ktor.websocket.readText
+import io.ktor.websocket.send
 import io.legado.app.R
-import io.legado.app.constant.PreferKey
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.model.MatchMode
 import io.legado.app.domain.usecase.BookSearchControl
 import io.legado.app.domain.usecase.BookSearchRequest
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SearchRunEvent
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
-import io.legado.app.utils.*
-import kotlinx.coroutines.*
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.isJson
+import io.legado.app.utils.printOnDebug
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
 class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : CoroutineScope by session {
 
     private val searchBooksUseCase: SearchBooksUseCase by lazy { GlobalContext.get().get() }
+    private val localPreferencesRepository: LocalPreferencesRepository by lazy {
+        GlobalContext.get().get()
+    }
     private val searchControl = BookSearchControl()
     private val sentBookUrls = linkedSetOf<String>()
     private var searchJob: Job? = null
@@ -66,7 +83,14 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
                             keyword = key,
                             page = 1,
                             scope = BookSearchScope(AppConfig.searchScope),
-                            precision = appCtx.getPrefBoolean(PreferKey.precisionSearch),
+                            matchMode = MatchMode.of(
+                                localPreferencesRepository
+                                    .getPreference(
+                                        LocalPreferencesKeys.MATCH_MODE,
+                                        MatchMode.DEFAULT.value
+                                    )
+                                    .first()
+                            ),
                             concurrency = OtherConfig.threadCount,
                         ),
                         searchControl

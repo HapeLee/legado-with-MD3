@@ -38,7 +38,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.ActionItem
 import io.legado.app.ui.widget.components.DraggableSelectionHandler
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -315,9 +315,9 @@ fun DictRuleScreen(
                         onEnabledChange = { enabled -> viewModel.update(item.rule.copy(enabled = enabled)) },
                         onClickEdit = { editingRule = item.rule; showEditSheet = true },
                         trailingAction = {
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = { showDeleteRuleDialog = item.rule },
-                                imageVector = AppIcons.Delete
+                                icon = AppIcons.Delete
                             )
                         }
                     )

@@ -5,21 +5,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,8 +28,8 @@ import androidx.core.graphics.ColorUtils
 import io.legado.app.R
 import io.legado.app.help.config.TagColorGenerator
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -57,7 +55,7 @@ fun LabelColorManageSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.theme_config_manage_label_colors),
         startAction = {
-            MediumOutlinedIconButton(
+            MediumOutlinedButton(
                 onClick = {
                     val baseColor = if (themeColor != 0) Color(themeColor) else primaryColor
                     val generatedColors = TagColorGenerator.generateTagColors(baseColor)
@@ -65,23 +63,25 @@ fun LabelColorManageSheet(
                     tagColors.addAll(generatedColors)
                     ThemeConfig.saveCustomTagColors(tagColors)
                 },
-                imageVector = Icons.Default.AutoAwesome
+                icon = Icons.Default.AutoAwesome
             )
         },
         endAction = {
-            MediumOutlinedIconButton(
+            MediumOutlinedButton(
                 onClick = {
                     tagColors.add(TagColorPair(0, 0))
                     editingIndex = tagColors.size - 1
                     editingTextColor = 0
                     showColorPicker = true
                 },
-                imageVector = Icons.Default.Add
+                icon = Icons.Default.Add
             )
         }
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(tagColors.size) { index ->
@@ -110,20 +110,20 @@ fun LabelColorManageSheet(
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = {
                                     editingIndex = index
                                     editingTextColor = colorPair.textColor
                                     showColorPicker = true
                                 },
-                                imageVector = Icons.Default.Edit
+                                icon = Icons.Default.Edit
                             )
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = {
                                     tagColors.removeAt(index)
                                     ThemeConfig.saveCustomTagColors(tagColors)
                                 },
-                                imageVector = Icons.Default.Delete
+                                icon = Icons.Default.Delete
                             )
                         }
                     }

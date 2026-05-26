@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.MediumAnimatedActionButton
-import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.MediumToggleButton
 import io.legado.app.ui.widget.components.text.AppText
 import java.time.LocalDate
 
@@ -54,15 +54,14 @@ fun HeatmapCalendarStartAction(
     currentMode: HeatmapMode,
     onModeChanged: (HeatmapMode) -> Unit,
 ) {
-    MediumAnimatedActionButton(
+    MediumToggleButton(
         checked = currentMode == HeatmapMode.TIME,
         onCheckedChange = {
             onModeChanged(if (it) HeatmapMode.TIME else HeatmapMode.COUNT)
         },
+        icon = Icons.Default.FormatListNumbered,
         iconChecked = Icons.Default.AccessTime,
-        iconUnchecked = Icons.Default.FormatListNumbered,
-        activeText = "按时长",
-        inactiveText = "按次数"
+        text = "按时长"
     )
 }
 
@@ -73,9 +72,9 @@ fun HeatmapCalendarStartAction(
 fun HeatmapCalendarEndAction(
     onClearDate: () -> Unit
 ) {
-    MediumOutlinedIconButton(
+    MediumOutlinedButton(
         onClick = onClearDate,
-        imageVector = Icons.Outlined.Delete,
+        icon = Icons.Outlined.Delete,
     )
 }
 

@@ -2,7 +2,6 @@ package io.legado.app.ui.config.otherConfig
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,12 +15,8 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,7 +34,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -70,18 +65,18 @@ fun DirectLinkUploadBottomSheet(
         show = show,
         title = stringResource(R.string.direct_link_upload_config),
         startAction = {
-            MediumIconButton(
+            MediumPlainButton(
                 onClick = {
                     viewModel.testRule { result -> showTestResult = result }
                 },
-                imageVector = Icons.Default.Checklist
+                icon = Icons.Default.Checklist
             )
         },
         endAction = {
             Box {
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = { showMenu = true },
-                    imageVector = Icons.Default.MoreVert
+                    icon = Icons.Default.MoreVert
                 )
                 RoundDropdownMenu(
                     expanded = showMenu,

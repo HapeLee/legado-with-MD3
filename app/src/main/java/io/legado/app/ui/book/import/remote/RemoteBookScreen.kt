@@ -76,9 +76,9 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.MediumIconButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.card.TextCard
@@ -167,9 +167,9 @@ fun RemoteBookScreen(
         },
         endAction = if (showSheet is RemoteBookSheet.Servers) {
             {
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = { showSheet = RemoteBookSheet.ServerConfig(null) },
-                    imageVector = Icons.Default.Add
+                    icon = Icons.Default.Add
                 )
             }
         } else {
@@ -430,16 +430,16 @@ private fun ServerItem(
             {
                 Row {
                     onEdit?.let {
-                        SmallIconButton(
+                        SmallPlainButton(
                             onClick = it,
-                            imageVector = Icons.Default.Edit,
+                            icon = Icons.Default.Edit,
                             contentDescription = "Edit"
                         )
                     }
                     onDelete?.let {
-                        SmallIconButton(
+                        SmallPlainButton(
                             onClick = it,
-                            imageVector = Icons.Default.Delete,
+                            icon = Icons.Default.Delete,
                             contentDescription = "Delete"
                         )
                     }
@@ -602,9 +602,9 @@ private fun PathNavigationBar(
         }
 
         if (canGoBack) {
-            SmallTonalIconButton(
+            SmallTonalButton(
                 onClick = onNavigateBack,
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "返回上级"
             )
         }
@@ -703,7 +703,7 @@ private fun RemoteBookItem(
             if (!book.isDir) {
                 Spacer(modifier = Modifier.width(8.dp))
 
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = {
                         if (book.isOnBookShelf) {
                             onUpdateClick(book)
@@ -711,7 +711,7 @@ private fun RemoteBookItem(
                             onAddClick(book)
                         }
                     },
-                    imageVector = if (book.isOnBookShelf)
+                    icon = if (book.isOnBookShelf)
                         Icons.Outlined.CloudSync
                     else
                         Icons.Outlined.AddCircleOutline,

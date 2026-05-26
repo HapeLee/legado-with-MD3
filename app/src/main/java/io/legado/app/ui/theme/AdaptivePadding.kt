@@ -36,6 +36,14 @@ fun Modifier.adaptiveVerticalPadding(): Modifier {
 }
 
 @Composable
+fun adaptiveHorizonalPadding(): PaddingValues {
+    val horizontal = if (ThemeResolver.isMiuixEngine(composeEngine)) 12.dp else 16.dp
+    return PaddingValues(
+        horizontal = horizontal
+    )
+}
+
+@Composable
 fun adaptiveContentPaddingOnlyVertical(
     top: Dp,
     bottom: Dp

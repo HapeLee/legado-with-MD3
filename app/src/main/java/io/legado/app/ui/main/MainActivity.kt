@@ -111,7 +111,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             context: Context,
             exploreName: String? = null,
             sourceUrl: String,
-            exploreUrl: String? = null
+            exploreUrl: String? = null,
         ): Intent = MainIntent.createExploreShowIntent(context, exploreName, sourceUrl, exploreUrl)
     }
 

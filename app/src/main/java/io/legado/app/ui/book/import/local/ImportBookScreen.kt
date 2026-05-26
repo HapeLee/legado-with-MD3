@@ -61,8 +61,8 @@ import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SelectionActions
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
@@ -427,9 +427,9 @@ private fun ImportPathNavigationBar(
         }
 
         if (canGoBack) {
-            SmallTonalIconButton(
+            SmallTonalButton(
                 onClick = onNavigateBack,
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "back"
             )
         }
@@ -511,9 +511,9 @@ private fun ImportBookItem(
 
             if (!item.isDir && !item.isOnBookShelf) {
                 Spacer(modifier = Modifier.width(8.dp))
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = onAddToBookshelf,
-                    imageVector = if (isSelected) Icons.Default.Check else Icons.Default.AddCircleOutline
+                    icon = if (isSelected) Icons.Default.Check else Icons.Default.AddCircleOutline
                 )
             }
         }

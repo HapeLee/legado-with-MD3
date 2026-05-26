@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.SmallOutlinedIconButton
+import io.legado.app.ui.widget.components.button.series.SmallOutlinedButton
 import io.legado.app.ui.widget.components.card.TextCard
 
 @Composable
@@ -26,12 +26,12 @@ fun ValueStepper(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        SmallOutlinedIconButton(
+        SmallOutlinedButton(
             onClick = {
                 val newValue = (value.toInt() - 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            imageVector = Icons.Default.Remove
+            icon = Icons.Default.Remove
         )
         TextCard(
             cornerRadius = 8.dp,
@@ -41,12 +41,12 @@ fun ValueStepper(
             backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
             contentColor = LegadoTheme.colorScheme.onSurface
         )
-        SmallOutlinedIconButton(
+        SmallOutlinedButton(
             onClick = {
                 val newValue = (value.toInt() + 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            imageVector = Icons.Default.Add
+            icon = Icons.Default.Add
         )
     }
 }

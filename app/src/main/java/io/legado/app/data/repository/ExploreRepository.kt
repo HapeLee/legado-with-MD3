@@ -80,9 +80,10 @@ class ExploreRepositoryImpl(
     override suspend fun exploreBooks(
         bookSource: BookSource,
         url: String,
-        page: Int
+        page: Int,
+        key: String?
     ): List<SearchBook> {
-        return WebBook.exploreBookSuspend(bookSource, url, page)
+        return WebBook.exploreBookSuspend(bookSource, url, page, key = key, isSearch = key != null)
     }
 
     override suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {

@@ -22,7 +22,7 @@ import io.legado.app.R
 import io.legado.app.ui.main.homepage.HomepageSourceManageUi
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.SecondaryButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.utils.move
@@ -85,13 +85,13 @@ fun SetListPage(
                     }
                 },
                 trailingAction = {
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = { onRenameSet(set.sourceUrl) },
-                        imageVector = Icons.Default.DriveFileRenameOutline
+                        icon = Icons.Default.DriveFileRenameOutline
                     )
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = { onDeleteSet(set.sourceUrl) },
-                        imageVector = Icons.Default.Delete
+                        icon = Icons.Default.Delete
                     )
                 }
             )

@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SettingItem
 
@@ -118,13 +118,13 @@ private fun GroupItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                SmallTextButton(
-                    text = stringResource(id = R.string.ok),
-                    imageVector = Icons.Default.Check,
+                SmallPlainButton(
                     onClick = {
                         onUpdateGroup(group, state.text.toString())
                         expanded = false
-                    }
+                    },
+                    icon = Icons.Default.Check,
+                    text = stringResource(id = R.string.ok)
                 )
             }
         }

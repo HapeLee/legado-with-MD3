@@ -44,7 +44,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -183,9 +183,9 @@ fun <T> BatchImportDialog(
         title = sheetTitle,
         startAction = if (isEditing) {
             {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = { editingIndex = null },
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "返回"
                 )
             }
@@ -196,9 +196,9 @@ fun <T> BatchImportDialog(
             {
                 Row {
                     topBarActions()
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = { onToggleAll(!allSelected) },
-                        imageVector = Icons.Default.SelectAll,
+                        icon = Icons.Default.SelectAll,
                         contentDescription = if (allSelected) "全不选" else "全选"
                     )
                 }
@@ -371,9 +371,9 @@ fun ImportItemRow(
                 modifier = Modifier.padding(end = 4.dp)
             )
 
-            SmallIconButton(
+            SmallPlainButton(
                 onClick = onInfoClick,
-                imageVector = Icons.Default.Info,
+                icon = Icons.Default.Info,
                 contentDescription = "详情"
             )
         }

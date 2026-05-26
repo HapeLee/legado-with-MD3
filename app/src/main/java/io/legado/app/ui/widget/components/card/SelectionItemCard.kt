@@ -16,13 +16,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyItemScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +37,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.AdaptiveSwitch
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
@@ -50,7 +45,6 @@ import io.legado.app.ui.widget.components.text.AppText
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.ReorderableLazyListState
 import top.yukonga.miuix.kmp.basic.BasicComponent
-import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun SelectionItemCard(
@@ -218,9 +212,9 @@ fun SelectionItemCardContent(
             }
 
             if (onClickEdit != null) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = onClickEdit,
-                    imageVector = AppIcons.Edit,
+                    icon = AppIcons.Edit,
                     contentDescription = "Edit"
                 )
             }
@@ -231,9 +225,9 @@ fun SelectionItemCardContent(
 
             if (dropdownContent != null) {
                 Box {
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = { showMenu = true },
-                        imageVector = AppIcons.MoreVert,
+                        icon = AppIcons.MoreVert,
                         contentDescription = "More"
                     )
                     RoundDropdownMenu(

@@ -54,7 +54,7 @@ import io.legado.app.ui.book.readRecord.component.StatsGridCard
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
 import io.legado.app.ui.widget.components.AppScaffold
-import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.heatmap.HeatmapMode
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
@@ -187,9 +187,9 @@ fun DateNavigator(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        MediumIconButton(
+        MediumPlainButton(
             onClick = onPrevClick,
-            imageVector = Icons.AutoMirrored.Filled.ArrowLeft
+            icon = Icons.AutoMirrored.Filled.ArrowLeft
         )
         AnimatedContent(
             targetState = referenceDate,
@@ -224,9 +224,9 @@ fun DateNavigator(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         }
-        MediumIconButton(
+        MediumPlainButton(
             onClick = onNextClick,
-            imageVector = Icons.AutoMirrored.Filled.ArrowRight
+            icon = Icons.AutoMirrored.Filled.ArrowRight
         )
     }
 }

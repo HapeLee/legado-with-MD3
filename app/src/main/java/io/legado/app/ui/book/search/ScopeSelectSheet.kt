@@ -25,7 +25,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.MediumPlainButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet

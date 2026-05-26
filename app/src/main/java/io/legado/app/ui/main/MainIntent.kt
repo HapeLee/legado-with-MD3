@@ -134,7 +134,7 @@ object MainIntent {
         context: Context,
         exploreName: String? = null,
         sourceUrl: String,
-        exploreUrl: String? = null
+        exploreUrl: String? = null,
     ): Intent {
         return createLauncherIntent(context).apply {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_EXPLORE_SHOW)
