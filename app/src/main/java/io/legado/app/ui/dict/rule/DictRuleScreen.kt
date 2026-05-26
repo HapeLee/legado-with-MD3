@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.SnackbarHostState
@@ -77,7 +75,6 @@ fun DictRuleScreen(
     var showDeleteRuleDialog by remember { mutableStateOf<DictRule?>(null) }
     var showUrlInput by remember { mutableStateOf(false) }
 
-    var showFilePickerSheet by remember { mutableStateOf(false) }
     var showImportSheet by remember { mutableStateOf(false) }
     var showExportSheet by remember { mutableStateOf(false) }
 
@@ -276,7 +273,7 @@ fun DictRuleScreen(
             }),
             ActionItem(
                 text = stringResource(R.string.export),
-                onClick = { showFilePickerSheet = true })
+                onClick = { showExportSheet = true })
         ),
         onDeleteSelected = { ids ->
             @Suppress("UNCHECKED_CAST")
