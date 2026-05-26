@@ -517,6 +517,8 @@
     <string name="no">否</string>
     <string name="sure">確認</string>
     <string name="sure_del">是否確認刪除？</string>
+    <string name="sure_del_private_group">刪除後，相關書籍可能在公開書架中顯示，是否確認刪除？</string>
+    <string name="sure_disable_private_group">關閉後，本組書籍可能在公開書架中顯示，是否確認關閉？</string>
     <string name="sure_del_any">是否確認刪除 %s？</string>
     <string name="sure_del_all_book">是否刪除全部書籍？</string>
     <string name="sure_del_download_book">是否同時刪除已下載的書籍目錄？</string>
@@ -1140,6 +1142,9 @@
     <string name="file_manage_summary">管理私有文件夹的文件</string>
     <string name="create_folder">创建文件夹</string>
     <string name="allow_drop_down_refresh">允许下拉刷新</string>
+    <string name="private_group">設為隱私分組</string>
+    <string name="disable_private_group">關閉隱私分組</string>
+    <string name="private_group_desc">開啟後，本分組內的書籍將從公開書架隱藏</string>
     <string name="text_underline">文字下划线</string>
     <string name="select_new_source">选中新增源</string>
     <string name="select_update_source">选中更新源</string>

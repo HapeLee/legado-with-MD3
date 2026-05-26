@@ -22,6 +22,15 @@ data class GroupBookCount(
     val count: Int
 )
 
+private const val PRIVATE_GROUP_MASK =
+    "(SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0 AND isPrivate = 1)"
+
+private const val PUBLIC_GROUP_MASK =
+    "(SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0 AND isPrivate = 0)"
+
+private const val PUBLIC_BOOK_FILTER =
+    "(`group` = 0 OR (`group` & $PRIVATE_GROUP_MASK) = 0)"
+
 @Dao
 interface BookDao {
 
@@ -69,7 +78,8 @@ interface BookDao {
         """
         select * from books where type & ${BookType.text} > 0
         and type & ${BookType.local} = 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        and ($PUBLIC_GROUP_MASK & `group`) = 0
+        and $PUBLIC_BOOK_FILTER
         and (select show from book_groups where groupId = ${BookGroup.IdNetNone}) != 1
         """
     )
@@ -103,7 +113,8 @@ interface BookDao {
         FROM books 
         where type & ${BookType.text} > 0
         and type & ${BookType.local} = 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        and ($PUBLIC_GROUP_MASK & `group`) = 0
+        and $PUBLIC_BOOK_FILTER
         and (select show from book_groups where groupId = ${BookGroup.IdNetNone}) != 1
         """
     )
@@ -138,6 +149,7 @@ interface BookDao {
         kind,
         wordCount
     FROM books
+    WHERE $PUBLIC_BOOK_FILTER
     ORDER BY durChapterTime DESC
 """
     )
@@ -173,6 +185,7 @@ interface BookDao {
             wordCount
         FROM books
         WHERE type & ${BookType.audio} > 0
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfAudio(): Flow<List<BookShelfItem>>
@@ -207,6 +220,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE type & ${BookType.local} > 0
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfLocal(): Flow<List<BookShelfItem>>
@@ -246,7 +260,8 @@ interface BookDao {
             wordCount
         FROM books 
         where type & ${BookType.audio} = 0 and type & ${BookType.local} = 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        and ($PUBLIC_GROUP_MASK & `group`) = 0
+        and $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfNetNoGroup(): Flow<List<BookShelfItem>>
@@ -286,7 +301,8 @@ interface BookDao {
             wordCount
         FROM books 
         where type & ${BookType.local} > 0
-        and ((SELECT sum(groupId) FROM book_groups where groupId > 0) & `group`) = 0
+        and ($PUBLIC_GROUP_MASK & `group`) = 0
+        and $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfLocalNoGroup(): Flow<List<BookShelfItem>>
@@ -321,6 +337,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE (`group` & :group) > 0
+        AND ((SELECT isPrivate FROM book_groups WHERE groupId = :group) = 1 OR $PUBLIC_BOOK_FILTER)
         """
     )
     fun flowBookShelfByUserGroup(group: Long): Flow<List<BookShelfItem>>
@@ -356,7 +373,8 @@ interface BookDao {
             kind,
             wordCount
         FROM books 
-        WHERE name like '%'||:key||'%' or author like '%'||:key||'%' or originName like '%'||:key||'%'
+        WHERE (name like '%'||:key||'%' or author like '%'||:key||'%' or originName like '%'||:key||'%')
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfSearch(key: String): Flow<List<BookShelfItem>>
@@ -391,6 +409,7 @@ interface BookDao {
             wordCount
         FROM books 
         where type & ${BookType.updateError} > 0 
+        and $PUBLIC_BOOK_FILTER
         order by durChapterTime desc
         """
     )
@@ -426,6 +445,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE durChapterIndex = 0 AND durChapterPos = 0
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfUnread(): Flow<List<BookShelfItem>>
@@ -460,6 +480,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfReadFinished(): Flow<List<BookShelfItem>>
@@ -494,6 +515,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfReading(): Flow<List<BookShelfItem>>
@@ -528,6 +550,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE type & ${BookType.image} > 0
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfManga(): Flow<List<BookShelfItem>>
@@ -562,6 +585,7 @@ interface BookDao {
             wordCount
         FROM books 
         WHERE type & ${BookType.text} > 0
+        AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowBookShelfText(): Flow<List<BookShelfItem>>
@@ -677,35 +701,44 @@ interface BookDao {
 
     // ── Group preview / count queries (DB-level, replaces in-memory buildGroupPreviewState) ──
 
-    @Query("SELECT COUNT(*) FROM books")
+    @Query("SELECT COUNT(*) FROM books WHERE $PUBLIC_BOOK_FILTER")
     fun flowAllBookShelfCount(): Flow<Int>
 
     @Query(
         """
-        SELECT ${BookGroup.IdAll} AS groupId, COUNT(*) AS count FROM books
+        SELECT ${BookGroup.IdAll} AS groupId, COUNT(*) AS count FROM books WHERE $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdRoot}, COUNT(*) FROM books
             WHERE type & ${BookType.text} > 0 AND type & ${BookType.local} = 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
             AND (SELECT show FROM book_groups WHERE groupId = ${BookGroup.IdNetNone}) != 1
-        UNION ALL SELECT ${BookGroup.IdLocal}, COUNT(*) FROM books WHERE type & ${BookType.local} > 0
-        UNION ALL SELECT ${BookGroup.IdAudio}, COUNT(*) FROM books WHERE type & ${BookType.audio} > 0
+        UNION ALL SELECT ${BookGroup.IdLocal}, COUNT(*) FROM books WHERE type & ${BookType.local} > 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdAudio}, COUNT(*) FROM books WHERE type & ${BookType.audio} > 0 AND $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdNetNone}, COUNT(*) FROM books
             WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
         UNION ALL SELECT ${BookGroup.IdLocalNone}, COUNT(*) FROM books
             WHERE type & ${BookType.local} > 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
-        UNION ALL SELECT ${BookGroup.IdManga}, COUNT(*) FROM books WHERE type & ${BookType.image} > 0
-        UNION ALL SELECT ${BookGroup.IdText}, COUNT(*) FROM books WHERE type & ${BookType.text} > 0
-        UNION ALL SELECT ${BookGroup.IdError}, COUNT(*) FROM books WHERE type & ${BookType.updateError} > 0
-        UNION ALL SELECT ${BookGroup.IdUnread}, COUNT(*) FROM books WHERE durChapterIndex = 0 AND durChapterPos = 0
-        UNION ALL SELECT ${BookGroup.IdReading}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
-        UNION ALL SELECT ${BookGroup.IdReadFinished}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdManga}, COUNT(*) FROM books WHERE type & ${BookType.image} > 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdText}, COUNT(*) FROM books WHERE type & ${BookType.text} > 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdError}, COUNT(*) FROM books WHERE type & ${BookType.updateError} > 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdUnread}, COUNT(*) FROM books WHERE durChapterIndex = 0 AND durChapterPos = 0 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdReading}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1 AND $PUBLIC_BOOK_FILTER
+        UNION ALL SELECT ${BookGroup.IdReadFinished}, COUNT(*) FROM books WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1 AND $PUBLIC_BOOK_FILTER
         """
     )
     fun flowSystemGroupCounts(): Flow<List<GroupBookCount>>
 
-    @Query("SELECT COUNT(*) FROM books WHERE (`group` & :groupId) > 0")
+    @Query(
+        """
+        SELECT COUNT(*) FROM books
+        WHERE (`group` & :groupId) > 0
+        AND ((SELECT isPrivate FROM book_groups WHERE groupId = :groupId) = 1 OR $PUBLIC_BOOK_FILTER)
+        """
+    )
     fun flowUserGroupBookCount(groupId: Long): Flow<Int>
 
     fun flowGroupPreview(groupId: Long): Flow<List<BookShelfItem>> {
@@ -737,6 +770,7 @@ interface BookDao {
             type, `group`, `order`, canUpdate,
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
+        WHERE $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -753,7 +787,8 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.text} > 0 AND type & ${BookType.local} = 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
             AND (SELECT show FROM book_groups WHERE groupId = ${BookGroup.IdNetNone}) != 1
         ORDER BY durChapterTime DESC
         LIMIT 10
@@ -771,6 +806,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.local} > 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -787,6 +823,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.audio} > 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -803,7 +840,8 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.audio} = 0 AND type & ${BookType.local} = 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -820,7 +858,8 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.local} > 0
-            AND ((SELECT COALESCE(SUM(groupId), 0) FROM book_groups WHERE groupId > 0) & `group`) = 0
+            AND ($PUBLIC_GROUP_MASK & `group`) = 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -837,6 +876,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.image} > 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -853,6 +893,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.text} > 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -869,6 +910,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE type & ${BookType.updateError} > 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -885,6 +927,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE durChapterIndex = 0 AND durChapterPos = 0
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -901,6 +944,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE totalChapterNum > 0 AND durChapterIndex > 0 AND durChapterIndex < totalChapterNum - 1
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -917,6 +961,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE totalChapterNum > 0 AND durChapterIndex >= totalChapterNum - 1
+            AND $PUBLIC_BOOK_FILTER
         ORDER BY durChapterTime DESC
         LIMIT 10
         """
@@ -933,6 +978,7 @@ interface BookDao {
             ifnull(customIntro, intro) as intro, kind, wordCount
         FROM books
         WHERE (`group` & :groupId) > 0
+            AND ((SELECT isPrivate FROM book_groups WHERE groupId = :groupId) = 1 OR $PUBLIC_BOOK_FILTER)
         ORDER BY durChapterTime DESC
         LIMIT 10
         """

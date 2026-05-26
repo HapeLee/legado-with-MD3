@@ -24,6 +24,7 @@ class GroupViewModel(
         groupName: String,
         bookSort: Int,
         enableRefresh: Boolean,
+        isPrivate: Boolean,
         cover: String?,
         finally: () -> Unit
     ) {
@@ -35,6 +36,7 @@ class GroupViewModel(
                 cover = cover,
                 bookSort = bookSort,
                 enableRefresh = enableRefresh,
+                isPrivate = isPrivate,
                 order = bookGroupRepository.getMaxOrder().plus(1)
             )
             bookGroupRepository.getByID(groupId) ?: removeBookGroupAssignmentUseCase.execute(groupId)

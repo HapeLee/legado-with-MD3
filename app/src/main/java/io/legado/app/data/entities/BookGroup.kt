@@ -23,7 +23,9 @@ data class BookGroup(
     @ColumnInfo(defaultValue = "1")
     var show: Boolean = true,
     @ColumnInfo(defaultValue = "-1")
-    var bookSort: Int = -1
+    var bookSort: Int = -1,
+    @ColumnInfo(defaultValue = "0")
+    var isPrivate: Boolean = false
 ) : Parcelable {
 
     companion object {
@@ -83,6 +85,7 @@ data class BookGroup(
                     && other.enableRefresh == enableRefresh
                     && other.show == show
                     && other.order == order
+                    && other.isPrivate == isPrivate
         }
         return false
     }
