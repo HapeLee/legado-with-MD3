@@ -267,6 +267,17 @@ class SearchViewModel(
             }
 
             is SearchIntent.OpenExpandedSourceBook -> {
+                _uiState.update {
+                    it.copy(
+                        expandedSourceUrl = null,
+                        expandedSourceName = null,
+                        expandedSourceBooks = persistentListOf(),
+                        expandedSourceLoading = false,
+                        expandedSourceEnd = false,
+                        expandedSourceError = null,
+                        expandedSourcePage = 1,
+                    )
+                }
                 emitEffect(
                     SearchEffect.OpenBookInfo(
                         name = intent.book.name,

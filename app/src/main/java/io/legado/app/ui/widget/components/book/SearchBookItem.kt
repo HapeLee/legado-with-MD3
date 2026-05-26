@@ -64,17 +64,6 @@ fun SearchBookListItem(
                 ) else Modifier
             )
             .then(if (showPadding) Modifier.adaptiveHorizontalPadding(vertical = 8.dp) else Modifier)
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                                ?: return@with Modifier,
-                        )
-                    } else Modifier
-                }
-            )
     ) {
         Box(modifier = Modifier
             .width(72.dp)
@@ -203,17 +192,6 @@ fun SearchBookGridItem(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
-            )
-            .then(
-                with(sharedTransitionScope) {
-                    if (this != null) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
-                            animatedVisibilityScope = animatedVisibilityScope
-                                ?: return@with Modifier,
-                        )
-                    } else Modifier
-                }
             )
     ) {
         Box(

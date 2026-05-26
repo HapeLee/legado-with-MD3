@@ -68,17 +68,6 @@ fun BannerModule(
                         .combinedClickable(
                             onClick = { onClick(book, sharedCoverKey) },
                             onLongClick = onLongClick?.let { cb -> { cb(book, sharedCoverKey) } }
-                        )
-                        .then(
-                            with(sharedTransitionScope) {
-                                if (this != null) {
-                                    Modifier.sharedBounds(
-                                        sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                            ?: return@with Modifier,
-                                    )
-                                } else Modifier
-                            }
                         ),
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
