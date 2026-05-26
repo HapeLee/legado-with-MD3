@@ -17,7 +17,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
@@ -46,6 +45,7 @@ import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.checkBox.CheckboxGroupContainer
 import io.legado.app.ui.widget.components.checkBox.CheckboxItem
@@ -165,9 +165,11 @@ fun RuleSubScreen(
                             }
                         },
                         trailingAction = {
-                            IconButton(onClick = { showEditDialog = ruleSub }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit")
-                            }
+                            SmallPlainButton(
+                                onClick = { showEditDialog = ruleSub },
+                                icon = Icons.Default.Edit,
+                                contentDescription = "Edit"
+                            )
                         },
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(

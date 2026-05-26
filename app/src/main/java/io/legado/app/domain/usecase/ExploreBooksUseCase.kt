@@ -20,14 +20,17 @@ class ExploreBooksUseCase(
         sourceUrl: String,
         moduleUrl: String?,
         args: String?,
-        page: Int = 1
+        page: Int = 1,
+        key: String? = null,
     ): ExploreResult = withContext(Dispatchers.IO) {
         val base = gateway.getBookSource(sourceUrl)
             ?: throw SourceNotFound(sourceUrl)
         val source = args?.let { base.copy().also { s -> s.setVariable(it) } } ?: base
-        val resolvedUrl = moduleUrl ?: source.exploreUrl
-        ?: throw NoExploreUrl(sourceUrl)
-        val books = gateway.exploreBooks(source, resolvedUrl, page)
+        val resolvedUrl = moduleUrl
+            ?: (if (key != null) source.searchUrl else null)
+            ?: source.exploreUrl
+            ?: throw NoExploreUrl(sourceUrl)
+        val books = gateway.exploreBooks(source, resolvedUrl, page, key = key)
         ExploreResult(resolvedUrl, books)
     }
 

@@ -109,9 +109,12 @@ object WebBook {
         url: String,
         page: Int? = 1,
         ruleData: RuleDataInterface = RuleData(),
+        key: String? = null,
+        isSearch: Boolean = false,
     ): ArrayList<SearchBook> {
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
+            key = key,
             page = page,
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
@@ -137,7 +140,7 @@ object WebBook {
             analyzeUrl = analyzeUrl,
             baseUrl = res.url,
             body = res.body,
-            isSearch = false
+            isSearch = isSearch
         )
     }
 
@@ -146,8 +149,10 @@ object WebBook {
         url: String,
         page: Int? = 1,
         ruleData: RuleDataInterface = RuleData(),
+        key: String? = null,
+        isSearch: Boolean = false,
     ): List<SearchBook> {
-        return exploreBookAwait(bookSource, url, page, ruleData)
+        return exploreBookAwait(bookSource, url, page, ruleData, key, isSearch)
     }
 
     suspend fun exploreBookWithResolvedUrl(

@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.button
+package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.RowScope

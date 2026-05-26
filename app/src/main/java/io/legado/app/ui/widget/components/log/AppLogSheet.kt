@@ -23,7 +23,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.EmptyMessage
-import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.LogUtils
@@ -43,12 +43,12 @@ fun AppLogSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.log),
         endAction = {
-            MediumIconButton(
+            MediumPlainButton(
                 onClick = {
                     AppLog.clear()
                     logs = emptyList()
                 },
-                imageVector = Icons.Default.DeleteSweep
+                icon = Icons.Default.DeleteSweep
             )
         }
     ) {

@@ -26,12 +26,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.BookGroup
-import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupDeleteAction
+import io.legado.app.ui.book.group.GroupEditContent
 import io.legado.app.ui.book.group.GroupResetCoverAction
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.ReorderableSelectionItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.move
@@ -95,13 +95,13 @@ fun GroupManageSheet(
         },
         endAction = {
             if (!isEditing) {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = {
                         editingGroup = null
                         coverPath = null
                         isEditing = true
                     },
-                    imageVector = Icons.Default.Add
+                    icon = Icons.Default.Add
                 )
             } else {
                 GroupResetCoverAction(

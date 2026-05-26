@@ -47,7 +47,7 @@ import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -393,17 +393,17 @@ private fun SavedThemeItem(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = onEdit,
-                        imageVector = Icons.Default.Edit
+                        icon = Icons.Default.Edit
                     )
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = onExport,
-                        imageVector = Icons.Default.Share
+                        icon = Icons.Default.Share
                     )
-                    SmallIconButton(
+                    SmallPlainButton(
                         onClick = onDelete,
-                        imageVector = Icons.Default.Delete
+                        icon = Icons.Default.Delete
                     )
                 }
             }

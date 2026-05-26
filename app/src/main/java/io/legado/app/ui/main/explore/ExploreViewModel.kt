@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,7 +41,6 @@ class ExploreViewModel(
 
     private val _uiState = MutableStateFlow(ExploreUiState())
     val uiState: StateFlow<ExploreUiState> = _uiState
-        .map { state -> state.copy(listItems = buildExploreListItems(state)) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExploreUiState())
     private val _effects = MutableSharedFlow<ExploreEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
@@ -200,11 +198,10 @@ class ExploreViewModel(
         val exploreKinds: ImmutableList<ExploreKind> = persistentListOf(),
         val kindDisplayNames: ImmutableMap<String, String> = persistentMapOf(),
         val kindValues: ImmutableMap<String, String> = persistentMapOf(),
-        val loadingKinds: Boolean = false,
-        val listItems: ImmutableList<ExploreListItem> = persistentListOf()
+        val loadingKinds: Boolean = false
     ) : ListUiState<BookSourcePart>
 
-    private fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {
+    fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {
         if (state.items.isEmpty()) return persistentListOf()
         val expandedId = state.expandedId
         val kindRows = if (expandedId != null) {

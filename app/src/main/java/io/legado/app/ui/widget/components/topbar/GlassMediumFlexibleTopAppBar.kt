@@ -1,9 +1,13 @@
 package io.legado.app.ui.widget.components.topbar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LocalHazeState
@@ -81,7 +86,9 @@ fun GlassMediumFlexibleTopAppBar(
     }
 
     val finalModifier = if (hazeState != null) {
-        modifier.background(color = animatedColor).responsiveHazeEffect(state = hazeState)
+        modifier
+            .background(color = animatedColor)
+            .responsiveHazeEffect(state = hazeState)
     } else {
         modifier.background(color = animatedColor)
     }
@@ -116,7 +123,7 @@ fun GlassMediumFlexibleTopAppBar(
                             AdaptiveAnimatedText(
                                 text = title,
                                 useCharMode = useCharMode,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
                         },
@@ -126,7 +133,13 @@ fun GlassMediumFlexibleTopAppBar(
                             }
                         },
                         navigationIcon = navigationIcon,
-                        actions = actions,
+                        actions = {
+                            Box(modifier = Modifier.padding(end = 12.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) { actions() }
+                            }
+                        },
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
                         colors = transparentColors
                     )
@@ -153,7 +166,15 @@ fun GlassMediumFlexibleTopAppBar(
                             }
                         },
                         navigationIcon = navigationIcon,
-                        actions = actions,
+                        actions = {
+                            Box(modifier = Modifier.padding(end = 12.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    actions()
+                                }
+                            }
+                        },
                         scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
                         colors = transparentColors
                     )

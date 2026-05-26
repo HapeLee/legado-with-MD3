@@ -34,11 +34,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import io.legado.app.ui.widget.components.AppFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
-import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.animateFloatingActionButton
 import androidx.compose.runtime.Composable
@@ -57,20 +55,23 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveHorizontalPadding
+import io.legado.app.ui.widget.components.AppFloatingActionButton
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.MediumOutlinedButton
-import io.legado.app.ui.widget.components.button.SmallAnimatedActionButton
-import io.legado.app.ui.widget.components.button.SmallIconButton
-import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.widget.components.button.series.SmallToggleButton
+import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
+import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarAnimatedActionButton
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -302,14 +303,14 @@ fun SearchHistoryList(
                 color = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center)
             )
-            SmallAnimatedActionButton(
+            SmallToggleButton(
                 modifier = Modifier.align(Alignment.CenterEnd),
                 checked = onlyThisBook,
                 onCheckedChange = { onToggleScope() },
+                style = ToggleStyle.Tonal,
                 iconChecked = Icons.Default.Book,
-                iconUnchecked = Icons.Default.CollectionsBookmark,
-                activeText = "仅本书",
-                inactiveText = "所有记录"
+                icon = Icons.Default.CollectionsBookmark,
+                text = "仅本书"
             )
         }
 
@@ -338,9 +339,9 @@ fun SearchHistoryList(
                             Icon(Icons.Default.History, contentDescription = null)
                         },
                         trailingContent = {
-                            SmallIconButton(
+                            SmallPlainButton(
                                 onClick = { onDeleteHistory(item) },
-                                imageVector = Icons.Default.Close,
+                                icon = Icons.Default.Close,
                                 contentDescription = "删除"
                             )
                         },
@@ -361,7 +362,7 @@ fun SearchHistoryList(
                         MediumOutlinedButton(
                             onClick = onClearHistory,
                             modifier = Modifier.fillMaxWidth(0.6f),
-                            imageVector = Icons.Outlined.DeleteSweep,
+                            icon = Icons.Outlined.DeleteSweep,
                             text = "清除搜索历史"
                         )
                     }

@@ -59,7 +59,7 @@ import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.MediumOutlinedIconButton
+import io.legado.app.ui.widget.components.button.series.MediumOutlinedButton
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -156,7 +156,7 @@ fun BookInfoEditContent(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MediumOutlinedIconButton(
+                    MediumOutlinedButton(
                         onClick = {
                             (context as? BookInfoEditActivity)?.showDialogFragment(
                                 ChangeCoverDialog(
@@ -165,15 +165,15 @@ fun BookInfoEditContent(
                                 )
                             )
                         },
-                        imageVector = Icons.Default.ImageSearch
+                        icon = Icons.Default.ImageSearch
                     )
-                    MediumOutlinedIconButton(
+                    MediumOutlinedButton(
                         onClick = { selectCover.launch() },
-                        imageVector = Icons.Default.FolderOpen
+                        icon = Icons.Default.FolderOpen
                     )
-                    MediumOutlinedIconButton(
+                    MediumOutlinedButton(
                         onClick = { viewModel.resetCover() },
-                        imageVector = Icons.Default.Replay
+                        icon = Icons.Default.Replay
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -371,19 +371,19 @@ fun KindEditor(
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedIconButton(
+        MediumOutlinedButton(
             onClick = {
                 onReset()
             },
-            imageVector = Icons.Default.Replay
+            icon = Icons.Default.Replay
         )
         Spacer(modifier = Modifier.width(8.dp))
-        MediumOutlinedIconButton(
+        MediumOutlinedButton(
             onClick = {
                 editingIndex = -1
                 editText = ""
             },
-            imageVector = Icons.Default.Add
+            icon = Icons.Default.Add
         )
     }
 

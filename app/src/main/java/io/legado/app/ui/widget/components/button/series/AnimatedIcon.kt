@@ -1,4 +1,4 @@
-package io.legado.app.ui.widget.components.button
+package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn

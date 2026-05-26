@@ -6,6 +6,7 @@ import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.domain.model.BookSearchScope
+import io.legado.app.domain.model.MatchMode
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CancellationException
@@ -30,7 +31,7 @@ data class BookSearchRequest(
     val keyword: String,
     val page: Int,
     val scope: BookSearchScope,
-    val precision: Boolean,
+    val matchMode: MatchMode,
     val concurrency: Int,
     val types: Set<Int>? = null,
 )
@@ -103,7 +104,7 @@ class SearchBooksUseCase(
             throw NoStackTraceException("可搜索书源为空")
         }
 
-        val merger = SearchResultMerger(keyword, request.precision)
+        val merger = SearchResultMerger(keyword, request.matchMode)
         val concurrency = request.concurrency.coerceAtLeast(1)
         var hasMore = false
         var processedSources = 0
@@ -116,7 +117,7 @@ class SearchBooksUseCase(
             .flatMapMerge(concurrency) { searchableSource ->
                 flow {
                     control.awaitResumed()
-                    emit(searchSource(searchableSource, keyword, request.page, request.precision))
+                    emit(searchSource(searchableSource, keyword, request.page, request.matchMode))
                 }.flowOn(Dispatchers.IO)
             }
             .collect { result ->
@@ -177,7 +178,7 @@ class SearchBooksUseCase(
         searchableSource: SearchableSource,
         keyword: String,
         page: Int,
-        precision: Boolean,
+        matchMode: MatchMode,
     ): SourceSearchResult {
         return try {
             val source = searchableSource.source
@@ -191,7 +192,7 @@ class SearchBooksUseCase(
                     keyword,
                     page,
                     filter = { name, author ->
-                        !precision ||
+                        matchMode == MatchMode.DEFAULT ||
                             name.contains(keyword, ignoreCase = true) ||
                             author.contains(keyword, ignoreCase = true)
                     }
@@ -222,7 +223,7 @@ class SearchBooksUseCase(
 
     private class SearchResultMerger(
         private val keyword: String,
-        private val precision: Boolean,
+        private val matchMode: MatchMode,
     ) {
         private companion object {
             const val MAX_RETAINED_SEARCH_RESULTS = 1000
@@ -267,9 +268,13 @@ class SearchBooksUseCase(
                 book.name.equals(keyword, ignoreCase = true) ||
                     book.author.equals(keyword, ignoreCase = true) -> equalBooks
                 book.name.contains(keyword, ignoreCase = true) ||
-                    book.author.contains(keyword, ignoreCase = true) -> containsBooks
-                !precision -> otherBooks
-                else -> null
+                        book.author.contains(
+                            keyword,
+                            ignoreCase = true
+                        ) -> if (matchMode == MatchMode.EXACT) null else containsBooks
+
+                matchMode != MatchMode.DEFAULT -> null
+                else -> otherBooks
             }
         }
 

@@ -19,7 +19,9 @@ import io.legado.app.ui.about.AboutEffect
 import io.legado.app.ui.about.AboutScreen
 import io.legado.app.ui.about.AboutViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageRouteScreen
+import io.legado.app.ui.book.explore.ExploreShowIntent
 import io.legado.app.ui.book.explore.ExploreShowScreen
+import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.import.local.ImportBookScreen
 import io.legado.app.ui.book.import.remote.RemoteBookScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
@@ -39,8 +41,8 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
-import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
+import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesScreen
@@ -436,10 +438,17 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteExploreShow> { route ->
+        val exploreViewModel = koinViewModel<ExploreShowViewModel>()
+
+        LaunchedEffect(route.sourceUrl, route.exploreUrl, exploreViewModel) {
+            exploreViewModel.onIntent(
+                ExploreShowIntent.InitData(route.sourceUrl, route.exploreUrl)
+            )
+        }
+
         ExploreShowScreen(
+            viewModel = exploreViewModel,
             title = route.title ?: "探索",
-            sourceUrl = route.sourceUrl,
-            exploreUrl = route.exploreUrl,
             onBack = { onNavigateBack() },
             onBookClick = { book, sharedCoverKey ->
                 onNavigateToRoute(

@@ -54,7 +54,7 @@ class SearchActivity : BaseComposeActivity() {
             },
             onOpenSourceManage = {
                 startActivity<BookSourceActivity>()
-            }
+            },
         )
     }
 

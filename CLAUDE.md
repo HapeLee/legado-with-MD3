@@ -138,7 +138,228 @@ Legacy View-based theme still exists in `lib/theme/` (used by non-migrated scree
 
 The app is mid-migration from Views to Compose. View-based screens (reader, book info, source management) coexist with Compose screens (main tabs, settings, search, RSS, cache management). XML layouts, `viewBinding`, and traditional Activities are still heavily used. The `viewBinding` build feature is enabled but Compose screens are the target.
 
-Compose code follows **MVI/UDF**: ViewModel owns `StateFlow`/`SharedFlow` state, Screen observes and emits user actions, no business logic in composables. For detailed Compose review conventions and migration patterns, see `.claude/skills/legado-compose-review/`.
+## Jetpack Compose Requirements (new screens MUST follow)
+
+All **new** UI screens must be implemented in Jetpack Compose following the patterns below. Do **not
+** create new View-based Activities/Fragments/XML layouts. Existing View-based screens can remain
+until migrated.
+
+### MVI/UDF Architecture
+
+Every Compose screen follows a strict **Model-View-Intent** pattern with three artifacts defined in
+a `*Contract.kt` file:
+
+```
+ui/{feature}/
+├── XxxContract.kt      // UiState, Intent, Effect (and optionally Sheet/Dialog)
+├── XxxViewModel.kt     // ViewModel
+├── XxxScreen.kt        // Screen composable
+└── XxxRouteScreen.kt   // (optional) outer wrapper for activity results / lifecycle
+```
+
+**Contract definitions:**
+
+```kotlin
+// @Stable data class — all screen state in one place
+@Stable
+data class XxxUiState(
+    val loading: Boolean = false,
+    val items: ImmutableList<ItemUi> = persistentListOf(),
+    val activeSheet: XxxSheet? = null,
+    val activeDialog: XxxDialog? = null,
+)
+
+// sealed interface — every user action is an Intent
+sealed interface XxxIntent {
+    data class LoadData(val id: Long) : XxxIntent
+    data object Refresh : XxxIntent
+}
+
+// sealed interface — one-shot side effects (navigation, toast, etc.)
+sealed interface XxxEffect {
+    data class ShowToast(val message: String) : XxxEffect
+    data class NavigateTo(val route: MainRoute) : XxxEffect
+}
+
+// (optional) sealed interface for multi-sheet/dialog scenarios
+sealed interface XxxSheet { data object Filter : XxxSheet }
+sealed interface XxxDialog { data class Confirm(val msg: String) : XxxDialog }
+```
+
+**Naming rules:**
+
+- State: `{Feature}UiState` — `@Stable data class`
+- Intent: `{Feature}Intent` — `sealed interface` with `data class` / `data object` members
+- Effect: `{Feature}Effect` — `sealed interface`
+- Sheet/Dialog: `{Feature}Sheet`, `{Feature}Dialog` — `sealed interfaces` stored in UiState
+
+### ViewModel
+
+```kotlin
+class XxxViewModel(/* injected dependencies */) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(XxxUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<XxxEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: XxxIntent) {
+        when (intent) {
+            is XxxIntent.LoadData -> loadData(intent.id)
+            is XxxIntent.Refresh -> refresh()
+        }
+    }
+
+    private fun loadData(id: Long) {
+        // Use viewModelScope, update _uiState via update { it.copy(...) }
+    }
+}
+```
+
+Key rules:
+
+- Extend `ViewModel()` directly (not `BaseViewModel`).
+- `_uiState` is `MutableStateFlow`, exposed as `StateFlow` via `.asStateFlow()`.
+- `_effects` is `MutableSharedFlow(extraBufferCapacity = 16)`, exposed via `.asSharedFlow()`.
+- Emit effects via `_effects.tryEmit(...)`.
+- Single `onIntent()` entry point, dispatched via `when`.
+
+### Screen Composable
+
+```kotlin
+// Stateless screen — ViewModel wired in entry provider or RouteScreen
+@Composable
+fun XxxScreen(
+    state: XxxUiState,
+    onIntent: (XxxIntent) -> Unit,
+    effects: Flow<XxxEffect>,                   // one-shot effects from ViewModel
+    onBack: () -> Unit,
+    onNavigateToYyy: (YyyRoute) -> Unit,
+) {
+    // Collect effects
+    LaunchedEffect(Unit) {
+        effects.collectLatest { effect ->
+            when (effect) {
+                is XxxEffect.ShowToast -> { /* ... */ }
+                is XxxEffect.NavigateTo -> onNavigateToYyy(effect.route)
+            }
+        }
+    }
+
+    AppScaffold(
+        topBar = {
+            GlassMediumFlexibleTopAppBar(
+                title = { Text("Title") },
+                scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior(),
+                navigationButton = { TopBarNavigationButton(onBack) },
+            )
+        },
+    ) { contentPadding ->
+        // UI content, no business logic here
+    }
+}
+```
+
+Key rules:
+
+- Screen is **stateless** — receives `state`, `onIntent`, `effects`, never accesses ViewModel
+  directly.
+- Effects collected in `LaunchedEffect(Unit) { ... }` using `collectLatest`.
+- Alternatively, effects can be collected in the outer `RouteScreen` or entry provider if the screen
+  doesn't need them directly.
+- Use project custom widgets: `AppScaffold`, `AppText`, `AppIcon`, `AppIcons`, `AppAlertDialog`,
+  `AppModalBottomSheet`, `NormalCard`, `GlassMediumFlexibleTopAppBar`, `TopBarNavigationButton`,
+  `TopBarActionButton`, etc.
+- No business logic, no direct DB/network calls in composables.
+
+Two input patterns are acceptable:
+
+- **Stateless (preferred for new screens):** `state: XxxUiState` + `onIntent: (XxxIntent) -> Unit` —
+  ViewModel wired in entry provider or RouteScreen.
+- **ViewModel as default param:** `viewModel: XxxViewModel = koinViewModel()` — simpler for
+  standalone screens.
+
+### Stability
+
+- All `UiState` and UI item data classes **must** be annotated with `@Stable`.
+- Use `ImmutableList` (from `kotlinx.collections.immutable`) for list properties in state classes,
+  not `List` or `MutableList`.
+- Prefer `persistentListOf()` / `toImmutableList()` for default values.
+
+### Navigation
+
+Uses **Navigation 3** (`androidx.navigation3`). Routes are `@Serializable` sealed interfaces:
+
+```kotlin
+// In MainNavKey.kt
+@Serializable
+data class MainRouteXxx(val id: Long) : MainRoute
+```
+
+Entry registered in `MainNavGraph.kt`:
+
+```kotlin
+entry<MainRouteXxx> { route ->
+    val viewModel = koinViewModel<XxxViewModel>()
+    XxxScreen(
+        state = viewModel.uiState.collectAsStateWithLifecycle().value,
+        onIntent = viewModel::onIntent,
+        onBack = { onNavigateBack() },
+        onNavigateToYyy = { onNavigateToRoute(it) },
+    )
+}
+```
+
+Key rules:
+
+- Screens **never** reference the navigator directly — receive `onBack`, `onNavigateToXxx` lambdas.
+- Navigation is callback-based, wired by the entry provider.
+- New routes added to the `MainRoute` sealed interface in `MainNavKey.kt`.
+
+### Koin DI
+
+- Register ViewModels in `di/appModule.kt` with `viewModelOf(::XxxViewModel)`.
+- Inject in Compose via `koinViewModel()` (default param or explicit in entry provider).
+- For keyed ViewModels (e.g. per-book): `koinViewModel<XxxViewModel>(key = route.bookUrl)`.
+- Repositories/gateways/use cases registered as `singleOf(::...)`.
+
+### Activity Base Class
+
+New standalone Compose activities extend `BaseComposeActivity`:
+
+```kotlin
+class XxxActivity : BaseComposeActivity() {
+    @Composable
+    override fun Content() {
+        // Screen content — AppTheme is already applied by the base class
+    }
+}
+```
+
+### RouteScreen Wrapper
+
+For screens needing activity result handling, lifecycle observation, or permission requests, use a
+two-layer pattern:
+
+- Outer `XxxRouteScreen`: handles `ActivityResultLauncher`, lifecycle callbacks, file pickers,
+  permission requests. Wires ViewModel.
+- Inner `XxxScreen`: pure UI, stateless with `state` + `onIntent`.
+
+### Material 3 vs Miuix
+
+The project supports two Compose theme engines. If a screen needs engine-specific UI, branch on:
+
+```kotlin
+if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
+    // Miuix implementation
+} else {
+    // Material 3 implementation
+}
+```
+
+For detailed Compose review conventions and migration patterns, see
+`.claude/skills/legado-compose-review/`.
 
 ## Rhino JavaScript Engine
 

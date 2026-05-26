@@ -72,7 +72,7 @@ import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
-import io.legado.app.ui.widget.components.button.SmallTonalIconButton
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
@@ -82,6 +82,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.sendToClip
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 
@@ -132,7 +133,7 @@ fun HomepageScreen(
     }
 
     LaunchedEffect(viewModel) {
-        viewModel.effects.collect { effect ->
+        viewModel.effects.collectLatest { effect ->
             when (effect) {
                 is HomepageEffect.NavigateToBookInfo ->
                     onBookClick(
@@ -717,9 +718,9 @@ private fun ModuleHeader(
             modifier = Modifier.weight(1f),
         )
         if (onNavigate != null) {
-            SmallTonalIconButton(
+            SmallTonalButton(
                 onClick = onNavigate,
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward
+                icon = Icons.AutoMirrored.Filled.ArrowForward
             )
         }
     }

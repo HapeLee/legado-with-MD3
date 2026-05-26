@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Source
 import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -54,11 +52,12 @@ import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.button.SmallTextButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import org.koin.androidx.compose.koinViewModel
 
 
@@ -81,7 +80,7 @@ fun MyScreen(
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.my),
                 actions = {
-                    IconButton(
+                    TopBarActionButton(
                         onClick = {
                             onNavigate(
                                 PrefClickEvent.ShowMd(
@@ -89,10 +88,10 @@ fun MyScreen(
                                     path = "appHelp"
                                 )
                             )
-                        }
-                    ) {Icon(
-                        Icons.AutoMirrored.Filled.HelpOutline, null)
-                    }
+                        },
+                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                        contentDescription = null
+                    )
                 },
                 scrollBehavior = scrollBehavior
             )
@@ -251,22 +250,22 @@ fun WebServiceSettingBlock(
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
                 horizontalArrangement = Arrangement.End
             ) {
-                SmallTextButton(
-                    text = stringResource(R.string.copy_url),
-                    imageVector = Icons.Default.ContentCopy,
+                SmallPlainButton(
                     onClick = {
                         onNavigate(PrefClickEvent.CopyUrl(uiState.webServiceAddress))
-                    }
+                    },
+                    icon = Icons.Default.ContentCopy,
+                    text = stringResource(R.string.copy_url)
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                SmallTextButton(
-                    text = stringResource(R.string.open_in_browser),
-                    imageVector = Icons.Default.OpenInBrowser,
+                SmallPlainButton(
                     onClick = {
                         onNavigate(PrefClickEvent.OpenUrl(uiState.webServiceAddress))
-                    }
+                    },
+                    icon = Icons.Default.OpenInBrowser,
+                    text = stringResource(R.string.open_in_browser)
                 )
             }
         }

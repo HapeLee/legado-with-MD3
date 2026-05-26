@@ -58,7 +58,7 @@ import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -422,9 +422,9 @@ private fun FavoriteEditSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.favorite),
         endAction = {
-            SmallIconButton(
+            SmallPlainButton(
                 onClick = onDelete,
-                imageVector = Icons.Default.CleaningServices,
+                icon = Icons.Default.CleaningServices,
                 contentDescription = stringResource(R.string.delete)
             )
         }

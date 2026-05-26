@@ -88,7 +88,7 @@ import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -222,8 +222,8 @@ fun ThemeConfigScreen(
                                 style = LegadoTheme.typography.labelLargeEmphasized,
                                 modifier = Modifier.weight(1f)
                             )
-                            SmallIconButton(
-                                imageVector = AppIcons.Close,
+                            SmallPlainButton(
+                                icon = AppIcons.Close,
                                 contentDescription = "关闭",
                                 onClick = {
                                     viewModel.setShowThemeRefactorTip(false)
@@ -759,8 +759,8 @@ fun ThemeConfigScreen(
         onDismissRequest = { showFontSheet = false },
         title = stringResource(R.string.font_setting),
         startAction = {
-            SmallIconButton(
-                imageVector = Icons.Default.Delete,
+            SmallPlainButton(
+                icon = Icons.Default.Delete,
                 contentDescription = stringResource(R.string.clear),
                 onClick = {
                     ThemeConfig.appFontPath = null
@@ -769,8 +769,8 @@ fun ThemeConfigScreen(
             )
         },
         endAction = {
-            SmallIconButton(
-                imageVector = Icons.Default.Add,
+            SmallPlainButton(
+                icon = Icons.Default.Add,
                 contentDescription = stringResource(R.string.select_folder),
                 onClick = { fontFolderLauncher.launch(null) }
             )

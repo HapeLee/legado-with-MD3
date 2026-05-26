@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonParser
 import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.SmallIconButton
+import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.GSON
 
@@ -37,17 +37,17 @@ fun JsonRawEditor(
                 style = LegadoTheme.typography.labelMediumEmphasized
             )
             Row {
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = {
                         runCatching {
                             val jsonElement = JsonParser.parseString(value)
                             onValueChange(GSON.toJson(jsonElement))
                         }
                     },
-                    imageVector = Icons.Default.AutoFixHigh,
+                    icon = Icons.Default.AutoFixHigh,
                     contentDescription = "格式化"
                 )
-                SmallIconButton(
+                SmallPlainButton(
                     onClick = {
                         runCatching {
                             val jsonElement = JsonParser.parseString(value)
@@ -55,7 +55,7 @@ fun JsonRawEditor(
                             onValueChange(compactGson.toJson(jsonElement))
                         }
                     },
-                    imageVector = Icons.Default.Compress,
+                    icon = Icons.Default.Compress,
                     contentDescription = "压缩"
                 )
             }

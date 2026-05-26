@@ -338,6 +338,12 @@ class HomepageViewModel(
         }
     }
 
+    override fun onCleared() {
+        super.onCleared()
+        loadJobs.values.forEach { it.cancel() }
+        loadJobs.clear()
+    }
+
     private suspend fun syncModulesFromSource(source: BookSource) {
         val json = source.homepageModules ?: return
         ensureSetForSource(source.bookSourceUrl, source.bookSourceName)

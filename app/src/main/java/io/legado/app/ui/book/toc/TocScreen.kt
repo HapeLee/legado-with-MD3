@@ -95,7 +95,8 @@ import io.legado.app.ui.widget.components.FabMenuItem
 import io.legado.app.ui.widget.components.SelectionBottomBar
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditSheet
 import io.legado.app.ui.widget.components.bookmark.BookmarkItem
-import io.legado.app.ui.widget.components.button.SmallOutlinedIconToggleButton
+import io.legado.app.ui.widget.components.button.series.SmallToggleButton
+import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.divider.PillDivider
@@ -476,10 +477,11 @@ fun TocScreen(
 
                         if (pagerState.currentPage == 0 && hasVolumes) {
                             Box {
-                                SmallOutlinedIconToggleButton(
+                                SmallToggleButton(
                                     checked = showVolumeMenu,
                                     onCheckedChange = { showVolumeMenu = it },
-                                    imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    style = ToggleStyle.Outlined,
+                                    icon = Icons.AutoMirrored.Filled.FormatListBulleted,
                                     contentDescription = stringResource(R.string.volume_management)
                                 )
                                 RoundDropdownMenu(

@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,8 +25,9 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.MediumIconButton
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 
@@ -68,9 +67,9 @@ fun ScopeSelectSheet(
         title = title,
         endAction = onConfirm?.let {
             {
-                MediumIconButton(
+                MediumPlainButton(
                     onClick = it,
-                    imageVector = Icons.Default.Check
+                    icon = AppIcons.Settings
                 )
             }
         }

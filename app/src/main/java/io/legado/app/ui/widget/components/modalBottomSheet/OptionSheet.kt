@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +63,7 @@ fun RowScope.OptionCard(
             .weight(1f)
             .height(100.dp),
         cornerRadius = 12.dp,
-        containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        containerColor = LegadoTheme.colorScheme.onSheetContent,
         elevation = 2.dp
     ) {
         Column(

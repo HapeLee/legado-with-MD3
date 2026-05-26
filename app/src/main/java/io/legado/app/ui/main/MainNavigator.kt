@@ -268,7 +268,7 @@ object MainNavigator {
                     MainRouteExploreShow(
                         title = intent.getStringExtra(MainIntent.EXTRA_EXPLORE_NAME),
                         sourceUrl = sourceUrl,
-                        exploreUrl = intent.getStringExtra(MainIntent.EXTRA_EXPLORE_URL)
+                        exploreUrl = intent.getStringExtra(MainIntent.EXTRA_EXPLORE_URL),
                     )
                 } ?: MainRouteHome
 

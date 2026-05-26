@@ -92,6 +92,9 @@ fun ExploreScreen(
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
+        derivedStateOf { viewModel.buildExploreListItems(uiState) }
+    }
     var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
         uiState.items.firstOrNull { it.bookSourceUrl == sourceToDeleteUrl }
@@ -118,10 +121,10 @@ fun ExploreScreen(
         }
     }
 
-    val stickyHeaderSource by remember(uiState.listItems, uiState.items) {
+    val stickyHeaderSource by remember(listItems, uiState.items) {
         derivedStateOf {
             val firstIndex = listState.firstVisibleItemIndex
-            val item = uiState.listItems.getOrNull(firstIndex)
+            val item = listItems.getOrNull(firstIndex)
             if (item is ExploreListItem.KindRow) {
                 uiState.items.find { it.bookSourceUrl == item.sourceUrl }
             } else {
@@ -178,7 +181,7 @@ fun ExploreScreen(
                 )
             ) {
                 items(
-                    items = uiState.listItems,
+                    items = listItems,
                     key = { it.key }
                 ) { listItem ->
                     when (listItem) {
@@ -268,7 +271,7 @@ fun ExploreScreen(
                     verticalPadding = 8.dp,
                     onClick = {
                         scope.launch {
-                            val index = uiState.listItems.indexOfFirst {
+                            val index = listItems.indexOfFirst {
                                 it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
                             }
                             if (index >= 0) listState.animateScrollToItem(index)
