@@ -25,42 +25,75 @@ interface BookGroupDao {
 
     @get:Query(
         """
-    with const as (SELECT sum(groupId) sumGroupId FROM book_groups where groupId > 0)
+    with const as (
+        SELECT
+            COALESCE(SUM(CASE WHEN groupId > 0 AND isPrivate = 0 THEN groupId ELSE 0 END), 0) sumPublicGroupId,
+            COALESCE(SUM(CASE WHEN groupId > 0 AND isPrivate = 1 THEN groupId ELSE 0 END), 0) sumPrivateGroupId
+        FROM book_groups
+    )
     SELECT book_groups.* FROM book_groups join const 
     where show > 0 
     and (
-        (groupId >= 0  and exists (select 1 from books where `group` & book_groups.groupId > 0))
+        (groupId >= 0  and exists (
+            select 1 from books
+            where `group` & book_groups.groupId > 0
+            and (book_groups.isPrivate = 1 or `group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
         or groupId = ${BookGroup.IdAll}
-        or (groupId = ${BookGroup.IdLocal} and exists (select 1 from books where type & ${BookType.local} > 0))
-        or (groupId = ${BookGroup.IdAudio} and exists (select 1 from books where type & ${BookType.audio} > 0))
-        or (groupId = ${BookGroup.IdManga} and exists (select 1 FROM books where type & ${BookType.image} > 0))
-        or (groupId = ${BookGroup.IdText} and exists (select 1 FROM books where type & ${BookType.text} > 0))
+        or (groupId = ${BookGroup.IdLocal} and exists (
+            select 1 from books
+            where type & ${BookType.local} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
+        or (groupId = ${BookGroup.IdAudio} and exists (
+            select 1 from books
+            where type & ${BookType.audio} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
+        or (groupId = ${BookGroup.IdManga} and exists (
+            select 1 FROM books
+            where type & ${BookType.image} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
+        or (groupId = ${BookGroup.IdText} and exists (
+            select 1 FROM books
+            where type & ${BookType.text} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
         or (groupId = ${BookGroup.IdReading} and exists (
             SELECT 1 FROM books 
             WHERE totalChapterNum > 0 
             AND durChapterIndex > 0 
             AND durChapterIndex < totalChapterNum - 1
+            AND (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
         ))
         or (groupId = ${BookGroup.IdUnread} and exists (
             SELECT 1 FROM books 
             WHERE durChapterIndex = 0 
             AND durChapterPos = 0
+            AND (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
         ))
         or (groupId = ${BookGroup.IdReadFinished} and exists (
             SELECT 1 FROM books 
             WHERE totalChapterNum > 0 
             AND durChapterIndex >= totalChapterNum - 1
             AND durChapterPos != 0
+            AND (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
         ))
         
-        or (groupId = ${BookGroup.IdError} and exists (select 1 from books where type & ${BookType.updateError} > 0))
+        or (groupId = ${BookGroup.IdError} and exists (
+            select 1 from books
+            where type & ${BookType.updateError} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
         
         or (groupId = ${BookGroup.IdNetNone} 
             and exists (
                 select 1 from books 
                 where type & ${BookType.audio} = 0
                 and type & ${BookType.local} = 0
-                and const.sumGroupId & `group` = 0
+                and (const.sumPublicGroupId & `group`) = 0
+                and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
             )
         )
         or (groupId = ${BookGroup.IdLocalNone}
@@ -68,7 +101,8 @@ interface BookGroupDao {
                 select 1 from books 
                 where type & ${BookType.audio} = 0
                 and type & ${BookType.local} > 0
-                and const.sumGroupId & `group` = 0
+                and (const.sumPublicGroupId & `group`) = 0
+                and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
             )
         )
     )

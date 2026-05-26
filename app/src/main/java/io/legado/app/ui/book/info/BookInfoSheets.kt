@@ -138,6 +138,7 @@ fun GroupSelectSheet(
 ) {
     var selectedGroupId by remember(currentGroupId, show) { mutableLongStateOf(currentGroupId) }
     var editingGroup by remember(show) { mutableStateOf<BookGroup?>(null) }
+    var showAddGroup by remember(show) { mutableStateOf(false) }
 
     AppModalBottomSheet(
         show = show,
@@ -145,7 +146,7 @@ fun GroupSelectSheet(
         title = stringResource(R.string.group_select),
         startAction = {
             MediumPlainButton(
-                onClick = { editingGroup = BookGroup() },
+                onClick = { showAddGroup = true },
                 icon = Icons.Default.Add
             )
         },
@@ -198,7 +199,14 @@ fun GroupSelectSheet(
             Spacer(modifier = Modifier.height(12.dp))
         }
     }
-    GroupEditSheet(show = editingGroup != null, group = editingGroup, onDismissRequest = { editingGroup = null })
+    GroupEditSheet(
+        show = showAddGroup || editingGroup != null,
+        group = editingGroup,
+        onDismissRequest = {
+            showAddGroup = false
+            editingGroup = null
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -648,4 +656,3 @@ fun ChangeSourceSheet(
         }
     )
 }
-

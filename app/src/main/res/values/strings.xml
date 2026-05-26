@@ -591,6 +591,8 @@
     <string name="no">No</string>
     <string name="sure">OK</string>
     <string name="sure_del">Are you sure to delete it?</string>
+    <string name="sure_del_private_group">Related books may appear in public bookshelf views after deletion. Are you sure to delete?</string>
+    <string name="sure_disable_private_group">Books in this group may appear in public bookshelf views after disabling. Are you sure to disable?</string>
     <string name="sure_del_any">Are you sure to delete %s?</string>
     <string name="sure_del_all_book">Are you sure to delete all books？</string>
     <string name="sure_del_download_book">Do you want to delete the downloaded book chapters at the same time?</string>
@@ -1245,6 +1247,9 @@
     <string name="file_manage_summary">Managing files in the application\'s private folder</string>
     <string name="create_folder">Create Folder</string>
     <string name="allow_drop_down_refresh">Allow drop-down refresh</string>
+    <string name="private_group">Set as private group</string>
+    <string name="disable_private_group">Disable private group</string>
+    <string name="private_group_desc">After enabling, books in this group are hidden from the public bookshelf</string>
     <string name="text_underline">Text underline</string>
     <string name="select_new_source">Select new source</string>
     <string name="select_update_source">Select update source</string>
