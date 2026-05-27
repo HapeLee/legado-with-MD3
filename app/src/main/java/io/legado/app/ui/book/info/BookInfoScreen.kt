@@ -59,13 +59,11 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
-import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
@@ -73,7 +71,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
-import io.legado.app.model.BookCover
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
@@ -93,8 +90,8 @@ import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.icon.AppIcon
+import io.legado.app.ui.widget.components.image.cover.BookCoverImage
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
-import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -192,10 +189,7 @@ private fun BookInfoScreenContent(
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 BookInfoBackdrop(
-                    bookUrl = book.bookUrl,
-                    coverUrl = book.coverUrl,
-                    customCoverUrl = book.customCoverUrl,
-                    origin = book.origin,
+                    book = book,
                 )
                 AppPullToRefresh(
                     modifier = Modifier.fillMaxSize(),
@@ -479,26 +473,8 @@ private fun BookInfoTopBarActions(
 
 @Composable
 private fun BookInfoBackdrop(
-    bookUrl: String,
-    coverUrl: String?,
-    customCoverUrl: String?,
-    origin: String,
+    book: Book,
 ) {
-    val useDefaultCover = AppConfig.useDefaultCover || customCoverUrl == "use_default_cover"
-    val isNight = AppConfig.isNightTheme
-
-    val cover = remember(bookUrl, customCoverUrl, coverUrl, isNight) {
-        if (useDefaultCover) {
-            BookCover.getRandomDefaultPath(bookUrl, isNight)
-        } else {
-            if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
-        }
-    }
-    val sourceOrigin = if (!useDefaultCover) origin else null
-    val loadOnlyWifi = CoverConfig.loadCoverOnlyWifi
-    val context = LocalContext.current
-    val imageLoader = koinInject<ImageLoader>()
-
     val seedOverlay = lerp(
         LegadoTheme.colorScheme.secondaryContainer,
         LegadoTheme.seedColor,
@@ -506,32 +482,22 @@ private fun BookInfoBackdrop(
     )
     Box(modifier = Modifier.fillMaxSize()) {
         Crossfade(
-            targetState = cover,
+            targetState = book,
             animationSpec = tween(800),
             label = "BackdropCrossfade"
-        ) { currentCover ->
-            if (!currentCover.isNullOrBlank()) {
-                val backdropRequest = remember(currentCover, sourceOrigin, loadOnlyWifi, context) {
-                    buildCoverImageRequest(
-                        context = context,
-                        data = currentCover,
-                        sourceOrigin = sourceOrigin,
-                        loadOnlyWifi = loadOnlyWifi,
-                        crossfade = true,
-                        memoryCacheKey = currentCover,
-                    )
-                }
-                AsyncImage(
-                    model = backdropRequest,
-                    imageLoader = imageLoader,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(480.dp)
-                        .blur(24.dp),
-                    contentScale = ContentScale.Crop,
-                )
-            }
+        ) { currentBook ->
+            BookCoverImage(
+                name = currentBook.name,
+                author = currentBook.author,
+                path = currentBook.getDisplayCover(),
+                sourceOrigin = currentBook.origin,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(480.dp)
+                    .blur(24.dp),
+                contentScale = ContentScale.Crop,
+                showLoadingPlaceholder = false,
+            )
         }
         Box(
             modifier = Modifier

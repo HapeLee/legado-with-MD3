@@ -52,6 +52,97 @@ import io.legado.app.model.BookCover as BookCoverModel
 private const val SharedCoverRadiusCacheMaxSize = 256
 private val sharedCoverRadiusCache = mutableStateMapOf<String, Dp>()
 
+@Composable
+fun BookCoverImage(
+    name: String?,
+    author: String?,
+    path: String?,
+    modifier: Modifier = Modifier,
+    sourceOrigin: String? = null,
+    ignoreUseDefaultCover: Boolean = false,
+    showLoadingPlaceholder: Boolean = true,
+    contentScale: ContentScale = ContentScale.Crop,
+    onLoadFinish: (() -> Unit)? = null,
+    onSuccess: (() -> Unit)? = null,
+    onError: (() -> Unit)? = null,
+    sharedCoverKey: String? = null,
+) {
+    val context = LocalContext.current
+    val isNight = isSystemInDarkTheme()
+
+    val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
+    val finalPath = if (useDefault) null else path
+
+    val randomPath = remember(name, author, path, isNight) {
+        BookCoverModel.getRandomDefaultPath(
+            seed = name ?: author ?: path ?: "",
+            isNight = isNight
+        )
+    }
+
+    val hasCustomDefault = !randomPath.isNullOrBlank()
+    var isOnlineCoverLoaded by remember(finalPath) {
+        mutableStateOf(sharedCoverKey != null && finalPath != null)
+    }
+
+    LaunchedEffect(finalPath) {
+        if (finalPath == null) {
+            isOnlineCoverLoaded = false
+        }
+    }
+
+    Box(modifier = modifier) {
+        if (hasCustomDefault && !isOnlineCoverLoaded) {
+            AsyncImage(
+                model = buildCoverImageRequest(
+                    context = context,
+                    data = randomPath,
+                    sourceOrigin = null,
+                    loadOnlyWifi = false,
+                    crossfade = showLoadingPlaceholder,
+                    memoryCacheKey = randomPath,
+                ),
+                contentDescription = null,
+                imageLoader = koinInject(),
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        if (finalPath != null) {
+            AsyncImage(
+                model = buildCoverImageRequest(
+                    context = context,
+                    data = finalPath,
+                    sourceOrigin = sourceOrigin,
+                    loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
+                    crossfade = showLoadingPlaceholder,
+                    memoryCacheKey = finalPath,
+                ),
+                contentDescription = null,
+                imageLoader = koinInject(),
+                contentScale = contentScale,
+                modifier = Modifier.fillMaxSize(),
+                onSuccess = {
+                    isOnlineCoverLoaded = true
+                    onSuccess?.invoke()
+                    onLoadFinish?.invoke()
+                },
+                onError = {
+                    isOnlineCoverLoaded = false
+                    onError?.invoke()
+                    onLoadFinish?.invoke()
+                }
+            )
+        } else {
+            LaunchedEffect(Unit) {
+                onLoadFinish?.invoke()
+            }
+        }
+    }
+}
+
+// 改成BookCover
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun CoilBookCover(
@@ -68,7 +159,6 @@ fun CoilBookCover(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
-    val context = LocalContext.current
     val isNight = isSystemInDarkTheme()
 
     val useDefault = !ignoreUseDefaultCover && CoverConfig.useDefaultCover
@@ -126,54 +216,24 @@ fun CoilBookCover(
             )
             .clip(shape)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (hasCustomDefault && !isOnlineCoverLoaded) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = randomPath,
-                        sourceOrigin = null,
-                        loadOnlyWifi = false,
-                        crossfade = showLoadingPlaceholder,
-                        memoryCacheKey = randomPath,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                )
-            }
-
-            if (finalPath != null) {
-                AsyncImage(
-                    model = buildCoverImageRequest(
-                        context = context,
-                        data = finalPath,
-                        sourceOrigin = sourceOrigin,
-                        loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
-                        crossfade = showLoadingPlaceholder,
-                        memoryCacheKey = finalPath,
-                    ),
-                    contentDescription = null,
-                    imageLoader = koinInject(),
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                    onSuccess = {
-                        isOnlineCoverLoaded = true
-                        onLoadFinish?.invoke()
-                    },
-                    onError = {
-                        isOnlineCoverLoaded = false
-                        onLoadFinish?.invoke()
-                    }
-                )
-            } else {
-                LaunchedEffect(Unit) {
-                    onLoadFinish?.invoke()
-                }
-            }
-        }
+        BookCoverImage(
+            name = name,
+            author = author,
+            path = path,
+            modifier = Modifier.fillMaxSize(),
+            sourceOrigin = sourceOrigin,
+            ignoreUseDefaultCover = ignoreUseDefaultCover,
+            showLoadingPlaceholder = showLoadingPlaceholder,
+            onSuccess = {
+                isOnlineCoverLoaded = true
+                onLoadFinish?.invoke()
+            },
+            onError = {
+                isOnlineCoverLoaded = false
+                onLoadFinish?.invoke()
+            },
+            sharedCoverKey = sharedCoverKey
+        )
 
         if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
             if (!hasCustomDefault) {
