@@ -72,7 +72,9 @@ import io.legado.app.ui.main.homepage.modules.GridRankingModule
 import io.legado.app.ui.main.homepage.modules.HomepageModuleSkeleton
 import io.legado.app.ui.main.homepage.modules.RankingModule
 import io.legado.app.ui.main.homepage.modules.WaterfallItem
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.LoadMoreFooter
@@ -84,6 +86,7 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -171,12 +174,12 @@ fun HomepageScreen(
                 actions = {
                     TopBarActionButton(
                         onClick = { viewModel.toggleConfigMode() },
-                        imageVector = Icons.Default.GridView,
+                        imageVector = AppIcons.MoreCircle,
                         contentDescription = "Layout Settings",
                     )
                     TopBarActionButton(
                         onClick = { viewModel.toggleManageMode() },
-                        imageVector = Icons.Default.Settings,
+                        imageVector = AppIcons.Settings,
                         contentDescription = "Manage Modules",
                     )
                 },
@@ -200,14 +203,14 @@ fun HomepageScreen(
         AppPullToRefresh(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.onRefresh() },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier = Modifier.fillMaxSize(),
         ) {
             if (selectedSets.isEmpty()) {
                 EmptyMessage(
                     messageResId = R.string.homepage_no_source_sets_selected,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
                 )
             } else {
                 HorizontalPager(
@@ -231,6 +234,7 @@ fun HomepageScreen(
                         modules = sourceModules,
                         viewModel = viewModel,
                         modifier = Modifier.fillMaxSize(),
+                        paddingValues = paddingValues,
                         onErrorClick = { errorMsg = it },
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
@@ -344,6 +348,7 @@ private fun ModuleList(
     modules: List<HomepageModuleUi>,
     viewModel: HomepageViewModel,
     modifier: Modifier = Modifier,
+    paddingValues: PaddingValues = PaddingValues(0.dp),
     gridState: LazyStaggeredGridState = rememberLazyStaggeredGridState(),
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -381,7 +386,11 @@ private fun ModuleList(
             modifier = modifier,
             verticalItemSpacing = 16.dp,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+            contentPadding = adaptiveContentPaddingBookshelf(
+                top = paddingValues.calculateTopPadding(),
+                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
+                horizontal = 4.dp
+            ),
         ) {
             processedModules.forEach { moduleUi ->
                 // 1. 头部 (全宽)
