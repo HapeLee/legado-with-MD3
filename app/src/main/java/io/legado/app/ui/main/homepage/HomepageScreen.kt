@@ -1,9 +1,15 @@
 package io.legado.app.ui.main.homepage
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +69,7 @@ import io.legado.app.ui.main.homepage.modules.ButtonGroupModule
 import io.legado.app.ui.main.homepage.modules.CardModule
 import io.legado.app.ui.main.homepage.modules.GridModule
 import io.legado.app.ui.main.homepage.modules.GridRankingModule
+import io.legado.app.ui.main.homepage.modules.HomepageModuleSkeleton
 import io.legado.app.ui.main.homepage.modules.RankingModule
 import io.legado.app.ui.main.homepage.modules.WaterfallItem
 import io.legado.app.ui.theme.LegadoTheme
@@ -75,8 +82,8 @@ import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.icon.AppIcon
-import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.tabRow.AppTabRow
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
@@ -198,9 +205,10 @@ fun HomepageScreen(
                 .padding(paddingValues),
         ) {
             if (selectedSets.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    AppText(stringResource(R.string.homepage_no_source_sets_selected))
-                }
+                EmptyMessage(
+                    messageResId = R.string.homepage_no_source_sets_selected,
+                    modifier = Modifier.fillMaxSize(),
+                )
             } else {
                 HorizontalPager(
                     state = pagerState,
@@ -394,100 +402,103 @@ private fun ModuleList(
 
                 // 2. 内容正文
                 when (val state = moduleUi.state) {
-                    is ModuleLoadState.Loading -> {
-                        item(
-                            key = "loading_${moduleUi.globalId}",
-                            span = StaggeredGridItemSpan.FullLine
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(120.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                AppCircularProgressIndicator()
-                            }
-                        }
-                    }
-
+                    is ModuleLoadState.Loading,
                     is ModuleLoadState.Error -> {
                         item(
-                            key = "error_${moduleUi.globalId}",
+                            key = "status_${moduleUi.globalId}",
                             span = StaggeredGridItemSpan.FullLine
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                GlassCard(
-                                    onClick = { onErrorClick(state.message) },
-                                    containerColor = LegadoTheme.colorScheme.errorContainer.copy(
-                                        alpha = 0.6f
-                                    ),
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(
-                                                    horizontal = 16.dp,
-                                                    vertical = 16.dp
-                                                ),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-
-                                            AppIcon(
-                                                imageVector = Icons.Outlined.Info,
-                                                contentDescription = null,
-                                                tint = LegadoTheme.colorScheme.error
-                                            )
-
-                                            AppText(
-                                                text = state.message,
-                                                color = LegadoTheme.colorScheme.error,
-                                                style = LegadoTheme.typography.bodySmall,
-                                                modifier = Modifier.weight(1f),
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        }
-
-                                        HorizontalDivider(
-                                            color = LegadoTheme.colorScheme.error.copy(alpha = 0.3f)
+                            AnimatedContent(
+                                targetState = state,
+                                transitionSpec = {
+                                    fadeIn(tween(300)) togetherWith fadeOut(tween(300))
+                                },
+                                contentKey = { it::class },
+                            ) { targetState ->
+                                when (targetState) {
+                                    is ModuleLoadState.Loading -> {
+                                        HomepageModuleSkeleton(
+                                            type = moduleUi.type,
+                                            modifier = Modifier.fillMaxWidth(),
                                         )
+                                    }
 
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable {
-                                                    viewModel.retryModule(moduleUi.globalId)
-                                                }
-                                                .padding(vertical = 10.dp),
-                                            contentAlignment = Alignment.Center
+                                    is ModuleLoadState.Error -> {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                            GlassCard(
+                                                onClick = { onErrorClick(targetState.message) },
+                                                containerColor = LegadoTheme.colorScheme.errorContainer.copy(
+                                                    alpha = 0.6f
+                                                ),
                                             ) {
-                                                AppIcon(
-                                                    imageVector = Icons.Default.Refresh,
-                                                    contentDescription = null,
-                                                    tint = LegadoTheme.colorScheme.error
-                                                )
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(
+                                                                horizontal = 16.dp,
+                                                                vertical = 16.dp
+                                                            ),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                    ) {
+                                                        AppIcon(
+                                                            imageVector = Icons.Outlined.Info,
+                                                            contentDescription = null,
+                                                            tint = LegadoTheme.colorScheme.error
+                                                        )
 
-                                                AppText(
-                                                    text = "重试",
-                                                    color = LegadoTheme.colorScheme.error,
-                                                    style = LegadoTheme.typography.labelMedium
-                                                )
+                                                        AppText(
+                                                            text = targetState.message,
+                                                            color = LegadoTheme.colorScheme.error,
+                                                            style = LegadoTheme.typography.bodySmall,
+                                                            modifier = Modifier.weight(1f),
+                                                            maxLines = 2,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                        )
+                                                    }
+
+                                                    HorizontalDivider(
+                                                        color = LegadoTheme.colorScheme.error.copy(alpha = 0.3f)
+                                                    )
+
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable {
+                                                                viewModel.retryModule(moduleUi.globalId)
+                                                            }
+                                                            .padding(vertical = 10.dp),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Row(
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            AppIcon(
+                                                                imageVector = Icons.Default.Refresh,
+                                                                contentDescription = null,
+                                                                tint = LegadoTheme.colorScheme.error
+                                                            )
+
+                                                            AppText(
+                                                                text = "重试",
+                                                                color = LegadoTheme.colorScheme.error,
+                                                                style = LegadoTheme.typography.labelMedium
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+
+                                    else -> {}
                                 }
                             }
                         }
@@ -520,19 +531,21 @@ private fun ModuleList(
                                         item.book.bookUrl,
                                         "home:${moduleUi.globalId}:waterfall:$index"
                                     )
-                                    WaterfallItem(
-                                        item = item,
-                                        onClick = {
-                                            viewModel.onBookClick(
-                                                item.book,
-                                                sharedCoverKey
-                                            )
-                                        },
-                                        onLongClick = onBookLongClick,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        sharedCoverKey = sharedCoverKey,
-                                    )
+                                    AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                        WaterfallItem(
+                                            item = item,
+                                            onClick = {
+                                                viewModel.onBookClick(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            },
+                                            onLongClick = onBookLongClick,
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            sharedCoverKey = sharedCoverKey,
+                                        )
+                                    }
                                 }
 
                                 item(
@@ -556,20 +569,22 @@ private fun ModuleList(
                                         item.book.bookUrl,
                                         "home:${moduleUi.globalId}:infinite:$index"
                                     )
-                                    SearchBookGridItem(
-                                        book = item.book,
-                                        shelfState = item.shelfState,
-                                        onClick = {
-                                            viewModel.onBookClick(
-                                                item.book,
-                                                sharedCoverKey
-                                            )
-                                        },
-                                        onLongClick = onBookLongClick,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        sharedCoverKey = sharedCoverKey
-                                    )
+                                    AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                        SearchBookGridItem(
+                                            book = item.book,
+                                            shelfState = item.shelfState,
+                                            onClick = {
+                                                viewModel.onBookClick(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            },
+                                            onLongClick = onBookLongClick,
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            sharedCoverKey = sharedCoverKey
+                                        )
+                                    }
                                 }
 
                                 item(
@@ -592,19 +607,21 @@ private fun ModuleList(
                                     key = "content_${moduleUi.globalId}",
                                     span = StaggeredGridItemSpan.FullLine
                                 ) {
-                                    GridModule(
-                                        books = state.books,
-                                        onClick = { book, sharedCoverKey ->
-                                            viewModel.onBookClick(book, sharedCoverKey)
-                                        },
-                                        onLongClick = onBookLongClick,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        columns = columns,
-                                        maxRows = rows,
-                                        sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        sharedCoverKeySourceId = "home:${moduleUi.globalId}:grid",
-                                    )
+                                    AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                        GridModule(
+                                            books = state.books,
+                                            onClick = { book, sharedCoverKey ->
+                                                viewModel.onBookClick(book, sharedCoverKey)
+                                            },
+                                            onLongClick = onBookLongClick,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            columns = columns,
+                                            maxRows = rows,
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            sharedCoverKeySourceId = "home:${moduleUi.globalId}:grid",
+                                        )
+                                    }
                                 }
                             }
 
@@ -615,17 +632,19 @@ private fun ModuleList(
                                             key = "content_${moduleUi.globalId}",
                                             span = StaggeredGridItemSpan.FullLine
                                         ) {
-                                            BannerModule(
-                                                books = state.books,
-                                                onClick = { book, sharedCoverKey ->
-                                                    viewModel.onBookClick(book, sharedCoverKey)
-                                                },
-                                                onLongClick = onBookLongClick,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                sharedCoverKeySourceId = "home:${moduleUi.globalId}:banner",
-                                            )
+                                            AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                                BannerModule(
+                                                    books = state.books,
+                                                    onClick = { book, sharedCoverKey ->
+                                                        viewModel.onBookClick(book, sharedCoverKey)
+                                                    },
+                                                    onLongClick = onBookLongClick,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    sharedCoverKeySourceId = "home:${moduleUi.globalId}:banner",
+                                                )
+                                            }
                                         }
                                     }
 
@@ -634,17 +653,19 @@ private fun ModuleList(
                                             key = "content_${moduleUi.globalId}",
                                             span = StaggeredGridItemSpan.FullLine
                                         ) {
-                                            RankingModule(
-                                                books = state.books,
-                                                onClick = { book, sharedCoverKey ->
-                                                    viewModel.onBookClick(book, sharedCoverKey)
-                                                },
-                                                onLongClick = onBookLongClick,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                sharedCoverKeySourceId = "home:${moduleUi.globalId}:ranking",
-                                            )
+                                            AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                                RankingModule(
+                                                    books = state.books,
+                                                    onClick = { book, sharedCoverKey ->
+                                                        viewModel.onBookClick(book, sharedCoverKey)
+                                                    },
+                                                    onLongClick = onBookLongClick,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    sharedCoverKeySourceId = "home:${moduleUi.globalId}:ranking",
+                                                )
+                                            }
                                         }
                                     }
 
@@ -653,18 +674,20 @@ private fun ModuleList(
                                             key = "content_${moduleUi.globalId}",
                                             span = StaggeredGridItemSpan.FullLine
                                         ) {
-                                            GridRankingModule(
-                                                books = state.books,
-                                                onClick = { book, sharedCoverKey ->
-                                                    viewModel.onBookClick(book, sharedCoverKey)
-                                                },
-                                                onLongClick = onBookLongClick,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                rows = config["layout_rows"]?.toIntOrNull() ?: 4,
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                sharedCoverKeySourceId = "home:${moduleUi.globalId}:grid-ranking",
-                                            )
+                                            AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                                GridRankingModule(
+                                                    books = state.books,
+                                                    onClick = { book, sharedCoverKey ->
+                                                        viewModel.onBookClick(book, sharedCoverKey)
+                                                    },
+                                                    onLongClick = onBookLongClick,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    rows = config["layout_rows"]?.toIntOrNull() ?: 4,
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    sharedCoverKeySourceId = "home:${moduleUi.globalId}:grid-ranking",
+                                                )
+                                            }
                                         }
                                     }
 
@@ -673,17 +696,19 @@ private fun ModuleList(
                                             key = "content_${moduleUi.globalId}",
                                             span = StaggeredGridItemSpan.FullLine
                                         ) {
-                                            CardModule(
-                                                books = state.books,
-                                                onClick = { book, sharedCoverKey ->
-                                                    viewModel.onBookClick(book, sharedCoverKey)
-                                                },
-                                                onLongClick = onBookLongClick,
-                                                modifier = Modifier.fillMaxWidth(),
-                                                sharedTransitionScope = sharedTransitionScope,
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                sharedCoverKeySourceId = "home:${moduleUi.globalId}:card",
-                                            )
+                                            AnimatedVisibility(visible = true, enter = fadeIn()) {
+                                                CardModule(
+                                                    books = state.books,
+                                                    onClick = { book, sharedCoverKey ->
+                                                        viewModel.onBookClick(book, sharedCoverKey)
+                                                    },
+                                                    onLongClick = onBookLongClick,
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    sharedTransitionScope = sharedTransitionScope,
+                                                    animatedVisibilityScope = animatedVisibilityScope,
+                                                    sharedCoverKeySourceId = "home:${moduleUi.globalId}:card",
+                                                )
+                                            }
                                         }
                                     }
 
