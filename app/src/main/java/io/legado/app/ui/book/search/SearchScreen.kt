@@ -269,7 +269,7 @@ fun SearchScreen(
                     },
                     actions = {
                         TopBarAnimatedActionButton(
-                            checked = isSourceGroupedMode || state.matchMode == MatchMode.EXACT || state.selectedSourceTypes.isNotEmpty(),
+                            checked = isSourceGroupedMode || state.selectedSourceTypes.isNotEmpty(),
                             onCheckedChange = {
                                 viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(true))
                             },
@@ -277,6 +277,17 @@ fun SearchScreen(
                             iconUnchecked = AppIcons.Settings,
                             activeText = stringResource(R.string.setting),
                             inactiveText = stringResource(R.string.setting),
+                        )
+                        TopBarAnimatedActionButton(
+                            checked = state.matchMode == MatchMode.EXACT,
+                            onCheckedChange = {
+                                val newMode = if (state.matchMode == MatchMode.EXACT) MatchMode.DEFAULT else MatchMode.EXACT
+                                viewModel.onIntent(SearchIntent.SetMatchMode(newMode))
+                            },
+                            iconChecked = AppIcons.PrecisionSearch,
+                            iconUnchecked = AppIcons.UnPrecisionSearch,
+                            activeText = stringResource(R.string.precision_search),
+                            inactiveText = stringResource(R.string.precision_search),
                         )
                         TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
@@ -616,26 +627,6 @@ fun SearchScreen(
                 }
             )
 
-            CompactDropdownSettingItem(
-                title = stringResource(R.string.precision_search),
-                selectedValue = state.matchMode.value.toString(),
-                displayEntries = arrayOf(
-                    stringResource(R.string.precision_search),
-                    stringResource(R.string.search)
-                ),
-                entryValues = arrayOf(
-                    MatchMode.EXACT.value.toString(),
-                    MatchMode.DEFAULT.value.toString()
-                ),
-                imageVector = if (state.matchMode == MatchMode.EXACT) AppIcons.PrecisionSearch else AppIcons.UnPrecisionSearch,
-                onValueChange = { newValue ->
-                    val mode = MatchMode.of(newValue.toInt())
-                    if (mode != state.matchMode) {
-                        viewModel.onIntent(SearchIntent.SetMatchMode(mode))
-                    }
-                }
-            )
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -651,7 +642,6 @@ fun SearchScreen(
             }
 
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 SelectionItemCard(
