@@ -74,6 +74,7 @@ import io.legado.app.ui.main.homepage.modules.RankingModule
 import io.legado.app.ui.main.homepage.modules.WaterfallItem
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.theme.adaptiveContentPaddingBookshelf
 import io.legado.app.ui.widget.components.AppPullToRefresh
 import io.legado.app.ui.widget.components.AppScaffold
@@ -386,10 +387,9 @@ private fun ModuleList(
             modifier = modifier,
             verticalItemSpacing = 16.dp,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = adaptiveContentPaddingBookshelf(
+            contentPadding = adaptiveContentPadding(
                 top = paddingValues.calculateTopPadding(),
-                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
-                horizontal = 4.dp
+                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp
             ),
         ) {
             processedModules.forEach { moduleUi ->

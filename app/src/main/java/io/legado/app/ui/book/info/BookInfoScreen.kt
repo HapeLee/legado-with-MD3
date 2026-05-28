@@ -398,12 +398,18 @@ private fun BookInfoTransparentTopAppBar(
                 TopBarNavigationButton(onClick = onBackPressed)
             },
             actions = {
-                BookInfoTopBarActions(
-                    state = state,
-                    showMenu = showMenu,
-                    onShowMenuChange = onShowMenuChange,
-                    onMenuAction = onMenuAction,
-                )
+                Box(modifier = Modifier.padding(end = 12.dp)) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        BookInfoTopBarActions(
+                            state = state,
+                            showMenu = showMenu,
+                            onShowMenuChange = onShowMenuChange,
+                            onMenuAction = onMenuAction,
+                        )
+                    }
+                }
             },
             scrollBehavior = (scrollBehavior as? M3GlassScrollBehavior)?.m3Behavior,
             colors = topBarColors,
