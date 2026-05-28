@@ -135,6 +135,8 @@ fun RssArticlesPage(
         modifier = modifier.fillMaxSize(),
         topPadding = paddingValues.calculateTopPadding()
     ) {
+        val showLoadMoreFooter = !loadState.isRefreshing &&
+            (loadState.isLoadingMore || loadState.errorMessage != null || !loadState.hasMore)
         when (layout) {
             RssArticleLayout.List, RssArticleLayout.LargeCard -> {
                 val listState = rememberLazyListState()
@@ -160,13 +162,16 @@ fun RssArticlesPage(
                             onClick = onRead
                         )
                     }
-                    item {
-                        LoadMoreFooter(
-                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
-                            errorMsg = loadState.errorMessage,
-                            isEnd = !loadState.hasMore,
-                            onRetry = { rssSource?.let(viewModel::loadMore) }
-                        )
+                    if (showLoadMoreFooter) {
+                        item {
+                            LoadMoreFooter(
+                                isLoading = loadState.isLoadingMore,
+                                errorMsg = loadState.errorMessage,
+                                isEnd = !loadState.hasMore,
+                                onRetry = { rssSource?.let(viewModel::loadMore) },
+                                autoLoad = false
+                            )
+                        }
                     }
                 }
             }
@@ -197,13 +202,16 @@ fun RssArticlesPage(
                             onClick = onRead
                         )
                     }
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        LoadMoreFooter(
-                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
-                            errorMsg = loadState.errorMessage,
-                            isEnd = !loadState.hasMore,
-                            onRetry = { rssSource?.let(viewModel::loadMore) }
-                        )
+                    if (showLoadMoreFooter) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            LoadMoreFooter(
+                                isLoading = loadState.isLoadingMore,
+                                errorMsg = loadState.errorMessage,
+                                isEnd = !loadState.hasMore,
+                                onRetry = { rssSource?.let(viewModel::loadMore) },
+                                autoLoad = false
+                            )
+                        }
                     }
                 }
             }
@@ -234,13 +242,16 @@ fun RssArticlesPage(
                             onClick = onRead
                         )
                     }
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        LoadMoreFooter(
-                            isLoading = loadState.isRefreshing || loadState.isLoadingMore,
-                            errorMsg = loadState.errorMessage,
-                            isEnd = !loadState.hasMore,
-                            onRetry = { rssSource?.let(viewModel::loadMore) }
-                        )
+                    if (showLoadMoreFooter) {
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            LoadMoreFooter(
+                                isLoading = loadState.isLoadingMore,
+                                errorMsg = loadState.errorMessage,
+                                isEnd = !loadState.hasMore,
+                                onRetry = { rssSource?.let(viewModel::loadMore) },
+                                autoLoad = false
+                            )
+                        }
                     }
                 }
             }

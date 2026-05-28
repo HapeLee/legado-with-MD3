@@ -899,6 +899,7 @@ private fun ExpandedSourceSheet(
         title = sourceName,
     ) {
         val listState = rememberLazyListState()
+        val showLoadMoreFooter = isLoading || errorMsg != null || isEnd
 
         val shouldLoadMore by remember {
             derivedStateOf {
@@ -935,13 +936,16 @@ private fun ExpandedSourceSheet(
                 )
             }
 
-            item {
-                LoadMoreFooter(
-                    isLoading = isLoading,
-                    errorMsg = errorMsg,
-                    isEnd = isEnd,
-                    onRetry = onLoadMore,
-                )
+            if (showLoadMoreFooter) {
+                item {
+                    LoadMoreFooter(
+                        isLoading = isLoading,
+                        errorMsg = errorMsg,
+                        isEnd = isEnd,
+                        onRetry = onLoadMore,
+                        autoLoad = false,
+                    )
+                }
             }
         }
     }

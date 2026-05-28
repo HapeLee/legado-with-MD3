@@ -36,7 +36,7 @@ sealed interface ExploreShowSheet {
 
 sealed interface ExploreShowIntent {
     data class InitData(
-        val sourceUrl: String?,
+        val sourceUrl: String,
         val exploreUrl: String?,
     ) : ExploreShowIntent
 

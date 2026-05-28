@@ -19,7 +19,6 @@ interface ExploreRepository {
     fun getExploreGroups(): Flow<List<String>>
     fun getExploreSources(query: String, selectedGroup: String): Flow<List<BookSourcePart>>
     suspend fun getBookSource(sourceUrl: String): BookSource?
-    suspend fun saveSearchBooks(books: List<SearchBook>)
     suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind>
     suspend fun topSource(bookSource: BookSourcePart)
     suspend fun deleteSource(sourceUrl: String)
@@ -89,10 +88,6 @@ class ExploreRepositoryImpl(
     override suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {
         val source = appDb.bookSourceDao.getBookSource(sourceUrl)
         return@withContext source?.exploreKinds() ?: emptyList()
-    }
-
-    override suspend fun saveSearchBooks(books: List<SearchBook>) {
-        appDb.searchBookDao.insert(*books.toTypedArray())
     }
 
     override suspend fun topSource(bookSource: BookSourcePart) {
