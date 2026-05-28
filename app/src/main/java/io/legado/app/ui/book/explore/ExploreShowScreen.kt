@@ -330,7 +330,8 @@ fun ExploreShowScreen(
                                 isLoading = state.isLoading && !state.isRefreshing,
                                 errorMsg = state.errorMsg,
                                 isEnd = state.isEnd,
-                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
+                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) }
                             )
                         }
                     }
@@ -380,7 +381,8 @@ fun ExploreShowScreen(
                                 isLoading = state.isLoading && !state.isRefreshing,
                                 errorMsg = state.errorMsg,
                                 isEnd = state.isEnd,
-                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
+                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) }
                             )
                         }
                     }

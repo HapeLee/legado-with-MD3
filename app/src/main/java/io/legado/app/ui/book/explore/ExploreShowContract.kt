@@ -41,6 +41,7 @@ sealed interface ExploreShowIntent {
     ) : ExploreShowIntent
 
     data object LoadMore : ExploreShowIntent
+    data object ForceLoadNext : ExploreShowIntent
     data object Refresh : ExploreShowIntent
     data class SwitchKind(val kind: ExploreKind) : ExploreShowIntent
     data object ToggleLayout : ExploreShowIntent
