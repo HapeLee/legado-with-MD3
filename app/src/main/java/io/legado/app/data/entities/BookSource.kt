@@ -4,6 +4,7 @@ import android.os.Parcelable
 import android.text.TextUtils
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
@@ -19,6 +20,7 @@ import io.legado.app.data.entities.rule.TocRule
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.splitNotBlank
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Suppress("unused")
@@ -103,12 +105,24 @@ data class BookSource(
     var homepageModules: String? = null
 ) : Parcelable, BaseSource {
 
+    @Ignore
+    @IgnoredOnParcel
+    private var temporaryVariable: String? = null
+
     override fun getTag(): String {
         return bookSourceName
     }
 
     override fun getKey(): String {
         return bookSourceUrl
+    }
+
+    override fun setTemporaryVariable(variable: String?) {
+        temporaryVariable = variable
+    }
+
+    override fun getTemporaryVariable(): String? {
+        return temporaryVariable
     }
 
     override fun hashCode(): Int {

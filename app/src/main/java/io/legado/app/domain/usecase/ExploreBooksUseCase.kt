@@ -1,5 +1,6 @@
 package io.legado.app.domain.usecase
 
+import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.ExploreBooksGateway
 import kotlinx.coroutines.Dispatchers
@@ -23,15 +24,9 @@ class ExploreBooksUseCase(
         page: Int = 1,
         key: String? = null,
     ): ExploreResult = withContext(Dispatchers.IO) {
-        val base = gateway.getBookSource(sourceUrl)
-            ?: throw SourceNotFound(sourceUrl)
-        val source = args?.let { base.copy().also { s -> s.setVariable(it) } } ?: base
-        val resolvedUrl = moduleUrl
-            ?: (if (key != null) source.searchUrl else null)
-            ?: source.exploreUrl
-            ?: throw NoExploreUrl(sourceUrl)
-        val books = gateway.exploreBooks(source, resolvedUrl, page, key = key)
-        ExploreResult(resolvedUrl, books)
+        val request = resolveRequest(sourceUrl, moduleUrl, args, key)
+        val books = gateway.exploreBooks(request.source, request.url, page, key = key)
+        ExploreResult(request.url, books)
     }
 
     suspend fun executeForRanking(
@@ -39,16 +34,13 @@ class ExploreBooksUseCase(
         moduleUrl: String?,
         args: String?
     ): List<SearchBook> = withContext(Dispatchers.IO) {
-        val result = execute(sourceUrl, moduleUrl, args)
-        var books = result.books
+        val request = resolveRequest(sourceUrl, moduleUrl, args)
+        var books = gateway.exploreBooks(request.source, request.url, page = 1)
         var page = 1
         while (books.size < MAX_RANKING_BOOKS && page < MAX_RANKING_PAGES) {
             page++
             val next = try {
-                val source = gateway.getBookSource(sourceUrl)
-                    ?.let { s -> args?.let { s.copy().also { x -> x.setVariable(it) } } ?: s }
-                    ?: return@withContext books.take(MAX_RANKING_BOOKS)
-                gateway.exploreBooks(source, result.resolvedUrl, page)
+                gateway.exploreBooks(request.source, request.url, page)
             } catch (_: Exception) {
                 emptyList()
             }
@@ -58,7 +50,28 @@ class ExploreBooksUseCase(
         books.take(MAX_RANKING_BOOKS)
     }
 
+    private suspend fun resolveRequest(
+        sourceUrl: String,
+        moduleUrl: String?,
+        args: String?,
+        key: String? = null,
+    ): ExploreRequest {
+        val base = gateway.getBookSource(sourceUrl)
+            ?: throw SourceNotFound(sourceUrl)
+        val source = args?.let { base.copy().also { s -> s.setTemporaryVariable(it) } } ?: base
+        val url = moduleUrl
+            ?: (if (key != null) source.searchUrl else null)
+            ?: source.exploreUrl
+            ?: throw NoExploreUrl(sourceUrl)
+        return ExploreRequest(source, url)
+    }
+
     data class ExploreResult(val resolvedUrl: String, val books: List<SearchBook>)
+
+    private data class ExploreRequest(
+        val source: BookSource,
+        val url: String,
+    )
 
     class SourceNotFound(url: String) : Exception("Source not found: ${url.take(60)}")
     class NoExploreUrl(url: String) : Exception("No explore URL for source: ${url.take(60)}")

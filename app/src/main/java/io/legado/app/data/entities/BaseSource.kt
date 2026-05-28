@@ -265,7 +265,17 @@ interface BaseSource : JsExtensions {
      */
     @JavascriptInterface
     fun getVariable(): String {
+        getTemporaryVariable()?.let {
+            return it
+        }
         return CacheManager.get("sourceVariable_${getKey()}") ?: ""
+    }
+
+    fun setTemporaryVariable(variable: String?) {
+    }
+
+    fun getTemporaryVariable(): String? {
+        return null
     }
 
     /**
