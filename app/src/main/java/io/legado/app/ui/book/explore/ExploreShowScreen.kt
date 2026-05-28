@@ -327,7 +327,7 @@ fun ExploreShowScreen(
 
                         item(span = { GridItemSpan(maxLineSpan) }) {
                             LoadMoreFooter(
-                                isLoading = state.isLoading,
+                                isLoading = state.isLoading && !state.isRefreshing,
                                 errorMsg = state.errorMsg,
                                 isEnd = state.isEnd,
                                 onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
@@ -377,7 +377,7 @@ fun ExploreShowScreen(
 
                         item {
                             LoadMoreFooter(
-                                isLoading = state.isLoading,
+                                isLoading = state.isLoading && !state.isRefreshing,
                                 errorMsg = state.errorMsg,
                                 isEnd = state.isEnd,
                                 onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
