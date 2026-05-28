@@ -468,6 +468,7 @@ private fun BookshelfManageScreen(
                 searchKey = ""
             }
         },
+        onClearSelection = clearSelection,
         onSearchQueryChange = { searchKey = it },
         searchPlaceholder = "筛选书名/作者/书源/分组",
         topBarActions = {
