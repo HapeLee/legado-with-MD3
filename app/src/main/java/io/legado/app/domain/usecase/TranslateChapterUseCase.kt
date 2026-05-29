@@ -34,7 +34,7 @@ class TranslateChapterUseCase(
     )
 
     companion object {
-        private const val MAX_DICTIONARY_PAIRS = 50
+        private const val MAX_DICTIONARY_PAIRS = 80
     }
 
     private val dictionaryLock = Any()
@@ -198,9 +198,11 @@ class TranslateChapterUseCase(
             }
         }
 
-        // Keep only the most recent MAX_DICTIONARY_PAIRS
+        // Keep early important names and the most recently discovered terms.
         if (existing.size > MAX_DICTIONARY_PAIRS) {
-            val trimmed = existing.takeLast(MAX_DICTIONARY_PAIRS)
+            val headCount = MAX_DICTIONARY_PAIRS / 2
+            val tailCount = MAX_DICTIONARY_PAIRS - headCount
+            val trimmed = existing.take(headCount) + existing.takeLast(tailCount)
             existing.clear()
             existing.addAll(trimmed)
             changed = true
@@ -261,6 +263,7 @@ class TranslateChapterUseCase(
                 apiKey = TranslationConfig.llmApiKey,
                 model = TranslationConfig.llmModel,
                 prompt = TranslationConfig.llmPrompt,
+                temperature = TranslationConfig.llmTemperature,
                 dictionaries = dictSnapshot,
                 onUpdate = onDictionaryUpdate,
                 retryReason = lastRetryReason

@@ -31,6 +31,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         apiKey: String,
         model: String,
         prompt: String,
+        temperature: Float,
         dictionaries: List<DictPair>,
         onUpdate: ((List<DictPair>) -> Unit)?,
         retryReason: RetryReason?
@@ -55,6 +56,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                     apiKey,
                     model,
                     prompt,
+                    temperature,
                     dictionaries,
                     onUpdate,
                     retryReason
@@ -131,6 +133,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         apiKey: String,
         model: String,
         prompt: String,
+        temperature: Float,
         dictionaries: List<DictPair>,
         onUpdate: ((List<DictPair>) -> Unit)?,
         retryReason: RetryReason?
@@ -150,7 +153,10 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                 mapOf("role" to "system", "content" to systemPrompt),
                 mapOf("role" to "user", "content" to "Translate the following text:\n\n$text")
             ),
-            "temperature" to 0.8
+            "temperature" to temperature.coerceIn(
+                TranslationConstants.MIN_TEMPERATURE,
+                TranslationConstants.MAX_TEMPERATURE
+            )
         )
         val jsonBody = GSON.toJson(requestBody)
         val fullUrl = baseUrl.trimEnd('/') + "/v1/chat/completions"
