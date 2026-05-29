@@ -1768,6 +1768,8 @@
     <string name="llm_max_chars_per_chunk">每块最大字符数</string>
     <string name="llm_concurrent_chunks">并发块数</string>
     <string name="llm_retry_count">重试次数</string>
+    <string name="llm_temperature">温度</string>
+    <string name="llm_temperature_description">允许值：0-2。越靠近 0 越严谨，越靠近 2 越有创造力。</string>
     <string name="translation_prompt">翻译提示词</string>
     <string name="llm_prompt">提示词</string>
     <string name="translate_chapter">翻译章节</string>

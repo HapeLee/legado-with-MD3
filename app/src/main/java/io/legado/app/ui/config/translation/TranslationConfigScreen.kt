@@ -109,6 +109,16 @@ fun TranslationConfigScreen(
                             onConfirm = { TranslationConfig.llmModel = it }
                         )
 
+                        SliderSettingItem(
+                            title = stringResource(R.string.llm_temperature),
+                            value = TranslationConfig.llmTemperature,
+                            defaultValue = TranslationConfig.DEFAULT_TEMPERATURE,
+                            valueRange = TranslationConfig.MIN_TEMPERATURE..TranslationConfig.MAX_TEMPERATURE,
+                            steps = 19,
+                            description = stringResource(R.string.llm_temperature_description),
+                            onValueChange = { TranslationConfig.llmTemperature = it }
+                        )
+
                         InputSettingItem(
                             title = stringResource(R.string.llm_prompt),
                             value = tempPrompt,

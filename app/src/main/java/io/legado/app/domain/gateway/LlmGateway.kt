@@ -2,6 +2,7 @@ package io.legado.app.domain.gateway
 
 import io.legado.app.domain.model.DictPair
 import io.legado.app.domain.model.RetryReason
+import io.legado.app.domain.model.TranslationConstants
 
 interface LlmGateway {
     suspend fun translate(
@@ -12,6 +13,7 @@ interface LlmGateway {
         apiKey: String,
         model: String,
         prompt: String,
+        temperature: Float = TranslationConstants.DEFAULT_TEMPERATURE,
         dictionaries: List<DictPair> = emptyList(),
         onUpdate: ((List<DictPair>) -> Unit)? = null,
         retryReason: RetryReason? = null

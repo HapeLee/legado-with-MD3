@@ -51,6 +51,17 @@ object TranslationConfig {
         2
     )
 
+    private var storedLlmTemperature by prefDelegate(
+        PreferKey.llmTemperature,
+        TranslationConstants.DEFAULT_TEMPERATURE
+    )
+
+    var llmTemperature: Float
+        get() = storedLlmTemperature.coerceIn(MIN_TEMPERATURE, MAX_TEMPERATURE)
+        set(value) {
+            storedLlmTemperature = value.coerceIn(MIN_TEMPERATURE, MAX_TEMPERATURE)
+        }
+
     var llmPrompt by prefDelegate(
         PreferKey.llmPrompt,
         TranslationConstants.DEFAULT_PROMPT
@@ -62,6 +73,9 @@ object TranslationConfig {
     val providerDisplayNames get() = TranslationConstants.providerDisplayNames
     val providerValues get() = TranslationConstants.providerValues
     val targetLanguages get() = TranslationConstants.targetLanguages
+    const val MIN_TEMPERATURE = TranslationConstants.MIN_TEMPERATURE
+    const val MAX_TEMPERATURE = TranslationConstants.MAX_TEMPERATURE
+    const val DEFAULT_TEMPERATURE = TranslationConstants.DEFAULT_TEMPERATURE
     const val DEFAULT_PROMPT = TranslationConstants.DEFAULT_PROMPT
     const val OUTPUT_FORMAT = TranslationConstants.OUTPUT_FORMAT
 }

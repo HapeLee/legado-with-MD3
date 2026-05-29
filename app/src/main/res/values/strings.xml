@@ -1709,6 +1709,8 @@
     <string name="llm_max_chars_per_chunk">Max Chars Per Chunk</string>
     <string name="llm_concurrent_chunks">Concurrent Chunks</string>
     <string name="llm_retry_count">Retry Count</string>
+    <string name="llm_temperature">Temperature</string>
+    <string name="llm_temperature_description">Allowed range: 0-2. Closer to 0 is stricter; closer to 2 is more creative.</string>
     <string name="translation_prompt">Translation Prompt</string>
     <string name="llm_prompt">Prompt</string>
     <string name="translate_chapter">Translate Chapter</string>

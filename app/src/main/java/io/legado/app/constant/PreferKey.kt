@@ -331,6 +331,7 @@ object PreferKey {
     const val llmMaxCharsPerChunk = "llmMaxCharsPerChunk"
     const val llmConcurrentChunks = "llmConcurrentChunks"
     const val llmRetryCount = "llmRetryCount"
+    const val llmTemperature = "llmTemperature"
     const val llmPrompt = "llmPrompt"
 
     const val homepageModuleOrder = "homepageModuleOrder"
