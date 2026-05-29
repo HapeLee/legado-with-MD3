@@ -9,7 +9,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.storage.Backup
+import io.legado.app.help.storage.BackupRestoreLock
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.webdav.Authorization
 import io.legado.app.lib.webdav.WebDav
@@ -122,10 +124,13 @@ object AppWebDav {
     suspend fun restoreWebDav(name: String) {
         authorization?.let {
             val webDav = WebDav(rootWebDavUrl + name, it)
-            webDav.downloadTo(Backup.zipFilePath, true)
-            FileUtils.delete(Backup.backupPath)
-            ZipUtils.unZipToPath(File(Backup.zipFilePath), Backup.backupPath)
-            Restore.restoreLocked(Backup.backupPath)
+            BackupRestoreLock.withLock {
+                webDav.downloadTo(Backup.zipFilePath, true)
+                FileUtils.delete(Backup.backupPath)
+                ZipUtils.unZipToPath(File(Backup.zipFilePath), Backup.backupPath)
+                Restore.restoreUnzipped(Backup.backupPath)
+                LocalConfig.lastBackup = System.currentTimeMillis()
+            }
         }
     }
 

@@ -55,8 +55,6 @@ import io.legado.app.utils.openInputStream
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -70,38 +68,43 @@ import java.io.FileInputStream
 object Restore : KoinComponent {
 
     private val settingsRepository: SettingsRepository by inject()
-    private val mutex = Mutex()
-
     private const val TAG = "Restore"
 
     suspend fun restore(context: Context, uri: Uri) {
-        LogUtils.d(TAG, "开始恢复备份 uri:$uri")
-        kotlin.runCatching {
-            FileUtils.delete(Backup.backupPath)
-            if (uri.isContentScheme()) {
-                DocumentFile.fromSingleUri(context, uri)!!.openInputStream()!!.use {
-                    ZipUtils.unZipToPath(it, Backup.backupPath)
+        BackupRestoreLock.withLock {
+            LogUtils.d(TAG, "开始恢复备份 uri:$uri")
+            val unzipResult = kotlin.runCatching {
+                FileUtils.delete(Backup.backupPath)
+                if (uri.isContentScheme()) {
+                    DocumentFile.fromSingleUri(context, uri)!!.openInputStream()!!.use {
+                        ZipUtils.unZipToPath(it, Backup.backupPath)
+                    }
+                } else {
+                    ZipUtils.unZipToPath(File(uri.path!!), Backup.backupPath)
                 }
-            } else {
-                ZipUtils.unZipToPath(File(uri.path!!), Backup.backupPath)
+            }.onFailure {
+                AppLog.put("复制解压文件出错\n${it.localizedMessage}", it)
             }
-        }.onFailure {
-            AppLog.put("复制解压文件出错\n${it.localizedMessage}", it)
-            return
-        }
-        kotlin.runCatching {
-            restoreLocked(Backup.backupPath)
-            LocalConfig.lastBackup = System.currentTimeMillis()
-        }.onFailure {
-            appCtx.toastOnUi("恢复备份出错\n${it.localizedMessage}")
-            AppLog.put("恢复备份出错\n${it.localizedMessage}", it)
+            if (unzipResult.isSuccess) {
+                kotlin.runCatching {
+                    restoreUnzipped(Backup.backupPath)
+                    LocalConfig.lastBackup = System.currentTimeMillis()
+                }.onFailure {
+                    appCtx.toastOnUi("恢复备份出错\n${it.localizedMessage}")
+                    AppLog.put("恢复备份出错\n${it.localizedMessage}", it)
+                }
+            }
         }
     }
 
     suspend fun restoreLocked(path: String) {
-        mutex.withLock {
-            restore(path)
+        BackupRestoreLock.withLock {
+            restoreUnzipped(path)
         }
+    }
+
+    internal suspend fun restoreUnzipped(path: String) {
+        restore(path)
     }
 
     private suspend fun restore(path: String) {

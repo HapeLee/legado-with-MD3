@@ -34,8 +34,6 @@ import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
@@ -57,8 +55,6 @@ object Backup {
     val zipFilePath = "${appCtx.externalFiles.absolutePath}${File.separator}tmp_backup.zip"
 
     private const val TAG = "Backup"
-
-    private val mutex = Mutex()
 
     private val backupFileNames by lazy {
         arrayOf(
@@ -107,7 +103,7 @@ object Backup {
     fun autoBack(context: Context) {
         if (shouldBackup()) {
             Coroutine.async {
-                mutex.withLock {
+                BackupRestoreLock.withLock {
                     if (shouldBackup()) {
                         val backupZipFileName = getNowZipFileName()
                         if (!AppWebDav.hasBackUp(backupZipFileName)) {
@@ -124,7 +120,7 @@ object Backup {
     }
 
     suspend fun backupLocked(context: Context, path: String?, mode: String = "both") {
-        mutex.withLock {
+        BackupRestoreLock.withLock {
             withContext(IO) {
                 backup(context, path, mode)
             }
