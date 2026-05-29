@@ -169,18 +169,24 @@ fun BackupConfigScreen(
         uri?.let {
             showLoadingDialog = true
             loadingText = context.getString(R.string.on_restore)
-            scope.launch {
-                try {
-                    Restore.restore(context, uri)
+            viewModel.restore(
+                context = context,
+                uri = uri,
+                onSuccess = {
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar(context.getString(R.string.restore_success))
-                } catch (e: Exception) {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(context.getString(R.string.restore_success))
+                    }
+                },
+                onError = { error ->
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.restore_fail_with_error, e.localizedMessage)
-                    )
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            context.getString(R.string.restore_fail_with_error, error)
+                        )
+                    }
                 }
-            }
+            )
         }
     }
 
