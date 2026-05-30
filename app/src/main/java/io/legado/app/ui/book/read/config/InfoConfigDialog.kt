@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.config
 
+import android.content.DialogInterface
 import android.os.Bundle
 import android.view.View
 import com.jaredrummler.android.colorpicker.ColorPickerDialog
@@ -21,6 +22,7 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
 
     private val binding by viewBinding(DialogReadInfoBinding::bind)
     private val callBack get() = activity as? ReadBookActivity
+    private var dismissBySelf = false;
 
     override val curFontPath: String
         get() = ReadBookConfig.headerFont
@@ -47,6 +49,11 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
         }
     }
 
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        if(dismissBySelf) return;
+        callBack?.showReadStyle()
+    }
     private fun initView() {
         ReadTipConfig.run {
             tipNames.let { tipNames ->
@@ -66,6 +73,7 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
         }
         binding.btnPaddingSetting.setOnClickListener {
             callBack?.showPaddingConfig()
+            dismissBySelf = true;
             dismissAllowingStateLoss()
         }
         upTvHeaderColor()
