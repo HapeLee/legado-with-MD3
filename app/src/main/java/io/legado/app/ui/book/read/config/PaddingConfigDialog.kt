@@ -8,6 +8,7 @@ import io.legado.app.base.BaseDialogFragment
 import io.legado.app.constant.EventBus
 import io.legado.app.databinding.DialogReadPaddingBinding
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.viewbindingdelegate.viewBinding
@@ -15,7 +16,6 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 class PaddingConfigDialog : BaseDialogFragment(R.layout.dialog_read_padding) {
 
     private val binding by viewBinding(DialogReadPaddingBinding::bind)
-
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         initData()
         initView()
@@ -24,6 +24,7 @@ class PaddingConfigDialog : BaseDialogFragment(R.layout.dialog_read_padding) {
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         ReadBookConfig.save()
+        (activity as? ReadBookActivity)?.showInfoConfig()
     }
 
     override fun onStart() {
