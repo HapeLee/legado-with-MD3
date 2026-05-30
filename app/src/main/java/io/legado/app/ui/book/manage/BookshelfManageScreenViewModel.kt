@@ -346,7 +346,7 @@ class BookshelfManageScreenViewModel(
         booksJob?.cancel()
         booksJob = viewModelScope.launch {
             bookRepository.flowBookShelfByGroup(groupId).map { books ->
-                val booksDownload = books.filter { !it.isAudio }.map { it.toLightBook() }
+                val booksDownload = books.map { it.toLightBook() }
                 val bookSort = bookshelfManageScreenConfig.getBookSortByGroupId(groupId)
                 val isDescending = bookshelfManageScreenConfig.bookshelfSortOrder == 1
                 bookSort to when (bookSort) {
