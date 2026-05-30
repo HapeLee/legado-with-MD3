@@ -24,7 +24,10 @@ class PaddingConfigDialog : BaseDialogFragment(R.layout.dialog_read_padding) {
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
         ReadBookConfig.save()
-        (activity as? ReadBookActivity)?.showInfoConfig()
+        val activity = activity ?: return
+        if (!activity.isFinishing) {
+            (activity as? ReadBookActivity)?.showInfoConfig()
+        }
     }
 
     override fun onStart() {

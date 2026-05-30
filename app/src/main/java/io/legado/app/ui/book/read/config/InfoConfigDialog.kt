@@ -22,7 +22,7 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
 
     private val binding by viewBinding(DialogReadInfoBinding::bind)
     private val callBack get() = activity as? ReadBookActivity
-    private var dismissBySelf = false;
+    private var dismissBySelf = false
 
     override val curFontPath: String
         get() = ReadBookConfig.headerFont
@@ -51,8 +51,11 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        if(dismissBySelf) return;
-        callBack?.showReadStyle()
+        if(dismissBySelf) return
+        val activity = activity ?: return
+        if (!activity.isFinishing) {
+            callBack?.showReadStyle()
+        }
     }
     private fun initView() {
         ReadTipConfig.run {
@@ -73,7 +76,7 @@ class InfoConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_info
         }
         binding.btnPaddingSetting.setOnClickListener {
             callBack?.showPaddingConfig()
-            dismissBySelf = true;
+            dismissBySelf = true
             dismissAllowingStateLoss()
         }
         upTvHeaderColor()
