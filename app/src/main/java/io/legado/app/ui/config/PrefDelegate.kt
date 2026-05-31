@@ -12,11 +12,12 @@ import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefLong
 import io.legado.app.utils.getPrefString
+import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
-import io.legado.app.utils.putPrefString
+import io.legado.app.utils.putPrefStringSync
 import splitties.init.appCtx
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -84,7 +85,7 @@ fun <T> prefDelegate(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (_value.value != value) {
                 when (value) {
-                    is String? -> appCtx.putPrefString(key, value)
+                    is String? -> appCtx.putPrefStringSync(key, value)
                     is Int -> appCtx.putPrefInt(key, value)
                     is Boolean -> appCtx.putPrefBoolean(key, value)
                     is Long -> appCtx.putPrefLong(key, value)
