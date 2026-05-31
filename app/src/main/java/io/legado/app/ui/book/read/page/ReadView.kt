@@ -49,11 +49,17 @@ import kotlin.math.abs
 /**
  * 阅读视图
  */
-class ReadView(context: Context, attrs: AttributeSet) :
+class ReadView(
+    context: Context,
+    attrs: AttributeSet? = null,
+    callBack: CallBack? = null,
+    contentCallBack: ContentTextView.CallBack? = null,
+) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    val callBack: CallBack get() = activity as CallBack
+    private var injectedCallBack: CallBack? = callBack
+    val callBack: CallBack get() = injectedCallBack ?: activity as CallBack
     var pageFactory: TextPageFactory = TextPageFactory(this)
     var pageDelegate: PageDelegate? = null
         private set(value) {
@@ -63,9 +69,9 @@ class ReadView(context: Context, attrs: AttributeSet) :
             upContent()
         }
     override var isScroll = false
-    val prevPage by lazy { PageView(context) }
-    val curPage by lazy { PageView(context) }
-    val nextPage by lazy { PageView(context) }
+    val prevPage by lazy { PageView(context, contentCallBack) }
+    val curPage by lazy { PageView(context, contentCallBack) }
+    val nextPage by lazy { PageView(context, contentCallBack) }
     val defaultAnimationSpeed = 300
     private var pressDown = false
     private var isMove = false

@@ -6,8 +6,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
@@ -27,6 +32,9 @@ import io.legado.app.ui.book.import.remote.RemoteBookScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
+import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookRouteScreen
+import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewScreen
 import io.legado.app.ui.book.readRecord.ReadRecordScreen
 import io.legado.app.ui.book.search.SearchIntent
@@ -239,6 +247,68 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    entry<MainRouteReadBook> { route ->
+        val readBookViewModel = koinViewModel<ReadBookViewModel>(
+            key = route.bookUrl ?: "last-read"
+        )
+        val controller = remember(readBookViewModel) {
+            ReadBookController(this@mainEntryProvider, readBookViewModel)
+        }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val readIntent = remember(route) {
+            MainActivity.createReadBookIntent(
+                context = this@mainEntryProvider,
+                bookUrl = route.bookUrl,
+                readAloud = route.readAloud,
+                inBookshelf = route.inBookshelf,
+                chapterChanged = route.chapterChanged,
+            )
+        }
+
+        LaunchedEffect(route, readBookViewModel) {
+            readBookViewModel.initReadBookConfig(readIntent)
+            readBookViewModel.initData(readIntent)
+            controller.onRouteInitialized()
+        }
+
+        DisposableEffect(controller, lifecycleOwner, route.readAloud) {
+            activeReadBookController = controller
+            MainActivity.hasActiveReadBookRoute = true
+            controller.onClose = { onNavigateBack() }
+            controller.onStartContentLoadFinish = {
+                if (route.readAloud) {
+                    io.legado.app.model.ReadBook.readAloud()
+                }
+            }
+            val lifecycleObserver = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> controller.onResume()
+                    Lifecycle.Event.ON_PAUSE -> controller.onPause()
+                    else -> Unit
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                controller.onResume()
+            }
+            onDispose {
+                controller.onPause()
+                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+                if (activeReadBookController === controller) {
+                    activeReadBookController = null
+                }
+                MainActivity.hasActiveReadBookRoute = false
+                controller.clearTts()
+            }
+        }
+
+        ReadBookRouteScreen(
+            viewModel = readBookViewModel,
+            host = controller,
+            controller = controller,
+        )
+    }
+
     entry<MainRouteSearch> { route ->
         val searchViewModel = koinViewModel<SearchViewModel>()
 
@@ -421,6 +491,15 @@ fun MainActivity.mainEntryProvider(
             onFinish = { _, _ -> onNavigateBack() },
             onOpenSearch = { keyword ->
                 onNavigateToRoute(MainRouteSearch(key = keyword))
+            },
+            onOpenReader = { bookUrl, inBookshelf, chapterChanged ->
+                onNavigateToRoute(
+                    MainRouteReadBook(
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
+                        chapterChanged = chapterChanged,
+                    )
+                )
             },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
                 onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl, origin, coverPath))

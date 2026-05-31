@@ -576,7 +576,7 @@ fun ChangeSourceSheet(
 
     val performAction: (SearchBook, Boolean) -> Unit = { searchBook, replace ->
         loadingAction = true
-        val book = viewModel.bookMap[searchBook.primaryStr()] ?: searchBook.toBook()
+        val book = viewModel.getBookFromMap(searchBook.primaryStr()) ?: searchBook.toBook()
         viewModel.getToc(
             book,
             onSuccess = { toc, source ->

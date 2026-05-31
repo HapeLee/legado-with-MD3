@@ -20,7 +20,6 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.model.ReadBook
-import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -41,10 +40,12 @@ import java.util.Date
 /**
  * 页面视图
  */
-class PageView(context: Context) : FrameLayout(context) {
+class PageView(
+    context: Context,
+    callBack: ContentTextView.CallBack? = null,
+) : FrameLayout(context) {
 
     private val binding = ViewBookPageBinding.inflate(LayoutInflater.from(context), this, true)
-    private val readBookActivity get() = activity as? ReadBookActivity
     private var battery = 100
     private var tvTitle: BatteryView? = null
     private var tvTime: BatteryView? = null
@@ -80,6 +81,7 @@ class PageView(context: Context) : FrameLayout(context) {
         }
 
     init {
+        callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
         binding.vwNavigationBar.applyNavigationBarPadding()
@@ -160,7 +162,7 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     fun upStatusBar() = with(binding.vwStatusBar) {
         setPadding(paddingLeft, context.statusBarHeight, paddingRight, paddingBottom)
-        isGone = ReadBookConfig.hideStatusBar || readBookActivity?.isInMultiWindow == true
+        isGone = ReadBookConfig.hideStatusBar || activity?.isInMultiWindowMode == true
     }
 
     fun upNavigationBar() {

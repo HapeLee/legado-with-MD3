@@ -35,7 +35,7 @@ fun SmallTonalButton(
                 onClick = onClick,
                 modifier = modifier.size(SmallMiuixButtonSize),
                 enabled = enabled,
-                backgroundColor = LegadoTheme.colorScheme.surfaceContainer
+                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh
             ) {
                 MiuixIcon(
                     imageVector = icon,
@@ -49,7 +49,7 @@ fun SmallTonalButton(
                 modifier = modifier,
                 showIndication = true,
                 colors = CardDefaults.defaultColors(
-                    color = LegadoTheme.colorScheme.surfaceContainer,
+                    color = LegadoTheme.colorScheme.surfaceContainerHigh,
                     contentColor = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             ) {

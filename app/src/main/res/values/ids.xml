@@ -14,4 +14,9 @@
 
     <item name="bettermovementmethod_highlight_background_span" type="id" />
 
+    <item name="text_menu_position" type="id" />
+    <item name="cursor_left" type="id" />
+    <item name="cursor_right" type="id" />
+    <item name="navigation_bar" type="id" />
+
 </resources>

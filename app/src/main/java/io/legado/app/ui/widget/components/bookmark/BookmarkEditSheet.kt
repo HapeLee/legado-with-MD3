@@ -32,66 +32,78 @@ fun BookmarkEditSheet(
     onSave: (Bookmark) -> Unit,
     onDelete: (Bookmark) -> Unit
 ) {
-
-    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
-    var bookText by remember(bookmark) { mutableStateOf(bookmark.bookText) }
-    var content by remember(bookmark) { mutableStateOf(bookmark.content) }
-
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismiss,
         title = bookmark.chapterName,
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
+        BookmarkEditContent(
+            bookmark = bookmark,
+            onSave = onSave,
+            onDelete = onDelete,
+        )
+    }
+}
+
+@Composable
+fun BookmarkEditContent(
+    bookmark: Bookmark,
+    onSave: (Bookmark) -> Unit,
+    onDelete: (Bookmark) -> Unit
+) {
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var bookText by remember(bookmark) { mutableStateOf(bookmark.bookText) }
+    var content by remember(bookmark) { mutableStateOf(bookmark.content) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+    ) {
+        AppTextFieldSurface(
+            value = bookText,
+            onValueChange = { bookText = it },
+            label = "原文",
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 10
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        AppTextFieldSurface(
+            value = content,
+            onValueChange = { content = it },
+            label = "摘要/笔记",
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 5
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            AppTextFieldSurface(
-                value = bookText,
-                onValueChange = { bookText = it },
-                label = "原文",
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 10
+            SecondaryButton(
+                onClick = { showDeleteConfirmDialog = true },
+                modifier = Modifier.weight(1f),
+                text = "删除"
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            AppTextFieldSurface(
-                value = content,
-                onValueChange = { content = it },
-                label = "摘要/笔记",
-                modifier = Modifier.fillMaxWidth(),
-                maxLines = 5
+            PrimaryButton(
+                onClick = {
+                    val newBookmark = bookmark.apply {
+                        this.bookText = bookText
+                        this.content = content
+                    }
+                    onSave(newBookmark)
+                },
+                modifier = Modifier.weight(1f),
+                text = "保存"
             )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                SecondaryButton(
-                    onClick = { showDeleteConfirmDialog = true },
-                    modifier = Modifier.weight(1f),
-                    text = "删除"
-                )
-
-                PrimaryButton(
-                    onClick = {
-                        val newBookmark = bookmark.apply {
-                            this.bookText = bookText
-                            this.content = content
-                        }
-                        onSave(newBookmark)
-                    },
-                    modifier = Modifier.weight(1f),
-                    text = "保存"
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
         }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 
     AppAlertDialog(

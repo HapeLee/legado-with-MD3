@@ -11,7 +11,6 @@ import coil.ImageLoader
 import coil.request.SuccessResult
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
-
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
@@ -56,12 +55,13 @@ import io.legado.app.ui.main.MainIntent
 import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.UrlUtil
+import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
@@ -76,7 +76,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.collections.immutable.toImmutableList
 import java.io.ByteArrayOutputStream
 
 class BookInfoViewModel(
@@ -346,7 +345,7 @@ class BookInfoViewModel(
                 syncUiState()
             }
 
-            io.legado.app.ui.book.read.ReadBookActivity.RESULT_DELETED -> {
+            READER_RESULT_DELETED -> {
                 emitEffect(BookInfoEffect.Finish(resultCode = RESULT_OK))
             }
         }

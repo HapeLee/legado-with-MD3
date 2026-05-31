@@ -5,6 +5,9 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.text.format.DateUtils
+import android.view.InputDevice
+import android.view.KeyEvent
+import android.view.MotionEvent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -38,11 +41,13 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
-import io.legado.app.ui.book.read.ReadBookActivity
+import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
+import io.legado.app.utils.LogUtils
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
@@ -60,6 +65,9 @@ import kotlin.coroutines.suspendCoroutine
 open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     companion object {
+        @Volatile
+        var hasActiveReadBookRoute: Boolean = false
+
         fun createLauncherIntent(context: Context): Intent =
             MainIntent.createLauncherIntent(context)
 
@@ -91,6 +99,20 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         fun createBookCacheManageIntent(context: Context): Intent =
             MainIntent.createBookCacheManageIntent(context)
 
+        fun createReadBookIntent(
+            context: Context,
+            bookUrl: String? = null,
+            readAloud: Boolean = false,
+            inBookshelf: Boolean = true,
+            chapterChanged: Boolean = false,
+        ): Intent = MainIntent.createReadBookIntent(
+            context = context,
+            bookUrl = bookUrl,
+            readAloud = readAloud,
+            inBookshelf = inBookshelf,
+            chapterChanged = chapterChanged,
+        )
+
         fun createSearchIntent(
             context: Context,
             key: String? = null,
@@ -118,6 +140,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     private val viewModel by viewModel<MainViewModel>()
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
+    internal var activeReadBookController: ReadBookController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -251,7 +274,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 true
             }
             getPrefBoolean(PreferKey.defaultToRead) -> {
-                startActivity<ReadBookActivity>()
+                setIntent(createReadBookIntent(this))
                 false
             }
             else -> false
@@ -341,6 +364,54 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         if (AppConfig.autoRefreshBook) {
             outState.putBoolean("isAutoRefreshedBook", true)
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val keyCode = event.keyCode
+        val isDown = event.action == KeyEvent.ACTION_DOWN
+        if (keyCode == KeyEvent.KEYCODE_MENU && isDown) {
+            activeReadBookController?.viewModel?.onIntent(
+                io.legado.app.ui.book.read.ReadBookIntent.ToggleMenu
+            )
+            if (activeReadBookController != null) return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        val controller = activeReadBookController ?: return super.onGenericMotionEvent(event)
+        if (0 != (event.source and InputDevice.SOURCE_CLASS_POINTER) &&
+            event.action == MotionEvent.ACTION_SCROLL
+        ) {
+            val axisValue = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            LogUtils.d("onGenericMotionEvent", "axisValue = $axisValue")
+            controller.mouseWheelPage(
+                if (axisValue < 0.0f) PageDirection.NEXT else PageDirection.PREV
+            )
+            return true
+        }
+        if (0 != (event.source and InputDevice.SOURCE_CLASS_JOYSTICK) &&
+            event.action == MotionEvent.ACTION_MOVE
+        ) {
+            val yAxis = event.getAxisValue(MotionEvent.AXIS_Y)
+            if (kotlin.math.abs(yAxis) > 0.5f) {
+                controller.handleKeyPage(
+                    if (yAxis > 0) PageDirection.NEXT else PageDirection.PREV
+                )
+                return true
+            }
+        }
+        return super.onGenericMotionEvent(event)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (activeReadBookController?.onKeyDown(keyCode, event) == true) return true
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (activeReadBookController?.onKeyUp(keyCode, event) == true) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun onDestroy() {

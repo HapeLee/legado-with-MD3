@@ -19,7 +19,8 @@ fun ValueStepper(
     displayValue: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier,
@@ -31,7 +32,8 @@ fun ValueStepper(
                 val newValue = (value.toInt() - 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Remove
+            enabled = enabled,
+            icon = Icons.Default.Remove,
         )
         TextCard(
             cornerRadius = 8.dp,
@@ -46,7 +48,8 @@ fun ValueStepper(
                 val newValue = (value.toInt() + 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Add
+            enabled = enabled,
+            icon = Icons.Default.Add,
         )
     }
 }
