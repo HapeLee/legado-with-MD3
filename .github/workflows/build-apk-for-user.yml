@@ -39,10 +39,14 @@ jobs:
           echo "清空18PlusList.txt"
           echo "" > $GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
 
+      - name: Remove Aliyun mirrors (unreliable in CI)
+        run: |
+          sed -i '/maven.aliyun.com/d' settings.gradle
+
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleAppDebug --no-daemon
+          ./gradlew assembleAppDebug --no-daemon --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
