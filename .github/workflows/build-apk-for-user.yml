@@ -1,0 +1,105 @@
+name: Build APK for User
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '要构建的分支'
+        required: true
+        default: 'trae/solo-agent-vhkVM3'
+      release_tag:
+        description: 'Release 标签 (留空则不上传到 Release)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Clear 18PlusList.txt
+        run: |
+          echo "清空18PlusList.txt"
+          echo "" > $GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
+
+      - name: Build Debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleAppDebug --no-daemon
+        env:
+          COMMIT_NUMBER: ${{ github.run_number }}
+          APP_VERSION_NAME: debug-${{ github.run_number }}
+
+      - name: Check Build Output
+        run: |
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          echo "检查 APK 输出目录: $APK_PATH"
+          ls -la "$APK_PATH" || true
+          if [ -z "$(find "$APK_PATH" -name "*.apk" -print -quit)" ]; then
+            echo "未找到 APK 文件！"
+            exit 1
+          fi
+
+      - name: Rename APK Files
+        run: |
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          cd "$APK_PATH"
+          for f in *.apk; do
+            mv "$f" "legado-debug-${GITHUB_RUN_NUMBER}-${f}"
+          done
+          ls -la
+
+      - name: Create ZIP Archive
+        run: |
+          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}.zip"
+          cd "$APK_PATH"
+          zip "$GITHUB_WORKSPACE/$ZIP_NAME" *.apk
+          echo "ZIP 文件已创建: $ZIP_NAME"
+          ls -la "$GITHUB_WORKSPACE/$ZIP_NAME"
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado-apks-${{ github.run_number }}
+          path: app/build/outputs/apk/app/debug/*.apk
+
+      - name: Upload ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado-apks-zip-${{ github.run_number }}
+          path: legado-debug-apks-*.zip
+
+      - name: Create Release and Upload
+        if: ${{ github.event.inputs.release_tag != '' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag }}
+          name: Legado Debug Build ${{ github.event.inputs.release_tag }}
+          body: |
+            自动构建的 Debug 版本
+            - 分支: ${{ github.event.inputs.branch }}
+            - 构建号: ${{ github.run_number }}
+          prerelease: true
+          files: |
+            app/build/outputs/apk/app/debug/*.apk
+            legado-debug-apks-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
