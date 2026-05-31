@@ -12,11 +12,11 @@ import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefLong
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
+import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
 import splitties.init.appCtx
 import kotlin.properties.ReadWriteProperty
