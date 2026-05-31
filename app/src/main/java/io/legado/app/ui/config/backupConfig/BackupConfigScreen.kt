@@ -624,10 +624,8 @@ fun BackupConfigScreen(
 
     AppAlertDialog(
         show = showLoadingDialog,
-        onDismiss = {},
-        onConfirm = {},
-        title = loadingText,
-        onDismissRequest = { showLoadingDialog = false }
+        onDismissRequest = { showLoadingDialog = false },
+        title = loadingText
     )
 
 }

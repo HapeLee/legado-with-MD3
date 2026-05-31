@@ -7,25 +7,18 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        //原仓库
         gradlePluginPortal()
         mavenCentral()
-        //镜像仓库,无法连接源仓库自行启用镜像仓库,不要提交修改
-        //maven { url "https://maven-central-asia.storage-download.googleapis.com/maven2/" }
-        //maven { url 'https://maven.aliyun.com/repository/google' }
-        //maven { url 'https://maven.aliyun.com/repository/public' }
-        //maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-        //maven { url 'https://repo.huaweicloud.com/repository/maven/' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
 plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
-
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        //原仓库
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -33,6 +26,8 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
         maven {
             url = uri("https://jitpack.io")
             content {
@@ -40,12 +35,6 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
-
-        //镜像仓库,无法连接源仓库自行启用镜像仓库,不要提交修改
-        //maven { url "https://maven-central-asia.storage-download.googleapis.com/maven2/" }
-        //maven { url 'https://maven.aliyun.com/repository/google' }
-        //maven { url 'https://maven.aliyun.com/repository/public' }
-        //maven { url 'https://repo.huaweicloud.com/repository/maven/' }
     }
 }
 rootProject.name = 'legado'
