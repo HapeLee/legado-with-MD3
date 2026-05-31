@@ -17,6 +17,7 @@ import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
+import io.legado.app.utils.putPrefStringSync
 import splitties.init.appCtx
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -34,6 +35,7 @@ fun <T> prefDelegate(
     key: String,
     defaultValue: T,
     lifecycleOwner: LifecycleOwner? = null,
+    sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefDelegate<T> {
     return object : PrefDelegate<T>, SharedPreferences.OnSharedPreferenceChangeListener, DefaultLifecycleObserver {
@@ -84,7 +86,7 @@ fun <T> prefDelegate(
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (_value.value != value) {
                 when (value) {
-                    is String? -> appCtx.putPrefString(key, value)
+                    is String? -> if (sync) appCtx.putPrefStringSync(key, value) else appCtx.putPrefString(key, value)
                     is Int -> appCtx.putPrefInt(key, value)
                     is Boolean -> appCtx.putPrefBoolean(key, value)
                     is Long -> appCtx.putPrefLong(key, value)
@@ -111,8 +113,9 @@ fun <T> prefStateDelegate(
     key: String,
     defaultValue: T,
     lifecycleOwner: LifecycleOwner? = null,
+    sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefStateDelegate<T> {
-    val delegate = prefDelegate(key, defaultValue, lifecycleOwner, onValueChange)
+    val delegate = prefDelegate(key, defaultValue, lifecycleOwner, sync, onValueChange)
     return PrefStateDelegate(delegate)
 }
