@@ -39,8 +39,12 @@ jobs:
           languages: ${{ matrix.language }}
           build-mode: manual
 
+      - name: Remove Aliyun mirrors (unreliable in CI)
+        run: |
+          sed -i '/maven.aliyun.com/d' settings.gradle
+
       - name: Build with Gradle
-        run: ./gradlew assembleAppDebug --no-daemon -Dorg.gradle.warning.mode=none
+        run: ./gradlew assembleAppDebug --no-daemon --no-configuration-cache -Dorg.gradle.warning.mode=none
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
