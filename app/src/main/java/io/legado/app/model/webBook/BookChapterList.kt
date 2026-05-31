@@ -85,13 +85,13 @@ object BookChapterList {
                         chapterList.addAll(chapterData.first)
                     }
                 }
-                Debug.log(bookSource.bookSourceUrl, "◇目录总页数:${nextUrlList.size}")
+                Debug.log(bookSource.bookSourceUrl, "◇Total catalog pages:${nextUrlList.size}")
             }
 
             else -> {
                 Debug.log(
                     bookSource.bookSourceUrl,
-                    "◇并发解析目录,总页数:${chapterData.second.size}"
+                    "◇Concurrent catalog parsing, total pages:${chapterData.second.size}"
                 )
                 flow {
                     for (urlStr in chapterData.second) {
@@ -127,7 +127,7 @@ object BookChapterList {
         if (!book.getReverseToc()) {
             list.reverse()
         }
-        Debug.log(book.origin, "◇目录总数:${list.size}")
+        Debug.log(book.origin, "◇Total chapters:${list.size}")
         coroutineContext.ensureActive()
         list.forEachIndexed { index, bookChapter ->
             bookChapter.index = index
@@ -146,7 +146,7 @@ object BookChapterList {
                             bookChapter.title = it
                         }
                     }.onFailure {
-                        Debug.log(book.origin, "格式化标题出错, ${it.localizedMessage}")
+                        Debug.log(book.origin, "Error formatting title, ${it.localizedMessage}")
                     }
                 }
             }
@@ -185,14 +185,14 @@ object BookChapterList {
         analyzeRule.setCoroutineContext(coroutineContext)
         //获取目录列表
         val chapterList = arrayListOf<BookChapter>()
-        Debug.log(bookSource.bookSourceUrl, "┌获取目录列表", log)
+        Debug.log(bookSource.bookSourceUrl, "┌Getting chapter list", log)
         val elements = analyzeRule.getElements(listRule)
-        Debug.log(bookSource.bookSourceUrl, "└列表大小:${elements.size}", log)
+        Debug.log(bookSource.bookSourceUrl, "└List size:${elements.size}", log)
         //获取下一页链接
         val nextUrlList = arrayListOf<String>()
         val nextTocRule = tocRule.nextTocUrl
         if (getNextUrl && !nextTocRule.isNullOrEmpty()) {
-            Debug.log(bookSource.bookSourceUrl, "┌获取目录下一页列表", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting next page list", log)
             analyzeRule.getStringList(nextTocRule, isUrl = true)?.let {
                 for (item in it) {
                     if (item != redirectUrl) {
@@ -202,13 +202,13 @@ object BookChapterList {
             }
             Debug.log(
                 bookSource.bookSourceUrl,
-                "└" + TextUtils.join("，\n", nextUrlList),
+                "└" + TextUtils.join(",\n", nextUrlList),
                 log
             )
         }
         coroutineContext.ensureActive()
         if (elements.isNotEmpty()) {
-            Debug.log(bookSource.bookSourceUrl, "┌解析目录列表", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Parsing chapter list", log)
             val nameRule = analyzeRule.splitSourceRule(tocRule.chapterName)
             val urlRule = analyzeRule.splitSourceRule(tocRule.chapterUrl)
             val vipRule = analyzeRule.splitSourceRule(tocRule.isVip)
@@ -233,13 +233,13 @@ object BookChapterList {
                         bookChapter.url = bookChapter.title + index
                         Debug.log(
                             bookSource.bookSourceUrl,
-                            "⇒一级目录${index}未获取到url,使用标题替代"
+                            "⇒Top-level directory ${index} did not get url, using title instead"
                         )
                     } else {
                         bookChapter.url = baseUrl
                         Debug.log(
                             bookSource.bookSourceUrl,
-                            "⇒目录${index}未获取到url,使用baseUrl替代"
+                            "⇒Chapter ${index} did not get url, using baseUrl instead"
                         )
                     }
                 }
@@ -255,16 +255,16 @@ object BookChapterList {
                     chapterList.add(bookChapter)
                 }
             }
-            Debug.log(bookSource.bookSourceUrl, "└目录列表解析完成", log)
+            Debug.log(bookSource.bookSourceUrl, "└Chapter list parsing complete", log)
             if (chapterList.isEmpty()) {
-                Debug.log(bookSource.bookSourceUrl, "◇章节列表为空", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Chapter list is empty", log)
             } else {
-                Debug.log(bookSource.bookSourceUrl, "≡首章信息", log)
-                Debug.log(bookSource.bookSourceUrl, "◇章节名称:${chapterList[0].title}", log)
-                Debug.log(bookSource.bookSourceUrl, "◇章节链接:${chapterList[0].url}", log)
-                Debug.log(bookSource.bookSourceUrl, "◇章节信息:${chapterList[0].tag}", log)
-                Debug.log(bookSource.bookSourceUrl, "◇是否VIP:${chapterList[0].isVip}", log)
-                Debug.log(bookSource.bookSourceUrl, "◇是否购买:${chapterList[0].isPay}", log)
+                Debug.log(bookSource.bookSourceUrl, "≡First chapter info", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Chapter name:${chapterList[0].title}", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Chapter link:${chapterList[0].url}", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Chapter info:${chapterList[0].tag}", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Is VIP:${chapterList[0].isVip}", log)
+                Debug.log(bookSource.bookSourceUrl, "◇Is paid:${chapterList[0].isPay}", log)
             }
         }
         return Pair(chapterList, nextUrlList)

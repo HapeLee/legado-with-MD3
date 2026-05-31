@@ -224,7 +224,7 @@ private fun BookshelfManageScreen(
                     (book.group and it.groupId) > 0L
                 }
                 if (groups.isEmpty()) noGroupText
-                else groups.joinToString("、") { it.groupName }
+                else groups.joinToString(", ") { it.groupName }
             }
         }
     }
@@ -408,7 +408,7 @@ private fun BookshelfManageScreen(
         },
         BookshelfManageFabAction(
             Icons.Default.Download,
-            "缓存选中"
+            "Cache Selected"
         ) {
             if (selectedBookUrls.isNotEmpty()) {
                 showBatchDownloadConfirmDialog = true
@@ -416,7 +416,7 @@ private fun BookshelfManageScreen(
         },
         BookshelfManageFabAction(
             Icons.Default.Refresh,
-            "批量换源"
+            "Batch Change Source"
         ) {
             if (selectedBookUrls.isNotEmpty()) {
                 showBatchSourcePickerSheet = true
@@ -434,7 +434,7 @@ private fun BookshelfManageScreen(
         },
         BookshelfManageFabAction(
             Icons.Default.Upload,
-            "导出选中"
+            "Export Selected"
         ) {
             exportSelected()
         },
@@ -470,7 +470,7 @@ private fun BookshelfManageScreen(
     }
     ListScaffold(
         title = if (inSelectionMode) {
-            "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
+            "Selected ${selectedBookUrls.size}/${filteredBooks.size}"
         } else {
             state.groupName ?: stringResource(R.string.offline_cache)
         },
@@ -483,7 +483,7 @@ private fun BookshelfManageScreen(
             }
         },
         onSearchQueryChange = { searchKey = it },
-        searchPlaceholder = "筛选书名/作者/书源/分组",
+        searchPlaceholder = "Filter by name/author/source/group",
         topBarActions = {
             if (state.groupList.isNotEmpty()) {
                 TopBarActionButton(
@@ -554,7 +554,7 @@ private fun BookshelfManageScreen(
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = "替换净化",
+                text = "Replace & Purify",
                 isSelected = state.exportConfig.exportUseReplace,
                 onClick = {
                     dismiss()
@@ -564,7 +564,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "自定义导出",
+                text = "Custom Export",
                 isSelected = state.exportConfig.enableCustomExport,
                 onClick = {
                     dismiss()
@@ -574,7 +574,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出包含章节名",
+                text = "Export Chapter Names",
                 isSelected = !state.exportConfig.exportNoChapterName,
                 onClick = {
                     dismiss()
@@ -584,7 +584,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出到WebDav",
+                text = "Export to WebDAV",
                 isSelected = state.exportConfig.exportToWebDav,
                 onClick = {
                     dismiss()
@@ -594,7 +594,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出插图文件",
+                text = "Export Image Files",
                 isSelected = state.exportConfig.exportPictureFile,
                 onClick = {
                     dismiss()
@@ -604,7 +604,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "并行导出",
+                text = "Parallel Export",
                 isSelected = state.exportConfig.parallelExportBook,
                 onClick = {
                     dismiss()
@@ -781,14 +781,14 @@ private fun BookshelfManageScreen(
                                         onDismissRequest = { moreMenuBookUrl = null }
                                     ) { dismiss ->
                                         RoundDropdownMenuItem(
-                                            text = "换源",
+                                            text = "Change Source",
                                             onClick = {
                                                 singleChangeSourceBook = book
                                                 dismiss()
                                             }
                                         )
                                         RoundDropdownMenuItem(
-                                            text = "删除书籍",
+                                            text = "Delete Book",
                                             onClick = {
                                                 pendingDeleteBookUrls = setOf(book.bookUrl)
                                                 deleteOriginalBookFile = state.deleteBookOriginal
@@ -797,7 +797,7 @@ private fun BookshelfManageScreen(
                                             }
                                         )
                                         RoundDropdownMenuItem(
-                                            text = "删除缓存",
+                                            text = "Delete Cache",
                                             onClick = {
                                                 viewModel.dispatch(
                                                     BookshelfManageScreenIntent.ClearCachesForBooks(
@@ -863,14 +863,14 @@ private fun BookshelfManageScreen(
                 singleChangeSourceBook = null
             },
             onAddAsNew = { _, _ ->
-                context.toastOnUi("请在书籍详情页添加为新书")
+                context.toastOnUi("Please add as a new book on the book details page")
             },
         )
     }
 
     BookSourcePickerSheet(
         show = showBatchSourcePickerSheet,
-        title = "选择目标书源",
+        title = "Select Target Source",
         onDismissRequest = { showBatchSourcePickerSheet = false },
         onConfirm = { sources ->
             pendingBatchSources = sources
@@ -880,8 +880,8 @@ private fun BookshelfManageScreen(
 
     ChangeSourceMigrationOptionsSheet(
         show = pendingBatchSources.isNotEmpty(),
-        title = "批量换源选项",
-        subtitle = "将对已选 ${selectedBookUrls.size} 本书执行换源；选项只对本次操作生效。",
+        title = "Batch Change Source Options",
+        subtitle = "Will change source for ${selectedBookUrls.size} selected books. Options apply to this operation only.",
         onDismissRequest = { pendingBatchSources = emptyList() },
         onConfirm = { options ->
             viewModel.dispatch(
@@ -930,7 +930,7 @@ private fun BookshelfManageScreen(
                 manualSearchPreviewBook = null
             },
             onAddAsNew = { _, _ ->
-                context.toastOnUi("请先选择替换候选后再新增至书架")
+                context.toastOnUi("Please select a replacement candidate before adding to bookshelf")
             },
         )
     }
@@ -965,7 +965,7 @@ private fun BookshelfManageScreen(
                     CircularProgressIndicator()
                 }
                 AppText(
-                    text = state.changeSourceError ?: state.changeSourceProgress ?: "准备中",
+                    text = state.changeSourceError ?: state.changeSourceProgress ?: "Preparing",
                     style = LegadoTheme.typography.bodyMedium,
                     color = if (state.changeSourceError == null) {
                         LegadoTheme.colorScheme.onSurface
@@ -1352,7 +1352,7 @@ private fun BookSourcePickerSheet(
         Spacer(modifier = Modifier.height(12.dp))
         if (selectedSources.isNotEmpty()) {
             AppText(
-                text = "已选书源（长按拖拽排序）",
+                text = "Selected Sources (long press to reorder)",
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.primary,
             )
@@ -1383,7 +1383,7 @@ private fun BookSourcePickerSheet(
             Spacer(modifier = Modifier.height(12.dp))
         }
         AppText(
-            text = "可选书源",
+            text = "Available Sources",
             style = LegadoTheme.typography.labelMedium,
             color = LegadoTheme.colorScheme.onSurfaceVariant,
         )
@@ -1445,10 +1445,10 @@ private fun BatchChangePreviewSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "批量换源预览",
+        title = "Batch Change Source Preview",
         endAction = {
             SmallTonalTextButton(
-                text = "迁移全部",
+                text = "Migrate All",
                 imageVector = Icons.Default.PlayArrow,
                 onClick = onMigrateAll,
             )
@@ -1504,7 +1504,7 @@ private fun BatchChangePreviewRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 PreviewBookInfo(
-                    title = "原书籍",
+                    title = "Original Book",
                     book = item.oldBook,
                     chapterCount = item.oldBook.totalChapterNum,
                     onClick = { onOpenBook(item.oldBook, true) },
@@ -1542,23 +1542,23 @@ private fun BatchChangePreviewRow(
                     onClick = { onManualSearch(item.oldBook) },
                 )
                 SmallTonalTextButton(
-                    text = "不迁移",
+                    text = "Skip",
                     imageVector = Icons.Default.SkipNext,
                     onClick = { onSkip(item.oldBook.bookUrl) },
                 )
                 SmallTonalTextButton(
-                    text = "开始迁移",
+                    text = "Migrate",
                     imageVector = Icons.Default.PlayArrow,
                     onClick = { onMigrate(item.oldBook.bookUrl) },
                 )
                 SmallTonalTextButton(
-                    text = "新增至书架",
+                    text = "Add to Bookshelf",
                     imageVector = Icons.Default.Add,
                     onClick = { onAddToShelf(item.oldBook.bookUrl) },
                 )
                 if (item.candidates.size > 1) {
                     SmallTonalTextButton(
-                        text = "查看其他源信息",
+                        text = "View Other Sources",
                         imageVector = Icons.Default.Info,
                         onClick = { onShowOtherSources(item) },
                     )
@@ -1595,7 +1595,7 @@ private fun PreviewBookInfo(
                 maxLines = 1,
             )
             AppText(
-                text = "${book.getRealAuthor()} · ${chapterCount ?: 0}章",
+                text = "${book.getRealAuthor()} · ${chapterCount ?: 0}ch",
                 style = LegadoTheme.typography.labelSmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1622,7 +1622,7 @@ private fun OtherSourceOptionsSheet(
     AppModalBottomSheet(
         show = item != null,
         onDismissRequest = onDismissRequest,
-        title = "其他源信息",
+        title = "Other Source Info",
     ) {
         val currentItem = item
         if (currentItem != null) {
@@ -1636,7 +1636,7 @@ private fun OtherSourceOptionsSheet(
                     val candidate = currentItem.candidates[index]
                     SelectionItemCard(
                         title = candidate.source.bookSourceName,
-                        subtitle = "${candidate.book.name} · ${candidate.chapterCount}章",
+                        subtitle = "${candidate.book.name} · ${candidate.chapterCount}ch",
                         supportingContent = {
                             AppText(
                                 text = candidate.book.getRealAuthor(),
@@ -1663,9 +1663,9 @@ private fun OtherSourceOptionsSheet(
 
 private fun statusText(status: BatchChangeSourcePreviewStatus): String {
     return when (status) {
-        BatchChangeSourcePreviewStatus.Matched -> "已匹配"
-        BatchChangeSourcePreviewStatus.NotFound -> "未找到"
-        BatchChangeSourcePreviewStatus.Skipped -> "不迁移"
+        BatchChangeSourcePreviewStatus.Matched -> "Matched"
+        BatchChangeSourcePreviewStatus.NotFound -> "Not Found"
+        BatchChangeSourcePreviewStatus.Skipped -> "Skipped"
     }
 }
 

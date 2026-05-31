@@ -297,10 +297,10 @@ private fun LoadMoreFooter(
     onRetry: () -> Unit
 ) {
     val text = when {
-        state.isLoadingMore -> "加载中..."
-        !state.hasMore -> "没有更多了"
-        state.errorMessage != null -> "加载失败，点击重试"
-        else -> "上拉加载更多"
+        state.isLoadingMore -> "Loading..."
+        !state.hasMore -> "No more"
+        state.errorMessage != null -> "Load failed, tap to retry"
+        else -> "Pull up to load more"
     }
     val contentModifier = if (state.errorMessage != null) {
         Modifier.clickable(onClick = onRetry)

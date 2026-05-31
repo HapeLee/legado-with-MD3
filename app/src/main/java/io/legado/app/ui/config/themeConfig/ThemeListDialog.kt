@@ -124,7 +124,7 @@ fun ThemeListDialog(
                             IconButton(
                                 onClick = {
                                     val json = GSON.toJson(item)
-                                    context.share(json, "主题分享")
+                                    context.share(json, "Theme share")
                                 }
                             ) {
                                 Icon(

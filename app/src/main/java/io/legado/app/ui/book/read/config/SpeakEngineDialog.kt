@@ -109,13 +109,13 @@ class SpeakEngineDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
                 ivEdit.gone()
                 ivMenuDelete.gone()
                 labelSys.visible()
-                cbName.text = "系统默认"
+                cbName.text = "System default"
                 cbName.tag = ""
                 cbName.isChecked = ttsEngine == null || ttsEngine!!.isJsonObject()
                         && GSON.fromJsonObject<SelectItem<String>>(ttsEngine)
                     .getOrNull()?.value.isNullOrEmpty()
                 cbName.setOnClickListener {
-                    upTts(GSON.toJson(SelectItem("系统默认", "")))
+                    upTts(GSON.toJson(SelectItem("System default", "")))
                 }
             }
         }

@@ -97,7 +97,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
         }
         if (waitTime > 0) {
             throw ConcurrentException(
-                "根据并发率还需等待${waitTime}毫秒才可以访问",
+                "Waiting ${waitTime}ms as per rate limit",
                 waitTime = waitTime
             )
         }

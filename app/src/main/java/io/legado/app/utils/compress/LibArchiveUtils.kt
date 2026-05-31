@@ -225,7 +225,7 @@ object LibArchiveUtils {
         destDir: File?,
         filter: ((String) -> Boolean)? = null
     ): List<File> {
-        destDir ?: throw NullPointerException("解压路径不能为空")
+        destDir ?: throw NullPointerException("Extraction path cannot be empty")
         val files = arrayListOf<File>()
 
 
@@ -238,7 +238,7 @@ object LibArchiveUtils {
                         ?: continue
                 val entryFile = File(destDir, entryName)
                 if (!entryFile.canonicalPath.startsWith(destDir.canonicalPath)) {
-                    throw SecurityException("压缩文件只能解压到指定路径")
+                    throw SecurityException("Archive files can only be extracted to the specified path")
                 }
                 val entryStat = ArchiveEntry.stat(entry)
 

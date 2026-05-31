@@ -74,14 +74,14 @@ class TxtTocRuleEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_toc
 
     private fun checkValid(tocRule: TxtTocRule): Boolean {
         if (tocRule.name.isEmpty()) {
-            toastOnUi("名称不能为空")
+            toastOnUi("Name cannot be empty")
             return false
         }
 
         try {
             Pattern.compile(tocRule.rule, Pattern.MULTILINE)
         } catch (ex: PatternSyntaxException) {
-            AppLog.put("正则语法错误或不支持(txt)：${ex.localizedMessage}", ex, true)
+            AppLog.put("Regex syntax error or unsupported (txt): ${ex.localizedMessage}", ex, true)
             return false
         }
 
@@ -124,10 +124,10 @@ class TxtTocRuleEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_toc
             execute(context = Dispatchers.Main) {
                 val text = context.getClipText()
                 if (text.isNullOrBlank()) {
-                    throw NoStackTraceException("剪贴板为空")
+                    throw NoStackTraceException("Clipboard is empty")
                 }
                 GSON.fromJsonObject<TxtTocRule>(text).getOrNull()
-                    ?: throw NoStackTraceException("格式不对")
+                    ?: throw NoStackTraceException("Invalid format")
             }.onSuccess {
                 success.invoke(it)
             }.onError {

@@ -84,7 +84,7 @@ class VisibleWebView(
                                 if (selectedText.isNotBlank()) {
                                     showDictDialog(selectedText)
                                 } else {
-                                    context.toastOnUi("未获取到选中文本，请重试")
+                                    context.toastOnUi("No text selected, please try again")
                                 }
                             }
                         }, 200)

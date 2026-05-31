@@ -84,7 +84,7 @@ fun CollapsibleHeader(
             if (showIcon) {
                 Icon(
                     imageVector = Icons.Default.ExpandMore,
-                    contentDescription = if (isCollapsed) "展开" else "折叠",
+                    contentDescription = if (isCollapsed) "Expand" else "Collapse",
                     modifier = Modifier.rotate(rotation),
                     tint = LegadoTheme.colorScheme.primary
                 )

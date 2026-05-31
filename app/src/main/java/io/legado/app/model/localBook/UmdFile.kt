@@ -87,7 +87,7 @@ class UmdFile(var book: Book) {
     private fun upBookInfo() {
         if (umdBook == null) {
             uFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Book import error"
         } else {
             upBookCover()
             val hd = umdBook!!.header

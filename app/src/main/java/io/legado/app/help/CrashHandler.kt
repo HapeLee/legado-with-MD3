@@ -52,7 +52,7 @@ class CrashHandler(val context: Context) : Thread.UncaughtExceptionHandler {
      */
     override fun uncaughtException(thread: Thread, ex: Throwable) {
         if (shouldAbsorb(ex)) {
-            AppLog.put("发生未捕获的异常\n${ex.localizedMessage}", ex)
+            AppLog.put("Uncaught exception occurred\n${ex.localizedMessage}", ex)
             Looper.loop()
         } else {
             ReadAloud.stop(context)
@@ -173,7 +173,7 @@ class CrashHandler(val context: Context) : Thread.UncaughtExceptionHandler {
             val fileName = "crash-$time-$timestamp.log"
             try {
                 val backupPath = AppConfig.backupPath
-                    ?: throw NoStackTraceException("备份路径未配置")
+                    ?: throw NoStackTraceException("Backup path not configured")
                 val uri = Uri.parse(backupPath)
                 val fileDoc = FileDoc.fromUri(uri, true)
                 fileDoc.createFileIfNotExist(fileName, "crash")

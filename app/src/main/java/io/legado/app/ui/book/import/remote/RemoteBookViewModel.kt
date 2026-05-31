@@ -225,7 +225,7 @@ class RemoteBookViewModel(
                     onSuccess()
                 } else {
                     val defaultWebDav = repository.getDefaultBookWebDav()
-                        ?: throw NoStackTraceException("webDav没有配置")
+                        ?: throw NoStackTraceException("WebDAV not configured")
                     _state.update {
                         it.copy(
                             remoteBookWebDav = defaultWebDav,
@@ -236,7 +236,7 @@ class RemoteBookViewModel(
                     onSuccess()
                 }
             } catch (e: Exception) {
-                context.toastOnUi("初始化webDav出错:${e.localizedMessage}")
+                context.toastOnUi("WebDAV initialization error:${e.localizedMessage}")
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
         }
@@ -247,14 +247,14 @@ class RemoteBookViewModel(
         viewModelScope.launch {
             try {
                 val webDav = _state.value.remoteBookWebDav
-                    ?: throw NoStackTraceException("没有配置webDav")
+                    ?: throw NoStackTraceException("WebDAV not configured")
                 val bookList = withContext(Dispatchers.IO) {
                     repository.loadBooks(webDav, path)
                 }
                 _state.update { it.copy(remoteBooks = bookList) }
             } catch (e: Exception) {
-                AppLog.put("获取webDav书籍出错\n${e.localizedMessage}", e)
-                context.toastOnUi("获取webDav书籍出错\n${e.localizedMessage}")
+                AppLog.put("Failed to get WebDAV books\n${e.localizedMessage}", e)
+                context.toastOnUi("Failed to get WebDAV books\n${e.localizedMessage}")
             } finally {
                 _state.update { it.copy(interaction = it.interaction.copy(isLoading = false)) }
             }
@@ -265,7 +265,7 @@ class RemoteBookViewModel(
         _state.update { it.copy(interaction = it.interaction.copy(isUploading = true)) }
         return try {
             val webDav = _state.value.remoteBookWebDav
-                ?: throw NoStackTraceException("没有配置webDav")
+                ?: throw NoStackTraceException("WebDAV not configured")
 
             withContext(Dispatchers.IO) {
                 remoteBooks.forEach { remoteBook ->
@@ -285,8 +285,8 @@ class RemoteBookViewModel(
             _effects.emit(RemoteBookEffect.RequestBookFolderPicker(defaultBookTreeUri()))
             Result.failure(e)
         } catch (e: Exception) {
-            AppLog.put("导入出错\n${e.localizedMessage}", e)
-            context.toastOnUi("导入出错\n${e.localizedMessage}")
+            AppLog.put("Import error\n${e.localizedMessage}", e)
+            context.toastOnUi("Import error\n${e.localizedMessage}")
             Result.failure(e)
         } finally {
             _state.update { it.copy(interaction = it.interaction.copy(isUploading = false)) }

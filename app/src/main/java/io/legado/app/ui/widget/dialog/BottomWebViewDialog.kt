@@ -149,7 +149,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
             manager.beginTransaction().remove(this).commit()
             super.show(manager, tag)
         }.onFailure {
-            AppLog.put("显示对话框失败 tag:$tag", it)
+            AppLog.put("Failed to show dialog tag:$tag", it)
         }
     }
 
@@ -434,7 +434,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                 activity?.runOnUiThread {
                     currentWebView.loadDataWithBaseURL(
                         url,
-                        "<html><body style='color:red;'>加载失败：${it.localizedMessage}</body></html>",
+                        "<html><body style='color:red;'>Load failed: ${it.localizedMessage}</body></html>",
                         "text/html",
                         "utf-8",
                         url
@@ -559,13 +559,13 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
         webPic ?: return
         Coroutine.async(lifecycleScope) {
             val fileName = "${AppConst.fileNameFormat.format(Date(System.currentTimeMillis()))}.jpg"
-            val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("图片数据为空")
+            val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("Image data is empty")
             uri.writeBytes(requireContext(), fileName, byteArray)
         }.onError {
             ACache.get().remove(imagePathKey)
-            context?.toastOnUi("保存图片失败:${it.localizedMessage}")
+            context?.toastOnUi("Failed to save image:${it.localizedMessage}")
         }.onSuccess {
-            context?.toastOnUi("保存成功")
+            context?.toastOnUi("Saved successfully")
         }
     }
 

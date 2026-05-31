@@ -171,7 +171,7 @@ fun TocScreen(
                 book?.durChapterTitle?.takeIf { it.isNotBlank() } ?: (book?.name ?: "")
             }
 
-            1 -> "书签管理"
+            1 -> "Bookmarks"
             else -> book?.name ?: ""
         }
     }
@@ -217,7 +217,7 @@ fun TocScreen(
 
     val fabItems = remember(state.items) {
         listOf(
-            FabAction(Icons.Default.LocationOn, "定位至当前阅读") {
+            FabAction(Icons.Default.LocationOn, "Go to Current Chapter") {
                 scope.launch {
                     val target = state.items.indexOfFirst { it.isDur }
                     if (target != -1) {
@@ -228,13 +228,13 @@ fun TocScreen(
                     }
                 }
             },
-            FabAction(Icons.Default.VerticalAlignTop, "移至顶部") {
+            FabAction(Icons.Default.VerticalAlignTop, "Go to Top") {
                 scope.launch { listState.animateScrollToItem(0) }
             },
-            FabAction(Icons.Default.VerticalAlignBottom, "移至底部") {
+            FabAction(Icons.Default.VerticalAlignBottom, "Go to Bottom") {
                 scope.launch { listState.animateScrollToItem(state.items.size) }
             },
-            FabAction(Icons.Default.DownloadForOffline, "下载全部") {
+            FabAction(Icons.Default.DownloadForOffline, "Download All") {
                 viewModel.downloadAll()
             }
         )
@@ -243,17 +243,17 @@ fun TocScreen(
     val selectionSecondaryActions = remember(state.selectedIds) {
         listOf(
             ActionItem(
-                text = "反选",
+                text = "Invert Selection",
                 icon = { Icon(Icons.Default.Refresh, contentDescription = null) },
                 onClick = { viewModel.invertSelection() }
             ),
             ActionItem(
-                text = "选择后续",
+                text = "Select Following",
                 icon = { Icon(Icons.Default.ExpandMore, contentDescription = null) },
                 onClick = { viewModel.selectFromLast() }
             ),
             ActionItem(
-                text = "添加书签",
+                text = "Add Bookmark",
                 icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
                 onClick = { viewModel.addBookmarksForSelected() }
             )
@@ -341,39 +341,39 @@ fun TocScreen(
                 onBackClick = onBackClick,
                 onSearchToggle = { viewModel.setSearchMode(it) },
                 onSearchQueryChange = { viewModel.setSearchKey(it) },
-                searchPlaceholder = "搜索章节...",
+                searchPlaceholder = "Search chapters...",
                 onClearSelection = { viewModel.clearSelection() },
                 dropDownMenuContent = { dismiss ->
                     when (pagerState.currentPage) {
                         0 -> {
                             RoundDropdownMenuItem(
-                                text = "使用替换规则",
+                                text = "Use Replace Rules",
                                 trailingIcon = {
                                     Checkbox(checked = useReplace, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleUseReplace() }
                             )
                             RoundDropdownMenuItem(
-                                text = "显示字数",
+                                text = "Show Word Count",
                                 trailingIcon = {
                                     Checkbox(checked = showWordCount, onCheckedChange = null)
                                 },
                                 onClick = { viewModel.toggleShowWordCount() }
                             )
                             RoundDropdownMenuItem(
-                                text = "反转目录",
+                                text = "Reverse TOC",
                                 onClick = { viewModel.reverseToc() }
                             )
                             PillDivider()
                             RoundDropdownMenuItem(
-                                text = "替换规则",
+                                text = "Replace Rules",
                                 onClick = {
                                     onOpenReplaceRule(null)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "新建替换规则",
+                                text = "New Replace Rule",
                                 onClick = {
                                     val scopes = mutableListOf<String>()
                                     book?.name?.let { scopes.add(it) }
@@ -391,9 +391,9 @@ fun TocScreen(
                                 }
                             )
                             if (book?.isLocal == true) {
-                                PillHeaderDivider(title = "本地书籍选项")
+                                PillHeaderDivider(title = "Local Book Options")
                                 RoundDropdownMenuItem(
-                                    text = "本地书籍目录规则",
+                                    text = "Local Book TOC Rules",
                                     onClick = {
                                         val intent =
                                             Intent(context, TxtTocRuleActivity::class.java).apply {
@@ -404,7 +404,7 @@ fun TocScreen(
                                     }
                                 )
                                 RoundDropdownMenuItem(
-                                    text = "拆分超长章节",
+                                    text = "Split Long Chapters",
                                     trailingIcon = {
                                         Checkbox(
                                             checked = viewModel.isSplitLongChapter,
@@ -421,25 +421,25 @@ fun TocScreen(
 
                         else -> {
                             RoundDropdownMenuItem(
-                                text = "导出书签为JSON",
+                                text = "Export Bookmarks as JSON",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
                                         Locale.getDefault()
                                     ).format(Date())
-                                    val initialName = "${book?.name ?: "书签"}_$dateFormat.json"
+                                    val initialName = "${book?.name ?: "Bookmarks"}_$dateFormat.json"
                                     exportLauncher.launch(initialName)
                                     dismiss()
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "导出书签为MarkDown",
+                                text = "Export Bookmarks as Markdown",
                                 onClick = {
                                     val dateFormat = SimpleDateFormat(
                                         "yyyyMMdd_HHmm",
                                         Locale.getDefault()
                                     ).format(Date())
-                                    val initialName = "${book?.name ?: "书签"}_$dateFormat.md"
+                                    val initialName = "${book?.name ?: "Bookmarks"}_$dateFormat.md"
                                     exportLauncher.launch(initialName)
                                     dismiss()
                                 }
@@ -455,7 +455,7 @@ fun TocScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AppTabRow(
-                            tabTitles = listOf("目录", "书签"),
+                            tabTitles = listOf("Table of Contents", "Bookmarks"),
                             selectedTabIndex = pagerState.currentPage,
                             onTabSelected = { index ->
                                 scope.launch {
@@ -471,20 +471,20 @@ fun TocScreen(
                                     checked = showVolumeMenu,
                                     onCheckedChange = { showVolumeMenu = it },
                                     imageVector = Icons.AutoMirrored.Filled.FormatListBulleted,
-                                    contentDescription = "卷管理"
+                                    contentDescription = "Volume Management"
                                 )
                                 RoundDropdownMenu(
                                     expanded = showVolumeMenu,
                                     onDismissRequest = { showVolumeMenu = false }
                                 ) {
                                     RoundDropdownMenuItem(
-                                        text = "展开所有卷",
+                                        text = "Expand All Volumes",
                                         onClick = {
                                             viewModel.expandAllVolumes(); showVolumeMenu = false
                                         }
                                     )
                                     RoundDropdownMenuItem(
-                                        text = "收起所有卷",
+                                        text = "Collapse All Volumes",
                                         onClick = {
                                             viewModel.collapseAllVolumes(); showVolumeMenu = false
                                         }
@@ -493,7 +493,7 @@ fun TocScreen(
                                     val volumeItems =
                                         remember(state.items) { state.items.filter { it.isVolume } }
                                     if (volumeItems.isNotEmpty()) {
-                                        PillHeaderDivider(title = "快速跳转")
+                                        PillHeaderDivider(title = "Quick Jump")
                                         volumeItems.forEach { uiItem ->
                                             RoundDropdownMenuItem(
                                                 text = uiItem.title,
@@ -576,7 +576,7 @@ fun TocScreen(
                     onSelectAll = { viewModel.selectAll() },
                     onSelectInvert = { viewModel.invertSelection() },
                     primaryAction = ActionItem(
-                        text = "下载已选 (${state.selectedIds.size})",
+                        text = "Download Selected (${state.selectedIds.size})",
                         icon = { Icon(Icons.Default.Download, null) },
                         onClick = { viewModel.downloadSelected() }
                     ),
@@ -866,7 +866,7 @@ fun BookmarkListContent(
             contentAlignment = Alignment.Center
         ) {
             EmptyMessage(
-                message = "暂无书签"
+                message = "No bookmarks"
             )
         }
     } else {

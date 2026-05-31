@@ -209,7 +209,7 @@ class BackstageWebView(
                     return@async
                 }
                 if (retry > 30) {
-                    callback?.onError(NoStackTraceException("js执行超时"))
+                    callback?.onError(NoStackTraceException("JS execution timed out"))
                     mHandler.post {
                         destroy()
                     }

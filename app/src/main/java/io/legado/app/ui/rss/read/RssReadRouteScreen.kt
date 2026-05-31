@@ -319,7 +319,7 @@ fun RssReadRouteScreen(
                                                 viewModel.updateRssSourceRedirectPolicy(source.sourceUrl, policy.name)
                                                 redirectPolicy = policy
                                             }
-                                            context.toastOnUi("重定向策略已更新")
+                                            context.toastOnUi("Redirect policy updated")
                                         },
                                         trailingIcon = {
                                             if (policy == redirectPolicy) {

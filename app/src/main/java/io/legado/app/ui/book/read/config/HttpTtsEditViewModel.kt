@@ -46,7 +46,7 @@ class HttpTtsEditViewModel(app: Application) : BaseViewModel(app) {
     fun importFromClip(onSuccess: (httpTTS: HttpTTS) -> Unit) {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板为空")
+            context.toastOnUi("Clipboard is empty")
         } else {
             importSource(text, onSuccess)
         }
@@ -63,7 +63,7 @@ class HttpTtsEditViewModel(app: Application) : BaseViewModel(app) {
                     HttpTTS.fromJsonArray(text1).getOrThrow().first()
                 }
                 else -> {
-                    throw NoStackTraceException("格式不对")
+                    throw NoStackTraceException("Invalid format")
                 }
             }
         }.onSuccess {

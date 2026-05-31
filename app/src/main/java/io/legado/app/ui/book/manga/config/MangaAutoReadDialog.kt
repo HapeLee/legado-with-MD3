@@ -36,7 +36,7 @@ class MangaAutoReadDialog : BaseBottomSheetDialogFragment(R.layout.dialog_manga_
     private fun initAutoPageSpeed(boolean: Boolean) {
         binding.scvAutoPageSpeed.run {
             isEnabled = boolean
-            valueFormat = { "$it 秒" }
+            valueFormat = { "$it s" }
             progress = AppConfig.mangaAutoPageSpeed
 
             onChanged = { newValue ->

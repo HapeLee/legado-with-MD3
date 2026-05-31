@@ -123,7 +123,7 @@ fun AllBookmarkScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.exportBookmark(it, pendingExportIsMd)
-            Toast.makeText(context, "开始导出...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Exporting...", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -132,7 +132,7 @@ fun AllBookmarkScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = "所有书签",
+                    title = "All Bookmarks",
                     scrollBehavior = scrollBehavior,
                     navigationIcon = {
                         TopBarNavigationButton(onClick = onBack)
@@ -165,7 +165,7 @@ fun AllBookmarkScreen(
                             onDismissRequest = { showMenu = false }
                         ) {
                             RoundDropdownMenuItem(
-                                text = "导出 JSON",
+                                text = "Export JSON",
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = false
@@ -173,7 +173,7 @@ fun AllBookmarkScreen(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "导出 Markdown",
+                                text = "Export Markdown",
                                 onClick = {
                                     showMenu = false
                                     pendingExportIsMd = true
@@ -193,7 +193,7 @@ fun AllBookmarkScreen(
                     SearchBar(
                         query = searchText,
                         onQueryChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = "搜索...",
+                        placeholder = "Search...",
                         scrollState = listState,
                         scope = scope
                     )
@@ -212,7 +212,7 @@ fun AllBookmarkScreen(
                 when (state) {
                     "LOADING" -> {
                         EmptyMessage(
-                            message = "加载中...",
+                            message = "Loading...",
                             isLoading = true,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -225,7 +225,7 @@ fun AllBookmarkScreen(
 
                     "EMPTY" -> {
                         EmptyMessage(
-                            message = "没有书签！",
+                            message = "No bookmarks!",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(

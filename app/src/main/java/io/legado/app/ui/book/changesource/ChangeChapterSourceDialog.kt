@@ -91,8 +91,8 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             val searchGroup = AppConfig.searchGroup
             if (searchGroup.isNotEmpty()) {
                 lifecycleScope.launch {
-                    context?.alert("搜索结果为空") {
-                        setMessage("${searchGroup}分组搜索结果为空,是否切换到全部分组")
+                    context?.alert("No search results") {
+                        setMessage("${searchGroup} group search returned no results. Switch to all groups?")
                         noButton()
                         yesButton {
                             AppConfig.searchGroup = ""

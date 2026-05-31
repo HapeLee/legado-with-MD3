@@ -689,7 +689,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
                 entry<MainRouteExploreShow> { route ->
                     ExploreShowScreen(
-                        title = route.title ?: "探索",
+                        title = route.title ?: "Explore",
                         sourceUrl = route.sourceUrl,
                         exploreUrl = route.exploreUrl,
                         onBack = { navigateBack(backStack) },
@@ -881,7 +881,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             return
         }
         LocalConfig.appCrash = false
-        alert(getString(R.string.draw), "检测到阅读发生了崩溃，是否打开崩溃日志以便报告问题？") {
+        alert(getString(R.string.draw), "The app has crashed. Open crash logs to report the issue?") {
             yesButton {
                 showDialogFragment<CrashLogsDialog>()
             }

@@ -93,7 +93,7 @@ class GroupManageDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler
                 if (appDb.bookGroupDao.canAddGroup) {
                     showDialogFragment(GroupEditDialog())
                 } else {
-                    toastOnUi("分组已达上限(64个)")
+                    toastOnUi("Maximum groups reached (64)")
                 }
             }
         }

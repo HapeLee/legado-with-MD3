@@ -43,7 +43,7 @@ fun <T> RuleListScaffold(
     onBackClick: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    searchPlaceholder: String = "搜索...",
+    searchPlaceholder: String = "Search\u2026",
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
@@ -61,7 +61,7 @@ fun <T> RuleListScaffold(
                     visible = state.selectedIds.isEmpty(),
                     alignment = Alignment.BottomEnd,
                 ),
-                tooltipText = "添加"
+                tooltipText = "Add"
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add")
             }

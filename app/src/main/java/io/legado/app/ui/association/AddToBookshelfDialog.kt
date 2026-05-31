@@ -64,7 +64,7 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val bookUrl = arguments?.getString("bookUrl")
         if (bookUrl.isNullOrBlank()) {
-            toastOnUi("url不能为空")
+            toastOnUi("URL cannot be empty")
             dismiss()
             return
         }
@@ -106,10 +106,10 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
         fun load(bookUrl: String, success: (book: Book) -> Unit) {
             execute {
                 appDb.bookDao.getBook(bookUrl)?.let {
-                    throw NoStackTraceException("${it.name} 已在书架")
+                    throw NoStackTraceException("${it.name} already on bookshelf")
                 }
                 val baseUrl = NetworkUtils.getBaseUrl(bookUrl)
-                    ?: throw NoStackTraceException("书籍地址格式不对")
+                    ?: throw NoStackTraceException("Invalid book URL format")
                 val urlMatcher = AnalyzeUrl.paramPattern.matcher(bookUrl)
                 if (urlMatcher.find()) {
                     val origin = GSON.fromJsonObject<AnalyzeUrl.UrlOption>(
@@ -140,9 +140,9 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
                     } catch (_: Exception) {
                     }
                 }
-                throw NoStackTraceException("未找到匹配书源")
+                throw NoStackTraceException("No matching source found")
             }.onError {
-                AppLog.put("添加书籍 $bookUrl 出错", it)
+                AppLog.put("Error adding book $bookUrl", it)
                 loadErrorLiveData.postValue(it.localizedMessage)
             }.onSuccess {
                 book = it

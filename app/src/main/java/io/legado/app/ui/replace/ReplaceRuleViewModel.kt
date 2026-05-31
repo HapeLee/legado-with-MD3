@@ -79,7 +79,7 @@ class ReplaceRuleViewModel(
         )
 
     fun setGroup(groupName: String?) {
-        _group.value = if (groupName == "全部" || groupName.isNullOrBlank()) {
+        _group.value = if (groupName == "All" || groupName.isNullOrBlank()) {
             null
         } else {
             groupName
@@ -93,7 +93,7 @@ class ReplaceRuleViewModel(
         }.flatMapLatest { (group, sortMode) ->
             val baseFlow = when (group) {
                 null -> repository.flowAll()
-                "未分组" -> repository.flowNoGroup()
+                "Uncategorized" -> repository.flowNoGroup()
                 else -> repository.flowGroupSearch(group)
             }
 
@@ -146,7 +146,7 @@ class ReplaceRuleViewModel(
         return when {
             text.isJsonArray() -> ReplaceAnalyzer.jsonToReplaceRules(text).getOrThrow()
             text.isJsonObject() -> listOf(ReplaceAnalyzer.jsonToReplaceRule(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Invalid format")
         }
     }
 
@@ -192,7 +192,7 @@ class ReplaceRuleViewModel(
                 }
                 withContext(Dispatchers.Main) {
                     _importState.value = BaseImportUiState.Idle
-                    _eventChannel.send(BaseRuleEvent.ShowSnackbar("成功导入 ${rulesToSave.size} 条规则"))
+                    _eventChannel.send(BaseRuleEvent.ShowSnackbar("Successfully imported ${rulesToSave.size} rule(s)"))
                 }
             }
         }

@@ -86,8 +86,8 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             val searchGroup = AppConfig.searchGroup
             if (searchGroup.isNotEmpty()) {
                 lifecycleScope.launch {
-                    context?.alert("搜索结果为空") {
-                        setMessage("${searchGroup}分组搜索结果为空,是否切换到全部分组")
+                    context?.alert("No search results") {
+                        setMessage("${searchGroup} group search returned no results. Switch to all groups?")
                         cancelButton()
                         okButton {
                             AppConfig.searchGroup = ""
@@ -424,7 +424,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
         }, {
             waitDialog.dismiss()
             AppLog.put("${if (isReplace) "换源" else "添加书籍"}获取目录出错\n$it", it, true)
-            context?.toastOnUi("${if (isReplace) "换源" else "添加书籍"}失败")
+            context?.toastOnUi("${if (isReplace) "Source change" else "Add book"} failed")
         })
 
         waitDialog.setOnCancelListener {

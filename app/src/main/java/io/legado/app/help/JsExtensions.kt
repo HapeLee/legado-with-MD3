@@ -379,7 +379,7 @@ interface JsExtensions : JsEncodeUtils {
             path.startsWith("http") -> cacheFile(path)
             else -> readTxtFile(path)
         }
-        if (result.isBlank()) throw NoStackTraceException("$path 内容获取失败或者为空")
+        if (result.isBlank()) throw NoStackTraceException("$path content fetch failed or is empty")
         return result
     }
 
@@ -727,7 +727,7 @@ interface JsExtensions : JsEncodeUtils {
         val file = File(aPath)
         val safePath = appCtx.externalCache.parent!!
         if (!file.canonicalPath.startsWith(safePath)) {
-            throw SecurityException("非法路径")
+            throw SecurityException("Illegal path")
         }
         return file
     }
@@ -917,7 +917,7 @@ interface JsExtensions : JsEncodeUtils {
             }
         }
 
-        log("getZipContent 未发现内容")
+        log("getZipContent no content found")
         return null
     }
 
@@ -968,7 +968,7 @@ interface JsExtensions : JsEncodeUtils {
         ReplaceWith("queryTTF(data)")
     )
     fun queryBase64TTF(data: String?): QueryTTF? {
-        log("queryBase64TTF(String)方法已过时,并将在未来删除；请无脑使用queryTTF(Any)替代，新方法支持传入 url、本地文件、base64、ByteArray 自动判断&自动缓存，特殊情况需禁用缓存请传入第二可选参数false:Boolean")
+        log("queryBase64TTF(String) method is deprecated and will be removed in the future; please use queryTTF(Any) instead. The new method supports url, local file, base64, ByteArray auto-detection & auto-caching. For special cases where caching needs to be disabled, pass the second optional parameter false:Boolean")
         return queryTTF(data)
     }
 
@@ -1017,7 +1017,7 @@ interface JsExtensions : JsEncodeUtils {
             if (key != null) AppCacheManager.put(key, qTTF)
             return qTTF
         } catch (e: Exception) {
-            AppLog.put("[queryTTF] 获取字体处理类出错", e)
+            AppLog.put("[queryTTF] Error getting font processing class", e)
             throw e
         }
     }
@@ -1125,7 +1125,7 @@ interface JsExtensions : JsEncodeUtils {
         getSource()?.let {
             Debug.log(it.getKey(), msg.toString())
         } ?: Debug.log(msg.toString())
-        AppLog.putDebug("${getTag() ?: "源"}调试输出: $msg")
+        AppLog.putDebug("${getTag() ?: "Source"} debug output: $msg")
         return msg
     }
 

@@ -586,23 +586,23 @@ class BookSourceEditActivity :
 
     override fun helpActions(): List<SelectItem<String>> {
         val helpActions = arrayListOf(
-            SelectItem("插入URL参数", "urlOption"),
-            SelectItem("书源教程", "ruleHelp"),
-            SelectItem("js教程", "jsHelp"),
-            SelectItem("正则教程", "regexHelp"),
+            SelectItem("Insert URL parameter", "urlOption"),
+            SelectItem("Source tutorial", "ruleHelp"),
+            SelectItem("JS tutorial", "jsHelp"),
+            SelectItem("Regex tutorial", "regexHelp"),
         )
         val view = window.decorView.findFocus()
         if (view is EditText) {
             when (view.getTag(R.id.tag)) {
                 "bookSourceGroup" -> {
                     helpActions.add(
-                        SelectItem("插入分组", "addGroup")
+                        SelectItem("Insert group", "addGroup")
                     )
                 }
 
                 else -> {
                     helpActions.add(
-                        SelectItem("选择文件", "selectFile")
+                        SelectItem("Select file", "selectFile")
                     )
                 }
             }
@@ -644,7 +644,7 @@ class BookSourceEditActivity :
         viewModel.save(getSource()) { source ->
             lifecycleScope.launch {
                 val comment =
-                    source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+                    source.getDisplayVariableComment("Source variables can be accessed via source.getVariable() in JS")
                 val variable = withContext(IO) { source.getVariable() }
                 showDialogFragment(
                     VariableDialog(

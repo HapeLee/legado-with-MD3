@@ -93,7 +93,7 @@ class KeyboardAssistsConfig : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private fun editKey(keyboardAssist: KeyboardAssist?) {
         alert {
-            setTitle("辅助按键")
+            setTitle("Auxiliary keys")
             val alertBinding = DialogMultipleEditTextBinding.inflate(layoutInflater).apply {
                 layout1.hint = "key"
                 edit1.setText(keyboardAssist?.key)

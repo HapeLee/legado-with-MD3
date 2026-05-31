@@ -431,11 +431,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
+                AppLog.putDebug("moveToNextChapter - chapter not loaded, starting load")
                 if (upContentInPlace) callBack?.upContent()
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
+                AppLog.putDebug("moveToNextChapter - chapter loaded, refreshing view")
                 callBack?.upContent()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -445,7 +445,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("跳转下一章失败,没有下一章")
+            AppLog.putDebug("Failed to jump to next chapter, no next chapter")
             return false
         }
     }
@@ -462,11 +462,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
+                AppLog.putDebug("moveToNextChapter - chapter not loaded, starting load")
                 if (upContentInPlace) callBack?.upContentAwait()
                 loadContentAwait(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
+                AppLog.putDebug("moveToNextChapter - chapter loaded, refreshing view")
                 callBack?.upContentAwait()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -476,7 +476,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("跳转下一章失败,没有下一章")
+            AppLog.putDebug("Failed to jump to next chapter, no next chapter")
             return false
         }
     }
@@ -666,7 +666,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val book = book!!
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: run {
                 if (index == durChapterIndex) {
-                    upMsg("章节不存在")
+                    upMsg("Chapter does not exist")
                 }
                 return@async
             }
@@ -689,9 +689,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }.onError {
             removeLoading(index)
             if (index == durChapterIndex) {
-                upMsg("加载正文出错\n${it.localizedMessage}")
+                upMsg("Error loading content\n${it.localizedMessage}")
             }
-            AppLog.put("加载正文出错\n${it.localizedMessage}", it)
+            AppLog.put("Error loading content\n${it.localizedMessage}", it)
         }
     }
 
@@ -752,11 +752,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (bookSource != null) {
             CacheBook.getOrCreate(bookSource, book).download(scope, chapter, semaphore)
         } else {
-            val msg = if (book.isLocal) "无内容" else "没有书源"
+            val msg = if (book.isLocal) "No content" else "No book source"
             contentLoadFinish(
                 book,
                 chapter,
-                "加载正文失败\n$msg",
+                "Failed to load content\n$msg",
                 resetPageOffset = resetPageOffset,
                 success = success
             )
@@ -769,8 +769,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (bookSource != null) {
             return CacheBook.getOrCreate(bookSource, book).downloadAwait(chapter)
         } else {
-            val msg = if (book.isLocal) "无内容" else "没有书源"
-            return "加载正文失败\n$msg"
+            val msg = if (book.isLocal) "No content" else "No book source"
+            return "Failed to load content\n$msg"
         }
     }
 
@@ -1017,7 +1017,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 }
                 book.update()
             }.onFailure {
-                AppLog.put("保存书籍阅读进度信息出错\n$it", it)
+                AppLog.put("Error saving book reading progress\n$it", it)
             }
         }
     }

@@ -238,7 +238,7 @@ fun RuleSubEditDialog(
                 )
 
                 AppText(
-                    text = "订阅类型",
+                    text = "Subscription type",
                     style = LegadoTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 8.dp)
                 )

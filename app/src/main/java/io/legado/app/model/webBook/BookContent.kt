@@ -108,12 +108,12 @@ object BookContent {
                     nextUrl =
                         if (contentData.second.isNotEmpty()) contentData.second[0] else ""
                     appendContent(contentData.first)
-                    Debug.log(bookSource.bookSourceUrl, "第${pageCount}页完成")
+                    Debug.log(bookSource.bookSourceUrl, "Page ${pageCount} complete")
                 }
             }
-            Debug.log(bookSource.bookSourceUrl, "◇本章总页数:${nextUrlList.size}")
+            Debug.log(bookSource.bookSourceUrl, "◇Total pages in this chapter:${nextUrlList.size}")
         } else if (contentData.second.size > 1) {
-            Debug.log(bookSource.bookSourceUrl, "◇并发解析正文,总页数:${contentData.second.size}")
+            Debug.log(bookSource.bookSourceUrl, "◇Concurrent content parsing, total pages:${contentData.second.size}")
             flow {
                 for (urlStr in contentData.second) {
                     emit(urlStr)
@@ -143,7 +143,7 @@ object BookContent {
             var title = analyzeRule.runCatching {
                 getString(titleRule)
             }.onFailure {
-                Debug.log(bookSource.bookSourceUrl, "获取标题出错, ${it.localizedMessage}")
+                Debug.log(bookSource.bookSourceUrl, "Error getting title, ${it.localizedMessage}")
             }.getOrNull()
             if (!title.isNullOrBlank()) {
                 val matchResult = AppPattern.imgRegex.find(title)
@@ -169,16 +169,16 @@ object BookContent {
             contentStr = analyzeRule.getString(replaceRegex, contentStr)
             contentStr = contentStr.split(AppPattern.LFRegex).joinToString("\n") { "　　$it" }
         }
-        Debug.log(bookSource.bookSourceUrl, "┌获取章节名称")
+        Debug.log(bookSource.bookSourceUrl, "┌Getting chapter name")
         Debug.log(bookSource.bookSourceUrl, "└${bookChapter.title}")
-        Debug.log(bookSource.bookSourceUrl, "┌获取正文内容")
+        Debug.log(bookSource.bookSourceUrl, "┌Getting content")
         if (needSave) {
-            Debug.log(bookSource.bookSourceUrl, "└正文长度:${contentStr.length}")
+            Debug.log(bookSource.bookSourceUrl, "└Content length:${contentStr.length}")
         } else {
             Debug.log(bookSource.bookSourceUrl, "└\n$contentStr")
         }
         if (!bookChapter.isVolume && contentStr.isBlank()) {
-            throw ContentEmptyException("内容为空")
+            throw ContentEmptyException("Content is empty")
         }
         if (needSave) {
             BookHelp.saveContent(bookSource, book, bookChapter, contentStr)
@@ -229,11 +229,11 @@ object BookContent {
         if (getNextPageUrl) {
             val nextUrlRule = contentRule.nextContentUrl
             if (!nextUrlRule.isNullOrEmpty()) {
-                Debug.log(bookSource.bookSourceUrl, "┌获取正文下一页链接", printLog)
+                Debug.log(bookSource.bookSourceUrl, "┌Getting next page link", printLog)
                 analyzeRule.getStringList(nextUrlRule, isUrl = true)?.let {
                     nextUrlList.addAll(it)
                 }
-                Debug.log(bookSource.bookSourceUrl, "└" + nextUrlList.joinToString("，"), printLog)
+                Debug.log(bookSource.bookSourceUrl, "└" + nextUrlList.joinToString(", "), printLog)
             }
         }
         return Pair(content, nextUrlList)

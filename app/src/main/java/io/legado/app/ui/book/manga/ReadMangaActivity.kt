@@ -318,8 +318,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             page?.let { item ->
                 selector(
                     arrayListOf(
-                        SelectItem("保存", "save"),
-                        SelectItem("分享", "share")
+                        SelectItem("Save", "save"),
+                        SelectItem("Share", "share")
                     )
                 ) { _, option, _ ->
                     when (option.value) {
@@ -370,7 +370,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
                 if (curFinish) {
                     if (!ReadManga.hasNextChapter) {
-                        loadMoreView.noMore("暂无章节了！")
+                        loadMoreView.noMore("No more chapters!")
                     } else if (nextFinish) {
                         loadMoreView.stopLoad()
                     } else {
@@ -497,7 +497,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 binding.llRetry.isVisible = true
                 binding.tvMsg2.setMessage(msg)
             } else {
-                loadMoreView.error(null, "加载失败，点击重试")
+                loadMoreView.error(null, "Load failed, tap to retry")
             }
         }
     }
@@ -571,7 +571,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             binding.flLoading.isVisible = true
             viewModel.changeTo(book, toc)
         } else {
-            toastOnUi("所选择的源不是漫画源")
+            toastOnUi("Selected source is not a manga source")
         }
     }
 
@@ -1101,7 +1101,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     override fun addToBookshelf(book: Book, toc: List<BookChapter>) {
         viewModel.addToBookshelf(book, toc) {
-            toastOnUi("已添加到书架")
+            toastOnUi("Added to bookshelf")
         }
     }
 

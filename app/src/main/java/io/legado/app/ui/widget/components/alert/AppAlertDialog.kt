@@ -33,9 +33,9 @@ fun AppAlertDialog(
     title: String? = null,
     text: String? = null,
     content: (@Composable () -> Unit)? = null,
-    confirmText: String = "确定", // 默认文字
+    confirmText: String = "OK",
     onConfirm: (() -> Unit)? = null,
-    dismissText: String = "取消",
+    dismissText: String = "Cancel",
     onDismiss: (() -> Unit)? = null,
 ) {
     if (ThemeResolver.isMiuixEngine(composeEngine)) {
@@ -144,9 +144,9 @@ fun <T> AppAlertDialog(
     onDismissRequest: () -> Unit,
     title: String? = null,
     text: String? = null,
-    confirmText: String = "确定",
+    confirmText: String = "OK",
     onConfirm: ((T) -> Unit)? = null,
-    dismissText: String = "取消",
+    dismissText: String = "Cancel",
     onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     content: (@Composable (T) -> Unit)? = null

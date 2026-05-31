@@ -86,7 +86,7 @@ class ReadAloudConfigDialog : BasePrefDialogFragment() {
                 it.summary = getString(R.string.clear_cache)
                 it.setOnPreferenceClickListener {
                     TTSCacheUtils.clearTtsCache()
-                    toastOnUi("音频缓存已清理")
+                    toastOnUi("Audio cache cleared")
                     true
                 }
             }

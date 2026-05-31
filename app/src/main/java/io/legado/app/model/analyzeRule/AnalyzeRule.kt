@@ -89,7 +89,7 @@ class AnalyzeRule(
 
     @JvmOverloads
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
-        if (content == null) throw AssertionError("内容不可空（Content cannot be null）")
+        if (content == null) throw AssertionError("Content cannot be null")
         this.content = content
         isJSON = when (content) {
             is Node -> false
@@ -852,7 +852,7 @@ class AnalyzeRule(
      * 重新获取book
      */
     fun reGetBook() {
-        if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (!preUpdateJs) throw NoStackTraceException("Can only be called within preUpdateJs")
         if (isFromBookInfo) {
             log("重新获取book")
         }
@@ -877,7 +877,7 @@ class AnalyzeRule(
      * 更新tocUrl,有些书源目录url定期更新,可以在js调用更新
      */
     fun refreshTocUrl() {
-        if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (!preUpdateJs) throw NoStackTraceException("Can only be called within preUpdateJs")
         if (isFromBookInfo) {
             log("已跳过重复加载详情页，请优化代码")
             return

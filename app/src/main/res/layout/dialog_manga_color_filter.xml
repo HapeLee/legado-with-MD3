@@ -94,7 +94,7 @@
                 android:layout_height="wrap_content"
                 app:orientation="horizontal"
                 app:max="255"
-                app:title="阈值" />
+                app:title="@string/threshold" />
         </LinearLayout>
 
 

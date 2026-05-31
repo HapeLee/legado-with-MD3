@@ -426,9 +426,9 @@ class TocViewModel(
         val book = bookState.value ?: return
         book.tocUrl = newRegex
         upBookTocRule(book) { error ->
-            if (error != null) context.toastOnUi("更新目录规则失败: ${error.localizedMessage}")
+            if (error != null) context.toastOnUi("Failed to update TOC rules: ${error.localizedMessage}")
             else {
-                context.toastOnUi("目录规则已更新")
+                context.toastOnUi("TOC rules updated")
                 if (ReadBook.book?.bookUrl == book.bookUrl) ReadBook.upMsg(null)
             }
         }
@@ -439,8 +439,8 @@ class TocViewModel(
         val newState = !isSplitLongChapter
         book.setSplitLongChapter(newState)
         upBookTocRule(book) { error ->
-            if (error != null) context.toastOnUi("设置失败: ${error.localizedMessage}")
-            else context.toastOnUi(if (newState) "已开启长章节拆分" else "已关闭长章节拆分")
+            if (error != null) context.toastOnUi("Setting failed: ${error.localizedMessage}")
+            else context.toastOnUi(if (newState) "Long chapter splitting enabled" else "Long chapter splitting disabled")
         }
     }
 
@@ -469,16 +469,16 @@ class TocViewModel(
             val book = bookState.value ?: return@launch
             val bookmarks = appDb.bookmarkDao.getByBook(book.name, book.author)
             if (bookmarks.isEmpty()) {
-                context.toastOnUi("没有可导出的书签")
+                context.toastOnUi("No bookmarks to export")
                 return@launch
             }
             BookmarkExporter.exportToUri(
                 context = getApplication(), fileUri = fileUri, bookmarks = bookmarks,
                 isMd = isMd, bookName = book.name, author = book.author
             )
-            context.toastOnUi("保存成功")
+            context.toastOnUi("Saved successfully")
         } catch (e: Exception) {
-            context.toastOnUi("保存失败: ${e.message}")
+            context.toastOnUi("Save failed: ${e.message}")
         }
     }
 
@@ -497,7 +497,7 @@ class TocViewModel(
             .toList()
 
         if (selectedItems.isEmpty()) {
-            context.toastOnUi("请选择章节")
+            context.toastOnUi("Please select chapters")
             return@launch
         }
 
@@ -514,7 +514,7 @@ class TocViewModel(
         }
 
         appDb.bookmarkDao.insert(*bookmarks.toTypedArray())
-        context.toastOnUi("已添加 ${bookmarks.size} 个书签")
+        context.toastOnUi("Added ${bookmarks.size} bookmarks")
         withContext(Dispatchers.Main) {
             clearSelection()
         }
@@ -527,7 +527,7 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, indices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi("开始下载 $count 个章节")
+            getApplication<Application>().toastOnUi("Downloading $count chapters")
             clearSelection()
         }
     }
@@ -537,7 +537,7 @@ class TocViewModel(
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
         }.onSuccess {
-            getApplication<Application>().toastOnUi("开始下载章节")
+            getApplication<Application>().toastOnUi("Downloading chapter")
         }
     }
 
@@ -548,14 +548,14 @@ class TocViewModel(
             .map { it.id }
 
         if (targetIndices.isEmpty()) {
-            getApplication<Application>().toastOnUi("所有章节已缓存")
+            getApplication<Application>().toastOnUi("All chapters cached")
             return
         }
 
         execute {
             cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
         }.onSuccess { count ->
-            getApplication<Application>().toastOnUi("开始下载剩余 $count 个章节")
+            getApplication<Application>().toastOnUi("Downloading remaining $count chapters")
         }
     }
 

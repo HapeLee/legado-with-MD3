@@ -250,7 +250,7 @@ class BookshelfManageScreenViewModel(
             is BookshelfManageScreenIntent.SetExportUseReplace -> {
                 bookshelfManageScreenConfig.exportUseReplace = intent.enabled
                 syncExportConfig()
-                val msg = if (intent.enabled) "替换净化功能已开启" else "替换净化功能已关闭"
+                val msg = if (intent.enabled) "Replace & Purify enabled" else "Replace & Purify disabled"
                 _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage(msg))
             }
 
@@ -402,7 +402,7 @@ class BookshelfManageScreenViewModel(
                     .keys
                 val failureMsgs = downloadState.books.mapNotNull { (bookUrl, bookState) ->
                     val message = bookState.failureMessage ?: if (bookState.failedIndices.isNotEmpty()) {
-                        "${bookState.failedIndices.size} 章"
+                        "${bookState.failedIndices.size} chapters"
                     } else {
                         null
                     }
@@ -587,15 +587,15 @@ class BookshelfManageScreenViewModel(
             }.onSuccess { count ->
                 if (count <= 0) {
                     pendingDownloadBookUrls.remove(book.bookUrl)
-                    downloadFailureMessages[book.bookUrl] = "没有可缓存的章节"
+                    downloadFailureMessages[book.bookUrl] = "No chapters to cache"
                     emitBookChanged(book.bookUrl)
-                    _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的章节"))
+                    _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("No chapters to cache"))
                 }
             }.onError { error ->
                 pendingDownloadBookUrls.remove(book.bookUrl)
-                downloadFailureMessages[book.bookUrl] = error.localizedMessage ?: "未知错误"
+                downloadFailureMessages[book.bookUrl] = error.localizedMessage ?: "Unknown error"
                 emitBookChanged(book.bookUrl)
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存失败\n${error.localizedMessage}"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Cache failed\n${error.localizedMessage}"))
             }.onFinally {
                 syncDownloadRunning()
             }
@@ -608,7 +608,7 @@ class BookshelfManageScreenViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, safeGroupId)
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("移动分组失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Move group failed\n${it.localizedMessage}"))
         }
     }
 
@@ -620,9 +620,9 @@ class BookshelfManageScreenViewModel(
         }.onSuccess { deletedBookUrls ->
             _uiState.update { it.copy(deleteBookOriginal = deleteOriginal) }
             deletedBookUrls.forEach { cacheCounts.remove(it) }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除成功"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Deleted successfully"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Delete failed\n${it.localizedMessage}"))
         }
     }
 
@@ -635,9 +635,9 @@ class BookshelfManageScreenViewModel(
                 cacheCounts[bookUrl] = 0
                 emitBookChanged(bookUrl)
             }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存已清理"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Cache cleared"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("清理缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Clear cache failed\n${it.localizedMessage}"))
         }
     }
 
@@ -661,7 +661,7 @@ class BookshelfManageScreenViewModel(
         execute {
             bookDao.update(*reorderedBooks.toTypedArray())
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("排序保存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Failed to save sort order\n${it.localizedMessage}"))
         }
     }
 
@@ -676,13 +676,13 @@ class BookshelfManageScreenViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已加入缓存队列: $count 本"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Added to download queue: $count books"))
             } else {
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的书籍"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("No books to cache"))
             }
             syncDownloadRunning()
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Batch cache failed\n${it.localizedMessage}"))
         }
     }
 
@@ -701,9 +701,9 @@ class BookshelfManageScreenViewModel(
             cacheCounts.remove(result.oldBookUrl)
             cacheCounts[result.book.bookUrl] = 0
             emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Source changed successfully"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Source change failed\n${it.localizedMessage}"))
         }
     }
 
@@ -713,11 +713,11 @@ class BookshelfManageScreenViewModel(
         options: ChangeSourceMigrationOptions,
     ) {
         if (bookUrls.isEmpty()) {
-            _uiState.update { it.copy(changeSourceError = "未选择书籍") }
+            _uiState.update { it.copy(changeSourceError = "No books selected") }
             return
         }
         if (sources.isEmpty()) {
-            _uiState.update { it.copy(changeSourceError = "未选择书源") }
+            _uiState.update { it.copy(changeSourceError = "No sources selected") }
             return
         }
         execute {
@@ -726,7 +726,7 @@ class BookshelfManageScreenViewModel(
                 it.copy(
                     isChangingSource = true,
                     changeSourceProgress = "0 / ${bookUrls.size}",
-                    changeSourceMessage = "开始查找：${bookUrls.size} 本，${sources.size} 个书源，并发 $concurrency",
+                    changeSourceMessage = "Starting search: ${bookUrls.size} books, ${sources.size} sources, concurrency $concurrency",
                     changeSourceError = null,
                     batchChangeOptions = options,
                     batchChangePreviewItems = emptyList()
@@ -757,7 +757,7 @@ class BookshelfManageScreenViewModel(
             val notFoundCount = previewItems.size - matchedCount - skippedCount
             _uiState.update {
                 it.copy(
-                    changeSourceMessage = "查找完成：可迁移 $matchedCount 本，未找到 $notFoundCount 本，跳过 $skippedCount 本",
+                    changeSourceMessage = "Search complete: $matchedCount can migrate, $notFoundCount not found, $skippedCount skipped",
                     changeSourceError = null
                 )
             }
@@ -765,7 +765,7 @@ class BookshelfManageScreenViewModel(
             val progress = uiState.value.changeSourceProgress.orEmpty()
             _uiState.update { state ->
                 state.copy(
-                    changeSourceError = "批量换源查找失败${if (progress.isBlank()) "" else "\n进度：$progress"}\n${it.localizedMessage}"
+                    changeSourceError = "Batch source search failed${if (progress.isBlank()) "" else "\nProgress: $progress"}\n${it.localizedMessage}"
                 )
             }
         }.onFinally {
@@ -788,99 +788,7 @@ class BookshelfManageScreenViewModel(
             val chapters = changeBookSourceUseCase.loadCandidateChapters(
                 candidate.source,
                 candidate.book
-            ) ?: error("获取目录失败")
-            changeBookSourceUseCase.changeTo(
-                oldBook = oldBook,
-                newBook = candidate.book,
-                chapters = chapters,
-                options = uiState.value.batchChangeOptions,
-            )
-        }.onSuccess { result ->
-            cacheCounts.remove(result.oldBookUrl)
-            cacheCounts[result.book.bookUrl] = 0
-            removePreviewItem(oldBookUrl)
-            emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移完成"))
-        }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移失败\n${it.localizedMessage}"))
-        }
-    }
-
-    private fun skipPreviewItem(oldBookUrl: String) {
-        _uiState.update { state ->
-            state.copy(
-                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
-                    if (item.oldBook.bookUrl == oldBookUrl) {
-                        item.copy(status = BatchChangeSourcePreviewStatus.Skipped)
-                    } else {
-                        item
-                    }
-                }
-            )
-        }
-    }
-
-    private fun selectPreviewCandidate(oldBookUrl: String, candidateIndex: Int) {
-        _uiState.update { state ->
-            state.copy(
-                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
-                    if (item.oldBook.bookUrl == oldBookUrl) {
-                        item.copy(
-                            selectedCandidateIndex = candidateIndex.coerceIn(
-                                0,
-                                (item.candidates.size - 1).coerceAtLeast(0)
-                            ),
-                            status = BatchChangeSourcePreviewStatus.Matched
-                        )
-                    } else {
-                        item
-                    }
-                }
-            )
-        }
-    }
-
-    private fun updatePreviewItem(
-        oldBookUrl: String,
-        source: BookSource,
-        book: Book,
-        chapterCount: Int,
-    ) {
-        _uiState.update { state ->
-            state.copy(
-                batchChangePreviewItems = state.batchChangePreviewItems.map { item ->
-                    if (item.oldBook.bookUrl == oldBookUrl) {
-                        book.totalChapterNum = chapterCount
-                        item.copy(
-                            candidates = listOf(
-                                BatchChangeSourceCandidate(
-                                    source = source,
-                                    book = book,
-                                    chapterCount = chapterCount
-                                )
-                            ) +
-                                    item.candidates,
-                            selectedCandidateIndex = 0,
-                            status = BatchChangeSourcePreviewStatus.Matched
-                        )
-                    } else {
-                        item
-                    }
-                }
-            )
-        }
-    }
-
-    private fun addPreviewItemToShelf(oldBookUrl: String) {
-        val item = uiState.value.batchChangePreviewItems.firstOrNull {
-            it.oldBook.bookUrl == oldBookUrl
-        } ?: return
-        val candidate = item.selectedCandidate ?: return
-        execute {
-            val chapters = changeBookSourceUseCase.loadCandidateChapters(
-                candidate.source,
-                candidate.book
-            ) ?: error("获取目录失败")
+            ) ?: error("Failed to get chapters")
             candidate.book.removeType(BookType.notShelf)
             if (candidate.book.order == 0) {
                 candidate.book.order = bookDao.minOrder - 1
@@ -889,9 +797,9 @@ class BookshelfManageScreenViewModel(
             bookChapterDao.insert(*chapters.toTypedArray())
             candidate.book
         }.onSuccess {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已添加到书架"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Added to bookshelf"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("添加书籍失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Add book failed\n${it.localizedMessage}"))
         }
     }
 
@@ -903,6 +811,80 @@ class BookshelfManageScreenViewModel(
             book
         }.onSuccess {
             _effects.tryEmit(BookshelfManageScreenEffect.OpenBookInfo(it.bookUrl, it.name, it.author))
+        }
+    }
+
+    private fun skipPreviewItem(oldBookUrl: String) {
+        _uiState.update {
+            it.copy(
+                batchChangePreviewItems = it.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        item.copy(
+                            status = BatchChangeSourcePreviewStatus.Skipped,
+                            selectedCandidateIndex = 0
+                        )
+                    } else item
+                },
+                cacheVersion = it.cacheVersion + 1
+            )
+        }
+    }
+
+    private fun selectPreviewCandidate(oldBookUrl: String, candidateIndex: Int) {
+        _uiState.update {
+            it.copy(
+                batchChangePreviewItems = it.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        item.copy(selectedCandidateIndex = candidateIndex)
+                    } else item
+                },
+                cacheVersion = it.cacheVersion + 1
+            )
+        }
+    }
+
+    private fun updatePreviewItem(oldBookUrl: String, source: BookSource, book: Book, chapterCount: Int) {
+        _uiState.update {
+            it.copy(
+                batchChangePreviewItems = it.batchChangePreviewItems.map { item ->
+                    if (item.oldBook.bookUrl == oldBookUrl) {
+                        val candidates = item.candidates.map { candidate ->
+                            if (candidate.source.bookSourceUrl == source.bookSourceUrl) {
+                                candidate.copy(chapterCount = chapterCount, book = book)
+                            } else candidate
+                        }
+                        item.copy(candidates = candidates)
+                    } else item
+                },
+                cacheVersion = it.cacheVersion + 1
+            )
+        }
+    }
+
+    private fun addPreviewItemToShelf(oldBookUrl: String) {
+        val item = uiState.value.batchChangePreviewItems.firstOrNull {
+            it.oldBook.bookUrl == oldBookUrl
+        } ?: return
+        val candidate = item.selectedCandidate ?: return
+        execute {
+            val oldBook = bookDao.getBook(oldBookUrl) ?: item.oldBook
+            val chapters = changeBookSourceUseCase.loadCandidateChapters(
+                candidate.source,
+                candidate.book
+            ) ?: error("Failed to get chapters")
+            candidate.book.removeType(BookType.notShelf)
+            if (candidate.book.order == 0) {
+                candidate.book.order = bookDao.minOrder - 1
+            }
+            bookDao.insert(candidate.book)
+            bookChapterDao.insert(*chapters.toTypedArray())
+            candidate.book
+        }.onSuccess {
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Added to bookshelf"))
+        }.onError {
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Add book failed\n${it.localizedMessage}"))
+        }.onFinally {
+            removePreviewItem(oldBookUrl)
         }
     }
 
@@ -944,9 +926,9 @@ class BookshelfManageScreenViewModel(
         }.onSuccess {
             cacheCounts.clear()
             _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Batch migration complete"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Batch migration failed\n${it.localizedMessage}"))
         }.onFinally {
             _uiState.update {
                 it.copy(

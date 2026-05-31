@@ -102,29 +102,29 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
         }
 
         binding.btnTitleSegType.setOnClickListener {
-            val types = arrayOf("不分段", "按字符数分段", "按标志字符串分段", "正则表达式分段")
+            val types = arrayOf("No segmentation", "By character count", "By flag string", "Regex segmentation")
             val current = ReadBookConfig.titleSegType
 
-            alert(title = "选择标题分段模式") {
+            alert(title = "Select title segmentation mode") {
                 singleChoiceItems(types, current) { _, which ->
                     ReadBookConfig.titleSegType = which
                 }
-                positiveButton("确定") {
-                    toastOnUi("分段模式已设置为：${types[ReadBookConfig.titleSegType]}")
+                positiveButton("OK") {
+                    toastOnUi("Segmentation mode set to: ${types[ReadBookConfig.titleSegType]}")
                     postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                 }
-                negativeButton("取消")
+                negativeButton("Cancel")
             }.show()
         }
 
         binding.btnTitleSegConfig.setOnClickListener {
             when (ReadBookConfig.titleSegType) {
                 1 -> { // 按字符数分段
-                    alert(title = "设置分段字符数") {
+                    alert(title = "Set segment character count") {
                         val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
                             editView.inputType = InputType.TYPE_CLASS_NUMBER
                             editView.setText(ReadBookConfig.titleSegDistance.toString())
-                            editView.hint = "输入分段字符数"
+                            editView.hint = "Enter segment character count"
                         }
                         customView { alertBinding.root }
 
@@ -132,10 +132,10 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                             val value = alertBinding.editView.text?.toString()?.toIntOrNull()
                             if (value != null && value > 0) {
                                 ReadBookConfig.titleSegDistance = value
-                                toastOnUi("分段字符数设置为 $value")
+                                toastOnUi("Segment character count set to $value")
                                 postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                             } else {
-                                toastOnUi("请输入有效数字")
+                                toastOnUi("Please enter a valid number")
                             }
                         }
                         cancelButton()
@@ -143,11 +143,11 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                 }
 
                 2 -> { // 按标志字符串分段
-                    alert(title = "设置分段标志") {
+                    alert(title = "Set segment flags") {
                         val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
                             editView.inputType = InputType.TYPE_CLASS_TEXT
                             editView.setText(ReadBookConfig.titleSegFlag)
-                            editLayout.hint = "输入多个标志，用英文逗号分隔，例如：章,回,篇"
+                            editLayout.hint = "Enter flags separated by commas, e.g. chapter,section,part"
                         }
                         customView { alertBinding.root }
 
@@ -155,10 +155,10 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                             val value = alertBinding.editView.text?.toString()?.trim()
                             if (!value.isNullOrEmpty()) {
                                 ReadBookConfig.titleSegFlag = value
-                                toastOnUi("分段标志设置为 \"$value\"")
+                                toastOnUi("Segment flags set to \"$value\"")
                                 postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                             } else {
-                                toastOnUi("标志不能为空")
+                                toastOnUi("Flags cannot be empty")
                             }
                         }
                         cancelButton()
@@ -166,11 +166,11 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                 }
 
                 3 -> { // 正则表达式分段
-                    alert(title = "设置正则分段规则") {
+                    alert(title = "Set regex segmentation rule") {
                         val alertBinding = DialogEditTextBinding.inflate(layoutInflater).apply {
                             editView.inputType = InputType.TYPE_CLASS_TEXT
                             editView.setText(ReadBookConfig.titleSegFlag)
-                            editLayout.hint = "例如: [章回篇] 或 (第.{1,3}章)"
+                            editLayout.hint = "e.g. [chapter] or (ch.{1,3})"
                             editView.isSingleLine = true
                         }
 
@@ -182,13 +182,13 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                                 try {
                                     Regex(value)
                                     ReadBookConfig.titleSegFlag = value
-                                    toastOnUi("正则规则已保存")
+                                    toastOnUi("Regex rule saved")
                                     postEvent(EventBus.UP_CONFIG, arrayListOf(5))
                                 } catch (e: Exception) {
-                                    toastOnUi("正则表达式格式错误")
+                                    toastOnUi("Invalid regex format")
                                 }
                             } else {
-                                toastOnUi("规则不能为空")
+                                toastOnUi("Rule cannot be empty")
                             }
                         }
                         cancelButton()
@@ -196,7 +196,7 @@ class TipConfigDialog : BaseBottomSheetDialogFragment(R.layout.dialog_tip_config
                 }
 
                 else -> {
-                    toastOnUi("当前分段模式无需配置参数")
+                    toastOnUi("Current segmentation mode needs no configuration")
                 }
             }
         }

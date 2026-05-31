@@ -473,7 +473,7 @@ class ReadMenu @JvmOverloads constructor(
                         if (confirmSkipToChapter) {
                             callBack.skipToChapter(progress - 1)
                         } else {
-                            context.alert("章节跳转确认", "确定要跳转章节吗？") {
+                            context.alert("Chapter jump confirmation", "Are you sure you want to jump?") {
                                 yesButton {
                                     confirmSkipToChapter = true
                                     callBack.skipToChapter(progress - 1)

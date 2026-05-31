@@ -21,10 +21,10 @@ object ReplaceRuleController {
 
     fun saveRule(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Data cannot be empty")
         val rule = GSON.fromJsonObject<ReplaceRule>(postData).getOrNull()
         if (rule == null) {
-            returnData.setErrorMsg("格式不对")
+            returnData.setErrorMsg("Invalid format")
         } else {
             if (rule.order == Int.MIN_VALUE) {
                 rule.order = appDb.replaceRuleDao.maxOrder + 1
@@ -37,10 +37,10 @@ object ReplaceRuleController {
 
     fun delete(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Data cannot be empty")
         val rule = GSON.fromJsonObject<ReplaceRule>(postData).getOrNull()
         if (rule == null) {
-            returnData.setErrorMsg("格式不对")
+            returnData.setErrorMsg("Invalid format")
         } else {
             appDb.replaceRuleDao.delete(rule)
         }
@@ -56,10 +56,10 @@ object ReplaceRuleController {
      */
     fun testRule(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Data cannot be empty")
         val map = GSON.fromJsonObject<Map<String, *>>(postData).getOrNull()
         if (map == null) {
-            returnData.setErrorMsg("格式不对")
+            returnData.setErrorMsg("Invalid format")
         } else {
             val rule = map["rule"]?.let {
                 if (it is String) {
@@ -69,11 +69,11 @@ object ReplaceRuleController {
                 }
             }
             if (rule == null) {
-                returnData.setErrorMsg("格式不对")
+                returnData.setErrorMsg("Invalid format")
                 return returnData
             }
             if (rule.pattern.isEmpty()) {
-                returnData.setErrorMsg("替换规则不能为空")
+                returnData.setErrorMsg("Replace rule cannot be empty")
             }
             val text = map["text"] as String
             val content = try {

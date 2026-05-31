@@ -60,10 +60,10 @@ class FilePickerViewModel(application: Application) : BaseViewModel(application)
 
     fun createFolder(name: String) {
         execute {
-            val dir = lastDir ?: throw NoStackTraceException("父文件夹不存在")
+            val dir = lastDir ?: throw NoStackTraceException("Parent folder does not exist")
             val folder = File(dir, name)
             if (!folder.canonicalPath.contains(dir.canonicalPath)) {
-                throw NoStackTraceException("非法文件名")
+                throw NoStackTraceException("Invalid file name")
             }
             folder.mkdir()
         }.onSuccess {

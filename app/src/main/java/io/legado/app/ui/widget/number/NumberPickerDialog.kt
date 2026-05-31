@@ -77,7 +77,7 @@ class NumberPickerDialog(context: Context) {
 
                 val min = minValue ?: numberPicker?.minValue
                 val max = maxValue ?: numberPicker?.maxValue
-                inputLayout?.hint = "输入范围: $min - $max"
+                inputLayout?.hint = "Input range: $min - $max"
 
                 editText?.setText(numberPicker?.value?.toString() ?: value?.toString())
             } else {
@@ -94,7 +94,7 @@ class NumberPickerDialog(context: Context) {
                 val min = minValue ?: numberPicker?.minValue ?: Int.MIN_VALUE
                 val max = maxValue ?: numberPicker?.maxValue ?: Int.MAX_VALUE
                 if (num == null || num !in min..max) {
-                    inputLayout?.error = "请输入 $min - $max 范围内的数字"
+                    inputLayout?.error = "Please enter a number between $min and $max"
                 } else {
                     inputLayout?.error = null
                     callBack?.invoke(num)

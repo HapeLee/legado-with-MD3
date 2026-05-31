@@ -17,18 +17,18 @@ object RssSourceController {
             val source = appDb.rssSourceDao.all
             val returnData = ReturnData()
             return if (source.isEmpty()) {
-                returnData.setErrorMsg("源列表为空")
+                returnData.setErrorMsg("Source list is empty")
             } else returnData.setData(source)
         }
 
     fun saveSource(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Data cannot be empty")
         GSON.fromJsonObject<RssSource>(postData).onFailure {
-            returnData.setErrorMsg("转换源失败${it.localizedMessage}")
+            returnData.setErrorMsg("Source conversion failed ${it.localizedMessage}")
         }.onSuccess { source ->
             if (TextUtils.isEmpty(source.sourceName) || TextUtils.isEmpty(source.sourceUrl)) {
-                returnData.setErrorMsg("源名称和URL不能为空")
+                returnData.setErrorMsg("Source name and URL cannot be empty")
             } else {
                 appDb.rssSourceDao.insert(source)
                 returnData.setData("")
@@ -38,11 +38,11 @@ object RssSourceController {
     }
 
     fun saveSources(postData: String?): ReturnData {
-        postData ?: return ReturnData().setErrorMsg("数据不能为空")
+        postData ?: return ReturnData().setErrorMsg("Data cannot be empty")
         val okSources = arrayListOf<RssSource>()
         val source = GSON.fromJsonArray<RssSource>(postData).getOrNull()
         if (source.isNullOrEmpty()) {
-            return ReturnData().setErrorMsg("转换源失败")
+            return ReturnData().setErrorMsg("Source conversion failed")
         }
         for (rssSource in source) {
             if (rssSource.sourceName.isBlank() || rssSource.sourceUrl.isBlank()) {
@@ -58,20 +58,20 @@ object RssSourceController {
         val url = parameters["url"]?.firstOrNull()
         val returnData = ReturnData()
         if (url.isNullOrEmpty()) {
-            return returnData.setErrorMsg("参数url不能为空，请指定书源地址")
+            return returnData.setErrorMsg("Parameter url cannot be empty, please specify source URL")
         }
         val source = appDb.rssSourceDao.getByKey(url)
-            ?: return returnData.setErrorMsg("未找到源，请检查源地址")
+            ?: return returnData.setErrorMsg("Source not found, please check source URL")
         return returnData.setData(source)
     }
 
     fun deleteSources(postData: String?): ReturnData {
-        postData ?: return ReturnData().setErrorMsg("没有传递数据")
+        postData ?: return ReturnData().setErrorMsg("No data passed")
         GSON.fromJsonArray<RssSource>(postData).onFailure {
-            return ReturnData().setErrorMsg("格式不对")
+            return ReturnData().setErrorMsg("Invalid format")
         }.onSuccess {
             SourceHelp.deleteRssSources(it)
         }
-        return ReturnData().setData("已执行"/*okSources*/)
+        return ReturnData().setData("Executed"/*okSources*/)
     }
 }

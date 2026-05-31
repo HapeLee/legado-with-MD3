@@ -62,7 +62,7 @@ object BookList {
         if (isSearch) bookSource.bookUrlPattern?.let {
             coroutineContext.ensureActive()
             if (baseUrl.matches(it.toRegex())) {
-                Debug.log(bookSource.bookSourceUrl, "≡链接为详情页")
+                Debug.log(bookSource.bookSourceUrl, "≡Link is detail page")
                 getInfoItem(
                     bookSource,
                     analyzeRule,
@@ -94,11 +94,11 @@ object BookList {
         if (ruleList.startsWith("+")) {
             ruleList = ruleList.substring(1)
         }
-        Debug.log(bookSource.bookSourceUrl, "┌获取书籍列表")
+        Debug.log(bookSource.bookSourceUrl, "┌Getting book list")
         collections = analyzeRule.getElements(ruleList)
         coroutineContext.ensureActive()
         if (collections.isEmpty() && bookSource.bookUrlPattern.isNullOrEmpty()) {
-            Debug.log(bookSource.bookSourceUrl, "└列表为空,按详情页解析")
+            Debug.log(bookSource.bookSourceUrl, "└List is empty, parsing as detail page")
             getInfoItem(
                 bookSource, analyzeRule, analyzeUrl, body, baseUrl, ruleData.getVariable(),
                 isRedirect, filter
@@ -115,7 +115,7 @@ object BookList {
             val ruleKind = analyzeRule.splitSourceRule(bookListRule.kind)
             val ruleLastChapter = analyzeRule.splitSourceRule(bookListRule.lastChapter)
             val ruleWordCount = analyzeRule.splitSourceRule(bookListRule.wordCount)
-            Debug.log(bookSource.bookSourceUrl, "└列表大小:${collections.size}")
+            Debug.log(bookSource.bookSourceUrl, "└List size:${collections.size}")
             for ((index, item) in collections.withIndex()) {
                 getSearchItem(
                     bookSource, analyzeRule, item, baseUrl, ruleData.getVariable(),
@@ -146,7 +146,7 @@ object BookList {
                 bookList.reverse()
             }
         }
-        Debug.log(bookSource.bookSourceUrl, "◇书籍总数:${bookList.size}")
+        Debug.log(bookSource.bookSourceUrl, "◇Total books:${bookList.size}")
         return bookList
     }
 
@@ -216,19 +216,19 @@ object BookList {
         analyzeRule.setRuleData(searchBook)
         analyzeRule.setContent(item)
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取书名", log)
+        Debug.log(bookSource.bookSourceUrl, "┌Getting book name", log)
         searchBook.name = BookHelp.formatBookName(analyzeRule.getString(ruleName))
         Debug.log(bookSource.bookSourceUrl, "└${searchBook.name}", log)
         if (searchBook.name.isNotEmpty()) {
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取作者", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting author", log)
             searchBook.author = BookHelp.formatBookAuthor(analyzeRule.getString(ruleAuthor))
             Debug.log(bookSource.bookSourceUrl, "└${searchBook.author}", log)
             if (filter?.invoke(searchBook.name, searchBook.author) == false) {
                 return null
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取分类", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting category", log)
             try {
                 searchBook.kind = analyzeRule.getStringList(ruleKind)?.joinToString(",")
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.kind ?: ""}", log)
@@ -237,7 +237,7 @@ object BookList {
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取字数", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting word count", log)
             try {
                 searchBook.wordCount = wordCountFormat(analyzeRule.getString(ruleWordCount))
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.wordCount}", log)
@@ -246,7 +246,7 @@ object BookList {
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取最新章节", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting latest chapter", log)
             try {
                 searchBook.latestChapterTitle = analyzeRule.getString(ruleLastChapter)
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.latestChapterTitle}", log)
@@ -255,7 +255,7 @@ object BookList {
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取简介", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting description", log)
             try {
                 searchBook.intro = HtmlFormatter.format(analyzeRule.getString(ruleIntro))
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.intro}", log)
@@ -264,7 +264,7 @@ object BookList {
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取封面链接", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting cover link", log)
             try {
                 analyzeRule.getString(ruleCoverUrl).let {
                     if (it.isNotEmpty()) {
@@ -277,7 +277,7 @@ object BookList {
                 Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}", log)
             }
             coroutineContext.ensureActive()
-            Debug.log(bookSource.bookSourceUrl, "┌获取详情页链接", log)
+            Debug.log(bookSource.bookSourceUrl, "┌Getting detail page link", log)
             searchBook.bookUrl = analyzeRule.getString(ruleBookUrl, isUrl = true)
             if (searchBook.bookUrl.isEmpty()) {
                 searchBook.bookUrl = baseUrl
@@ -301,7 +301,7 @@ object BookList {
             return
         }
         GSON.fromJsonArray<ExploreKind>(json).getOrNull()?.let {
-            Debug.log("≡发现地址规则 JSON 格式不规范，请改为规范格式")
+            Debug.log("≡Explore URL rule JSON format is not standard, please change to standard format")
         }
     }
 

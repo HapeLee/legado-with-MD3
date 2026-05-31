@@ -31,8 +31,8 @@ data class BookInfoEditUiState(
     val coverUrl: String? = null,
     val intro: String? = null,
     val remark: String? = null,
-    val selectedType: String = "文本",
-    val bookTypes: List<String> = listOf("文本", "音频", "图片"),
+    val selectedType: String = "Text",
+    val bookTypes: List<String> = listOf("Text", "Audio", "Image"),
     val fixedType: Boolean = false,
     val book: Book? = null,
 )

@@ -42,7 +42,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
     private val defaultCover by lazy {
         listOf(
             SearchBook(
-                originName = "默认封面",
+                originName = "Default cover",
                 name = name,
                 author = author,
                 coverUrl = "use_default_cover"

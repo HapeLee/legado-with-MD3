@@ -31,7 +31,7 @@ object ReplaceAnalyzer {
                 val rule = ReplaceRule()
                 rule.id = jsonItem.readLong("$.id") ?: System.currentTimeMillis()
                 rule.pattern = jsonItem.readString("$.regex") ?: ""
-                if (rule.pattern.isEmpty()) throw NoStackTraceException("格式不对")
+                if (rule.pattern.isEmpty()) throw NoStackTraceException("Invalid format")
                 rule.name = jsonItem.readString("$.replaceSummary") ?: ""
                 rule.replacement = jsonItem.readString("$.replacement") ?: ""
                 rule.isRegex = jsonItem.readBool("$.isRegex") == true

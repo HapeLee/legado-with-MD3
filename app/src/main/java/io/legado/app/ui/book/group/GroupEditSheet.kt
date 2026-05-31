@@ -197,7 +197,7 @@ fun GroupEditContent(
             onDismiss = onDismissRequest,
             onConfirm = {
                 if (groupName.isEmpty()) {
-                    appCtx.toastOnUi("分组名称不能为空")
+                    appCtx.toastOnUi("Group name cannot be empty")
                 } else {
                     if (group != null && group.groupId != 0b1L) {
                         viewModel.upGroup(
@@ -271,7 +271,7 @@ fun GroupResetCoverAction(
             if (group != null) {
                 viewModel.clearCover(group) {
                     onCoverPathChange(null)
-                    appCtx.toastOnUi("封面已重置")
+                    appCtx.toastOnUi("Cover reset")
                 }
             } else {
                 onCoverPathChange(null)

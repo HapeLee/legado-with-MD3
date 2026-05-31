@@ -84,8 +84,8 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
 
     private fun updateChineseIcon() {
         val text = when (AppConfig.chineseConverterType) {
-            1 -> " 简"
-            2 -> " 繁"
+            1 -> " Simp"
+            2 -> " Trad"
             else -> null
         }
         binding.btnChineseConverter.text = text
@@ -212,7 +212,7 @@ class ReadStyleDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_book_
             payloads: MutableList<Any>
         ) {
             binding.apply {
-                tvStyle.text = item.name.ifBlank { "文字" }
+                tvStyle.text = item.name.ifBlank { "Text" }
                 tvStyle.setTextColor(item.curTextColor())
                 ivStyle.setImageDrawable(item.curBgDrawable(100, 150))
                 cdStyle.strokeWidth = 1.dpToPx()

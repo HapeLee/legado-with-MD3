@@ -55,12 +55,12 @@ class OkHttpStreamFetcher(
 
     override fun loadData(priority: Priority, callback: DataFetcher.DataCallback<in InputStream>) {
         if (failUrl.contains(url.toStringUrl())) {
-            callback.onLoadFailed(NoStackTraceException("跳过加载失败的图片"))
+            callback.onLoadFailed(NoStackTraceException("Skipping failed image load"))
             return
         }
         val loadOnlyWifi = options.get(OkHttpModelLoader.loadOnlyWifiOption) ?: false
         if (loadOnlyWifi && !appCtx.isWifiConnect) {
-            callback.onLoadFailed(NoStackTraceException("只在wifi加载图片"))
+            callback.onLoadFailed(NoStackTraceException("Only load images on WiFi"))
             return
         }
 
@@ -151,7 +151,7 @@ class OkHttpStreamFetcher(
             if (!manga) {
                 failUrl.add(url.toStringUrl())
             }
-            callback?.onLoadFailed(NoStackTraceException("封面二次解密失败"))
+            callback?.onLoadFailed(NoStackTraceException("Cover re-decryption failed"))
         } else {
             val contentLength: Long =
                 if (inputStream is ByteArrayInputStream) inputStream.available().toLong()

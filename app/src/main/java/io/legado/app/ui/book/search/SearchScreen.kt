@@ -243,7 +243,7 @@ fun SearchScreen(
                                 viewModel.onIntent(SearchIntent.OpenSourceManage)
                             },
                             imageVector = AppIcons.Settings,
-                            contentDescription = "书源管理"
+                            contentDescription = "Source management"
                         )
                     },
                     scrollBehavior = scrollBehavior
@@ -381,8 +381,8 @@ fun SearchScreen(
                         TopFloatingStickyItem(
                             item = if (showResultCountCard || showSourceProgressCard) {
                                 SearchFloatingSummary(
-                                    resultText = if (showResultCountCard) "结果 ${state.results.size}" else null,
-                                    sourceText = if (showSourceProgressCard) " · 进度 ${state.processedSources}/${state.totalSources}" else null,
+                                    resultText = if (showResultCountCard) "Results: ${state.results.size}" else null,
+                                    sourceText = if (showSourceProgressCard) " · Progress: ${state.processedSources}/${state.totalSources}" else null,
                                 )
                             } else {
                                 null
@@ -442,9 +442,9 @@ fun SearchScreen(
         content = {
             Text(
                 text = if (it.wasPrecisionSearch) {
-                    "${it.scopeDisplay}分组搜索结果为空，是否关闭精准搜索？"
+                    "${it.scopeDisplay} group search returned no results. Disable precision search?"
                 } else {
-                    "${it.scopeDisplay}分组搜索结果为空，是否切换到全部分组？"
+                    "${it.scopeDisplay} group search returned no results. Switch to all groups?"
                 }
             )
         }

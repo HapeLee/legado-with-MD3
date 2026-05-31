@@ -47,28 +47,28 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
                 binding.btnNext.text = when (position) {
-                    0 -> "阅读并同意" // PrivacyFragment
-                    pages.lastIndex -> "完成"
-                    else -> "下一步"
+                    0 -> "Read & Agree"
+                    pages.lastIndex -> "Finish"
+                    else -> "Next"
                 }
                 binding.tvTitle.text = when (position) {
-                    0 -> "欢迎！" // PrivacyFragment
-                    1 -> "备份与恢复"
-                    2 -> "书籍文件夹"
-                    else -> "主题样式"
+                    0 -> "Welcome!"
+                    1 -> "Backup & Restore"
+                    2 -> "Book Folder"
+                    else -> "Theme Style"
                 }
                 binding.tvSummary.text = when (position) {
-                    0 -> "请先阅读应用的服务条款与用户协议。"
-                    1 -> "此处可设置云同步与恢复应用备份。"
-                    2 -> "请选择保存本地书籍的文件夹。"
-                    else -> "在这里设置您喜爱的样式。"
+                    0 -> "Please read the terms of service and user agreement first."
+                    1 -> "Set up cloud sync and restore app backup here."
+                    2 -> "Please select a folder for local books."
+                    else -> "Set your preferred style here."
                 }
                 updateProgress(position)
             }
         })
 
         // 初始化按钮文字
-        binding.btnNext.text = "阅读并同意"
+        binding.btnNext.text = "Read & Agree"
 
         binding.btnNext.setOnClickListener {
             val current = binding.viewPager.currentItem

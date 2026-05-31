@@ -264,11 +264,11 @@ class RssSourceEditActivity :
             add(EditEntity("contentWhitelist", rs.contentWhitelist, R.string.c_whitelist))
             add(EditEntity("contentBlacklist", rs.contentBlacklist, R.string.c_blacklist))
             add(
-                EditEntity(
-                    "shouldOverrideUrlLoading",
-                    rs.shouldOverrideUrlLoading,
-                    "url跳转拦截(js, 返回true拦截,js变量url,可以通过js打开url,比如调用阅读搜索,添加书架等,简化规则写法,不用webView js注入)"
-                )
+                    EditEntity(
+                        "shouldOverrideUrlLoading",
+                        rs.shouldOverrideUrlLoading,
+                        "URL redirect intercept (JS, return true to intercept, JS variable url, can open URLs via JS e.g. search, add bookshelf, simplified rules without webView JS injection)"
+                    )
             )
         }
         binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
@@ -344,7 +344,7 @@ class RssSourceEditActivity :
         viewModel.save(getRssSource()) { source ->
             lifecycleScope.launch {
                 val comment =
-                    source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+                    source.getDisplayVariableComment("Source variables can be accessed via source.getVariable() in JS")
                 val variable = withContext(Dispatchers.IO) { source.getVariable() }
                 showDialogFragment(
                     VariableDialog(
@@ -364,11 +364,11 @@ class RssSourceEditActivity :
 
     override fun helpActions(): List<SelectItem<String>> {
         return arrayListOf(
-            SelectItem("插入URL参数", "urlOption"),
-            SelectItem("订阅源教程", "ruleHelp"),
-            SelectItem("js教程", "jsHelp"),
-            SelectItem("正则教程", "regexHelp"),
-            SelectItem("选择文件", "selectFile"),
+            SelectItem("Insert URL parameter", "urlOption"),
+            SelectItem("RSS source tutorial", "ruleHelp"),
+            SelectItem("JS tutorial", "jsHelp"),
+            SelectItem("Regex tutorial", "regexHelp"),
+            SelectItem("Select file", "selectFile"),
         )
     }
 

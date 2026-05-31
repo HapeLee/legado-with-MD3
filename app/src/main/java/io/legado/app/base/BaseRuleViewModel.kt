@@ -169,7 +169,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
                     .map { ruleItemToEntity(it) }
 
                 if (rulesToExport.isEmpty()) {
-                    _eventChannel.send(BaseRuleEvent.ShowSnackbar("没有选中的规则可导出"))
+                    _eventChannel.send(BaseRuleEvent.ShowSnackbar("No selected rules to export"))
                     return@launch
                 }
 
@@ -181,10 +181,10 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
                         writer.flush()
                     }
                 }
-                _eventChannel.send(BaseRuleEvent.ShowSnackbar("导出成功"))
+                _eventChannel.send(BaseRuleEvent.ShowSnackbar("Export successful"))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _eventChannel.send(BaseRuleEvent.ShowSnackbar("导出失败: ${e.localizedMessage}"))
+                _eventChannel.send(BaseRuleEvent.ShowSnackbar("Export failed: ${e.localizedMessage}"))
             }
         }
     }
@@ -213,15 +213,15 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
 
                 _eventChannel.send(
                     BaseRuleEvent.ShowSnackbar(
-                        message = "上传成功: $url",
-                        actionLabel = "复制链接",
+                        message = "Upload successful: $url",
+                        actionLabel = "Copy Link",
                         url = url
                     )
                 )
             } catch (e: Exception) {
                 _eventChannel.send(
                     BaseRuleEvent.ShowSnackbar(
-                        message = "上传失败: ${e.localizedMessage}"
+                        message = "Upload failed: ${e.localizedMessage}"
                     )
                 )
             } finally {

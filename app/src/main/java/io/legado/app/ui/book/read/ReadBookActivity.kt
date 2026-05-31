@@ -727,7 +727,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                             textChapter.chapter.getFileName("nr")
                         )
                     ) {
-                        toastOnUi("未找到可移除的重复标题")
+                        toastOnUi("No removable duplicate title found")
                     }
                 }
                 viewModel.reverseRemoveSameTitle()
@@ -1491,7 +1491,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                         }
                     }
                 }.onError {
-                    AppLog.put("执行购买操作出错\n${it.localizedMessage}", it, true)
+                    AppLog.put("Purchase operation error\n${it.localizedMessage}", it, true)
                 }
             }
             noButton()
@@ -1584,7 +1584,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                         }
                     }
                 }.onError {
-                    AppLog.put("执行图片链接click键值出错\n${it.localizedMessage}", it, true)
+                    AppLog.put("Image link click key error\n${it.localizedMessage}", it, true)
                 }
                 return true
             }
@@ -1603,7 +1603,7 @@ class ReadBookActivity : BaseReadBookActivity(),
                     evalJS(jsStr, urlNoOption)
                 }
             }.onError {
-                AppLog.put("执行图片链接js键值出错\n${it.localizedMessage}", it, true)
+                    AppLog.put("Image link js key error\n${it.localizedMessage}", it, true)
             }
             return true
         }
@@ -1640,7 +1640,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             listOf(
                 SelectItem(getString(R.string.show), "show"),
                 SelectItem(getString(R.string.refresh), "refresh"),
-                SelectItem("保存到相册", "save"),
+                SelectItem("Save to gallery", "save"),
                 SelectItem(getString(R.string.menu), "menu"),
             )
         )
@@ -1990,7 +1990,7 @@ class ReadBookActivity : BaseReadBookActivity(),
 
     override fun addToBookshelf(book: Book, toc: List<BookChapter>) {
         viewModel.addToBookshelf(book, toc) {
-            toastOnUi("已添加到书架")
+            toastOnUi("Added to bookshelf")
         }
     }
 

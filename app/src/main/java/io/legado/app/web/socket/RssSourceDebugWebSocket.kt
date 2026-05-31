@@ -47,8 +47,8 @@ class RssSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
         launch(IO) {
             kotlin.runCatching {
                 if (!message.textPayload.isJson()) {
-                    send("数据必须为Json格式")
-                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                    send("Data must be in JSON format")
+                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                     return@launch
                 }
                 val debugBean =
@@ -57,7 +57,7 @@ class RssSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                     val tag = debugBean["tag"]
                     if (tag.isNullOrBlank()) {
                         send(appCtx.getString(R.string.cannot_empty))
-                        close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                        close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                         return@launch
                     }
                     appDb.rssSourceDao.getByKey(tag)?.let {
@@ -86,7 +86,7 @@ class RssSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                 send(msg)
                 if (state == -1 || state == 1000) {
                     Debug.cancelDebug(true)
-                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                 }
             }.onFailure {
                 it.printOnDebug()

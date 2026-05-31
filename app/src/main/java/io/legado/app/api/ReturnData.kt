@@ -8,7 +8,7 @@ class ReturnData {
     var isSuccess: Boolean = false
         private set
 
-    var errorMsg: String = "未知错误,请联系开发者!"
+    var errorMsg: String = "Unknown error, please contact developer!"
         private set
 
     var data: Any? = null

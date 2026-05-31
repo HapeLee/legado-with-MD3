@@ -613,7 +613,7 @@ object FileUtils {
      * 获取格式化后的文件/目录创建或最后修改时间
      */
     @JvmOverloads
-    fun getDateTime(path: String, format: String = "yyyy年MM月dd日HH:mm"): String {
+    fun getDateTime(path: String, format: String = "yyyy-MM-dd HH:mm"): String {
         val file = File(path)
         return getDateTime(file, format)
     }

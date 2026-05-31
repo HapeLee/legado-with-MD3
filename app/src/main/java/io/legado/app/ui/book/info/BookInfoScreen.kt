@@ -443,18 +443,18 @@ private fun BookInfoTopBarActions(
         TopBarActionButton(
             onClick = { onMenuAction(BookInfoMenuAction.Edit) },
             imageVector = Icons.Default.Edit,
-            contentDescription = "编辑"
+            contentDescription = "Edit"
         )
     }
     TopBarActionButton(
         onClick = { onMenuAction(BookInfoMenuAction.Share) },
         imageVector = Icons.Default.Share,
-        contentDescription = "分享"
+            contentDescription = "Share"
     )
     TopBarActionButton(
         onClick = { onShowMenuChange(true) },
         imageVector = Icons.Default.MoreVert,
-        contentDescription = "更多"
+            contentDescription = "More"
     )
     BookInfoOverflowMenu(
         expanded = showMenu,
@@ -908,7 +908,7 @@ private fun BookInfoSummary(
                 color = LegadoTheme.colorScheme.secondary
             )
             AppText(
-                text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "已读完" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
+                text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "Finished" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.secondary,
             )
@@ -996,7 +996,7 @@ private fun BookInfoDialogs(
                 AppTextField(
                     value = remarkText,
                     onValueChange = { remarkText = it },
-                    label = "备注",
+                    label = "Remark",
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

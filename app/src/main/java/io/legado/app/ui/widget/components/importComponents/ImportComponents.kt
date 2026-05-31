@@ -54,8 +54,8 @@ import io.legado.app.utils.GSON
 @Composable
 fun SourceInputDialog(
     show: Boolean,
-    title: String = "网络导入",
-    hint: String = "请输入 URL 或 JSON",
+    title: String = "Import from network",
+    hint: String = "Enter URL or JSON",
     initialValue: String = "",
     historyValues: List<String> = emptyList(),
     onDismissRequest: () -> Unit,
@@ -79,7 +79,7 @@ fun SourceInputDialog(
 
                 if (historyValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    AppText("历史记录:", style = LegadoTheme.typography.labelSmall)
+                    AppText("History:", style = LegadoTheme.typography.labelSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(historyValues) { history ->
                             AssistChip(
@@ -157,7 +157,7 @@ fun <T> BatchImportDialog(
                 SmallIconButton(
                     onClick = { editingIndex = null },
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "返回"
+                    contentDescription = "Back"
                 )
             }
         } else {
@@ -170,7 +170,7 @@ fun <T> BatchImportDialog(
                     SmallIconButton(
                         onClick = { onToggleAll(!allSelected) },
                         imageVector = Icons.Default.SelectAll,
-                        contentDescription = if (allSelected) "全不选" else "全选"
+                        contentDescription = if (allSelected) "Deselect all" else "Select all"
                     )
                 }
             }
@@ -225,8 +225,8 @@ fun <T> BatchImportDialog(
                 val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
                 onConfirm(selectedData)
             },
-            dismissText = "取消",
-            confirmText = "导入",
+            dismissText = "Cancel",
+            confirmText = "Import",
             confirmEnabled = selectedCount > 0
         )
     }
@@ -242,7 +242,7 @@ private fun <T> BatchImportJsonEditContent(
     val jsonObject = remember(version) { data.toImportJsonObject() }
 
     if (jsonObject == null) {
-        AppText("不支持编辑")
+        AppText("Not editable")
         return
     }
 
@@ -327,10 +327,10 @@ fun ImportItemRow(
         trailingAction = {
             AppText(
                 text = when (status) {
-                    ImportStatus.New -> "新增"
-                    ImportStatus.Update -> "更新"
-                    ImportStatus.Existing -> "已有"
-                    ImportStatus.Error -> "错误"
+                    ImportStatus.New -> "New"
+                    ImportStatus.Update -> "Update"
+                    ImportStatus.Existing -> "Existing"
+                    ImportStatus.Error -> "Error"
                 },
                 style = LegadoTheme.typography.labelMedium,
                 color = when (status) {
@@ -345,7 +345,7 @@ fun ImportItemRow(
             SmallIconButton(
                 onClick = onInfoClick,
                 imageVector = Icons.Default.Info,
-                contentDescription = "详情"
+                contentDescription = "Details"
             )
         }
     )

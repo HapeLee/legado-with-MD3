@@ -55,23 +55,23 @@ fun ChangeSourceMigrationOptionsSheet(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-            CheckboxItem("阅读进度", checked = migrateReadingProgress) {
+            CheckboxItem("Reading progress", checked = migrateReadingProgress) {
                 migrateReadingProgress = it
             }
             if (migrateReadingProgress) {
                 AppText(
-                    text = "若新源总章节比进度更少，阅读进度将调整至最后一章。",
+                    text = "If the new source has fewer chapters than progress, reading progress adjusts to the last chapter.",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
             }
-            CheckboxItem("分组和排序", checked = migrateGroup) { migrateGroup = it }
-            CheckboxItem("自定义封面", checked = migrateCover) { migrateCover = it }
-            CheckboxItem("分类与标签", checked = migrateCategory) { migrateCategory = it }
-            CheckboxItem("备注和自定义简介", checked = migrateRemark) { migrateRemark = it }
-            CheckboxItem("阅读设置", checked = migrateReadConfig) { migrateReadConfig = it }
-            CheckboxItem("删除已下载章节", checked = deleteDownloadedChapters) {
+            CheckboxItem("Group and sorting", checked = migrateGroup) { migrateGroup = it }
+            CheckboxItem("Custom cover", checked = migrateCover) { migrateCover = it }
+            CheckboxItem("Categories and tags", checked = migrateCategory) { migrateCategory = it }
+            CheckboxItem("Remark and custom summary", checked = migrateRemark) { migrateRemark = it }
+            CheckboxItem("Read settings", checked = migrateReadConfig) { migrateReadConfig = it }
+            CheckboxItem("Delete downloaded chapters", checked = deleteDownloadedChapters) {
                 deleteDownloadedChapters = it
             }
             Spacer(modifier = Modifier.height(8.dp))

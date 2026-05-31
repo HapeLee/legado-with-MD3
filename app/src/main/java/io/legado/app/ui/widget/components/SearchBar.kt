@@ -33,7 +33,7 @@ fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     onSearch: (String) -> Unit = {},
-    placeholder: String = "搜索...",
+    placeholder: String = "Search\u2026",
     leadingIcon: @Composable (() -> Unit)? = {
         AppIcon(
             modifier = Modifier.padding(horizontal = 12.dp),

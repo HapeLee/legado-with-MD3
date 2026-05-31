@@ -46,7 +46,7 @@ class RemoteBookRepository(
     suspend fun refreshLocalBook(book: Book): Boolean {
         if (!book.isLocal) return false
         val remoteUrl = book.getRemoteUrl() ?: return false
-        val webDav = getWebDav(book) ?: throw NoStackTraceException("webDav没有配置")
+        val webDav = getWebDav(book) ?: throw NoStackTraceException("WebDAV not configured")
         val remoteBook = webDav.getRemoteBook(remoteUrl)
         if (remoteBook == null) {
             book.origin = BookType.localTag
@@ -62,13 +62,13 @@ class RemoteBookRepository(
     }
 
     suspend fun syncBookFromRemote(book: Book): Book {
-        val remoteUrl = book.getRemoteUrl() ?: throw NoStackTraceException("不是远程书籍")
-        val webDav = getWebDav(book) ?: throw NoStackTraceException("webDav没有配置")
+        val remoteUrl = book.getRemoteUrl() ?: throw NoStackTraceException("Not a remote book")
+        val webDav = getWebDav(book) ?: throw NoStackTraceException("WebDAV not configured")
         val remoteBook =
-            webDav.getRemoteBook(remoteUrl) ?: throw NoStackTraceException("远程文件不存在")
+            webDav.getRemoteBook(remoteUrl) ?: throw NoStackTraceException("Remote file does not exist")
         val downloadBookUri = webDav.downloadRemoteBook(remoteBook)
         val importedBooks = LocalBook.importFiles(downloadBookUri)
-        val newBook = importedBooks.firstOrNull() ?: throw NoStackTraceException("导入失败")
+        val newBook = importedBooks.firstOrNull() ?: throw NoStackTraceException("Import failed")
         newBook.durChapterIndex = book.durChapterIndex
         newBook.durChapterPos = book.durChapterPos
         newBook.order = book.order
@@ -77,7 +77,7 @@ class RemoteBookRepository(
     }
 
     suspend fun uploadBook(book: Book) {
-        val webDav = getWebDav(book) ?: throw NoStackTraceException("未配置webDav")
+        val webDav = getWebDav(book) ?: throw NoStackTraceException("WebDAV not configured")
         webDav.upload(book)
         book.lastCheckTime = System.currentTimeMillis()
     }

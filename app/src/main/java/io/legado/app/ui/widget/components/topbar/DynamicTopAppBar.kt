@@ -60,8 +60,8 @@ fun <T> DynamicTopAppBar(
         modifier = Modifier
             .fillMaxWidth(),
         title = when {
-            state.isLoading -> "请稍后..."
-            isSelecting -> "已选择 ${state.selectedIds.size}/${state.items.size}"
+            state.isLoading -> "Please wait\u2026"
+            isSelecting -> "Selected ${state.selectedIds.size}/${state.items.size}"
             else -> title
         },
         useCharMode = isSelecting || state.isLoading,
@@ -71,7 +71,7 @@ fun <T> DynamicTopAppBar(
                 TopBarNavigationButton(
                     onClick = { if (isSelecting) onClearSelection() else onBackClick?.invoke() },
                     imageVector = if (isSelecting) AppIcons.Close else backNavigationIcon,
-                    contentDescription = if (isSelecting) "取消选择" else "返回"
+                    contentDescription = if (isSelecting) "Deselect" else "Back"
                 )
             }
         },
@@ -81,7 +81,7 @@ fun <T> DynamicTopAppBar(
                     TopBarActionButton(
                         onClick = { onSearchToggle(!state.isSearch) },
                         imageVector = AppIcons.Search,
-                        contentDescription = "搜索"
+                        contentDescription = "Search"
                     )
                 }
 
@@ -92,7 +92,7 @@ fun <T> DynamicTopAppBar(
                         TopBarActionButton(
                             onClick = { showMenu = true },
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "更多"
+                            contentDescription = "More"
                         )
                         RoundDropdownMenu(
                             expanded = showMenu,

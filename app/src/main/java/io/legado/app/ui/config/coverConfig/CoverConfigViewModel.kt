@@ -33,7 +33,7 @@ class CoverConfigViewModel : ViewModel() {
                     var file = appCtx.externalFiles
                     val suffix = fileDoc.name.substringAfterLast(".")
                     val inputStreamForMd5 = appCtx.contentResolver.openInputStream(uri)
-                        ?: throw NoStackTraceException("无法打开输入流")
+                        ?: throw NoStackTraceException("Cannot open input stream")
                     val fileName = MD5Utils.md5Encode(inputStreamForMd5) + ".$suffix"
                     file = FileUtils.createFileIfNotExist(file, "covers", fileName)
                     FileOutputStream(file).use {
@@ -74,7 +74,7 @@ class CoverConfigViewModel : ViewModel() {
         try {
             if (uri.isContentScheme()) {
                 val doc = DocumentFile.fromSingleUri(context, uri)
-                doc ?: throw NoStackTraceException("未获取到文件")
+                doc ?: throw NoStackTraceException("Failed to get file")
                 val fileDoc = FileDoc.fromDocumentFile(doc)
                 context.contentResolver.openInputStream(uri)!!.use { inputStream ->
                     success.invoke(fileDoc, inputStream)
@@ -95,7 +95,7 @@ class CoverConfigViewModel : ViewModel() {
             }
         } catch (e: Exception) {
             e.printOnDebug()
-            AppLog.put("读取Uri出错\n$e", e, true)
+            AppLog.put("Error reading URI\n$e", e, true)
         }
     }
 

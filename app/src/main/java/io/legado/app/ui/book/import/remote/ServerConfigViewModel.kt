@@ -37,7 +37,7 @@ class ServerConfigViewModel(
         }.onSuccess {
             onSuccess.invoke()
         }.onError {
-            context.toastOnUi("保存出错\n${it.localizedMessage}")
+            context.toastOnUi("Save failed\n${it.localizedMessage}")
         }
     }
 

@@ -103,7 +103,7 @@ private fun BookCacheManageScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "缓存管理",
+                title = "Cache Management",
                 subtitle = state.downloadSummary.takeIf { it.isNotBlank() },
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -112,7 +112,7 @@ private fun BookCacheManageScreen(
                     TopBarActionButton(
                         onClick = { onIntent(BookCacheManageIntent.Refresh) },
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "刷新"
+                        contentDescription = "Refresh"
                     )
                 },
                 scrollBehavior = scrollBehavior
@@ -131,7 +131,7 @@ private fun BookCacheManageScreen(
                 ) {
                     AppIcon(
                         imageVector = if (hasRunningDownload) Icons.Default.Stop else Icons.Default.Download,
-                        contentDescription = if (hasRunningDownload) "停止下载" else "开始下载"
+                        contentDescription = if (hasRunningDownload) "Stop Download" else "Start Download"
                     )
                 }
             }
@@ -157,8 +157,8 @@ private fun BookCacheManageScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 cacheSection(
-                    title = "书架书籍",
-                    emptyText = "没有书架内书籍缓存或下载任务",
+                    title = "Bookshelf Books",
+                    emptyText = "No cached books or download tasks in bookshelf",
                     books = state.shelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -170,8 +170,8 @@ private fun BookCacheManageScreen(
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
                 cacheSection(
-                    title = "未在书架",
-                    emptyText = "没有未在书架的书籍下载状态",
+                    title = "Not on Bookshelf",
+                    emptyText = "No download status for books not on bookshelf",
                     books = state.notShelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -351,7 +351,7 @@ private fun BookCacheBookCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = "下载中 ${item.downloadingCount} · 等待 ${item.waitingCount} · 暂停 ${item.pausedCount} · 失败 ${item.errorCount}",
+                    text = "Downloading ${item.downloadingCount} · Waiting ${item.waitingCount} · Paused ${item.pausedCount} · Failed ${item.errorCount}",
                     modifier = Modifier.weight(1f),
                     style = LegadoTheme.typography.labelMediumEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
@@ -367,9 +367,9 @@ private fun BookCacheBookCard(
                         },
                         imageVector = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
                         contentDescription = when {
-                            item.hasActiveDownload -> "暂停本书下载"
-                            item.isPaused -> "继续本书下载"
-                            else -> "开始本书下载"
+                            item.hasActiveDownload -> "Pause Book Download"
+                            item.isPaused -> "Resume Book Download"
+                            else -> "Start Book Download"
                         }
                     )
                 }
@@ -425,13 +425,13 @@ private fun BookCacheChapterRow(
             SmallTonalIconButton(
                 onClick = onStop,
                 imageVector = Icons.Default.Stop,
-                contentDescription = "暂停章节下载"
+                contentDescription = "Pause Chapter Download"
             )
         } else if (item.isPaused || !item.isCached) {
             SmallTonalIconButton(
                 onClick = onDownload,
                 imageVector = Icons.Default.Download,
-                contentDescription = if (item.isPaused) "继续章节下载" else "下载章节"
+                contentDescription = if (item.isPaused) "Resume Chapter Download" else "Download Chapter"
             )
         }
         SmallTonalIconButton(
@@ -444,12 +444,12 @@ private fun BookCacheChapterRow(
 
 private fun chapterStatusText(item: BookCacheChapterItem): String {
     return when {
-        item.isDownloading -> "下载中"
-        item.isWaiting -> "等待下载"
-        item.isPaused -> "已暂停"
-        item.isError -> "下载失败"
-        item.isCached -> "已缓存"
-        else -> "未缓存"
+        item.isDownloading -> "Downloading"
+        item.isWaiting -> "Waiting"
+        item.isPaused -> "Paused"
+        item.isError -> "Failed"
+        item.isCached -> "Cached"
+        else -> "Not Cached"
     }
 }
 
@@ -463,7 +463,7 @@ private fun DeleteBookCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除《${item?.name.orEmpty()}》的全部缓存，并从下载队列移除？",
+        text = "Delete all caches for \"${item?.name.orEmpty()}\" and remove from download queue?",
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let(onConfirm) },
         dismissText = stringResource(android.R.string.cancel),
@@ -481,7 +481,7 @@ private fun DeleteChapterCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除章节缓存：${item?.second?.title.orEmpty()}？",
+        text = "Delete chapter cache: ${item?.second?.title.orEmpty()}?",
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let { onConfirm(it.first, it.second) } },
         dismissText = stringResource(android.R.string.cancel),

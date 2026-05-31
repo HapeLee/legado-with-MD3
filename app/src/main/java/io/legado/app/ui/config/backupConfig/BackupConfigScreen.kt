@@ -159,15 +159,15 @@ fun BackupConfigScreen(
     ) { uri ->
         uri?.let {
             showLoadingDialog = true
-            loadingText = "恢复中…"
+            loadingText = "Restoring..."
             scope.launch {
                 try {
                     Restore.restore(context, uri)
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar("恢复成功")
+                    snackbarHostState.showSnackbar("Restore successful")
                 } catch (e: Exception) {
                     showLoadingDialog = false
-                    snackbarHostState.showSnackbar("恢复出错: ${e.localizedMessage}")
+                    snackbarHostState.showSnackbar("Restore error: ${e.localizedMessage}")
                 }
             }
         }
@@ -306,7 +306,7 @@ fun BackupConfigScreen(
                             showRestoreFilePicker = true
                         } else {
                             confirmDialogTitle = backupText
-                            confirmDialogText = "确定要备份吗？"
+                            confirmDialogText = "Are you sure you want to backup?"
                             onConfirmAction = {
                                 if (backupPath.isContentScheme()) {
                                     startBackup(backupPath, context, viewModel, {
@@ -365,15 +365,15 @@ fun BackupConfigScreen(
                     onClick = {
                         scope.launch {
                             showLoadingDialog = true
-                            loadingText = "加载中"
+                            loadingText = "Loading"
                             try {
                                 val names = viewModel.getBackupNames()
                                 backupNames = names
                                 showRestoreSheet = true
                             } catch (e: Exception) {
-                                confirmDialogTitle = "恢复"
+                                confirmDialogTitle = "Restore"
                                 confirmDialogText =
-                                    "WebDavError\n${e.localizedMessage}\n将从本地备份恢复。"
+                                    "WebDavError\n${e.localizedMessage}\nWill restore from local backup."
                                 onConfirmAction = {
                                     restoreFileLauncher.launch(arrayOf("application/zip"))
                                 }
@@ -420,20 +420,20 @@ fun BackupConfigScreen(
                     value = tempAccount,
                     onValueChange = { tempAccount = it },
                     backgroundColor = LegadoTheme.colorScheme.surface,
-                    label = "账号"
+                    label = "Account"
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AppTextField(
                     value = tempPassword,
                     onValueChange = { tempPassword = it },
                     backgroundColor = MiuixTheme.colorScheme.surface,
-                    label = "密码",
+                    label = "Password",
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
                         val image =
                             if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
-                        val description = if (passwordVisible) "隐藏密码" else "显示密码"
+                        val description = if (passwordVisible) "Hide password" else "Show password"
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(imageVector = image, contentDescription = description)
                         }
@@ -447,13 +447,13 @@ fun BackupConfigScreen(
             showWebDavAuthDialog = false
             scope.launch {
                 showLoadingDialog = true
-                loadingText = "测试中…"
+                loadingText = "Testing…"
                 val success = viewModel.testWebDav()
                 showLoadingDialog = false
                 if (success) {
-                    snackbarHostState.showSnackbar("WebDav 配置正确")
+                    snackbarHostState.showSnackbar("WebDAV configuration correct")
                 } else {
-                    snackbarHostState.showSnackbar("WebDav 配置错误")
+                    snackbarHostState.showSnackbar("WebDAV configuration error")
                 }
             }
         },
@@ -517,19 +517,19 @@ fun BackupConfigScreen(
                     onToggleSelection = {
                         showRestoreSheet = false
                         showLoadingDialog = true
-                        loadingText = "恢复中…"
+            loadingText = "Restoring…"
                         viewModel.restoreWebDav(
                             it,
                             {
                                 showLoadingDialog = false
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("恢复成功")
+                                    snackbarHostState.showSnackbar("Restore successful")
                                 }
                             },
                             { error ->
                                 showLoadingDialog = false
                                 scope.launch {
-                                    snackbarHostState.showSnackbar("WebDav恢复出错\n$error")
+                                    snackbarHostState.showSnackbar("WebDAV restore error\n$error")
                                 }
                             }
                         )

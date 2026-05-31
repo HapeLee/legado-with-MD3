@@ -529,7 +529,7 @@ class CacheBookModel(
             onError(chapter, e)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
-            return "获取正文失败\n${e.localizedMessage}"
+            return "Failed to get content\n${e.localizedMessage}"
         } finally {
             host.onTaskQueuesChanged(book.bookUrl)
         }
@@ -564,7 +564,7 @@ class CacheBookModel(
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
-            downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}", resetPageOffset)
+            downloadFinish(chapter, "Failed to get content\n${it.localizedMessage}", resetPageOffset)
             emitPendingReadError(chapter, it)
         }.onCancel {
             onCancel(chapter.index, requeue = false)
@@ -600,7 +600,7 @@ class CacheBookModel(
 
     private fun emitPendingReadError(chapter: BookChapter, error: Throwable) {
         val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
-        downloadFinish(chapter, "获取正文失败\n${error.localizedMessage}", resetPageOffset)
+        downloadFinish(chapter, "Failed to get content\n${error.localizedMessage}", resetPageOffset)
     }
 
     private fun emitPendingReadCanceled(chapter: BookChapter) {

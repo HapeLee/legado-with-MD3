@@ -44,7 +44,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
 
                 else -> {
                     val sourceKey = intent.getStringExtra("key")
-                        ?: throw NoStackTraceException("没有参数")
+                        ?: throw NoStackTraceException("No parameters")
                     val type = intent.getStringExtra("type")
                     source = when (type) {
                         "bookSource" -> appDb.bookSourceDao.getBookSource(sourceKey)
@@ -67,11 +67,11 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
             if (it != null) {
                 success.invoke(it)
             } else {
-                context.toastOnUi("未找到书源")
+                context.toastOnUi("Book source not found")
             }
         }.onError {
             error.invoke()
-            AppLog.put("登录 UI 初始化失败\n$it", it, true)
+            AppLog.put("Login UI initialization failed\n$it", it, true)
         }
     }
 

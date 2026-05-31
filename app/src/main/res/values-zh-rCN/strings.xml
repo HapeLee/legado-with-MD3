@@ -1471,4 +1471,5 @@
     <string name="bookshelf_empty_global_search">没有书籍，尝试全局搜索</string>
     <string name="global_search">全局搜索</string>
     <string name="cache_management">缓存管理</string>
+    <string name="search_hint">搜索</string>
 </resources>

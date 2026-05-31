@@ -85,7 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="16dp"
                 app:max="30"
-                app:title="侧边留白" />
+                app:title="@string/sidebar_margin" />
 
         </LinearLayout>
 

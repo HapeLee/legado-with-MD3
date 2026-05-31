@@ -52,7 +52,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试搜索 - 输入关键字，如："
+                android:text="@string/debug_search_hint"
                 tools:ignore="HardcodedText" />
 
             <LinearLayout
@@ -73,7 +73,7 @@
                     android:paddingTop="4dp"
                     android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="我的"
+                    android:text="@string/debug_mine"
                     android:textSize="14sp"
                     tools:ignore="HardcodedText,UnusedAttribute" />
 
@@ -90,7 +90,7 @@
                     android:paddingTop="4dp"
                     android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="系统"
+                    android:text="@string/debug_system"
                     android:textSize="14sp"
                     tools:ignore="HardcodedText,UnusedAttribute" />
             </LinearLayout>
@@ -99,7 +99,7 @@
                 android:id="@+id/text_fx_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试发现 - 输入发现URL，如："
+                android:text="@string/debug_discover_hint"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -115,14 +115,14 @@
                 android:paddingTop="4dp"
                 android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="系统::http://xxx"
+                android:text="@string/debug_system_http_example"
                 android:textSize="14sp"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试详情页 - 输入详情页URL，如："
+                android:text="@string/debug_detail_hint"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -145,7 +145,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试目录页 - 输入目录页URL，如："
+                android:text="@string/debug_toc_hint"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -168,7 +168,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试正文页 - 输入正文页URL，如："
+                android:text="@string/debug_content_hint"
                 tools:ignore="HardcodedText" />
 
             <TextView

@@ -48,7 +48,7 @@
     "titleTopSpacing": 0
   },
   {
-    "name": "预设1",
+    "name": "Preset 1",
     "bgStr": "#FFFFFF",
     "bgStrNight": "#000000",
     "textColor": "#000000",
@@ -59,7 +59,7 @@
     "darkStatusIconNight": false
   },
   {
-    "name": "预设2",
+    "name": "Preset 2",
     "bgStr": "#DDC090",
     "bgStrNight": "#3C3F43",
     "textColor": "#3E3422",
@@ -70,7 +70,7 @@
     "darkStatusIconNight": false
   },
   {
-    "name": "预设3",
+    "name": "Preset 3",
     "bgStr": "#C2D8AA",
     "bgStrNight": "#3C3F43",
     "textColor": "#596C44",
@@ -81,7 +81,7 @@
     "darkStatusIconNight": false
   },
   {
-    "name": "预设4",
+    "name": "Preset 4",
     "bgStr": "#DBB8E2",
     "bgStrNight": "#3C3F43",
     "textColor": "#68516C",
@@ -92,7 +92,7 @@
     "darkStatusIconNight": false
   },
   {
-    "name": "预设5",
+    "name": "Preset 5",
     "bgStr": "#ABCEE0",
     "bgStrNight": "#3C3F43",
     "textColor": "#3D4C54",

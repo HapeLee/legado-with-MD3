@@ -105,7 +105,7 @@ class MobiFile(var book: Book) {
                 val chapter = BookChapter()
                 val content = kF6Book.getSectionText(section)
                 val soup = Jsoup.parse(content)
-                val title = soup.getElementsByTag("title").first()?.text() ?: "卷首"
+                val title = soup.getElementsByTag("title").first()?.text() ?: "Prologue"
                 chapter.bookUrl = book.bookUrl
                 chapter.title = title
                 chapter.url = "0:" + section.href
@@ -146,7 +146,7 @@ class MobiFile(var book: Book) {
                 val chapter = BookChapter()
                 val content = kf8Book.getSectionText(section)
                 val soup = Jsoup.parse(content)
-                val title = soup.getElementsByTag("title").first()?.text() ?: "卷首"
+                val title = soup.getElementsByTag("title").first()?.text() ?: "Prologue"
                 chapter.bookUrl = book.bookUrl
                 chapter.title = title
                 chapter.url = "0:" + section.href
@@ -298,7 +298,7 @@ class MobiFile(var book: Book) {
     private fun upBookInfo() {
         if (mobiBook == null) {
             mFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Book import error"
         } else {
             upBookCover()
             val metadata = mobiBook!!.metadata

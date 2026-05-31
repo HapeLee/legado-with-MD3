@@ -84,7 +84,7 @@ class SearchMenu @JvmOverloads constructor(
     @SuppressLint("SetTextI18n")
     fun updateSearchInfo() {
         ReadBook.curTextChapter?.let {
-            binding.tvCurrentChapter.text = "当前章节: ${it.title}"
+            binding.tvCurrentChapter.text = "Current chapter: ${it.title}"
         }
         updateSearchProgress()
     }

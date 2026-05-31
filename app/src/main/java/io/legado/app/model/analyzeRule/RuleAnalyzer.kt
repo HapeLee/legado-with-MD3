@@ -226,7 +226,7 @@ class RuleAnalyzer(data: String, code: Boolean = false) {
             val next = if (queue[pos] == '[') ']' else ')' //平衡组末尾字符
 
             if (!chompBalanced(queue[pos], next)) throw Error(
-                queue.substring(0, start) + "后未平衡"
+                "not balanced after " + queue.substring(0, start)
             ) //拉出一个筛选器,不平衡则报错
 
         } while (end > pos)
@@ -283,7 +283,7 @@ class RuleAnalyzer(data: String, code: Boolean = false) {
             val next = if (queue[pos] == '[') ']' else ')' //平衡组末尾字符
 
             if (!chompBalanced(queue[pos], next)) throw Error(
-                queue.substring(0, start) + "后未平衡"
+                "not balanced after " + queue.substring(0, start)
             ) //拉出一个筛选器,不平衡则报错
 
         } while (end > pos)

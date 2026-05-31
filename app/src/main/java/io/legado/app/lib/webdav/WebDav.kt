@@ -47,7 +47,7 @@ open class WebDav(
     companion object {
 
         fun fromPath(path: String): WebDav {
-            val id = AnalyzeUrl(path).serverID ?: throw WebDavException("没有serverID")
+            val id = AnalyzeUrl(path).serverID ?: throw WebDavException("No server ID")
             val authorization = Authorization(id)
             return WebDav(path, authorization)
         }
@@ -295,7 +295,7 @@ open class WebDav(
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav创建目录失败\n${it.localizedMessage}", it)
+            AppLog.put("WebDav directory creation failed\n${it.localizedMessage}", it)
         }.isSuccess
     }
 
@@ -339,10 +339,10 @@ open class WebDav(
     suspend fun upload(file: File, contentType: String = DEFAULT_CONTENT_TYPE) {
         kotlin.runCatching {
             withContext(IO) {
-                if (!file.exists()) throw WebDavException("文件不存在")
+                if (!file.exists()) throw WebDavException("File does not exist")
                 // 务必注意RequestBody不要嵌套，不然上传时内容可能会被追加多余的文件信息
                 val fileBody = file.asRequestBody(contentType.toMediaType())
-                val url = httpUrl ?: throw WebDavException("url不能为空")
+                val url = httpUrl ?: throw WebDavException("URL cannot be empty")
                 webDavClient.newCallResponse {
                     url(url)
                     put(fileBody)
@@ -352,8 +352,8 @@ open class WebDav(
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
-            throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
+            AppLog.put("WebDav upload failed\n${it.localizedMessage}", it)
+            throw WebDavException("WebDav upload failed\n${it.localizedMessage}")
         }
     }
 
@@ -363,7 +363,7 @@ open class WebDav(
         kotlin.runCatching {
             withContext(IO) {
                 val fileBody = byteArray.toRequestBody(contentType.toMediaType())
-                val url = httpUrl ?: throw NoStackTraceException("url不能为空")
+                val url = httpUrl ?: throw NoStackTraceException("URL cannot be empty")
                 webDavClient.newCallResponse {
                     url(url)
                     put(fileBody)
@@ -373,8 +373,8 @@ open class WebDav(
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
-            throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
+            AppLog.put("WebDav upload failed\n${it.localizedMessage}", it)
+            throw WebDavException("WebDav upload failed\n${it.localizedMessage}")
         }
     }
 
@@ -384,7 +384,7 @@ open class WebDav(
         kotlin.runCatching {
             withContext(IO) {
                 val fileBody = uri.toRequestBody(contentType.toMediaType())
-                val url = httpUrl ?: throw NoStackTraceException("url不能为空")
+                val url = httpUrl ?: throw NoStackTraceException("URL cannot be empty")
                 webDavClient.newCallResponse {
                     url(url)
                     put(fileBody)
@@ -394,14 +394,14 @@ open class WebDav(
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav上传失败\n${it.localizedMessage}", it)
-            throw WebDavException("WebDav上传失败\n${it.localizedMessage}")
+            AppLog.put("WebDav upload failed\n${it.localizedMessage}", it)
+            throw WebDavException("WebDav upload failed\n${it.localizedMessage}")
         }
     }
 
     @Throws(WebDavException::class)
     suspend fun downloadInputStream(): InputStream {
-        val url = httpUrl ?: throw WebDavException("WebDav下载出错\nurl为空")
+        val url = httpUrl ?: throw WebDavException("WebDav download error\nURL is empty")
         val byteStream = webDavClient.newCallResponse {
             url(url)
         }.apply {
@@ -425,7 +425,7 @@ open class WebDav(
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav删除失败\n${it.localizedMessage}", it)
+            AppLog.put("WebDav deletion failed\n${it.localizedMessage}", it)
         }.isSuccess
     }
 
@@ -441,7 +441,7 @@ open class WebDav(
                     it.startsWith("Basic", ignoreCase = true)
                 }
                 if (headers.isNotEmpty() && !supportBasicAuth) {
-                    AppLog.put("服务器不支持BasicAuth认证")
+                    AppLog.put("Server does not support BasicAuth authentication")
                 }
             }
 
@@ -456,7 +456,7 @@ open class WebDav(
                     message ?: "$path doesn't exist. code:${response.code}"
                 )
             }
-            throw WebDavException(message ?: "未知错误 code:${response.code}")
+            throw WebDavException(message ?: "Unknown error code:${response.code}")
         }
     }
 

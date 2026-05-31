@@ -48,7 +48,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     private val restoreDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
-            waitDialog.setText("恢复中…")
+            waitDialog.setText("Restoring…")
             waitDialog.show()
             val task = Coroutine.async {
                 Restore.restore(appCtx, uri)
@@ -125,7 +125,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                     restore()
                 } finally {
                     binding.progressRestore.gone()
-                    binding.btnRestore.text = "获取备份"
+                    binding.btnRestore.text = "Get Backup"
                 }
             }
         }
@@ -158,7 +158,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
             }
             alert {
                 setTitle(R.string.restore)
-                setMessage("WebDavError\n${it.localizedMessage}\n将从本地备份恢复。")
+                setMessage("WebDavError\n${it.localizedMessage}\nWill restore from local backup.")
                 okButton {
                     restoreFromLocal()
                 }
@@ -172,7 +172,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     private suspend fun showRestoreDialog(context: Context) {
         val names = withContext(IO) { webDavBackupUseCase.getBackupNames() }
         if (webDavBackupUseCase.isJianGuoYun && names.size > 700) {
-            context.toastOnUi("由于坚果云限制列出文件数量，部分备份可能未显示，请及时清理旧备份")
+            context.toastOnUi("Due to Nutstore limitations on listing file count, some backups may not be displayed. Please clean up old backups in time.")
         }
         if (names.isNotEmpty()) {
             coroutineContext.ensureActive()
@@ -192,13 +192,13 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     private fun restoreWebDav(name: String) {
-        waitDialog.setText("恢复中…")
+        waitDialog.setText("Restoring…")
         waitDialog.show()
         val task = Coroutine.async {
             webDavBackupUseCase.restore(name)
         }.onError {
-            AppLog.put("WebDav恢复出错\n${it.localizedMessage}", it)
-            appCtx.toastOnUi("WebDav恢复出错\n${it.localizedMessage}")
+            AppLog.put("WebDav restore error\n${it.localizedMessage}", it)
+            appCtx.toastOnUi("WebDav restore error\n${it.localizedMessage}")
         }.onFinally {
             waitDialog.dismiss()
         }

@@ -120,7 +120,7 @@ class ReadAloudDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_aloud
 
         ivTimer.setOnClickListener {
             AppConfig.ttsTimer = seekTimer.value.toInt()
-            toastOnUi("保存设定时间成功！")
+            toastOnUi("Timer saved successfully!")
         }
 
         // 设置初始值
@@ -149,8 +149,8 @@ class ReadAloudDialog : BaseBottomSheetDialogFragment(R.layout.dialog_read_aloud
 
         btnTimer.setOnClickListener {
             val times = intArrayOf(0, 5, 10, 15, 30, 60, 90, 180)
-            val timeKeys = times.map { "$it 分钟" }
-            context?.selector("设定时间", timeKeys) { _, index ->
+            val timeKeys = times.map { "$it min" }
+            context?.selector("Set time", timeKeys) { _, index ->
                 ReadAloud.setTimer(requireContext(), times[index])
                 upTimerText(times[index])
             }

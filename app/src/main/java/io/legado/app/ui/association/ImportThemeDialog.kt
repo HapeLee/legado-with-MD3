@@ -143,9 +143,9 @@ class ImportThemeDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_recycl
                 cbSourceName.text = item.themeName
                 val localSource = viewModel.checkSources[holder.layoutPosition]
                 tvSourceState.text = when {
-                    localSource == null -> "新增"
-                    localSource != item -> "更新"
-                    else -> "已有"
+                    localSource == null -> "New"
+                    localSource != item -> "Update"
+                    else -> "Existing"
                 }
             }
         }

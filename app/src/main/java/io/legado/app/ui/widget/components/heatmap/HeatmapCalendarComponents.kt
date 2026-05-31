@@ -44,7 +44,7 @@ import java.time.LocalDate
 /**
  * 热力图日历弹窗标题
  */
-const val HEATMAP_CALENDAR_TITLE = "时间线"
+const val HEATMAP_CALENDAR_TITLE = "Timeline"
 
 /**
  * 热力图日历弹窗左侧操作
@@ -61,8 +61,8 @@ fun HeatmapCalendarStartAction(
         },
         iconChecked = Icons.Default.AccessTime,
         iconUnchecked = Icons.Default.FormatListNumbered,
-        activeText = "按时长",
-        inactiveText = "按次数"
+        activeText = "By duration",
+        inactiveText = "By count"
     )
 }
 
@@ -92,7 +92,7 @@ fun WeekdayLabelsColumn(
         modifier = modifier
             .padding(top = 20.dp, end = 8.dp)
     ) {
-        val labels = listOf("一", "二", "三", "四", "五", "六", "日")
+        val labels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
         labels.forEachIndexed { index, label ->
             if (index % 2 == 0) {
@@ -158,7 +158,7 @@ fun NoEarlierDataIndicator(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            "没有更早数据".forEach { char ->
+            "No earlier data".forEach { char ->
                 AppText(
                     text = char.toString(),
                     fontSize = 9.sp,
@@ -242,7 +242,7 @@ fun HeatmapWeekColumn(
         // 月份标签
         if (firstDayOfMonth != null) {
             AppText(
-                text = "${firstDayOfMonth.monthValue}月",
+                text = "${firstDayOfMonth.monthValue}",
                 fontSize = 10.sp,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -267,10 +267,11 @@ fun HeatmapLegend(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val legendUnit = if (mode == HeatmapMode.COUNT) "次" else "长"
+        val legendLow = if (mode == HeatmapMode.COUNT) "Few" else "Short"
+        val legendHigh = if (mode == HeatmapMode.COUNT) "Many" else "Long"
 
         AppText(
-            "少($legendUnit)",
+            text = legendLow,
             style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )
@@ -288,7 +289,7 @@ fun HeatmapLegend(
         }
 
         AppText(
-            "多($legendUnit)",
+            text = legendHigh,
             style = LegadoTheme.typography.bodySmall,
             color = Color.Gray
         )

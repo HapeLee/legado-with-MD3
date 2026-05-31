@@ -539,10 +539,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(selectedBooks.map { it.file.uri })
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            context.toastOnUi("Failed to add to bookshelf. Try a different folder.")
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            context.toastOnUi("Added to bookshelf")
         }.onFinally {
             clearSelection()
         }
@@ -553,10 +553,10 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         execute {
             LocalBook.importFiles(listOf(item.file.uri))
         }.onError {
-            context.toastOnUi("添加书架失败，请尝试重新选择文件夹")
+            context.toastOnUi("Failed to add to bookshelf. Try a different folder.")
             AppLog.put("添加书架失败\n${it.localizedMessage}", it)
         }.onSuccess {
-            context.toastOnUi("添加书架成功")
+            context.toastOnUi("Added to bookshelf")
         }.onFinally {
             _state.update { state ->
                 state.copy(selectedIds = state.selectedIds - item.selectionId)
@@ -662,7 +662,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 }
             }.onFailure {
                 withContext(Main) {
-                    context.toastOnUi("扫描文件夹出错\n${it.localizedMessage}")
+                    context.toastOnUi("Error scanning folder\n${it.localizedMessage}")
                 }
                 _state.update { state ->
                     state.copy(interaction = state.interaction.copy(isLoading = false))
@@ -701,7 +701,7 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
                 )
             }
         }.onError {
-            context.toastOnUi("获取文件列表出错\n${it.localizedMessage}")
+            context.toastOnUi("Error getting file list\n${it.localizedMessage}")
             _state.update { state ->
                 state.copy(interaction = state.interaction.copy(isLoading = false))
             }

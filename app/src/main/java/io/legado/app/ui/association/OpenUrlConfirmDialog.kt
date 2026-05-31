@@ -66,7 +66,7 @@ class OpenUrlConfirmDialog() : BaseDialogFragment(R.layout.dialog_open_url_confi
     }
 
     private fun initView() {
-        binding.message.text = "${viewModel.sourceName} 正在请求跳转链接/应用，是否跳转？"
+        binding.message.text = "${viewModel.sourceName} is requesting to open a link/app. Continue?"
         binding.btnNegative.setOnClickListener { dismiss() }
         binding.btnPositive.setOnClickListener {
             openUrl()

@@ -154,7 +154,7 @@ private fun TimelineSessionRow(session: ReadRecordSession) {
         }
         if (session.words > 0) {
             TextCard(
-                text = "第${session.words}章",
+                text = "Ch.${session.words}",
                 textStyle = LegadoTheme.typography.labelSmall,
                 backgroundColor = LegadoTheme.colorScheme.secondaryContainer,
                 contentColor = LegadoTheme.colorScheme.onSecondaryContainer,

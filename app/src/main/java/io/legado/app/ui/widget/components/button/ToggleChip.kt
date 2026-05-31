@@ -37,8 +37,8 @@ fun ToggleChip(
     selected: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
-    checkedContentDescription: String = "已选择",
-    uncheckedContentDescription: String = "未选择"
+    checkedContentDescription: String = "Selected",
+    uncheckedContentDescription: String = "Not selected"
 ) {
     val isSelected = selected
     if (ThemeResolver.isMiuixEngine(composeEngine)) {

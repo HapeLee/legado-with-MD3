@@ -54,7 +54,7 @@ object WebBook {
     ): ArrayList<SearchBook> {
         val searchUrl = bookSource.searchUrl
         if (searchUrl.isNullOrBlank()) {
-            throw NoStackTraceException("搜索url不能为空")
+            throw NoStackTraceException("Search URL cannot be empty")
         }
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
@@ -228,7 +228,7 @@ object WebBook {
             }
         }.onFailure {
             coroutineContext.ensureActive()
-            AppLog.put("执行preUpdateJs规则失败 书源:${bookSource.bookSourceName}", it)
+            AppLog.put("Failed to execute preUpdateJs rule source:${bookSource.bookSourceName}", it)
         }
     }
 
@@ -316,11 +316,11 @@ object WebBook {
         needSave: Boolean = true
     ): String {
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
-            Debug.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接:${bookChapter.url}")
+            Debug.log(bookSource.bookSourceUrl, "⇒Content rule is empty, using chapter link:${bookChapter.url}")
             return bookChapter.url
         }
         if (bookChapter.isVolume && bookChapter.url.startsWith(bookChapter.title)) {
-            Debug.log(bookSource.bookSourceUrl, "⇒一级目录正文不解析规则")
+            Debug.log(bookSource.bookSourceUrl, "⇒Top-level directory content does not parse rules")
             return bookChapter.tag ?: ""
         }
         return if (bookChapter.url == book.bookUrl && !book.tocHtml.isNullOrEmpty()) {
@@ -386,7 +386,7 @@ object WebBook {
                     return@async Pair(book, source)
                 }
             }
-            throw NoStackTraceException("没有搜索到<$name>$author")
+            throw NoStackTraceException("No search results for <$name>$author")
         }
     }
 
@@ -405,7 +405,7 @@ object WebBook {
                 coroutineContext.ensureActive()
                 return@runCatching searchBook.toBook()
             }
-            throw NoStackTraceException("未搜索到 $name($author) 书籍")
+            throw NoStackTraceException("No search results for $name($author)")
         }.onFailure {
             coroutineContext.ensureActive()
         }
@@ -417,8 +417,8 @@ object WebBook {
     private fun checkRedirect(bookSource: BookSource, response: StrResponse) {
         response.raw.priorResponse?.let {
             if (it.isRedirect) {
-                Debug.log(bookSource.bookSourceUrl, "≡检测到重定向(${it.code})")
-                Debug.log(bookSource.bookSourceUrl, "┌重定向后地址")
+                Debug.log(bookSource.bookSourceUrl, "≡Redirect detected(${it.code})")
+                Debug.log(bookSource.bookSourceUrl, "┌Redirect URL")
                 Debug.log(bookSource.bookSourceUrl, "└${response.url}")
             }
         }

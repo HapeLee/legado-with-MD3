@@ -716,7 +716,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             * clickActionBL * clickActionBC * clickActionBR != 0
         ) {
             appCtx.putPrefInt(PreferKey.clickActionMC, 0)
-            appCtx.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
+            appCtx.toastOnUi("No menu area configured. Auto-restored center area as menu.")
         }
     }
 
@@ -726,7 +726,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             * mangaClickActionBL * mangaClickActionBC * mangaClickActionBR != 0
         ) {
             appCtx.putPrefInt(PreferKey.mangaClickActionMC, 0)
-            appCtx.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
+            appCtx.toastOnUi("No menu area configured. Auto-restored center area as menu.")
         }
     }
 

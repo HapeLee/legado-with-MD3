@@ -286,7 +286,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     suspend fun contentLoadFinish(
         chapter: BookChapter,
         content: String?,
-        errorMsg: String = "加载内容失败",
+        errorMsg: String = "Failed to load content",
         canceled: Boolean = false
     ) {
         removeLoading(chapter.index)
@@ -300,12 +300,12 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                     return
                 }
                 if (content.isEmpty() && !chapter.isVolume) {
-                    mCallback?.loadFail("正文内容为空")
+                    mCallback?.loadFail("Content is empty")
                     return
                 }
                 val mangaChapter = getManageChapter(chapter, content)
                 if (mangaChapter.imageCount == 0 && !chapter.isVolume) {
-                    mCallback?.loadFail("正文没有图片")
+                    mCallback?.loadFail("Content has no images")
                     return
                 }
                 curMangaChapter = mangaChapter
@@ -546,7 +546,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 contentLoadFinish(chapter, null, canceled = true)
             })
         } else {
-            contentLoadFinish(chapter, null, "加载内容失败 没有书源")
+            contentLoadFinish(chapter, null, "Failed to load content: no book source")
         }
     }
 
@@ -705,9 +705,9 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (imageCount == 0 && chapter.isVolume) {
             pages.add(ReaderLoading(chapter.index, -1, chapter.title, true))
         } else {
-            pages.add(ReaderLoading(chapter.index, -1, "下一章 ${chapter.title}"))
+            pages.add(ReaderLoading(chapter.index, -1, "Next: ${chapter.title}"))
             pages.addAll(list)
-            pages.add(ReaderLoading(chapter.index, imageCount, "已读完 ${chapter.title}"))
+            pages.add(ReaderLoading(chapter.index, imageCount, "Finished: ${chapter.title}"))
         }
 
         return MangaChapter(chapter, pages, imageCount)

@@ -136,8 +136,8 @@ fun SearchContentScreen(
             Column {
                 GlassMediumFlexibleTopAppBar(
                     title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
-                        "共 ${searchResults.size} 条结果"
-                    } else "搜索内容",
+                        "${searchResults.size} results"
+                    } else "Search Content",
                     navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                     actions = {
                         Row(
@@ -148,8 +148,8 @@ fun SearchContentScreen(
                                 onCheckedChange = { viewModel.toggleReplace(it) },
                                 iconChecked = Icons.Default.FindReplace,
                                 iconUnchecked = Icons.Default.FindReplace,
-                                activeText = "替换开启",
-                                inactiveText = "替换关闭"
+                                activeText = "Replace On",
+                                inactiveText = "Replace Off"
                             )
 
                             TopBarAnimatedActionButton(
@@ -157,8 +157,8 @@ fun SearchContentScreen(
                                 onCheckedChange = { viewModel.toggleRegex(it) },
                                 iconChecked = Icons.Default.Code,
                                 iconUnchecked = Icons.Default.Code,
-                                activeText = "正则开启",
-                                inactiveText = "正则关闭"
+                                activeText = "Regex On",
+                                inactiveText = "Regex Off"
                             )
                         }
                     },
@@ -193,16 +193,16 @@ fun SearchContentScreen(
                         scrollToCurrentChapter()
                     }
                 },
-                tooltipText = if (isSearching) "停止搜索" else "跳转到当前章节"
+                tooltipText = if (isSearching) "Stop Search" else "Go to current chapter"
             ) {
                 AnimatedContent(
                     targetState = isSearching,
                     label = "FabIconTransition"
                 ) { searching ->
                     if (searching) {
-                        AppIcon(Icons.Default.Stop, contentDescription = "停止搜索")
+                        AppIcon(Icons.Default.Stop, contentDescription = "Stop Search")
                     } else {
-                        AppIcon(Icons.Default.MyLocation, contentDescription = "定位当前章节")
+                        AppIcon(Icons.Default.MyLocation, contentDescription = "Go to current chapter")
                     }
                 }
             }
@@ -221,7 +221,7 @@ fun SearchContentScreen(
                 when (state) {
                     is SearchContentState.Error -> {
                         EmptyMessage(
-                            message = state.throwable.localizedMessage ?: "发生未知错误",
+                            message = state.throwable.localizedMessage ?: "An unknown error occurred",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()
@@ -240,7 +240,7 @@ fun SearchContentScreen(
                     }
                     SearchContentState.EmptyResult -> {
                         EmptyMessage(
-                            message = "没有找到相关内容！",
+                            message = "No results found!",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()
@@ -297,7 +297,7 @@ fun SearchHistoryList(
                 .padding(vertical = 4.dp),
         ) {
             AppText(
-                text = "搜索历史",
+                text = "Search History",
                 style = LegadoTheme.typography.titleSmallEmphasized,
                 color = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center)
@@ -308,14 +308,14 @@ fun SearchHistoryList(
                 onCheckedChange = { onToggleScope() },
                 iconChecked = Icons.Default.Book,
                 iconUnchecked = Icons.Default.CollectionsBookmark,
-                activeText = "仅本书",
-                inactiveText = "所有记录"
+                activeText = "This book",
+                inactiveText = "All records"
             )
         }
 
         if (history.isEmpty()) {
             EmptyMessage(
-                message = "暂无搜索历史",
+                message = "No search history",
                 modifier = Modifier
                     .fillMaxSize()
                     .wrapContentSize()
@@ -341,7 +341,7 @@ fun SearchHistoryList(
                             SmallIconButton(
                                 onClick = { onDeleteHistory(item) },
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "删除"
+                                contentDescription = "Delete"
                             )
                         },
                         colors = ListItemDefaults.colors(
@@ -362,7 +362,7 @@ fun SearchHistoryList(
                             onClick = onClearHistory,
                             modifier = Modifier.fillMaxWidth(0.6f),
                             imageVector = Icons.Outlined.DeleteSweep,
-                            text = "清除搜索历史"
+                            text = "Clear search history"
                         )
                     }
                 }
@@ -429,7 +429,7 @@ fun SearchResultItem(
 
                 if (isCurrentChapter) {
                     TextCard(
-                        text = "当前章节",
+                        text = "Current chapter",
                         backgroundColor = LegadoTheme.colorScheme.secondaryContainer,
                         contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                         cornerRadius = 8.dp,

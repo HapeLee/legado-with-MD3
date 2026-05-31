@@ -65,9 +65,9 @@ object SourceVerificationHelp {
             }
             LockSupport.parkNanos(this, waitTime)
         }
-        val result = getResult(source.getKey()) ?: throw NoStackTraceException("验证结果为空")
+        val result = getResult(source.getKey()) ?: throw NoStackTraceException("Verification result is empty")
         clearResult(source.getKey())
-        if (result.second.isEmpty()) throw NoStackTraceException("验证结果为空")
+        if (result.second.isEmpty()) throw NoStackTraceException("Verification result is empty")
         return result
     }
 

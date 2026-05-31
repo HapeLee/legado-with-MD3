@@ -141,13 +141,13 @@ class ContentProcessor private constructor(
                         2 -> mContent = ChineseUtils.s2t(mContent)
                     }
                 } catch (_: Exception) {
-                    appCtx.toastOnUi("简繁转换出错")
+                    appCtx.toastOnUi("Trad-Simp conversion error")
                 }
             }
             val useHtmlMap = mutableMapOf<String, String>()
             if (AppConfig.adaptSpecialStyle) { //html处理
                 mContent = AppPattern.useHtmlRegex.replace(mContent) { matchResult ->
-                    val placeholder = "特殊格式的占位不应该被看见${useHtmlMap.size}。"
+                    val placeholder = "special_format_placeholder_${useHtmlMap.size}_"
                     useHtmlMap[placeholder] = "\n${matchResult.value.replace("\n", "")}\n"
                     placeholder
                 }
@@ -184,7 +184,7 @@ class ContentProcessor private constructor(
                     } catch (_: CancellationException) {
                     } catch (e: Exception) {
                         AppLog.put("替换净化: 规则 ${item.name}替换出错.\n${mContent}", e)
-                        appCtx.toastOnUi("替换净化: 规则 ${item.name}替换出错")
+                        appCtx.toastOnUi("Replace/Purify: rule ${item.name} error")
                     }
                 }
             }

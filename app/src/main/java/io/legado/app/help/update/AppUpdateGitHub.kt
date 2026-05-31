@@ -29,15 +29,15 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
             "https://api.github.com/repos/HapeLee/legado-with-MD3/releases"
 
         val res = okHttpClient.newCallResponse { url(url) }
-        if (!res.isSuccessful) throw NoStackTraceException("获取新版本出错(${res.code})")
+        if (!res.isSuccessful) throw NoStackTraceException("Error fetching new version (${res.code})")
 
         val body = res.body.text()
-        if (body.isBlank()) throw NoStackTraceException("获取新版本出错")
+        if (body.isBlank()) throw NoStackTraceException("Error fetching new version")
 
         return when (checkVariant) {
             AppVariant.BETA_RELEASE -> {
                 val releases = GSON.fromJsonArray<GithubRelease>(body)
-                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
+                    .getOrElse { throw NoStackTraceException("Parse failed ${it.localizedMessage}") }
 
                 releases.filter { it.isPreRelease }
                     .flatMap { it.gitReleaseToAppReleaseInfo() }
@@ -46,7 +46,7 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
             AppVariant.OFFICIAL -> {
                 val release = GSON.fromJsonObject<GithubRelease>(body)
-                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
+                    .getOrElse { throw NoStackTraceException("Parse failed ${it.localizedMessage}") }
 
                 release.gitReleaseToAppReleaseInfo()
                     .sortedByDescending { it.createdAt }
@@ -54,7 +54,7 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
             AppVariant.ALL -> {
                 val releases = GSON.fromJsonArray<GithubRelease>(body)
-                    .getOrElse { throw NoStackTraceException("解析失败 ${it.localizedMessage}") }
+                    .getOrElse { throw NoStackTraceException("Parse failed ${it.localizedMessage}") }
 
                 releases.flatMap { it.gitReleaseToAppReleaseInfo() }
                     .sortedByDescending { it.createdAt }
@@ -109,7 +109,7 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
                 )
             }
 
-            throw NoStackTraceException("已是最新版本")
+            throw NoStackTraceException("Already the latest version")
         }.timeout(10000)
     }
 

@@ -192,14 +192,14 @@ fun ExploreShowScreen(
             horizontalArrangement = Arrangement.Center
         ) {
             AppText(
-                text = "布局列数",
+                text = "Layout columns",
                 style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
 
             TextCard(
-                text = "$gridColumnCount 列",
+                text = "$gridColumnCount columns",
                 textStyle = LegadoTheme.typography.titleSmall,
                 verticalPadding = 4.dp,
                 horizontalPadding = 12.dp,
@@ -226,7 +226,7 @@ fun ExploreShowScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
         ) {
-            AppText("完成")
+            AppText("Done")
         }
     }
 
@@ -242,7 +242,7 @@ fun ExploreShowScreen(
             query = kindQuery,
             backgroundColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.5f),
             onQueryChange = { kindQuery = it },
-            placeholder = "选择或搜索分类",
+            placeholder = "Select or search category",
         )
 
         val filteredKinds = remember(kindQuery, kinds) {
@@ -325,7 +325,7 @@ fun ExploreShowScreen(
                         TopBarActionButton(
                             onClick = { showKindSheet = true },
                             imageVector = Icons.Outlined.FilterAlt,
-                            contentDescription = "分类"
+                            contentDescription = "Category"
                         )
 
                         AnimatedVisibility(
@@ -336,7 +336,7 @@ fun ExploreShowScreen(
                             TopBarActionButton(
                                 onClick = { showGridCountSheet = true },
                                 imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                                contentDescription = "列数设置"
+                                contentDescription = "Column settings"
                             )
                         }
                     }
@@ -344,7 +344,7 @@ fun ExploreShowScreen(
                     TopBarActionButton(
                         onClick = { viewModel.setLayout() },
                         imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                        contentDescription = "切换布局"
+                        contentDescription = "Toggle layout"
                     )
 
                     RoundDropdownMenu(
@@ -352,7 +352,7 @@ fun ExploreShowScreen(
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = "全部显示",
+                            text = "Show all",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_ALL)
                                 showMenu = false
@@ -364,7 +364,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = "隐藏已在书架的同源书籍",
+                            text = "Hide same-source books in shelf",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_IN_SHELF)
                                 showMenu = false
@@ -376,7 +376,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = "隐藏已在书架的非同源书籍",
+                            text = "Hide different-source books in shelf",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.HIDE_SAME_NAME_AUTHOR)
                                 showMenu = false
@@ -388,7 +388,7 @@ fun ExploreShowScreen(
                         )
 
                         RoundDropdownMenuItem(
-                            text = "只显示不在书架的书籍",
+                            text = "Show only books not in shelf",
                             onClick = {
                                 viewModel.setFilterState(BookFilterState.SHOW_NOT_IN_SHELF_ONLY)
                                 showMenu = false
@@ -558,10 +558,10 @@ fun LoadMoreFooter(
 
             AnimatedContent(
                 targetState = when {
-                    isLoading -> "加载中…"
-                    errorMsg != null -> "加载失败: $errorMsg"
-                    isEnd -> "已经到底了~"
-                    else -> "我爱你"
+                    isLoading -> "Loading\u2026"
+                    errorMsg != null -> "Load failed: $errorMsg"
+                    isEnd -> "End reached~"
+                    else -> "I love you"
                 },
                 label = "FooterTextChange"
             ) { text ->
@@ -580,7 +580,7 @@ fun LoadMoreFooter(
             AnimatedTextButton(
                 isLoading = isLoading,
                 onClick = onRetry,
-                text = if (errorMsg != null) "重试" else "再试一次",
+                text = if (errorMsg != null) "Retry" else "Try again",
                 modifier = Modifier.padding(top = 4.dp)
             )
         }

@@ -292,7 +292,7 @@ fun ChangeSourceSheet(
                         onDismissRequest = { showOptionsMenu = false }
                     ) { dismiss ->
                         RoundDropdownMenuItem(
-                            text = "校验作者",
+                            text = "Verify author",
                             isSelected = checkAuthor,
                             onClick = {
                                 viewModel.onCheckAuthorChange(!checkAuthor)
@@ -300,7 +300,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载详情",
+                            text = "Load details",
                             isSelected = loadInfo,
                             onClick = {
                                 viewModel.onLoadInfoChange(!loadInfo)
@@ -308,7 +308,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载目录",
+                            text = "Load TOC",
                             isSelected = loadToc,
                             onClick = {
                                 viewModel.onLoadTocChange(!loadToc)
@@ -316,7 +316,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "显示更多信息",
+                            text = "Show more info",
                             isSelected = loadWordCount,
                             onClick = {
                                 viewModel.onLoadWordCountChange(!loadWordCount)
@@ -442,7 +442,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "置底",
+                            text = "Move to bottom",
                             onClick = {
                                 viewModel.bottomSource(item)
                                 onDismiss()
@@ -456,7 +456,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "禁用",
+                            text = "Disable",
                             onClick = {
                                 viewModel.disableSource(item)
                                 onDismiss()
@@ -496,7 +496,7 @@ fun ChangeSourceSheet(
             actionBook = null
         }, {
             loadingAction = false
-            context.toastOnUi(if (replace) "换源失败" else "添加书籍失败")
+            context.toastOnUi(if (replace) "Change source failed" else "Add book failed")
         })
     }
 
@@ -534,13 +534,13 @@ fun ChangeSourceSheet(
     val migration = pendingMigration
     ChangeSourceMigrationOptionsSheet(
         show = migration != null,
-        title = "换源选项",
+        title = "Source change options",
         subtitle = migration?.let {
             val sameNameAuthor = oldBook.isSameNameAuthor(it.book)
             if (sameNameAuthor && oldBook.origin != it.book.origin) {
-                "检测到书名、作者相同但书源不同，可选择本次要迁移的数据。"
+                "Same name and author detected but source differs. Select data to migrate."
             } else {
-                "选择本次替换当前书籍时要迁移的数据。"
+                "Select data to migrate when replacing the current book."
             }
         },
         onDismissRequest = { pendingMigration = null },

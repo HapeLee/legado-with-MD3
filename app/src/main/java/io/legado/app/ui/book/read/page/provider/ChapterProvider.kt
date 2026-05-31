@@ -375,7 +375,7 @@ object ChapterProvider {
                 if (textPage.height < durY) {
                     textPage.height = durY
                 }
-                textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                textPage.text = stringBuilder.toString().ifEmpty { "This page has no text content" }
                 stringBuilder.clear()
                 textPages.add(TextPage())
                 durY = 0f
@@ -406,7 +406,7 @@ object ChapterProvider {
                             if (textPage.leftLineSize == 0) {
                                 textPage.leftLineSize = textPage.lineSize
                             }
-                            textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                            textPage.text = stringBuilder.toString().ifEmpty { "This page has no text content" }
                             stringBuilder.clear()
                             textPages.add(TextPage())
                         }
@@ -444,7 +444,7 @@ object ChapterProvider {
                             if (textPage.leftLineSize == 0) {
                                 textPage.leftLineSize = textPage.lineSize
                             }
-                            textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                            textPage.text = stringBuilder.toString().ifEmpty { "This page has no text content" }
                             stringBuilder.clear()
                             textPages.add(TextPage())
                         }

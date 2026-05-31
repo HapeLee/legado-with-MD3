@@ -2,19 +2,19 @@
   {
     "uploadUrl": "https://sy.nyasama.net/shuyuan,{\"method\":\"POST\",\"body\": {\"file\": \"fileRequest\"},\"type\": \"multipart/form-data\"}",
     "downloadUrlRule": "$.data@js:if (result == '') \n '' \n else \n 'https://shuyuan.nyasama.net/shuyuan/' + result",
-    "summary": "喵公子网盘①(有效期30天·香港G口)",
+    "summary": "MiaoCloud Disk #1 (30-day validity · Hong Kong G-port)",
     "compress": false
   },
   {
     "uploadUrl": "https://sy.mgz6.com/shuyuan,{\"method\":\"POST\",\"body\": {\"file\": \"fileRequest\"},\"type\": \"multipart/form-data\"}",
     "downloadUrlRule": "$.data@js:if (result == '') \n '' \n else \n 'https://shuyuan.mgz6.com/shuyuan/' + result",
-    "summary": "喵公子网盘②(有效期7天)",
+    "summary": "MiaoCloud Disk #2 (7-day validity)",
     "compress": false
   },
   {
     "uploadUrl": "http://v2.jt12.eu/up-v2.php,{\"method\":\"POST\",\"body\": {\"file\": \"fileRequest\"},\"type\": \"multipart/form-data\"}",
     "downloadUrlRule": "$.msg",
-    "summary": "橘涂书源网盘2.0 Beta(永久有效)",
+    "summary": "Jutu Source Disk 2.0 Beta (Permanent)",
     "compress": false
   }
 ]

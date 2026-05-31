@@ -48,7 +48,7 @@ object BookController {
             val books = appDb.bookDao.all
             val returnData = ReturnData()
             return if (books.isEmpty()) {
-                returnData.setErrorMsg("还没有添加小说")
+                returnData.setErrorMsg("No books added yet")
             } else {
                 val data = when (AppConfig.bookshelfSort) {
                     1 -> books.sortedByDescending { it.latestChapterTime }
@@ -99,13 +99,13 @@ object BookController {
     fun getImg(parameters: Map<String, List<String>>): ReturnData {
         val returnData = ReturnData()
         val bookUrl = parameters["url"]?.firstOrNull()
-            ?: return returnData.setErrorMsg("bookUrl为空")
+            ?: return returnData.setErrorMsg("bookUrl is empty")
         val src = parameters["path"]?.firstOrNull()
-            ?: return returnData.setErrorMsg("图片链接为空")
+            ?: return returnData.setErrorMsg("Image link is empty")
         val width = parameters["width"]?.firstOrNull()?.toInt() ?: 640
         if (this.bookUrl != bookUrl) {
             this.book = appDb.bookDao.getBook(bookUrl)
-                ?: return returnData.setErrorMsg("bookUrl不对")
+                ?: return returnData.setErrorMsg("bookUrl is incorrect")
             this.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
         }
         this.bookUrl = bookUrl
@@ -124,10 +124,10 @@ object BookController {
         try {
             val bookUrl = parameters["url"]?.firstOrNull()
             if (bookUrl.isNullOrEmpty()) {
-                return returnData.setErrorMsg("参数url不能为空，请指定书籍地址")
+                return returnData.setErrorMsg("Parameter url cannot be empty, please specify book URL")
             }
             val book = appDb.bookDao.getBook(bookUrl)
-                ?: return returnData.setErrorMsg("未在数据库找到对应书籍，请先添加")
+                ?: return returnData.setErrorMsg("Book not found in database, please add it first")
             if (book.isLocal) {
                 val toc = LocalBook.getChapterList(book)
                 appDb.bookChapterDao.delByBook(book.bookUrl)
@@ -136,7 +136,7 @@ object BookController {
                 return returnData.setData(toc)
             } else {
                 val bookSource = appDb.bookSourceDao.getBookSource(book.origin)
-                    ?: return returnData.setErrorMsg("未找到对应书源,请换源")
+                    ?: return returnData.setErrorMsg("No matching source found, please change source")
                 val toc = runBlocking {
                     if (book.tocUrl.isBlank()) {
                         WebBook.getBookInfoAwait(bookSource, book)
@@ -160,7 +160,7 @@ object BookController {
         val bookUrl = parameters["url"]?.firstOrNull()
         val returnData = ReturnData()
         if (bookUrl.isNullOrEmpty()) {
-            return returnData.setErrorMsg("参数url不能为空，请指定书籍地址")
+            return returnData.setErrorMsg("Parameter url cannot be empty, please specify book URL")
         }
         val chapterList = appDb.bookChapterDao.getChapterList(bookUrl)
         if (chapterList.isEmpty()) {
@@ -177,10 +177,10 @@ object BookController {
         val index = parameters["index"]?.firstOrNull()?.toInt()
         val returnData = ReturnData()
         if (bookUrl.isNullOrEmpty()) {
-            return returnData.setErrorMsg("参数url不能为空，请指定书籍地址")
+            return returnData.setErrorMsg("Parameter url cannot be empty, please specify book URL")
         }
         if (index == null) {
-            return returnData.setErrorMsg("参数index不能为空, 请指定目录序号")
+            return returnData.setErrorMsg("Parameter index cannot be empty, please specify chapter index")
         }
         val book = appDb.bookDao.getBook(bookUrl)
         val chapter = runBlocking {
@@ -194,7 +194,7 @@ object BookController {
             chapter
         }
         if (book == null || chapter == null) {
-            return returnData.setErrorMsg("未找到")
+            return returnData.setErrorMsg("Not found")
         }
         var content: String? = BookHelp.getContent(book, chapter)
         if (content != null) {
@@ -206,7 +206,7 @@ object BookController {
             return returnData.setData(content)
         }
         val bookSource = appDb.bookSourceDao.getBookSource(book.origin)
-            ?: return returnData.setErrorMsg("未找到书源")
+            ?: return returnData.setErrorMsg("No source found")
         try {
             content = runBlocking {
                 WebBook.getContentAwait(bookSource, book, chapter).let {
@@ -232,7 +232,7 @@ object BookController {
             book.save()
             return returnData.setData("")
         }
-        return returnData.setErrorMsg("格式不对")
+        return returnData.setErrorMsg("Invalid format")
     }
 
     /**
@@ -244,7 +244,7 @@ object BookController {
             book.delete()
             return returnData.setData("")
         }
-        return returnData.setErrorMsg("格式不对")
+        return returnData.setErrorMsg("Invalid format")
     }
 
     /**
@@ -274,7 +274,7 @@ object BookController {
                     return returnData.setData("")
                 }
             }
-        return returnData.setErrorMsg("格式不对")
+        return returnData.setErrorMsg("Invalid format")
     }
 
     /**
@@ -286,16 +286,16 @@ object BookController {
     ): ReturnData {
         val returnData = ReturnData()
         val fileName = parameters["fileName"]?.firstOrNull()
-            ?: return returnData.setErrorMsg("fileName 不能为空")
+            ?: return returnData.setErrorMsg("fileName cannot be empty")
         val fileData = files["fileData"]
-            ?: return returnData.setErrorMsg("fileData 不能为空")
+            ?: return returnData.setErrorMsg("fileData cannot be empty")
         kotlin.runCatching {
             val uri = LocalBook.saveBookFile(File(fileData).inputStream(), fileName)
             LocalBook.importFile(uri)
         }.onFailure {
             return when (it) {
-                is SecurityException -> returnData.setErrorMsg("需重新设置书籍保存位置!")
-                else -> returnData.setErrorMsg("保存书籍错误\n${it.localizedMessage}")
+                is SecurityException -> returnData.setErrorMsg("Need to reset book save location!")
+                else -> returnData.setErrorMsg("Error saving book\n${it.localizedMessage}")
             }
         }
         return returnData.setData(true)
@@ -318,7 +318,7 @@ object BookController {
     fun getWebReadConfig(): ReturnData {
         val returnData = ReturnData()
         val data = CacheManager.get("webReadConfig")
-            ?: return returnData.setErrorMsg("没有配置")
+            ?: return returnData.setErrorMsg("No configuration")
         return returnData.setData(data)
     }
 

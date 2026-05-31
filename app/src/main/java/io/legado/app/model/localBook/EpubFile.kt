@@ -282,7 +282,7 @@ class EpubFile(var book: Book) {
     private fun upBookInfo() {
         if (epubBook == null) {
             eFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Book import error"
         } else {
             upBookCover()
             val metadata = epubBook!!.metadata
@@ -336,7 +336,7 @@ class EpubFile(var book: Book) {
                     chapter.bookUrl = book.bookUrl
                     chapter.url = resource.href
                     if (i == 0 && title.isEmpty()) {
-                        chapter.title = "封面"
+                        chapter.title = "Cover"
                     } else {
                         chapter.title = title
                     }
@@ -389,7 +389,7 @@ class EpubFile(var book: Book) {
                     if (elements.isNotEmpty() && elements[0].text().isNotBlank())
                         elements[0].text()
                     else
-                        "--卷首--"
+                        "--Prologue--"
             }
             chapter.bookUrl = book.bookUrl
             chapter.title = title

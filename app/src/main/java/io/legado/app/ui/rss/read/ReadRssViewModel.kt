@@ -134,7 +134,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
                 }
                 _contentState.value = body
             }.onError {
-                _contentState.value = "加载正文失败\n${it.stackTraceToString()}"
+                _contentState.value = "Failed to load content\n${it.stackTraceToString()}"
             }
     }
 
@@ -148,7 +148,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
                     finish.invoke()
                 }
             } ?: let {
-                appCtx.toastOnUi("订阅源不存在")
+                appCtx.toastOnUi("RSS source does not exist")
                 finish.invoke()
             }
         } ?: finish.invoke()
@@ -198,11 +198,11 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
                 byteArray,
                 folderName = "Legado"
             )
-            if (!success) throw NoStackTraceException("保存到相册失败")
+            if (!success) throw NoStackTraceException("Failed to save to gallery")
         }.onError {
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            context.toastOnUi("Failed to save image: ${it.localizedMessage}")
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            context.toastOnUi("Saved to gallery")
         }
     }
 
@@ -272,7 +272,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
             rssSource?.redirectPolicy = redirectPolicy
         }.onError {
-            appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
+            appCtx.toastOnUi("Save failed: ${it.localizedMessage}")
         }
     }
 

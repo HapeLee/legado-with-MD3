@@ -152,12 +152,12 @@ object AudioPlay : CoroutineScope by MainScope() {
                 WebBook.getContent(this, bookSource, book, chapter)
                     .onSuccess { content ->
                         if (content.isEmpty()) {
-                            appCtx.toastOnUi("未获取到资源链接")
+                            appCtx.toastOnUi("No resource link obtained")
                         } else {
                             contentLoadFinish(chapter, content)
                         }
                     }.onError {
-                        AppLog.put("获取资源链接出错\n$it", it, true)
+                        AppLog.put("Error getting resource link\n$it", it, true)
                         upLoading(false)
                     }.onCancel {
                         removeLoading(index)

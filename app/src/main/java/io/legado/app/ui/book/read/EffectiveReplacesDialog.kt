@@ -33,7 +33,7 @@ class EffectiveReplacesDialog : BaseDialogFragment(R.layout.dialog_recycler_view
     private val binding by viewBinding(DialogRecyclerViewBinding::bind)
     private val viewModel by activityViewModels<ReadBookViewModel>()
     private val adapter by lazy { ReplaceAdapter(requireContext()) }
-    private val chineseConvert by lazy { ReplaceRule(0, "繁简转换") }
+    private val chineseConvert by lazy { ReplaceRule(0, "Trad-Simp conversion") }
 
     private var isEdit = false
 

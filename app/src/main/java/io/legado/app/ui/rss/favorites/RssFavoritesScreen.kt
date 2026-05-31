@@ -184,7 +184,7 @@ fun RssFavoritesScreen(
                 contentAlignment = Alignment.Center
             ) {
                 EmptyMessage(
-                    message = "还没有收藏订阅！",
+                    message = "No favorite subscriptions yet!",
                     isLoading = state.isLoading
                 )
             }

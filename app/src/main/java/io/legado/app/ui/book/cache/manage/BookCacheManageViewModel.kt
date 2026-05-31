@@ -456,12 +456,12 @@ class BookCacheManageViewModel(
         }.onSuccess { countOrNull ->
             val count = countOrNull ?: return@onSuccess
             if (count > 0) {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("已加入缓存队列: $count 章"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Added to download queue: $count chapters"))
             } else {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("没有可缓存的章节"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("No chapters to cache"))
             }
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("加入缓存队列失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Failed to add to download queue\n${it.localizedMessage}"))
         }.onFinally {
             reloadAll(forceDatabase = true)
         }
@@ -480,12 +480,12 @@ class BookCacheManageViewModel(
         }.onSuccess { countOrNull ->
             val count = countOrNull ?: return@onSuccess
             if (count > 0) {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("已加入缓存队列: $count 章"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Added to download queue: $count chapters"))
             } else {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("没有可缓存的章节"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("No chapters to cache"))
             }
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("加入缓存队列失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Failed to add to download queue\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -525,9 +525,9 @@ class BookCacheManageViewModel(
             CacheBook.removeAwait(context, bookUrl)
             clearBookCacheUseCase.execute(bookUrl)
         }.onSuccess {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("缓存已删除"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Cache deleted"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("删除缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Delete cache failed\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -542,9 +542,9 @@ class BookCacheManageViewModel(
             true
         }.onSuccess { enqueued ->
             if (!enqueued) return@onSuccess
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节已加入缓存队列"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Chapter added to download queue"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Chapter cache failed\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -576,9 +576,9 @@ class BookCacheManageViewModel(
             true
         }.onSuccess { deleted ->
             if (!deleted) return@onSuccess
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节缓存已删除"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Chapter cache deleted"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("删除章节缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Delete chapter cache failed\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -597,7 +597,7 @@ class BookCacheManageViewModel(
         val pausedCount = items.sumOf { it.pausedCount }
         val errorCount = items.sumOf { it.errorCount }
         val cachedCount = items.sumOf { it.cachedCount }
-        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:$errorCount | 已缓存:$cachedCount"
+        return "Downloading:$downloadingCount | Waiting:$waitingCount | Paused:$pausedCount | Failed:$errorCount | Cached:$cachedCount"
     }
 
     private data class LoadedCacheState(

@@ -84,7 +84,7 @@ class TextDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_text_view) {
                 else -> {
                     if (content.length >= 32 * 1024) {
                         val truncatedContent =
-                            content.substring(0, 32 * 1024) + "\n\n数据太大，无法全部显示…"
+                            content.substring(0, 32 * 1024) + "\n\nData is too large to display fully…"
                         binding.textView.text = truncatedContent
                     } else {
                         binding.textView.text = content

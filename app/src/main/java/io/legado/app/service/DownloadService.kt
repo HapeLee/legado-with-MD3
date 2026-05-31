@@ -71,7 +71,7 @@ class DownloadService : BaseService() {
                 if (completeDownloads.contains(id)) {
                     openDownload(id, downloads[id]?.fileName)
                 } else {
-                    toastOnUi("未完成,下载的文件夹Download")
+                    toastOnUi("Not complete, download folder: Download")
                 }
             }
 
@@ -95,7 +95,7 @@ class DownloadService : BaseService() {
             return
         }
         if (downloads.values.any { it.url == url }) {
-            toastOnUi("已在下载列表")
+            toastOnUi("Already in download list")
             return
         }
         kotlin.runCatching {
@@ -116,8 +116,8 @@ class DownloadService : BaseService() {
         }.onFailure {
             it.printStackTrace()
             val msg = when (it) {
-                is SecurityException -> "下载出错,没有存储权限"
-                else -> "下载出错,${it.localizedMessage}"
+                is SecurityException -> "Download error, no storage permission"
+                else -> "Download error,${it.localizedMessage}"
             }
             toastOnUi(msg)
             AppLog.put(msg, it)
@@ -219,7 +219,7 @@ class DownloadService : BaseService() {
                 openFileUri(uri, type)
             }
         }.onFailure {
-            AppLog.put("打开下载文件${fileName}出错", it)
+            AppLog.put("Error opening downloaded file ${fileName}", it)
         }
     }
 

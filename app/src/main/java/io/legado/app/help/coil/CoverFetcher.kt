@@ -76,7 +76,7 @@ class CoverFetcher(
                 ImageUtils.decode(url, bytes, false, source, ReadManga.book)
             } else {
                 ImageUtils.decode(url, bytes, true, source)
-            } ?: throw IOException("图片解密失败")
+            } ?: throw IOException("Image decryption failed")
 
             SourceResult(
                 source = ImageSource(

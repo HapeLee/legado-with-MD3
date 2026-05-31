@@ -134,7 +134,7 @@ fun CoverConfigScreen(
                 val coverCount = CoverConfig.defaultCover.split(",").filter { it.isNotBlank() }.size
                 ClickableSettingItem(
                     title = stringResource(R.string.default_cover),
-                    description = if (coverCount > 0) "已选择 $coverCount 张图片" else stringResource(
+                    description = if (coverCount > 0) "$coverCount image(s) selected" else stringResource(
                         R.string.select_image
                     ),
                     onClick = { manageKey = PreferKey.defaultCover }
@@ -191,7 +191,7 @@ fun CoverConfigScreen(
                     CoverConfig.defaultCoverDark.split(",").filter { it.isNotBlank() }.size
                 ClickableSettingItem(
                     title = stringResource(R.string.default_cover),
-                    description = if (coverCount > 0) "已选择 $coverCount 张图片" else stringResource(
+                    description = if (coverCount > 0) "$coverCount image(s) selected" else stringResource(
                         R.string.select_image
                     ),
                     onClick = { manageKey = PreferKey.defaultCoverDark }

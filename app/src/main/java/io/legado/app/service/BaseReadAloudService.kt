@@ -152,7 +152,7 @@ abstract class BaseReadAloudService : BaseService(),
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         setTimer(AppConfig.ttsTimer)
         if (AppConfig.ttsTimer > 0) {
-            toastOnUi("朗读定时 ${AppConfig.ttsTimer} 分钟")
+            toastOnUi("Read aloud timer ${AppConfig.ttsTimer} minutes")
         }
         execute {
             ImageLoader
@@ -430,7 +430,7 @@ abstract class BaseReadAloudService : BaseService(),
         val requestFocus = MediaHelp.requestFocus(mFocusRequest)
         if (!requestFocus) {
             pauseReadAloud(false)
-            toastOnUi("未获取到音频焦点")
+            toastOnUi("Could not obtain audio focus")
         }
         return requestFocus
     }

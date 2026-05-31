@@ -11,7 +11,7 @@ import io.legado.app.utils.startService
 import splitties.init.appCtx
 
 object CheckSource {
-    var keyword = "我的"
+    var keyword = "My"
 
     //校验设置
     var timeout = CacheManager.getLong("checkSourceTimeout") ?: 180000L

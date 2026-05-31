@@ -140,8 +140,8 @@ class ImportDictRuleDialog() : BaseDialogFragment(R.layout.dialog_recycler_view)
                 cbSourceName.text = item.name
                 val localSource = viewModel.checkSources[holder.layoutPosition]
                 tvSourceState.text = when (localSource) {
-                    null -> "新增"
-                    else -> "已有"
+                    null -> "New"
+                    else -> "Existing"
                 }
             }
         }

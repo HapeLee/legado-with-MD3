@@ -168,8 +168,8 @@ fun BookInfoEditContent(
         }
         Spacer(modifier = Modifier.height(16.dp))
         SwitchSettingItem(
-            title = "固定书籍类型",
-            description = "书籍更新后不覆盖书籍类型",
+            title = "Fix book type",
+            description = "Don't overwrite book type on update",
             checked = uiState.fixedType,
             onCheckedChange = { viewModel.onFixedTypeChange(it) }
         )
@@ -177,35 +177,35 @@ fun BookInfoEditContent(
         AppTextField(
             value = uiState.name,
             onValueChange = { viewModel.onNameChange(it) },
-            label = "书名",
+            label = "Title",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.author,
             onValueChange = { viewModel.onAuthorChange(it) },
-            label = "作者",
+            label = "Author",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.coverUrl ?: "",
             onValueChange = { viewModel.onCoverUrlChange(it) },
-            label = "封面链接",
+            label = "Cover URL",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.intro ?: "",
             onValueChange = { viewModel.onIntroChange(it) },
-            label = "简介",
+            label = "Summary",
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
         AppTextField(
             value = uiState.remark ?: "",
             onValueChange = { viewModel.onRemarkChange(it) },
-            label = "备注",
+            label = "Remark",
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -237,7 +237,7 @@ fun BookTypeDropdown(
             state = textFieldState,
             readOnly = true,
             lineLimits = TextFieldLineLimits.SingleLine,
-            label = "书籍类型",
+            label = "Book type",
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },

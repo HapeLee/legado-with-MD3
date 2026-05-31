@@ -130,7 +130,7 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
             success?.invoke()
         }.onError {
             AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            context.toastOnUi("Failed to add book")
         }
     }
 

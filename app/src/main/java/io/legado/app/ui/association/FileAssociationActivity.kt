@@ -123,7 +123,7 @@ class FileAssociationActivity :
                     .onGranted {
                         viewModel.dispatchIntent(data)
                     }.onDenied {
-                        toastOnUi("请求存储权限失败。")
+                        toastOnUi("Storage permission request failed.")
                         handler.postDelayed(2000) {
                             finish()
                         }
@@ -159,7 +159,7 @@ class FileAssociationActivity :
                             DocumentFile.fromTreeUri(this@FileAssociationActivity, treeUri)
                         if (!treeDoc!!.checkWrite()) {
                             throw InvalidBooksDirException(
-                                "请重新设置书籍保存位置\nPermission Denial"
+                                "Please reset the book save location\nPermission Denial"
                             )
                         }
                         readUri(uri) { fileDoc, inputStream ->
@@ -169,7 +169,7 @@ class FileAssociationActivity :
                                 if (doc == null) {
                                     doc = treeDoc.createFile(FileUtils.getMimeType(name), name)
                                         ?: throw InvalidBooksDirException(
-                                            "请重新设置书籍保存位置\nPermission Denial"
+                                            "Please reset the book save location\nPermission Denial"
                                         )
                                 }
                                 contentResolver.openOutputStream(doc.uri)!!.use { oStream ->
@@ -183,7 +183,7 @@ class FileAssociationActivity :
                         val treeFile = File(treeUri.path ?: treeUri.toString())
                         if (!treeFile.checkWrite()) {
                             throw InvalidBooksDirException(
-                                "请重新设置书籍保存位置\nPermission Denial"
+                                "Please reset the book save location\nPermission Denial"
                             )
                         }
                         readUri(uri) { fileDoc, inputStream ->
@@ -207,7 +207,7 @@ class FileAssociationActivity :
                     }
 
                     else -> {
-                        val msg = "导入书籍失败\n${it.localizedMessage}"
+                        val msg = "Import book failed\n${it.localizedMessage}"
                         AppLog.put(msg, it)
                         toastOnUi(msg)
                         handler.postDelayed(2000) {

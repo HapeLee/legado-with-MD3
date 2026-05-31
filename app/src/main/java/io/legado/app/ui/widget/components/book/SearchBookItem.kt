@@ -66,7 +66,7 @@ fun SearchBookListItem(
             {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Check,
-                    contentDescription = "已在书架",
+                    contentDescription = "In bookshelf",
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -76,7 +76,7 @@ fun SearchBookListItem(
             {
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Shuffle,
-                    contentDescription = "同名书籍",
+                    contentDescription = "Same-name book",
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -128,7 +128,7 @@ fun SearchBookListItem(
                     )
 
                     AppText(
-                        text = "最新: $latestChapter",
+                        text = "Latest: $latestChapter",
                         style = LegadoTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -188,8 +188,8 @@ fun SearchBookGridItem(
     modifier: Modifier = Modifier,
 ) {
     val badgeText: String? = when (shelfState) {
-        BookShelfState.IN_SHELF -> "已在书架"
-        BookShelfState.SAME_NAME_AUTHOR -> "同名书籍"
+        BookShelfState.IN_SHELF -> "In bookshelf"
+        BookShelfState.SAME_NAME_AUTHOR -> "Same-name book"
         BookShelfState.NOT_IN_SHELF -> null
     }
 

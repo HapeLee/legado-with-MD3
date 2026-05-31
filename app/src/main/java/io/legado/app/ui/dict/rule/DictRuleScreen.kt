@@ -177,7 +177,7 @@ fun DictRuleScreen(
     )
 
     BatchImportDialog(
-        title = "导入词典规则",
+        title = "Import Dictionary Rules",
         importState = importState,
         onDismissRequest = { viewModel.cancelImport() },
         onToggleItem = { viewModel.toggleImportSelection(it) },
@@ -251,7 +251,7 @@ fun DictRuleScreen(
     )
 
     RuleListScaffold(
-        title = "字典规则",
+        title = "Dictionary Rules",
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->

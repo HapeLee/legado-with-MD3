@@ -105,7 +105,7 @@ fun ReplaceRuleScreen(
     val importState by viewModel.importState.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabItems = remember(groups) { listOf("全部") + groups }
+    val tabItems = remember(groups) { listOf("All") + groups }
     val filteredRules = remember(uiState.items, selectedTabIndex, tabItems) {
         val targetGroup = tabItems.getOrNull(selectedTabIndex)
         if (targetGroup == null || selectedTabIndex == 0) {
@@ -220,7 +220,7 @@ fun ReplaceRuleScreen(
         val maxIndex = groups.size
         if (selectedTabIndex > maxIndex) {
             selectedTabIndex = 0
-            viewModel.setGroup("全部")
+            viewModel.setGroup("All")
         }
     }
 
@@ -272,7 +272,7 @@ fun ReplaceRuleScreen(
     )
 
     RuleListScaffold(
-        title = "替换规则",
+        title = "Replace Rules",
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { viewModel.setSearchMode(!uiState.isSearch) },
@@ -355,39 +355,39 @@ fun ReplaceRuleScreen(
                 onClick = { showImportSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "分组管理",
+                text = "Group Management",
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "帮助",
+                text = "Help",
                 onClick = { /*TODO*/ dismiss() }
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = "旧的在前",
+                text = "Old First",
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "新的在前",
+                text = "New First",
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "名称升序",
+                text = "Name Ascending",
                 onClick = {
                     viewModel.setSortMode("name_asc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar("Dragging disabled in current sort mode")
                     }
                 }
             )
             RoundDropdownMenuItem(
-                text = "名称降序",
+                text = "Name Descending",
                 onClick = {
                     viewModel.setSortMode("name_desc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar("Dragging disabled in current sort mode")
                     }
                 }
             )
@@ -433,15 +433,15 @@ fun ReplaceRuleScreen(
                         modifier = Modifier,
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = "移至顶部",
+                                text = "Move to Top",
                                 onClick = { viewModel.toTop(ui.rule); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "移至底部",
+                                text = "Move to Bottom",
                                 onClick = { viewModel.toBottom(ui.rule); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "删除",
+                                text = "Delete",
                                 onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
                             )
                         }

@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 data class ReplaceEditUiState(
     val id: Long = 0,
     val name: String = "",
-    val group: String = "默认",
+    val group: String = "Default",
     val pattern: String = "",
     val replacement: String = "",
     val isRegex: Boolean = false,
@@ -80,7 +80,7 @@ class ReplaceEditViewModel(
     private fun observeGroups() {
         viewModelScope.launch {
             replaceRuleDao.flowGroups().collectLatest { groups ->
-                _uiState.update { it.copy(allGroups = listOf("默认") + groups) }
+                _uiState.update { it.copy(allGroups = listOf("Default") + groups) }
             }
         }
     }
@@ -90,7 +90,7 @@ class ReplaceEditViewModel(
             it.copy(
                 id = rule.id,
                 name = rule.name,
-                group = rule.group ?: "默认",
+                group = rule.group ?: "Default",
                 pattern = rule.pattern,
                 replacement = rule.replacement,
                 isRegex = rule.isRegex,
@@ -108,7 +108,7 @@ class ReplaceEditViewModel(
         val rule = ReplaceRule().apply {
             id = state.id
             name = state.name
-            group = if (state.group == "默认" || state.group.isBlank()) null else state.group
+                group = if (state.group == "Default" || state.group.isBlank()) null else state.group
             pattern = state.pattern
             replacement = state.replacement
             isRegex = state.isRegex
@@ -126,7 +126,7 @@ class ReplaceEditViewModel(
             val ruleToCopy = getReplaceRuleFromState()
             val json = GSON.toJson(ruleToCopy)
             app.sendToClip(json)
-            app.toastOnUi("规则已复制到剪贴板")
+            app.toastOnUi("Rule copied to clipboard")
         }
     }
 
@@ -135,11 +135,11 @@ class ReplaceEditViewModel(
             try {
                 val text = app.getClipText()
                 if (text.isNullOrBlank()) {
-                    throw NoStackTraceException("剪贴板为空")
+                    throw NoStackTraceException("Clipboard is empty")
                 }
 
                 val pastedRule = GSON.fromJsonObject<ReplaceRule>(text).getOrNull()
-                    ?: throw NoStackTraceException("格式不对")
+                    ?: throw NoStackTraceException("Invalid format")
 
                 launch(Dispatchers.Main) {
                     updateStateFromRule(pastedRule)
@@ -147,7 +147,7 @@ class ReplaceEditViewModel(
                 }
             } catch (e: Exception) {
                 launch(Dispatchers.Main) {
-                    app.toastOnUi(e.localizedMessage ?: "格式不对")
+                    app.toastOnUi(e.localizedMessage ?: "Invalid format")
                 }
             }
         }
@@ -202,7 +202,7 @@ class ReplaceEditViewModel(
             val rule = ReplaceRule().apply {
                 id = if (state.id <= 0) System.currentTimeMillis() else state.id
                 name = state.name
-                group = if (state.group == "默认" || state.group.isBlank()) null else state.group
+            group = if (state.group == "Default" || state.group.isBlank()) null else state.group
                 pattern = state.pattern
                 replacement = state.replacement
                 isRegex = state.isRegex

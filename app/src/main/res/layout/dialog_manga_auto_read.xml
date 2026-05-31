@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             app:max="100"
             app:min="1"
-            app:title="翻页速度" />
+            app:title="@string/page_turn_speed" />
 
 
     </LinearLayout>

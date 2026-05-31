@@ -407,7 +407,7 @@ object BookHelp {
             val path = FileUtils.getPath(downloadDir, cacheEpubFolderName, book.originName)
             val file = File(path)
             val doc = DocumentFile.fromSingleUri(appCtx, uri)
-                ?: throw IOException("文件不存在")
+                ?: throw IOException("File does not exist")
             if (!file.exists() || doc.lastModified() > book.latestChapterTime) {
                 LocalBook.getBookInputStream(book).use { inputStream ->
                     FileOutputStream(file).use { outputStream ->

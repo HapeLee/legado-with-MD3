@@ -118,7 +118,7 @@ object Backup {
                     }
                 }
             }.onError {
-                AppLog.put("自动备份失败\n${it.localizedMessage}")
+                AppLog.put("Auto backup failed\n${it.localizedMessage}")
             }
         }
     }
@@ -235,7 +235,7 @@ object Backup {
             try {
                 AppWebDav.backUpWebDav(zipFileName)
             } catch (e: Exception) {
-                AppLog.put("上传备份至webdav失败\n$e", e)
+                AppLog.put("Upload backup to WebDAV failed\n$e", e)
             }
         }
         FileUtils.delete(backupPath)
@@ -274,9 +274,9 @@ object Backup {
         val treeDoc = DocumentFile.fromTreeUri(context, uri)!!
         treeDoc.findFile(fileName)?.delete()
         val fileDoc = treeDoc.createFile("", fileName)
-            ?: throw NoStackTraceException("创建文件失败")
+            ?: throw NoStackTraceException("Failed to create file")
         val outputS = fileDoc.openOutputStream()
-            ?: throw NoStackTraceException("打开OutputStream失败")
+            ?: throw NoStackTraceException("Failed to open OutputStream")
         outputS.use {
             FileInputStream(zipFilePath).use { inputS ->
                 inputS.copyTo(outputS)

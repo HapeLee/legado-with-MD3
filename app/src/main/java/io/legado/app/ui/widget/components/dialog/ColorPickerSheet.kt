@@ -70,7 +70,7 @@ fun ColorPickerSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "选择颜色",
+        title = "Choose color",
     ) {
         Column(
             modifier = Modifier
@@ -123,7 +123,7 @@ fun ColorPickerSheet(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    label = "色值",
+                    label = "Color value",
                     singleLine = true,
                     isError = isHexInputError,
                     backgroundColor = LegadoTheme.colorScheme.surface,

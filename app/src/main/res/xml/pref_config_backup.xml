@@ -18,7 +18,7 @@
         <io.legado.app.lib.prefs.Preference
             android:key="web_dav_auth"
             android:title="@string/web_dav_account"
-            android:summary="设置 WebDAV 账号和密码"
+            android:summary="@string/web_dav_auth_summary"
             app:iconSpaceReserved="false" />
 
         <io.legado.app.lib.prefs.EditTextPreference
@@ -37,8 +37,8 @@
 
         <io.legado.app.lib.prefs.Preference
             android:key="web_dav_test"
-            android:title="测试 WebDav 配置"
-            android:summary="测试 WebDav 服务工作状态"
+            android:title="@string/test_webdav_config"
+            android:summary="@string/test_webdav_config_summary"
             app:iconSpaceReserved="false"/>
 
         <io.legado.app.lib.prefs.SwitchPreference

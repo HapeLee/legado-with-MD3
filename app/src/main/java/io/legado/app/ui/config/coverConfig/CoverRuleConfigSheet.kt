@@ -119,7 +119,7 @@ fun CoverRuleConfigSheet(
 
                 Button(onClick = {
                     if (searchUrl.isBlank() || coverRule.isBlank()) {
-                        appCtx.toastOnUi("搜索url和cover规则不能为空")
+                        appCtx.toastOnUi("Search URL and cover rule cannot be empty")
                     } else {
                         BookCover.CoverRule(enable, searchUrl, coverRule).let { config ->
                             BookCover.saveCoverRule(config)

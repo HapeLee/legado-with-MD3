@@ -227,7 +227,7 @@ class TextFile(private var book: Book) {
                             //加入简介
                             if (chapterContent.isNotBlank()) {
                                 val qyChapter = BookChapter()
-                                qyChapter.title = "前言"
+                                qyChapter.title = "Foreword"
                                 qyChapter.start = curOffset
                                 qyChapter.end = curOffset + chapterLength
                                 qyChapter.wordCount =
@@ -390,7 +390,7 @@ class TextFile(private var book: Book) {
                         bookWordCount += content.length
                         lastChapterWordCount = content.length
                         val chapter = BookChapter()
-                        chapter.title = "第${blockPos}章($chapterPos)"
+                        chapter.title = "Ch.${blockPos}($chapterPos)"
                         chapter.start = toc.lastOrNull()?.end ?: curOffset
                         chapter.end = chapter.start!! + end - chapterOffset
                         chapter.wordCount = StringUtils.wordCountFormat(content.length)
@@ -414,7 +414,7 @@ class TextFile(private var book: Book) {
             bookWordCount += content.length
             if (bufferStart > 100 || toc.isEmpty()) {
                 val chapter = BookChapter()
-                chapter.title = "第${blockPos}章(${chapterPos})"
+                chapter.title = "Ch.${blockPos}(${chapterPos})"
                 chapter.start = toc.lastOrNull()?.end ?: curOffset
                 chapter.end = chapter.start!! + bufferStart
                 chapter.wordCount = StringUtils.wordCountFormat(content.length)

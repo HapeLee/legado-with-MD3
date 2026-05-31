@@ -97,7 +97,7 @@ class CheckSourceService : BaseService() {
 
     private fun check(ids: List<String>) {
         if (checkJob?.isActive == true) {
-            toastOnUi("已有书源在校验,等完成后再试")
+            toastOnUi("A source is being checked, try again later")
             return
         }
         checkJob = lifecycleScope.launch(searchCoroutine) {
@@ -136,16 +136,16 @@ class CheckSourceService : BaseService() {
                 doCheckSource(source)
             }
         }.onSuccess {
-            Debug.updateFinalMessage(source.bookSourceUrl, "校验成功")
+            Debug.updateFinalMessage(source.bookSourceUrl, "Verification successful")
         }.onFailure {
             coroutineContext.ensureActive()
             when (it) {
-                is TimeoutCancellationException -> source.addGroup("校验超时")
-                is ScriptException, is WrappedException -> source.addGroup("js失效")
-                !is NoStackTraceException -> source.addGroup("网站失效")
+                is TimeoutCancellationException -> source.addGroup("Verification timeout")
+                is ScriptException, is WrappedException -> source.addGroup("JS invalid")
+                !is NoStackTraceException -> source.addGroup("Site invalid")
             }
             source.addErrorComment(it)
-            Debug.updateFinalMessage(source.bookSourceUrl, "校验失败:${it.localizedMessage}")
+            Debug.updateFinalMessage(source.bookSourceUrl, "Verification failed:${it.localizedMessage}")
         }
         source.respondTime = Debug.getRespondTime(source.bookSourceUrl)
     }
@@ -158,16 +158,16 @@ class CheckSourceService : BaseService() {
         if (CheckSource.checkSearch) {
             val searchWord = source.getCheckKeyword(CheckSource.keyword)
             if (!source.searchUrl.isNullOrBlank()) {
-                source.removeGroup("搜索链接规则为空")
+                source.removeGroup("Search link rule is empty")
                 val searchBooks = WebBook.searchBookAwait(source, searchWord)
                 if (searchBooks.isEmpty()) {
-                    source.addGroup("搜索失效")
+                    source.addGroup("Search invalid")
                 } else {
-                    source.removeGroup("搜索失效")
+                    source.removeGroup("Search invalid")
                     checkBook(searchBooks.first().toBook(), source)
                 }
             } else {
-                source.addGroup("搜索链接规则为空")
+                source.addGroup("Search link rule is empty")
             }
         }
         //校验发现书籍
@@ -176,14 +176,14 @@ class CheckSourceService : BaseService() {
                 !it.url.isNullOrBlank()
             }?.url
             if (url.isNullOrBlank()) {
-                source.addGroup("发现规则为空")
+                source.addGroup("Discovery rule is empty")
             } else {
-                source.removeGroup("发现规则为空")
+                source.removeGroup("Discovery rule is empty")
                 val exploreBooks = WebBook.exploreBookAwait(source, url)
                 if (exploreBooks.isEmpty()) {
-                    source.addGroup("发现失效")
+                    source.addGroup("Discovery invalid")
                 } else {
-                    source.removeGroup("发现失效")
+                    source.removeGroup("Discovery invalid")
                     checkBook(exploreBooks.first().toBook(), source, false)
                 }
             }
@@ -227,16 +227,16 @@ class CheckSourceService : BaseService() {
                 needSave = false
             )
         }.onFailure {
-            val bookType = if (isSearchBook) "搜索" else "发现"
+            val bookType = if (isSearchBook) "Search" else "Discovery"
             when (it) {
-                is ContentEmptyException -> source.addGroup("${bookType}正文失效")
-                is TocEmptyException -> source.addGroup("${bookType}目录失效")
+                is ContentEmptyException -> source.addGroup("${bookType} content invalid")
+                is TocEmptyException -> source.addGroup("${bookType} table of contents invalid")
                 else -> throw it
             }
         }.onSuccess {
-            val bookType = if (isSearchBook) "搜索" else "发现"
-            source.removeGroup("${bookType}目录失效")
-            source.removeGroup("${bookType}正文失效")
+            val bookType = if (isSearchBook) "Search" else "Discovery"
+            source.removeGroup("${bookType} table of contents invalid")
+            source.removeGroup("${bookType} content invalid")
         }
     }
 

@@ -47,8 +47,8 @@ class BookSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
         launch(IO) {
             kotlin.runCatching {
                 if (!message.textPayload.isJson()) {
-                    send("数据必须为Json格式")
-                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                    send("Data must be in JSON format")
+                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                     return@launch
                 }
                 val debugBean =
@@ -58,7 +58,7 @@ class BookSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                     val key = debugBean["key"]
                     if (tag.isNullOrBlank() || key.isNullOrBlank()) {
                         send(appCtx.getString(R.string.cannot_empty))
-                        close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                        close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                         return@launch
                     }
                     appDb.bookSourceDao.getBookSource(tag)?.let {
@@ -66,8 +66,8 @@ class BookSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                         Debug.startDebug(this, it, key)
                     }
                 } else {
-                    send("数据必须为Json格式")
-                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                    send("Data must be in JSON format")
+                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                     return@launch
                 }
             }
@@ -91,7 +91,7 @@ class BookSourceDebugWebSocket(handshakeRequest: NanoHTTPD.IHTTPSession) :
                 send(msg)
                 if (state == -1 || state == 1000) {
                     Debug.cancelDebug(true)
-                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "调试结束", false)
+                    close(NanoWSD.WebSocketFrame.CloseCode.NormalClosure, "Debug ended", false)
                 }
             }.onFailure {
                 it.printOnDebug()

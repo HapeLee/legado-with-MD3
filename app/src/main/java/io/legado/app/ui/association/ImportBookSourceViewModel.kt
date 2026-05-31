@@ -143,7 +143,7 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                     }.onFailure {
                         GSON.fromJsonObject<BookSource>(mText).getOrThrow().let {
                             if (it.bookSourceUrl.isEmpty()) {
-                                throw NoStackTraceException("不是书源")
+                                throw NoStackTraceException("Not a book source")
                             }
                             allSources.add(it)
                         }
@@ -154,7 +154,7 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                     .let { items ->
                         val source = items.firstOrNull() ?: return@let
                         if (source.bookSourceUrl.isEmpty()) {
-                            throw NoStackTraceException("不是书源")
+                            throw NoStackTraceException("Not a book source")
                         }
                         allSources.addAll(items)
                     }
@@ -169,7 +169,7 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                         GSON.fromJsonArray<BookSource>(inputS).getOrThrow().let {
                             val source = it.firstOrNull() ?: return@let
                             if (source.bookSourceUrl.isEmpty()) {
-                                throw NoStackTraceException("不是书源")
+                                throw NoStackTraceException("Not a book source")
                             }
                             allSources.addAll(it)
                         }
@@ -198,7 +198,7 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
             GSON.fromJsonArray<BookSource>(it).getOrThrow().let { list ->
                 val source = list.firstOrNull() ?: return@let
                 if (source.bookSourceUrl.isEmpty()) {
-                    throw NoStackTraceException("不是书源")
+                    throw NoStackTraceException("Not a book source")
                 }
                 allSources.addAll(list)
             }

@@ -176,7 +176,7 @@ class RssSourceViewModel(
         return when {
             text.isJsonArray() -> GSON.fromJsonArray<RssSource>(text).getOrThrow()
             text.isJsonObject() -> listOf(GSON.fromJsonObject<RssSource>(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Invalid format")
         }
     }
 

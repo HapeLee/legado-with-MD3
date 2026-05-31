@@ -107,7 +107,7 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
             appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
             rssSource?.redirectPolicy = redirectPolicy
         }.onError {
-            appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
+            appCtx.toastOnUi("Save failed: ${it.localizedMessage}")
         }
     }
 }

@@ -18,8 +18,8 @@
 
         <io.legado.app.lib.prefs.ThemeCardPreference
             android:key="app_theme"
-            android:title="应用主题"
-            android:summary="喵喵喵"
+            android:title="@string/app_theme"
+            android:summary="@string/app_theme_summary"
             android:entries="@array/themes_item"
             android:entryValues="@array/themes_value"
             android:defaultValue="0" />
@@ -77,7 +77,7 @@
     </io.legado.app.lib.prefs.PreferenceCategory>
 
     <io.legado.app.lib.prefs.PreferenceCategory
-        android:title="Compose 相关"
+        android:title="@string/compose_related"
         app:allowDividerAbove="false"
         app:allowDividerBelow="false"
         app:iconSpaceReserved="false"
@@ -191,8 +191,8 @@
         <io.legado.app.lib.prefs.SwitchPreference
             android:defaultValue="true"
             android:key="isPredictiveBackEnabled"
-            android:summary="仅部分设备可用"
-            android:title="预见性返回手势" />
+            android:summary="@string/predictive_back_limited"
+            android:title="@string/predictive_back" />
 
     </io.legado.app.lib.prefs.PreferenceCategory>
 

@@ -59,7 +59,7 @@ object SharedJsScope {
                             if (js != null) {
                                 aCache.put(fileName, js)
                             } else {
-                                throw NoStackTraceException("下载jsLib-${value}失败")
+                                throw NoStackTraceException("Download jsLib-${value} failed")
                             }
                         }
                         RhinoScriptEngine.eval(js, scope, coroutineContext)

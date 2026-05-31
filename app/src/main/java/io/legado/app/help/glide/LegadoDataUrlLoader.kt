@@ -53,7 +53,7 @@ class LegadoDataUrlLoader : ModelLoader<String, InputStream> {
                     )?.inputStream()
                 }
                 if (decoded == null) {
-                    throw NoStackTraceException("漫画图片解密失败")
+                    throw NoStackTraceException("Manga image decryption failed")
                 }
                 callback.onDataReady(decoded)
             } catch (e: Exception) {

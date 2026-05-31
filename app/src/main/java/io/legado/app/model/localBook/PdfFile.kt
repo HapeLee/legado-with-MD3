@@ -181,7 +181,7 @@ class PdfFile(var book: Book) {
                     val chapter = BookChapter()
                     chapter.index = it
                     chapter.bookUrl = book.bookUrl
-                    chapter.title = "分段_${it}"
+                    chapter.title = "Segment_${it}"
                     chapter.url = "pdf_${it}"
                     chapterList.add(chapter)
                 }
@@ -213,7 +213,7 @@ class PdfFile(var book: Book) {
     private fun upBookInfo() {
         if (pdfRenderer == null) {
             pFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Book import error"
         } else {
             upBookCover()
             if (book.name.isEmpty()) {

@@ -192,7 +192,7 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
-                title = "搜索按钮优先打开筛选栏",
+                title = "Search button opens filter bar by default",
                 checked = BookshelfConfig.bookshelfSearchActionDirectToSearch,
                 color = MaterialTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.bookshelfSearchActionDirectToSearch = it }

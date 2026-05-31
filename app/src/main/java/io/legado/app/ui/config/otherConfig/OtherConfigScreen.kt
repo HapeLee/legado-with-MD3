@@ -151,7 +151,7 @@ fun OtherConfigScreen(
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         } else {
-                            Toast.makeText(context, "无需申请", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "No need to request", Toast.LENGTH_SHORT).show()
                         }
                     }
                 )

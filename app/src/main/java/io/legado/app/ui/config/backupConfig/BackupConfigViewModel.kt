@@ -55,7 +55,7 @@ class BackupConfigViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError(e.localizedMessage ?: "备份出错")
+                    onError(e.localizedMessage ?: "Backup failed")
                 }
             }
         }
@@ -76,7 +76,7 @@ class BackupConfigViewModel(
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onError(e.localizedMessage ?: "恢复出错")
+                    onError(e.localizedMessage ?: "Restore failed")
                 }
             }
         }

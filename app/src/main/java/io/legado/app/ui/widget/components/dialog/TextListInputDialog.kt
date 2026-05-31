@@ -57,7 +57,7 @@ fun TextListInputDialog(
                 if (suggestions.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
                     AppText(
-                        text = "建议:",
+                        text = "Suggestion:",
                         style = LegadoTheme.typography.labelSmall,
                         modifier = Modifier.padding(bottom = 4.dp)
                     )

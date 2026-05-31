@@ -50,7 +50,7 @@ fun BookmarkEditSheet(
             AppTextFieldSurface(
                 value = bookText,
                 onValueChange = { bookText = it },
-                label = "原文",
+                label = "Original text",
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 10
             )
@@ -60,7 +60,7 @@ fun BookmarkEditSheet(
             AppTextFieldSurface(
                 value = content,
                 onValueChange = { content = it },
-                label = "摘要/笔记",
+                label = "Summary/Notes",
                 modifier = Modifier.fillMaxWidth(),
                 maxLines = 5
             )
@@ -75,7 +75,7 @@ fun BookmarkEditSheet(
                 SecondaryButton(
                     onClick = { showDeleteConfirmDialog = true },
                     modifier = Modifier.weight(1f),
-                    text = "删除"
+                    text = "Delete"
                 )
 
                 PrimaryButton(
@@ -87,7 +87,7 @@ fun BookmarkEditSheet(
                         onSave(newBookmark)
                     },
                     modifier = Modifier.weight(1f),
-                    text = "保存"
+                    text = "Save"
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -97,14 +97,14 @@ fun BookmarkEditSheet(
     AppAlertDialog(
         show = showDeleteConfirmDialog,
         onDismissRequest = { showDeleteConfirmDialog = false },
-        title = "确认删除",
-        text = "你确定要删除这条书签吗？",
-        confirmText = "删除",
+        title = "Confirm delete",
+        text = "Are you sure you want to delete this bookmark?",
+        confirmText = "Delete",
         onConfirm = {
             showDeleteConfirmDialog = false
             onDelete(bookmark)
         },
-        dismissText = "取消",
+        dismissText = "Cancel",
         onDismiss = { showDeleteConfirmDialog = false }
     )
 }

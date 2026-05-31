@@ -113,7 +113,7 @@ internal fun configureRssReadWebView(
             return when (redirectPolicyProvider()) {
                 RedirectPolicy.ALLOW_ALL -> false
                 RedirectPolicy.BLOCK_ALL -> {
-                    context.toastOnUi("已阻止重定向")
+                    context.toastOnUi("Redirect blocked")
                     true
                 }
 
@@ -131,14 +131,14 @@ internal fun configureRssReadWebView(
 
                 RedirectPolicy.BLOCK_CROSS_ORIGIN -> {
                     if (crossOrigin) {
-                        context.toastOnUi("已阻止跨域重定向")
+                        context.toastOnUi("Cross-origin redirect blocked")
                         true
                     } else false
                 }
 
                 RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> {
                     if (crossOrigin) {
-                        context.toastOnUi("已阻止域外跳转")
+                        context.toastOnUi("External redirect blocked")
                         true
                     } else {
                         askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
@@ -150,10 +150,10 @@ internal fun configureRssReadWebView(
 
         private fun askUser(fromUrl: String?, toUrl: String, onResult: (Boolean) -> Unit) {
             AlertDialog.Builder(context)
-                .setTitle("重定向请求")
-                .setMessage("是否允许页面跳转？\n\n来源：${fromUrl ?: "未知"}\n目标：$toUrl")
-                .setPositiveButton("允许") { _, _ -> onResult(true) }
-                .setNegativeButton("拒绝") { _, _ -> onResult(false) }
+                .setTitle("Redirect request")
+                .setMessage("Allow page redirect?\n\nFrom: ${fromUrl ?: "Unknown"}\nTo: $toUrl")
+                .setPositiveButton("Allow") { _, _ -> onResult(true) }
+                .setNegativeButton("Deny") { _, _ -> onResult(false) }
                 .setCancelable(true)
                 .show()
         }

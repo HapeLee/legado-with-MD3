@@ -137,7 +137,7 @@
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             app:max="100"
-            app:title="实线长度"/>
+            app:title="@string/solid_line_length"/>
 
         <View
             android:layout_width="0dp"
@@ -149,7 +149,7 @@
             android:layout_width="120dp"
             android:layout_height="wrap_content"
             app:max="100"
-            app:title="比例"/>
+            app:title="@string/scale_ratio"/>
     </LinearLayout>
 
 

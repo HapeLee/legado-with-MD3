@@ -10,7 +10,7 @@
         android:id="@+id/title_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:subtitle="您的支持是我更新的动力"
+        app:subtitle="@string/donate_subtitle"
         app:title="@string/donate" />
 
     <FrameLayout

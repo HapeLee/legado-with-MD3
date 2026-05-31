@@ -181,12 +181,12 @@ fun ReadRecordScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = "阅读记录",
+                    title = "Reading Records",
                     subtitle = run {
                         val subTitle = when (displayMode) {
-                            DisplayMode.AGGREGATE -> "汇总视图"
-                            DisplayMode.TIMELINE -> "时间线视图"
-                            DisplayMode.LATEST -> "最后阅读"
+                            DisplayMode.AGGREGATE -> "Aggregated View"
+                            DisplayMode.TIMELINE -> "Timeline View"
+                            DisplayMode.LATEST -> "Last Read"
                         }
                         subTitle
                     },
@@ -255,7 +255,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "加载中",
+                        message = "Loading",
                         isLoading = true
                     )
                 }
@@ -268,7 +268,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "没有记录"
+                        message = "No records"
                     )
                 }
 
@@ -295,7 +295,7 @@ fun ReadRecordScreen(
                                     scope.launch {
                                         val candidates = viewModel.getMergeCandidates(record)
                                         if (candidates.isEmpty()) {
-                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                            snackbarHostState.showSnackbar("No mergeable records with the same name")
                                         } else {
                                             mergeDialogData = record to candidates
                                         }
@@ -340,25 +340,25 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = pendingDeleteAction,
         onDismissRequest = { pendingDeleteAction = null },
-        title = "确认删除",
+        title = "Confirm Deletion",
         content = { _ ->
             Column {
-                AppText("确定要删除这条记录吗？")
+                AppText("Are you sure you want to delete this record?")
                 Spacer(modifier = Modifier.height(8.dp))
                 CheckboxItem(
-                    title = "不再提示",
+                    title = "Don't ask again",
                     checked = skipDeleteConfirmTemp,
                     onCheckedChange = { skipDeleteConfirmTemp = it }
                 )
             }
         },
-        confirmText = "删除",
+        confirmText = "Delete",
         onConfirm = { action ->
             action.invoke()
             pendingDeleteAction = null
             skipDeleteConfirm = skipDeleteConfirmTemp
         },
-        dismissText = "取消",
+        dismissText = "Cancel",
         onDismiss = {
             pendingDeleteAction = null
         }
@@ -406,18 +406,18 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = mergeDialogData,
         onDismissRequest = { mergeDialogData = null },
-        title = "合并阅读记录",
+        title = "Merge Reading Records",
         content = { (targetRecord, candidates) ->
             Column {
-                AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                AppText("Merge “${targetRecord.bookName}” by the following authors into ${targetRecord.bookAuthor.ifBlank { "Unknown Author" }}")
                 Spacer(modifier = Modifier.height(8.dp))
 
                 candidates.forEach { candidate ->
-                    val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                    val author = candidate.bookAuthor.ifBlank { "Unknown Author" }
                     val isChecked = selectedAuthors.contains(candidate.bookAuthor)
 
                     CheckboxItem(
-                        title = "$author（${formatDuring(candidate.readTime)}）",
+                        title = "$author (${formatDuring(candidate.readTime)})",
                         checked = isChecked,
                         onCheckedChange = { checked ->
                             selectedAuthors = if (checked) {
@@ -430,7 +430,7 @@ fun ReadRecordScreen(
                 }
             }
         },
-        confirmText = "合并",
+        confirmText = "Merge",
         onConfirm = { (targetRecord, candidates) ->
             viewModel.mergeReadRecords(
                 targetRecord,
@@ -438,7 +438,7 @@ fun ReadRecordScreen(
             )
             mergeDialogData = null
         },
-        dismissText = "取消",
+        dismissText = "Cancel",
         onDismiss = { mergeDialogData = null }
     )
 }
@@ -459,7 +459,7 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                title = selectedDate.format(DateTimeFormatter.ofPattern("M/d Reading Overview")),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
@@ -473,7 +473,7 @@ fun SummarySection(
 
         if (allBooksCount > 0) {
             ReadingSummaryCard(
-                title = "累计阅读成就",
+                title = "Total Reading Achievement",
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
@@ -731,7 +731,7 @@ fun LatestReadItem(
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = record.bookAuthor.ifBlank { "未知作者" },
+                text = record.bookAuthor.ifBlank { "Unknown Author" },
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
@@ -770,12 +770,12 @@ fun TimelineSessionItem(
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
-    var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
+    var chapterTitle by remember { mutableStateOf<String?>("Loading...") }
 
     LaunchedEffect(session.bookName, session.bookAuthor) {
         coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
         val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
-        chapterTitle = title ?: "第 ${session.words} 章"
+        chapterTitle = title ?: "Chapter ${session.words}"
     }
 
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")
@@ -840,7 +840,7 @@ fun TimelineSessionItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     AppText(
-                        text = session.bookAuthor.ifBlank { "未知作者" },
+                        text = session.bookAuthor.ifBlank { "Unknown Author" },
                         style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
@@ -891,13 +891,13 @@ fun ReadRecordItem(
                 maxLines = 1
             )
             AppText(
-                text = detail.bookAuthor.ifBlank { "未知作者" },
+                text = detail.bookAuthor.ifBlank { "Unknown Author" },
                 style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
-                text = "阅读时长: ${formatDuring(detail.readTime)}",
+                text = "Read Time: ${formatDuring(detail.readTime)}",
                 color = MaterialTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
@@ -925,7 +925,7 @@ fun DateHeader(
             )
             dailyTotalTime?.let { total ->
                 AppText(
-                    text = "已读 ${formatDuring(total)}",
+                    text = "Read ${formatDuring(total)}",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurface
                 )
@@ -979,7 +979,7 @@ fun ReadingSummaryCard(
 
                 Row(verticalAlignment = Alignment.Bottom) {
                     AppText(
-                        text = "已读 ",
+                        text = "Read ",
                         style = LegadoTheme.typography.titleMedium
                     )
                     AppText(
@@ -989,7 +989,7 @@ fun ReadingSummaryCard(
                         fontWeight = FontWeight.Bold,
                     )
                     AppText(
-                        text = " 本书",
+                        text = " books",
                         style = LegadoTheme.typography.titleMedium
                     )
                 }
@@ -998,10 +998,10 @@ fun ReadingSummaryCard(
 
                 val hours = totalDurationMinutes / 60
                 val minutes = totalDurationMinutes % 60
-                val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
+                val timeString = if (hours > 0) "${hours}h${minutes}m" else "${minutes}m"
 
                 AppText(
-                    text = "共阅读 $timeString",
+                    text = "Total Reading $timeString",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )

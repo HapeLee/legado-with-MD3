@@ -110,7 +110,7 @@ class ImportReplaceRuleViewModel(app: Application) : BaseViewModel(app) {
                 importAwait(text.toUri().readText(appCtx))
             }
 
-            else -> throw NoStackTraceException("格式不对")
+            else -> throw NoStackTraceException("Invalid format")
         }
     }
 

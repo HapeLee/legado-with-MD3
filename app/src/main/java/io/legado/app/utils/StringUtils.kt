@@ -73,8 +73,8 @@ object StringUtils {
             if (oldHour == 0) {
                 //比日期:昨天今天和明天
                 return when {
-                    difDate == 0L -> "今天"
-                    difDate < DAY_OF_YESTERDAY -> "昨天"
+                    difDate == 0L -> "Today"
+                    difDate < DAY_OF_YESTERDAY -> "Yesterday"
                     else -> {
                         @SuppressLint("SimpleDateFormat")
                         val convertFormat = SimpleDateFormat("yyyy-MM-dd")
@@ -84,10 +84,10 @@ object StringUtils {
             }
 
             return when {
-                difSec < TIME_UNIT -> difSec.toString() + "秒前"
-                difMin < TIME_UNIT -> difMin.toString() + "分钟前"
-                difHour < HOUR_OF_DAY -> difHour.toString() + "小时前"
-                difDate < DAY_OF_YESTERDAY -> "昨天"
+                difSec < TIME_UNIT -> difSec.toString() + "s ago"
+                difMin < TIME_UNIT -> difMin.toString() + "m ago"
+                difHour < HOUR_OF_DAY -> difHour.toString() + "h ago"
+                difDate < DAY_OF_YESTERDAY -> "Yesterday"
                 else -> {
                     @SuppressLint("SimpleDateFormat")
                     val convertFormat = SimpleDateFormat("yyyy-MM-dd")
@@ -113,9 +113,9 @@ object StringUtils {
             val today = LocalDate.now(ZoneId.systemDefault())
             val daysBetween = ChronoUnit.DAYS.between(inputDate, today)
             when (daysBetween) {
-                0L -> "今天"
-                1L -> "昨天"
-                in 2L..5L -> "${daysBetween}天前"
+                0L -> "Today"
+                1L -> "Yesterday"
+                in 2L..5L -> "${daysBetween}d ago"
                 else -> dateString
             }
         }.getOrElse {
@@ -268,9 +268,9 @@ object StringUtils {
         if (words > 0) {
             if (words > 10000) {
                 val df = wordCountFormatter
-                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "万字"
+                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "w"
             } else {
-                wordsS = words.toString() + "字"
+                wordsS = words.toString() + " words"
             }
         }
         return wordsS
@@ -284,9 +284,9 @@ object StringUtils {
             if (words > 0) {
                 if (words > 10000) {
                     val df = wordCountFormatter
-                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "万字"
+                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "w"
                 } else {
-                    wordsS = words.toString() + "字"
+                    wordsS = words.toString() + " words"
                 }
             }
         } else {

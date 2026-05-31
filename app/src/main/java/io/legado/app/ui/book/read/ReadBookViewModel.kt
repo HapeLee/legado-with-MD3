@@ -98,7 +98,7 @@ class ReadBookViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            val msg = "初始化数据失败\n${it.localizedMessage}"
+            val msg = "Initialization failed\n${it.localizedMessage}"
             ReadBook.upMsg(msg)
             AppLog.put(msg, it)
         }.onFinally {
@@ -168,7 +168,7 @@ class ReadBookViewModel(
             LocalBook.getBookInputStream(book)
             return true
         } catch (e: Throwable) {
-            ReadBook.upMsg("打开本地书籍出错: ${e.localizedMessage}")
+            ReadBook.upMsg("Error opening local book: ${e.localizedMessage}")
             if (e is SecurityException || e is FileNotFoundException) {
                 permissionDenialLiveData.postValue(0)
             }
@@ -186,7 +186,7 @@ class ReadBookViewModel(
             return true
         } catch (e: Throwable) {
             coroutineContext.ensureActive()
-            ReadBook.upMsg("详情页出错: ${e.localizedMessage}")
+            ReadBook.upMsg("Book info error: ${e.localizedMessage}")
             return false
         }
     }
@@ -261,7 +261,7 @@ class ReadBookViewModel(
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
-            AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
+            AppLog.put("Failed to fetch reading progress for ${book.name}\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
             progress ?: return@onSuccess
             if (progress.durChapterIndex < book.durChapterIndex ||
@@ -271,7 +271,7 @@ class ReadBookViewModel(
                 alertSync?.invoke(progress)
             } else if (progress.durChapterIndex < book.simulatedTotalChapterNum()) {
                 ReadBook.setProgress(progress)
-                AppLog.put("自动同步阅读进度成功《${book.name}》 ${progress.durChapterTitle}")
+                AppLog.put("Auto sync reading progress for ${book.name}: ${progress.durChapterTitle}")
             }
         }
     }
@@ -321,7 +321,7 @@ class ReadBookViewModel(
             ReadBook.upMsg(null)
             ReadBook.loadContent(resetPageOffset = true)
         }.onError {
-            AppLog.put("换源失败\n$it", it, true)
+            AppLog.put("Source switch failed\n$it", it, true)
             ReadBook.upMsg(null)
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
@@ -365,12 +365,12 @@ class ReadBookViewModel(
             }.take(1).onEach { (book, toc) ->
                 changeTo(book, toc)
             }.onEmpty {
-                throw NoStackTraceException("没有合适书源")
+                throw NoStackTraceException("No suitable book source")
             }.onCompletion {
                 ReadBook.upMsg(null)
             }.catch {
-                AppLog.put("自动换源失败\n${it.localizedMessage}", it)
-                context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+                AppLog.put("Auto source switch failed\n${it.localizedMessage}", it)
+                context.toastOnUi("Auto source switch failed\n${it.localizedMessage}")
             }.collect()
         }
     }
@@ -564,11 +564,11 @@ class ReadBookViewModel(
                 byteArray,
                 folderName = "Legado"
             )
-            if (!success) throw NoStackTraceException("保存到相册失败")
+            if (!success) throw NoStackTraceException("Failed to save to gallery")
         }.onError {
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            context.toastOnUi("Failed to save image: ${it.localizedMessage}")
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            context.toastOnUi("Saved to gallery")
         }
     }
 
@@ -612,8 +612,8 @@ class ReadBookViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Failed to add book to bookshelf", it)
+            context.toastOnUi("Failed to add book")
         }
     }
 

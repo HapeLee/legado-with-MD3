@@ -66,7 +66,7 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
     private fun observeDicts() {
         viewModel.initData { dictRules ->
             if (dictRules.isEmpty()) {
-                showEmptyView("暂无可用词典")
+                showEmptyView("No dictionaries available")
                 return@initData
             }
 
@@ -93,7 +93,7 @@ class DictDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_dict) {
         viewModel.dict(dictRule, word!!) { result ->
             binding.rotateLoading.gone()
             if (result.isBlank()) {
-                showEmptyView("没有查询到结果")
+                showEmptyView("No results found")
             } else {
                 binding.tvDict.visible()
                 binding.tvDict.setHtml(result)

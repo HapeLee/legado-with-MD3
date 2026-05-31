@@ -107,17 +107,17 @@ class AboutActivity : BaseComposeActivity() {
     private fun saveLog() {
         Coroutine.async {
             val backupPath = AppConfig.backupPath ?: let {
-                toastOnUi("未设置备份目录")
+                toastOnUi("Backup directory not set")
                 return@async
             }
             if (!AppConfig.recordLog) {
-                toastOnUi("未开启日志记录，请去其他设置里打开记录日志")
+                toastOnUi("Log recording not enabled, enable it in Other Settings")
                 delay(3000)
             }
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             copyLogs(doc)
             copyHeapDump(doc)
-            toastOnUi("已保存至备份目录")
+            toastOnUi("Saved to backup directory")
         }.onError {
             AppLog.put("保存日志出错\n${it.localizedMessage}", it, true)
         }
@@ -126,21 +126,21 @@ class AboutActivity : BaseComposeActivity() {
     private fun createHeapDump() {
         Coroutine.async {
             val backupPath = AppConfig.backupPath ?: let {
-                toastOnUi("未设置备份目录")
+                toastOnUi("Backup directory not set")
                 return@async
             }
             if (!AppConfig.recordHeapDump) {
-                toastOnUi("未开启堆转储记录，请去其他设置里打开记录堆转储")
+                toastOnUi("Heap dump recording not enabled, enable it in Other Settings")
                 delay(3000)
             }
-            toastOnUi("开始创建堆转储")
+            toastOnUi("Creating heap dump...")
             System.gc()
             CrashHandler.doHeapDump(true)
             val doc = FileDoc.fromUri(backupPath.toUri(), true)
             if (!copyHeapDump(doc)) {
-                toastOnUi("未找到堆转储文件")
+                toastOnUi("Heap dump file not found")
             } else {
-                toastOnUi("已保存至备份目录")
+                toastOnUi("Saved to backup directory")
             }
         }.onError {
             AppLog.put("保存堆转储失败\n${it.localizedMessage}", it)

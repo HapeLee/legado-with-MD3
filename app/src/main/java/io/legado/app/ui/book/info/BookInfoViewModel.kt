@@ -124,7 +124,7 @@ class BookInfoViewModel(
             } ?: appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()?.let {
                 inBookshelf = false
                 it
-            } ?: throw NoStackTraceException("未找到书籍")
+            } ?: throw NoStackTraceException("Book not found")
 
             val source = if (book.isLocal) {
                 null
@@ -135,7 +135,7 @@ class BookInfoViewModel(
         }.onSuccess {
             upBook(it.first, it.second)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "未找到书籍")
+            context.toastOnUi(it.localizedMessage ?: "Book not found")
             emitEffect(BookInfoEffect.Finish(afterTransition = true))
         }
     }
@@ -190,7 +190,7 @@ class BookInfoViewModel(
 
             is BookInfoIntent.AddSourceAsNewBook -> {
                 addToBookshelf(intent.book, intent.toc) {
-                    context.toastOnUi("已添加到书架")
+                    context.toastOnUi("Added to bookshelf")
                 }
             }
 
@@ -322,8 +322,8 @@ class BookInfoViewModel(
 
     fun requestSourceVariableDialog() {
         execute {
-            val source = bookSource ?: throw NoStackTraceException("书源不存在")
-            val comment = source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+            val source = bookSource ?: throw NoStackTraceException("Book source does not exist")
+            val comment = source.getDisplayVariableComment("Source variables can be accessed in JS via source.getVariable()")
             val variable = source.getVariable()
             BookInfoEffect.ShowVariableDialog(
                 title = context.getString(R.string.set_source_variable),
@@ -334,17 +334,17 @@ class BookInfoViewModel(
         }.onSuccess {
             emitEffect(it)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "书源不存在")
+            context.toastOnUi(it.localizedMessage ?: "Book source does not exist")
         }
     }
 
     fun requestBookVariableDialog() {
         execute {
-            val source = bookSource ?: throw NoStackTraceException("书源不存在")
+            val source = bookSource ?: throw NoStackTraceException("Book source does not exist")
             val book = currentBook ?: throw NoStackTraceException("book is null")
             val variable = book.getCustomVariable()
             val comment = source.getDisplayVariableComment(
-                "书籍变量可在js中通过book.getVariable(\"custom\")获取"
+                "Book variables can be accessed in JS via book.getVariable(\"custom\")"
             )
             BookInfoEffect.ShowVariableDialog(
                 title = context.getString(R.string.set_book_variable),
@@ -355,7 +355,7 @@ class BookInfoViewModel(
         }.onSuccess {
             emitEffect(it)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "书源不存在")
+            context.toastOnUi(it.localizedMessage ?: "Book source does not exist")
         }
     }
 
@@ -400,7 +400,7 @@ class BookInfoViewModel(
             inBookshelf = true
             syncUiState(isTocLoading = true)
             loadChapter(newBook)
-            context.toastOnUi("同步完成")
+            context.toastOnUi("Sync complete")
         }.onFinally {
             setBusy(false)
         }.onError {
@@ -436,7 +436,7 @@ class BookInfoViewModel(
             }.onSuccess {
                 context.toastOnUi(R.string.clear_cache_success)
             }.onError {
-                context.toastOnUi("清理缓存出错\n${it.localizedMessage}")
+                context.toastOnUi("Cache clear error\n${it.localizedMessage}")
             }
         }
     }
@@ -537,8 +537,8 @@ class BookInfoViewModel(
             }
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Failed to add book to bookshelf", it)
+            context.toastOnUi("Failed to add book")
         }
     }
 
@@ -623,7 +623,7 @@ class BookInfoViewModel(
                         loadChapter(loadedBook, runPreUpdateJs)
                     }
                 }.onError {
-                    AppLog.put("获取书籍信息失败\n${it.localizedMessage}", it)
+                    AppLog.put("Failed to get book info\n${it.localizedMessage}", it)
                     context.toastOnUi(R.string.error_get_book_info)
                     syncUiState(isTocLoading = false)
                 }
@@ -778,7 +778,7 @@ class BookInfoViewModel(
                 }.onError {
                     currentChapterList = emptyList()
                     syncUiState(isTocLoading = false)
-                    AppLog.put("获取目录失败\n${it.localizedMessage}", it)
+                    AppLog.put("Failed to get chapter list\n${it.localizedMessage}", it)
                     context.toastOnUi(R.string.error_get_chapter_list)
                 }
         }
@@ -786,7 +786,7 @@ class BookInfoViewModel(
 
     private fun loadWebFile(book: Book) {
         execute {
-            val fileNameNoExtension = if (book.author.isBlank()) book.name else "${book.name} 作者：${book.author}"
+            val fileNameNoExtension = if (book.author.isBlank()) book.name else "${book.name} Author: ${book.author}"
             book.downloadUrls.orEmpty().map { url ->
                 val analyzeUrl = AnalyzeUrl(
                     url,
@@ -959,7 +959,7 @@ class BookInfoViewModel(
             }
 
             BookInfoMenuAction.Upload -> uploadBook {
-                context.toastOnUi("上传成功")
+                context.toastOnUi("Upload successful")
             }
             BookInfoMenuAction.SyncRemote -> syncFromRemote()
             BookInfoMenuAction.Refresh -> refreshCurrentBook()

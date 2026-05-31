@@ -19,7 +19,7 @@ object IntentHelp {
         intent.data = uri
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (intent.resolveActivity(appCtx.packageManager) == null) {
-            return Intent.createChooser(intent, "请选择浏览器")
+            return Intent.createChooser(intent, "Choose browser")
         }
         return intent
     }
@@ -43,7 +43,7 @@ object IntentHelp {
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             context.startActivity(intent)
         }.onFailure {
-            context.toastOnUi("无法打开设置")
+            context.toastOnUi("Cannot open settings")
         }
     }
 

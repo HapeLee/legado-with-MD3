@@ -107,7 +107,7 @@ fun ReplaceEditScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = if (state.id > 0) "编辑替换规则" else "新增替换规则",
+                title = if (state.id > 0) "Edit Replace Rule" else "New Replace Rule",
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBack)
                 },
@@ -122,27 +122,27 @@ fun ReplaceEditScreen(
                                 viewModel.save(onSaveSuccess)
                             },
                             imageVector = Icons.Default.Save,
-                            contentDescription = "保存"
+                            contentDescription = "Save"
                         )
                     }
                     TopBarActionButton(
                         onClick = { showMenu = true },
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "更多操作"
+                        contentDescription = "More Options"
                     )
                     RoundDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = "复制规则",
+                            text = "Copy Rule",
                             onClick = {
                                 showMenu = false
                                 viewModel.copyRule()
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "粘贴规则",
+                            text = "Paste Rule",
                             onClick = {
                                 showMenu = false
                                 viewModel.pasteRule(onSuccess = {})
@@ -162,9 +162,9 @@ fun ReplaceEditScreen(
                         alignment = Alignment.BottomEnd,
                     ),
                 onClick = { viewModel.save(onSaveSuccess) },
-                tooltipText = "添加"
+                tooltipText = "Save"
             ) {
-                AppIcon(Icons.Default.Save, contentDescription = "保存")
+                AppIcon(Icons.Default.Save, contentDescription = "Save")
             }
         }, contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
@@ -200,7 +200,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
-                    label = "规则名称",
+                    label = "Rule Name",
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -220,8 +220,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.pattern,
                     onValueChange = viewModel::onPatternChange,
-                    label = "匹配规则",
-                    placeholder = { AppText("输入正则表达式或关键字") },
+                    label = "Pattern",
+                    placeholder = { AppText("Enter regex or keyword") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -233,8 +233,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.replacement,
                     onValueChange = viewModel::onReplacementChange,
-                    label = "替换为",
-                    placeholder = { AppText("输入替换内容或捕获组") },
+                    label = "Replacement",
+                    placeholder = { AppText("Enter replacement text or capture group") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -249,27 +249,27 @@ fun ReplaceEditScreen(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     ToggleChip(
-                        label = "标题",
+                        label = "Title",
                         selected = state.scopeTitle,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = "Selected",
                         onToggle = { viewModel.onScopeTitleChange(!state.scopeTitle) }
                     )
 
                     Spacer(Modifier.width(8.dp))
 
                     ToggleChip(
-                        label = "内容",
+                        label = "Content",
                         selected = state.scopeContent,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = "Selected",
                         onToggle = { viewModel.onScopeContentChange(!state.scopeContent) }
                     )
 
                     Spacer(Modifier.weight(1f))
 
                     ToggleChip(
-                        label = "使用正则",
+                        label = "Use Regex",
                         selected = state.isRegex,
-                        checkedContentDescription = "正则已启用",
+                        checkedContentDescription = "Regex Enabled",
                         onToggle = { viewModel.onRegexChange(!state.isRegex) }
                     )
 
@@ -278,8 +278,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.scope,
                     onValueChange = viewModel::onScopeChange,
-                    label = "特定范围",
-                    placeholder = { AppText("指定规则适用的范围") },
+                    label = "Scope",
+                    placeholder = { AppText("Specify the applicable scope of the rule") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -291,8 +291,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.excludeScope,
                     onValueChange = viewModel::onExcludeScopeChange,
-                    label = "排除范围",
-                    placeholder = { AppText("指定规则不适用的范围") },
+                    label = "Exclude Scope",
+                    placeholder = { AppText("Specify the scope where the rule does not apply") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -304,7 +304,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.timeout,
                     onValueChange = viewModel::onTimeoutChange,
-                    label = "超时 (ms)",
+                    label = "Timeout (ms)",
                     placeholder = { AppText("3000") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -315,7 +315,7 @@ fun ReplaceEditScreen(
 
             ManageGroupDialog(
                 show = state.showGroupDialog,
-                groups = state.allGroups.filter { it != "默认" },
+                groups = state.allGroups.filter { it != "Default" },
                 onDismiss = { viewModel.toggleGroupDialog(false) },
                 onDelete = { viewModel.deleteGroups(it) }
             )
@@ -343,8 +343,8 @@ fun GroupSelector(
             AppTextField(
                 value = currentGroup,
                 onValueChange = onGroupChange,
-                label = "分组",
-                placeholder = { AppText("默认") },
+                label = "Group",
+                placeholder = { AppText("Default") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -387,10 +387,10 @@ fun ManageGroupDialog(
     AppAlertDialog(
         show = show,
         onDismissRequest = onDismiss,
-        title = "分组管理",
+        title = "Manage Groups",
         content = {
             if (groups.isEmpty()) {
-                AppText("暂无其他分组")
+                AppText("No other groups")
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -413,11 +413,11 @@ fun ManageGroupDialog(
                 }
             }
         },
-        confirmText = "删除选中",
+        confirmText = "Delete Selected",
         onConfirm = {
             onDelete(selectedGroups.toList())
         },
-        dismissText = "关闭",
+        dismissText = "Close",
         onDismiss = onDismiss
     )
 }

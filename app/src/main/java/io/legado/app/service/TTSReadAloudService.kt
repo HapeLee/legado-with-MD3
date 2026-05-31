@@ -83,7 +83,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         if (!ttsInitFinish) return
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
-            AppLog.putDebug("朗读列表为空")
+            AppLog.putDebug("Read aloud list is empty")
             ReadBook.readAloud()
             return
         }
@@ -91,8 +91,8 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         MediaHelp.playSilentSound(this@TTSReadAloudService)
         speakJob?.cancel()
         speakJob = execute {
-            LogUtils.d(TAG, "朗读列表大小 ${contentList.size}")
-            LogUtils.d(TAG, "朗读页数 ${textChapter?.pageSize}")
+            LogUtils.d(TAG, "Read aloud list size ${contentList.size}")
+            LogUtils.d(TAG, "Read aloud page count ${textChapter?.pageSize}")
             val tts = textToSpeech ?: throw NoStackTraceException("tts is null")
             val contentList = contentList
             var isAddedText = false
@@ -109,11 +109,11 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                     val result = tts.runCatching {
                         speak(text, TextToSpeech.QUEUE_FLUSH, null, AppConst.APP_TAG + i)
                     }.getOrElse {
-                        AppLog.put("tts出错\n${it.localizedMessage}", it, true)
+                        AppLog.put("TTS error\n${it.localizedMessage}", it, true)
                         TextToSpeech.ERROR
                     }
                     if (result == TextToSpeech.ERROR) {
-                        AppLog.put("tts出错 尝试重新初始化")
+                        AppLog.put("TTS error, attempting re-initialization")
                         clearTTS()
                         initTts()
                         return@execute
@@ -122,16 +122,16 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                     val result = tts.runCatching {
                         speak(text, TextToSpeech.QUEUE_ADD, null, AppConst.APP_TAG + i)
                     }.getOrElse {
-                        AppLog.put("tts出错\n${it.localizedMessage}", it, true)
+                        AppLog.put("TTS error\n${it.localizedMessage}", it, true)
                         TextToSpeech.ERROR
                     }
                     if (result == TextToSpeech.ERROR) {
-                        AppLog.put("tts朗读出错:$text")
+                        AppLog.put("TTS read aloud error:$text")
                     }
                 }
                 isAddedText = true
             }
-            LogUtils.d(TAG, "朗读内容添加完成")
+            LogUtils.d(TAG, "Read aloud content added")
             if (!isAddedText) {
                 playStop()
                 delay(1000)

@@ -36,7 +36,7 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
             }
         }.onError {
             it.printOnDebug()
-            val msg = "无法打开文件\n${it.localizedMessage}"
+            val msg = "Cannot open file\n${it.localizedMessage}"
             errorLive.postValue(msg)
             AppLog.put(msg, it)
         }

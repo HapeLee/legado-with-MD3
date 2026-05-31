@@ -353,7 +353,7 @@ fun FileDoc.delete() {
 
 fun FileDoc.checkWrite(): Boolean {
     if (!isDir) {
-        throw NoStackTraceException("只能检查目录")
+        throw NoStackTraceException("Can only check directories")
     }
     asFile()?.let {
         return it.checkWrite()
@@ -401,7 +401,7 @@ fun DocumentFile.readBytes(context: Context): ByteArray {
         it.read(buffer)
         it.close()
         return buffer
-    } ?: throw NoStackTraceException("打开文件失败\n${uri}")
+    } ?: throw NoStackTraceException("Failed to open file\n${uri}")
 }
 
 fun DocumentFile.checkWrite(): Boolean {

@@ -521,7 +521,7 @@ class CacheBookService : BaseService() {
         val progress = CacheBook.completedCount
         val pendingBookCount = synchronized(admissionQueue) { admissionQueue.size }
         val summary = if (pendingBookCount > 0) {
-            "${CacheBook.downloadSummary} | 待入队:$pendingBookCount"
+            "${CacheBook.downloadSummary} | Pending:$pendingBookCount"
         } else {
             CacheBook.downloadSummary
         }

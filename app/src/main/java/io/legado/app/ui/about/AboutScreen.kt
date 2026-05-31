@@ -145,7 +145,7 @@ fun AboutScreen(
                     description = null,
                     option = null,
                     onClick = {
-                        onShowMdFile("隐私政策", "privacyPolicy.md")
+                        onShowMdFile("Privacy Policy", "privacyPolicy.md")
                     }
                 )
                 SettingItem(
@@ -153,7 +153,7 @@ fun AboutScreen(
                     description = null,
                     option = null,
                     onClick = {
-                        onShowMdFile("许可证", "LICENSE.md")
+                        onShowMdFile("License", "LICENSE.md")
                     }
                 )
                 SettingItem(
@@ -161,7 +161,7 @@ fun AboutScreen(
                     description = null,
                     option = null,
                     onClick = {
-                        onShowMdFile("免责声明", "disclaimer.md")
+                        onShowMdFile("Disclaimer", "disclaimer.md")
                     }
                 )
                 SettingItem(

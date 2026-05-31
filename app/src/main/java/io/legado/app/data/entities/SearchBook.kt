@@ -92,7 +92,7 @@ data class SearchBook(
                 return it
             }
         }
-        return "无最新章节"
+        return "No latest chapter"
     }
 
     fun trimIntro(context: Context): String {

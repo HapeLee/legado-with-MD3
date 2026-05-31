@@ -496,7 +496,7 @@ object CacheBook {
         } else {
             0
         }
-        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:${stateStore.state.totalFailure} | 已缓存:${successDownloadCount.get()}"
+        return "Downloading:$downloadingCount | Waiting:$waitingCount | Paused:$pausedCount | Failed:${stateStore.state.totalFailure} | Cached:${successDownloadCount.get()}"
     }
 
     private fun CacheDownloadRequest.hasValidSelection(): Boolean {

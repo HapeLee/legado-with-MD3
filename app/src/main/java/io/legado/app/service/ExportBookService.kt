@@ -179,7 +179,7 @@ class ExportBookService : BaseService() {
         exportJob = lifecycleScope.launch(IO) {
             while (isActive) {
                 val (bookUrl, exportConfig) = waitExportBooks.entries.firstOrNull() ?: let {
-                    notificationContentText = "导出完成"
+                    notificationContentText = "Export complete"
                     upExportNotification(true)
                     stopSelf()
                     return@launch
@@ -188,7 +188,7 @@ class ExportBookService : BaseService() {
                 waitExportBooks.remove(bookUrl)
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
-                    book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
+                    book ?: throw NoStackTraceException("Error fetching book ${bookUrl}")
                     refreshChapterList(book)
                     notificationContentText = getString(
                         R.string.export_book_notification_content,
@@ -212,7 +212,7 @@ class ExportBookService : BaseService() {
                 } catch (e: Throwable) {
                     ensureActive()
                     exportMsg[bookUrl] = e.localizedMessage ?: "ERROR"
-                    AppLog.put("导出书籍<${book?.name ?: bookUrl}>出错", e)
+                    AppLog.put("Error exporting book<${book?.name ?: bookUrl}>", e)
                 } finally {
                     exportProgress.remove(bookUrl)
                     notifyExportBookChanged(bookUrl)
@@ -702,7 +702,7 @@ class ExportBookService : BaseService() {
             }
 
             val elapsed = System.currentTimeMillis() - currentTimeMillis
-            AppLog.put("分割导出书籍 ${book.name} 一共耗时 $elapsed")
+            AppLog.put("Split export book ${book.name} total time $elapsed")
         }
 
 
@@ -735,7 +735,7 @@ class ExportBookService : BaseService() {
             }
             // val totalChapterNum = book.totalChapterNum / scope.size
             if (chapterList.isEmpty()) {
-                throw RuntimeException("书籍<${book.name}>(${epubBookIndex + 1})未找到章节信息")
+                throw RuntimeException("Book<${book.name}>(${epubBookIndex + 1}) chapter info not found")
             }
             chapterList = chapterList.subList(
                 epubBookIndex * size,

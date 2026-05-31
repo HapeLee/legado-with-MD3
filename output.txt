@@ -1,0 +1,743 @@
+﻿io\legado\app\api\controller\BookController.kt:163: return returnData.setErrorMsg("ÕÅéµò░urlõ©ìÞâ¢õ©║þ®║´╝îÞ»ÀµîçÕ«Üõ╣ªþ▒ìÕ£░ÕØÇ")
+io\legado\app\api\controller\BookController.kt:180: return returnData.setErrorMsg("ÕÅéµò░urlõ©ìÞâ¢õ©║þ®║´╝îÞ»ÀµîçÕ«Üõ╣ªþ▒ìÕ£░ÕØÇ")
+io\legado\app\base\BaseBottomSheetDialogFragment.kt:55: AppLog.put("µÿ¥þñ║BottomSheetDialogÕñ▒Þ┤Ñ tag:$tag\n$it")
+io\legado\app\base\BaseDialogFragment.kt:98: AppLog.put("µÿ¥þñ║Õ»╣Þ»ØµíåÕñ▒Þ┤Ñ tag:$tag", it)
+io\legado\app\base\BaseOverlayDialogFragment.kt:53: AppLog.put("µÿ¥þñ║Õ»╣Þ»ØµíåÕñ▒Þ┤Ñ tag:$tag", it)
+io\legado\app\constant\AppPattern.kt:27: val wordCountRegex = Regex("(?:^|Õ¡ùµò░[´╝Ü:ÒÇü]?|\\s+)([0-9õ©çÕìâþÖ¥\\.]{1,6}Õ¡ù)")
+io\legado\app\constant\AppPattern.kt:35: val nameRegex = Regex("\\s+õ¢£\\s*ÞÇà.*|\\s+\\S+\\s+Þæù")
+io\legado\app\constant\AppPattern.kt:36: val authorRegex = Regex("^\\s*õ¢£\\s*ÞÇà[:´╝Ü\\s]+|\\s+Þæù")
+io\legado\app\constant\AppPattern.kt:40: val titleNumPattern: Pattern = Pattern.compile("(þ¼¼)(.+?)(þ½á)")
+io\legado\app\data\dao\ReplaceRuleDao.kt:63: @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%µ£¬Õêåþ╗ä%' ORDER BY sortOrder ASC")
+io\legado\app\data\dao\ReplaceRuleDao.kt:66: @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%µ£¬Õêåþ╗ä%' ORDER BY sortOrder DESC")
+io\legado\app\data\dao\ReplaceRuleDao.kt:69: @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%µ£¬Õêåþ╗ä%' ORDER BY name COLLATE NOCASE ASC")
+io\legado\app\data\dao\ReplaceRuleDao.kt:72: @Query("SELECT * FROM replace_rules WHERE `group` IS NULL OR trim(`group`) = '' OR trim(`group`) LIKE '%µ£¬Õêåþ╗ä%' ORDER BY name COLLATE NOCASE DESC")
+io\legado\app\data\dao\ReplaceRuleDao.kt:84: @Query("select * from replace_rules where `group` is null or trim(`group`) = '' or trim(`group`) like '%µ£¬Õêåþ╗ä%'")
+io\legado\app\data\dao\RssSourceDao.kt:65: @Query("select * from rssSources where sourceGroup is null or sourceGroup = '' or sourceGroup like '%µ£¬Õêåþ╗ä%'")
+io\legado\app\data\entities\BaseSource.kt:118: log("Þ»Àµ▒éÕñ┤ÞºäÕêÖ JSON µá╝Õ╝Åõ©ìÞºäÞîâ´╝îÞ»Àµö╣õ©║ÞºäÞîâµá╝Õ╝Å")
+io\legado\app\data\entities\BaseSource.kt:122: AppLog.put("µëºÞíîÞ»Àµ▒éÕñ┤ÞºäÕêÖÕç║ÚöÖ\n$e", e)
+io\legado\app\data\entities\BaseSource.kt:176: AppLog.put("ÞÄÀÕÅûþÖ╗ÚÖåõ┐íµü»Õç║ÚöÖ", e)
+io\legado\app\data\entities\BaseSource.kt:228: AppLog.put("õ┐ØÕ¡ÿþÖ╗ÚÖåõ┐íµü»Õç║ÚöÖ", e)
+io\legado\app\data\entities\Book.kt:268: println("Þºúµ×ÉµùÑµ£ƒÕñ▒Þ┤Ñ: ${config.startDate}, ÚöÖÞ»»: ${e.message}")
+io\legado\app\data\entities\BookChapter.kt:135: AppLog.put("${item.name}µø┐µìóÕç║ÚöÖ\nµø┐µìóÕåàÕ«╣\n${displayTitle}", e)
+io\legado\app\data\entities\BookChapter.kt:136: appCtx.toastOnUi("${item.name}µø┐µìóÕç║ÚöÖ")
+io\legado\app\data\entities\BookSource.kt:226: "Õñ▒µòê" in it || it == "µáíÚ¬îÞÂàµùÂ"
+io\legado\app\data\entities\BookSource.kt:226: "Õñ▒µòê" in it || it == "µáíÚ¬îÞÂàµùÂ"
+io\legado\app\data\entities\ReplaceRule.kt:97: AppLog.put("µ¡úÕêÖÞ»¡µ│òÚöÖÞ»»µêûõ©ìµö»µîü´╝Ü${ex.localizedMessage}", ex)
+io\legado\app\data\entities\RssArticle.kt:24: @ColumnInfo(defaultValue = "Ú╗ÿÞ«ñÕêåþ╗ä")
+io\legado\app\data\entities\RssArticle.kt:25: var group: String = "Ú╗ÿÞ«ñÕêåþ╗ä",
+io\legado\app\data\entities\RssStar.kt:25: @ColumnInfo(defaultValue = "Ú╗ÿÞ«ñÕêåþ╗ä")
+io\legado\app\data\entities\RssStar.kt:26: var group: String = "Ú╗ÿÞ«ñÕêåþ╗ä",
+io\legado\app\data\entities\SearchBook.kt:95: return "µùáµ£Çµû░þ½áÞèé"
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:124: AppLog.put("µÉ£þ┤óõ╣ªþ▒ìÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:135: AppLog.put("ÞÄÀÕÅûõ╣ªþ▒ìÞ»ªµâàÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:143: AppLog.put("ÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:201: AppLog.put("µÉ£þ┤óõ╣ªþ▒ìÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:220: AppLog.put("ÞÄÀÕÅûõ╣ªþ▒ìÞ»ªµâàÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\ChangeBookSourceUseCase.kt:225: AppLog.put("ÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\domain\usecase\SearchBooksUseCase.kt:145: AppLog.put("õ╣ªµ║ÉµÉ£þ┤óÕç║ÚöÖ\n${result.throwable.localizedMessage}", result.throwable)
+io\legado\app\help\AppFreezeMonitor.kt:58: LogUtils.d(TAG, "µúÇµÁïÕê░Õ║öþö¿Þó½þ│╗þ╗ƒÕå╗þ╗ô´╝îµùÂÚò┐´╝Ü$extra µ»½þºÆ")
+io\legado\app\help\ConcurrentRateLimiter.kt:100: "µá╣µì«Õ╣ÂÕÅæþÄçÞ┐ÿÚ£Çþ¡ëÕ¥à${waitTime}µ»½þºÆµëìÕÅ»õ╗ÑÞ«┐Úù«",
+io\legado\app\help\IntentHelp.kt:22: return Intent.createChooser(intent, "Þ»ÀÚÇëµï®µÁÅÞºêÕÖ¿")
+io\legado\app\help\IntentHelp.kt:46: context.toastOnUi("µùáµ│òµëôÕ╝ÇÞ«¥þ¢«")
+io\legado\app\help\JsEncodeUtils.kt:100: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:117: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:137: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:162: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:179: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:196: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:213: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:230: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:247: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:268: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:283: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:293: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:303: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:313: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:334: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:358: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:387: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsEncodeUtils.kt:412: "Þ┐çõ║Äþ╣üþÉÉÕ╝âþö¿",
+io\legado\app\help\JsExtensions.kt:409: log("Úªûµ¼íõ©ïÞ¢¢ $urlStr >> $path")
+io\legado\app\help\TTS.kt:91: AppLog.put("ttsµ£ùÞ»╗Õç║ÚöÖ:$text")
+io\legado\app\help\TTS.kt:95: AppLog.put("ttsµ£ùÞ»╗Õç║ÚöÖ", it)
+io\legado\app\help\book\BookExtensions.kt:389: return "$name õ¢£ÞÇà´╝Ü${getRealAuthor()}.$suffix"
+io\legado\app\help\book\BookExtensions.kt:428: "$name õ¢£ÞÇà´╝Ü${getRealAuthor()}.$suffix"
+io\legado\app\help\book\BookExtensions.kt:442: val default = "$name õ¢£ÞÇà´╝Ü${getRealAuthor()} [${epubIndex}].$suffix"
+io\legado\app\help\book\BookHelp.kt:179: AppLog.put("õ┐ØÕ¡ÿµ¡úµûçÕñ▒Þ┤Ñ ${book.name} ${bookChapter.title}", e)
+io\legado\app\help\book\BookHelp.kt:195: AppLog.put("õ┐«µö╣µ£¼Õ£░TXTÕñ▒Þ┤Ñ: ${e.localizedMessage}", e)
+io\legado\app\help\book\BookHelp.kt:329: AppLog.put("${book.name} ${chapter?.title} Õø¥þëç $src õ©ïÞ¢¢ÚöÖÞ»» µò░µì«Õ╝éÕ©©")
+io\legado\app\help\book\BookHelp.kt:342: val msg = "${book.name} ${chapter?.title} Õø¥þëç $src õ©ïÞ¢¢Õñ▒Þ┤Ñ\n${e.localizedMessage}"
+io\legado\app\help\book\BookHelp.kt:374: AppLog.put("${book.name} Õø¥þëç $src õ©ïÞ¢¢ÚöÖÞ»» µò░µì«Õ╝éÕ©©")
+io\legado\app\help\book\BookHelp.kt:410: ?: throw IOException("µûçõ╗Âõ©ìÕ¡ÿÕ£¿")
+io\legado\app\help\book\BookHelp.kt:743: ".*?þ¼¼([\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ]+)[þ½áÞèéþ»çÕø×ÚøåÞ»Ø]"
+io\legado\app\help\book\BookHelp.kt:750: "^(?:[\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ]+[,:ÒÇü])*([\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ]+)(?:[,:ÒÇü]|\\.[^\\d])"
+io\legado\app\help\book\BookHelp.kt:779: return@lazy "^.*?þ¼¼(?:[\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ]+)[þ½áÞèéþ»çÕø×ÚøåÞ»Ø](?!$)|^(?:[\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ]+[,:ÒÇü])*(?:[\\dÚøÂÒÇçõ©Çõ║îõ©ñõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìüþÖ¥Õìâõ©çÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥õ¢░õ╗ƒ
+io\legado\app\help\book\ContentHelp.kt:56: "([Úù«Þ»┤ÕûèÕö▒ÕÅ½Ú¬éÚüôþØÇþ¡ö])[\\.ÒÇé]".toRegex(),
+io\legado\app\help\book\ContentHelp.kt:200: } else if (match(",´╝îÒÇü/ÕÆîõ©Äµêû", str[i - 1])) {
+io\legado\app\help\book\ContentHelp.kt:237: } else if (!match("þÜä", charB2)) {
+io\legado\app\help\book\ContentHelp.kt:336: if (match("þÜäÕ£░Õ¥ù", str[start])) {
+io\legado\app\help\book\ContentHelp.kt:614: private const val MARK_SENTENCES_SAY = "Úù«Þ»┤ÕûèÕö▒ÕÅ½Ú¬éÚüôþØÇþ¡ö"
+io\legado\app\help\book\ContentProcessor.kt:130: AppLog.put("ÕÄ╗ÚÖñÚçìÕñìµáçÚóÿÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\help\book\ContentProcessor.kt:144: appCtx.toastOnUi("þ«Çþ╣üÞ¢¼µìóÕç║ÚöÖ")
+io\legado\app\help\book\ContentProcessor.kt:150: val placeholder = "þë╣µ«èµá╝Õ╝ÅþÜäÕìáõ¢ìõ©ìÕ║öÞ»ÑÞó½þ£ïÞºü${useHtmlMap.size}ÒÇé"
+io\legado\app\help\book\ContentProcessor.kt:186: AppLog.put("µø┐µìóÕçÇÕîû: ÞºäÕêÖ ${item.name}µø┐µìóÕç║ÚöÖ.\n${mContent}", e)
+io\legado\app\help\book\ContentProcessor.kt:187: appCtx.toastOnUi("µø┐µìóÕçÇÕîû: ÞºäÕêÖ ${item.name}µø┐µìóÕç║ÚöÖ")
+io\legado\app\help\bookmark\BookmarkExporter.kt:16: if (!author.isNullOrBlank()) append("õ¢£ÞÇà´╝Ü$author\n")
+io\legado\app\help\coil\CoverFetcher.kt:79: } ?: throw IOException("Õø¥þëçÞºúÕ»åÕñ▒Þ┤Ñ")
+io\legado\app\help\config\AppConfig.kt:719: appCtx.toastOnUi("Õ¢ôÕëìµ▓íµ£ëÚàìþ¢«ÞÅ£ÕìòÕî║Õƒƒ,Þç¬Õè¿µüóÕñìõ©¡Úù┤Õî║Õƒƒõ©║ÞÅ£Õìò.")
+io\legado\app\help\config\AppConfig.kt:729: appCtx.toastOnUi("Õ¢ôÕëìµ▓íµ£ëÚàìþ¢«ÞÅ£ÕìòÕî║Õƒƒ,Þç¬Õè¿µüóÕñìõ©¡Úù┤Õî║Õƒƒõ©║ÞÅ£Õìò.")
+io\legado\app\help\config\OldThemeConfig.kt:179: AppLog.put("Þ«¥þ¢«õ©╗ÚóÿÕç║ÚöÖ\n$e", e, true)
+io\legado\app\help\config\ReadBookConfig.kt:86: AppLog.put("Þ»╗ÕÅûµÄÆþëêÚàìþ¢«µûçõ╗ÂÕç║ÚöÖ", e)
+io\legado\app\help\http\CookieManager.kt:70: val msg = "Þ«¥þ¢«cookieÕç║ÚöÖ´╝îÕÀ▓µ©àÚÖñcookie $domain cookie:$newCookie\n$it"
+io\legado\app\help\http\CookieStore.kt:32: AppLog.put("õ┐ØÕ¡ÿCookieÕñ▒Þ┤Ñ\n$e", e)
+io\legado\app\help\http\OkhttpUncaughtExceptionHandler.kt:8: AppLog.put("Okhttp Dispatcherõ©¡þÜäþ║┐þ¿ïµëºÞíîÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\help\source\SourceHelp.kt:124: appCtx.toastOnUi("${it.sourceName}µÿ»18+þ¢æÕØÇ,þªüµ¡óÕ»╝ÕàÑ.")
+io\legado\app\help\source\SourceHelp.kt:136: appCtx.toastOnUi("${it.bookSourceName}µÿ»18+þ¢æÕØÇ,þªüµ¡óÕ»╝ÕàÑ.")
+io\legado\app\help\source\SourceVerificationHelp.kt:63: AppLog.putDebug("þ¡ëÕ¥àÞ┐öÕø×Ú¬îÞ»üþ╗ôµ×£...")
+io\legado\app\help\storage\Backup.kt:135: LogUtils.d(TAG, "Õ╝ÇÕºïÕñçõ╗¢ path:$path")
+io\legado\app\help\storage\Backup.kt:259: LogUtils.d(TAG, "ÚÿàÞ»╗Õñçõ╗¢ $fileName ÕêùÞí¿ÕñºÕ░Å ${list.size}")
+io\legado\app\help\storage\Backup.kt:264: LogUtils.d(TAG, "ÚÿàÞ»╗Õñçõ╗¢ $fileName ÕåÖÕàÑÕñºÕ░Å ${file.length()}")
+io\legado\app\help\storage\Backup.kt:266: LogUtils.d(TAG, "ÚÿàÞ»╗Õñçõ╗¢ $fileName ÕêùÞí¿õ©║þ®║")
+io\legado\app\help\storage\Restore.kt:74: LogUtils.d(TAG, "Õ╝ÇÕºïµüóÕñìÕñçõ╗¢ uri:$uri")
+io\legado\app\help\storage\Restore.kt:85: AppLog.put("ÕñìÕêÂÞºúÕÄïµûçõ╗ÂÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:93: AppLog.put("µüóÕñìÕñçõ╗¢Õç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:208: AppLog.put("µüóÕñìµ£ìÕèíÕÖ¿Úàìþ¢«Õç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:216: AppLog.put("µüóÕñìþø┤Úô¥õ©èõ╝áÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:226: AppLog.put("µüóÕñìõ©╗ÚóÿÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:234: AppLog.put("µüóÕñìÕ░üÚØóÞºäÕêÖÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:245: AppLog.put("µüóÕñìÚÿàÞ»╗þòîÚØóÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:254: AppLog.put("µüóÕñìÚÿàÞ»╗þòîÚØóÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\help\storage\Restore.kt:312: LogUtils.d(TAG, "ÚÿàÞ»╗µüóÕñìÕñçõ╗¢ $fileName µûçõ╗ÂÕñºÕ░Å ${file.length()}")
+io\legado\app\help\storage\Restore.kt:315: LogUtils.d(TAG, "ÚÿàÞ»╗µüóÕñìÕñçõ╗¢ $fileName ÕêùÞí¿ÕñºÕ░Å ${list.size}")
+io\legado\app\help\storage\Restore.kt:319: LogUtils.d(TAG, "ÚÿàÞ»╗µüóÕñìÕñçõ╗¢ $fileName µûçõ╗Âõ©ìÕ¡ÿÕ£¿")
+io\legado\app\help\storage\Restore.kt:322: AppLog.put("$fileName\nÞ»╗ÕÅûÞºúµ×ÉÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\lib\cronet\CronetHelper.kt:46: AppLog.put("ÕêØÕºïÕîûcronetEngineÕç║ÚöÖ", e)
+io\legado\app\lib\cronet\CronetLoader.kt:88: DebugLog.d(javaClass.simpleName, "So Õ║ôÕÀ▓Õ¡ÿÕ£¿")
+io\legado\app\lib\permission\PermissionActivity.kt:47: AppLog.put("Þ»Àµ▒éµØâÚÖÉÕç║ÚöÖ\n$e", e, true)
+io\legado\app\model\CacheBook.kt:499: return "õ©ïÞ¢¢õ©¡:$downloadingCount | þ¡ëÕ¥à:$waitingCount | µÜéÕü£:$pausedCount | Õñ▒Þ┤Ñ:${stateStore.state.totalFailure} | ÕÀ▓þ╝ôÕ¡ÿ:${successDownloadCount.get()}"
+io\legado\app\model\CacheBookModel.kt:292: AppLog.put("õ©ïÞ¢¢${book.name}-${chapter.title}Õñ▒Þ┤Ñ\n${error.localizedMessage}", error)
+io\legado\app\model\CacheBookModel.kt:532: return "ÞÄÀÕÅûµ¡úµûçÕñ▒Þ┤Ñ\n${e.localizedMessage}"
+io\legado\app\model\CacheBookModel.kt:567: downloadFinish(chapter, "ÞÄÀÕÅûµ¡úµûçÕñ▒Þ┤Ñ\n${it.localizedMessage}", resetPageOffset)
+io\legado\app\model\CacheBookModel.kt:603: downloadFinish(chapter, "ÞÄÀÕÅûµ¡úµûçÕñ▒Þ┤Ñ\n${error.localizedMessage}", resetPageOffset)
+io\legado\app\model\Debug.kt:89: debugMessageMap[source.bookSourceUrl] = "${debugTimeFormat.format(Date(0))} Õ╝ÇÕºïµáíÚ¬î"
+io\legado\app\model\Debug.kt:104: if (state == "µáíÚ¬îµêÉÕèƒ") spendingTime else CheckSource.timeout + spendingTime
+io\legado\app\model\Debug.kt:113: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×É")
+io\legado\app\model\Debug.kt:118: log(debugSource, "ÔçÆÕêùÞí¿ÚíÁÞºúµ×ÉµêÉÕèƒ´╝îõ©║þ®║")
+io\legado\app\model\Debug.kt:119: log(debugSource, "´©¢Þºúµ×ÉÕ«îµêÉ", state = 1000)
+io\legado\app\model\Debug.kt:123: log(debugSource, "´©¢ÕêùÞí¿ÚíÁÞºúµ×ÉÕ«îµêÉ")
+io\legado\app\model\Debug.kt:126: log(debugSource, "ÔçÆÕåàÕ«╣ÞºäÕêÖõ©║þ®║´╝îÚ╗ÿÞ«ñÞÄÀÕÅûµò┤õ©¬þ¢æÚíÁ", state = 1000)
+io\legado\app\model\Debug.kt:131: log(debugSource, "ÔçÆÕ¡ÿÕ£¿µÅÅÞ┐░ÞºäÕêÖ´╝îõ©ìÞºúµ×ÉÕåàÕ«╣ÚíÁ")
+io\legado\app\model\Debug.kt:132: log(debugSource, "´©¢Þºúµ×ÉÕ«îµêÉ", state = 1000)
+io\legado\app\model\Debug.kt:147: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×ÉÕåàÕ«╣ÚíÁ")
+io\legado\app\model\Debug.kt:151: log(debugSource, "´©¢ÕåàÕ«╣ÚíÁÞºúµ×ÉÕ«îµêÉ", state = 1000)
+io\legado\app\model\Debug.kt:167: log(bookSource.bookSourceUrl, "ÔçÆÕ╝ÇÕºïÞ«┐Úù«Þ»ªµâàÚíÁ:$key")
+io\legado\app\model\Debug.kt:173: log(bookSource.bookSourceUrl, "ÔçÆÕ╝ÇÕºïÞ«┐Úù«ÕÅæþÄ░ÚíÁ:$url")
+io\legado\app\model\Debug.kt:182: log(bookSource.bookSourceUrl, "ÔçÆÕ╝ÇÕºïÞ«┐þø«Õ¢òÚíÁ:$url")
+io\legado\app\model\Debug.kt:190: log(bookSource.bookSourceUrl, "ÔçÆÕ╝ÇÕºïÞ«┐µ¡úµûçÚíÁ:$url")
+io\legado\app\model\Debug.kt:192: chapter.title = "Þ░âÞ»ò"
+io\legado\app\model\Debug.kt:198: log(bookSource.bookSourceUrl, "ÔçÆÕ╝ÇÕºïµÉ£þ┤óÕà│Úö«Õ¡ù:$key")
+io\legado\app\model\Debug.kt:205: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×ÉÕÅæþÄ░ÚíÁ")
+io\legado\app\model\Debug.kt:209: log(debugSource, "´©¢ÕÅæþÄ░ÚíÁÞºúµ×ÉÕ«îµêÉ")
+io\legado\app\model\Debug.kt:213: log(debugSource, "´©¢µ£¬ÞÄÀÕÅûÕê░õ╣ªþ▒ì", state = -1)
+io\legado\app\model\Debug.kt:223: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×ÉµÉ£þ┤óÚíÁ")
+io\legado\app\model\Debug.kt:227: log(debugSource, "´©¢µÉ£þ┤óÚíÁÞºúµ×ÉÕ«îµêÉ")
+io\legado\app\model\Debug.kt:231: log(debugSource, "´©¢µ£¬ÞÄÀÕÅûÕê░õ╣ªþ▒ì", state = -1)
+io\legado\app\model\Debug.kt:242: log(debugSource, "ÔëíÕÀ▓ÞÄÀÕÅûþø«Õ¢òÚô¥µÄÑ,ÞÀ│Þ┐çÞ»ªµâàÚíÁ")
+io\legado\app\model\Debug.kt:247: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×ÉÞ»ªµâàÚíÁ")
+io\legado\app\model\Debug.kt:250: log(debugSource, "´©¢Þ»ªµâàÚíÁÞºúµ×ÉÕ«îµêÉ")
+io\legado\app\model\Debug.kt:255: log(debugSource, "Ôëíµûçõ╗Âþ▒╗õ╣ªµ║ÉÞÀ│Þ┐çÞºúµ×Éþø«Õ¢ò", state = 1000)
+io\legado\app\model\Debug.kt:265: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×Éþø«Õ¢òÚíÁ")
+io\legado\app\model\Debug.kt:268: log(debugSource, "´©¢þø«Õ¢òÚíÁÞºúµ×ÉÕ«îµêÉ")
+io\legado\app\model\Debug.kt:272: log(debugSource, "Ôëíµ▓íµ£ëµ¡úµûçþ½áÞèé")
+io\legado\app\model\Debug.kt:291: log(debugSource, "´©¥Õ╝ÇÕºïÞºúµ×Éµ¡úµûçÚíÁ")
+io\legado\app\model\Debug.kt:300: log(debugSource, "´©¢µ¡úµûçÚíÁÞºúµ×ÉÕ«îµêÉ", state = 1000)
+io\legado\app\model\ReadAloud.kt:61: val msg = "ÕÉ»Õè¿µ£ùÞ»╗µ£ìÕèíÕç║ÚöÖ\n${e.localizedMessage}"
+io\legado\app\model\ReadBook.kt:281: AppLog.put("µïëÕÅûÚÿàÞ»╗Þ┐øÕ║ªÕñ▒Þ┤Ñ", it)
+io\legado\app\model\ReadBook.kt:382: AppLog.put("õ┐ØÕ¡ÿÚÿàÞ»╗õ╝ÜÞ»ØÕç║ÚöÖ: ${sessionToSave.bookName}", e)
+io\legado\app\model\ReadBook.kt:712: AppLog.put("ÕèáÞ¢¢µ¡úµûçÕç║ÚöÖ\n${e.localizedMessage}")
+io\legado\app\model\ReadManga.kt:228: AppLog.put("õ┐ØÕ¡ÿÚÿàÞ»╗õ╝ÜÞ»ØÕç║ÚöÖ: ${sessionToSave.bookName}", e)
+io\legado\app\model\ReadManga.kt:279: AppLog.put("ÕèáÞ¢¢µ¡úµûçÕç║ÚöÖ\n${it.localizedMessage}")
+io\legado\app\model\ReadManga.kt:289: errorMsg: String = "ÕèáÞ¢¢ÕåàÕ«╣Õñ▒Þ┤Ñ",
+io\legado\app\model\ReadManga.kt:303: mCallback?.loadFail("µ¡úµûçÕåàÕ«╣õ©║þ®║")
+io\legado\app\model\ReadManga.kt:308: mCallback?.loadFail("µ¡úµûçµ▓íµ£ëÕø¥þëç")
+io\legado\app\model\ReadManga.kt:388: AppLog.putDebug("ÞÀ│Þ¢¼õ©ïõ©Çþ½áÕñ▒Þ┤Ñ,µ▓íµ£ëõ©ïõ©Çþ½á")
+io\legado\app\model\ReadManga.kt:439: AppLog.put("õ┐ØÕ¡ÿµ╝½þö╗ÚÿàÞ»╗Þ┐øÕ║ªõ┐íµü»Õç║ÚöÖ\n$it", it)
+io\legado\app\model\ReadManga.kt:549: contentLoadFinish(chapter, null, "ÕèáÞ¢¢ÕåàÕ«╣Õñ▒Þ┤Ñ µ▓íµ£ëõ╣ªµ║É")
+io\legado\app\model\ReadManga.kt:601: AppLog.put("µïëÕÅûÚÿàÞ»╗Þ┐øÕ║ªÕñ▒Þ┤Ñ", it)
+io\legado\app\model\ReadManga.kt:708: pages.add(ReaderLoading(chapter.index, -1, "õ©ïõ©Çþ½á ${chapter.title}"))
+io\legado\app\model\ReadManga.kt:710: pages.add(ReaderLoading(chapter.index, imageCount, "ÕÀ▓Þ»╗Õ«î ${chapter.title}"))
+io\legado\app\model\SourceCallBack.kt:77: "${source.bookSourceName}\nõ╣ªµ║ÉµëºÞíîÕø×Þ░âõ║ïõ╗Â${event}Õç║ÚöÖ\n${it.localizedMessage}",
+io\legado\app\model\SourceCallBack.kt:107: "${source.bookSourceName}\nõ╣ªµ║ÉµëºÞíîÕø×Þ░âõ║ïõ╗Â${event}Õç║ÚöÖ\n${it.localizedMessage}",
+io\legado\app\model\SourceCallBack.kt:131: "${source.bookSourceName}\nõ╣ªµ║ÉµëºÞíîÕø×Þ░âõ║ïõ╗Â${event}Õç║ÚöÖ\n${it.localizedMessage}",
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:92: if (content == null) throw AssertionError("ÕåàÕ«╣õ©ìÕÅ»þ®║´╝êContent cannot be null´╝ë")
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:431: Debug.log("Ôëí@put ÞºäÕêÖ JSON µá╝Õ╝Åõ©ìÞºäÞîâ´╝îÞ»Àµö╣õ©║ÞºäÞîâµá╝Õ╝Å")
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:855: if (!preUpdateJs) throw NoStackTraceException("ÕÅ¬Þâ¢Õ£¿ preUpdateJs õ©¡Þ░âþö¿")
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:857: log("Úçìµû░ÞÄÀÕÅûbook")
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:880: if (!preUpdateJs) throw NoStackTraceException("ÕÅ¬Þâ¢Õ£¿ preUpdateJs õ©¡Þ░âþö¿")
+io\legado\app\model\analyzeRule\AnalyzeRule.kt:882: log("ÕÀ▓ÞÀ│Þ┐çÚçìÕñìÕèáÞ¢¢Þ»ªµâàÚíÁ´╝îÞ»Àõ╝ÿÕîûõ╗úþáü")
+io\legado\app\model\analyzeRule\AnalyzeUrl.kt:236: log("Úô¥µÄÑÕÅéµò░ JSON µá╝Õ╝Åõ©ìÞºäÞîâ´╝îÞ»Àµö╣õ©║ÞºäÞîâµá╝Õ╝Å")
+io\legado\app\model\analyzeRule\RuleAnalyzer.kt:229: queue.substring(0, start) + "ÕÉÄµ£¬Õ╣│Þíí"
+io\legado\app\model\analyzeRule\RuleAnalyzer.kt:286: queue.substring(0, start) + "ÕÉÄµ£¬Õ╣│Þíí"
+io\legado\app\model\localBook\EpubFile.kt:118: AppLog.put("Þ»╗ÕÅûEpubµûçõ╗ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\model\localBook\EpubFile.kt:274: } ?: AppLog.putDebug("Epub: Õ░üÚØóÞÄÀÕÅûõ©║þ®║. path: ${book.bookUrl}")
+io\legado\app\model\localBook\EpubFile.kt:277: AppLog.put("ÕèáÞ¢¢õ╣ªþ▒ìÕ░üÚØóÕñ▒Þ┤Ñ\n${e.localizedMessage}", e)
+io\legado\app\model\localBook\EpubFile.kt:285: book.intro = "õ╣ªþ▒ìÕ»╝ÕàÑÕ╝éÕ©©"
+io\legado\app\model\localBook\EpubFile.kt:339: chapter.title = "Õ░üÚØó"
+io\legado\app\model\localBook\EpubFile.kt:392: "--ÕìÀÚªû--"
+io\legado\app\model\localBook\LocalBook.kt:76: Pattern.compile("(.*?)ÒÇè([^ÒÇèÒÇï]+)ÒÇï.*?õ¢£ÞÇà´╝Ü(.*)"),
+io\legado\app\model\localBook\LocalBook.kt:78: Pattern.compile("(^)(.+) õ¢£ÞÇà´╝Ü(.+)$"),
+io\legado\app\model\localBook\MobiFile.kt:85: AppLog.put("Þ»╗ÕÅûMobiµûçõ╗ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\model\localBook\MobiFile.kt:108: val title = soup.getElementsByTag("title").first()?.text() ?: "ÕìÀÚªû"
+io\legado\app\model\localBook\MobiFile.kt:149: val title = soup.getElementsByTag("title").first()?.text() ?: "ÕìÀÚªû"
+io\legado\app\model\localBook\MobiFile.kt:293: AppLog.put("ÕèáÞ¢¢õ╣ªþ▒ìÕ░üÚØóÕñ▒Þ┤Ñ\n${e.localizedMessage}", e)
+io\legado\app\model\localBook\MobiFile.kt:301: book.intro = "õ╣ªþ▒ìÕ»╝ÕàÑÕ╝éÕ©©"
+io\legado\app\model\localBook\PdfFile.kt:184: chapter.title = "Õêåµ«Á_${it}"
+io\legado\app\model\localBook\PdfFile.kt:208: AppLog.put("ÕèáÞ¢¢õ╣ªþ▒ìÕ░üÚØóÕñ▒Þ┤Ñ\n${e.localizedMessage}", e)
+io\legado\app\model\localBook\PdfFile.kt:216: book.intro = "õ╣ªþ▒ìÕ»╝ÕàÑÕ╝éÕ©©"
+io\legado\app\model\localBook\TextFile.kt:230: qyChapter.title = "ÕëìÞ¿Ç"
+io\legado\app\model\localBook\TextFile.kt:393: chapter.title = "þ¼¼${blockPos}þ½á($chapterPos)"
+io\legado\app\model\localBook\TextFile.kt:417: chapter.title = "þ¼¼${blockPos}þ½á(${chapterPos})"
+io\legado\app\model\localBook\TextFile.kt:444: AppLog.put("TXTþø«Õ¢òÞºäÕêÖµ¡úÕêÖÞ»¡µ│òÚöÖÞ»»:${tocRule.name}\n$e", e)
+io\legado\app\model\localBook\UmdFile.kt:90: book.intro = "õ╣ªþ▒ìÕ»╝ÕàÑÕ╝éÕ©©"
+io\legado\app\model\rss\Rss.kt:81: Debug.log(rssSource.sourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:${rssSource.sourceUrl}")
+io\legado\app\model\rss\Rss.kt:97: Debug.log(rssSource.sourceUrl, "ÔëíµúÇµÁïÕê░ÚçìÕ«ÜÕÉæ(${it.code})")
+io\legado\app\model\rss\Rss.kt:98: Debug.log(rssSource.sourceUrl, "ÔöîÚçìÕ«ÜÕÉæÕÉÄÕ£░ÕØÇ")
+io\legado\app\model\rss\RssParserByRule.kt:37: Debug.log(sourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:$sourceUrl")
+io\legado\app\model\rss\RssParserDefault.kt:102: Debug.log(sourceUrl, "ÔöîÞÄÀÕÅûµáçÚóÿ")
+io\legado\app\model\rss\RssParserDefault.kt:104: Debug.log(sourceUrl, "ÔöîÞÄÀÕÅûµùÂÚù┤")
+io\legado\app\model\rss\RssParserDefault.kt:106: Debug.log(sourceUrl, "ÔöîÞÄÀÕÅûµÅÅÞ┐░")
+io\legado\app\model\rss\RssParserDefault.kt:108: Debug.log(sourceUrl, "ÔöîÞÄÀÕÅûÕø¥þëçurl")
+io\legado\app\model\rss\RssParserDefault.kt:110: Debug.log(sourceUrl, "ÔöîÞÄÀÕÅûµûçþ½áÚô¥µÄÑ")
+io\legado\app\model\webBook\BookChapterList.kt:47: Debug.log(bookSource.bookSourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:${baseUrl}")
+io\legado\app\model\webBook\BookContent.kt:54: Debug.log(bookSource.bookSourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:${baseUrl}")
+io\legado\app\model\webBook\BookInfo.kt:39: Debug.log(bookSource.bookSourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:${baseUrl}")
+io\legado\app\model\webBook\BookList.kt:53: Debug.log(bookSource.bookSourceUrl, "ÔëíÞÄÀÕÅûµêÉÕèƒ:${analyzeUrl.ruleUrl}")
+io\legado\app\service\AudioPlayService.kt:238: AppLog.put("µÆ¡µö¥Õç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\service\AudioPlayService.kt:538: AppLog.put("Õ┐¢þòÑÚƒ│Úóæþäªþé╣ÕñäþÉå(µ£ëÕú░)")
+io\legado\app\service\AudioPlayService.kt:544: AppLog.put("Úƒ│Úóæþäªþé╣ÞÄÀÕ¥ù,þ╗ºþ╗¡µÆ¡µö¥")
+io\legado\app\service\AudioPlayService.kt:547: AppLog.put("Úƒ│Úóæþäªþé╣ÞÄÀÕ¥ù")
+io\legado\app\service\AudioPlayService.kt:552: AppLog.put("Úƒ│Úóæþäªþé╣õ©óÕñ▒,µÜéÕü£µÆ¡µö¥")
+io\legado\app\service\AudioPlayService.kt:557: AppLog.put("Úƒ│Úóæþäªþé╣µÜéµùÂõ©óÕñ▒Õ╣Âõ╝ÜÕ¥êÕ┐½Õåìµ¼íÞÄÀÕ¥ù,µÜéÕü£µÆ¡µö¥")
+io\legado\app\service\AudioPlayService.kt:566: AppLog.put("Úƒ│Úóæþäªþé╣þƒ¡µÜéõ©óÕñ▒,õ©ìÕüÜÕñäþÉå")
+io\legado\app\service\AudioPlayService.kt:646: AppLog.put("ÕêøÕ╗║Úƒ│ÚóæµÆ¡µö¥ÚÇÜþƒÑÕç║ÚöÖ,${e.localizedMessage}", e, true)
+io\legado\app\service\AudioPlayService.kt:660: AppLog.put("ÕêøÕ╗║Úƒ│ÚóæµÆ¡µö¥ÚÇÜþƒÑÕç║ÚöÖ,${e.localizedMessage}", e, true)
+io\legado\app\service\BaseReadAloudService.kt:271: AppLog.put("ÕÉ»Õè¿µ£ùÞ»╗Õç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\service\BaseReadAloudService.kt:537: AppLog.put("Õ┐¢þòÑÚƒ│Úóæþäªþé╣ÕñäþÉå(TTS)")
+io\legado\app\service\BaseReadAloudService.kt:543: AppLog.put("Úƒ│Úóæþäªþé╣ÞÄÀÕ¥ù,þ╗ºþ╗¡µ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:546: AppLog.put("Úƒ│Úóæþäªþé╣ÞÄÀÕ¥ù")
+io\legado\app\service\BaseReadAloudService.kt:551: AppLog.put("Úƒ│Úóæþäªþé╣õ©óÕñ▒,µÜéÕü£µ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:556: AppLog.put("Úƒ│Úóæþäªþé╣µÜéµùÂõ©óÕñ▒Õ╣Âõ╝ÜÕ¥êÕ┐½Õåìµ¼íÞÄÀÕ¥ù,µÜéÕü£µ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:565: AppLog.put("Úƒ│Úóæþäªþé╣þƒ¡µÜéõ©óÕñ▒,õ©ìÕüÜÕñäþÉå")
+io\legado\app\service\BaseReadAloudService.kt:576: AppLog.put("ÕêøÕ╗║µ£ùÞ»╗ÚÇÜþƒÑÕç║ÚöÖ,${e.localizedMessage}", e, true)
+io\legado\app\service\BaseReadAloudService.kt:670: AppLog.put("ÕêøÕ╗║µ£ùÞ»╗ÚÇÜþƒÑÕç║ÚöÖ,${e.localizedMessage}", e, true)
+io\legado\app\service\BaseReadAloudService.kt:687: AppLog.putDebug("${ReadBook.curTextChapter?.chapter?.title} µ£ùÞ»╗þ╗ôµØƒÞÀ│Þ¢¼õ©ïõ©Çþ½áÕ╣Âµ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:747: AppLog.put("µØÑþöÁþ╗ôµØƒ,þ╗ºþ╗¡µ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:750: AppLog.put("µØÑþöÁþ╗ôµØƒ")
+io\legado\app\service\BaseReadAloudService.kt:756: AppLog.put("µØÑþöÁÕôìÚôâ,µÜéÕü£µ£ùÞ»╗")
+io\legado\app\service\BaseReadAloudService.kt:760: AppLog.put("µØÑþöÁÕôìÚôâ")
+io\legado\app\service\BaseReadAloudService.kt:765: AppLog.put("µØÑþöÁµÄÑÕÉ¼,õ©ìÕüÜÕñäþÉå")
+io\legado\app\service\CacheBookService.kt:322: "ÒÇè$nameÒÇïþø«Õ¢òõ©║þ®║õ©öÕèáÞ¢¢Þ»ªµâàÚíÁÕñ▒Þ┤Ñ\n${it.localizedMessage}",
+io\legado\app\service\CacheBookService.kt:345: "ÒÇè$nameÒÇïþø«Õ¢òõ©║þ®║õ©öÕèáÞ¢¢þø«Õ¢òÕñ▒Þ┤Ñ\n${it.localizedMessage}",
+io\legado\app\service\CacheBookService.kt:524: "${CacheBook.downloadSummary} | Õ¥àÕàÑÚÿƒ:$pendingBookCount"
+io\legado\app\service\ExportBookService.kt:529: AppLog.put("ÞÄÀÕÅûõ╣ªþ▒ìÕ░üÚØóÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\service\TTSReadAloudService.kt:141: AppLog.put("ttsµ£ùÞ»╗Õç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\ui\about\AboutActivity.kt:122: AppLog.put("õ┐ØÕ¡ÿµùÑÕ┐ùÕç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\ui\about\AboutActivity.kt:146: AppLog.put("õ┐ØÕ¡ÿÕáåÞ¢¼Õé¿Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\about\AboutActivity.kt:193: AppLog.put("õ┐ØÕ¡ÿLogcatÕñ▒Þ┤Ñ\n$e", e)
+io\legado\app\ui\about\AboutScreen.kt:148: onShowMdFile("ÚÜÉþºüµö┐þ¡û", "privacyPolicy.md")
+io\legado\app\ui\about\AboutScreen.kt:156: onShowMdFile("Þ«©ÕÅ»Þ»ü", "LICENSE.md")
+io\legado\app\ui\about\AboutScreen.kt:164: onShowMdFile("ÕàìÞ┤úÕú░µÿÄ", "disclaimer.md")
+io\legado\app\ui\about\UpdateDialog.kt:58: toastOnUi("µ▓íµ£ëµò░µì«")
+io\legado\app\ui\about\UpdateDialog.kt:80: toastOnUi("õ©ïÞ¢¢õ┐íµü»õ©ìÕ«îµò┤")
+io\legado\app\ui\about\UpdateDialog.kt:84: toastOnUi("Õ╝ÇÕºïõ©ïÞ¢¢: $fileName")
+io\legado\app\ui\about\UpdateDialog.kt:89: binding.bottomSheetTitle.text = "ÕÀ▓þ╗Åµø┤µû░Þç│"
+io\legado\app\ui\association\BaseAssociationViewModel.kt:45: else -> errorLive.postValue("µá╝Õ╝Åõ©ìÕ»╣")
+io\legado\app\ui\association\FileAssociationActivity.kt:126: toastOnUi("Þ»Àµ▒éÕ¡ÿÕé¿µØâÚÖÉÕñ▒Þ┤ÑÒÇé")
+io\legado\app\ui\association\FileAssociationActivity.kt:162: "Þ»ÀÚçìµû░Þ«¥þ¢«õ╣ªþ▒ìõ┐ØÕ¡ÿõ¢ìþ¢«\nPermission Denial"
+io\legado\app\ui\association\FileAssociationActivity.kt:172: "Þ»ÀÚçìµû░Þ«¥þ¢«õ╣ªþ▒ìõ┐ØÕ¡ÿõ¢ìþ¢«\nPermission Denial"
+io\legado\app\ui\association\FileAssociationActivity.kt:186: "Þ»ÀÚçìµû░Þ«¥þ¢«õ╣ªþ▒ìõ┐ØÕ¡ÿõ¢ìþ¢«\nPermission Denial"
+io\legado\app\ui\association\FileAssociationActivity.kt:210: val msg = "Õ»╝ÕàÑõ╣ªþ▒ìÕñ▒Þ┤Ñ\n${it.localizedMessage}"
+io\legado\app\ui\association\FileAssociationViewModel.kt:39: val msg = "µùáµ│òµëôÕ╝Çµûçõ╗Â\n${it.localizedMessage}"
+io\legado\app\ui\association\FileAssociationViewModel.kt:53: AppLog.put("Õ░ØÞ»òÕ»╝ÕàÑõ©║JSONµûçõ╗ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\association\ImportBookSourceDialog.kt:248: localSource == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportBookSourceDialog.kt:249: item.lastUpdateTime > localSource.lastUpdateTime -> "µø┤µû░"
+io\legado\app\ui\association\ImportBookSourceDialog.kt:250: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportDictRuleDialog.kt:143: null -> "µû░Õó×"
+io\legado\app\ui\association\ImportDictRuleDialog.kt:144: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportHttpTtsDialog.kt:147: localSource == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportHttpTtsDialog.kt:148: item.lastUpdateTime > localSource.lastUpdateTime -> "µø┤µû░"
+io\legado\app\ui\association\ImportHttpTtsDialog.kt:149: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportReplaceRuleDialog.kt:210: localRule == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportReplaceRuleDialog.kt:214: || item.scope != localRule.scope -> "µø┤µû░"
+io\legado\app\ui\association\ImportReplaceRuleDialog.kt:215: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportRssSourceDialog.kt:228: localSource == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportRssSourceDialog.kt:229: item.lastUpdateTime > localSource.lastUpdateTime -> "µø┤µû░"
+io\legado\app\ui\association\ImportRssSourceDialog.kt:230: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportThemeDialog.kt:146: localSource == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportThemeDialog.kt:147: localSource != item -> "µø┤µû░"
+io\legado\app\ui\association\ImportThemeDialog.kt:148: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\ImportTxtTocRuleDialog.kt:146: localSource == null -> "µû░Õó×"
+io\legado\app\ui\association\ImportTxtTocRuleDialog.kt:147: item != localSource -> "µø┤µû░"
+io\legado\app\ui\association\ImportTxtTocRuleDialog.kt:148: else -> "ÕÀ▓µ£ë"
+io\legado\app\ui\association\OnLineImportViewModel.kt:69: finally.invoke(context.getString(R.string.success), "Õ»╝ÕàÑµÄÆþëêµêÉÕèƒ")
+io\legado\app\ui\association\OpenUrlConfirmDialog.kt:69: binding.message.text = "${viewModel.sourceName} µ¡úÕ£¿Þ»Àµ▒éÞÀ│Þ¢¼Úô¥µÄÑ/Õ║öþö¿´╝îµÿ»ÕÉªÞÀ│Þ¢¼´╝ƒ"
+io\legado\app\ui\association\OpenUrlConfirmDialog.kt:99: AppLog.put("µëôÕ╝ÇÚô¥µÄÑÕñ▒Þ┤Ñ", e, true)
+io\legado\app\ui\book\audio\AudioPlayActivity.kt:707: toastOnUi("ÕÀ▓µÀ╗ÕèáÕê░õ╣ªµ×Â")
+io\legado\app\ui\book\audio\AudioPlayViewModel.kt:61: AppLog.put("Þ»ªµâàÚíÁÕç║ÚöÖ: ${e.localizedMessage}", e, true)
+io\legado\app\ui\book\audio\AudioPlayViewModel.kt:132: AppLog.put("µÀ╗Õèáõ╣ªþ▒ìÕê░õ╣ªµ×ÂÕñ▒Þ┤Ñ", it)
+io\legado\app\ui\book\audio\AudioPlayViewModel.kt:133: context.toastOnUi("µÀ╗Õèáõ╣ªþ▒ìÕñ▒Þ┤Ñ")
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:126: Toast.makeText(context, "Õ╝ÇÕºïÕ»╝Õç║...", Toast.LENGTH_SHORT).show()
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:135: title = "µëÇµ£ëõ╣ªþ¡¥",
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:168: text = "Õ»╝Õç║ JSON",
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:176: text = "Õ»╝Õç║ Markdown",
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:196: placeholder = "µÉ£þ┤ó...",
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:215: message = "ÕèáÞ¢¢õ©¡...",
+io\legado\app\ui\book\bookmark\AllBookmarkScreen.kt:228: message = "µ▓íµ£ëõ╣ªþ¡¥´╝ü",
+io\legado\app\ui\book\bookmark\AllBookmarkViewModel.kt:169: context.toastOnUi("Õ»╝Õç║µêÉÕèƒ: $fileName")
+io\legado\app\ui\book\bookmark\AllBookmarkViewModel.kt:174: getApplication<Application>().toastOnUi("Õ»╝Õç║Õñ▒Þ┤Ñ: ${e.message}")
+io\legado\app\ui\book\bookmark\AllBookmarkViewModel.kt:191: sb.append("> **ÕÄƒµûç´╝Ü** ${it.bookText}\n\n")
+io\legado\app\ui\book\changecover\ChangeCoverViewModel.kt:45: originName = "Ú╗ÿÞ«ñÕ░üÚØó",
+io\legado\app\ui\book\changecover\ChangeCoverViewModel.kt:140: AppLog.put("Õ░üÚØóµìóµ║ÉµÉ£þ┤óÕç║ÚöÖ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:89: context?.alert("µÉ£þ┤óþ╗ôµ×£õ©║þ®║") {
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:90: setMessage("${searchGroup}Õêåþ╗äµÉ£þ┤óþ╗ôµ×£õ©║þ®║,µÿ»ÕÉªÕêçµìóÕê░Õà¿Úâ¿Õêåþ╗ä")
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:426: AppLog.put("${if (isReplace) "µìóµ║É" else "µÀ╗Õèáõ╣ªþ▒ì"}ÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n$it", it, true)
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:426: AppLog.put("${if (isReplace) "µìóµ║É" else "µÀ╗Õèáõ╣ªþ▒ì"}ÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n$it", it, true)
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:427: context?.toastOnUi("${if (isReplace) "µìóµ║É" else "µÀ╗Õèáõ╣ªþ▒ì"}Õñ▒Þ┤Ñ")
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:427: context?.toastOnUi("${if (isReplace) "µìóµ║É" else "µÀ╗Õèáõ╣ªþ▒ì"}Õñ▒Þ┤Ñ")
+io\legado\app\ui\book\changesource\ChangeBookSourceDialog.kt:483: AppLog.put("µìóµ║ÉÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n$it", it, true)
+io\legado\app\ui\book\changesource\ChangeChapterSourceDialog.kt:94: context?.alert("µÉ£þ┤óþ╗ôµ×£õ©║þ®║") {
+io\legado\app\ui\book\changesource\ChangeChapterSourceDialog.kt:95: setMessage("${searchGroup}Õêåþ╗äµÉ£þ┤óþ╗ôµ×£õ©║þ®║,µÿ»ÕÉªÕêçµìóÕê░Õà¿Úâ¿Õêåþ╗ä")
+io\legado\app\ui\book\changesource\ChangeChapterSourceDialog.kt:325: AppLog.put("Õìòþ½áµìóµ║ÉÞÄÀÕÅûþø«Õ¢òÕç║ÚöÖ\n$it", it, true)
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:58: CheckboxItem("ÚÿàÞ»╗Þ┐øÕ║ª", checked = migrateReadingProgress) {
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:63: text = "ÞïÑµû░µ║ÉµÇ╗þ½áÞèéµ»öÞ┐øÕ║ªµø┤Õ░æ´╝îÚÿàÞ»╗Þ┐øÕ║ªÕ░åÞ░âµò┤Þç│µ£ÇÕÉÄõ©Çþ½áÒÇé",
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:69: CheckboxItem("Õêåþ╗äÕÆîµÄÆÕ║Å", checked = migrateGroup) { migrateGroup = it }
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:70: CheckboxItem("Þç¬Õ«Üõ╣ëÕ░üÚØó", checked = migrateCover) { migrateCover = it }
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:71: CheckboxItem("Õêåþ▒╗õ©Äµáçþ¡¥", checked = migrateCategory) { migrateCategory = it }
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:72: CheckboxItem("Õñçµ│¿ÕÆîÞç¬Õ«Üõ╣ëþ«Çõ╗ï", checked = migrateRemark) { migrateRemark = it }
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:73: CheckboxItem("ÚÿàÞ»╗Þ«¥þ¢«", checked = migrateReadConfig) { migrateReadConfig = it }
+io\legado\app\ui\book\changesource\ChangeSourceMigrationOptionsSheet.kt:74: CheckboxItem("ÕêáÚÖñÕÀ▓õ©ïÞ¢¢þ½áÞèé", checked = deleteDownloadedChapters) {
+io\legado\app\ui\book\group\GroupEditDialog.kt:113: toastOnUi("Õ░üÚØóÕÀ▓Úçìþ¢«")
+io\legado\app\ui\book\group\GroupEditDialog.kt:126: toastOnUi("Õêåþ╗äÕÉìþº░õ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\book\group\GroupEditSheet.kt:200: appCtx.toastOnUi("Õêåþ╗äÕÉìþº░õ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\book\group\GroupEditSheet.kt:274: appCtx.toastOnUi("Õ░üÚØóÕÀ▓Úçìþ¢«")
+io\legado\app\ui\book\group\GroupManageDialog.kt:77: AppLog.put("õ╣ªþ▒ìÕêåþ╗äþ«íþÉåþòîÚØóÞÄÀÕÅûÕêåþ╗äµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\group\GroupManageDialog.kt:96: toastOnUi("Õêåþ╗äÕÀ▓Þ¥¥õ©èÚÖÉ(64õ©¬)")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:542: context.toastOnUi("µÀ╗Õèáõ╣ªµ×ÂÕñ▒Þ┤Ñ´╝îÞ»ÀÕ░ØÞ»òÚçìµû░ÚÇëµï®µûçõ╗ÂÕñ╣")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:543: AppLog.put("µÀ╗Õèáõ╣ªµ×ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:545: context.toastOnUi("µÀ╗Õèáõ╣ªµ×ÂµêÉÕèƒ")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:556: context.toastOnUi("µÀ╗Õèáõ╣ªµ×ÂÕñ▒Þ┤Ñ´╝îÞ»ÀÕ░ØÞ»òÚçìµû░ÚÇëµï®µûçõ╗ÂÕñ╣")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:557: AppLog.put("µÀ╗Õèáõ╣ªµ×ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:559: context.toastOnUi("µÀ╗Õèáõ╣ªµ×ÂµêÉÕèƒ")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:665: context.toastOnUi("µë½µÅÅµûçõ╗ÂÕñ╣Õç║ÚöÖ\n${it.localizedMessage}")
+io\legado\app\ui\book\import\local\ImportBookViewModel.kt:704: context.toastOnUi("ÞÄÀÕÅûµûçõ╗ÂÕêùÞí¿Õç║ÚöÖ\n${it.localizedMessage}")
+io\legado\app\ui\book\import\remote\ServerConfigViewModel.kt:40: context.toastOnUi("õ┐ØÕ¡ÿÕç║ÚöÖ\n${it.localizedMessage}")
+io\legado\app\ui\book\import\remote\ServersDialog.kt:89: AppLog.put("µ£ìÕèíÕÖ¿Úàìþ¢«þòîÚØóÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\info\BookInfoReadRecordSheet.kt:157: text = "þ¼¼${session.words}þ½á",
+io\legado\app\ui\book\info\BookInfoScreen.kt:446: contentDescription = "þ╝ûÞ¥æ"
+io\legado\app\ui\book\info\BookInfoScreen.kt:452: contentDescription = "Õêåõ║½"
+io\legado\app\ui\book\info\BookInfoScreen.kt:457: contentDescription = "µø┤ÕñÜ"
+io\legado\app\ui\book\info\BookInfoScreen.kt:911: text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "ÕÀ▓Þ»╗Õ«î" else stringResource(R.string.read_chapter_index, book.d
+io\legado\app\ui\book\info\BookInfoScreen.kt:999: label = "Õñçµ│¿",
+io\legado\app\ui\book\info\BookInfoViewModel.kt:578: AppLog.put("õ©ïÞ¢¢Þ┐£þ¿ïõ╣ªþ▒ì<${book.name}>Õñ▒Þ┤Ñ", it)
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:171: title = "Õø║Õ«Üõ╣ªþ▒ìþ▒╗Õ×ï",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:172: description = "õ╣ªþ▒ìµø┤µû░ÕÉÄõ©ìÞªåþøûõ╣ªþ▒ìþ▒╗Õ×ï",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:180: label = "õ╣ªÕÉì",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:187: label = "õ¢£ÞÇà",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:194: label = "Õ░üÚØóÚô¥µÄÑ",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:201: label = "þ«Çõ╗ï",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:208: label = "Õñçµ│¿",
+io\legado\app\ui\book\info\edit\BookInfoEditScreen.kt:240: label = "õ╣ªþ▒ìþ▒╗Õ×ï",
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:34: val selectedType: String = "µûçµ£¼",
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:35: val bookTypes: List<String> = listOf("µûçµ£¼", "Úƒ│Úóæ", "Õø¥þëç"),
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:35: val bookTypes: List<String> = listOf("µûçµ£¼", "Úƒ│Úóæ", "Õø¥þëç"),
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:35: val bookTypes: List<String> = listOf("µûçµ£¼", "Úƒ│Úóæ", "Õø¥þëç"),
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:130: AppLog.put("õ╣ªþ▒ìõ┐íµü»õ┐ØÕ¡ÿÕñ▒Þ┤Ñ´╝îÕ¡ÿÕ£¿þø©ÕÉîõ╣ªÕÉìõ¢£ÞÇàõ╣ªþ▒ì\n$it", it, true)
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:132: AppLog.put("õ╣ªþ▒ìõ┐íµü»õ┐ØÕ¡ÿÕñ▒Þ┤Ñ\n$it", it, true)
+io\legado\app\ui\book\info\edit\BookInfoEditViewModel.kt:155: AppLog.put("õ╣ªþ▒ìÕ░üÚØóõ┐ØÕ¡ÿÕñ▒Þ┤Ñ\n$it", it, true)
+io\legado\app\ui\book\manga\ReadMangaActivity.kt:646: AppLog.put("µëºÞíîÞ┤¡õ╣░µôìõ¢£Õç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\ui\book\manga\config\MangaAutoReadDialog.kt:39: valueFormat = { "$it þºÆ" }
+io\legado\app\ui\book\manga\config\MangaFooterSettingDialog.kt:64: toastOnUi("ÕÀ▓Þ«¥þ¢«õ©║Õà¿Õ▒ÇÚ╗ÿÞ«ñµ¿íÕ╝Å")
+io\legado\app\ui\book\manga\config\MangaFooterSettingDialog.kt:275: val label = if (!config.hideChapterLabel) "þ½áÞèé" else ""
+io\legado\app\ui\book\manga\config\MangaFooterSettingDialog.kt:277: val name = if (!config.hideChapterName) "þ¼¼õ©ëÞ»Ø " else ""
+io\legado\app\ui\book\manga\config\MangaFooterSettingDialog.kt:279: val progressLabel = if (!config.hideProgressRatioLabel) "µÇ╗Þ┐øÕ║ª" else ""
+io\legado\app\ui\book\manga\config\MangaFooterSettingDialog.kt:282: val pageLabel = if (!config.hidePageNumberLabel) "ÚíÁµò░" else ""
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:19: PAGE_LEFT_TO_RIGHT -> "ÕìòÚíÁÕ╝Å´╝êõ╗ÄÕÀªÕê░ÕÅ│´╝ë"
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:20: PAGE_RIGHT_TO_LEFT -> "ÕìòÚíÁÕ╝Å´╝êõ╗ÄÕÅ│Õê░ÕÀª´╝ë"
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:21: PAGE_TOP_TO_BOTTOM -> "ÕìòÚíÁÕ╝Å´╝êõ╗Äõ©èÕê░õ©ï´╝ë"
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:22: WEBTOON -> "µØíµ╝½"
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:23: WEBTOON_WITH_GAP -> "µØíµ╝½´╝êÚíÁÚØóµ£ëþ®║ÚÜÖ´╝ë"
+io\legado\app\ui\book\manga\config\MangaScrollMode.kt:24: else -> "µ£¬þƒÑ"
+io\legado\app\ui\book\read\BaseReadBookActivity.kt:85: } ?: ReadBook.upMsg("µë¥õ©ìÕê░µûçõ╗Â")
+io\legado\app\ui\book\read\BaseReadBookActivity.kt:87: } ?: ReadBook.upMsg("µ▓íµ£ëµØâÚÖÉÞ«┐Úù«")
+io\legado\app\ui\book\read\BaseReadBookActivity.kt:107: title = "ÚÇëµï®õ╣ªþ▒ìµëÇÕ£¿µûçõ╗ÂÕñ╣"
+io\legado\app\ui\book\read\BaseReadBookActivity.kt:342: .setTitleText("ÚÇëµï®Õ╝ÇÕºïµùÑµ£ƒ")
+io\legado\app\ui\book\read\EffectiveReplacesDialog.kt:36: private val chineseConvert by lazy { ReplaceRule(0, "þ╣üþ«ÇÞ¢¼µìó") }
+io\legado\app\ui\book\read\ReadBookActivity.kt:1629: AppLog.put("µëºÞíîÕø¥þëçÚô¥µÄÑclickÚö«ÕÇ╝Õç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\ui\book\read\ReadBookActivity.kt:1820: bookText = page.text.replace(Regex("[Þó«Ûºü]"), "").trim()
+io\legado\app\ui\book\read\ReadMenu.kt:476: context.alert("þ½áÞèéÞÀ│Þ¢¼þí«Þ«ñ", "þí«Õ«ÜÞªüÞÀ│Þ¢¼þ½áÞèéÕÉù´╝ƒ") {
+io\legado\app\ui\book\read\ReadMenu.kt:476: context.alert("þ½áÞèéÞÀ│Þ¢¼þí«Þ«ñ", "þí«Õ«ÜÞªüÞÀ│Þ¢¼þ½áÞèéÕÉù´╝ƒ") {
+io\legado\app\ui\book\read\SearchMenu.kt:87: binding.tvCurrentChapter.text = "Õ¢ôÕëìþ½áÞèé: ${it.title}"
+io\legado\app\ui\book\read\TextActionMenu.kt:189: context.toastOnUi("Õêçµìóõ©║õ╗ÄÚÇëµï®þÜäÕ£░µû╣Õ╝ÇÕºïõ©Çþø┤µ£ùÞ»╗")
+io\legado\app\ui\book\read\TextActionMenu.kt:192: context.toastOnUi("Õêçµìóõ©║µ£ùÞ»╗ÚÇëµï®ÕåàÕ«╣")
+io\legado\app\ui\book\read\TextActionMenu.kt:226: AppLog.put("µëºÞíîµûçµ£¼ÞÅ£Õìòµôìõ¢£Õç║ÚöÖ\n$e", e, true)
+io\legado\app\ui\book\read\TextActionMenu.kt:264: context.toastOnUi("ÞÄÀÕÅûµûçÕ¡ùµôìõ¢£ÞÅ£ÕìòÕç║ÚöÖ:${it.localizedMessage}")
+io\legado\app\ui\book\read\config\BgTextConfigDialog.kt:283: AppLog.put("Õ»╝Õç║Õñ▒Þ┤Ñ:${it.localizedMessage}", it)
+io\legado\app\ui\book\read\config\FontSelectDialog.kt:140: AppLog.put("ÕèáÞ¢¢Õ¡ùõ¢ôµûçõ╗ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\read\config\FontSelectDialog.kt:212: AppLog.put("Þ»╗ÕÅûÕ¡ùõ¢ô ${item.name} Õç║ÚöÖ\n${it.localizedMessage}", it, true)
+io\legado\app\ui\book\read\config\HttpTtsEditDialog.kt:88: toastOnUi("õ┐ØÕ¡ÿµêÉÕèƒ")
+io\legado\app\ui\book\read\config\HttpTtsEditDialog.kt:92: toastOnUi("þÖ╗Õ¢òurlõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\book\read\config\ReadAloudConfigDialog.kt:89: toastOnUi("Úƒ│Úóæþ╝ôÕ¡ÿÕÀ▓µ©àþÉå")
+io\legado\app\ui\book\read\config\ReadAloudDialog.kt:123: toastOnUi("õ┐ØÕ¡ÿÞ«¥Õ«ÜµùÂÚù┤µêÉÕèƒ´╝ü")
+io\legado\app\ui\book\read\config\ReadAloudDialog.kt:152: val timeKeys = times.map { "$it ÕêåÚÆƒ" }
+io\legado\app\ui\book\read\config\ReadAloudDialog.kt:153: context?.selector("Þ«¥Õ«ÜµùÂÚù┤", timeKeys) { _, index ->
+io\legado\app\ui\book\read\config\ReadStyleDialog.kt:87: 1 -> " þ«Ç"
+io\legado\app\ui\book\read\config\ReadStyleDialog.kt:88: 2 -> " þ╣ü"
+io\legado\app\ui\book\read\config\ReadStyleDialog.kt:215: tvStyle.text = item.name.ifBlank { "µûçÕ¡ù" }
+io\legado\app\ui\book\read\config\SpeakEngineDialog.kt:112: cbName.text = "þ│╗þ╗ƒÚ╗ÿÞ«ñ"
+io\legado\app\ui\book\read\config\SpeakEngineDialog.kt:118: upTts(GSON.toJson(SelectItem("þ│╗þ╗ƒÚ╗ÿÞ«ñ", "")))
+io\legado\app\ui\book\read\config\SpeakEngineDialog.kt:171: AppLog.put("µ£ùÞ»╗Õ╝òµôÄþòîÚØóÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:105: val types = arrayOf("õ©ìÕêåµ«Á", "µîëÕ¡ùþ¼ªµò░Õêåµ«Á", "µîëµáçÕ┐ùÕ¡ùþ¼ªõ©▓Õêåµ«Á", "µ¡úÕêÖÞí¿Þ¥¥Õ╝ÅÕêåµ«Á")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:105: val types = arrayOf("õ©ìÕêåµ«Á", "µîëÕ¡ùþ¼ªµò░Õêåµ«Á", "µîëµáçÕ┐ùÕ¡ùþ¼ªõ©▓Õêåµ«Á", "µ¡úÕêÖÞí¿Þ¥¥Õ╝ÅÕêåµ«Á")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:105: val types = arrayOf("õ©ìÕêåµ«Á", "µîëÕ¡ùþ¼ªµò░Õêåµ«Á", "µîëµáçÕ┐ùÕ¡ùþ¼ªõ©▓Õêåµ«Á", "µ¡úÕêÖÞí¿Þ¥¥Õ╝ÅÕêåµ«Á")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:105: val types = arrayOf("õ©ìÕêåµ«Á", "µîëÕ¡ùþ¼ªµò░Õêåµ«Á", "µîëµáçÕ┐ùÕ¡ùþ¼ªõ©▓Õêåµ«Á", "µ¡úÕêÖÞí¿Þ¥¥Õ╝ÅÕêåµ«Á")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:108: alert(title = "ÚÇëµï®µáçÚóÿÕêåµ«Áµ¿íÕ╝Å") {
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:112: positiveButton("þí«Õ«Ü") {
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:113: toastOnUi("Õêåµ«Áµ¿íÕ╝ÅÕÀ▓Þ«¥þ¢«õ©║´╝Ü${types[ReadBookConfig.titleSegType]}")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:116: negativeButton("ÕÅûµÂê")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:123: alert(title = "Þ«¥þ¢«Õêåµ«ÁÕ¡ùþ¼ªµò░") {
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:127: editView.hint = "Þ¥ôÕàÑÕêåµ«ÁÕ¡ùþ¼ªµò░"
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:135: toastOnUi("Õêåµ«ÁÕ¡ùþ¼ªµò░Þ«¥þ¢«õ©║ $value")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:138: toastOnUi("Þ»ÀÞ¥ôÕàÑµ£ëµòêµò░Õ¡ù")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:146: alert(title = "Þ«¥þ¢«Õêåµ«ÁµáçÕ┐ù") {
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:150: editLayout.hint = "Þ¥ôÕàÑÕñÜõ©¬µáçÕ┐ù´╝îþö¿Þï▒µûçÚÇùÕÅÀÕêåÚÜö´╝îõ¥ïÕªé´╝Üþ½á,Õø×,þ»ç"
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:158: toastOnUi("Õêåµ«ÁµáçÕ┐ùÞ«¥þ¢«õ©║ \"$value\"")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:161: toastOnUi("µáçÕ┐ùõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:169: alert(title = "Þ«¥þ¢«µ¡úÕêÖÕêåµ«ÁÞºäÕêÖ") {
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:173: editLayout.hint = "õ¥ïÕªé: [þ½áÕø×þ»ç] µêû (þ¼¼.{1,3}þ½á)"
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:185: toastOnUi("µ¡úÕêÖÞºäÕêÖÕÀ▓õ┐ØÕ¡ÿ")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:188: toastOnUi("µ¡úÕêÖÞí¿Þ¥¥Õ╝Åµá╝Õ╝ÅÚöÖÞ»»")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:191: toastOnUi("ÞºäÕêÖõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\book\read\config\TipConfigDialog.kt:199: toastOnUi("Õ¢ôÕëìÕêåµ«Áµ¿íÕ╝ÅµùáÚ£ÇÚàìþ¢«ÕÅéµò░")
+io\legado\app\ui\book\read\page\ContentTextView.kt:108: check(!visibleRect.isEmpty) { "visibleRect õ©║þ®║" }
+io\legado\app\ui\book\read\page\entities\TextChapter.kt:189: stringBuilder.append(pages[index].text.replace(Regex("[Þó«Ûºü]"), " "))
+io\legado\app\ui\book\read\page\entities\TextChapter.kt:270: throw IllegalStateException("ÕÀ▓þ╗ÅµÄÆþëêÞ┐çõ║å")
+io\legado\app\ui\book\read\page\entities\TextLine.kt:268: val text = "õ©Çõ║î õ©ë"
+io\legado\app\ui\book\read\page\provider\ChapterProvider.kt:41: const val srcReplaceChar = "Þó«" //Ôû®Ôûú õ©¿Ô╝ü //µìóµêÉÞó«´╝îÞ┐Öµÿ»õ©ìÕ║öÞ»ÑÕ¡ÿÕ£¿þÜäµ▒ëÕ¡ù,µø┐µìóõ©║þÑó
+io\legado\app\ui\book\read\page\provider\ChapterProvider.kt:378: textPage.text = stringBuilder.toString().ifEmpty { "µ£¼ÚíÁµùáµûçÕ¡ùÕåàÕ«╣" }
+io\legado\app\ui\book\read\page\provider\ChapterProvider.kt:409: textPage.text = stringBuilder.toString().ifEmpty { "µ£¼ÚíÁµùáµûçÕ¡ùÕåàÕ«╣" }
+io\legado\app\ui\book\read\page\provider\ChapterProvider.kt:447: textPage.text = stringBuilder.toString().ifEmpty { "µ£¼ÚíÁµùáµûçÕ¡ùÕåàÕ«╣" }
+io\legado\app\ui\book\read\page\provider\TextChapterLayout.kt:163: AppLog.put("Þ░âþö¿Õ©âÕ▒ÇÞ┐øÕ║ªþøæÕÉ¼Õø×Þ░âÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\ui\book\read\page\provider\TextChapterLayout.kt:190: AppLog.put("Þ░âþö¿Õ©âÕ▒ÇÞ┐øÕ║ªþøæÕÉ¼Õø×Þ░âÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\ui\book\read\page\provider\TextChapterLayout.kt:200: AppLog.put("Þ░âþö¿Õ©âÕ▒ÇÞ┐øÕ║ªþøæÕÉ¼Õø×Þ░âÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\ui\book\read\page\provider\TextChapterLayout.kt:216: AppLog.put("Þ░âþö¿Õ©âÕ▒ÇÞ┐øÕ║ªþøæÕÉ¼Õø×Þ░âÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\ui\book\read\page\provider\TextMeasure.kt:10: private var chineseCommonWidth = paint.measureText("õ©Ç")
+io\legado\app\ui\book\read\page\provider\TextMeasure.kt:138: chineseCommonWidth = paint.measureText("õ©Ç")
+io\legado\app\ui\book\read\page\provider\ZhLayout.kt:39: ?: getDesiredWidth("µêæ", textPaint).also {
+io\legado\app\ui\book\search\SearchScopeDialog.kt:142: AppLog.put("ÕñÜÕêåþ╗ä/õ╣ªµ║ÉþòîÚØóµø┤µû░õ╣ªµ║ÉÕç║ÚöÖ", it)
+io\legado\app\ui\book\search\SearchScreen.kt:246: contentDescription = "õ╣ªµ║Éþ«íþÉå"
+io\legado\app\ui\book\search\SearchScreen.kt:384: resultText = if (showResultCountCard) "þ╗ôµ×£ ${state.results.size}" else null,
+io\legado\app\ui\book\search\SearchScreen.kt:385: sourceText = if (showSourceProgressCard) " ┬À Þ┐øÕ║ª ${state.processedSources}/${state.totalSources}" else null,
+io\legado\app\ui\book\search\SearchScreen.kt:445: "${it.scopeDisplay}Õêåþ╗äµÉ£þ┤óþ╗ôµ×£õ©║þ®║´╝îµÿ»ÕÉªÕà│Úù¡þ▓¥ÕçåµÉ£þ┤ó´╝ƒ"
+io\legado\app\ui\book\search\SearchScreen.kt:447: "${it.scopeDisplay}Õêåþ╗äµÉ£þ┤óþ╗ôµ×£õ©║þ®║´╝îµÿ»ÕÉªÕêçµìóÕê░Õà¿Úâ¿Õêåþ╗ä´╝ƒ"
+io\legado\app\ui\book\source\debug\BookSourceDebugActivity.kt:80: startSearch(query ?: "µêæþÜä")
+io\legado\app\ui\book\source\debug\BookSourceDebugActivity.kt:135: adapter.addItem("ÞÄÀÕÅûÕÅæþÄ░Õç║ÚöÖ\n${it.url}")
+io\legado\app\ui\book\source\debug\BookSourceDebugActivity.kt:145: selector("ÚÇëµï®ÕÅæþÄ░", exploreKindTitles) { _, index ->
+io\legado\app\ui\book\source\debug\BookSourceDebugActivity.kt:153: adapter.addItem("ÞÄÀÕÅûÕÅæþÄ░Õç║ÚöÖ JSON µò░µì«ÚöÖÞ»»\n$e")
+io\legado\app\ui\book\source\debug\BookSourceDebugActivity.kt:189: toastOnUi("µ£¬ÞÄÀÕÅûÕê░õ╣ªµ║É")
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:589: SelectItem("µÅÆÕàÑURLÕÅéµò░", "urlOption"),
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:590: SelectItem("õ╣ªµ║ÉµòÖþ¿ï", "ruleHelp"),
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:591: SelectItem("jsµòÖþ¿ï", "jsHelp"),
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:592: SelectItem("µ¡úÕêÖµòÖþ¿ï", "regexHelp"),
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:599: SelectItem("µÅÆÕàÑÕêåþ╗ä", "addGroup")
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:605: SelectItem("ÚÇëµï®µûçõ╗Â", "selectFile")
+io\legado\app\ui\book\source\edit\BookSourceEditActivity.kt:647: source.getDisplayVariableComment("µ║ÉÕÅÿÚçÅÕÅ»Õ£¿jsõ©¡ÚÇÜÞ┐çsource.getVariable()ÞÄÀÕÅû")
+io\legado\app\ui\book\source\manage\BookSourceActivity.kt:383: AppLog.put("õ╣ªµ║ÉþòîÚØóµø┤µû░õ╣ªµ║ÉÕç║ÚöÖ", it)
+io\legado\app\ui\book\source\manage\BookSourceActivity.kt:646: if (group.contains("Õñ▒µòê") && searchView.query.isEmpty()) {
+io\legado\app\ui\book\source\manage\BookSourceActivity.kt:647: searchView.setQuery("Õñ▒µòê", true)
+io\legado\app\ui\book\source\manage\BookSourceActivity.kt:648: toastOnUi("ÕÅæþÄ░µ£ëÕñ▒µòêõ╣ªµ║É´╝îÕÀ▓õ©║µé¿Þç¬Õè¿þ¡øÚÇë´╝ü")
+io\legado\app\ui\book\source\manage\BookSourceAdapter.kt:40: private val finalMessageRegex = Regex("µêÉÕèƒ|Õñ▒Þ┤Ñ")
+io\legado\app\ui\book\source\manage\BookSourceAdapter.kt:240: Debug.updateFinalMessage(item.bookSourceUrl, "µáíÚ¬îÕñ▒Þ┤Ñ")
+io\legado\app\ui\book\toc\TocViewModel.kt:360: throw NotImplementedError("TOC õ©ìÚ£ÇÞªüÕÉæÕÉÄÕÅìÞ¢¼Õ«×õ¢ô")
+io\legado\app\ui\book\toc\rule\TxtTocRuleDialog.kt:121: AppLog.put("TXTþø«Õ¢òÞºäÕêÖÕ»╣Þ»ØµíåÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\book\toc\rule\TxtTocRuleViewModel.kt:120: else -> throw Exception("µá╝Õ╝Åõ©ìµ¡úþí«")
+io\legado\app\ui\book\toc\rule\TxtTocRuleViewModel.kt:150: context.toastOnUi("Õë¬Þ┤┤µØ┐µ▓íµ£ëÕåàÕ«╣")
+io\legado\app\ui\book\toc\rule\TxtTocRuleViewModel.kt:156: context.toastOnUi("µá╝Õ╝Åõ©ìÕ»╣")
+io\legado\app\ui\config\CoverRuleConfigDialog.kt:40: toastOnUi("µÉ£þ┤óurlÕÆîcoverÞºäÕêÖõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\config\DirectLinkUploadConfig.kt:67: toastOnUi("Õë¬Þ┤┤µØ┐õ©║þ®║µêûµá╝Õ╝Åõ©ìÕ»╣")
+io\legado\app\ui\config\DirectLinkUploadConfig.kt:86: toastOnUi("õ©èõ╝áUrlõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\config\DirectLinkUploadConfig.kt:90: toastOnUi("õ©ïÞ¢¢UrlÞºäÕêÖõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\config\DirectLinkUploadConfig.kt:94: toastOnUi("µ│¿Úçèõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\config\backupConfig\BackupConfigViewModel.kt:58: onError(e.localizedMessage ?: "Õñçõ╗¢Õç║ÚöÖ")
+io\legado\app\ui\config\backupConfig\BackupConfigViewModel.kt:79: onError(e.localizedMessage ?: "µüóÕñìÕç║ÚöÖ")
+io\legado\app\ui\config\coverConfig\CoverConfigScreen.kt:137: description = if (coverCount > 0) "ÕÀ▓ÚÇëµï® $coverCount Õ╝áÕø¥þëç" else stringResource(
+io\legado\app\ui\config\coverConfig\CoverConfigScreen.kt:194: description = if (coverCount > 0) "ÕÀ▓ÚÇëµï® $coverCount Õ╝áÕø¥þëç" else stringResource(
+io\legado\app\ui\config\coverConfig\CoverRuleConfigSheet.kt:122: appCtx.toastOnUi("µÉ£þ┤óurlÕÆîcoverÞºäÕêÖõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\config\otherConfig\DirectLinkUploadBottomSheet.kt:91: text = "Õ»╝ÕàÑÚ╗ÿÞ«ñ",
+io\legado\app\ui\config\otherConfig\DirectLinkUploadBottomSheet.kt:127: context.toastOnUi("Õë¬Þ┤┤µØ┐õ©║þ®║µêûµá╝Õ╝Åõ©ìÕ»╣")
+io\legado\app\ui\config\otherConfig\DirectLinkUploadBottomSheet.kt:189: context.toastOnUi("Þ»ÀÕí½ÕåÖÕ«îµò┤õ┐íµü»")
+io\legado\app\ui\config\themeConfig\ThemeConfigScreen.kt:192: MiuixText("Miuix þø«Õëìõ©║µÁïÞ»òõ©╗Úóÿ´╝îõ©öõ©ìÕ»╣Õƒ║õ║ÄViewþÜäþòîÚØóþöƒµòê´╝ü")
+io\legado\app\ui\config\themeConfig\ThemeListDialog.kt:127: context.share(json, "õ©╗ÚóÿÕêåõ║½")
+io\legado\app\ui\dict\DictDialog.kt:69: showEmptyView("µÜéµùáÕÅ»þö¿Þ»ìÕà©")
+io\legado\app\ui\dict\DictDialog.kt:96: showEmptyView("µ▓íµ£ëµƒÑÞ»óÕê░þ╗ôµ×£")
+io\legado\app\ui\dict\rule\DictRuleViewModel.kt:93: else -> throw Exception("µá╝Õ╝Åõ©ìµ¡úþí«")
+io\legado\app\ui\dict\rule\DictRuleViewModel.kt:155: context.toastOnUi("Õë¬Þ┤┤µØ┐µ▓íµ£ëÕåàÕ«╣")
+io\legado\app\ui\dict\rule\DictRuleViewModel.kt:161: context.toastOnUi("µá╝Õ╝Åõ©ìÕ»╣")
+io\legado\app\ui\file\FilePickerDialog.kt:122: toastOnUi("Þ»ÀÚÇëµï®µûçõ╗Â")
+io\legado\app\ui\file\FilePickerDialog.kt:135: editView.hint = "µûçõ╗ÂÕñ╣ÕÉì"
+io\legado\app\ui\file\FilePickerDialog.kt:141: toastOnUi("µûçõ╗ÂÕñ╣ÕÉìõ©ìÞâ¢õ©║þ®║")
+io\legado\app\ui\file\HandleFileViewModel.kt:29: AppLog.put("õ©èõ╝áµûçõ╗ÂÕñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\login\SourceLoginDialog.kt:708: AppLog.put("þÖ╗Õ¢òÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\ui\login\SourceLoginDialog.kt:709: context?.toastOnUi("þÖ╗Õ¢òÕç║ÚöÖ\n${e.localizedMessage}")
+io\legado\app\ui\main\MainActivity.kt:692: title = route.title ?: "µÄóþ┤ó",
+io\legado\app\ui\main\MainActivity.kt:884: alert(getString(R.string.draw), "µúÇµÁïÕê░ÚÿàÞ»╗ÕÅæþöƒõ║åÕ┤®µ║â´╝îµÿ»ÕÉªµëôÕ╝ÇÕ┤®µ║âµùÑÕ┐ùõ╗Ñõ¥┐µèÑÕæèÚù«Úóÿ´╝ƒ") {
+io\legado\app\ui\main\bookshelf\BookshelfConfigSheet.kt:195: title = "µÉ£þ┤óµîëÚÆ«õ╝ÿÕàêµëôÕ╝Çþ¡øÚÇëµáÅ",
+io\legado\app\ui\replace\ReplaceRuleViewModel.kt:82: _group.value = if (groupName == "Õà¿Úâ¿" || groupName.isNullOrBlank()) {
+io\legado\app\ui\replace\ReplaceRuleViewModel.kt:96: "µ£¬Õêåþ╗ä" -> repository.flowNoGroup()
+io\legado\app\ui\replace\ReplaceRuleViewModel.kt:149: else -> throw Exception("µá╝Õ╝Åõ©ìµ¡úþí«")
+io\legado\app\ui\replace\ReplaceRuleViewModel.kt:195: _eventChannel.send(BaseRuleEvent.ShowSnackbar("µêÉÕèƒÕ»╝ÕàÑ ${rulesToSave.size} µØíÞºäÕêÖ"))
+io\legado\app\ui\replace\edit\ReplaceEditViewModel.kt:26: val group: String = "Ú╗ÿÞ«ñ",
+io\legado\app\ui\replace\edit\ReplaceEditViewModel.kt:83: _uiState.update { it.copy(allGroups = listOf("Ú╗ÿÞ«ñ") + groups) }
+io\legado\app\ui\replace\edit\ReplaceEditViewModel.kt:93: group = rule.group ?: "Ú╗ÿÞ«ñ",
+io\legado\app\ui\replace\edit\ReplaceEditViewModel.kt:111: group = if (state.group == "Ú╗ÿÞ«ñ" || state.group.isBlank()) null else state.group
+io\legado\app\ui\replace\edit\ReplaceEditViewModel.kt:205: group = if (state.group == "Ú╗ÿÞ«ñ" || state.group.isBlank()) null else state.group
+io\legado\app\ui\rss\article\RssArticlesCompose.kt:114: AppLog.put("Þ«óÚÿàµûçþ½áþòîÚØóÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\rss\article\RssArticlesCompose.kt:300: state.isLoadingMore -> "ÕèáÞ¢¢õ©¡..."
+io\legado\app\ui\rss\article\RssArticlesCompose.kt:301: !state.hasMore -> "µ▓íµ£ëµø┤ÕñÜõ║å"
+io\legado\app\ui\rss\article\RssArticlesCompose.kt:302: state.errorMessage != null -> "ÕèáÞ¢¢Õñ▒Þ┤Ñ´╝îþé╣Õç╗ÚçìÞ»ò"
+io\legado\app\ui\rss\article\RssArticlesCompose.kt:303: else -> "õ©èµïëÕèáÞ¢¢µø┤ÕñÜ"
+io\legado\app\ui\rss\article\RssArticlesViewModel.kt:74: AppLog.put("rssÞÄÀÕÅûÕåàÕ«╣Õñ▒Þ┤Ñ", it)
+io\legado\app\ui\rss\article\RssArticlesViewModel.kt:104: AppLog.put("rssÞÄÀÕÅûÕåàÕ«╣Õñ▒Þ┤Ñ", it)
+io\legado\app\ui\rss\article\RssSortRouteScreen.kt:102: context.toastOnUi("µ║Éõ©ìÕ¡ÿÕ£¿")
+io\legado\app\ui\rss\article\RssSortRouteScreen.kt:105: val comment = source.getDisplayVariableComment("µ║ÉÕÅÿÚçÅÕÅ»Õ£¿jsõ©¡ÚÇÜÞ┐çsource.getVariable()ÞÄÀÕÅû")
+io\legado\app\ui\rss\article\RssSortRouteScreen.kt:157: context.toastOnUi("ÚçìÕ«ÜÕÉæþ¡ûþòÑÕÀ▓µø┤µû░")
+io\legado\app\ui\rss\article\RssSortViewModel.kt:110: appCtx.toastOnUi("õ┐ØÕ¡ÿÕñ▒Þ┤Ñ: ${it.localizedMessage}")
+io\legado\app\ui\rss\favorites\RssFavoritesScreen.kt:187: message = "Þ┐ÿµ▓íµ£ëµöÂÞùÅÞ«óÚÿà´╝ü",
+io\legado\app\ui\rss\read\RedirectPolicy.kt:20: RedirectPolicy.ALLOW_ALL -> "ÕàüÞ«©µëÇµ£ëÞÀ│Þ¢¼"
+io\legado\app\ui\rss\read\RedirectPolicy.kt:21: RedirectPolicy.ASK_ALWAYS -> "µÇ╗µÿ»Þ»óÚù«"
+io\legado\app\ui\rss\read\RedirectPolicy.kt:22: RedirectPolicy.ASK_CROSS_ORIGIN -> "ÞÀ¿ÕƒƒÞ»óÚù«"
+io\legado\app\ui\rss\read\RedirectPolicy.kt:23: RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> "ÕÉîÕƒƒÞ»óÚù«´╝îÞÀ¿Õƒƒµïªµê¬"
+io\legado\app\ui\rss\read\RedirectPolicy.kt:24: RedirectPolicy.BLOCK_CROSS_ORIGIN -> "µïªµê¬ÞÀ¿Õƒƒ"
+io\legado\app\ui\rss\read\RedirectPolicy.kt:25: RedirectPolicy.BLOCK_ALL -> "µïªµê¬µëÇµ£ë"
+io\legado\app\ui\rss\read\RssJsExtensions.kt:85: activity.toastOnUi("ÕÀ▓Õ£¿þÖ╗Õ¢òþòîÚØó")
+io\legado\app\ui\rss\read\RssJsExtensions.kt:92: activity.toastOnUi("µ║Éµ£¬Úàìþ¢«þÖ╗Õ¢ò")
+io\legado\app\ui\rss\read\RssReadRouteScreen.kt:322: context.toastOnUi("ÚçìÕ«ÜÕÉæþ¡ûþòÑÕÀ▓µø┤µû░")
+io\legado\app\ui\rss\read\RssReadWebController.kt:174: AppLog.put("${source.getTag()}: urlÞÀ│Þ¢¼µïªµê¬jsÕç║ÚöÖ", it)
+io\legado\app\ui\rss\read\RssReadWebController.kt:177: AppLog.put("${source.getTag()}: urlÞÀ│Þ¢¼µïªµê¬jsµëºÞíîÞÇùµùÂÞ┐çÚò┐")
+io\legado\app\ui\rss\read\VisibleWebView.kt:87: context.toastOnUi("µ£¬ÞÄÀÕÅûÕê░ÚÇëõ©¡µûçµ£¼´╝îÞ»ÀÚçìÞ»ò")
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:270: "urlÞÀ│Þ¢¼µïªµê¬(js, Þ┐öÕø×trueµïªµê¬,jsÕÅÿÚçÅurl,ÕÅ»õ╗ÑÚÇÜÞ┐çjsµëôÕ╝Çurl,µ»öÕªéÞ░âþö¿ÚÿàÞ»╗µÉ£þ┤ó,µÀ╗Õèáõ╣ªµ×Âþ¡ë,þ«ÇÕîûÞºäÕêÖÕåÖµ│ò,õ©ìþö¿webView jsµ│¿ÕàÑ)"
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:347: source.getDisplayVariableComment("µ║ÉÕÅÿÚçÅÕÅ»Õ£¿jsõ©¡ÚÇÜÞ┐çsource.getVariable()ÞÄÀÕÅû")
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:367: SelectItem("µÅÆÕàÑURLÕÅéµò░", "urlOption"),
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:368: SelectItem("Þ«óÚÿàµ║ÉµòÖþ¿ï", "ruleHelp"),
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:369: SelectItem("jsµòÖþ¿ï", "jsHelp"),
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:370: SelectItem("µ¡úÕêÖµòÖþ¿ï", "regexHelp"),
+io\legado\app\ui\rss\source\edit\RssSourceEditActivity.kt:371: SelectItem("ÚÇëµï®µûçõ╗Â", "selectFile"),
+io\legado\app\ui\rss\source\manage\RssSourceViewModel.kt:124: "µ£¬Õêåþ╗ä"
+io\legado\app\ui\rss\source\manage\RssSourceViewModel.kt:179: else -> throw Exception("µá╝Õ╝Åõ©ìµ¡úþí«")
+io\legado\app\ui\rss\subscription\RuleSubScreen.kt:241: text = "Þ«óÚÿàþ▒╗Õ×ï",
+io\legado\app\ui\welcome\WebDavFragment.kt:155: AppLog.put("µüóÕñìÕñçõ╗¢Õç║ÚöÖWebDavError\n${it.localizedMessage}", it)
+io\legado\app\ui\widget\CollapsibleHeader.kt:87: contentDescription = if (isCollapsed) "Õ▒òÕ╝Ç" else "µèÿÕÅá",
+io\legado\app\ui\widget\CollapsibleHeader.kt:87: contentDescription = if (isCollapsed) "Õ▒òÕ╝Ç" else "µèÿÕÅá",
+io\legado\app\ui\widget\components\SearchBar.kt:36: placeholder: String = "µÉ£þ┤ó...",
+io\legado\app\ui\widget\components\alert\AppAlertDialog.kt:36: confirmText: String = "þí«Õ«Ü", // Ú╗ÿÞ«ñµûçÕ¡ù
+io\legado\app\ui\widget\components\alert\AppAlertDialog.kt:38: dismissText: String = "ÕÅûµÂê",
+io\legado\app\ui\widget\components\alert\AppAlertDialog.kt:147: confirmText: String = "þí«Õ«Ü",
+io\legado\app\ui\widget\components\alert\AppAlertDialog.kt:149: dismissText: String = "ÕÅûµÂê",
+io\legado\app\ui\widget\components\book\SearchBookItem.kt:69: contentDescription = "ÕÀ▓Õ£¿õ╣ªµ×Â",
+io\legado\app\ui\widget\components\book\SearchBookItem.kt:79: contentDescription = "ÕÉîÕÉìõ╣ªþ▒ì",
+io\legado\app\ui\widget\components\book\SearchBookItem.kt:131: text = "µ£Çµû░: $latestChapter",
+io\legado\app\ui\widget\components\book\SearchBookItem.kt:191: BookShelfState.IN_SHELF -> "ÕÀ▓Õ£¿õ╣ªµ×Â"
+io\legado\app\ui\widget\components\book\SearchBookItem.kt:192: BookShelfState.SAME_NAME_AUTHOR -> "ÕÉîÕÉìõ╣ªþ▒ì"
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:53: label = "ÕÄƒµûç",
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:63: label = "µæÿÞªü/þ¼öÞ«░",
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:78: text = "ÕêáÚÖñ"
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:90: text = "õ┐ØÕ¡ÿ"
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:100: title = "þí«Þ«ñÕêáÚÖñ",
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:101: text = "õ¢áþí«Õ«ÜÞªüÕêáÚÖñÞ┐ÖµØíõ╣ªþ¡¥ÕÉù´╝ƒ",
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:102: confirmText = "ÕêáÚÖñ",
+io\legado\app\ui\widget\components\bookmark\BookmarkEditSheet.kt:107: dismissText = "ÕÅûµÂê",
+io\legado\app\ui\widget\components\button\ToggleChip.kt:40: checkedContentDescription: String = "ÕÀ▓ÚÇëµï®",
+io\legado\app\ui\widget\components\button\ToggleChip.kt:41: uncheckedContentDescription: String = "µ£¬ÚÇëµï®"
+io\legado\app\ui\widget\components\dialog\ColorPickerSheet.kt:73: title = "ÚÇëµï®Úó£Þë▓",
+io\legado\app\ui\widget\components\dialog\ColorPickerSheet.kt:126: label = "Þë▓ÕÇ╝",
+io\legado\app\ui\widget\components\dialog\TextListInputDialog.kt:60: text = "Õ╗║Þ««:",
+io\legado\app\ui\widget\components\filePicker\FilePickerSheet.kt:57: text = "ÕñÜÚÇëÚí╣þø«",
+io\legado\app\ui\widget\components\list\ListScaffold.kt:53: searchPlaceholder: String = "µÉ£þ┤ó...",
+io\legado\app\ui\widget\components\list\ListScaffold.kt:67: tooltipText = "µÀ╗Õèá"
+io\legado\app\ui\widget\components\rules\RuleListScaffold.kt:46: searchPlaceholder: String = "µÉ£þ┤ó...",
+io\legado\app\ui\widget\components\rules\RuleListScaffold.kt:64: tooltipText = "µÀ╗Õèá"
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:63: state.isLoading -> "Þ»Àþ¿ìÕÉÄ..."
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:64: isSelecting -> "ÕÀ▓ÚÇëµï® ${state.selectedIds.size}/${state.items.size}"
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:74: contentDescription = if (isSelecting) "ÕÅûµÂêÚÇëµï®" else "Þ┐öÕø×"
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:74: contentDescription = if (isSelecting) "ÕÅûµÂêÚÇëµï®" else "Þ┐öÕø×"
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:84: contentDescription = "µÉ£þ┤ó"
+io\legado\app\ui\widget\components\topbar\DynamicTopAppBar.kt:95: contentDescription = "µø┤ÕñÜ"
+io\legado\app\ui\widget\dialog\BottomWebViewDialog.kt:443: AppLog.put("WebViewÕèáÞ¢¢Õñ▒Þ┤Ñ", it)
+io\legado\app\ui\widget\dialog\BottomWebViewDialog.kt:811: AppLog.put("µïªµê¬Þ»Àµ▒éÕñäþÉåÕñ▒Þ┤Ñ", e)
+io\legado\app\ui\widget\dialog\PhotoDialog.kt:94: if (success) "ÕÀ▓õ┐ØÕ¡ÿÕê░þø©Õåî" else "õ┐ØÕ¡ÿÕñ▒Þ┤Ñ"
+io\legado\app\ui\widget\dialog\PhotoDialog.kt:94: if (success) "ÕÀ▓õ┐ØÕ¡ÿÕê░þø©Õåî" else "õ┐ØÕ¡ÿÕñ▒Þ┤Ñ"
+io\legado\app\ui\widget\dialog\TextDialog.kt:87: content.substring(0, 32 * 1024) + "\n\nµò░µì«Õñ¬Õñº´╝îµùáµ│òÕà¿Úâ¿µÿ¥þñ║ÔÇª"
+io\legado\app\ui\widget\keyboard\KeyboardAssistsConfig.kt:80: AppLog.put("Þ¥àÕè®µîëÚö«Úàìþ¢«ÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\widget\keyboard\KeyboardAssistsConfig.kt:96: setTitle("Þ¥àÕè®µîëÚö«")
+io\legado\app\ui\widget\keyboard\KeyboardToolPop.kt:113: AppLog.put("Úö«þøÿÕ©«Õè®µÁ«þ¬ùÞÄÀÕÅûµò░µì«Õñ▒Þ┤Ñ\n${it.localizedMessage}", it)
+io\legado\app\ui\widget\number\NumberPickerDialog.kt:80: inputLayout?.hint = "Þ¥ôÕàÑÞîâÕø┤: $min - $max"
+io\legado\app\ui\widget\number\NumberPickerDialog.kt:97: inputLayout?.error = "Þ»ÀÞ¥ôÕàÑ $min - $max ÞîâÕø┤ÕåàþÜäµò░Õ¡ù"
+io\legado\app\ui\widget\recycler\LoadMoreView.kt:79: text.ifEmpty { context.getString(R.string.error_load_msg, "þé╣Õç╗µƒÑþ£ïÞ»ªµâà") }
+io\legado\app\utils\ChineseUtils.kt:32: "µºâ",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:33: "ÕêÆµº│", "Õêùµá╣", "Úø¬µó¿", "Úø¬þ│ò", "ÕñÜÕú½", "ÞÁÀÕÅ©", "ÞèØÕú½", "µ▓ÖÞè¼", "µ»ìÚƒ│",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:34: "ÕìÄõ╣É", "µ░æõ╣É", "µÖÂÕàâ", "µÖÂþëç", "µÿáÕâÅ", "µÿÄÞªå", "µÿÄþ×¡", "µû░Õèø", "µû░Õû╗",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:35: "ÚøÂÚîó", "ÚøÂÚÆ▒", "ÚøóþÀÜ", "þóƒþëç", "µ¿íþÁä", "µíîþÉâ", "µíêÚá¡", "µ®ƒÞ╗è", "Úø╗µ╝┐",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:36: "Ú││µó¿", "Ú¡öµêÆ", "Þ╝ëÕàÑ", "ÞÅ▓µ×ù", "µò┤ÕÉê", "Þ«èµò©", "Þºúþó╝", "µòúÚÆ▒", "µÅÆµ░┤",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:37: "µê┐Õ▒ï", "µê┐õ╗À", "Õ┐½ÕÅû", "Õ¥ÀÕú½", "Õ╗║þ½ï", "Õ©©Õ╝Å", "Õ©¡õ©╣", "Õ©âµ«è", "Õ©âÕ©î",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:38: "ÕÀ┤Õôê", "ÕÀ¿Úøå", "Õñ£Õ¡ª", "ÕÉæÚçÅ", "ÕìèÕ¢ó", "ÕèáÕ¢¡", "ÕêùÕì░", "Õç¢Õ╝Å", "Õà¿Õ¢ó",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:39: "Õàëþóƒ", "õ╗ïÚØó", "õ╣│Úà¬", "µ▓êÞê╣", "µ░©þÅì", "µ╝öÕîû", "þëøµ▓╣", "þø©Õ«╣", "þúüþóƒ",
+io\legado\app\utils\ChineseUtils.kt:40: "ÞÅ▓µ×ù", "ÞªÅÕëç", "ÚàÁþ┤á", "ÚøÀµá╣", "ÚÑ¡þøÆ",
+io\legado\app\utils\ChineseUtils.kt:40: "ÞÅ▓µ×ù", "ÞªÅÕëç", "ÚàÁþ┤á", "ÚøÀµá╣", "ÚÑ¡þøÆ",
+io\legado\app\utils\ChineseUtils.kt:40: "ÞÅ▓µ×ù", "ÞªÅÕëç", "ÚàÁþ┤á", "ÚøÀµá╣", "ÚÑ¡þøÆ",
+io\legado\app\utils\ChineseUtils.kt:40: "ÞÅ▓µ×ù", "ÞªÅÕëç", "ÚàÁþ┤á", "ÚøÀµá╣", "ÚÑ¡þøÆ",
+io\legado\app\utils\ChineseUtils.kt:40: "ÞÅ▓µ×ù", "ÞªÅÕëç", "ÚàÁþ┤á", "ÚøÀµá╣", "ÚÑ¡þøÆ",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:41: "ÞÀ»µÿôµû»", "ÚØ×ÕÉîµ¡Ñ", "Õç║þºƒÞ¢ª", "Õæ¿µØ░ÕÇ½", "Ú®¼ÚôâÞû»", "Úª¼Úê┤Þû»", "µ®ƒµó░õ║║", "Úø╗Õû«Þ╗è",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:42: "Úø╗µëÂµó»", "Úƒ│µòêÕìí", "ÚúåÞ╗èµùÅ", "Ú╗×ÚÖúÕ£û", "ÕÇïÕàÑþÉâ", "ÚíåÚÇ▓þÉâ", "µ▓âÕ░ôµ▓â", "µÖÂþëçÚøå",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:43: "µû»þôªÕÀ┤", "µû£ÞºÆÕÀÀ", "µêÿÕêùÞê░", "Õ┐½ÚÇƒÚØó", "Õ©îþë╣µïë", "Õñ¬þ®║µó¡", "ÕÉÉþôªÚ¡»", "ÕÉëÕ©âÕáñ",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:44: "ÕÉëÕ©âÕ£░", "ÕÅ▓Õñ¬µ×ù", "ÕìùÕå░µ┤ï", "Õî║Õƒƒþ¢æ", "µ│óµ£¡Úéú", "Þºúµ×ÉÕ║ª", "ÚàÀµ┤øþ▒│", "ÚçæÕñÅµ▓Ö",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:45: "Ú¡öþì©þ┤ÇÕàâ", "Ú½ÿþ®║Õ¢êÞÀ│", "ÚôüÞ¥¥Õ░╝ÕÅÀ", "Õñ¬þ®║µêÿÕú½", "ÕƒâÕÅèÕªûÕÉÄ", "ÕÉëÚçîÕÀ┤µû»", "ÚÖäÕèáÕàâõ╗Â",
+io\legado\app\utils\ChineseUtils.kt:46: "Ú¡öÚ¼╝þÁéþÁÉÞÇà", "þ┤öµûçÕ¡ùµ¬öµíê", "ÕÑçÕ╣╗Ú¡öµ│òMelody", "Õêùµö»µòªµû»þÖ╗"
+io\legado\app\utils\ChineseUtils.kt:46: "Ú¡öÚ¼╝þÁéþÁÉÞÇà", "þ┤öµûçÕ¡ùµ¬öµíê", "ÕÑçÕ╣╗Ú¡öµ│òMelody", "Õêùµö»µòªµû»þÖ╗"
+io\legado\app\utils\ChineseUtils.kt:46: "Ú¡öÚ¼╝þÁéþÁÉÞÇà", "þ┤öµûçÕ¡ùµ¬öµíê", "ÕÑçÕ╣╗Ú¡öµ│òMelody", "Õêùµö»µòªµû»þÖ╗"
+io\legado\app\utils\ChineseUtils.kt:46: "Ú¡öÚ¼╝þÁéþÁÉÞÇà", "þ┤öµûçÕ¡ùµ¬öµíê", "ÕÑçÕ╣╗Ú¡öµ│òMelody", "Õêùµö»µòªµû»þÖ╗"
+io\legado\app\utils\FileUtils.kt:616: fun getDateTime(path: String, format: String = "yyyyÕ╣┤MMµ£êddµùÑHH:mm"): String {
+io\legado\app\utils\GsonExtensions.kt:64: throw JsonSyntaxException("Þºúµ×ÉÕ¡ùþ¼ªõ©▓õ©║þ®║")
+io\legado\app\utils\GsonExtensions.kt:73: throw JsonSyntaxException("Þºúµ×ÉÕ¡ùþ¼ªõ©▓õ©║þ®║")
+io\legado\app\utils\GsonExtensions.kt:85: throw JsonSyntaxException("Þºúµ×ÉµÁüõ©║þ®║")
+io\legado\app\utils\GsonExtensions.kt:95: throw JsonSyntaxException("Þºúµ×ÉµÁüõ©║þ®║")
+io\legado\app\utils\ImageUtils.kt:34: AppLog.putDebug("${src}ÞºúÕ»åÚöÖÞ»»", it)
+io\legado\app\utils\ImageUtils.kt:53: AppLog.putDebug("${src}ÞºúÕ»åÚöÖÞ»»", it)
+io\legado\app\utils\LogUtils.kt:86: AppLog.putNotSave("ÕêøÕ╗║fileHandlerÕç║ÚöÖ\n$e", e)
+io\legado\app\utils\NetworkUtils.kt:186: AppLog.put("þ¢æÕØÇµï╝µÄÑÕç║ÚöÖ\n${e.localizedMessage}", e)
+io\legado\app\utils\ReadRecordTimeFormatter.kt:8: val d = if (days > 0) "${days}Õñ®" else ""
+io\legado\app\utils\ReadRecordTimeFormatter.kt:9: val h = if (hours > 0) "${hours}Õ░ÅµùÂ" else ""
+io\legado\app\utils\ReadRecordTimeFormatter.kt:10: val m = if (minutes > 0) "${minutes}ÕêåÚÆƒ" else ""
+io\legado\app\utils\ReadRecordTimeFormatter.kt:11: val s = if (seconds > 0) "${seconds}þºÆ" else ""
+io\legado\app\utils\ReadRecordTimeFormatter.kt:12: return if ("$d$h$m$s".isBlank()) "0þºÆ" else "$d$h$m$s"
+io\legado\app\utils\RegexExtensions.kt:72: "µø┐µìóÞÂàµùÂ,3þºÆÕÉÄÞ┐ÿµ£¬þ╗ôµØƒÕ░åÚçìÕÉ»Õ║öþö¿\nµø┐µìóÞºäÕêÖ$regex\nµø┐µìóÕåàÕ«╣:$charSequence"
+io\legado\app\utils\StringUtils.kt:36: var cnStr = "ÚøÂõ©Çõ║îõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕìü"
+io\legado\app\utils\StringUtils.kt:41: cnStr = "ÒÇçÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄûµï¥"
+io\legado\app\utils\StringUtils.kt:76: difDate == 0L -> "õ╗èÕñ®"
+io\legado\app\utils\StringUtils.kt:77: difDate < DAY_OF_YESTERDAY -> "µÿ¿Õñ®"
+io\legado\app\utils\StringUtils.kt:87: difSec < TIME_UNIT -> difSec.toString() + "þºÆÕëì"
+io\legado\app\utils\StringUtils.kt:88: difMin < TIME_UNIT -> difMin.toString() + "ÕêåÚÆƒÕëì"
+io\legado\app\utils\StringUtils.kt:89: difHour < HOUR_OF_DAY -> difHour.toString() + "Õ░ÅµùÂÕëì"
+io\legado\app\utils\StringUtils.kt:90: difDate < DAY_OF_YESTERDAY -> "µÿ¿Õñ®"
+io\legado\app\utils\StringUtils.kt:116: 0L -> "õ╗èÕñ®"
+io\legado\app\utils\StringUtils.kt:117: 1L -> "µÿ¿Õñ®"
+io\legado\app\utils\StringUtils.kt:118: in 2L..5L -> "${daysBetween}Õñ®Õëì"
+io\legado\app\utils\StringUtils.kt:187: if (cn.size > 1 && chNum.matches("^[ÒÇçÚøÂõ©Çõ║îõ©ëÕøøõ║öÕà¡õ©âÕà½õ╣ØÕú╣Þ┤░ÕÅüÞéåõ╝ìÚÖåµƒÆµìîþÄû]$".toRegex())) {
+io\legado\app\utils\StringUtils.kt:271: wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "õ©çÕ¡ù"
+io\legado\app\utils\StringUtils.kt:273: wordsS = words.toString() + "Õ¡ù"
+io\legado\app\utils\StringUtils.kt:287: wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "õ©çÕ¡ù"
+io\legado\app\utils\StringUtils.kt:289: wordsS = words.toString() + "Õ¡ù"
+io\legado\app\utils\TimeUtils.kt:9: val end = if (time < curTime) "Õëì" else "ÕÉÄ"
+io\legado\app\utils\TimeUtils.kt:9: val end = if (time < curTime) "Õëì" else "ÕÉÄ"
+io\legado\app\utils\TimeUtils.kt:12: seconds < 60 -> "${seconds.toInt()}þºÆ"
+io\legado\app\utils\TimeUtils.kt:15: "${minutes.toInt()}ÕêåÚÆƒ"
+io\legado\app\utils\TimeUtils.kt:19: "${hours.toInt()}Õ░ÅµùÂ"
+io\legado\app\utils\TimeUtils.kt:23: "${days.toInt()}Õñ®"
+io\legado\app\utils\TimeUtils.kt:27: "${weeks.toInt()}Õæ¿"
+io\legado\app\utils\TimeUtils.kt:31: "${months.toInt()}µ£ê"
+io\legado\app\utils\TimeUtils.kt:35: "${years.toInt()}Õ╣┤"
+io\legado\app\utils\UriExtensions.kt:46: AppLog.put("µîüõ╣àÕîûÞ»╗ÕåÖµØâÚÖÉÕñ▒Þ┤Ñ(þ╗äÕÉêµ¿íÕ╝Å): $this", it)
+io\legado\app\utils\UriExtensions.kt:58: AppLog.put("µîüõ╣àÕîûÞ»╗ÕÅûµØâÚÖÉÕñ▒Þ┤Ñ: $this", it)
+io\legado\app\utils\UriExtensions.kt:70: AppLog.put("µîüõ╣àÕîûÕåÖÕàÑµØâÚÖÉÕñ▒Þ┤Ñ: $this", it)
+io\legado\app\utils\UriExtensions.kt:146: AppLog.put("Þ»╗ÕÅûUriÕç║ÚöÖ\n$e", e, true)
+io\legado\app\utils\compress\LibArchiveUtils.kt:228: destDir ?: throw NullPointerException("ÞºúÕÄïÞÀ»Õ¥äõ©ìÞâ¢õ©║þ®║")
+io\legado\app\utils\compress\LibArchiveUtils.kt:241: throw SecurityException("ÕÄïþ╝®µûçõ╗ÂÕÅ¬Þâ¢ÞºúÕÄïÕê░µîçÕ«ÜÞÀ»Õ¥ä")
+io\legado\app\utils\compress\ZipUtils.kt:242: throw SecurityException("ÕÄïþ╝®µûçõ╗ÂÕÅ¬Þâ¢ÞºúÕÄïÕê░µîçÕ«ÜÞÀ»Õ¥ä")

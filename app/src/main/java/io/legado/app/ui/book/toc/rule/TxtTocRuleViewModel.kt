@@ -117,7 +117,7 @@ class TxtTocRuleViewModel(
         return when {
             text.isJsonArray() -> GSON.fromJsonArray<TxtTocRule>(text).getOrThrow()
             text.isJsonObject() -> listOf(GSON.fromJsonObject<TxtTocRule>(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Invalid format")
         }
     }
 
@@ -147,13 +147,13 @@ class TxtTocRuleViewModel(
     fun pasteRule(): TxtTocRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            context.toastOnUi("Clipboard is empty")
             return null
         }
         return try {
             GSON.fromJsonObject<TxtTocRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            context.toastOnUi("Invalid format")
             null
         }
     }

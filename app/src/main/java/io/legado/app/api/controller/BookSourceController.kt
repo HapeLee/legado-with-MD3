@@ -17,33 +17,33 @@ object BookSourceController {
             val bookSources = appDb.bookSourceDao.all
             val returnData = ReturnData()
             return if (bookSources.isEmpty()) {
-                returnData.setErrorMsg("设备源列表为空")
+                returnData.setErrorMsg("Device source list is empty")
             } else returnData.setData(bookSources)
         }
 
     fun saveSource(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Data cannot be empty")
         val bookSource = GSON.fromJsonObject<BookSource>(postData).getOrNull()
         if (bookSource != null) {
             if (TextUtils.isEmpty(bookSource.bookSourceName) || TextUtils.isEmpty(bookSource.bookSourceUrl)) {
-                returnData.setErrorMsg("源名称和URL不能为空")
+                returnData.setErrorMsg("Source name and URL cannot be empty")
             } else {
                 appDb.bookSourceDao.insert(bookSource)
                 returnData.setData("")
             }
         } else {
-            returnData.setErrorMsg("转换源失败")
+            returnData.setErrorMsg("Source conversion failed")
         }
         return returnData
     }
 
     fun saveSources(postData: String?): ReturnData {
-        postData ?: return ReturnData().setErrorMsg("数据为空")
+        postData ?: return ReturnData().setErrorMsg("Data is empty")
         val okSources = arrayListOf<BookSource>()
         val bookSources = GSON.fromJsonArray<BookSource>(postData).getOrNull()
         if (bookSources.isNullOrEmpty()) {
-            return ReturnData().setErrorMsg("转换源失败")
+            return ReturnData().setErrorMsg("Source conversion failed")
         }
         bookSources.forEach { bookSource ->
             if (bookSource.bookSourceName.isNotBlank()
@@ -60,10 +60,10 @@ object BookSourceController {
         val url = parameters["url"]?.firstOrNull()
         val returnData = ReturnData()
         if (url.isNullOrEmpty()) {
-            return returnData.setErrorMsg("参数url不能为空，请指定源地址")
+            return returnData.setErrorMsg("Parameter url cannot be empty, please specify source URL")
         }
         val bookSource = appDb.bookSourceDao.getBookSource(url)
-            ?: return returnData.setErrorMsg("未找到源，请检查书源地址")
+            ?: return returnData.setErrorMsg("Source not found, please check source URL")
         return returnData.setData(bookSource)
     }
 
@@ -73,8 +73,8 @@ object BookSourceController {
                 SourceHelp.deleteBookSources(it)
             }
         }.onFailure {
-            return ReturnData().setErrorMsg(it.localizedMessage ?: "数据格式错误")
+            return ReturnData().setErrorMsg(it.localizedMessage ?: "Data format error")
         }
-        return ReturnData().setData("已执行"/*okSources*/)
+        return ReturnData().setData("Executed"/*okSources*/)
     }
 }

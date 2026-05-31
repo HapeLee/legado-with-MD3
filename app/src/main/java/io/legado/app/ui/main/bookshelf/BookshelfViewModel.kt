@@ -676,7 +676,7 @@ class BookshelfViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, groupId)
         }.onError {
-            context.toastOnUi("更新分组失败\n${it.localizedMessage}")
+            context.toastOnUi("Failed to update group\n${it.localizedMessage}")
         }
     }
 
@@ -694,7 +694,7 @@ class BookshelfViewModel(
                 appDb.bookDao.update(*updates.toTypedArray())
             }
         }.onError {
-            context.toastOnUi("排序保存失败\n${it.localizedMessage}")
+            context.toastOnUi("Failed to save sort order\n${it.localizedMessage}")
         }
     }
 
@@ -708,12 +708,12 @@ class BookshelfViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                context.toastOnUi("已加入缓存队列: $count 本")
+                context.toastOnUi("Added to cache queue: $count books")
             } else {
                 context.toastOnUi(R.string.no_download)
             }
         }.onError {
-            context.toastOnUi("批量缓存失败\n${it.localizedMessage}")
+            context.toastOnUi("Batch cache failed\n${it.localizedMessage}")
         }
     }
 
@@ -826,7 +826,7 @@ class BookshelfViewModel(
                 }
             }.catch {
                 completedWithoutFlowError = false
-                AppLog.put("更新目录出错\n${it.localizedMessage}", it)
+                AppLog.put("Update TOC error\n${it.localizedMessage}", it)
             }.collect()
 
             finishUpTocJob(completedWithoutFlowError)
@@ -927,7 +927,7 @@ class BookshelfViewModel(
             addDownload(source, book)
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("${book.name} 更新目录失败\n${it.localizedMessage}", it)
+            AppLog.put("${book.name} TOC update failed\n${it.localizedMessage}", it)
             appDb.bookDao.getBook(book.bookUrl)?.let { book ->
                 book.addType(BookType.updateError)
                 appDb.bookDao.update(book)
@@ -982,7 +982,7 @@ class BookshelfViewModel(
 
     fun addBookByUrl(bookUrls: String) {
         var successCount = 0
-        loadingTextFlow.value = "添加中..."
+        loadingTextFlow.value = "Adding..."
         addBookJob = execute {
             val hasBookUrlPattern: List<BookSourcePart> by lazy {
                 appDb.bookSourceDao.hasBookUrlPattern
@@ -1029,17 +1029,17 @@ class BookshelfViewModel(
                         it.save()
                     }
                     successCount++
-                    loadingTextFlow.value = "添加中... ($successCount)"
+                    loadingTextFlow.value = "Adding... ($successCount)"
                 }
             }
         }.onSuccess {
             if (successCount > 0) {
                 context.toastOnUi(R.string.success)
             } else {
-                context.toastOnUi("添加网址失败")
+                context.toastOnUi("Failed to add URL")
             }
         }.onError {
-            AppLog.put("添加网址出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Error adding URL\n${it.localizedMessage}", it, true)
         }.onFinally {
             loadingTextFlow.value = null
         }
@@ -1065,9 +1065,9 @@ class BookshelfViewModel(
                 writer.close()
             }
         }.onSuccess {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出成功"))
+            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("Export successful"))
         }.onError {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出失败\n${it.localizedMessage}"))
+            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("Export failed\n${it.localizedMessage}"))
         }
     }
 
@@ -1092,15 +1092,15 @@ class BookshelfViewModel(
         }.onSuccess { url ->
             _eventChannel.trySend(
                 BaseRuleEvent.ShowSnackbar(
-                    message = "上传成功: $url",
-                    actionLabel = "复制链接",
+                    message = "Upload successful: $url",
+                    actionLabel = "Copy link",
                     url = url
                 )
             )
         }.onError {
             _eventChannel.trySend(
                 BaseRuleEvent.ShowSnackbar(
-                    message = "上传失败: ${it.localizedMessage}"
+                    message = "Upload failed: ${it.localizedMessage}"
                 )
             )
         }
@@ -1128,11 +1128,11 @@ class BookshelfViewModel(
                     writer.close()
                 }
                 file
-            } ?: throw NoStackTraceException("书籍不能为空")
+            } ?: throw NoStackTraceException("Books cannot be empty")
         }.onSuccess {
             success(it)
         }.onError {
-            context.toastOnUi("导出书籍出错\n${it.localizedMessage}")
+            context.toastOnUi("Error exporting books\n${it.localizedMessage}")
         }
     }
 
@@ -1153,7 +1153,7 @@ class BookshelfViewModel(
                 }
 
                 else -> {
-                    throw NoStackTraceException("格式不对")
+                    throw NoStackTraceException("Invalid format")
                 }
             }
         }.onError {
@@ -1172,7 +1172,7 @@ class BookshelfViewModel(
     }
 
     private fun importBookshelfByJson(json: String, groupId: Long) {
-        loadingTextFlow.value = "导入中..."
+        loadingTextFlow.value = "Importing..."
         execute {
             val bookSourceParts = appDb.bookSourceDao.allEnabledPart
             val semaphore = Semaphore(AppConfig.threadCount)

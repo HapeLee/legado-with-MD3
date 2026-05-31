@@ -189,7 +189,7 @@ fun ThemeConfigScreen(
                         contentColor = MiuixTheme.colorScheme.onPrimary
                     )
                 ) {
-                    MiuixText("Miuix 目前为测试主题，且不对基于View的界面生效！")
+                    MiuixText("Miuix is currently a test theme and does not work on View-based screens!")
                 }
             }
 
