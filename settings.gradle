@@ -7,10 +7,10 @@ pluginManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
         gradlePluginPortal()
         mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
     resolutionStrategy {
         eachPlugin {
@@ -30,15 +30,15 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
+        mavenCentral()
         maven {
             url = uri("https://jitpack.io")
             content {
                 includeGroupByRegex("com\\.github.*")
             }
         }
-        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
 rootProject.name = 'legado'
