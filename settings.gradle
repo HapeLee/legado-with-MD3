@@ -12,6 +12,13 @@ pluginManagement {
         gradlePluginPortal()
         mavenCentral()
     }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "de.undercouch.download") {
+                useModule("de.undercouch:gradle-download-task:5.7.0")
+            }
+        }
+    }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
