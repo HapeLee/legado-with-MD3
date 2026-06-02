@@ -908,7 +908,7 @@ private fun ExpandedSourceSheet(
     ) {
         val listState = rememberLazyListState()
         val showLoadMoreFooter = isLoading || errorMsg != null || isEnd
-
+        val currentOnSaveScrollState by rememberUpdatedState(onSaveScrollState)
         val shouldLoadMore by remember {
             derivedStateOf {
                 val total = listState.layoutInfo.totalItemsCount
@@ -930,12 +930,12 @@ private fun ExpandedSourceSheet(
             }
         }
 
-        DisposableEffect(onSaveScrollState) {
+        DisposableEffect(listState) {
             onDispose {
                 val first = listState.firstVisibleItemIndex
                 val offset = listState.firstVisibleItemScrollOffset
                 if (first > 0 || offset > 0) {
-                    onSaveScrollState(first, offset)
+                    currentOnSaveScrollState(first, offset)
                 }
             }
         }
