@@ -342,6 +342,7 @@ object PreferKey {
     // Lab
     const val labEnabled = "labEnabled"
     const val labEInkDisplay = "labEInkDisplay"
+    const val labEyeProtection = "labEyeProtection"
 
     // Eye Protection
     const val eyeProtectionEnabled = "eyeProtectionEnabled"

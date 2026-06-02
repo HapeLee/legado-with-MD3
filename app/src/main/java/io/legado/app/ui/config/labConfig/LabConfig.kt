@@ -15,4 +15,9 @@ object LabConfig {
         false
     )
 
+    var eyeProtection by prefDelegate(
+        PreferKey.labEyeProtection,
+        false
+    )
+
 }

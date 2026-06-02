@@ -1792,4 +1792,27 @@
     <string name="homepage_status_in_effect"> · In effect</string>
     <string name="homepage_status_blocked"> · Blocked</string>
     <string name="homepage_status_joined"> · Already joined</string>
+
+    <!-- Lab -->
+    <string name="lab_setting">Lab</string>
+    <string name="lab_enabled_title">Enable Lab</string>
+    <string name="lab_enabled_summary">Turn on to show experimental features. These may be unstable.</string>
+    <string name="lab_display">Display</string>
+    <string name="lab_eink_display_title">E-Ink Display</string>
+    <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
+    <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
+    <string name="lab_eye_protection_title">Eye Protection</string>
+    <string name="lab_eye_protection_summary">Apply warm color tint to comic and novel readers to reduce eye strain</string>
+    <string name="lab_eye_protection_hint">You can adjust eye protection settings in Theme → Appearance</string>
+
+    <!-- Eye Protection -->
+    <string name="eye_protection">Eye Protection</string>
+    <string name="eye_protection_enabled">Enable Eye Protection</string>
+    <string name="eye_protection_enabled_summary">Reduce blue light via warm color tint</string>
+    <string name="color_temperature">Color Temperature</string>
+    <string name="color_temperature_summary">Current temperature: %1$d</string>
+    <string name="eye_protection_schedule">Scheduled</string>
+    <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
+    <string name="eye_protection_start_time">Start Time</string>
+    <string name="eye_protection_end_time">End Time</string>
 </resources>

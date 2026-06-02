@@ -213,6 +213,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             ReadManga.loadOrUpContent()
         }
         binding.flLoading.isVisible = !AppConfig.isEInkMode
+        binding.eyeProtectionOverlay.refresh()
         mAdapter.addFooterView {
             ViewLoadMoreBinding.bind(loadMoreView)
         }
@@ -241,6 +242,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             mMangaFooterConfig = it
             val item = mAdapter.getItem(binding.recyclerView.findCenterViewPosition())
             upInfoBar(item)
+        }
+        observeEvent<Boolean>(io.legado.app.constant.PreferKey.eyeProtectionEnabled) {
+            binding.eyeProtectionOverlay.refresh()
+        }
+        observeEvent<Int>(io.legado.app.constant.PreferKey.colorTemperature) {
+            binding.eyeProtectionOverlay.refresh()
         }
     }
 
@@ -457,6 +464,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         ReadManga.initReadTime()
         ReadManga.startAutoSaveSession()
+        binding.eyeProtectionOverlay.refresh()
     }
 
     override fun onPause() {

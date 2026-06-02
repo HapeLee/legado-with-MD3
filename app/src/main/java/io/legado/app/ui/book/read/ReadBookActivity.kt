@@ -302,6 +302,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         ReadBook.register(this)
         binding.cursorLeft.setOnTouchListener(this)
         binding.cursorRight.setOnTouchListener(this)
+        binding.eyeProtectionOverlay.refresh()
 
         onBackPressedDispatcher.addCallback(this) {
             if (isShowingSearchResult) {
@@ -400,6 +401,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         registerReceiver(timeBatteryReceiver, timeBatteryReceiver.filter)
         binding.readView.upTime()
         screenOffTimerStart()
+        binding.eyeProtectionOverlay.refresh()
         // 网络监听，当从无网切换到网络环境时同步进度（注意注册的同时就会收到监听，因此界面激活时无需重复执行同步操作）
         networkChangedListener.register()
         networkChangedListener.onNetworkChanged = {
@@ -1984,6 +1986,12 @@ class ReadBookActivity : BaseReadBookActivity(),
                 binding.readView.upContent()
                 viewModel.refreshContentDur(it)
             }
+        }
+        observeEvent<Boolean>(PreferKey.eyeProtectionEnabled) {
+            binding.eyeProtectionOverlay.refresh()
+        }
+        observeEvent<Int>(PreferKey.colorTemperature) {
+            binding.eyeProtectionOverlay.refresh()
         }
     }
 

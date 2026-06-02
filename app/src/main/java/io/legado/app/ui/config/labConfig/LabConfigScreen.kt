@@ -80,6 +80,26 @@ fun LabConfigScreen(
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
                             )
                         }
+
+                        SwitchSettingItem(
+                            title = stringResource(R.string.lab_eye_protection_title),
+                            description = stringResource(R.string.lab_eye_protection_summary),
+                            checked = LabConfig.eyeProtection,
+                            onCheckedChange = {
+                                LabConfig.eyeProtection = it
+                            }
+                        )
+
+                        if (LabConfig.eyeProtection) {
+                            Text(
+                                text = stringResource(R.string.lab_eye_protection_hint),
+                                style = LegadoTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
