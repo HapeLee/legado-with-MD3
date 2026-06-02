@@ -3,9 +3,6 @@ buildscript {
         set("compile_sdk_version", 36)
         set("build_tool_version", "34.0.0")
     }
-    dependencies {
-        classpath("de.undercouch:gradle-download-task:5.7.0")
-    }
 }
 
 plugins {
@@ -17,6 +14,7 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.google.services) apply false
     alias(libs.plugins.room) apply false
+    alias(libs.plugins.download) apply false
     alias(libs.plugins.android.test) apply false
     alias(libs.plugins.baselineprofile) apply false
 }

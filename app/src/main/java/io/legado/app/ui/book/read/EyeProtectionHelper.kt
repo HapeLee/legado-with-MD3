@@ -3,8 +3,12 @@ package io.legado.app.ui.book.read
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.Paint
+import android.os.Handler
+import androidx.appcompat.app.AppCompatActivity
+import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.utils.observeEvent
 import java.util.Calendar
 
 /**
@@ -102,5 +106,62 @@ object EyeProtectionHelper {
         } else {
             paint.colorFilter = null
         }
+    }
+}
+
+/**
+ * 护眼定时刷新调度器
+ * 在定时区间边界（每分钟）自动刷新护眼状态
+ */
+class EyeProtectionRefreshScheduler(
+    private val handler: Handler,
+    private val onRefresh: () -> Unit
+) {
+    private val refreshRunnable = Runnable {
+        onRefresh()
+        schedule()
+    }
+
+    fun schedule() {
+        cancel()
+        if (!ThemeConfig.eyeProtectionSchedule) return
+        val now = Calendar.getInstance()
+        val delayMs = (60 - now.get(Calendar.SECOND)) * 1000L -
+            now.get(Calendar.MILLISECOND)
+        val safeDelay = delayMs.coerceAtLeast(1000L)
+        handler.postDelayed(refreshRunnable, safeDelay)
+    }
+
+    fun cancel() {
+        handler.removeCallbacks(refreshRunnable)
+    }
+}
+
+/**
+ * 在 Activity 中注册护眼模式相关的 EventBus 监听
+ * 设置变化时自动刷新覆盖层，定时/时间变化时重新调度
+ */
+fun AppCompatActivity.observeEyeProtectionEvents(
+    onRefresh: () -> Unit,
+    scheduler: EyeProtectionRefreshScheduler
+) {
+    observeEvent<Boolean>(PreferKey.eyeProtectionEnabled) {
+        onRefresh()
+        scheduler.schedule()
+    }
+    observeEvent<Int>(PreferKey.colorTemperature) {
+        onRefresh()
+    }
+    observeEvent<Boolean>(PreferKey.eyeProtectionSchedule) {
+        onRefresh()
+        scheduler.schedule()
+    }
+    observeEvent<String>(PreferKey.eyeProtectionStartTime) {
+        onRefresh()
+        scheduler.schedule()
+    }
+    observeEvent<String>(PreferKey.eyeProtectionEndTime) {
+        onRefresh()
+        scheduler.schedule()
     }
 }

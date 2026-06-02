@@ -223,6 +223,9 @@ fun Context.getPrefString(key: String, defValue: String? = null) =
 fun Context.putPrefString(key: String, value: String?) =
     defaultSharedPreferences.edit { putString(key, value) }
 
+fun Context.putPrefStringSync(key: String, value: String?) =
+    defaultSharedPreferences.edit(commit = true) { putString(key, value) }
+
 fun Context.getPrefStringSet(
     key: String,
     defValue: MutableSet<String>? = null,
