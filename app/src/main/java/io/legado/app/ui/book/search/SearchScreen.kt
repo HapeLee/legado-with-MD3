@@ -698,14 +698,19 @@ fun SearchScreen(
     )
 
     ExpandedSourceSheet(
-        show = state.expandedSourceUrl != null,
+        show = state.showExpandedSource,
         sourceName = state.expandedSourceName ?: "",
         books = state.expandedSourceBooks,
         isLoading = state.expandedSourceLoading,
         isEnd = state.expandedSourceEnd,
         errorMsg = state.expandedSourceError,
+        savedScrollIndex = state.expandedSourceSavedScrollIndex,
+        savedScrollOffset = state.expandedSourceSavedScrollOffset,
         onDismiss = { viewModel.onIntent(SearchIntent.DismissExpandedSource) },
         onLoadMore = { viewModel.onIntent(SearchIntent.LoadMoreExpandedSource) },
+        onSaveScrollState = { index, offset ->
+            viewModel.onIntent(SearchIntent.SaveExpandedSourceScrollState(index, offset))
+        },
         onBookClick = { book, coverKey ->
             viewModel.onIntent(SearchIntent.OpenExpandedSourceBook(book, coverKey))
         },
@@ -888,8 +893,11 @@ private fun ExpandedSourceSheet(
     isLoading: Boolean,
     isEnd: Boolean,
     errorMsg: String?,
+    savedScrollIndex: Int,
+    savedScrollOffset: Int,
     onDismiss: () -> Unit,
     onLoadMore: () -> Unit,
+    onSaveScrollState: (Int, Int) -> Unit,
     onBookClick: (SearchBook, String?) -> Unit,
     onBookLongClick: ((SearchBook, String?) -> Unit)? = null,
 ) {
@@ -900,7 +908,7 @@ private fun ExpandedSourceSheet(
     ) {
         val listState = rememberLazyListState()
         val showLoadMoreFooter = isLoading || errorMsg != null || isEnd
-
+        val currentOnSaveScrollState by rememberUpdatedState(onSaveScrollState)
         val shouldLoadMore by remember {
             derivedStateOf {
                 val total = listState.layoutInfo.totalItemsCount
@@ -912,6 +920,23 @@ private fun ExpandedSourceSheet(
         LaunchedEffect(shouldLoadMore, isLoading, isEnd) {
             if (shouldLoadMore && !isLoading && !isEnd) {
                 onLoadMore()
+            }
+        }
+
+        LaunchedEffect(savedScrollIndex, savedScrollOffset) {
+            if (savedScrollIndex > 0 || savedScrollOffset > 0) {
+                listState.scrollToItem(savedScrollIndex, savedScrollOffset)
+                onSaveScrollState(0, 0)
+            }
+        }
+
+        DisposableEffect(listState) {
+            onDispose {
+                val first = listState.firstVisibleItemIndex
+                val offset = listState.firstVisibleItemScrollOffset
+                if (first > 0 || offset > 0) {
+                    currentOnSaveScrollState(first, offset)
+                }
             }
         }
 

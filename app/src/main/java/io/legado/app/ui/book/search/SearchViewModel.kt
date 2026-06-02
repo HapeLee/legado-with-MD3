@@ -225,6 +225,11 @@ class SearchViewModel(
             SearchIntent.OpenSourceManage -> emitEffect(SearchEffect.OpenSourceManage)
 
             is SearchIntent.ExpandSource -> {
+                val state = _uiState.value
+                if (state.expandedSourceUrl == intent.sourceUrl) {
+                    _uiState.update { it.copy(showExpandedSource = true) }
+                    return
+                }
                 _uiState.update {
                     it.copy(
                         expandedSourceUrl = intent.sourceUrl,
@@ -234,6 +239,9 @@ class SearchViewModel(
                         expandedSourceEnd = false,
                         expandedSourceError = null,
                         expandedSourcePage = 1,
+                        showExpandedSource = true,
+                        expandedSourceSavedScrollIndex = 0,
+                        expandedSourceSavedScrollOffset = 0,
                     )
                 }
                 loadExpandedSourcePage(intent.sourceUrl, page = 1)
@@ -241,15 +249,7 @@ class SearchViewModel(
 
             SearchIntent.DismissExpandedSource -> {
                 _uiState.update {
-                    it.copy(
-                        expandedSourceUrl = null,
-                        expandedSourceName = null,
-                        expandedSourceBooks = persistentListOf(),
-                        expandedSourceLoading = false,
-                        expandedSourceEnd = false,
-                        expandedSourceError = null,
-                        expandedSourcePage = 1,
-                    )
+                    it.copy(showExpandedSource = false)
                 }
             }
 
@@ -267,17 +267,6 @@ class SearchViewModel(
             }
 
             is SearchIntent.OpenExpandedSourceBook -> {
-                _uiState.update {
-                    it.copy(
-                        expandedSourceUrl = null,
-                        expandedSourceName = null,
-                        expandedSourceBooks = persistentListOf(),
-                        expandedSourceLoading = false,
-                        expandedSourceEnd = false,
-                        expandedSourceError = null,
-                        expandedSourcePage = 1,
-                    )
-                }
                 emitEffect(
                     SearchEffect.OpenBookInfo(
                         name = intent.book.name,
@@ -295,6 +284,15 @@ class SearchViewModel(
                     it.copy(
                         savedScrollIndex = intent.index,
                         savedScrollOffset = intent.offset,
+                    )
+                }
+            }
+
+            is SearchIntent.SaveExpandedSourceScrollState -> {
+                _uiState.update {
+                    it.copy(
+                        expandedSourceSavedScrollIndex = intent.index,
+                        expandedSourceSavedScrollOffset = intent.offset,
                     )
                 }
             }
@@ -426,6 +424,16 @@ class SearchViewModel(
                 processedSources = 0,
                 totalSources = 0,
                 emptyScopeAction = null,
+                expandedSourceUrl = null,
+                expandedSourceName = null,
+                expandedSourceBooks = persistentListOf(),
+                expandedSourceLoading = false,
+                expandedSourceEnd = false,
+                expandedSourceError = null,
+                expandedSourcePage = 1,
+                showExpandedSource = false,
+                expandedSourceSavedScrollIndex = 0,
+                expandedSourceSavedScrollOffset = 0,
             )
         }
 
@@ -550,6 +558,16 @@ class SearchViewModel(
                 hasMore = true,
                 showSuggestions = true,
                 emptyScopeAction = null,
+                expandedSourceUrl = null,
+                expandedSourceName = null,
+                expandedSourceBooks = persistentListOf(),
+                expandedSourceLoading = false,
+                expandedSourceEnd = false,
+                expandedSourceError = null,
+                expandedSourcePage = 1,
+                showExpandedSource = false,
+                expandedSourceSavedScrollIndex = 0,
+                expandedSourceSavedScrollOffset = 0,
             )
         }
     }
