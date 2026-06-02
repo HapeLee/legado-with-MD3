@@ -338,4 +338,15 @@ object PreferKey {
     const val homepageModuleHidden = "homepageModuleHidden"
     const val homepageLayoutMode = "homepageLayoutMode"
     const val navIconHome = "navIconHome"
+
+    // Lab
+    const val labEnabled = "labEnabled"
+    const val labEInkDisplay = "labEInkDisplay"
+
+    // Eye Protection
+    const val eyeProtectionEnabled = "eyeProtectionEnabled"
+    const val colorTemperature = "colorTemperature"
+    const val eyeProtectionSchedule = "eyeProtectionSchedule"
+    const val eyeProtectionStartTime = "eyeProtectionStartTime"
+    const val eyeProtectionEndTime = "eyeProtectionEndTime"
 }

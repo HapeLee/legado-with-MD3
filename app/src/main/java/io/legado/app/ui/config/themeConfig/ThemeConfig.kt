@@ -182,6 +182,13 @@ object ThemeConfig {
 
     var navIconMy by prefDelegate(PreferKey.navIconMy, "")
 
+    // Eye Protection
+    var eyeProtectionEnabled by prefDelegate(PreferKey.eyeProtectionEnabled, false)
+    var colorTemperature by prefDelegate(PreferKey.colorTemperature, 50)
+    var eyeProtectionSchedule by prefDelegate(PreferKey.eyeProtectionSchedule, false)
+    var eyeProtectionStartTime by prefDelegate(PreferKey.eyeProtectionStartTime, "22:00")
+    var eyeProtectionEndTime by prefDelegate(PreferKey.eyeProtectionEndTime, "07:00")
+
     fun hasImageBg(isDark: Boolean): Boolean =
         !(if (isDark) bgImageDark else bgImageLight).isNullOrBlank()
 
