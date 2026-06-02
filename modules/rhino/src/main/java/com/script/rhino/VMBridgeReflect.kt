@@ -23,7 +23,12 @@ object VMBridgeReflect {
                 // Older versions used threadContextHelper (Object) which held a ThreadLocal
                 val field = Context::class.java.getDeclaredField("threadContextHelper")
                 field.isAccessible = true
-                field.get(null) as ThreadLocal<Any>
+                val helper = field.get(null)
+                    ?: throw NullPointerException("threadContextHelper is null")
+                val contextLocalField = helper.javaClass.getDeclaredField("contextLocal")
+                contextLocalField.isAccessible = true
+                @Suppress("UNCHECKED_CAST")
+                contextLocalField.get(helper) as ThreadLocal<Any>
             }
         }
     }

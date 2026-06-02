@@ -30,6 +30,7 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -75,12 +76,14 @@ import io.legado.app.ui.book.read.ReadBookActivity.Companion.RESULT_DELETED
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.recycler.LoadMoreView
 import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.StartActivityContract
+import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.canScroll
 import io.legado.app.utils.fastBinarySearch
 import io.legado.app.utils.findCenterViewPosition
@@ -138,6 +141,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     private var justInitData: Boolean = false
     private var syncDialog: AlertDialog? = null
+    private val handler by lazy { buildMainHandler() }
+    private val eyeProtectionRefreshRunnable = Runnable {
+        binding.eyeProtectionOverlay.refresh()
+        scheduleEyeProtectionRefresh()
+    }
     private val mScrollTimer by lazy {
         ScrollTimer(this, binding.recyclerView, lifecycleScope).apply {
             setSpeed(AppConfig.mangaAutoPageSpeed)
@@ -243,12 +251,43 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             val item = mAdapter.getItem(binding.recyclerView.findCenterViewPosition())
             upInfoBar(item)
         }
-        observeEvent<Boolean>(io.legado.app.constant.PreferKey.eyeProtectionEnabled) {
+        observeEvent<Boolean>(PreferKey.eyeProtectionEnabled) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+        observeEvent<Int>(PreferKey.colorTemperature) {
             binding.eyeProtectionOverlay.refresh()
         }
-        observeEvent<Int>(io.legado.app.constant.PreferKey.colorTemperature) {
+        observeEvent<Boolean>(PreferKey.eyeProtectionSchedule) {
             binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
         }
+        observeEvent<String>(PreferKey.eyeProtectionStartTime) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+        observeEvent<String>(PreferKey.eyeProtectionEndTime) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+    }
+
+    /**
+     * 调度护眼色温在定时区间边界自动刷新
+     * 仅在启用了护眼定时时才执行调度
+     */
+    private fun scheduleEyeProtectionRefresh() {
+        cancelEyeProtectionRefresh()
+        if (!ThemeConfig.eyeProtectionSchedule) return
+        val now = java.util.Calendar.getInstance()
+        val delayMs = (60 - now.get(java.util.Calendar.SECOND)) * 1000L -
+            now.get(java.util.Calendar.MILLISECOND)
+        val safeDelay = delayMs.coerceAtLeast(1000L)
+        handler.postDelayed(eyeProtectionRefreshRunnable, safeDelay)
+    }
+
+    private fun cancelEyeProtectionRefresh() {
+        handler.removeCallbacks(eyeProtectionRefreshRunnable)
     }
 
     private fun initRecyclerView() {
@@ -465,10 +504,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         ReadManga.initReadTime()
         ReadManga.startAutoSaveSession()
         binding.eyeProtectionOverlay.refresh()
+        scheduleEyeProtectionRefresh()
     }
 
     override fun onPause() {
         super.onPause()
+        cancelEyeProtectionRefresh()
         if (ReadManga.inBookshelf) {
             ReadManga.saveRead()
             if (!BuildConfig.DEBUG) {

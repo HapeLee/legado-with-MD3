@@ -530,14 +530,50 @@ fun ThemeConfigScreen(
                                         title = stringResource(R.string.eye_protection_start_time),
                                         option = eyeProtectionStartTime,
                                         onClick = {
-                                            // TODO: Show time picker
+                                            val parts = eyeProtectionStartTime.split(":")
+                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 22
+                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, h, m ->
+                                                    val timeStr = String.format(
+                                                        java.util.Locale.US,
+                                                        "%02d:%02d",
+                                                        h.coerceIn(0, 23),
+                                                        m.coerceIn(0, 59)
+                                                    )
+                                                    eyeProtectionStartTime = timeStr
+                                                    ThemeConfig.eyeProtectionStartTime = timeStr
+                                                },
+                                                hour.coerceIn(0, 23),
+                                                minute.coerceIn(0, 59),
+                                                true
+                                            ).show()
                                         }
                                     )
                                     ClickableSettingItem(
                                         title = stringResource(R.string.eye_protection_end_time),
                                         option = eyeProtectionEndTime,
                                         onClick = {
-                                            // TODO: Show time picker
+                                            val parts = eyeProtectionEndTime.split(":")
+                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 7
+                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, h, m ->
+                                                    val timeStr = String.format(
+                                                        java.util.Locale.US,
+                                                        "%02d:%02d",
+                                                        h.coerceIn(0, 23),
+                                                        m.coerceIn(0, 59)
+                                                    )
+                                                    eyeProtectionEndTime = timeStr
+                                                    ThemeConfig.eyeProtectionEndTime = timeStr
+                                                },
+                                                hour.coerceIn(0, 23),
+                                                minute.coerceIn(0, 59),
+                                                true
+                                            ).show()
                                         }
                                     )
                                 }

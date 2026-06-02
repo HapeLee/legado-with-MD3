@@ -41,8 +41,8 @@ object EyeProtectionHelper {
         return try {
             val parts = value.split(":")
             if (parts.size < 2) return null
-            val h = parts[0].trim().toInt()
-            val m = parts[1].trim().toInt()
+            val h = parts[0].trim().toInt().coerceIn(0, 23)
+            val m = parts[1].trim().toInt().coerceIn(0, 59)
             h * 60 + m
         } catch (e: Exception) {
             null

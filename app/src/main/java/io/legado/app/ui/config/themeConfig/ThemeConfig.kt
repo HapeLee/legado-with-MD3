@@ -189,9 +189,15 @@ object ThemeConfig {
     var colorTemperature by prefDelegate(PreferKey.colorTemperature, 50) {
         postEvent(PreferKey.colorTemperature, it)
     }
-    var eyeProtectionSchedule by prefDelegate(PreferKey.eyeProtectionSchedule, false)
-    var eyeProtectionStartTime by prefDelegate(PreferKey.eyeProtectionStartTime, "22:00")
-    var eyeProtectionEndTime by prefDelegate(PreferKey.eyeProtectionEndTime, "07:00")
+    var eyeProtectionSchedule by prefDelegate(PreferKey.eyeProtectionSchedule, false) {
+        postEvent(PreferKey.eyeProtectionSchedule, it)
+    }
+    var eyeProtectionStartTime by prefDelegate(PreferKey.eyeProtectionStartTime, "22:00") {
+        postEvent(PreferKey.eyeProtectionStartTime, it)
+    }
+    var eyeProtectionEndTime by prefDelegate(PreferKey.eyeProtectionEndTime, "07:00") {
+        postEvent(PreferKey.eyeProtectionEndTime, it)
+    }
 
     fun hasImageBg(isDark: Boolean): Boolean =
         !(if (isDark) bgImageDark else bgImageLight).isNullOrBlank()
