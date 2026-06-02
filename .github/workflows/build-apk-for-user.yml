@@ -66,13 +66,33 @@ jobs:
           done
           ls -la
 
-      - name: Create ZIP Archive
+      - name: Create Source Code ZIP Archive (excluding md files)
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          ZIP_NAME="legado-source-${GITHUB_RUN_NUMBER}.zip"
+          # 排除常见临时目录、构建产物以及所有 .md 文件
+          zip -r "$GITHUB_WORKSPACE/$ZIP_NAME" . \
+            -x "*.git/*" \
+            -x "*.gradle/*" \
+            -x "*.idea/*" \
+            -x "build/*" \
+            -x "*/build/*" \
+            -x "*.apk" \
+            -x "*.zip" \
+            -x "**/*.md" \
+            -x "**/*.MD" \
+            -x "LICENSE*" \
+            -x "README*"
+          echo "源码压缩包已创建: $ZIP_NAME"
+          ls -la "$GITHUB_WORKSPACE/$ZIP_NAME"
+
+      - name: Create APK ZIP Archive
         run: |
           APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
           ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}.zip"
           cd "$APK_PATH"
           zip "$GITHUB_WORKSPACE/$ZIP_NAME" *.apk
-          echo "ZIP 文件已创建: $ZIP_NAME"
+          echo "APK 压缩包已创建: $ZIP_NAME"
           ls -la "$GITHUB_WORKSPACE/$ZIP_NAME"
 
       - name: Upload APK Artifacts
@@ -81,7 +101,13 @@ jobs:
           name: legado-apks-${{ github.run_number }}
           path: app/build/outputs/apk/app/debug/*.apk
 
-      - name: Upload ZIP Artifact
+      - name: Upload Source Code ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado-source-zip-${{ github.run_number }}
+          path: legado-source-*.zip
+
+      - name: Upload APK ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
           name: legado-apks-zip-${{ github.run_number }}
@@ -95,11 +121,17 @@ jobs:
           name: Legado Debug Build ${{ github.event.inputs.release_tag }}
           body: |
             自动构建的 Debug 版本
+
             - 分支: ${{ github.event.inputs.branch }}
             - 构建号: ${{ github.run_number }}
+
+            **包含文件：**
+            - APK 安装包 (Debug)
+            - 源码压缩包（已排除 .md 文件）
           prerelease: true
           files: |
             app/build/outputs/apk/app/debug/*.apk
             legado-debug-apks-*.zip
+            legado-source-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
