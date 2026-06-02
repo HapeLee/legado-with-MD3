@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.baselineprofile)
 }
 
+apply(plugin = "de.undercouch.download")
 apply(from = "download.gradle")
 
 

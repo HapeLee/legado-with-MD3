@@ -12,9 +12,13 @@ pluginManagement {
         maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
         maven { url 'https://maven.aliyun.com/repository/public' }
     }
-}
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "de.undercouch.download") {
+                useModule("de.undercouch:gradle-download-task:5.7.0")
+            }
+        }
+    }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -26,15 +30,15 @@ dependencyResolutionManagement {
                 includeGroupByRegex("androidx.*")
             }
         }
-        maven { url 'https://maven.aliyun.com/repository/google' }
-        maven { url 'https://maven.aliyun.com/repository/public' }
+        mavenCentral()
         maven {
             url = uri("https://jitpack.io")
             content {
                 includeGroupByRegex("com\\.github.*")
             }
         }
-        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
 rootProject.name = 'legado'

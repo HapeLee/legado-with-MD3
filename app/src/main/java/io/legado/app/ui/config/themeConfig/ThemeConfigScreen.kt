@@ -55,6 +55,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -84,6 +85,7 @@ import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.loadFontFiles
+import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -296,9 +298,12 @@ fun ThemeConfigScreen(
                     if (!isMiuixEngine) {
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        val visibleThemes = themes.filter { (_, value) ->
+                            value != "4" || (LabConfig.labEnabled && LabConfig.eInkDisplay)
+                        }
                         ThemeColorSelector(
                             context = context,
-                            themes = themes,
+                            themes = visibleThemes,
                             selectedTheme = selectedTheme,
                             isDark = isDarkTheme,
                             isAmoled = ThemeConfig.isPureBlack,
@@ -462,6 +467,83 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.default_home_page_value),
                         onValueChange = { ThemeConfig.defaultHomePage = it }
                     )
+                }
+
+                SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {
+                    var eyeProtectionEnabled by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionEnabled)
+                    }
+                    var colorTemperature by remember {
+                        mutableIntStateOf(ThemeConfig.colorTemperature)
+                    }
+                    var eyeProtectionSchedule by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionSchedule)
+                    }
+                    var eyeProtectionStartTime by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionStartTime)
+                    }
+                    var eyeProtectionEndTime by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionEndTime)
+                    }
+
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_enabled),
+                        description = stringResource(R.string.eye_protection_enabled_summary),
+                        checked = eyeProtectionEnabled,
+                        onCheckedChange = {
+                            eyeProtectionEnabled = it
+                            ThemeConfig.eyeProtectionEnabled = it
+                        }
+                    )
+
+                    AnimatedVisibility(visible = eyeProtectionEnabled) {
+                        Column {
+                            SliderSettingItem(
+                                title = stringResource(R.string.color_temperature),
+                                description = stringResource(
+                                    R.string.color_temperature_summary,
+                                    colorTemperature
+                                ),
+                                value = colorTemperature.toFloat(),
+                                defaultValue = 50f,
+                                valueRange = 0f..100f,
+                                steps = 99,
+                                onValueChange = {
+                                    colorTemperature = it.toInt()
+                                    ThemeConfig.colorTemperature = it.toInt()
+                                }
+                            )
+
+                            SwitchSettingItem(
+                                title = stringResource(R.string.eye_protection_schedule),
+                                description = stringResource(R.string.eye_protection_schedule_summary),
+                                checked = eyeProtectionSchedule,
+                                onCheckedChange = {
+                                    eyeProtectionSchedule = it
+                                    ThemeConfig.eyeProtectionSchedule = it
+                                }
+                            )
+
+                            AnimatedVisibility(visible = eyeProtectionSchedule) {
+                                Column {
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_start_time),
+                                        option = eyeProtectionStartTime,
+                                        onClick = {
+                                            // TODO: Show time picker
+                                        }
+                                    )
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_end_time),
+                                        option = eyeProtectionEndTime,
+                                        onClick = {
+                                            // TODO: Show time picker
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
