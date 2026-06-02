@@ -107,6 +107,7 @@ import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.dict.DictDialog
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.login.SourceLoginJsExtensions
@@ -402,6 +403,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         binding.readView.upTime()
         screenOffTimerStart()
         binding.eyeProtectionOverlay.refresh()
+        scheduleEyeProtectionRefresh()
         // 网络监听，当从无网切换到网络环境时同步进度（注意注册的同时就会收到监听，因此界面激活时无需重复执行同步操作）
         networkChangedListener.register()
         networkChangedListener.onNetworkChanged = {
@@ -1989,10 +1991,41 @@ class ReadBookActivity : BaseReadBookActivity(),
         }
         observeEvent<Boolean>(PreferKey.eyeProtectionEnabled) {
             binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
         }
         observeEvent<Int>(PreferKey.colorTemperature) {
             binding.eyeProtectionOverlay.refresh()
         }
+        observeEvent<Boolean>(PreferKey.eyeProtectionSchedule) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+        observeEvent<String>(PreferKey.eyeProtectionStartTime) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+        observeEvent<String>(PreferKey.eyeProtectionEndTime) {
+            binding.eyeProtectionOverlay.refresh()
+            scheduleEyeProtectionRefresh()
+        }
+    }
+
+    /**
+     * 调度护眼色温在定时区间边界自动刷新
+     * 仅在启用了护眼定时时才执行调度
+     */
+    private fun scheduleEyeProtectionRefresh() {
+        cancelEyeProtectionRefresh()
+        if (!ThemeConfig.eyeProtectionSchedule) return
+        val now = java.util.Calendar.getInstance()
+        val delayMs = (60 - now.get(java.util.Calendar.SECOND)) * 1000L -
+            now.get(java.util.Calendar.MILLISECOND)
+        val safeDelay = delayMs.coerceAtLeast(1000L)
+        handler.postDelayed(eyeProtectionRefreshRunnable, safeDelay)
+    }
+
+    private fun cancelEyeProtectionRefresh() {
+        handler.removeCallbacks(eyeProtectionRefreshRunnable)
     }
 
     private fun upScreenTimeOut() {
