@@ -84,6 +84,7 @@ import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.OldThemeConfig
 import io.legado.app.help.loadFontFiles
+import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -296,9 +297,12 @@ fun ThemeConfigScreen(
                     if (!isMiuixEngine) {
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        val visibleThemes = themes.filter { (_, value) ->
+                            value != "4" || (LabConfig.labEnabled && LabConfig.eInkDisplay)
+                        }
                         ThemeColorSelector(
                             context = context,
-                            themes = themes,
+                            themes = visibleThemes,
                             selectedTheme = selectedTheme,
                             isDark = isDarkTheme,
                             isAmoled = ThemeConfig.isPureBlack,
