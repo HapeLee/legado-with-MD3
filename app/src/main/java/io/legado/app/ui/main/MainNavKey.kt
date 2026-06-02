@@ -34,6 +34,9 @@ data object MainRouteSettingsCustomTheme : MainRoute
 data object MainRouteSettingsThemeManage : MainRoute
 
 @Serializable
+data object MainRouteSettingsLabConfig : MainRoute
+
+@Serializable
 data object MainRouteSettingsDownloadCache : MainRoute
 
 @Serializable
@@ -98,6 +101,7 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_THEME = "settings/theme"
     const val ROUTE_SETTINGS_BACKUP = "settings/backup"
     const val ROUTE_SETTINGS_CUSTOM_THEME = "settings/custom_theme"
+    const val ROUTE_SETTINGS_LAB_CONFIG = "settings/lab_config"
     const val ROUTE_SETTINGS_DOWNLOAD_CACHE = "settings/download_cache"
     const val ROUTE_SETTINGS_TRANSLATION = "settings/translation"
     const val ROUTE_IMPORT_LOCAL = "import/local"

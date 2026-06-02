@@ -41,7 +41,6 @@
         android:id="@+id/fl_loading"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-
         <LinearLayout
             android:id="@+id/ll_loading"
             android:layout_width="match_parent"
@@ -93,5 +92,13 @@
         </LinearLayout>
 
     </FrameLayout>
+
+    <io.legado.app.ui.book.read.EyeProtectionOverlay
+        android:id="@+id/eye_protection_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        android:visibility="gone" />
 
 </FrameLayout>

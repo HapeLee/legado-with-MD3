@@ -122,13 +122,16 @@ class MangaAdapter(private val context: Context) :
             ) {
                 "ARGB values must be between 0-255"
             }
-            val matrix = floatArrayOf(
+            val baseMatrix = floatArrayOf(
                 (255 - mConfig.r) / 255f, 0f, 0f, 0f, 0f,
                 0f, (255 - mConfig.g) / 255f, 0f, 0f, 0f,
                 0f, 0f, (255 - mConfig.b) / 255f, 0f, 0f,
                 0f, 0f, 0f, (255 - mConfig.a) / 255f, 0f
             )
-            binding.image.colorFilter = ColorMatrixColorFilter(ColorMatrix(matrix))
+            val epMatrix = io.legado.app.ui.book.read.EyeProtectionHelper.buildColorMatrix()
+            val combined = android.graphics.ColorMatrix(baseMatrix)
+            combined.postConcat(epMatrix)
+            binding.image.colorFilter = ColorMatrixColorFilter(combined)
         }
 
         fun setBackground() {

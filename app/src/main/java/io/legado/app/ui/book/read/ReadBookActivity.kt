@@ -278,6 +278,9 @@ class ReadBookActivity : BaseReadBookActivity(),
     private var pageChanged = false
     private val handler by lazy { buildMainHandler() }
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
+    private val eyeProtectionScheduler by lazy {
+        EyeProtectionRefreshScheduler(handler) { binding.eyeProtectionOverlay.refresh() }
+    }
     private val executor = ReadBook.executor
     private val upSeekBarThrottle = throttle(200) {
         runOnUiThread {
@@ -302,6 +305,7 @@ class ReadBookActivity : BaseReadBookActivity(),
         ReadBook.register(this)
         binding.cursorLeft.setOnTouchListener(this)
         binding.cursorRight.setOnTouchListener(this)
+        binding.eyeProtectionOverlay.refresh()
 
         onBackPressedDispatcher.addCallback(this) {
             if (isShowingSearchResult) {
@@ -400,6 +404,8 @@ class ReadBookActivity : BaseReadBookActivity(),
         registerReceiver(timeBatteryReceiver, timeBatteryReceiver.filter)
         binding.readView.upTime()
         screenOffTimerStart()
+        binding.eyeProtectionOverlay.refresh()
+        eyeProtectionScheduler.schedule()
         // 网络监听，当从无网切换到网络环境时同步进度（注意注册的同时就会收到监听，因此界面激活时无需重复执行同步操作）
         networkChangedListener.register()
         networkChangedListener.onNetworkChanged = {
@@ -413,6 +419,7 @@ class ReadBookActivity : BaseReadBookActivity(),
     override fun onPause() {
         super.onPause()
         autoPageStop()
+        eyeProtectionScheduler.cancel()
         backupJob?.cancel()
         ReadBook.saveRead()
         ReadBook.stopAutoSaveSession()
@@ -1985,6 +1992,10 @@ class ReadBookActivity : BaseReadBookActivity(),
                 viewModel.refreshContentDur(it)
             }
         }
+        observeEyeProtectionEvents(
+            onRefresh = { binding.eyeProtectionOverlay.refresh() },
+            scheduler = eyeProtectionScheduler
+        )
     }
 
     private fun upScreenTimeOut() {

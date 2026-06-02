@@ -51,6 +51,9 @@ data class SearchUiState(
     val expandedSourceEnd: Boolean = false,
     val expandedSourceError: String? = null,
     val expandedSourcePage: Int = 1,
+    val showExpandedSource: Boolean = false,
+    val expandedSourceSavedScrollIndex: Int = 0,
+    val expandedSourceSavedScrollOffset: Int = 0,
 )
 
 data class SearchEmptyScopeAction(
@@ -90,6 +93,7 @@ sealed interface SearchIntent {
     data object DismissEmptyScopeAction : SearchIntent
     data object OpenSourceManage : SearchIntent
     data class SaveScrollState(val index: Int, val offset: Int) : SearchIntent
+    data class SaveExpandedSourceScrollState(val index: Int, val offset: Int) : SearchIntent
 }
 
 sealed interface SearchEffect {
