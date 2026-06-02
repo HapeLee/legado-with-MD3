@@ -1786,4 +1786,27 @@
     <string name="return_to_original">返回原文</string>
     <string name="translation_progress">翻译中 %1$d%%</string>
     <string name="translation_started">开始进行翻译，请耐心等待……</string>
+
+    <!-- 实验室 -->
+    <string name="lab_setting">实验室</string>
+    <string name="lab_enabled_title">启用实验室</string>
+    <string name="lab_enabled_summary">开启后显示实验性功能，可能不稳定</string>
+    <string name="lab_display">显示</string>
+    <string name="lab_eink_display_title">墨水屏显示</string>
+    <string name="lab_eink_display_summary">在平板界面显示墨水屏选项</string>
+    <string name="lab_eink_display_hint">可在 主题 → 显示 中调整墨水屏设置</string>
+    <string name="lab_eye_protection_title">护眼模式</string>
+    <string name="lab_eye_protection_summary">为漫画和小说阅读器叠加暖色滤镜，减少蓝光</string>
+    <string name="lab_eye_protection_hint">可在 主题 → 外观 中调整护眼模式</string>
+
+    <!-- 护眼模式 -->
+    <string name="eye_protection">护眼模式</string>
+    <string name="eye_protection_enabled">启用护眼模式</string>
+    <string name="eye_protection_enabled_summary">使用暖色调降低蓝光</string>
+    <string name="color_temperature">屏幕色温</string>
+    <string name="color_temperature_summary">当前色温：%1$d</string>
+    <string name="eye_protection_schedule">按时间段启用</string>
+    <string name="eye_protection_schedule_summary">仅在配置的时间段内生效</string>
+    <string name="eye_protection_start_time">开始时间</string>
+    <string name="eye_protection_end_time">结束时间</string>
 </resources>
