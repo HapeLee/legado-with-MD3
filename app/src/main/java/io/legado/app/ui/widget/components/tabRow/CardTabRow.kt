@@ -13,9 +13,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.text.AppText
 
 @Composable
 fun CardTabRow(
@@ -41,7 +43,7 @@ fun CardTabRow(
             )
             val contentColor by animateColorAsState(
                 targetValue = if (selected) {
-                    LegadoTheme.colorScheme.onPrimaryContainer
+                    LegadoTheme.colorScheme.onSecondaryContainer
                 } else {
                     LegadoTheme.colorScheme.onSurfaceVariant
                 },
@@ -54,10 +56,11 @@ fun CardTabRow(
                 modifier = Modifier.weight(1f),
                 containerColor = containerColor,
                 contentColor = contentColor,
+                cornerRadius = 12.dp
             ) {
-                Text(
+                AppText(
                     text = title,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = LegadoTheme.typography.labelMediumEmphasized,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     color = contentColor,
                     maxLines = 1,
@@ -65,7 +68,7 @@ fun CardTabRow(
                         .fillMaxWidth()
                         .padding(vertical = 10.dp)
                         .align(Alignment.CenterHorizontally),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = TextAlign.Center,
                 )
             }
         }

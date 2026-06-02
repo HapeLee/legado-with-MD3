@@ -75,7 +75,7 @@ fun ReadBookSearchBar(
                         )
                     )
                 },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -103,7 +103,7 @@ fun ReadBookSearchBar(
                         )
                     )
                 },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
@@ -168,7 +168,8 @@ private fun SearchBottomMenu(
             // Fraction: "3 / 10"
             Card(
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             ) {
                 Row(
@@ -178,7 +179,7 @@ private fun SearchBottomMenu(
                     Text(
                         text = "${state.searchResultIndex + 1} / ${state.searchResultList.size}",
                         style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(8.dp))
                     val percent = if (state.searchResultList.isNotEmpty()) {
@@ -187,13 +188,18 @@ private fun SearchBottomMenu(
                     Text(
                         text = "$percent%",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
             // Current chapter
-            Card {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
                 Text(
                     text = state.chapterName,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),

@@ -18,18 +18,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
-import io.legado.app.utils.postEvent
 
 @Composable
 fun UnderlineConfigSheet(
     onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
 ) {
     var underline by remember { mutableStateOf(ReadBookConfig.underline) }
     var dottedLine by remember { mutableStateOf(ReadBookConfig.dottedLine) }
@@ -57,12 +58,11 @@ fun UnderlineConfigSheet(
                 checked = underline,
                 onCheckedChange = {
                     underline = it
-                    ReadBookConfig.underline = it
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.Underline(it)))
                     if (!it) {
                         dottedLine = false
-                        ReadBookConfig.dottedLine = false
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DottedLine(false)))
                     }
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
                 },
             )
             TinyColorSettingItem(
@@ -76,8 +76,7 @@ fun UnderlineConfigSheet(
                 enabled = underline,
                 onCheckedChange = {
                     dottedLine = it
-                    ReadBookConfig.dottedLine = it
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DottedLine(it)))
                 },
             )
             TinySwitchSettingItem(
@@ -85,8 +84,7 @@ fun UnderlineConfigSheet(
                 checked = underlineExtend,
                 onCheckedChange = {
                     underlineExtend = it
-                    ReadBookConfig.underlineExtend = it
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineExtend(it)))
                 },
             )
 
@@ -97,8 +95,7 @@ fun UnderlineConfigSheet(
                 valueRange = 0f..20f,
                 onValueChange = { value ->
                     underlineHeight = value
-                    ReadBookConfig.underlineHeight = value.toInt()
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineHeight(value.toInt())))
                 },
             )
             TinySliderSettingItem(
@@ -107,8 +104,7 @@ fun UnderlineConfigSheet(
                 valueRange = 0f..20f,
                 onValueChange = { value ->
                     underlinePadding = value
-                    ReadBookConfig.underlinePadding = value.toInt()
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 9, 6))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlinePadding(value.toInt())))
                 },
             )
 
@@ -130,8 +126,7 @@ fun UnderlineConfigSheet(
                 valueRange = 0f..20f,
                 onValueChange = { value ->
                     dottedBase = value
-                    ReadBookConfig.durConfig.dottedBase = value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 8, 10))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DottedBase(value)))
                 },
             )
             TinySliderSettingItem(
@@ -140,8 +135,7 @@ fun UnderlineConfigSheet(
                 valueRange = 0f..20f,
                 onValueChange = { value ->
                     dottedRatio = value
-                    ReadBookConfig.durConfig.dottedRatio = value
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 8, 10))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DottedRatio(value)))
                 },
             )
         }
@@ -155,8 +149,7 @@ fun UnderlineConfigSheet(
             onDismissRequest = { showColorPicker = false },
             onColorSelected = { color ->
                 underlineColor = color
-                ReadBookConfig.durConfig.setUnderlineColor(color)
-                postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineColor(color)))
                 showColorPicker = false
             },
         )

@@ -3,6 +3,7 @@ package io.legado.app.ui.book.read
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.Build
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -22,7 +23,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
@@ -47,7 +47,6 @@ import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.book.searchContent.SearchResult
-import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
@@ -57,7 +56,6 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.invisible
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
@@ -98,8 +96,10 @@ class ReadBookController(
     private var tocLauncher: ActivityResultLauncher<String>? = null
     private var sourceEditLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
     private var replaceLauncher: ActivityResultLauncher<Intent>? = null
-    private var fontFolderPicker: ActivityResultLauncher<(HandleFileContract.HandleFileParam.() -> Unit)?>? =
-        null
+    private var fontFolderPicker: ActivityResultLauncher<Uri?>? = null
+    private var readStyleImagePicker: ActivityResultLauncher<Array<String>>? = null
+    private var readStyleImportPicker: ActivityResultLauncher<Array<String>>? = null
+    private var readStyleExportPicker: ActivityResultLauncher<String>? = null
     private var txtTocRuleLauncher: ActivityResultLauncher<Intent>? = null
     private var searchContentLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
     private var bookInfoLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
@@ -139,7 +139,13 @@ class ReadBookController(
     private val networkChangedListener by lazy { NetworkChangedListener(activity) }
     private val handler by lazy { buildMainHandler() }
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
-    private val textActionMenu by lazy { TextActionMenu(activity, this) }
+    private val textActionMenu by lazy {
+        TextActionMenu(
+            context = activity,
+            callBack = this,
+            expandTextMenu = { viewModel.readPreferences.value.expandTextMenu }
+        )
+    }
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
     private var backupJob: Job? = null
@@ -195,7 +201,10 @@ class ReadBookController(
         tocLauncher: ActivityResultLauncher<String>,
         sourceEditLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
         replaceLauncher: ActivityResultLauncher<Intent>,
-        fontFolderPicker: ActivityResultLauncher<(HandleFileContract.HandleFileParam.() -> Unit)?>,
+        fontFolderPicker: ActivityResultLauncher<Uri?>,
+        readStyleImagePicker: ActivityResultLauncher<Array<String>>,
+        readStyleImportPicker: ActivityResultLauncher<Array<String>>,
+        readStyleExportPicker: ActivityResultLauncher<String>,
         txtTocRuleLauncher: ActivityResultLauncher<Intent>,
         searchContentLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
         bookInfoLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
@@ -204,6 +213,9 @@ class ReadBookController(
         this.sourceEditLauncher = sourceEditLauncher
         this.replaceLauncher = replaceLauncher
         this.fontFolderPicker = fontFolderPicker
+        this.readStyleImagePicker = readStyleImagePicker
+        this.readStyleImportPicker = readStyleImportPicker
+        this.readStyleExportPicker = readStyleExportPicker
         this.txtTocRuleLauncher = txtTocRuleLauncher
         this.searchContentLauncher = searchContentLauncher
         this.bookInfoLauncher = bookInfoLauncher
@@ -371,6 +383,7 @@ class ReadBookController(
             } else {
                 0
             }
+        textActionMenu.upMenu()
         textActionMenu.show(
             r.textMenuPosition,
             r.root.height + navigationBarHeight,
@@ -773,7 +786,21 @@ class ReadBookController(
             }
 
             is ReadBookEffect.OpenFontFolderPicker -> {
-                fontFolderPicker?.launch { mode = HandleFileContract.DIR_SYS }
+                fontFolderPicker?.launch(null)
+            }
+
+            is ReadBookEffect.OpenReadStyleImagePicker -> {
+                readStyleImagePicker?.launch(arrayOf("image/*"))
+            }
+
+            is ReadBookEffect.OpenReadStyleImport -> {
+                readStyleImportPicker?.launch(
+                    arrayOf("application/zip", "application/octet-stream", "*/*")
+                )
+            }
+
+            is ReadBookEffect.OpenReadStyleExport -> {
+                readStyleExportPicker?.launch("readConfig.zip")
             }
 
             // ── DB query + sheet effects ──
@@ -938,9 +965,6 @@ class ReadBookController(
             is ReadBookEffect.DownloadChapters -> {
                 onDownloadChapters?.invoke(effect.start, effect.end)
             }
-
-            // ── Everything else → Activity fallback ──
-            else -> onUnhandledEffect(effect)
         }
     }
 
@@ -1141,7 +1165,7 @@ class ReadBookController(
     }
 
     private fun upScreenTimeOut() {
-        val keepLightPrefer = activity.getPrefString(PreferKey.keepLight)?.toInt() ?: 0
+        val keepLightPrefer = viewModel.readPreferences.value.keepLight.toIntOrNull() ?: 0
         screenTimeOut = keepLightPrefer * 1000L
         screenOffTimerStartInternal()
     }
@@ -1190,16 +1214,16 @@ class ReadBookController(
         if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
             return false
         }
-        val prevKeysStr = activity.getPrefString(PreferKey.prevKeys)
-        return prevKeysStr?.split(",")?.contains(keyCode.toString()) ?: false
+        val prevKeysStr = viewModel.readPreferences.value.prevKeys
+        return prevKeysStr.split(",").contains(keyCode.toString())
     }
 
     private fun isNextKey(keyCode: Int): Boolean {
         if (keyCode == KeyEvent.KEYCODE_UNKNOWN) {
             return false
         }
-        val nextKeysStr = activity.getPrefString(PreferKey.nextKeys)
-        return nextKeysStr?.split(",")?.contains(keyCode.toString()) ?: false
+        val nextKeysStr = viewModel.readPreferences.value.nextKeys
+        return nextKeysStr.split(",").contains(keyCode.toString())
     }
 
     fun setOrientation() {

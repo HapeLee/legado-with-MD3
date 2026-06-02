@@ -84,6 +84,17 @@ class SettingsRepository(private val context: Context) {
     suspend fun putString(key: String, value: String) =
         updatePreference(stringPreferencesKey(key), value)
 
+    suspend fun putStrings(values: Map<String, String>) {
+        dataStore.edit { preferences ->
+            values.forEach { (key, value) ->
+                preferences[stringPreferencesKey(key)] = value
+            }
+        }
+        values.forEach { (key, value) ->
+            syncToSharedPrefs(key, value)
+        }
+    }
+
     // Int 类型的快捷访问
     fun getInt(key: String, defaultValue: Int = 0): Flow<Int> =
         getPreference(intPreferencesKey(key), defaultValue)

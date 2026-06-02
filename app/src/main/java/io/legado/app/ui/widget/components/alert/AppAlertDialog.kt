@@ -95,7 +95,7 @@ fun AppAlertDialog(
             AlertDialog(
                 onDismissRequest = onDismissRequest,
                 modifier = modifier,
-                containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                containerColor = LegadoTheme.colorScheme.surfaceContainer,
                 iconContentColor = LegadoTheme.colorScheme.primary,
                 titleContentColor = LegadoTheme.colorScheme.onSurface,
                 textContentColor = LegadoTheme.colorScheme.onSurfaceVariant,

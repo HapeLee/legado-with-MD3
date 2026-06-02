@@ -3,15 +3,11 @@ package io.legado.app.ui.config.readConfig
 import android.view.KeyEvent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
@@ -32,10 +27,20 @@ import io.legado.app.ui.widget.components.text.AppText
 @Composable
 fun PageKeySheet(
     show: Boolean,
-    onDismissRequest: () -> Unit
+    prevKeys: String,
+    nextKeys: String,
+    onDismissRequest: () -> Unit,
+    onConfirm: (prevKeys: String, nextKeys: String) -> Unit
 ) {
-    var prevKeys by remember { mutableStateOf(ReadConfig.prevKeys) }
-    var nextKeys by remember { mutableStateOf(ReadConfig.nextKeys) }
+    var prevKeysDraft by remember { mutableStateOf(prevKeys) }
+    var nextKeysDraft by remember { mutableStateOf(nextKeys) }
+
+    LaunchedEffect(show, prevKeys, nextKeys) {
+        if (show) {
+            prevKeysDraft = prevKeys
+            nextKeysDraft = nextKeys
+        }
+    }
 
     AppModalBottomSheet(
         show = show,
@@ -49,8 +54,8 @@ fun PageKeySheet(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AppTextField(
-                value = prevKeys,
-                onValueChange = { prevKeys = it },
+                value = prevKeysDraft,
+                onValueChange = { prevKeysDraft = it },
                 label = stringResource(R.string.prev_page_key),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -58,10 +63,10 @@ fun PageKeySheet(
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                             val keyCode = event.nativeKeyEvent.keyCode
                             if (keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_DEL) {
-                                prevKeys = if (prevKeys.isEmpty() || prevKeys.endsWith(",")) {
-                                    prevKeys + keyCode.toString()
+                                prevKeysDraft = if (prevKeysDraft.isEmpty() || prevKeysDraft.endsWith(",")) {
+                                    prevKeysDraft + keyCode.toString()
                                 } else {
-                                    "$prevKeys,$keyCode"
+                                    "$prevKeysDraft,$keyCode"
                                 }
                                 return@onPreviewKeyEvent true
                             }
@@ -72,8 +77,8 @@ fun PageKeySheet(
             )
 
             AppTextField(
-                value = nextKeys,
-                onValueChange = { nextKeys = it },
+                value = nextKeysDraft,
+                onValueChange = { nextKeysDraft = it },
                 label = stringResource(R.string.next_page_key),
                 modifier = Modifier.Companion
                     .fillMaxWidth()
@@ -81,10 +86,10 @@ fun PageKeySheet(
                         if (event.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
                             val keyCode = event.nativeKeyEvent.keyCode
                             if (keyCode != KeyEvent.KEYCODE_BACK && keyCode != KeyEvent.KEYCODE_DEL) {
-                                nextKeys = if (nextKeys.isEmpty() || nextKeys.endsWith(",")) {
-                                    nextKeys + keyCode.toString()
+                                nextKeysDraft = if (nextKeysDraft.isEmpty() || nextKeysDraft.endsWith(",")) {
+                                    nextKeysDraft + keyCode.toString()
                                 } else {
-                                    "$nextKeys,$keyCode"
+                                    "$nextKeysDraft,$keyCode"
                                 }
                                 return@onPreviewKeyEvent true
                             }
@@ -102,13 +107,11 @@ fun PageKeySheet(
             ConfirmDismissButtonsRow(
                 modifier = Modifier.fillMaxWidth(),
                 onDismiss = {
-                    prevKeys = ""
-                    nextKeys = ""
+                    prevKeysDraft = ""
+                    nextKeysDraft = ""
                 },
                 onConfirm = {
-                    ReadConfig.prevKeys = prevKeys
-                    ReadConfig.nextKeys = nextKeys
-                    onDismissRequest()
+                    onConfirm(prevKeysDraft, nextKeysDraft)
                 },
                 dismissText = stringResource(R.string.reset),
                 confirmText = stringResource(R.string.ok)

@@ -7,6 +7,7 @@ import android.view.WindowManager
 import androidx.core.view.isVisible
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
+import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.databinding.DialogMangaColorFilterBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.GSON
@@ -14,9 +15,11 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
+import org.koin.android.ext.android.inject
 
 class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_manga_color_filter) {
     private val binding by viewBinding(DialogMangaColorFilterBinding::bind)
+    private val mangaSettingsRepository by inject<MangaSettingsRepository>()
     private val mConfig =
         GSON.fromJsonObject<MangaColorFilterConfig>(AppConfig.mangaColorFilter).getOrNull()
             ?: MangaColorFilterConfig()
@@ -114,8 +117,13 @@ class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_man
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        AppConfig.mangaColorFilter = mConfig.toJson()
+        val colorFilter = mConfig.toJson()
+        AppConfig.mangaColorFilter = colorFilter
         AppConfig.mangaEInkThreshold = mMangaEInkThreshold
+        execute {
+            mangaSettingsRepository.setMangaAutoColorFilter(colorFilter)
+            mangaSettingsRepository.setMangaEInkThreshold(mMangaEInkThreshold)
+        }
     }
 
     interface Callback {

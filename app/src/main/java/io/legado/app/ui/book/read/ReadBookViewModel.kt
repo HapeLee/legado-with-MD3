@@ -2,18 +2,24 @@ package io.legado.app.ui.book.read
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.repository.ReadBookStyleConfigRepository
+import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
@@ -39,6 +45,7 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
+import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
@@ -82,7 +89,9 @@ class ReadBookViewModel(
     application: Application,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
     private val uploadReadingProgressUseCase: UploadReadingProgressUseCase,
-    val translateChapterUseCase: io.legado.app.domain.usecase.TranslateChapterUseCase
+    val translateChapterUseCase: io.legado.app.domain.usecase.TranslateChapterUseCase,
+    private val readSettingsRepository: ReadSettingsRepository,
+    private val readBookStyleConfigRepository: ReadBookStyleConfigRepository
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -92,6 +101,9 @@ class ReadBookViewModel(
 
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
+
+    private val _readPreferences = MutableStateFlow(ReadPreferences())
+    val readPreferences = _readPreferences.asStateFlow()
 
     // --- Legacy fields (kept for backward compatibility during migration) ---
 
@@ -107,6 +119,7 @@ class ReadBookViewModel(
     init {
         AppConfig.detectClickArea()
         ReadBook.register(this)
+        collectReadPreferences()
         collectEventBus()
     }
 
@@ -124,7 +137,7 @@ class ReadBookViewModel(
             is ReadBookIntent.SkipToPage -> ReadBook.skipToPage(intent.pageIndex)
             is ReadBookIntent.ToggleMenu -> _uiState.update {
                 if (it.menuVisible) {
-                    ReadBookConfig.save()
+                    readBookStyleConfigRepository.save()
                     it.copy(menuState = ReadBookMenuState())
                 } else {
                     it.copy(menuState = ReadBookMenuState(visible = true))
@@ -136,7 +149,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.HideMenu -> _uiState.update {
-                ReadBookConfig.save()
+                readBookStyleConfigRepository.save()
                 it.copy(menuState = ReadBookMenuState())
             }
 
@@ -157,11 +170,11 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ReadMenuBack -> _uiState.update {
                 if (it.menuState.canNavigateBack) {
-                    ReadBookConfig.save()
+                    readBookStyleConfigRepository.save()
                     val nextStack = it.menuState.routeStack.dropLast(1).toImmutableList()
                     it.copy(menuState = it.menuState.copy(routeStack = nextStack))
                 } else {
-                    ReadBookConfig.save()
+                    readBookStyleConfigRepository.save()
                     it.copy(menuState = ReadBookMenuState())
                 }
             }
@@ -378,6 +391,10 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(intent.values))
             }
 
+            is ReadBookIntent.UpdateConfig -> {
+                handleConfigUpdate(intent.update)
+            }
+
             is ReadBookIntent.KeepLightChanged -> _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
             is ReadBookIntent.TextSelectAbleChanged -> _effects.tryEmit(
                 ReadBookEffect.UpTextSelectAble(
@@ -444,13 +461,53 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ReplaceRuleChanged -> replaceRuleChanged()
             is ReadBookIntent.OpenFontFolderPicker -> _effects.tryEmit(ReadBookEffect.OpenFontFolderPicker)
+            is ReadBookIntent.OpenReadStyleImagePicker -> {
+                _effects.tryEmit(ReadBookEffect.OpenReadStyleImagePicker)
+            }
+            is ReadBookIntent.OpenReadStyleImport -> {
+                _effects.tryEmit(ReadBookEffect.OpenReadStyleImport)
+            }
+            is ReadBookIntent.OpenReadStyleExport -> {
+                _effects.tryEmit(ReadBookEffect.OpenReadStyleExport)
+            }
+            is ReadBookIntent.ReadStyleImageSelected -> {
+                applyReadStyleBackgroundImage(intent.uri)
+            }
+            is ReadBookIntent.ReadStyleConfigImportSelected -> {
+                importReadStyleConfig(intent.uri)
+            }
+            is ReadBookIntent.ReadStyleConfigExportSelected -> {
+                exportReadStyleConfig(intent.uri)
+            }
+            is ReadBookIntent.SaveReadStyleConfig -> {
+                readBookStyleConfigRepository.save()
+            }
+            is ReadBookIntent.AddReadStyleConfig -> {
+                val newIndex = readBookStyleConfigRepository.addStyle()
+                handleConfigUpdate(ConfigUpdate.StyleSelect(newIndex))
+            }
+            is ReadBookIntent.DeleteCurrentReadStyleConfig -> {
+                if (readBookStyleConfigRepository.deleteCurrentStyle()) {
+                    _uiState.update {
+                        it.copy(
+                            configUpdateTrigger = it.configUpdateTrigger + 1,
+                            activeSheet = null,
+                        )
+                    }
+                    postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+                }
+            }
             is ReadBookIntent.RefreshToolButtons -> _effects.tryEmit(ReadBookEffect.Recreate)
+            is ReadBookIntent.RefreshTitleBarIcons -> _effects.tryEmit(ReadBookEffect.Recreate)
             is ReadBookIntent.OpenBgTextConfig -> {
                 ReadBookConfig.styleSelect = intent.index
+                viewModelScope.launch {
+                    readSettingsRepository.setStyleSelect(ReadBookConfig.isComic, intent.index)
+                }
                 _uiState.update { it.copy(activeSheet = ReadBookSheet.BgTextConfig) }
             }
 
-            is ReadBookIntent.ToggleDayNight -> _effects.tryEmit(ReadBookEffect.ToggleDayNight)
+            is ReadBookIntent.ToggleDayNight -> toggleDayNight()
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
                 when (AppConfig.contentSelectSpeakMod) {
@@ -568,7 +625,7 @@ class ReadBookViewModel(
     }
 
     override fun contentLoadFinish() {
-        _uiState.update { it.copy(isInitFinish = true) }
+        _uiState.update { syncFromReadBook(it).copy(isInitFinish = true) }
         _effects.tryEmit(ReadBookEffect.ContentLoadFinish)
     }
 
@@ -595,11 +652,12 @@ class ReadBookViewModel(
 
     // LayoutProgressListener
     override fun onLayoutPageCompleted(index: Int, page: TextPage) {
+        _uiState.update { syncFromReadBook(it) }
         _effects.tryEmit(ReadBookEffect.LayoutPageCompleted(index, page))
     }
 
     override fun onLayoutCompleted() {
-        // no-op: ReadView handles this internally
+        _uiState.update { syncFromReadBook(it) }
     }
 
     override fun onLayoutException(e: Throwable) {
@@ -667,6 +725,7 @@ class ReadBookViewModel(
         }
         viewModelScope.launch {
             eventFlow<Boolean>(EventBus.UP_SEEK_BAR).collect {
+                _uiState.update { syncFromReadBook(it) }
                 _effects.tryEmit(ReadBookEffect.UpSeekBar)
             }
         }
@@ -689,6 +748,38 @@ class ReadBookViewModel(
                 _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(chapterStart))
             }
         }
+    }
+
+    private fun collectReadPreferences() {
+        viewModelScope.launch {
+            var previous: ReadPreferences? = null
+            readSettingsRepository.preferences.collect { preferences ->
+                val old = previous
+                previous = preferences
+                ReadBookConfig.syncPreferences(preferences)
+                AppConfig.syncReadPreferences(preferences)
+                _readPreferences.value = preferences
+                if (!preferences.hasMenuClickArea()) {
+                    AppConfig.detectClickArea()
+                    readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
+                }
+                if (old != null && old.keepLight != preferences.keepLight) {
+                    _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
+                }
+            }
+        }
+    }
+
+    fun setFontFolder(value: String) {
+        viewModelScope.launch {
+            readSettingsRepository.setFontFolder(value)
+        }
+    }
+
+    private fun ReadPreferences.hasMenuClickArea(): Boolean {
+        return clickActionTL * clickActionTC * clickActionTR *
+                clickActionML * clickActionMC * clickActionMR *
+                clickActionBL * clickActionBC * clickActionBR == 0
     }
 
     // --- State Sync ---
@@ -1292,6 +1383,379 @@ class ReadBookViewModel(
         }
     }
 
+    @Suppress("LongMethod")
+    private fun handleConfigUpdate(update: ConfigUpdate) {
+        when (update) {
+            // --- Text style ---
+            is ConfigUpdate.TextSize -> ReadBookConfig.textSize = update.value
+            is ConfigUpdate.LetterSpacing -> ReadBookConfig.letterSpacing = update.value
+            is ConfigUpdate.LineSpacing -> ReadBookConfig.lineSpacingExtra = update.value
+            is ConfigUpdate.ParagraphSpacing -> ReadBookConfig.paragraphSpacing = update.value
+            is ConfigUpdate.ParagraphIndent -> ReadBookConfig.paragraphIndent = update.value
+            is ConfigUpdate.TextItalic -> ReadBookConfig.textItalic = update.value
+            is ConfigUpdate.TextBold -> ReadBookConfig.textBold = update.value
+            is ConfigUpdate.TextColor -> ReadBookConfig.durConfig.setCurTextColor(update.color)
+            is ConfigUpdate.TextAccentColor -> ReadBookConfig.durConfig.setCurTextAccentColor(update.color)
+
+            // --- Title style ---
+            is ConfigUpdate.TitleMode -> ReadBookConfig.titleMode = update.value
+            is ConfigUpdate.TitleBold -> ReadBookConfig.titleBold = update.value
+            is ConfigUpdate.TitleSegScaling -> ReadBookConfig.titleSegScaling = update.value
+            is ConfigUpdate.TitleLineSpacingExtra -> ReadBookConfig.titleLineSpacingExtra = update.value
+            is ConfigUpdate.TitleLineSpacingSub -> ReadBookConfig.titleLineSpacingSub = update.value
+            is ConfigUpdate.TitleSize -> ReadBookConfig.titleSize = update.value
+            is ConfigUpdate.TitleTopSpacing -> ReadBookConfig.titleTopSpacing = update.value
+            is ConfigUpdate.TitleBottomSpacing -> ReadBookConfig.titleBottomSpacing = update.value
+            is ConfigUpdate.TitleColor -> ReadBookConfig.titleColor = update.color
+
+            // --- Header / footer tips ---
+            is ConfigUpdate.HeaderMode -> ReadBookConfig.headerMode = update.value
+            is ConfigUpdate.FooterMode -> ReadBookConfig.footerMode = update.value
+            is ConfigUpdate.TipHeaderLeft -> ReadBookConfig.tipHeaderLeft = update.value
+            is ConfigUpdate.TipHeaderMiddle -> ReadBookConfig.tipHeaderMiddle = update.value
+            is ConfigUpdate.TipHeaderRight -> ReadBookConfig.tipHeaderRight = update.value
+            is ConfigUpdate.TipFooterLeft -> ReadBookConfig.tipFooterLeft = update.value
+            is ConfigUpdate.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = update.value
+            is ConfigUpdate.TipFooterRight -> ReadBookConfig.tipFooterRight = update.value
+            is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
+            is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color
+            is ConfigUpdate.TipFooterColor -> ReadBookConfig.tipFooterColor = update.color
+            is ConfigUpdate.TipDividerColor -> ReadBookConfig.tipDividerColor = update.color
+
+            // --- Layout / style ---
+            is ConfigUpdate.StyleSelect -> {
+                ReadBookConfig.styleSelect = update.index
+                viewModelScope.launch {
+                    readSettingsRepository.setStyleSelect(ReadBookConfig.isComic, update.index)
+                }
+            }
+            is ConfigUpdate.ShareLayout -> {
+                ReadBookConfig.shareLayout = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setShareLayout(update.value)
+                }
+            }
+            is ConfigUpdate.PageAnim -> ReadBookConfig.pageAnim = update.value
+
+            // --- Menu appearance ---
+            is ConfigUpdate.MenuBgColor -> {
+                ReadBookConfig.readMenuBgColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBgColor(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuAccentColor -> {
+                ReadBookConfig.readMenuAccentColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuAccentColor(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuContainerColor -> {
+                ReadBookConfig.readMenuContainerColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuContainerColor(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuBgColorNight -> {
+                ReadBookConfig.readMenuBgColorNight = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBgColorNight(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuAccentColorNight -> {
+                ReadBookConfig.readMenuAccentColorNight = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuAccentColorNight(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuContainerColorNight -> {
+                ReadBookConfig.readMenuContainerColorNight = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuContainerColorNight(update.color)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.MenuColorMode -> {
+                val value = update.value.coerceIn(0, 1)
+                ReadBookConfig.readMenuColorMode = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuColorMode(value)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.ReadBarStyle -> {
+                val value = update.value.coerceIn(0, 2)
+                AppConfig.updateReadBarStyleCache(value)
+                viewModelScope.launch {
+                    readSettingsRepository.setReadBarStyle(value)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            // --- Menu bar border ---
+            is ConfigUpdate.BorderWidth -> {
+                ReadBookConfig.readMenuBorderWidth = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBorderWidth(update.value)
+                }
+            }
+            is ConfigUpdate.BorderColor -> {
+                ReadBookConfig.readMenuBorderColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBorderColor(update.color)
+                }
+            }
+            is ConfigUpdate.BorderColorNight -> {
+                ReadBookConfig.readMenuBorderColorNight = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBorderColorNight(update.color)
+                }
+            }
+
+            // --- Shadow ---
+            is ConfigUpdate.TextShadow -> ReadBookConfig.textShadow = update.value
+            is ConfigUpdate.ShadowRadius -> ReadBookConfig.shadowRadius = update.value
+            is ConfigUpdate.ShadowDx -> ReadBookConfig.shadowDx = update.value
+            is ConfigUpdate.ShadowDy -> ReadBookConfig.shadowDy = update.value
+            is ConfigUpdate.ShadowColor -> ReadBookConfig.durConfig.setCurShadColor(update.color)
+
+            // --- Underline ---
+            is ConfigUpdate.Underline -> ReadBookConfig.underline = update.value
+            is ConfigUpdate.DottedLine -> ReadBookConfig.dottedLine = update.value
+            is ConfigUpdate.UnderlineExtend -> ReadBookConfig.underlineExtend = update.value
+            is ConfigUpdate.UnderlineHeight -> ReadBookConfig.underlineHeight = update.value
+            is ConfigUpdate.UnderlinePadding -> ReadBookConfig.underlinePadding = update.value
+            is ConfigUpdate.DottedBase -> ReadBookConfig.durConfig.dottedBase = update.value
+            is ConfigUpdate.DottedRatio -> ReadBookConfig.durConfig.dottedRatio = update.value
+            is ConfigUpdate.UnderlineColor -> ReadBookConfig.durConfig.setUnderlineColor(update.color)
+
+            // --- Body padding ---
+            is ConfigUpdate.PaddingTop -> ReadBookConfig.paddingTop = update.value
+            is ConfigUpdate.PaddingBottom -> ReadBookConfig.paddingBottom = update.value
+            is ConfigUpdate.PaddingLeft -> ReadBookConfig.paddingLeft = update.value
+            is ConfigUpdate.PaddingRight -> ReadBookConfig.paddingRight = update.value
+
+            // --- Header padding ---
+            is ConfigUpdate.HeaderPaddingTop -> ReadBookConfig.headerPaddingTop = update.value
+            is ConfigUpdate.HeaderPaddingBottom -> ReadBookConfig.headerPaddingBottom = update.value
+            is ConfigUpdate.HeaderPaddingLeft -> ReadBookConfig.headerPaddingLeft = update.value
+            is ConfigUpdate.HeaderPaddingRight -> ReadBookConfig.headerPaddingRight = update.value
+            is ConfigUpdate.ShowHeaderLine -> ReadBookConfig.showHeaderLine = update.value
+
+            // --- Footer padding ---
+            is ConfigUpdate.FooterPaddingTop -> ReadBookConfig.footerPaddingTop = update.value
+            is ConfigUpdate.FooterPaddingBottom -> ReadBookConfig.footerPaddingBottom = update.value
+            is ConfigUpdate.FooterPaddingLeft -> ReadBookConfig.footerPaddingLeft = update.value
+            is ConfigUpdate.FooterPaddingRight -> ReadBookConfig.footerPaddingRight = update.value
+            is ConfigUpdate.ShowFooterLine -> ReadBookConfig.showFooterLine = update.value
+
+            // --- Background / display ---
+            is ConfigUpdate.BgAlpha -> ReadBookConfig.bgAlpha = update.value
+            is ConfigUpdate.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(update.value)
+            is ConfigUpdate.MenuIconShowText -> {
+                ReadBookConfig.readMenuIconShowText = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuIconShowText(update.value)
+                }
+            }
+            is ConfigUpdate.MenuIconStyle -> {
+                val value = update.value.coerceIn(0, 2)
+                ReadBookConfig.readMenuIconStyle = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuIconStyle(value)
+                }
+            }
+            is ConfigUpdate.MenuIconItemsPerRow -> {
+                val value = update.value.coerceIn(2, 8)
+                ReadBookConfig.readMenuIconItemsPerRow = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuIconItemsPerRow(value)
+                }
+            }
+            is ConfigUpdate.MenuIconRowCount -> {
+                val value = update.value.coerceIn(1, 2)
+                ReadBookConfig.readMenuIconRowCount = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuIconRowCount(value)
+                }
+            }
+            is ConfigUpdate.MenuBottomCornerRadius -> {
+                val value = update.value.coerceIn(0, 32)
+                ReadBookConfig.readMenuBottomCornerRadius = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomCornerRadius(value)
+                }
+            }
+            is ConfigUpdate.MenuBottomHorizontalMargin -> {
+                val value = update.value.coerceIn(0, 32)
+                ReadBookConfig.readMenuBottomHorizontalMargin = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomHorizontalMargin(value)
+                }
+            }
+            is ConfigUpdate.MenuBottomBottomMargin -> {
+                val value = update.value.coerceIn(0, 32)
+                ReadBookConfig.readMenuBottomBottomMargin = value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomBottomMargin(value)
+                }
+            }
+            is ConfigUpdate.MenuCustomIcon -> {
+                val icons = ReadBookConfig.readMenuCustomIcons.toMutableMap()
+                if (update.path.isBlank()) {
+                    icons.remove(update.id)
+                } else {
+                    icons[update.id] = update.path
+                }
+                ReadBookConfig.readMenuCustomIcons = icons
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuCustomIcons(
+                        ReadBookConfig.encodeReadMenuCustomIcons(icons)
+                    )
+                }
+            }
+            is ConfigUpdate.TitleBarCustomIcon -> {
+                val icons = ReadBookConfig.titleBarCustomIcons.toMutableMap()
+                if (update.path.isBlank()) {
+                    icons.remove(update.id)
+                } else {
+                    icons[update.id] = update.path
+                }
+                ReadBookConfig.titleBarCustomIcons = icons
+                viewModelScope.launch {
+                    readSettingsRepository.setTitleBarCustomIcons(
+                        ReadBookConfig.encodeReadMenuCustomIcons(icons)
+                    )
+                }
+            }
+            is ConfigUpdate.TitleBarIconPosition -> {
+                ReadBookConfig.titleBarIconPosition = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setTitleBarIconPosition(update.value)
+                }
+            }
+
+            // --- System UI (also persists to DataStore) ---
+            is ConfigUpdate.HideStatusBar -> {
+                ReadBookConfig.hideStatusBar = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setHideStatusBar(update.value)
+                }
+            }
+            is ConfigUpdate.HideNavigationBar -> {
+                ReadBookConfig.hideNavigationBar = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setHideNavigationBar(update.value)
+                }
+            }
+
+            // --- Display toggles ---
+            is ConfigUpdate.PaddingDisplayCutouts -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setPaddingDisplayCutouts(update.value)
+                }
+            }
+            is ConfigUpdate.TitleBarMode -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setTitleBarMode(update.value)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.TextFullJustify -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setTextFullJustify(update.value)
+                }
+            }
+            is ConfigUpdate.TextBottomJustify -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setTextBottomJustify(update.value)
+                }
+            }
+            is ConfigUpdate.AdaptSpecialStyle -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setAdaptSpecialStyle(update.value)
+                }
+            }
+            is ConfigUpdate.UseZhLayout -> {
+                ReadBookConfig.useZhLayout = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setUseZhLayout(update.value)
+                }
+            }
+            is ConfigUpdate.ShowBrightnessView -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setShowBrightnessView(update.value)
+                }
+                postEvent(PreferKey.showBrightnessView, "")
+            }
+            is ConfigUpdate.UseUnderlineGlobal -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setUseUnderline(update.value)
+                }
+            }
+            is ConfigUpdate.ReadSliderMode -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setReadSliderMode(update.value)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+            is ConfigUpdate.DoubleHorizontalPage -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setDoubleHorizontalPage(update.value)
+                }
+                ChapterProvider.upLayout()
+                ReadBook.loadContent(false)
+            }
+            is ConfigUpdate.ProgressBarBehavior -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setProgressBarBehavior(update.value)
+                }
+                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+            }
+            is ConfigUpdate.NoAnimScrollPage -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setNoAnimScrollPage(update.value)
+                }
+                _effects.tryEmit(ReadBookEffect.UpPageAnim(upRecorder = false))
+            }
+            is ConfigUpdate.ShowReadTitleAddition -> {
+                viewModelScope.launch {
+                    readSettingsRepository.setShowReadTitleAddition(update.value)
+                }
+                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+            }
+
+            // --- Regex color rules ---
+            is ConfigUpdate.RegexColorRules -> {
+                ReadBookConfig.regexColorRules.clear()
+                ReadBookConfig.regexColorRules.addAll(update.rules)
+                ReadBookConfig.saveRegexColorRules()
+                io.legado.app.ui.book.read.page.provider.TextChapterLayout.invalidateRegexCache()
+            }
+
+            // --- Auto read ---
+            is ConfigUpdate.AutoReadSpeed -> {
+                ReadBookConfig.autoReadSpeed = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setAutoReadSpeed(update.value)
+                }
+            }
+        }
+
+        // Notify rendering layer
+        if (update.codes.isNotEmpty()) {
+            _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+            postEvent(EventBus.UP_CONFIG, ArrayList(update.codes))
+        } else {
+            _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+        }
+    }
+
     private fun selectFont(path: String) {
         if (pendingRegexColorFontIndex >= 0) {
             applyRegexColorFont(path)
@@ -1312,6 +1776,84 @@ class ReadBookViewModel(
         }
         // Re-open the regex color config sheet
         _uiState.update { it.copy(activeSheet = ReadBookSheet.RegexColorConfig) }
+    }
+
+    private fun toggleDayNight() {
+        AppConfig.isNightTheme = !AppConfig.isNightTheme
+        _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+        postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+        postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+    }
+
+    private fun applyReadStyleBackgroundImage(uri: Uri) {
+        viewModelScope.launch(IO) {
+            runCatching {
+                val name = queryDisplayName(uri)
+                val path = context.contentResolver.openInputStream(uri)?.use {
+                    readBookStyleConfigRepository.saveBackgroundImage(it, name)
+                } ?: throw FileNotFoundException(uri.toString())
+                readBookStyleConfigRepository.setCurrentBackgroundImage(path)
+                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+                postEvent(EventBus.UP_CONFIG, arrayListOf(1))
+                context.getString(R.string.success)
+            }.onSuccess { message ->
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }.onFailure { throwable ->
+                AppLog.put("选择阅读背景图失败", throwable)
+                _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
+            }
+        }
+    }
+
+    private fun importReadStyleConfig(uri: Uri) {
+        viewModelScope.launch(IO) {
+            runCatching {
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: throw FileNotFoundException(uri.toString())
+                readBookStyleConfigRepository.importCurrentStyle(bytes)
+                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+                postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+                context.getString(R.string.success)
+            }.onSuccess { message ->
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }.onFailure { throwable ->
+                AppLog.put("导入阅读样式失败", throwable)
+                _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
+            }
+        }
+    }
+
+    private fun exportReadStyleConfig(uri: Uri) {
+        viewModelScope.launch(IO) {
+            runCatching {
+                val bytes = readBookStyleConfigRepository.exportCurrentStyle()
+                context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    ?: throw FileNotFoundException(uri.toString())
+                context.getString(R.string.export_success)
+            }.onSuccess { message ->
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }.onFailure { throwable ->
+                AppLog.put("导出阅读样式失败", throwable)
+                _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
+            }
+        }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        return context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0) cursor.getString(index) else null
+            } else {
+                null
+            }
+        }
     }
 
     private fun colorSelected(dialogId: Int, color: Int) {
@@ -1347,19 +1889,19 @@ class ReadBookViewModel(
                 }
 
                 ReadBookColorPickerIds.TIP_HEADER_COLOR -> {
-                    io.legado.app.help.config.ReadTipConfig.tipHeaderColor = color
+                    ReadBookConfig.tipHeaderColor = color
                     postEvent(EventBus.TIP_COLOR, "")
                     postEvent(EventBus.UP_CONFIG, arrayListOf(2))
                 }
 
                 ReadBookColorPickerIds.TIP_FOOTER_COLOR -> {
-                    io.legado.app.help.config.ReadTipConfig.tipFooterColor = color
+                    ReadBookConfig.tipFooterColor = color
                     postEvent(EventBus.TIP_COLOR, "")
                     postEvent(EventBus.UP_CONFIG, arrayListOf(2))
                 }
 
                 ReadBookColorPickerIds.TIP_DIVIDER_COLOR -> {
-                    io.legado.app.help.config.ReadTipConfig.tipDividerColor = color
+                    ReadBookConfig.tipDividerColor = color
                     postEvent(EventBus.TIP_COLOR, "")
                     postEvent(EventBus.UP_CONFIG, arrayListOf(2))
                 }
@@ -1380,12 +1922,18 @@ class ReadBookViewModel(
                 }
 
                 ReadBookColorPickerIds.MENU_BG_COLOR -> {
-                    setMenuCurBg(color)
+                    ReadBookConfig.readMenuBgColor = color
+                    viewModelScope.launch {
+                        readSettingsRepository.setReadMenuBgColor(color)
+                    }
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
                 ReadBookColorPickerIds.MENU_ACCENT_COLOR -> {
-                    setMenuCurAc(color)
+                    ReadBookConfig.readMenuAccentColor = color
+                    viewModelScope.launch {
+                        readSettingsRepository.setReadMenuAccentColor(color)
+                    }
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 

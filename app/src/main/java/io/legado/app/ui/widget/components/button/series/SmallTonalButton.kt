@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
@@ -35,7 +36,7 @@ fun SmallTonalButton(
                 onClick = onClick,
                 modifier = modifier.size(SmallMiuixButtonSize),
                 enabled = enabled,
-                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh
+                backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow
             ) {
                 MiuixIcon(
                     imageVector = icon,
@@ -49,7 +50,7 @@ fun SmallTonalButton(
                 modifier = modifier,
                 showIndication = true,
                 colors = CardDefaults.defaultColors(
-                    color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    color = LegadoTheme.colorScheme.surfaceContainerLow,
                     contentColor = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             ) {
@@ -65,7 +66,10 @@ fun SmallTonalButton(
                         modifier = modifier.size(smallContainerSize()),
                         enabled = enabled,
                         shapes = IconButtonDefaults.shapes(),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors()
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                        )
                     ) {
                         Icon(
                             imageVector = icon,
@@ -80,6 +84,10 @@ fun SmallTonalButton(
                         onClick = onClick,
                         modifier = modifier,
                         enabled = enabled,
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                        ),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         SmallButtonContent(icon, text, contentDescription)

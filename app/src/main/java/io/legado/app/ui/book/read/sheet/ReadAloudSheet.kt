@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,14 +28,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.help.config.AppConfig
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun ReadAloudSheet(
@@ -72,15 +76,24 @@ fun ReadAloudContent(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val readAloudSettingsRepository: ReadAloudSettingsRepository = koinInject()
+    val preferences by readAloudSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = io.legado.app.data.repository.ReadAloudPreferences()
+    )
     var isPaused by remember { mutableStateOf(BaseReadAloudService.pause) }
-    var ttsFollowSys by remember { mutableStateOf(AppConfig.ttsFlowSys) }
-    var ttsSpeechRate by remember { mutableFloatStateOf(AppConfig.ttsSpeechRate.toFloat()) }
-    var timerMinute by remember {
+    var ttsFollowSys by remember(preferences.ttsFollowSys) {
+        mutableStateOf(preferences.ttsFollowSys)
+    }
+    var ttsSpeechRate by remember(preferences.ttsSpeechRate) {
+        mutableFloatStateOf(preferences.ttsSpeechRate.toFloat())
+    }
+    var timerMinute by remember(preferences.ttsTimer) {
         mutableFloatStateOf(
             if (BaseReadAloudService.timeMinute > 0) {
                 BaseReadAloudService.timeMinute.toFloat()
             } else {
-                AppConfig.ttsTimer.toFloat()
+                preferences.ttsTimer.toFloat()
             }
         )
     }
@@ -160,6 +173,9 @@ fun ReadAloudContent(
             steps = 179,
             onValueChange = {
                 timerMinute = it
+                scope.launch {
+                    readAloudSettingsRepository.setTtsTimer(it.toInt())
+                }
                 ReadAloud.setTimer(context, it.toInt())
             },
         )
@@ -178,6 +194,9 @@ fun ReadAloudContent(
             }
             FilledTonalButton(
                 onClick = {
+                    scope.launch {
+                        readAloudSettingsRepository.setTtsTimer(timerMinute.toInt())
+                    }
                     ReadAloud.setTimer(
                         context,
                         timerMinute.toInt()
@@ -202,7 +221,9 @@ fun ReadAloudContent(
             checked = ttsFollowSys,
             onCheckedChange = {
                 ttsFollowSys = it
-                AppConfig.ttsFlowSys = it
+                scope.launch {
+                    readAloudSettingsRepository.setTtsFollowSys(it)
+                }
             },
         )
 
@@ -214,8 +235,10 @@ fun ReadAloudContent(
             enabled = !ttsFollowSys,
             onValueChange = {
                 ttsSpeechRate = it
-                AppConfig.ttsSpeechRate = it.toInt()
-                ReadAloud.upTtsSpeechRate(context)
+                scope.launch {
+                    readAloudSettingsRepository.setTtsSpeechRate(it.toInt())
+                    ReadAloud.upTtsSpeechRate(context)
+                }
             },
         )
 

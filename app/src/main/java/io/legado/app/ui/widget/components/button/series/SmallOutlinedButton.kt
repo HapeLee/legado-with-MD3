@@ -36,7 +36,7 @@ fun SmallOutlinedButton(
                 onClick = onClick,
                 modifier = modifier.size(SmallMiuixButtonSize),
                 enabled = enabled,
-                backgroundColor = LegadoTheme.colorScheme.surfaceContainer
+                backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow
             ) {
                 MiuixIcon(
                     imageVector = icon,
@@ -50,7 +50,7 @@ fun SmallOutlinedButton(
                 modifier = modifier,
                 showIndication = true,
                 colors = CardDefaults.defaultColors(
-                    color = LegadoTheme.colorScheme.surfaceContainer,
+                    color = LegadoTheme.colorScheme.surfaceContainerLow,
                     contentColor = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             ) {
@@ -66,6 +66,10 @@ fun SmallOutlinedButton(
                         modifier = modifier.size(smallContainerSize()),
                         enabled = enabled,
                         shapes = IconButtonDefaults.shapes(),
+                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                        ),
                         border = ButtonDefaults.outlinedButtonBorder()
                     ) {
                         Icon(
@@ -81,6 +85,10 @@ fun SmallOutlinedButton(
                         onClick = onClick,
                         modifier = modifier,
                         enabled = enabled,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                        ),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                         border = ButtonDefaults.outlinedButtonBorder()
                     ) {

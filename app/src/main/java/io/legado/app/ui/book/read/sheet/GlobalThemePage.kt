@@ -1,0 +1,369 @@
+package io.legado.app.ui.book.read.sheet
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.SpaceBar
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
+import io.legado.app.R
+import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.model.ReadBook
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.fadingEdge
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.NormalCard
+import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.settingItem.TinySettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+
+// ========== Page 0: Global & Theme ==========
+
+@Composable
+internal fun GlobalThemePage(
+    onToggleDayNight: () -> Unit,
+    onOpenBgTextConfig: (Int) -> Unit,
+    onOpenTextTitle: () -> Unit,
+    onOpenPaddingConfig: () -> Unit,
+    onShareLayoutChange: (Boolean) -> Unit,
+    onStyleSelect: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    onIntent: (ReadBookIntent) -> Unit,
+) {
+    var textSize by remember { mutableIntStateOf(ReadBookConfig.textSize) }
+    var pageAnim by remember { mutableIntStateOf(ReadBook.pageAnim()) }
+    var styleSelect by remember { mutableIntStateOf(ReadBookConfig.styleSelect) }
+    var shareLayout by remember { mutableStateOf(ReadBookConfig.shareLayout) }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            TinySliderSettingItem(
+                title = stringResource(R.string.text_size),
+                value = textSize.toFloat(),
+                valueRange = 5f..50f,
+                steps = 44,
+                modifier = Modifier.weight(1f),
+                onValueChange = { value ->
+                    textSize = value.toInt()
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSize(value.toInt())))
+                },
+            )
+            NormalCard(
+                onClick = onOpenTextTitle,
+                modifier = Modifier
+                    .height(56.dp)
+                    .aspectRatio(1f),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TextFields,
+                        contentDescription = stringResource(R.string.read_config_text_effects),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // Style section label + Day/Night
+        NormalCard(
+            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+            cornerRadius = 12.dp
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 12.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    AppText(
+                        text = stringResource(R.string.text_bg_style),
+                        style = LegadoTheme.typography.titleSmallEmphasized
+                    )
+                    AppText(
+                        text = stringResource(R.string.long_click_to_custom),
+                        style = LegadoTheme.typography.labelSmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                SmallTonalButton(
+                    onClick = onToggleDayNight,
+                    icon = Icons.Default.Brightness6
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Style cards: [shareLayout] [cards...]
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+            ) {
+                NormalCard(
+                    onClick = {
+                        shareLayout = !shareLayout
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
+                        onShareLayoutChange(shareLayout)
+                    },
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(56.dp),
+                    cornerRadius = 8.dp,
+                    containerColor = if (shareLayout) {
+                        LegadoTheme.colorScheme.primaryContainer
+                    } else {
+                        LegadoTheme.colorScheme.surfaceContainerLow
+                    },
+                    contentColor = if (shareLayout) LegadoTheme.colorScheme.onPrimaryContainer else null
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.GridView,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                val styleListState = rememberLazyListState()
+                LazyRow(
+                    state = styleListState,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 8.dp)
+                        .fadingEdge(styleListState),
+                ) {
+                    itemsIndexed(ReadBookConfig.configList) { index, config ->
+                        StyleCard(
+                            config = config,
+                            isSelected = styleSelect == index,
+                            onClick = {
+                                styleSelect = index
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
+                                onStyleSelect(index)
+                            },
+                            onLongClick = {
+                                styleSelect = index
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
+                                onStyleSelect(index)
+                                onOpenBgTextConfig(index)
+                            },
+                        )
+                    }
+                    item {
+                        NormalCard(
+                            onClick = {
+                                onIntent(ReadBookIntent.AddReadStyleConfig)
+                                styleSelect = ReadBookConfig.styleSelect
+                                onStyleSelect(styleSelect)
+                            },
+                            modifier = Modifier
+                                .width(40.dp)
+                                .height(56.dp),
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        val pageAnimOptions = listOf(
+            R.string.page_anim_cover,
+            R.string.page_anim_slide,
+            R.string.page_anim_simulation,
+            R.string.page_anim_scroll,
+            R.string.page_anim_fade,
+            R.string.page_anim_none,
+        )
+        var showPageAnimMenu by remember { mutableStateOf(false) }
+        val pageAnimEntries = pageAnimOptions.map { stringResource(it) }.toTypedArray()
+        val pageAnimEntryValues = pageAnimOptions.indices.map { it.toString() }.toTypedArray()
+        val currentPageAnimDisplay =
+            pageAnimEntries.getOrNull(pageAnimEntryValues.indexOf(pageAnim.toString())) ?: ""
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                TinySettingItem(
+                    title = stringResource(R.string.page_anim),
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingContent = {
+                        TextCard(
+                            cornerRadius = 8.dp,
+                            horizontalPadding = 8.dp,
+                            verticalPadding = 4.dp,
+                            text = currentPageAnimDisplay,
+                            backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurface,
+                        )
+                    },
+                    onClick = { showPageAnimMenu = true },
+                )
+                RoundDropdownMenu(
+                    expanded = showPageAnimMenu,
+                    onDismissRequest = { showPageAnimMenu = false },
+                ) { dismiss ->
+                    pageAnimEntries.forEachIndexed { index, display ->
+                        RoundDropdownMenuItem(
+                            text = display,
+                            onClick = {
+                                pageAnim = index
+                                ReadBook.book?.setPageAnim(-1)
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
+                                ReadBook.loadContent(false)
+                                dismiss()
+                            },
+                        )
+                    }
+                }
+            }
+            NormalCard(
+                onClick = onOpenPaddingConfig,
+                modifier = Modifier
+                    .height(56.dp)
+                    .aspectRatio(1f),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                cornerRadius = 12.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SpaceBar,
+                        contentDescription = stringResource(R.string.padding),
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ========== Shared Components ==========
+
+@Composable
+internal fun StyleCard(
+    config: ReadBookConfig.Config,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val bgColor = if (config.curBgType() == 0) {
+        try {
+            Color(config.curBgStr().toColorInt())
+        } catch (_: Exception) {
+            LegadoTheme.colorScheme.surface
+        }
+    } else {
+        LegadoTheme.colorScheme.surface
+    }
+    val textColor = Color(config.curTextColor())
+    val name = config.name.ifBlank { stringResource(R.string.text_bg_style) }
+
+    NormalCard(
+        modifier = Modifier
+            .width(44.dp)
+            .height(56.dp),
+        cornerRadius = 8.dp,
+        containerColor = bgColor,
+        border = if (isSelected) {
+            BorderStroke(2.dp, LegadoTheme.colorScheme.secondary)
+        } else {
+            BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant)
+        },
+        onClick = onClick,
+        onLongClick = onLongClick,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            AppText(
+                text = name,
+                style = LegadoTheme.typography.labelSmall,
+                color = textColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}

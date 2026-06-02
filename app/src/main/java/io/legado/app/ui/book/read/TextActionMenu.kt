@@ -18,11 +18,9 @@ import androidx.core.view.isVisible
 import io.legado.app.R
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.ItemTextBinding
 import io.legado.app.databinding.PopupActionMenuBinding
 import io.legado.app.help.config.AppConfig
-import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.gone
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.printOnDebug
@@ -34,7 +32,11 @@ import androidx.core.net.toUri
 import io.legado.app.constant.AppLog
 
 @SuppressLint("RestrictedApi")
-class TextActionMenu(private val context: Context, private val callBack: CallBack) :
+class TextActionMenu(
+    private val context: Context,
+    private val callBack: CallBack,
+    private val expandTextMenu: () -> Boolean
+) :
     PopupWindow(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT) {
 
     private val binding = PopupActionMenuBinding.inflate(LayoutInflater.from(context))
@@ -45,7 +47,6 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
     private val menuItems: List<MenuItemImpl>
     private val visibleMenuItems = arrayListOf<MenuItemImpl>()
     private val moreMenuItems = arrayListOf<MenuItemImpl>()
-    private val expandTextMenu get() = context.getPrefBoolean(PreferKey.expandTextMenu)
 
     init {
         @SuppressLint("InflateParams")
@@ -66,7 +67,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
         binding.recyclerView.adapter = adapter
         binding.recyclerViewMore.adapter = adapter
         setOnDismissListener {
-            if (!context.getPrefBoolean(PreferKey.expandTextMenu)) {
+            if (!expandTextMenu()) {
                 binding.ivMenuMore.setImageResource(R.drawable.ic_more_vert)
                 binding.recyclerViewMore.gone()
                 adapter.setItems(visibleMenuItems)
@@ -90,7 +91,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
     }
 
     fun upMenu() {
-        if (expandTextMenu) {
+        if (expandTextMenu()) {
             adapter.setItems(menuItems)
             binding.ivMenuMore.gone()
         } else {
@@ -108,7 +109,7 @@ class TextActionMenu(private val context: Context, private val callBack: CallBac
         endX: Int,
         endBottomY: Int
     ) {
-        if (expandTextMenu) {
+        if (expandTextMenu()) {
             when {
                 startTopY > 500 -> {
                     showAtLocation(

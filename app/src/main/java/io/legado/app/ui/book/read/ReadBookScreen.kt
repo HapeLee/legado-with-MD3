@@ -27,7 +27,9 @@ import io.legado.app.ui.book.read.sheet.RegexColorConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
+import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
+import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -54,6 +56,7 @@ fun ReadBookScreen(
         is ReadBookDialog.ConfirmRestoreProgress -> {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+                containerColor = LegadoTheme.colorScheme.surfaceContainer,
                 confirmButton = {
                     androidx.compose.material3.TextButton(
                         onClick = {
@@ -79,6 +82,7 @@ fun ReadBookScreen(
         is ReadBookDialog.SureSyncProgress -> {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+                containerColor = LegadoTheme.colorScheme.surfaceContainer,
                 confirmButton = {
                     androidx.compose.material3.TextButton(
                         onClick = {
@@ -104,6 +108,7 @@ fun ReadBookScreen(
         is ReadBookDialog.ConfirmSkipToChapter -> {
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+                containerColor = LegadoTheme.colorScheme.surfaceContainer,
                 confirmButton = {
                     androidx.compose.material3.TextButton(
                         onClick = {
@@ -134,12 +139,14 @@ fun ReadBookScreen(
         is ReadBookSheet.ShadowSet -> {
             ShadowSetSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onIntent = onIntent,
             )
         }
 
         is ReadBookSheet.AutoRead -> {
             AutoReadSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onIntent = onIntent,
                 onOpenChapterList = { onIntent(ReadBookIntent.OpenChapterList) },
                 onShowMainMenu = { onIntent(ReadBookIntent.ShowMenu) },
                 onStopAutoPage = { onIntent(ReadBookIntent.StopAutoPage) },
@@ -160,6 +167,7 @@ fun ReadBookScreen(
         is ReadBookSheet.UnderlineConfig -> {
             UnderlineConfigSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onIntent = onIntent,
             )
         }
 
@@ -179,9 +187,18 @@ fun ReadBookScreen(
             )
         }
 
+        is ReadBookSheet.TitleBarIconConfig -> {
+            TitleBarIconSheet(
+                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onSaved = { onIntent(ReadBookIntent.RefreshTitleBarIcons) },
+                onIntent = onIntent,
+            )
+        }
+
         is ReadBookSheet.RegexColorConfig -> {
             RegexColorConfigSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onIntent = onIntent,
                 onOpenFontSelect = { index ->
                     onIntent(ReadBookIntent.SelectRegexColorFont(index))
                 },
@@ -197,6 +214,7 @@ fun ReadBookScreen(
         is ReadBookSheet.MoreConfig -> {
             MoreConfigSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onIntent = onIntent,
                 onOpenClickRegionalConfig = {
                     onIntent(ReadBookIntent.DismissSheet)
                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ClickActionConfig))
@@ -281,10 +299,10 @@ fun ReadBookScreen(
         is ReadBookSheet.BgTextConfig -> {
             BgTextConfigSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onSelectImage = { /* TODO: needs Activity for file picker */ },
-                onImportConfig = { /* TODO: needs Activity for file picker */ },
-                onExportConfig = { /* TODO: needs Activity for file picker */ },
-                onSelectColor = { /* TODO: needs Activity for color picker */ },
+                onIntent = onIntent,
+                onSelectImage = { onIntent(ReadBookIntent.OpenReadStyleImagePicker) },
+                onImportConfig = { onIntent(ReadBookIntent.OpenReadStyleImport) },
+                onExportConfig = { onIntent(ReadBookIntent.OpenReadStyleExport) },
             )
         }
 
@@ -313,21 +331,25 @@ fun ReadBookScreen(
 
         is ReadBookSheet.InfoConfig -> {
             // Integrated into ReadStyleSheet's HeaderFooterPage
-            onIntent(ReadBookIntent.DismissSheet)
+            LaunchedEffect(state.activeSheet) {
+                onIntent(ReadBookIntent.DismissSheet)
+            }
         }
 
         is ReadBookSheet.ChangeChapterSource -> {
-            state.book?.let { book ->
+            val sheet = state.activeSheet
+            val book = state.book
+            if (book != null) {
                 val viewModel = androidx.compose.runtime.key(
-                    "chapter-source-${book.bookUrl}-${state.activeSheet.chapterIndex}"
+                    "chapter-source-${book.bookUrl}-${sheet.chapterIndex}"
                 ) {
                     org.koin.androidx.compose.koinViewModel<io.legado.app.ui.book.changesource.ChangeChapterSourceViewModel>()
                 }
-                LaunchedEffect(book.bookUrl, state.activeSheet.chapterIndex) {
+                LaunchedEffect(book.bookUrl, sheet.chapterIndex) {
                     viewModel.initData(
                         book,
-                        state.activeSheet.chapterIndex,
-                        state.activeSheet.chapterTitle
+                        sheet.chapterIndex,
+                        sheet.chapterTitle
                     )
                 }
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -360,11 +382,17 @@ fun ReadBookScreen(
                         }
                     }
                 }
-            } ?: onIntent(ReadBookIntent.DismissSheet)
+            } else {
+                LaunchedEffect(sheet) {
+                    onIntent(ReadBookIntent.DismissSheet)
+                }
+            }
         }
 
         is ReadBookSheet.ChangeBookSource -> {
-            state.book?.let { book ->
+            val sheet = state.activeSheet
+            val book = state.book
+            if (book != null) {
                 ChangeSourceSheet(
                     show = true,
                     oldBook = book,
@@ -378,7 +406,11 @@ fun ReadBookScreen(
                         onIntent(ReadBookIntent.DismissSheet)
                     },
                 )
-            } ?: onIntent(ReadBookIntent.DismissSheet)
+            } else {
+                LaunchedEffect(sheet) {
+                    onIntent(ReadBookIntent.DismissSheet)
+                }
+            }
         }
 
         null -> {}

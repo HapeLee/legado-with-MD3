@@ -19,28 +19,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
-import io.legado.app.utils.postEvent
 import kotlinx.coroutines.launch
 
 @Composable
 fun PaddingConfigSheet(
     onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
 ) {
     AppModalBottomSheet(
         show = true,
         onDismissRequest = {
-            ReadBookConfig.save()
+            onIntent(ReadBookIntent.SaveReadStyleConfig)
             onDismissRequest()
         },
         title = stringResource(R.string.padding),
     ) {
         PaddingConfigContent(
+            onIntent = onIntent,
             modifier = Modifier
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
@@ -50,6 +52,7 @@ fun PaddingConfigSheet(
 
 @Composable
 fun PaddingConfigContent(
+    onIntent: (ReadBookIntent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Body padding
@@ -107,28 +110,27 @@ fun PaddingConfigContent(
                         checked = showHeaderLine,
                         onCheckedChange = {
                             showHeaderLine = it
-                            ReadBookConfig.showHeaderLine = it
-                            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowHeaderLine(it)))
                         },
                     )
                     PaddingSliders(
                         top = headerPaddingTop, bottom = headerPaddingBottom,
                         left = headerPaddingLeft, right = headerPaddingRight,
                         onTopChange = {
-                            headerPaddingTop = it; ReadBookConfig.headerPaddingTop =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            headerPaddingTop = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingTop(it.toInt())))
                         },
                         onBottomChange = {
-                            headerPaddingBottom = it; ReadBookConfig.headerPaddingBottom =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            headerPaddingBottom = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingBottom(it.toInt())))
                         },
                         onLeftChange = {
-                            headerPaddingLeft = it; ReadBookConfig.headerPaddingLeft =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            headerPaddingLeft = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingLeft(it.toInt())))
                         },
                         onRightChange = {
-                            headerPaddingRight = it; ReadBookConfig.headerPaddingRight =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            headerPaddingRight = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderPaddingRight(it.toInt())))
                         },
                     )
                 }
@@ -138,23 +140,20 @@ fun PaddingConfigContent(
                         top = paddingTop, bottom = paddingBottom,
                         left = paddingLeft, right = paddingRight,
                         onTopChange = {
-                            paddingTop = it; ReadBookConfig.paddingTop = it.toInt(); postEvent(EventBus.UP_CONFIG,
-                            arrayListOf(10, 5)
-                        )
+                            paddingTop = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingTop(it.toInt())))
                         },
                         onBottomChange = {
-                            paddingBottom = it; ReadBookConfig.paddingBottom =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+                            paddingBottom = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingBottom(it.toInt())))
                         },
                         onLeftChange = {
-                            paddingLeft = it; ReadBookConfig.paddingLeft = it.toInt(); postEvent(EventBus.UP_CONFIG,
-                            arrayListOf(10, 5)
-                        )
+                            paddingLeft = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingLeft(it.toInt())))
                         },
                         onRightChange = {
-                            paddingRight = it; ReadBookConfig.paddingRight = it.toInt(); postEvent(EventBus.UP_CONFIG,
-                            arrayListOf(10, 5)
-                        )
+                            paddingRight = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingRight(it.toInt())))
                         },
                     )
                 }
@@ -165,28 +164,27 @@ fun PaddingConfigContent(
                         checked = showFooterLine,
                         onCheckedChange = {
                             showFooterLine = it
-                            ReadBookConfig.showFooterLine = it
-                            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowFooterLine(it)))
                         },
                     )
                     PaddingSliders(
                         top = footerPaddingTop, bottom = footerPaddingBottom,
                         left = footerPaddingLeft, right = footerPaddingRight,
                         onTopChange = {
-                            footerPaddingTop = it; ReadBookConfig.footerPaddingTop =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            footerPaddingTop = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingTop(it.toInt())))
                         },
                         onBottomChange = {
-                            footerPaddingBottom = it; ReadBookConfig.footerPaddingBottom =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            footerPaddingBottom = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingBottom(it.toInt())))
                         },
                         onLeftChange = {
-                            footerPaddingLeft = it; ReadBookConfig.footerPaddingLeft =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            footerPaddingLeft = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingLeft(it.toInt())))
                         },
                         onRightChange = {
-                            footerPaddingRight = it; ReadBookConfig.footerPaddingRight =
-                            it.toInt(); postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                            footerPaddingRight = it
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FooterPaddingRight(it.toInt())))
                         },
                     )
                 }

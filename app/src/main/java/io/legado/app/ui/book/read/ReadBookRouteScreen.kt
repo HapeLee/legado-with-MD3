@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.constant.PreferKey
 import io.legado.app.help.IntentData
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.info.BookInfoActivity
@@ -25,10 +24,8 @@ import io.legado.app.ui.book.searchContent.SearchContentActivity
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
-import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.utils.StartActivityContract
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.putPrefString
+import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.model.ReadBook as ReadBookModel
 
 data class ReadBookViewRefs(
@@ -68,6 +65,7 @@ fun ReadBookRouteScreen(
     controller: ReadBookController,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // ── ActivityResult Launchers ──────────────────────────────────────
@@ -94,16 +92,33 @@ fun ReadBookRouteScreen(
         }
     }
 
-    val fontFolderPicker = rememberLauncherForActivityResult(HandleFileContract()) { result ->
-        result.uri?.let { uri ->
-            if (uri.isContentScheme()) {
-                context.putPrefString(PreferKey.fontFolder, uri.toString())
-            } else {
-                uri.path?.let { context.putPrefString(PreferKey.fontFolder, it) }
-            }
+    val fontFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            it.takePersistablePermissionSafely(context)
+            viewModel.setFontFolder(it.toString())
             viewModel.onIntent(ReadBookIntent.DismissSheet)
             viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
         }
+    }
+
+    val readStyleImagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleImageSelected(it)) }
+    }
+
+    val readStyleImportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigImportSelected(it)) }
+    }
+
+    val readStyleExportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleConfigExportSelected(it)) }
     }
 
     val txtTocRuleLauncher = rememberLauncherForActivityResult(
@@ -152,6 +167,9 @@ fun ReadBookRouteScreen(
             sourceEditLauncher = sourceEditLauncher,
             replaceLauncher = replaceLauncher,
             fontFolderPicker = fontFolderPicker,
+            readStyleImagePicker = readStyleImagePicker,
+            readStyleImportPicker = readStyleImportPicker,
+            readStyleExportPicker = readStyleExportPicker,
             txtTocRuleLauncher = txtTocRuleLauncher,
             searchContentLauncher = searchContentLauncher,
             bookInfoLauncher = bookInfoLauncher,
@@ -176,13 +194,18 @@ fun ReadBookRouteScreen(
             readViewCallBack = controller,
             contentTextViewCallBack = controller,
         )
-        ReadBookMenuBar(state = state, onIntent = viewModel::onIntent)
-        ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
-        ReadBookScreen(
-            state = state,
-            onIntent = viewModel::onIntent,
-            onBack = { controller.closeReadBook() },
-        )
+        ReadBookColorTheme(
+            configUpdateTrigger = state.configUpdateTrigger,
+            preferences = readPreferences,
+        ) {
+            ReadBookMenuBar(state = state, onIntent = viewModel::onIntent)
+            ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
+            ReadBookScreen(
+                state = state,
+                onIntent = viewModel::onIntent,
+                onBack = { controller.closeReadBook() },
+            )
+        }
     }
 }
 

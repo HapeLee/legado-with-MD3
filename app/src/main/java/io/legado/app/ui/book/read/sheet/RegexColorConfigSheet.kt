@@ -33,19 +33,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.constant.EventBus
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.RegexColorRule
-import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
-import io.legado.app.utils.postEvent
+import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookIntent
 
 @Composable
 fun RegexColorConfigSheet(
     onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
     onOpenFontSelect: (Int) -> Unit,
 ) {
     var rules by remember { mutableStateOf(ReadBookConfig.regexColorRules.toList()) }
@@ -78,7 +78,7 @@ fun RegexColorConfigSheet(
                         onFontClick = { onOpenFontSelect(index) },
                         onDeleteClick = {
                             rules = rules.toMutableList().also { it.removeAt(index) }
-                            saveRules(rules)
+                            saveRules(rules, onIntent)
                         },
                     )
                 }
@@ -110,7 +110,7 @@ fun RegexColorConfigSheet(
                     color = ReadBookConfig.durConfig.curTextAccentColor(),
                 )
                 rules = rules + rule
-                saveRules(rules)
+                saveRules(rules, onIntent)
                 showAddDialog = false
             },
         )
@@ -126,7 +126,7 @@ fun RegexColorConfigSheet(
                 rules = rules.toMutableList().also {
                     it[editingColorIndex] = it[editingColorIndex].copy(color = color)
                 }
-                saveRules(rules)
+                saveRules(rules, onIntent)
                 showColorPicker = false
             },
         )
@@ -194,6 +194,7 @@ private fun AddRuleDialog(
     if (showCustomInput) {
         AlertDialog(
             onDismissRequest = onDismiss,
+            containerColor = LegadoTheme.colorScheme.surfaceContainer,
             title = { Text(stringResource(R.string.custom_regex_rule)) },
             text = {
                 OutlinedTextField(
@@ -224,6 +225,7 @@ private fun AddRuleDialog(
     } else {
         AlertDialog(
             onDismissRequest = onDismiss,
+            containerColor = LegadoTheme.colorScheme.surfaceContainer,
             title = { Text(stringResource(R.string.add_regex_rule)) },
             text = {
                 Column {
@@ -256,10 +258,6 @@ private fun AddRuleDialog(
     }
 }
 
-private fun saveRules(rules: List<RegexColorRule>) {
-    ReadBookConfig.regexColorRules.clear()
-    ReadBookConfig.regexColorRules.addAll(rules)
-    ReadBookConfig.saveRegexColorRules()
-    TextChapterLayout.invalidateRegexCache()
-    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+private fun saveRules(rules: List<RegexColorRule>, onIntent: (ReadBookIntent) -> Unit) {
+    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.RegexColorRules(rules)))
 }

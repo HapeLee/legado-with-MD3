@@ -5,6 +5,7 @@ import android.os.Build
 import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
+import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.getPrefBoolean
@@ -64,8 +65,134 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var adaptSpecialStyle = appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)
     var useUnderline = appCtx.getPrefBoolean(PreferKey.useUnderline, false)
 
+    private var screenOrientationValue = appCtx.getPrefString(PreferKey.screenOrientation) ?: "0"
+    private var noAnimScrollPageValue = appCtx.getPrefBoolean(PreferKey.noAnimScrollPage, false)
+    private var tocUiUseReplaceValue = appCtx.getPrefBoolean(PreferKey.tocUiUseReplace)
+    private var tocCountWordsValue = appCtx.getPrefBoolean(PreferKey.tocCountWords, true)
+    private var autoChangeSourceValue = appCtx.getPrefBoolean(PreferKey.autoChangeSource, true)
+    private var clickImgWayValue = appCtx.getPrefString(PreferKey.clickImgWay, "2") ?: "2"
+    private var doublePageHorizontalValue = appCtx.getPrefString(PreferKey.doublePageHorizontal, "0") ?: "0"
+    private var progressBarBehaviorValue = appCtx.getPrefString(PreferKey.progressBarBehavior, "page") ?: "page"
+    private var keyPageOnLongPressValue = appCtx.getPrefBoolean(PreferKey.keyPageOnLongPress, false)
+    private var volumeKeyPageValue = appCtx.getPrefBoolean(PreferKey.volumeKeyPage, true)
+    private var volumeKeyPageOnPlayValue = appCtx.getPrefBoolean(PreferKey.volumeKeyPageOnPlay, true)
+    private var mouseWheelPageValue = appCtx.getPrefBoolean(PreferKey.mouseWheelPage, true)
+    private var paddingDisplayCutoutsValue = appCtx.getPrefBoolean(PreferKey.paddingDisplayCutouts, false)
+    private var pageTouchSlopValue = appCtx.getPrefInt(PreferKey.pageTouchSlop, 0)
+    private var showReadTitleBarAdditionValue =
+        appCtx.getPrefBoolean(PreferKey.showReadTitleAddition, true)
+    private var titleBarModeValue = appCtx.getPrefString(PreferKey.titleBarMode, "1") ?: "1"
+    private var menuAlphaValue = appCtx.getPrefInt(PreferKey.menuAlpha, 100)
+    private var readSliderModeValue = appCtx.getPrefString(PreferKey.readSliderMode, "0") ?: "0"
+    private var readBarStyleFollowPageValue =
+        appCtx.getPrefBoolean(PreferKey.readBarStyleFollowPage, false)
+    private var readBarStyleValue = appCtx.getPrefInt(PreferKey.readBarStyle, 0)
+    private var defaultSourceChangeAllValue =
+        appCtx.getPrefBoolean(PreferKey.defaultSourceChangeAll, true)
+    private var sliderVibratorValue = appCtx.getPrefBoolean(PreferKey.sliderVibrator, false)
+    private var selectVibratorValue = appCtx.getPrefBoolean(PreferKey.selectVibrator, false)
+
+    fun syncReadPreferences(preferences: ReadPreferences) {
+        optimizeRender = CanvasRecorderFactory.isSupport && preferences.optimizeRender
+        adaptSpecialStyle = preferences.adaptSpecialStyle
+        useUnderline = preferences.useUnderline
+        clickActionTL = preferences.clickActionTL
+        clickActionTC = preferences.clickActionTC
+        clickActionTR = preferences.clickActionTR
+        clickActionML = preferences.clickActionML
+        clickActionMC = preferences.clickActionMC
+        clickActionMR = preferences.clickActionMR
+        clickActionBL = preferences.clickActionBL
+        clickActionBC = preferences.clickActionBC
+        clickActionBR = preferences.clickActionBR
+        screenOrientationValue = preferences.screenOrientation
+        noAnimScrollPageValue = preferences.noAnimScrollPage
+        tocUiUseReplaceValue = preferences.tocUiUseReplace
+        tocCountWordsValue = preferences.tocCountWords
+        autoChangeSourceValue = preferences.autoChangeSource
+        clickImgWayValue = preferences.clickImgWay
+        doublePageHorizontalValue = preferences.doubleHorizontalPage
+        progressBarBehaviorValue = preferences.progressBarBehavior
+        keyPageOnLongPressValue = preferences.keyPageOnLongPress
+        volumeKeyPageValue = preferences.volumeKeyPage
+        volumeKeyPageOnPlayValue = preferences.volumeKeyPageOnPlay
+        mouseWheelPageValue = preferences.mouseWheelPage
+        paddingDisplayCutoutsValue = preferences.paddingDisplayCutouts
+        pageTouchSlopValue = preferences.pageTouchSlop
+        showReadTitleBarAdditionValue = preferences.showReadTitleAddition
+        titleBarModeValue = preferences.titleBarMode
+        menuAlphaValue = preferences.menuAlpha
+        readSliderModeValue = preferences.readSliderMode
+        readBarStyleFollowPageValue = preferences.readBarStyleFollowPage
+        readBarStyleValue = preferences.readBarStyle
+        defaultSourceChangeAllValue = preferences.defaultSourceChangeAll
+        sliderVibratorValue = preferences.sliderVibrator
+        selectVibratorValue = preferences.selectVibrator
+    }
+
+    fun updateReadBarStyleCache(value: Int) {
+        readBarStyleValue = value.coerceIn(0, 2)
+    }
+
+    private fun syncReadPreferenceFromSharedPreferences(key: String?) {
+        when (key) {
+            PreferKey.optimizeRender -> optimizeRender = CanvasRecorderFactory.isSupport &&
+                    appCtx.getPrefBoolean(PreferKey.optimizeRender, false)
+            PreferKey.adaptSpecialStyle -> adaptSpecialStyle =
+                appCtx.getPrefBoolean(PreferKey.adaptSpecialStyle, true)
+            PreferKey.useUnderline -> useUnderline =
+                appCtx.getPrefBoolean(PreferKey.useUnderline, false)
+            PreferKey.screenOrientation -> screenOrientationValue =
+                appCtx.getPrefString(PreferKey.screenOrientation) ?: "0"
+            PreferKey.noAnimScrollPage -> noAnimScrollPageValue =
+                appCtx.getPrefBoolean(PreferKey.noAnimScrollPage, false)
+            PreferKey.tocUiUseReplace -> tocUiUseReplaceValue =
+                appCtx.getPrefBoolean(PreferKey.tocUiUseReplace)
+            PreferKey.tocCountWords -> tocCountWordsValue =
+                appCtx.getPrefBoolean(PreferKey.tocCountWords, true)
+            PreferKey.autoChangeSource -> autoChangeSourceValue =
+                appCtx.getPrefBoolean(PreferKey.autoChangeSource, true)
+            PreferKey.clickImgWay -> clickImgWayValue =
+                appCtx.getPrefString(PreferKey.clickImgWay, "2") ?: "2"
+            PreferKey.doublePageHorizontal -> doublePageHorizontalValue =
+                appCtx.getPrefString(PreferKey.doublePageHorizontal, "0") ?: "0"
+            PreferKey.progressBarBehavior -> progressBarBehaviorValue =
+                appCtx.getPrefString(PreferKey.progressBarBehavior, "page") ?: "page"
+            PreferKey.keyPageOnLongPress -> keyPageOnLongPressValue =
+                appCtx.getPrefBoolean(PreferKey.keyPageOnLongPress, false)
+            PreferKey.volumeKeyPage -> volumeKeyPageValue =
+                appCtx.getPrefBoolean(PreferKey.volumeKeyPage, true)
+            PreferKey.volumeKeyPageOnPlay -> volumeKeyPageOnPlayValue =
+                appCtx.getPrefBoolean(PreferKey.volumeKeyPageOnPlay, true)
+            PreferKey.mouseWheelPage -> mouseWheelPageValue =
+                appCtx.getPrefBoolean(PreferKey.mouseWheelPage, true)
+            PreferKey.paddingDisplayCutouts -> paddingDisplayCutoutsValue =
+                appCtx.getPrefBoolean(PreferKey.paddingDisplayCutouts, false)
+            PreferKey.pageTouchSlop -> pageTouchSlopValue =
+                appCtx.getPrefInt(PreferKey.pageTouchSlop, 0)
+            PreferKey.showReadTitleAddition -> showReadTitleBarAdditionValue =
+                appCtx.getPrefBoolean(PreferKey.showReadTitleAddition, true)
+            PreferKey.titleBarMode -> titleBarModeValue =
+                appCtx.getPrefString(PreferKey.titleBarMode, "1") ?: "1"
+            PreferKey.menuAlpha -> menuAlphaValue = appCtx.getPrefInt(PreferKey.menuAlpha, 100)
+            PreferKey.readSliderMode -> readSliderModeValue =
+                appCtx.getPrefString(PreferKey.readSliderMode, "0") ?: "0"
+            PreferKey.readBarStyleFollowPage -> readBarStyleFollowPageValue =
+                appCtx.getPrefBoolean(PreferKey.readBarStyleFollowPage, false)
+            PreferKey.readBarStyle -> readBarStyleValue =
+                appCtx.getPrefInt(PreferKey.readBarStyle, 0)
+            PreferKey.defaultSourceChangeAll -> defaultSourceChangeAllValue =
+                appCtx.getPrefBoolean(PreferKey.defaultSourceChangeAll, true)
+            PreferKey.sliderVibrator -> sliderVibratorValue =
+                appCtx.getPrefBoolean(PreferKey.sliderVibrator, false)
+            PreferKey.selectVibrator -> selectVibratorValue =
+                appCtx.getPrefBoolean(PreferKey.selectVibrator, false)
+        }
+    }
+
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        syncReadPreferenceFromSharedPreferences(key)
         when (key) {
 
             PreferKey.adaptSpecialStyle -> adaptSpecialStyle =
@@ -230,7 +357,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 //        get() = appCtx.getPrefBoolean(PreferKey.immNavigationBar, true)
 
     val screenOrientation: String?
-        get() = appCtx.getPrefString(PreferKey.screenOrientation)
+        get() = screenOrientationValue
 
     var bookGroupStyle: Int
         get() = appCtx.getPrefInt(PreferKey.bookGroupStyle, 0)
@@ -351,7 +478,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     val noAnimScrollPage: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.noAnimScrollPage, false)
+        get() = noAnimScrollPageValue
 
     const val defaultSpeechRate = 5
 
@@ -468,14 +595,16 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var tocUiUseReplace: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.tocUiUseReplace)
+        get() = tocUiUseReplaceValue
         set(value) {
+            tocUiUseReplaceValue = value
             appCtx.putPrefBoolean(PreferKey.tocUiUseReplace, value)
         }
 
     var tocCountWords: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.tocCountWords, true)
+        get() = tocCountWordsValue
         set(value) {
+            tocCountWordsValue = value
             appCtx.putPrefBoolean(PreferKey.tocCountWords, value)
         }
 
@@ -486,7 +615,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     val autoChangeSource: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.autoChangeSource, true)
+        get() = autoChangeSourceValue
 
     var changeSourceLoadInfo: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.changeSourceLoadInfo)
@@ -545,7 +674,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     val clickImgWay: String?
-        get() = appCtx.getPrefString(PreferKey.clickImgWay)
+        get() = clickImgWayValue
     var preDownloadNum
         get() = appCtx.getPrefInt(PreferKey.preDownloadNum, 10)
         set(value) {
@@ -590,25 +719,25 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val streamReadAloudAudio get() = appCtx.getPrefBoolean(PreferKey.streamReadAloudAudio, false)
 
     val doublePageHorizontal: String?
-        get() = appCtx.getPrefString(PreferKey.doublePageHorizontal)
+        get() = doublePageHorizontalValue
 
     val progressBarBehavior: String?
-        get() = appCtx.getPrefString(PreferKey.progressBarBehavior, "page")
+        get() = progressBarBehaviorValue
 
     val keyPageOnLongPress
-        get() = appCtx.getPrefBoolean(PreferKey.keyPageOnLongPress, false)
+        get() = keyPageOnLongPressValue
 
     val volumeKeyPage
-        get() = appCtx.getPrefBoolean(PreferKey.volumeKeyPage, true)
+        get() = volumeKeyPageValue
 
     val volumeKeyPageOnPlay
-        get() = appCtx.getPrefBoolean(PreferKey.volumeKeyPageOnPlay, true)
+        get() = volumeKeyPageOnPlayValue
 
     val mouseWheelPage
-        get() = appCtx.getPrefBoolean(PreferKey.mouseWheelPage, true)
+        get() = mouseWheelPageValue
 
     val paddingDisplayCutouts
-        get() = appCtx.getPrefBoolean(PreferKey.paddingDisplayCutouts, false)
+        get() = paddingDisplayCutoutsValue
 
     var searchScope: String
         get() = appCtx.getPrefString("searchScope") ?: ""
@@ -623,8 +752,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var pageTouchSlop: Int
-        get() = appCtx.getPrefInt(PreferKey.pageTouchSlop, 0)
+        get() = pageTouchSlopValue
         set(value) {
+            pageTouchSlopValue = value
             appCtx.putPrefInt(PreferKey.pageTouchSlop, value)
         }
 
@@ -666,21 +796,24 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var showReadTitleBarAddition: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.showReadTitleAddition, true)
+        get() = showReadTitleBarAdditionValue
         set(value) {
+            showReadTitleBarAdditionValue = value
             appCtx.putPrefBoolean(PreferKey.showReadTitleAddition, value)
         }
 
     var readBarStyleFollowPage: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.readBarStyleFollowPage, false)
+        get() = readBarStyleFollowPageValue
         set(value) {
+            readBarStyleFollowPageValue = value
             appCtx.putPrefBoolean(PreferKey.readBarStyleFollowPage, value)
         }
 
     var readBarStyle: Int
-        get() = appCtx.getPrefInt(PreferKey.readBarStyle, 0)
+        get() = readBarStyleValue
         set(value) {
-            appCtx.putPrefInt(PreferKey.readBarStyle, value)
+            readBarStyleValue = value.coerceIn(0, 2)
+            appCtx.putPrefInt(PreferKey.readBarStyle, readBarStyleValue)
         }
 
     var sourceEditMaxLine: Int
@@ -757,8 +890,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var titleBarMode
-        get() = appCtx.getPrefString(PreferKey.titleBarMode, "1")
+        get() = titleBarModeValue
         set(value) {
+            titleBarModeValue = value
             appCtx.putPrefString(PreferKey.titleBarMode, value)
         }
 
@@ -903,14 +1037,16 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.enableBlur, value)
         }
     var menuAlpha: Int
-        get() = appCtx.getPrefInt(PreferKey.menuAlpha, 100)
+        get() = menuAlphaValue
         set(value) {
+            menuAlphaValue = value
             appCtx.putPrefInt(PreferKey.menuAlpha, value)
         }
 
     var readSliderMode
-        get() = appCtx.getPrefString(PreferKey.readSliderMode, "0")
+        get() = readSliderModeValue
         set(value) {
+            readSliderModeValue = value
             appCtx.putPrefString(PreferKey.readSliderMode, value)
         }
 
@@ -945,20 +1081,23 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var defaultSourceChangeAll: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.defaultSourceChangeAll, true)
+        get() = defaultSourceChangeAllValue
         set(value) {
+            defaultSourceChangeAllValue = value
             appCtx.putPrefBoolean(PreferKey.defaultSourceChangeAll, value)
         }
 
     var sliderVibrator: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.sliderVibrator, false)
+        get() = sliderVibratorValue
         set(value) {
+            sliderVibratorValue = value
             appCtx.putPrefBoolean(PreferKey.sliderVibrator, value)
         }
 
     var selectVibrator: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.selectVibrator, false)
+        get() = selectVibratorValue
         set(value) {
+            selectVibratorValue = value
             appCtx.putPrefBoolean(PreferKey.selectVibrator, value)
         }
 

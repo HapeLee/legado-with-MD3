@@ -126,7 +126,7 @@ fun ColorPickerSheet(
                     label = stringResource(R.string.color_value),
                     singleLine = true,
                     isError = isHexInputError,
-                    backgroundColor = LegadoTheme.colorScheme.surface,
+                    backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     keyboardOptions = KeyboardOptions(
                         capitalization = KeyboardCapitalization.Characters,
                         keyboardType = KeyboardType.Ascii,

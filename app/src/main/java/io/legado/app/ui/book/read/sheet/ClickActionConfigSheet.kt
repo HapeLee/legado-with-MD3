@@ -15,9 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,16 +25,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
-import io.legado.app.utils.getPrefInt
-import io.legado.app.utils.putPrefInt
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.ui.theme.LegadoTheme
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun ClickActionConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
+    val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val scope = rememberCoroutineScope()
 
     val actions = remember {
         linkedMapOf(
@@ -55,16 +64,6 @@ fun ClickActionConfigSheet(
             13 to context.getString(R.string.read_aloud_pause_resume),
         )
     }
-
-    var actionTL by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionTL, 2)) }
-    var actionTC by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionTC, 2)) }
-    var actionTR by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionTR, 1)) }
-    var actionML by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionML, 2)) }
-    var actionMC by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionMC, 0)) }
-    var actionMR by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionMR, 1)) }
-    var actionBL by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionBL, 2)) }
-    var actionBC by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionBC, 1)) }
-    var actionBR by remember { mutableIntStateOf(context.getPrefInt(PreferKey.clickActionBR, 1)) }
 
     var selectingPrefKey by remember { mutableStateOf<String?>(null) }
 
@@ -104,7 +103,7 @@ fun ClickActionConfigSheet(
                     .fillMaxWidth(),
             ) {
                 ClickAreaCell(
-                    label = actions[actionTL] ?: "",
+                    label = actions[preferences.clickActionTL] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -112,7 +111,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionTL },
                 )
                 ClickAreaCell(
-                    label = actions[actionTC] ?: "",
+                    label = actions[preferences.clickActionTC] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -120,7 +119,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionTC },
                 )
                 ClickAreaCell(
-                    label = actions[actionTR] ?: "",
+                    label = actions[preferences.clickActionTR] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -134,7 +133,7 @@ fun ClickActionConfigSheet(
                     .fillMaxWidth(),
             ) {
                 ClickAreaCell(
-                    label = actions[actionML] ?: "",
+                    label = actions[preferences.clickActionML] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -142,7 +141,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionML },
                 )
                 ClickAreaCell(
-                    label = actions[actionMC] ?: "",
+                    label = actions[preferences.clickActionMC] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -150,7 +149,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionMC },
                 )
                 ClickAreaCell(
-                    label = actions[actionMR] ?: "",
+                    label = actions[preferences.clickActionMR] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -164,7 +163,7 @@ fun ClickActionConfigSheet(
                     .fillMaxWidth(),
             ) {
                 ClickAreaCell(
-                    label = actions[actionBL] ?: "",
+                    label = actions[preferences.clickActionBL] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -172,7 +171,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionBL },
                 )
                 ClickAreaCell(
-                    label = actions[actionBC] ?: "",
+                    label = actions[preferences.clickActionBC] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -180,7 +179,7 @@ fun ClickActionConfigSheet(
                     onClick = { selectingPrefKey = PreferKey.clickActionBC },
                 )
                 ClickAreaCell(
-                    label = actions[actionBR] ?: "",
+                    label = actions[preferences.clickActionBR] ?: "",
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxSize()
@@ -197,6 +196,7 @@ fun ClickActionConfigSheet(
         val actionValues = actions.values.toList()
         AlertDialog(
             onDismissRequest = { selectingPrefKey = null },
+            containerColor = LegadoTheme.colorScheme.surfaceContainer,
             title = { Text(stringResource(R.string.select_action)) },
             text = {
                 Column {
@@ -204,17 +204,10 @@ fun ClickActionConfigSheet(
                         TextButton(
                             onClick = {
                                 val selectedAction = actionKeys[index]
-                                context.putPrefInt(selectingPrefKey!!, selectedAction)
-                                when (selectingPrefKey) {
-                                    PreferKey.clickActionTL -> actionTL = selectedAction
-                                    PreferKey.clickActionTC -> actionTC = selectedAction
-                                    PreferKey.clickActionTR -> actionTR = selectedAction
-                                    PreferKey.clickActionML -> actionML = selectedAction
-                                    PreferKey.clickActionMC -> actionMC = selectedAction
-                                    PreferKey.clickActionMR -> actionMR = selectedAction
-                                    PreferKey.clickActionBL -> actionBL = selectedAction
-                                    PreferKey.clickActionBC -> actionBC = selectedAction
-                                    PreferKey.clickActionBR -> actionBR = selectedAction
+                                selectingPrefKey?.let { key ->
+                                    scope.launch {
+                                        readSettingsRepository.setClickAction(key, selectedAction)
+                                    }
                                 }
                                 selectingPrefKey = null
                             },

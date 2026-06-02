@@ -13,31 +13,45 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.constant.PreferKey
-import io.legado.app.utils.getPrefString
-import io.legado.app.utils.putPrefString
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.ui.theme.LegadoTheme
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun PageKeyConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
-    val context = LocalContext.current
-    var prevKeys by remember { mutableStateOf(context.getPrefString(PreferKey.prevKeys) ?: "") }
-    var nextKeys by remember { mutableStateOf(context.getPrefString(PreferKey.nextKeys) ?: "") }
+    val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val scope = rememberCoroutineScope()
+    var prevKeys by remember { mutableStateOf(preferences.prevKeys) }
+    var nextKeys by remember { mutableStateOf(preferences.nextKeys) }
+
+    LaunchedEffect(preferences.prevKeys, preferences.nextKeys) {
+        prevKeys = preferences.prevKeys
+        nextKeys = preferences.nextKeys
+    }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.custom_page_key)) },
         text = {
             Column(
@@ -113,9 +127,10 @@ fun PageKeyConfigSheet(
         confirmButton = {
             TextButton(
                 onClick = {
-                    context.putPrefString(PreferKey.prevKeys, prevKeys)
-                    context.putPrefString(PreferKey.nextKeys, nextKeys)
-                    onDismissRequest()
+                    scope.launch {
+                        readSettingsRepository.setPageKeys(prevKeys, nextKeys)
+                        onDismissRequest()
+                    }
                 },
             ) {
                 Text(stringResource(R.string.ok))

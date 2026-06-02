@@ -12,34 +12,51 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import java.util.Locale
 import kotlin.math.roundToInt
 
 @Composable
 fun AutoReadSheet(
     onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
     onOpenChapterList: () -> Unit,
     onShowMainMenu: () -> Unit,
     onStopAutoPage: () -> Unit,
     onShowPageAnimConfig: () -> Unit,
 ) {
-    val initialSpeed = remember {
-        if (ReadBookConfig.autoReadSpeed < 1) 1f else ReadBookConfig.autoReadSpeed.toFloat()
-    }
+    val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val scope = rememberCoroutineScope()
+    val initialSpeed = remember { preferences.autoReadSpeed.coerceIn(1, 120).toFloat() }
     var speed by remember { mutableFloatStateOf(initialSpeed) }
+
+    LaunchedEffect(preferences.autoReadSpeed) {
+        speed = preferences.autoReadSpeed.coerceIn(1, 120).toFloat()
+    }
 
     AppModalBottomSheet(
         show = true,
@@ -80,7 +97,7 @@ fun AutoReadSheet(
                 onValueChange = {
                     speed = it
                     val intSpeed = it.roundToInt().coerceIn(1, 120)
-                    ReadBookConfig.autoReadSpeed = intSpeed
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.AutoReadSpeed(intSpeed)))
                 },
             )
 

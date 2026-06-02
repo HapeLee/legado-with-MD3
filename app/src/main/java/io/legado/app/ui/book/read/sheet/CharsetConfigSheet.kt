@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.ImeAction
 import io.legado.app.R
 import io.legado.app.constant.AppConst
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 
 @Composable
@@ -27,6 +28,7 @@ fun CharsetConfigSheet(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.set_charset)) },
         text = {
             Column {

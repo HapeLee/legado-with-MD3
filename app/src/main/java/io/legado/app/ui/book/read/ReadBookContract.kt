@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read
 
+import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.Book
@@ -213,14 +214,29 @@ sealed interface ReadBookIntent {
     // Font folder picker (needs Activity context for ActivityResult)
     data object OpenFontFolderPicker : ReadBookIntent
 
+    // Read style SAF actions
+    data object OpenReadStyleImagePicker : ReadBookIntent
+    data object OpenReadStyleImport : ReadBookIntent
+    data object OpenReadStyleExport : ReadBookIntent
+    data class ReadStyleImageSelected(val uri: Uri) : ReadBookIntent
+    data class ReadStyleConfigImportSelected(val uri: Uri) : ReadBookIntent
+    data class ReadStyleConfigExportSelected(val uri: Uri) : ReadBookIntent
+    data object SaveReadStyleConfig : ReadBookIntent
+    data object AddReadStyleConfig : ReadBookIntent
+    data object DeleteCurrentReadStyleConfig : ReadBookIntent
+
     // Bookshelf
     data object RemoveFromBookshelf : ReadBookIntent
 
     // Config update (triggers ReadView upBg/upStyle etc.)
     data class OnConfigUpdated(val values: List<Int>) : ReadBookIntent
 
+    // Typed config mutation — single entry point for all ReadBookConfig changes
+    data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
+
     // Tool buttons config saved — recreate to refresh toolbar
     data object RefreshToolButtons : ReadBookIntent
+    data object RefreshTitleBarIcons : ReadBookIntent
 
     // BgTextConfig (needs Activity for DialogFragment)
     data class OpenBgTextConfig(val index: Int) : ReadBookIntent
@@ -354,6 +370,11 @@ sealed interface ReadBookEffect {
     // Font folder picker
     data object OpenFontFolderPicker : ReadBookEffect
 
+    // Read style SAF actions
+    data object OpenReadStyleImagePicker : ReadBookEffect
+    data object OpenReadStyleImport : ReadBookEffect
+    data object OpenReadStyleExport : ReadBookEffect
+
     // Day/night toggle
     data object ToggleDayNight : ReadBookEffect
 
@@ -374,6 +395,7 @@ sealed interface ReadBookSheet {
     data object Charset : ReadBookSheet
     data object SimulatedReading : ReadBookSheet
     data object ToolButtonConfig : ReadBookSheet
+    data object TitleBarIconConfig : ReadBookSheet
     data object EffectiveReplaces : ReadBookSheet
     data object ContentEdit : ReadBookSheet
     data object AppLog : ReadBookSheet
@@ -407,4 +429,145 @@ sealed interface ReadBookDialog {
     data class ConfirmRestoreProgress(val progress: BookProgress) : ReadBookDialog
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
+}
+
+/**
+ * Typed config mutations — replaces direct `ReadBookConfig.xxx = value` + `postEvent(UP_CONFIG, ...)`.
+ * Each variant carries [codes] that map to the legacy UP_CONFIG integer codes for rendering layer compatibility.
+ */
+@Immutable
+sealed interface ConfigUpdate {
+    val codes: List<Int>
+
+    // --- Text style ---
+    data class TextSize(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class LetterSpacing(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class LineSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ParagraphSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ParagraphIndent(val value: String) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TextItalic(val value: Boolean) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TextBold(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
+    data class TextColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+    data class TextAccentColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+
+    // --- Title style ---
+    data class TitleMode(val value: Int) : ConfigUpdate { override val codes = listOf(5) }
+    data class TitleBold(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
+    data class TitleSegScaling(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleLineSpacingExtra(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleLineSpacingSub(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleSize(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleTopSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleBottomSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class TitleColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+
+    // --- Header / footer tips ---
+    data class HeaderMode(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class FooterMode(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class TipHeaderLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class TipHeaderMiddle(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class TipHeaderRight(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class TipFooterLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class TipFooterMiddle(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class TipFooterRight(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
+    data class HeaderFontSize(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class TipHeaderColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class TipFooterColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class TipDividerColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+
+    // --- Layout / style ---
+    data class StyleSelect(val index: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class ShareLayout(val value: Boolean) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class PageAnim(val value: Int) : ConfigUpdate { override val codes = listOf(1) }
+
+    // --- Menu colors ---
+    data class MenuBgColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuAccentColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuContainerColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuBgColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuAccentColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuContainerColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class MenuColorMode(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class ReadBarStyle(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+
+    // --- Menu bar border ---
+    data class BorderWidth(val value: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class BorderColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class BorderColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+
+    // --- Shadow ---
+    data class TextShadow(val value: Boolean) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ShadowRadius(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ShadowDx(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ShadowDy(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
+    data class ShadowColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+
+    // --- Underline ---
+    data class Underline(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
+    data class DottedLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
+    data class UnderlineExtend(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
+    data class UnderlineHeight(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
+    data class UnderlinePadding(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
+    data class DottedBase(val value: Float) : ConfigUpdate { override val codes = listOf(6, 8, 10) }
+    data class DottedRatio(val value: Float) : ConfigUpdate { override val codes = listOf(6, 8, 10) }
+    data class UnderlineColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+
+    // --- Body padding ---
+    data class PaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
+    data class PaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
+    data class PaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
+    data class PaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
+
+    // --- Header padding ---
+    data class HeaderPaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class HeaderPaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class HeaderPaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class HeaderPaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class ShowHeaderLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
+
+    // --- Footer padding ---
+    data class FooterPaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class FooterPaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class FooterPaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class FooterPaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class ShowFooterLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
+
+    // --- Background / display ---
+    data class BgAlpha(val value: Int) : ConfigUpdate { override val codes = listOf(3) }
+    data class StatusIconDark(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class MenuIconShowText(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuIconStyle(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuIconRowCount(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBottomCornerRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBottomHorizontalMargin(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBottomBottomMargin(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class TitleBarCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class TitleBarIconPosition(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+
+    // --- System UI (also updates AppConfig) ---
+    data class HideStatusBar(val value: Boolean) : ConfigUpdate { override val codes = listOf(0, 2) }
+    data class HideNavigationBar(val value: Boolean) : ConfigUpdate { override val codes = listOf(0, 2) }
+
+    // --- Display toggles ---
+    data class PaddingDisplayCutouts(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
+    data class TitleBarMode(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class TextFullJustify(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class TextBottomJustify(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class AdaptSpecialStyle(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class UseZhLayout(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class ShowBrightnessView(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class UseUnderlineGlobal(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
+    data class ReadSliderMode(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class DoubleHorizontalPage(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class ProgressBarBehavior(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class NoAnimScrollPage(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+
+    // --- Regex color rules ---
+    data class RegexColorRules(val rules: List<io.legado.app.help.config.RegexColorRule>) : ConfigUpdate { override val codes = listOf(8, 5) }
+
+    // --- Auto read ---
+    data class AutoReadSpeed(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
 }

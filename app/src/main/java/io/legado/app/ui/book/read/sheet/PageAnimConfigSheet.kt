@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.legado.app.R
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 
 @Composable
@@ -24,6 +25,7 @@ fun PageAnimConfigSheet(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.page_anim)) },
         text = {
             TinyDropdownSettingItem(

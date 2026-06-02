@@ -1,7 +1,12 @@
 package io.legado.app.ui.widget.components.settingItem
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,13 +15,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -26,9 +40,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AccentColorButton
@@ -47,29 +63,33 @@ fun TinySettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     trailingContent: (@Composable () -> Unit)? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null,
+    enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
     val isExpandable = expandContent != null && onExpandChange != null
+    val alpha = if (enabled) 1f else 0.5f
 
     NormalCard(
-        onClick = {
-            when {
-                isExpandable -> onExpandChange.invoke(!expanded)
-                else -> onClick?.invoke()
+        onClick = if (enabled) {
+            {
+                when {
+                    isExpandable -> onExpandChange.invoke(!expanded)
+                    else -> onClick?.invoke()
+                }
             }
-        },
+        } else null,
         modifier = modifier
             .padding(bottom = 4.dp)
             .heightIn(min = 56.dp)
             .fillMaxWidth(),
         cornerRadius = 12.dp,
-        containerColor = color,
-        contentColor = LegadoTheme.colorScheme.onSurface,
+        containerColor = color?.copy(alpha = alpha),
+        contentColor = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -84,7 +104,7 @@ fun TinySettingItem(
                     Icon(
                         imageVector = it,
                         contentDescription = null,
-                        tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                        tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -95,12 +115,13 @@ fun TinySettingItem(
                     AppText(
                         text = title,
                         style = LegadoTheme.typography.titleSmallEmphasized,
+                        color = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
                     )
                     description?.let {
                         AppText(
                             text = it,
                             style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
                         )
                     }
                 }
@@ -116,7 +137,7 @@ fun TinySettingItem(
                             Icon(
                                 imageVector = Icons.Default.KeyboardArrowDown,
                                 contentDescription = null,
-                                tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
                                 modifier = Modifier
                                     .size(20.dp)
                                     .rotate(rotation),
@@ -150,7 +171,7 @@ fun TinyDropdownSettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     onValueChange: (String) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -169,7 +190,7 @@ fun TinyDropdownSettingItem(
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
                     text = currentEntry,
-                    backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+                    backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
                     contentColor = LegadoTheme.colorScheme.onSurface,
                 )
             },
@@ -211,7 +232,7 @@ fun TinySliderSettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     enabled: Boolean = true,
     onValueChange: (Float) -> Unit,
 ) {
@@ -226,7 +247,8 @@ fun TinySliderSettingItem(
         modifier = modifier,
         color = color,
         expanded = expanded,
-        onExpandChange = { if (enabled) expanded = it },
+        onExpandChange = { expanded = it },
+        enabled = enabled,
         trailingContent = {
             ValueStepper(
                 value = value,
@@ -269,7 +291,7 @@ fun TinySwitchSettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
@@ -279,6 +301,7 @@ fun TinySwitchSettingItem(
         imageVector = imageVector,
         modifier = modifier,
         color = color,
+        enabled = enabled,
         trailingContent = {
             TinySwitch(
                 checked = checked,
@@ -286,7 +309,7 @@ fun TinySwitchSettingItem(
                 enabled = enabled,
             )
         },
-        onClick = { if (enabled) onCheckedChange(!checked) },
+        onClick = { onCheckedChange(!checked) },
     )
 }
 
@@ -296,7 +319,7 @@ fun TinyClickableSettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -325,7 +348,7 @@ fun TinyColorSettingItem(
     description: String? = null,
     imageVector: ImageVector? = null,
     modifier: Modifier = Modifier,
-    color: Color? = LegadoTheme.colorScheme.onSheetContent,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
@@ -335,6 +358,7 @@ fun TinyColorSettingItem(
         imageVector = imageVector,
         modifier = modifier,
         color = color,
+        enabled = enabled,
         trailingContent = {
             AccentColorButton(
                 color = colorValue,
@@ -342,6 +366,231 @@ fun TinyColorSettingItem(
                 enabled = enabled,
             )
         },
-        onClick = { if (enabled) onClick() },
+        onClick = { onClick() },
     )
+}
+
+/**
+ * A color setting item with an integrated light/dark mode pill toggle.
+ *
+ * @param title The title text.
+ * @param dayColor The color value for light mode (ARGB int).
+ * @param nightColor The color value for dark mode (ARGB int).
+ * @param onClickColor Called when the color knob is clicked (passes current mode's selection).
+ */
+@Composable
+fun TinyColorModeSettingItem(
+    title: String,
+    dayColor: Int,
+    nightColor: Int,
+    onClickColor: (isNight: Boolean) -> Unit,
+    description: String? = null,
+    imageVector: ImageVector? = null,
+    modifier: Modifier = Modifier,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
+    enabled: Boolean = true,
+) {
+    val currentDarkMode = LegadoTheme.isDark
+    var isNightMode by remember(currentDarkMode) { mutableStateOf(currentDarkMode) }
+
+    TinySettingItem(
+        title = title,
+        description = description,
+        imageVector = imageVector,
+        modifier = modifier,
+        color = color,
+        enabled = enabled,
+        trailingContent = {
+            ColorModePill(
+                dayColor = dayColor,
+                nightColor = nightColor,
+                isNightMode = isNightMode,
+                onToggleMode = { isNightMode = !isNightMode },
+                onClickColor = { onClickColor(isNightMode) },
+                enabled = enabled,
+            )
+        },
+    )
+}
+
+@Composable
+private fun ColorModePill(
+    dayColor: Int,
+    nightColor: Int,
+    isNightMode: Boolean,
+    onToggleMode: () -> Unit,
+    onClickColor: () -> Unit,
+    enabled: Boolean = true,
+) {
+    val pillWidth = 60.dp
+    val pillHeight = 32.dp
+    val knobSize = 24.dp
+    val padding = 4.dp
+
+    val knobOffset by animateDpAsState(
+        targetValue = if (isNightMode) pillWidth - knobSize - padding else padding,
+        animationSpec = tween(durationMillis = 200),
+        label = "knobOffset",
+    )
+
+    val currentColor = if (isNightMode) nightColor else dayColor
+
+    Box(
+        modifier = Modifier
+            .width(pillWidth)
+            .height(pillHeight)
+            .clip(RoundedCornerShape(pillHeight))
+            .background(LegadoTheme.colorScheme.surfaceContainerHigh)
+            .clickable(
+                enabled = enabled,
+                onClick = onToggleMode,
+            ),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        // Icons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.DarkMode,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = if (!isNightMode) {
+                    LegadoTheme.colorScheme.onSurface
+                } else {
+                    LegadoTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Icon(
+                imageVector = Icons.Default.LightMode,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = if (isNightMode) {
+                    LegadoTheme.colorScheme.onSurface
+                } else {
+                    LegadoTheme.colorScheme.onSurfaceVariant
+                },
+            )
+        }
+
+        // Knob — color or + icon
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(x = knobOffset.roundToPx(), y = 0) }
+                .size(knobSize)
+                .clip(CircleShape)
+                .background(
+                    if (currentColor != 0) Color(currentColor)
+                    else LegadoTheme.colorScheme.surfaceContainerLow
+                )
+                .clickable(
+                    enabled = enabled,
+                    onClick = onClickColor,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (currentColor == 0) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A color mode setting item with a reset icon to the left of the pill.
+ * Shows a reset button when the current mode has a custom color set.
+ */
+@Composable
+fun TinyClearColorModeSettingItem(
+    title: String,
+    dayColor: Int,
+    nightColor: Int,
+    onClickColor: (isNight: Boolean) -> Unit,
+    onClearColor: (isNight: Boolean) -> Unit,
+    description: String? = null,
+    imageVector: ImageVector? = null,
+    modifier: Modifier = Modifier,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
+    enabled: Boolean = true,
+) {
+    val currentDarkMode = LegadoTheme.isDark
+    var isNightMode by remember(currentDarkMode) { mutableStateOf(currentDarkMode) }
+
+    TinySettingItem(
+        title = title,
+        description = description,
+        imageVector = imageVector,
+        modifier = modifier,
+        color = color,
+        enabled = enabled,
+        trailingContent = {
+            ClearColorModePill(
+                dayColor = dayColor,
+                nightColor = nightColor,
+                isNightMode = isNightMode,
+                enabled = enabled,
+                onToggleMode = { isNightMode = !isNightMode },
+                onClickColor = { onClickColor(isNightMode) },
+                onReset = { onClearColor(isNightMode) },
+            )
+        },
+    )
+}
+
+@Composable
+private fun ClearColorModePill(
+    dayColor: Int,
+    nightColor: Int,
+    isNightMode: Boolean,
+    enabled: Boolean,
+    onToggleMode: () -> Unit,
+    onClickColor: () -> Unit,
+    onReset: () -> Unit,
+) {
+    val currentColor = if (isNightMode) nightColor else dayColor
+    val hasCustomColor = currentColor != 0
+    val knobSize = 32.dp
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (hasCustomColor) {
+            Box(
+                modifier = Modifier
+                    .size(knobSize)
+                    .clip(CircleShape)
+                    .clickable(enabled = enabled, onClick = onReset)
+                    .border(
+                        width = 1.dp,
+                        color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
+        ColorModePill(
+            dayColor = dayColor,
+            nightColor = nightColor,
+            isNightMode = isNightMode,
+            onToggleMode = onToggleMode,
+            onClickColor = onClickColor,
+            enabled = enabled,
+        )
+    }
 }

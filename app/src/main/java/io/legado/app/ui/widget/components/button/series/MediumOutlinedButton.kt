@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.components.button.series
 
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.runtime.Composable
@@ -30,7 +31,7 @@ fun MediumOutlinedButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh
+                backgroundColor = LegadoTheme.colorScheme.surfaceContainerLow
             ) {
                 MiuixIcon(
                     imageVector = icon,
@@ -43,7 +44,7 @@ fun MediumOutlinedButton(
                 modifier = modifier,
                 showIndication = true,
                 colors = CardDefaults.defaultColors(
-                    color = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    color = LegadoTheme.colorScheme.surfaceContainerLow,
                     contentColor = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             ) {
@@ -56,6 +57,10 @@ fun MediumOutlinedButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
+                colors = IconButtonDefaults.outlinedIconButtonColors(
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                ),
                 border = ButtonDefaults.outlinedButtonBorder()
             ) {
                 Icon(
@@ -69,6 +74,10 @@ fun MediumOutlinedButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                    contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                ),
                 border = ButtonDefaults.outlinedButtonBorder()
             ) {
                 MediumButtonContent(icon, text, contentDescription)

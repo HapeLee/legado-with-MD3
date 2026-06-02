@@ -15,6 +15,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.Book.ReadConfig
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
+import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
@@ -50,7 +51,8 @@ import java.io.ByteArrayOutputStream
 
 class ReadMangaViewModel(
     application: Application,
-    private val getReadingProgressUseCase: GetReadingProgressUseCase
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    private val mangaSettingsRepository: MangaSettingsRepository
 ) : BaseViewModel(application) {
 
     private var changeSourceCoroutine: Coroutine<*>? = null
@@ -376,6 +378,91 @@ class ReadMangaViewModel(
         }.onError {
             AppLog.put("更新阅读配置失败\n${it.localizedMessage}", it)
         }
+    }
+
+    fun setMangaPreDownloadNum(value: Int) {
+        AppConfig.mangaPreDownloadNum = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaPreDownloadNum(value) }
+    }
+
+    fun setMangaBackground(value: Int) {
+        AppConfig.mangaBackground = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaBackground(value) }
+    }
+
+    fun setDisableClickScroll(value: Boolean) {
+        AppConfig.disableClickScroll = value
+        viewModelScope.launch { mangaSettingsRepository.setDisableClickScroll(value) }
+    }
+
+    fun setDisableMangaScrollAnimation(value: Boolean) {
+        AppConfig.disableMangaScrollAnimation = value
+        viewModelScope.launch { mangaSettingsRepository.setDisableMangaScrollAnimation(value) }
+    }
+
+    fun setDisableMangaCrossFade(value: Boolean) {
+        AppConfig.disableMangaCrossFade = value
+        viewModelScope.launch { mangaSettingsRepository.setDisableMangaCrossFade(value) }
+    }
+
+    fun setDisableMangaScale(value: Boolean) {
+        AppConfig.disableMangaScale = value
+        viewModelScope.launch { mangaSettingsRepository.setDisableMangaScale(value) }
+    }
+
+    fun setEInkMode(enabled: Boolean, threshold: Int) {
+        AppConfig.enableMangaEInk = enabled
+        AppConfig.enableMangaGray = false
+        AppConfig.mangaEInkThreshold = threshold
+        viewModelScope.launch {
+            mangaSettingsRepository.setEnableMangaEInk(enabled)
+            mangaSettingsRepository.setEnableMangaGray(false)
+            mangaSettingsRepository.setMangaEInkThreshold(threshold)
+        }
+    }
+
+    fun setGrayMode(enabled: Boolean) {
+        AppConfig.enableMangaGray = enabled
+        AppConfig.enableMangaEInk = false
+        viewModelScope.launch {
+            mangaSettingsRepository.setEnableMangaGray(enabled)
+            mangaSettingsRepository.setEnableMangaEInk(false)
+        }
+    }
+
+    fun setMangaAutoPageSpeed(value: Int) {
+        AppConfig.mangaAutoPageSpeed = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaAutoPageSpeed(value) }
+    }
+
+    fun setMangaLongClick(value: Boolean) {
+        AppConfig.mangaLongClick = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaLongClick(value) }
+    }
+
+    fun setMangaVolumeKeyPage(value: Boolean) {
+        AppConfig.MangaVolumeKeyPage = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaVolumeKeyPage(value) }
+    }
+
+    fun setReverseVolumeKeyPage(value: Boolean) {
+        AppConfig.reverseVolumeKeyPage = value
+        viewModelScope.launch { mangaSettingsRepository.setReverseVolumeKeyPage(value) }
+    }
+
+    fun setHideMangaTitle(value: Boolean) {
+        AppConfig.hideMangaTitle = value
+        viewModelScope.launch { mangaSettingsRepository.setHideMangaTitle(value) }
+    }
+
+    fun setMangaColorFilter(value: String) {
+        AppConfig.mangaColorFilter = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaAutoColorFilter(value) }
+    }
+
+    fun setMangaFooterConfig(value: String) {
+        AppConfig.mangaFooterConfig = value
+        viewModelScope.launch { mangaSettingsRepository.setMangaFooterConfig(value) }
     }
 
     override fun onCleared() {

@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import java.time.Instant
 import java.time.LocalDate
@@ -49,6 +50,7 @@ fun SimulatedReadingSheet(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.simulated_reading)) },
         text = {
             Column {
@@ -122,6 +124,9 @@ fun SimulatedReadingSheet(
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
+            colors = androidx.compose.material3.DatePickerDefaults.colors(
+                containerColor = LegadoTheme.colorScheme.surfaceContainer,
+            ),
             confirmButton = {
                 TextButton(
                     onClick = {

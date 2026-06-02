@@ -63,12 +63,12 @@ fun TinySwitch(
         MiuixSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.scale(0.8f),
+            modifier = Modifier.scale(0.9f),
             enabled = enabled
         )
     } else {
         IconSwitch(
-            modifier = Modifier.scale(0.7f),
+            modifier = Modifier.scale(0.8f),
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,

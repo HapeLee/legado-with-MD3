@@ -25,7 +25,11 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LlmTranslateRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
+import io.legado.app.data.repository.MangaSettingsRepository
+import io.legado.app.data.repository.ReadBookStyleConfigRepository
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.SearchContentRepository
@@ -150,6 +154,10 @@ val appModule = module {
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
+    singleOf(::ReadSettingsRepository)
+    singleOf(::ReadAloudSettingsRepository)
+    singleOf(::ReadBookStyleConfigRepository)
+    singleOf(::MangaSettingsRepository)
     singleOf(::LocalPreferencesRepository)
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
@@ -257,7 +265,9 @@ val appModule = module {
             application = get(),
             getReadingProgressUseCase = get(),
             uploadReadingProgressUseCase = get(),
-            translateChapterUseCase = get()
+            translateChapterUseCase = get(),
+            readSettingsRepository = get(),
+            readBookStyleConfigRepository = get()
         )
     }
     viewModelOf(::ChangeCoverViewModel)

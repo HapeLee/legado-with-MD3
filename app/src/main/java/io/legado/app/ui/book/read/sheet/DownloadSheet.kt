@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.model.ReadBook
+import io.legado.app.ui.theme.LegadoTheme
 
 @Composable
 fun DownloadSheet(
@@ -30,6 +31,7 @@ fun DownloadSheet(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
+        containerColor = LegadoTheme.colorScheme.surfaceContainer,
         title = { Text(stringResource(R.string.offline_cache)) },
         text = {
             androidx.compose.foundation.layout.Column {

@@ -7,25 +7,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
+import io.legado.app.data.repository.ReadAloudPreferences
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.help.IntentHelp
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.utils.TTSCacheUtils
-import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @Composable
 fun ReadAloudConfigSheet(
@@ -35,19 +36,11 @@ fun ReadAloudConfigSheet(
     onOpenCacheCleanTimePicker: () -> Unit,
 ) {
     val context = LocalContext.current
-    var ignoreAudioFocus by remember { mutableStateOf(context.getPrefBoolean(PreferKey.ignoreAudioFocus)) }
-    var pauseReadAloudWhilePhoneCalls by remember { mutableStateOf(context.getPrefBoolean(PreferKey.pauseReadAloudWhilePhoneCalls)) }
-    var readAloudWakeLock by remember { mutableStateOf(context.getPrefBoolean(PreferKey.readAloudWakeLock)) }
-    var mediaButtonPerNext by remember { mutableStateOf(context.getPrefBoolean("mediaButtonPerNext")) }
-    var readAloudByPage by remember { mutableStateOf(context.getPrefBoolean(PreferKey.readAloudByPage)) }
-    var systemMediaControlCompatibilityChange by remember {
-        mutableStateOf(
-            context.getPrefBoolean(
-                PreferKey.systemMediaControlCompatibilityChange
-            )
-        )
-    }
-    var streamReadAloudAudio by remember { mutableStateOf(context.getPrefBoolean(PreferKey.streamReadAloudAudio)) }
+    val readAloudSettingsRepository: ReadAloudSettingsRepository = koinInject()
+    val preferences by readAloudSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadAloudPreferences()
+    )
+    val scope = rememberCoroutineScope()
 
     AppModalBottomSheet(
         show = true,
@@ -63,48 +56,45 @@ fun ReadAloudConfigSheet(
             TinySwitchSettingItem(
                 title = stringResource(R.string.ignore_audio_focus_title),
                 description = stringResource(R.string.ignore_audio_focus_summary),
-                checked = ignoreAudioFocus,
+                checked = preferences.ignoreAudioFocus,
                 onCheckedChange = {
-                    ignoreAudioFocus = it
-                    context.putPrefBoolean(PreferKey.ignoreAudioFocus, it)
+                    scope.launch { readAloudSettingsRepository.setIgnoreAudioFocus(it) }
                 },
             )
             TinySwitchSettingItem(
                 title = stringResource(R.string.pause_read_aloud_while_phone_calls_title),
                 description = stringResource(R.string.pause_read_aloud_while_phone_calls_summary),
-                checked = pauseReadAloudWhilePhoneCalls,
-                enabled = ignoreAudioFocus,
+                checked = preferences.pauseReadAloudWhilePhoneCalls,
+                enabled = preferences.ignoreAudioFocus,
                 onCheckedChange = {
-                    pauseReadAloudWhilePhoneCalls = it
-                    context.putPrefBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, it)
+                    scope.launch {
+                        readAloudSettingsRepository.setPauseReadAloudWhilePhoneCalls(it)
+                    }
                 },
             )
             TinySwitchSettingItem(
                 title = stringResource(R.string.read_aloud_wake_lock),
                 description = stringResource(R.string.read_aloud_wake_lock_summary),
-                checked = readAloudWakeLock,
+                checked = preferences.readAloudWakeLock,
                 onCheckedChange = {
-                    readAloudWakeLock = it
-                    context.putPrefBoolean(PreferKey.readAloudWakeLock, it)
+                    scope.launch { readAloudSettingsRepository.setReadAloudWakeLock(it) }
                 },
             )
             TinySwitchSettingItem(
                 title = stringResource(R.string.pref_media_button_per_next),
                 description = stringResource(R.string.pref_media_button_per_next_summary),
-                checked = mediaButtonPerNext,
+                checked = preferences.mediaButtonPerNext,
                 onCheckedChange = {
-                    mediaButtonPerNext = it
-                    context.putPrefBoolean("mediaButtonPerNext", it)
+                    scope.launch { readAloudSettingsRepository.setMediaButtonPerNext(it) }
                 },
             )
             TinySwitchSettingItem(
                 title = stringResource(R.string.read_aloud_by_page),
                 description = stringResource(R.string.read_aloud_by_page_summary),
-                checked = readAloudByPage,
+                checked = preferences.readAloudByPage,
                 onCheckedChange = {
-                    readAloudByPage = it
-                    context.putPrefBoolean(PreferKey.readAloudByPage, it)
-                    if (readAloudByPage) {
+                    scope.launch { readAloudSettingsRepository.setReadAloudByPage(it) }
+                    if (it) {
                         postEvent(EventBus.MEDIA_BUTTON, false)
                     }
                 },
@@ -112,20 +102,20 @@ fun ReadAloudConfigSheet(
             TinySwitchSettingItem(
                 title = stringResource(R.string.system_media_control_compatibility_change),
                 description = stringResource(R.string.system_media_control_compatibility_change_summary),
-                checked = systemMediaControlCompatibilityChange,
+                checked = preferences.systemMediaControlCompatibilityChange,
                 onCheckedChange = {
-                    systemMediaControlCompatibilityChange = it
-                    context.putPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, it)
+                    scope.launch {
+                        readAloudSettingsRepository.setSystemMediaControlCompatibilityChange(it)
+                    }
                 },
             )
             TinySwitchSettingItem(
                 title = stringResource(R.string.stream_read_aloud_audio),
                 description = stringResource(R.string.stream_read_aloud_audio_summary),
-                checked = streamReadAloudAudio,
+                checked = preferences.streamReadAloudAudio,
                 onCheckedChange = {
-                    streamReadAloudAudio = it
-                    context.putPrefBoolean(PreferKey.streamReadAloudAudio, it)
-                    if (streamReadAloudAudio) {
+                    scope.launch { readAloudSettingsRepository.setStreamReadAloudAudio(it) }
+                    if (it) {
                         postEvent(EventBus.MEDIA_BUTTON, false)
                     }
                 },

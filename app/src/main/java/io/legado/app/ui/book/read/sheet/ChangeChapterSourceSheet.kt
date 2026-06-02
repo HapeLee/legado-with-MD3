@@ -217,7 +217,7 @@ private fun TocContent(
             items(state.tocItems) { chapter ->
                 SelectionItemCard(
                     title = chapter.title,
-                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
                     isSelected = false,
                     onToggleSelection = {
@@ -279,7 +279,7 @@ private fun SearchContent(
                 }.collectAsStateWithLifecycle()
                 SelectionItemCard(
                     title = item.originName,
-                    containerColor = LegadoTheme.colorScheme.onSheetContent,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
                     leadingContent = {
                         MediumPlainButton(
