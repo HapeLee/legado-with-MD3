@@ -75,6 +75,10 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
         rssSource?.removeSortCache()
     }
 
+    fun setSourceVariable(variable: String?) {
+        rssSource?.setVariable(variable)
+    }
+
     fun getRecords(): List<RssReadRecord> {
         return appDb.rssReadRecordDao.getRecords()
     }
