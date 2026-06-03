@@ -1,7 +1,9 @@
 package io.legado.app.base
 
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.core.graphics.drawable.toDrawable
@@ -34,6 +36,10 @@ abstract class BaseComposeActivity(
         AppContextWrapper.applyLocaleAndFont(this)
 
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         setupSystemBar()
         // Compose 入口

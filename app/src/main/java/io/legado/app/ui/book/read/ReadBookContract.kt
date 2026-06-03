@@ -88,10 +88,32 @@ data class ReadBookUiState(
     val isReadingProgressSyncConfigured: Boolean = false,
     // Config update trigger (notifies ReadView to run upBg/upStyle etc.)
     val configUpdateTrigger: Int = 0,
+    // Menu config (from ReadBookConfig via repository)
+    val menuConfig: ReadMenuConfig = ReadMenuConfig(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
 }
+
+@Stable
+data class ReadMenuConfig(
+    val titleBarIconPosition: Int = 0,
+    val readMenuFloatingBottomBar: Boolean = false,
+    val readMenuBottomCornerRadius: Int = 0,
+    val readMenuIconItemsPerRow: Int = 5,
+    val readMenuIconRowCount: Int = 1,
+    val readMenuBorderWidth: Int = 0,
+    val readMenuBorderColor: Int = 0,
+    val readMenuBorderColorNight: Int = 0,
+    val readMenuBlurAlpha: Int = 60,
+    val readMenuBlurRadius: Int = 24,
+    val readMenuLensRadius: Float = 24f,
+    val readMenuLiquidGlass: Boolean = false,
+    val readMenuIconStyle: Int = 0,
+    val readMenuIconShowText: Boolean = true,
+    val titleBarCustomIcons: Map<String, String> = emptyMap(),
+    val readMenuCustomIcons: Map<String, String> = emptyMap(),
+)
 
 sealed interface ReadBookIntent {
     // Initialization
@@ -540,8 +562,11 @@ sealed interface ConfigUpdate {
     data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuIconRowCount(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuBottomCornerRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuBottomHorizontalMargin(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuBottomBottomMargin(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class FloatingBottomBar(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuLiquidGlass(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBlurRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBlurAlpha(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuLensRadius(val value: Float) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class TitleBarCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class TitleBarIconPosition(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }

@@ -15,6 +15,7 @@ import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.GSON
@@ -224,8 +225,11 @@ object ReadBookConfig {
     private var readMenuIconItemsPerRowValue = appCtx.getPrefInt(PreferKey.readMenuIconItemsPerRow, 5)
     private var readMenuIconRowCountValue = appCtx.getPrefInt(PreferKey.readMenuIconRowCount, 1)
     private var readMenuBottomCornerRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBottomCornerRadius)
-    private var readMenuBottomHorizontalMarginValue = appCtx.getPrefInt(PreferKey.readMenuBottomHorizontalMargin)
-    private var readMenuBottomBottomMarginValue = appCtx.getPrefInt(PreferKey.readMenuBottomBottomMargin)
+    private var readMenuFloatingBottomBarValue = appCtx.getPrefBoolean(PreferKey.readMenuFloatingBottomBar)
+    private var readMenuLiquidGlassValue = appCtx.getPrefBoolean(PreferKey.readMenuLiquidGlass)
+    private var readMenuBlurRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBlurRadius, 24)
+    private var readMenuBlurAlphaValue = appCtx.getPrefInt(PreferKey.readMenuBlurAlpha, 60)
+    private var readMenuLensRadiusValue = appCtx.getPrefFloat(PreferKey.readMenuLensRadius, 24f)
     private var readMenuBorderWidthValue = appCtx.getPrefInt(PreferKey.readMenuBorderWidth)
     private var readMenuBorderColorValue = appCtx.getPrefInt(PreferKey.readMenuBorderColor)
     private var readMenuBorderColorNightValue = appCtx.getPrefInt(PreferKey.readMenuBorderColorNight)
@@ -258,8 +262,11 @@ object ReadBookConfig {
         readMenuIconItemsPerRowValue = preferences.readMenuIconItemsPerRow
         readMenuIconRowCountValue = preferences.readMenuIconRowCount
         readMenuBottomCornerRadiusValue = preferences.readMenuBottomCornerRadius
-        readMenuBottomHorizontalMarginValue = preferences.readMenuBottomHorizontalMargin
-        readMenuBottomBottomMarginValue = preferences.readMenuBottomBottomMargin
+        readMenuFloatingBottomBarValue = preferences.readMenuFloatingBottomBar
+        readMenuLiquidGlassValue = preferences.readMenuLiquidGlass
+        readMenuBlurRadiusValue = preferences.readMenuBlurRadius
+        readMenuBlurAlphaValue = preferences.readMenuBlurAlpha
+        readMenuLensRadiusValue = preferences.readMenuLensRadius
         readMenuBorderWidthValue = preferences.readMenuBorderWidth
         readMenuBorderColorValue = preferences.readMenuBorderColor
         readMenuBorderColorNightValue = preferences.readMenuBorderColorNight
@@ -349,16 +356,34 @@ object ReadBookConfig {
             readMenuBottomCornerRadiusValue = value.coerceIn(0, 32)
         }
 
-    var readMenuBottomHorizontalMargin: Int
-        get() = readMenuBottomHorizontalMarginValue.coerceIn(0, 32)
+    var readMenuFloatingBottomBar: Boolean
+        get() = readMenuFloatingBottomBarValue
         set(value) {
-            readMenuBottomHorizontalMarginValue = value.coerceIn(0, 32)
+            readMenuFloatingBottomBarValue = value
         }
 
-    var readMenuBottomBottomMargin: Int
-        get() = readMenuBottomBottomMarginValue.coerceIn(0, 32)
+    var readMenuLiquidGlass: Boolean
+        get() = readMenuLiquidGlassValue
         set(value) {
-            readMenuBottomBottomMarginValue = value.coerceIn(0, 32)
+            readMenuLiquidGlassValue = value
+        }
+
+    var readMenuBlurRadius: Int
+        get() = readMenuBlurRadiusValue.coerceIn(0, 32)
+        set(value) {
+            readMenuBlurRadiusValue = value.coerceIn(0, 32)
+        }
+
+    var readMenuBlurAlpha: Int
+        get() = readMenuBlurAlphaValue.coerceIn(0, 100)
+        set(value) {
+            readMenuBlurAlphaValue = value.coerceIn(0, 100)
+        }
+
+    var readMenuLensRadius: Float
+        get() = readMenuLensRadiusValue.coerceIn(0f, 48f)
+        set(value) {
+            readMenuLensRadiusValue = value.coerceIn(0f, 48f)
         }
 
     var readMenuBorderWidth: Int

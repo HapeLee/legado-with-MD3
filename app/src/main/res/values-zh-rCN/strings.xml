@@ -1835,8 +1835,12 @@
     <string name="position_bottom_end">右下</string>
     <string name="read_menu_bottom_bar_layout">底栏布局</string>
     <string name="read_menu_bottom_corner_radius">底栏圆角</string>
-    <string name="read_menu_bottom_horizontal_margin">底栏左右边距</string>
-    <string name="read_menu_bottom_bottom_margin">底栏底部边距</string>
+    <string name="read_menu_floating_bottom_bar">悬浮底栏</string>
+    <string name="read_menu_liquid_glass">液态玻璃菜单栏</string>
+    <string name="read_menu_liquid_glass_summary">为阅读菜单顶栏和底栏应用液态玻璃模糊效果，需要 Android 13 及以上系统</string>
+    <string name="read_menu_blur_radius">模糊半径</string>
+    <string name="read_menu_blur_radius_summary">模糊半径越大，系统运行越卡顿</string>
+    <string name="read_menu_blur_alpha">菜单不透明度</string>
     <string name="read_menu_border">边框</string>
     <string name="read_menu_border_width">宽度</string>
     <string name="read_menu_border_color">颜色</string>

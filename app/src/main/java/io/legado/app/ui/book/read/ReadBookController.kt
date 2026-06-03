@@ -60,10 +60,8 @@ import io.legado.app.utils.invisible
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
 import io.legado.app.utils.setLightStatusBar
-import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.sysScreenOffTime
-import io.legado.app.utils.themeColor
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
@@ -233,7 +231,6 @@ class ReadBookController(
                 windowInsets
             }
         }
-        upNavigationBarColor()
         newRefs.readView.upTime()
     }
 
@@ -338,20 +335,6 @@ class ReadBookController(
         if (toolBarHide) {
             activity.setLightStatusBar(ReadBookConfig.durConfig.curStatusIconDark())
         }
-        upNavigationBarColor()
-    }
-
-    override fun upNavigationBarColor() {
-        val r = refs ?: return
-        val state = viewModel.uiState.value
-        val navColor = when {
-            state.menuVisible -> activity.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
-            state.searchMenuVisible -> activity.themeColor(com.google.android.material.R.attr.colorSurface)
-            bottomDialogCount > 0 -> activity.themeColor(com.google.android.material.R.attr.colorSurface)
-            else -> ReadBookConfig.bgMeanColor
-        }
-        activity.window.setNavigationBarColorAuto(navColor)
-        r.navigationBar.setBackgroundColor(navColor)
     }
 
     // ── ReadView.CallBack ─────────────────────────────────────────────

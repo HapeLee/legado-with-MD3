@@ -813,6 +813,24 @@ class ReadBookViewModel(
             delHTag = book?.getDelTag(Book.hTag) ?: false,
             sameTitleRemoved = textChapter?.sameTitleRemoved ?: false,
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
+            menuConfig = ReadMenuConfig(
+                titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
+                readMenuFloatingBottomBar = ReadBookConfig.readMenuFloatingBottomBar,
+                readMenuBottomCornerRadius = ReadBookConfig.readMenuBottomCornerRadius,
+                readMenuIconItemsPerRow = ReadBookConfig.readMenuIconItemsPerRow,
+                readMenuIconRowCount = ReadBookConfig.readMenuIconRowCount,
+                readMenuBorderWidth = ReadBookConfig.readMenuBorderWidth,
+                readMenuBorderColor = ReadBookConfig.readMenuBorderColor,
+                readMenuBorderColorNight = ReadBookConfig.readMenuBorderColorNight,
+                readMenuBlurAlpha = ReadBookConfig.readMenuBlurAlpha,
+                readMenuBlurRadius = ReadBookConfig.readMenuBlurRadius,
+                readMenuLensRadius = ReadBookConfig.readMenuLensRadius,
+                readMenuLiquidGlass = ReadBookConfig.readMenuLiquidGlass,
+                readMenuIconStyle = ReadBookConfig.readMenuIconStyle,
+                readMenuIconShowText = ReadBookConfig.readMenuIconShowText,
+                titleBarCustomIcons = ReadBookConfig.titleBarCustomIcons,
+                readMenuCustomIcons = ReadBookConfig.readMenuCustomIcons,
+            ),
         )
     }
 
@@ -1503,18 +1521,21 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuBorderWidth(update.value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBorderWidth = update.value)) }
             }
             is ConfigUpdate.BorderColor -> {
                 ReadBookConfig.readMenuBorderColor = update.color
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuBorderColor(update.color)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBorderColor = update.color)) }
             }
             is ConfigUpdate.BorderColorNight -> {
                 ReadBookConfig.readMenuBorderColorNight = update.color
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuBorderColorNight(update.color)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBorderColorNight = update.color)) }
             }
 
             // --- Shadow ---
@@ -1562,6 +1583,7 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuIconShowText(update.value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuIconShowText = update.value)) }
             }
             is ConfigUpdate.MenuIconStyle -> {
                 val value = update.value.coerceIn(0, 2)
@@ -1569,6 +1591,7 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuIconStyle(value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuIconStyle = value)) }
             }
             is ConfigUpdate.MenuIconItemsPerRow -> {
                 val value = update.value.coerceIn(2, 8)
@@ -1576,6 +1599,7 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuIconItemsPerRow(value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuIconItemsPerRow = value)) }
             }
             is ConfigUpdate.MenuIconRowCount -> {
                 val value = update.value.coerceIn(1, 2)
@@ -1583,6 +1607,7 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuIconRowCount(value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuIconRowCount = value)) }
             }
             is ConfigUpdate.MenuBottomCornerRadius -> {
                 val value = update.value.coerceIn(0, 32)
@@ -1590,20 +1615,42 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuBottomCornerRadius(value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBottomCornerRadius = value)) }
             }
-            is ConfigUpdate.MenuBottomHorizontalMargin -> {
-                val value = update.value.coerceIn(0, 32)
-                ReadBookConfig.readMenuBottomHorizontalMargin = value
+            is ConfigUpdate.FloatingBottomBar -> {
+                ReadBookConfig.readMenuFloatingBottomBar = update.value
                 viewModelScope.launch {
-                    readSettingsRepository.setReadMenuBottomHorizontalMargin(value)
+                    readSettingsRepository.setReadMenuFloatingBottomBar(update.value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuFloatingBottomBar = update.value)) }
             }
-            is ConfigUpdate.MenuBottomBottomMargin -> {
-                val value = update.value.coerceIn(0, 32)
-                ReadBookConfig.readMenuBottomBottomMargin = value
+            is ConfigUpdate.MenuLiquidGlass -> {
+                ReadBookConfig.readMenuLiquidGlass = update.value
                 viewModelScope.launch {
-                    readSettingsRepository.setReadMenuBottomBottomMargin(value)
+                    readSettingsRepository.setReadMenuLiquidGlass(update.value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuLiquidGlass = update.value)) }
+            }
+            is ConfigUpdate.MenuBlurRadius -> {
+                ReadBookConfig.readMenuBlurRadius = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBlurRadius(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBlurRadius = update.value)) }
+            }
+            is ConfigUpdate.MenuBlurAlpha -> {
+                ReadBookConfig.readMenuBlurAlpha = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBlurAlpha(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBlurAlpha = update.value)) }
+            }
+            is ConfigUpdate.MenuLensRadius -> {
+                ReadBookConfig.readMenuLensRadius = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuLensRadius(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuLensRadius = update.value)) }
             }
             is ConfigUpdate.MenuCustomIcon -> {
                 val icons = ReadBookConfig.readMenuCustomIcons.toMutableMap()
@@ -1618,6 +1665,7 @@ class ReadBookViewModel(
                         ReadBookConfig.encodeReadMenuCustomIcons(icons)
                     )
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuCustomIcons = icons.toMap())) }
             }
             is ConfigUpdate.TitleBarCustomIcon -> {
                 val icons = ReadBookConfig.titleBarCustomIcons.toMutableMap()
@@ -1632,12 +1680,14 @@ class ReadBookViewModel(
                         ReadBookConfig.encodeReadMenuCustomIcons(icons)
                     )
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarCustomIcons = icons.toMap())) }
             }
             is ConfigUpdate.TitleBarIconPosition -> {
                 ReadBookConfig.titleBarIconPosition = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setTitleBarIconPosition(update.value)
                 }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarIconPosition = update.value)) }
             }
 
             // --- System UI (also persists to DataStore) ---

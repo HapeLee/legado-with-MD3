@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import io.legado.app.R
 import io.legado.app.help.IntentData
 import io.legado.app.model.ReadBook
@@ -50,8 +52,6 @@ interface ReadBookRouteHost :
         isInMultiWindow: Boolean,
         toolBarHide: Boolean,
     )
-
-    fun upNavigationBarColor()
 }
 
 /**
@@ -67,6 +67,7 @@ fun ReadBookRouteScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val menuBackdrop = rememberLayerBackdrop()
 
     // ── ActivityResult Launchers ──────────────────────────────────────
 
@@ -181,14 +182,11 @@ fun ReadBookRouteScreen(
     LaunchedEffect(state.toolBarHide, state.menuVisible) {
         host.upSystemUiVisibility(host.isInMultiWindowModeCompat, !state.menuVisible)
     }
-    LaunchedEffect(state.menuVisible, state.searchMenuVisible) {
-        host.upNavigationBarColor()
-    }
-
     // ── View layer + Compose UI ───────────────────────────────────────
 
     Box(Modifier.fillMaxSize()) {
         ReadBookViewLayer(
+            modifier = Modifier.layerBackdrop(menuBackdrop),
             onRefsReady = { controller.onRefsReady(it) },
             onCursorTouch = controller,
             readViewCallBack = controller,
@@ -198,7 +196,7 @@ fun ReadBookRouteScreen(
             configUpdateTrigger = state.configUpdateTrigger,
             preferences = readPreferences,
         ) {
-            ReadBookMenuBar(state = state, onIntent = viewModel::onIntent)
+            ReadBookMenuBar(state = state, onIntent = viewModel::onIntent, backdrop = menuBackdrop)
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
             ReadBookScreen(
                 state = state,
@@ -211,13 +209,14 @@ fun ReadBookRouteScreen(
 
 @Composable
 private fun ReadBookViewLayer(
+    modifier: Modifier = Modifier,
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
     contentTextViewCallBack: ContentTextView.CallBack,
 ) {
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         factory = { context ->
             FrameLayout(context).apply {
                 val readView = ReadView(

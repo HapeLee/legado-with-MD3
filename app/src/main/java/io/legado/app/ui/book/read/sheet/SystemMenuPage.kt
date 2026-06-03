@@ -164,6 +164,7 @@ internal fun SystemMenuPage(
                     },
                 )
                 1 -> BottomBarTab(
+                    preferences = preferences,
                     customIcons = customIcons,
                     onIntent = onIntent,
                     onShowIconSheet = { showIconSheet = true },
@@ -353,7 +354,7 @@ private fun GlobalMenuTab(
             }
         }
 
-        var iconPosition by remember { mutableIntStateOf(ReadBookConfig.titleBarIconPosition) }
+        var iconPosition by remember { mutableIntStateOf(preferences.titleBarIconPosition) }
         TinyDropdownSettingItem(
             title = stringResource(R.string.title_bar_icon_position),
             selectedValue = iconPosition.toString(),
@@ -373,7 +374,7 @@ private fun GlobalMenuTab(
         Spacer(Modifier.height(8.dp))
 
         var borderEnabled by remember {
-            mutableStateOf(ReadBookConfig.readMenuBorderWidth > 0)
+            mutableStateOf(preferences.readMenuBorderWidth > 0)
         }
         TinySwitchSettingItem(
             title = stringResource(R.string.read_menu_border),
@@ -387,7 +388,7 @@ private fun GlobalMenuTab(
             Column {
                 TinySliderSettingItem(
                     title = stringResource(R.string.read_menu_border_width),
-                    value = ReadBookConfig.readMenuBorderWidth.coerceIn(1, 4).toFloat(),
+                    value = preferences.readMenuBorderWidth.coerceIn(1, 4).toFloat(),
                     valueRange = 1f..4f,
                     onValueChange = {
                         onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderWidth(it.toInt())))
@@ -395,8 +396,8 @@ private fun GlobalMenuTab(
                 )
                 TinyClearColorModeSettingItem(
                     title = stringResource(R.string.read_menu_border_color),
-                    dayColor = ReadBookConfig.readMenuBorderColor,
-                    nightColor = ReadBookConfig.readMenuBorderColorNight,
+                    dayColor = preferences.readMenuBorderColor,
+                    nightColor = preferences.readMenuBorderColorNight,
                     onClearColor = { isNight ->
                         if (isNight) {
                             onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(0)))
@@ -406,14 +407,46 @@ private fun GlobalMenuTab(
                     },
                     onClickColor = { isNight ->
                         if (isNight) {
-                            onShowColorPicker(COLOR_BORDER_NIGHT, ReadBookConfig.readMenuBorderColorNight)
+                            onShowColorPicker(COLOR_BORDER_NIGHT, preferences.readMenuBorderColorNight)
                         } else {
-                            onShowColorPicker(COLOR_BORDER, ReadBookConfig.readMenuBorderColor)
+                            onShowColorPicker(COLOR_BORDER, preferences.readMenuBorderColor)
                         }
                     },
                 )
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_liquid_glass),
+            description = stringResource(R.string.read_menu_liquid_glass_summary),
+            checked = preferences.readMenuLiquidGlass,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuLiquidGlass(it)))
+            },
+        )
+        AnimatedVisibility(visible = preferences.readMenuLiquidGlass) {
+            TinySliderSettingItem(
+                title = stringResource(R.string.read_menu_blur_radius),
+                value = preferences.readMenuBlurRadius.toFloat(),
+                valueRange = 0f..32f,
+                steps = 31,
+                description = stringResource(R.string.read_menu_blur_radius_summary),
+                onValueChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurRadius(it.toInt())))
+                },
+            )
+        }
+        TinySliderSettingItem(
+            title = stringResource(R.string.read_menu_blur_alpha),
+            value = preferences.readMenuBlurAlpha.toFloat(),
+            valueRange = 0f..100f,
+            steps = 99,
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurAlpha(it.toInt())))
+            },
+        )
     }
 }
 
@@ -421,18 +454,18 @@ private fun GlobalMenuTab(
 
 @Composable
 private fun BottomBarTab(
+    preferences: ReadPreferences,
     customIcons: Map<String, String>,
     onIntent: (ReadBookIntent) -> Unit,
     onShowIconSheet: () -> Unit,
     onShowColorPicker: (Int, Int) -> Unit,
 ) {
-    var showIconText by remember { mutableStateOf(ReadBookConfig.readMenuIconShowText) }
-    var iconStyle by remember { mutableIntStateOf(ReadBookConfig.readMenuIconStyle) }
-    var iconsPerRow by remember { mutableIntStateOf(ReadBookConfig.readMenuIconItemsPerRow) }
-    var iconRowCount by remember { mutableIntStateOf(ReadBookConfig.readMenuIconRowCount) }
-    var bottomCornerRadius by remember { mutableIntStateOf(ReadBookConfig.readMenuBottomCornerRadius) }
-    var bottomHorizontalMargin by remember { mutableIntStateOf(ReadBookConfig.readMenuBottomHorizontalMargin) }
-    var bottomBottomMargin by remember { mutableIntStateOf(ReadBookConfig.readMenuBottomBottomMargin) }
+    var showIconText by remember { mutableStateOf(preferences.readMenuIconShowText) }
+    var iconStyle by remember { mutableIntStateOf(preferences.readMenuIconStyle) }
+    var iconsPerRow by remember { mutableIntStateOf(preferences.readMenuIconItemsPerRow) }
+    var iconRowCount by remember { mutableIntStateOf(preferences.readMenuIconRowCount) }
+    var bottomCornerRadius by remember { mutableIntStateOf(preferences.readMenuBottomCornerRadius) }
+    val floatingBottomBar = preferences.readMenuFloatingBottomBar
 
     Column(
         modifier = Modifier
@@ -506,24 +539,11 @@ private fun BottomBarTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBottomCornerRadius(bottomCornerRadius)))
             },
         )
-        TinySliderSettingItem(
-            title = stringResource(R.string.read_menu_bottom_horizontal_margin),
-            value = bottomHorizontalMargin.toFloat(),
-            valueRange = 0f..32f,
-            steps = 31,
-            onValueChange = {
-                bottomHorizontalMargin = it.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBottomHorizontalMargin(bottomHorizontalMargin)))
-            },
-        )
-        TinySliderSettingItem(
-            title = stringResource(R.string.read_menu_bottom_bottom_margin),
-            value = bottomBottomMargin.toFloat(),
-            valueRange = 0f..32f,
-            steps = 31,
-            onValueChange = {
-                bottomBottomMargin = it.toInt()
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBottomBottomMargin(bottomBottomMargin)))
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_floating_bottom_bar),
+            checked = floatingBottomBar,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FloatingBottomBar(it)))
             },
         )
     }

@@ -1841,8 +1841,12 @@
     <string name="position_bottom_end">Bottom right</string>
     <string name="read_menu_bottom_bar_layout">Bottom Bar Layout</string>
     <string name="read_menu_bottom_corner_radius">Bottom bar corner radius</string>
-    <string name="read_menu_bottom_horizontal_margin">Bottom bar horizontal margin</string>
-    <string name="read_menu_bottom_bottom_margin">Bottom bar bottom margin</string>
+    <string name="read_menu_floating_bottom_bar">Floating bottom bar</string>
+    <string name="read_menu_liquid_glass">Liquid glass menu bars</string>
+    <string name="read_menu_liquid_glass_summary">Apply liquid glass blur to the reading menu top and bottom bars. Requires Android 13+</string>
+    <string name="read_menu_blur_radius">Blur radius</string>
+    <string name="read_menu_blur_radius_summary">Higher radius may reduce performance</string>
+    <string name="read_menu_blur_alpha">Menu opacity</string>
     <string name="read_menu_border">Border</string>
     <string name="read_menu_border_width">Width</string>
     <string name="read_menu_border_color">Color</string>

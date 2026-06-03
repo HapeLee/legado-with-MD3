@@ -36,7 +36,6 @@ import io.legado.app.utils.fullScreen
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.toastOnUi
@@ -101,7 +100,6 @@ abstract class BaseActivity<VB : ViewBinding>(
         else{
             setupSystemBar()
         }
-        window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurface))
         //setupSystemBar()
         setContentView(binding.root)
         upBackgroundImage()

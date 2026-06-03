@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.read
 
 import android.content.Context
+import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -70,6 +72,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.unit.Density
@@ -81,14 +84,21 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import coil.compose.AsyncImage
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
 import io.legado.app.R
 import io.legado.app.data.entities.Book
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.book.read.sheet.PaddingConfigContent
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
@@ -116,6 +126,7 @@ import kotlin.math.roundToInt
 fun ReadBookMenuBar(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop? = null,
 ) {
     val context = LocalContext.current
     val currentRoute = state.menuState.currentRoute
@@ -146,23 +157,30 @@ fun ReadBookMenuBar(
             modifier = Modifier.align(Alignment.TopCenter),
         ) {
             Column {
-                MenuTitleBar(state = state, colors = menuColors, onIntent = onIntent)
-                if (ReadBookConfig.titleBarIconPosition <= 1) {
+                MenuTitleBar(
+                    state = state,
+                    colors = menuColors,
+                    onIntent = onIntent,
+                    backdrop = backdrop,
+                )
+                if (state.menuConfig.titleBarIconPosition <= 1) {
                     FloatingIconRow(
+                        state = state,
                         colors = menuColors,
-                        alignment = if (ReadBookConfig.titleBarIconPosition == 0) {
+                        alignment = if (state.menuConfig.titleBarIconPosition == 0) {
                             Alignment.Start
                         } else {
                             Alignment.End
                         },
                         onIntent = onIntent,
+                        backdrop = backdrop,
                     )
                 }
             }
         }
 
         // Floating icon row (bottom positions)
-        if (ReadBookConfig.titleBarIconPosition >= 2) {
+        if (state.menuConfig.titleBarIconPosition >= 2) {
             AnimatedVisibility(
                 visible = state.menuVisible && !dialogLikeRoute,
                 enter = fadeIn(),
@@ -172,13 +190,15 @@ fun ReadBookMenuBar(
                     .padding(bottom = 16.dp),
             ) {
                 FloatingIconRow(
+                    state = state,
                     colors = menuColors,
-                    alignment = if (ReadBookConfig.titleBarIconPosition == 2) {
+                    alignment = if (state.menuConfig.titleBarIconPosition == 2) {
                         Alignment.Start
                     } else {
                         Alignment.End
                     },
                     onIntent = onIntent,
+                    backdrop = backdrop,
                 )
             }
         }
@@ -196,6 +216,7 @@ fun ReadBookMenuBar(
                 colors = menuColors,
                 onIntent = onIntent,
                 context = context,
+                backdrop = backdrop,
             )
         }
     }
@@ -208,6 +229,7 @@ private fun ReadBookMenuSurface(
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     context: Context,
+    backdrop: Backdrop?,
 ) {
     val expanded = route != ReadBookMenuRoute.Main
     val dialogLikeRoute = route == ReadBookMenuRoute.PaddingConfig
@@ -228,34 +250,55 @@ private fun ReadBookMenuSurface(
     } else {
         560.dp
     }
+    val isFloating = state.menuConfig.readMenuFloatingBottomBar
+    val navBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
+    val floatingBottomMargin = if (isFloating) 16.dp + navBarHeight else 0.dp
     val mainHorizontalMargin =
-        if (expanded) 0.dp else ReadBookConfig.readMenuBottomHorizontalMargin.dp
+        if (expanded && !isFloating) 0.dp else floatingHorizontalMargin
     val mainBottomMargin =
-        if (expanded) 0.dp else ReadBookConfig.readMenuBottomBottomMargin.dp
-    val mainCorner =
-        if (expanded) 0.dp else ReadBookConfig.readMenuBottomCornerRadius.dp
+        if (expanded && !isFloating) 0.dp else floatingBottomMargin
+    val mainCorner = state.menuConfig.readMenuBottomCornerRadius.dp
     val mainWidth = (screenWidth - mainHorizontalMargin * 2).coerceAtLeast(0.dp)
-    val surfaceWidth = if (expanded) lerp(screenWidth, dialogWidth, morphProgress) else mainWidth
+    val surfaceWidth = if (expanded) {
+        if (isFloating && !dialogLikeRoute) mainWidth
+        else lerp(screenWidth, dialogWidth, morphProgress)
+    } else {
+        mainWidth
+    }
     val bottomTopCorner by animateDpAsState(
-        targetValue = if (expanded) 24.dp else 0.dp,
+        targetValue = if (expanded && !isFloating) 24.dp else 0.dp,
         label = "ReadBookMenuCorner",
     )
     val corner = lerp(bottomTopCorner, 28.dp, morphProgress)
     val bottomCorner = lerp(0.dp, 28.dp, morphProgress)
     val surfaceShape = if (expanded) {
-        RoundedCornerShape(
-            topStart = corner,
-            topEnd = corner,
-            bottomStart = bottomCorner,
-            bottomEnd = bottomCorner,
-        )
-    } else {
+        if (isFloating && !dialogLikeRoute) {
+            RoundedCornerShape(mainCorner)
+        } else {
+            RoundedCornerShape(
+                topStart = corner,
+                topEnd = corner,
+                bottomStart = bottomCorner,
+                bottomEnd = bottomCorner,
+            )
+        }
+    } else if (isFloating) {
         RoundedCornerShape(mainCorner)
+    } else {
+        RoundedCornerShape(topStart = mainCorner, topEnd = mainCorner)
     }
 
-    val bottomBarBorderWidth = ReadBookConfig.readMenuBorderWidth
-    val bottomBarBorderColor = ReadBookConfig.resolvedMenuBorderColor.takeIf { it != 0 }
+    val bottomBarBorderWidth = state.menuConfig.readMenuBorderWidth
+    val bottomBarBorderColor = (if (ReadStyleResolver.isNightTheme()) {
+        state.menuConfig.readMenuBorderColorNight
+    } else {
+        state.menuConfig.readMenuBorderColor
+    }).takeIf { it != 0 }
         ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
+    val extendSurfaceToNavigationBar = !isFloating && !dialogLikeRoute
+    val useLiquidGlass = readMenuLiquidGlassEnabled(backdrop, state.menuConfig)
+    val useLens = useLiquidGlass && isFloating && mainCorner > 0.dp
 
     Surface(
         modifier = Modifier
@@ -264,6 +307,12 @@ private fun ReadBookMenuSurface(
                 end = mainHorizontalMargin,
                 bottom = mainBottomMargin,
             )
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(
+                    if (isFloating || extendSurfaceToNavigationBar) WindowInsetsSides.Horizontal
+                    else WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
+                )
+            )
             .width(surfaceWidth)
             .heightIn(max = maxHeight)
             .onSizeChanged { surfaceHeightPx = it.height }
@@ -271,6 +320,14 @@ private fun ReadBookMenuSurface(
                 val liftPx = ((windowSize.height - surfaceHeightPx) / 2f) * morphProgress
                 IntOffset(x = 0, y = -liftPx.roundToInt())
             }
+            .readMenuLiquidGlass(
+                backdrop = backdrop,
+                colors = colors,
+                shape = surfaceShape,
+                useTopBarStyle = false,
+                useLens = useLens,
+                menuConfig = state.menuConfig,
+            )
             .drawWithCache {
                 val strokeWidthPx = bottomBarBorderWidth.dp.toPx()
                 val outline = surfaceShape.createOutline(size, layoutDirection, this)
@@ -291,10 +348,10 @@ private fun ReadBookMenuSurface(
                 }
             },
         shape = surfaceShape,
-        color = colors.background,
-        contentColor = colors.content,
-        tonalElevation = if (expanded) 6.dp else 0.dp,
-        shadowElevation = if (expanded) 8.dp else 0.dp,
+        color = if (useLiquidGlass) Color.Transparent else colors.background.copy(
+            alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+        ),
+        contentColor = colors.content
     ) {
         AnimatedContent(
             targetState = route,
@@ -312,6 +369,8 @@ private fun ReadBookMenuSurface(
                         colors = colors,
                         onIntent = onIntent,
                         context = context,
+                        bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight + 16.dp else 16.dp,
+                        glassEnabled = useLiquidGlass,
                     )
                 }
 
@@ -319,6 +378,7 @@ private fun ReadBookMenuSurface(
                         ReadBookMenuRoutePage(
                             title = stringResource(R.string.read_config),
                             maxHeight = maxHeight,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleContent(
@@ -350,6 +410,7 @@ private fun ReadBookMenuSurface(
                             title = stringResource(R.string.padding),
                             maxHeight = maxHeight,
                             scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             PaddingConfigContent(
@@ -363,6 +424,7 @@ private fun ReadBookMenuSurface(
                         ReadBookMenuRoutePage(
                             title = stringResource(R.string.read_config_text_effects),
                             maxHeight = maxHeight,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleTextTitleContent(
@@ -389,6 +451,7 @@ private fun ReadBookMenuSurface(
                             title = stringResource(R.string.aloud_config),
                             maxHeight = maxHeight,
                             scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadAloudContent(
@@ -414,6 +477,7 @@ private fun ReadBookMenuSurface(
                             title = targetRoute.bookmark.chapterName,
                             maxHeight = maxHeight,
                             scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             Box(Modifier.padding(horizontal = 16.dp)) {
@@ -433,8 +497,9 @@ private fun ReadBookMenuSurface(
 @Composable
 private fun ReadBookMenuRoutePage(
     title: String,
-    maxHeight: androidx.compose.ui.unit.Dp,
+    maxHeight: Dp,
     scrollContent: Boolean = false,
+    bottomPadding: Dp = 0.dp,
     onBack: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -443,7 +508,7 @@ private fun ReadBookMenuRoutePage(
             .fillMaxWidth()
             .heightIn(max = maxHeight)
             .animateContentSize()
-            .padding(vertical = 16.dp),
+            .padding(top = 16.dp, bottom = 16.dp + bottomPadding),
     ) {
         Row(
             modifier = Modifier
@@ -487,17 +552,37 @@ private fun MenuTitleBar(
     state: ReadBookUiState,
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val topBarBorderWidth = ReadBookConfig.readMenuBorderWidth
-    val topBarBorderColor = ReadBookConfig.resolvedMenuBorderColor.takeIf { it != 0 }
+    val topBarBorderWidth = state.menuConfig.readMenuBorderWidth
+    val topBarBorderColor = (if (ReadStyleResolver.isNightTheme()) {
+        state.menuConfig.readMenuBorderColorNight
+    } else {
+        state.menuConfig.readMenuBorderColor
+    }).takeIf { it != 0 }
         ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.background)
+            .then(
+                if (readMenuLiquidGlassEnabled(backdrop, state.menuConfig)) {
+                    Modifier.readMenuLiquidGlass(
+                        backdrop = backdrop,
+                        colors = colors,
+                        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+                        useTopBarStyle = true,
+                        useLens = true,
+                        menuConfig = state.menuConfig,
+                    )
+                } else {
+                    Modifier.background(colors.background.copy(
+                        alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+                    ))
+                }
+            )
             .then(
                 if (topBarBorderWidth > 0) {
                     Modifier.drawBehind {
@@ -540,7 +625,7 @@ private fun MenuTitleBar(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 style = LegadoTheme.typography.titleMedium,
                 color = colors.content,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
 
@@ -660,9 +745,11 @@ private fun RefreshActionButton(
 
 @Composable
 private fun FloatingIconRow(
+    state: ReadBookUiState,
     colors: ReadMenuColors,
     alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
     onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
 ) {
     val context = LocalContext.current
     val titleBarIcons = remember { loadFloatingIcons(context, onIntent) }
@@ -682,16 +769,28 @@ private fun FloatingIconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         titleBarIcons.forEach { iconDef ->
-            val customPath = remember { ReadBookConfig.titleBarCustomIcons[iconDef.id] }
+            val customPath = remember { state.menuConfig.titleBarCustomIcons[iconDef.id] }
             val isCustom = !customPath.isNullOrBlank()
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
-                    .size(36.dp)
+                    .size(40.dp)
                     .then(
-                        if (isCustom) Modifier
-                        else Modifier.background(colors.background, CircleShape)
+                        when {
+                            isCustom -> Modifier
+                            readMenuLiquidGlassEnabled(backdrop, state.menuConfig) -> Modifier.readMenuLiquidGlass(
+                                backdrop = backdrop,
+                                colors = colors,
+                                shape = CircleShape,
+                                useTopBarStyle = true,
+                                useLens = true,
+                                menuConfig = state.menuConfig,
+                            )
+                            else -> Modifier.background(colors.background.copy(
+                                alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+                            ), CircleShape)
+                        }
                     )
                     .clickable(
                         indication = null,
@@ -930,6 +1029,8 @@ private fun MenuBottomBar(
     colors: ReadMenuColors,
     onIntent: (ReadBookIntent) -> Unit,
     context: Context,
+    bottomPadding: Dp = 0.dp,
+    glassEnabled: Boolean = false,
 ) {
     val seekMax = state.seekMax.coerceAtLeast(0)
     val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
@@ -945,13 +1046,10 @@ private fun MenuBottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(colors.background)
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(
-                    WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
-                )
-            )
-            .padding(top = 12.dp)
+            .background(if (glassEnabled) Color.Transparent else colors.background.copy(
+                alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+            ))
+            .padding(top = 12.dp, bottom = bottomPadding)
             .animateContentSize(),
     ) {
         // Seek bar row: prev + slider + next
@@ -1001,8 +1099,8 @@ private fun MenuBottomBar(
         val toolButtons = remember(context, state.configUpdateTrigger) {
             loadToolButtons(context, onIntent)
         }
-        val itemsPerRow = ReadBookConfig.readMenuIconItemsPerRow
-        val rowCount = ReadBookConfig.readMenuIconRowCount
+        val itemsPerRow = state.menuConfig.readMenuIconItemsPerRow
+        val rowCount = state.menuConfig.readMenuIconRowCount
         val pageSize = (itemsPerRow * rowCount).coerceAtLeast(1)
         val pageCount = ceil(toolButtons.size / pageSize.toFloat()).roundToInt().coerceAtLeast(1)
         val pagerState = rememberPagerState(pageCount = { pageCount })
@@ -1014,7 +1112,7 @@ private fun MenuBottomBar(
         ) { page ->
             val pageButtons = toolButtons.drop(page * pageSize).take(pageSize)
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
@@ -1026,8 +1124,7 @@ private fun MenuBottomBar(
                             else -> Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally)
                         },
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp),
+                            .fillMaxWidth(),
                     ) {
                         rowButtons.forEach { button ->
                             ToolButtonItem(
@@ -1063,11 +1160,11 @@ private fun ToolButtonItem(
     ) {
         NormalCard(
             cornerRadius = 16.dp,
-            containerColor = when (ReadBookConfig.readMenuIconStyle) {
+            containerColor = when (state.menuConfig.readMenuIconStyle) {
                 1 -> LegadoTheme.colorScheme.surfaceContainerLow
                 else -> Color.Transparent
             },
-            border = if (ReadBookConfig.readMenuIconStyle == 2) {
+            border = if (state.menuConfig.readMenuIconStyle == 2) {
                 BorderStroke(1.dp, iconTint.copy(alpha = 0.45f))
             } else {
                 null
@@ -1110,7 +1207,7 @@ private fun ToolButtonItem(
                 }
             }
         }
-        if (ReadBookConfig.readMenuIconShowText) {
+        if (state.menuConfig.readMenuIconShowText) {
             Spacer(Modifier.height(2.dp))
             Text(
                 text = button.description,
@@ -1212,6 +1309,49 @@ private data class ReadMenuColors(
     val background: Color,
     val content: Color,
 )
+
+private fun readMenuLiquidGlassEnabled(backdrop: Backdrop?, menuConfig: ReadMenuConfig): Boolean {
+    return backdrop != null &&
+            menuConfig.readMenuLiquidGlass &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+}
+
+@Composable
+private fun Modifier.readMenuLiquidGlass(
+    backdrop: Backdrop?,
+    colors: ReadMenuColors,
+    shape: Shape,
+    useTopBarStyle: Boolean,
+    useLens: Boolean,
+    menuConfig: ReadMenuConfig,
+): Modifier {
+    if (!readMenuLiquidGlassEnabled(backdrop, menuConfig)) return this
+    val blurRadius = menuConfig.readMenuBlurRadius
+    val blurAlpha = menuConfig.readMenuBlurAlpha
+    val containerColor = colors.background.copy(
+        alpha = (blurAlpha.coerceIn(0, 100) / 100f).coerceAtMost(0.6f)
+    )
+
+    return drawBackdrop(
+        backdrop = backdrop!!,
+        shape = { shape },
+        effects = {
+            vibrancy()
+            blur(blurRadius.coerceAtLeast(0).dp.toPx())
+            if (useLens) {
+                val lensRadius = menuConfig.readMenuLensRadius
+                lens(lensRadius.dp.toPx(), lensRadius.dp.toPx())
+            }
+        },
+        highlight = {
+            Highlight.Default
+        },
+        shadow = null,
+        onDrawSurface = {
+            drawRect(containerColor)
+        },
+    )
+}
 
 @Composable
 private fun readMenuColors(): ReadMenuColors {

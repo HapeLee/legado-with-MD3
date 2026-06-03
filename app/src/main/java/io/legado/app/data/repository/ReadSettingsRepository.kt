@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
@@ -78,8 +79,11 @@ data class ReadPreferences(
     val readMenuIconItemsPerRow: Int = 5,
     val readMenuIconRowCount: Int = 1,
     val readMenuBottomCornerRadius: Int = 0,
-    val readMenuBottomHorizontalMargin: Int = 0,
-    val readMenuBottomBottomMargin: Int = 0,
+    val readMenuFloatingBottomBar: Boolean = false,
+    val readMenuLiquidGlass: Boolean = false,
+    val readMenuBlurRadius: Int = 24,
+    val readMenuBlurAlpha: Int = 60,
+    val readMenuLensRadius: Float = 24f,
     val readMenuBorderWidth: Int = 0,
     val readMenuBorderColor: Int = 0,
     val readMenuBorderColorNight: Int = 0,
@@ -280,11 +284,20 @@ class ReadSettingsRepository(
     suspend fun setReadMenuBottomCornerRadius(value: Int) =
         settingsRepository.putInt(PreferKey.readMenuBottomCornerRadius, value.coerceIn(0, 32))
 
-    suspend fun setReadMenuBottomHorizontalMargin(value: Int) =
-        settingsRepository.putInt(PreferKey.readMenuBottomHorizontalMargin, value.coerceIn(0, 32))
+    suspend fun setReadMenuFloatingBottomBar(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuFloatingBottomBar, value)
 
-    suspend fun setReadMenuBottomBottomMargin(value: Int) =
-        settingsRepository.putInt(PreferKey.readMenuBottomBottomMargin, value.coerceIn(0, 32))
+    suspend fun setReadMenuLiquidGlass(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuLiquidGlass, value)
+
+    suspend fun setReadMenuBlurRadius(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuBlurRadius, value.coerceIn(0, 32))
+
+    suspend fun setReadMenuBlurAlpha(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuBlurAlpha, value.coerceIn(0, 100))
+
+    suspend fun setReadMenuLensRadius(value: Float) =
+        settingsRepository.putFloat(PreferKey.readMenuLensRadius, value.coerceIn(0f, 48f))
 
     suspend fun setReadMenuBorderWidth(value: Int) =
         settingsRepository.putInt(PreferKey.readMenuBorderWidth, value.coerceIn(0, 4))
@@ -383,8 +396,11 @@ class ReadSettingsRepository(
             readMenuIconItemsPerRow = this[Keys.ReadMenuIconItemsPerRow] ?: 5,
             readMenuIconRowCount = this[Keys.ReadMenuIconRowCount] ?: 1,
             readMenuBottomCornerRadius = this[Keys.ReadMenuBottomCornerRadius] ?: 0,
-            readMenuBottomHorizontalMargin = this[Keys.ReadMenuBottomHorizontalMargin] ?: 0,
-            readMenuBottomBottomMargin = this[Keys.ReadMenuBottomBottomMargin] ?: 0,
+            readMenuFloatingBottomBar = this[Keys.ReadMenuFloatingBottomBar] ?: false,
+            readMenuLiquidGlass = this[Keys.ReadMenuLiquidGlass] ?: false,
+            readMenuBlurRadius = this[Keys.ReadMenuBlurRadius] ?: 24,
+            readMenuBlurAlpha = this[Keys.ReadMenuBlurAlpha] ?: 60,
+            readMenuLensRadius = this[Keys.ReadMenuLensRadius] ?: 24f,
             readMenuBorderWidth = this[Keys.ReadMenuBorderWidth] ?: 0,
             readMenuBorderColor = this[Keys.ReadMenuBorderColor] ?: 0,
             readMenuBorderColorNight = this[Keys.ReadMenuBorderColorNight] ?: 0,
@@ -461,8 +477,11 @@ class ReadSettingsRepository(
         val ReadMenuIconItemsPerRow = intPreferencesKey(PreferKey.readMenuIconItemsPerRow)
         val ReadMenuIconRowCount = intPreferencesKey(PreferKey.readMenuIconRowCount)
         val ReadMenuBottomCornerRadius = intPreferencesKey(PreferKey.readMenuBottomCornerRadius)
-        val ReadMenuBottomHorizontalMargin = intPreferencesKey(PreferKey.readMenuBottomHorizontalMargin)
-        val ReadMenuBottomBottomMargin = intPreferencesKey(PreferKey.readMenuBottomBottomMargin)
+        val ReadMenuFloatingBottomBar = booleanPreferencesKey(PreferKey.readMenuFloatingBottomBar)
+        val ReadMenuLiquidGlass = booleanPreferencesKey(PreferKey.readMenuLiquidGlass)
+        val ReadMenuBlurRadius = intPreferencesKey(PreferKey.readMenuBlurRadius)
+        val ReadMenuBlurAlpha = intPreferencesKey(PreferKey.readMenuBlurAlpha)
+        val ReadMenuLensRadius = floatPreferencesKey(PreferKey.readMenuLensRadius)
         val ReadMenuBorderWidth = intPreferencesKey(PreferKey.readMenuBorderWidth)
         val ReadMenuBorderColor = intPreferencesKey(PreferKey.readMenuBorderColor)
         val ReadMenuBorderColorNight = intPreferencesKey(PreferKey.readMenuBorderColorNight)
