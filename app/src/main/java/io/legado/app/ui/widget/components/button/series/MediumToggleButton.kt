@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
@@ -32,6 +30,7 @@ fun MediumToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     style: ToggleStyle = ToggleStyle.Outlined,
     icon: ImageVector? = null,
@@ -80,18 +79,23 @@ fun MediumToggleButton(
                 }
             }
         } else {
-            MiuixIconButton(
+            SeriesIconButton(
+                icon = if (checked) (iconChecked ?: icon)!! else icon!!,
+                contentDescription = contentDescription,
                 onClick = { onCheckedChange(!checked) },
                 modifier = modifier,
                 enabled = enabled,
-                backgroundColor = containerColor
-            ) {
-                MiuixIcon(
-                    imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                    contentDescription = contentDescription,
-                    tint = contentColor
-                )
-            }
+                selected = checked,
+                onLongClick = onLongClick,
+                size = MediumSeriesIconButtonSize,
+                iconSize = MediumSeriesIconSize,
+                style = when (style) {
+                    ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
+                    ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
+                },
+                selectedContainerColor = containerColor,
+                selectedContentColor = contentColor
+            )
         }
     } else {
         if (text != null) {
@@ -120,33 +124,21 @@ fun MediumToggleButton(
                 }
             }
         } else {
-            when (style) {
-                ToggleStyle.Outlined -> {
-                    FilledTonalButton(
-                        onClick = { onCheckedChange(!checked) },
-                        modifier = modifier,
-                        enabled = enabled,
-                    ) {
-                        Icon(
-                            imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                            contentDescription = contentDescription,
-                        )
-                    }
+            SeriesIconButton(
+                icon = if (checked) (iconChecked ?: icon)!! else icon!!,
+                contentDescription = contentDescription,
+                onClick = { onCheckedChange(!checked) },
+                modifier = modifier,
+                enabled = enabled,
+                selected = checked,
+                onLongClick = onLongClick,
+                size = MediumSeriesIconButtonSize,
+                iconSize = MediumSeriesIconSize,
+                style = when (style) {
+                    ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
+                    ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
                 }
-
-                ToggleStyle.Tonal -> {
-                    FilledTonalIconButton(
-                        onClick = { onCheckedChange(!checked) },
-                        modifier = modifier,
-                        enabled = enabled,
-                    ) {
-                        Icon(
-                            imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                            contentDescription = contentDescription,
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }
