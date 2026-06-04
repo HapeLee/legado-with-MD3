@@ -278,7 +278,9 @@ class TextChapterLayout(
                     val matcher = AppPattern.imgPattern.matcher(text)
                     val ssb = StringBuffer()
                     while (matcher.find()) {
-                        matcher.appendReplacement(ssb, srcReplaceChar)
+                        if (matcher.group(1) != null) {
+                            matcher.appendReplacement(ssb, srcReplaceChar)
+                        }
                     }
                     matcher.appendTail(ssb)
                     fullTextBuilder.append(ssb.toString())
@@ -1394,8 +1396,10 @@ class TextChapterLayout(
         var hasMatch = false
         for (rule in rules) {
             try {
-                val regex = regexCache.getOrPut(rule.pattern) {
-                    Regex(rule.pattern, RegexOption.DOT_MATCHES_ALL)
+                val regex = synchronized(regexCache) {
+                    regexCache.getOrPut(rule.pattern) {
+                        Regex(rule.pattern, RegexOption.DOT_MATCHES_ALL)
+                    }
                 }
                 regex.findAll(fullText).forEach { match ->
                     hasMatch = true
@@ -1415,23 +1419,29 @@ class TextChapterLayout(
     private fun applyRegexColorRules(text: String, offset: Int): RegexMatchResult? {
         val globalResult = globalRegexResult ?: return null
         if (offset < 0) return null
+        val endIdx = minOf(offset + text.length, globalResult.colorArray.size)
+        var hasMatch = false
+        for (globalIdx in offset until endIdx) {
+            if (globalResult.colorArray[globalIdx] != -1 || globalResult.fontPathArray[globalIdx] != null) {
+                hasMatch = true
+                break
+            }
+        }
+        if (!hasMatch) return null
         val colorArray = IntArray(text.length) { -1 }
         val fontPathArray = arrayOfNulls<String>(text.length)
-        var hasMatch = false
         for (i in text.indices) {
             val globalIdx = offset + i
             if (globalIdx >= 0 && globalIdx < globalResult.colorArray.size) {
                 if (globalResult.colorArray[globalIdx] != -1) {
                     colorArray[i] = globalResult.colorArray[globalIdx]
-                    hasMatch = true
                 }
                 if (globalResult.fontPathArray[globalIdx] != null) {
                     fontPathArray[i] = globalResult.fontPathArray[globalIdx]
-                    hasMatch = true
                 }
             }
         }
-        return if (hasMatch) RegexMatchResult(colorArray, fontPathArray) else null
+        return RegexMatchResult(colorArray, fontPathArray)
     }
 
     private data class WordStyle(
