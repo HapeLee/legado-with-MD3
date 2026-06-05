@@ -2,8 +2,6 @@ package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +52,7 @@ import java.io.File
 
 @Composable
 fun TitleBarIconSheet(
+    customIcons: Map<String, String>,
     onDismissRequest: () -> Unit,
     onSaved: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
@@ -64,26 +63,6 @@ fun TitleBarIconSheet(
     }
     var items by remember {
         mutableStateOf(loadTitleBarIconConfig(prefs, context))
-    }
-    var customIcons by remember {
-        mutableStateOf(ReadBookConfig.titleBarCustomIcons)
-    }
-    var activeIconId by remember { mutableStateOf<String?>(null) }
-
-    val iconPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        val id = activeIconId ?: return@rememberLauncherForActivityResult
-        uri?.let {
-            val iconFile = File(context.filesDir, "title_bar_icons/$id.png")
-            iconFile.parentFile?.mkdirs()
-            context.contentResolver.openInputStream(it)?.use { input ->
-                iconFile.outputStream().use { output -> input.copyTo(output) }
-            }
-            customIcons = customIcons + (id to iconFile.absolutePath)
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(id, iconFile.absolutePath)))
-        }
-        activeIconId = null
     }
 
     val lazyListState = rememberLazyListState()
@@ -127,12 +106,10 @@ fun TitleBarIconSheet(
                                     }
                                 },
                                 onSelectIcon = {
-                                    activeIconId = item.id
-                                    iconPicker.launch("image/*")
+                                    onIntent(ReadBookIntent.OpenTitleBarCustomIconPicker(item.id))
                                 },
                                 onClearIcon = {
                                     customIcons[item.id]?.let { File(it).delete() }
-                                    customIcons = customIcons - item.id
                                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(item.id, "")))
                                 },
                                 dragHandleModifier = Modifier.draggableHandle(),

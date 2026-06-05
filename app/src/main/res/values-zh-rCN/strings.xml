@@ -1180,6 +1180,10 @@
     <string name="source_edit_max_line_summary">%s，设置行数小于屏幕可显示的最大行数可以更方便的滑动到其他的字段进行编辑</string>
     <string name="restore_last_book_process">是否恢复到跳转前的阅读进度？</string>
     <string name="confirm_skip_to_chapter">是否跳转到该章节？</string>
+    <string name="restore_progress">恢复进度</string>
+    <string name="sync_progress">同步进度</string>
+    <string name="found_cloud_progress">发现云端进度，是否恢复？</string>
+    <string name="progress_exceeds_cloud">当前阅读进度已超过云端，是否覆盖？</string>
     <string name="search_scope">搜索范围</string>
     <string name="toggle_search_scope">切换</string>
     <string name="sure_clear_search_history">是否确认清除所有搜索历史记录</string>

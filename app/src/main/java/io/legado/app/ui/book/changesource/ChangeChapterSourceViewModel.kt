@@ -73,6 +73,14 @@ class ChangeChapterSourceViewModel(
         this.oldBook = book
         this.chapterIndex = chapterIndex
         this.chapterTitle = chapterTitle
+        _uiState.update {
+            it.copy(
+                showToc = false,
+                tocItems = persistentListOf(),
+                isLoadingToc = false,
+                selectedSourceName = "",
+            )
+        }
         startSearch()
     }
 
@@ -265,6 +273,10 @@ class ChangeChapterSourceViewModel(
         searchJob?.cancel()
         searchJob = null
         _uiState.update { it.copy(isSearching = false) }
+    }
+
+    fun dispose() {
+        stopSearch()
     }
 
     private fun refreshResults() {

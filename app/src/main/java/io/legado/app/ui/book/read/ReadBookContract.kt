@@ -3,6 +3,8 @@ package io.legado.app.ui.book.read
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.persistentMapOf
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
@@ -52,9 +54,10 @@ data class ReadBookUiState(
     val isLocalBook: Boolean = true,
     val msg: String? = null,
     val isInitFinish: Boolean = false,
-    // Menu
+    // Search
     val searchMenuVisible: Boolean = false,
     val isShowingSearchResult: Boolean = false,
+    val searchContentQuery: String = "",
     val searchResultList: ImmutableList<SearchResult> = persistentListOf(),
     val searchResultIndex: Int = 0,
     // Read aloud / auto page
@@ -78,8 +81,6 @@ data class ReadBookUiState(
     // Active sheet / dialog
     val activeSheet: ReadBookSheet? = null,
     val activeDialog: ReadBookDialog? = null,
-    // System UI
-    val toolBarHide: Boolean = true,
     // Menu state (for overflow menu)
     val isLocalTxt: Boolean = false,
     val isEpub: Boolean = false,
@@ -89,6 +90,27 @@ data class ReadBookUiState(
     val delHTag: Boolean = false,
     val sameTitleRemoved: Boolean = false,
     val isReadingProgressSyncConfigured: Boolean = false,
+    // Content edit
+    val contentEditLoading: Boolean = false,
+    val contentEditText: String = "",
+    val contentEditTitle: String = "",
+    val contentEditIsLocalTxt: Boolean = false,
+    val contentEditSaveToSource: Boolean = false,
+    val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
+    val selectedTtsEngine: String? = null,
+    val preDownloadNum: Int = 10,
+    val audioCacheCleanTime: Int = 10,
+    // Read aloud config
+    val readAloudIgnoreAudioFocus: Boolean = false,
+    val readAloudPauseOnPhoneCall: Boolean = false,
+    val readAloudWakeLock: Boolean = false,
+    val readAloudMediaButtonPerNext: Boolean = false,
+    val readAloudByPage: Boolean = false,
+    val readAloudSystemMediaCompat: Boolean = true,
+    val readAloudStreamAudio: Boolean = false,
+    val readAloudTtsFollowSys: Boolean = false,
+    val readAloudTtsSpeechRate: Int = 10,
+    val readAloudTtsTimer: Int = 0,
     // Config update trigger (notifies ReadView to run upBg/upStyle etc.)
     val configUpdateTrigger: Int = 0,
     // Menu config (from ReadBookConfig via repository)
@@ -119,8 +141,14 @@ data class ReadMenuConfig(
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuIconStyle: Int = 0,
     val readMenuIconShowText: Boolean = true,
-    val titleBarCustomIcons: Map<String, String> = emptyMap(),
-    val readMenuCustomIcons: Map<String, String> = emptyMap(),
+    val titleBarCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
+    val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
+)
+
+@Immutable
+data class ReadBookTtsEngineItem(
+    val title: String,
+    val value: String?,
 )
 
 sealed interface ReadBookIntent {
@@ -148,7 +176,7 @@ sealed interface ReadBookIntent {
     data object ExitSearch : ReadBookIntent
     data object ShowSearchMenu : ReadBookIntent
     data object HideSearchMenu : ReadBookIntent
-    data class SetSearchResults(val results: List<SearchResult>, val index: Int) : ReadBookIntent
+    data class SetSearchResults(val results: List<SearchResult>, val index: Int, val query: String? = null) : ReadBookIntent
     data class SetSearchResultIndex(val index: Int) : ReadBookIntent
     data class SetShowingSearchResult(val value: Boolean) : ReadBookIntent
     data class NavigateToSearchResult(val result: SearchResult, val index: Int) : ReadBookIntent
@@ -169,6 +197,14 @@ sealed interface ReadBookIntent {
 
     // Change source
     data class ChangeSource(val book: Book, val toc: List<BookChapter>) : ReadBookIntent
+    data class AddSourceAsNewBook(val book: Book, val toc: List<BookChapter>) : ReadBookIntent
+
+    // Activity result intents
+    data class OpenChapterResult(val index: Int, val chapterPos: Int) : ReadBookIntent
+    data object SourceEditResult : ReadBookIntent
+    data object ReplaceRuleResult : ReadBookIntent
+    data class BookInfoResult(val bookDeleted: Boolean) : ReadBookIntent
+    data class FontFolderSelected(val uri: Uri) : ReadBookIntent
 
     // Progress sync
     data class SureNewProgress(val progress: BookProgress) : ReadBookIntent
@@ -196,16 +232,26 @@ sealed interface ReadBookIntent {
     // Sheet / Dialog
     data class ShowSheet(val sheet: ReadBookSheet) : ReadBookIntent
     data object DismissSheet : ReadBookIntent
+    data class SetActiveSheet(val sheet: ReadBookSheet?) : ReadBookIntent
     data class ShowDialog(val dialog: ReadBookDialog) : ReadBookIntent
     data object DismissDialog : ReadBookIntent
 
     // Source actions
     data object ShowLogin : ReadBookIntent
     data object PayAction : ReadBookIntent
+    data object ConfirmPayAction : ReadBookIntent
     data object DisableSource : ReadBookIntent
     data object OpenSourceEdit : ReadBookIntent
+    data class OpenSourceEditByUrl(val sourceUrl: String) : ReadBookIntent
     data object OpenBookInfo : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
+
+    // Content edit
+    data object LoadContentEdit : ReadBookIntent
+    data class SaveContentEdit(val content: String, val saveToSource: Boolean) : ReadBookIntent
+    data object ResetContentEdit : ReadBookIntent
+    data class SetContentEditText(val text: String) : ReadBookIntent
+    data class SetContentEditSaveToSource(val value: Boolean) : ReadBookIntent
 
     // Tools
     data class RefreshImage(val src: String) : ReadBookIntent
@@ -225,6 +271,7 @@ sealed interface ReadBookIntent {
     data object MenuChapterChangeSource : ReadBookIntent
     data object MenuSettingReplace : ReadBookIntent
     data object MenuTocRegex : ReadBookIntent
+    data class TocRegexResult(val tocRegex: String) : ReadBookIntent
     data object MenuRefreshDur : ReadBookIntent
     data object MenuRefreshAfter : ReadBookIntent
     data object MenuRefreshAll : ReadBookIntent
@@ -264,6 +311,12 @@ sealed interface ReadBookIntent {
     // Typed config mutation — single entry point for all ReadBookConfig changes
     data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
 
+    // Icon picker — file IO handled by ViewModel
+    data class SaveMenuCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
+    data class SaveTitleBarCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
+    data class OpenMenuCustomIconPicker(val id: String) : ReadBookIntent
+    data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookIntent
+
     // Tool buttons config saved — recreate to refresh toolbar
     data object RefreshToolButtons : ReadBookIntent
     data object RefreshTitleBarIcons : ReadBookIntent
@@ -298,6 +351,27 @@ sealed interface ReadBookIntent {
     data object SelectSpeakEngine : ReadBookIntent
     data object OpenPreDownloadNumPicker : ReadBookIntent
     data object OpenCacheCleanTimePicker : ReadBookIntent
+    data class ApplySpeakEngine(val value: String?) : ReadBookIntent
+    data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
+    data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
+    data class SetReadAloudIgnoreAudioFocus(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudPauseOnPhoneCall(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudWakeLock(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudMediaButtonPerNext(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudByPage(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudSystemMediaCompat(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudStreamAudio(val value: Boolean) : ReadBookIntent
+    data object ReadAloudPrevParagraph : ReadBookIntent
+    data object ReadAloudTogglePause : ReadBookIntent
+    data object ReadAloudStop : ReadBookIntent
+    data object ReadAloudNextParagraph : ReadBookIntent
+    data object ReadAloudPrevChapter : ReadBookIntent
+    data object ReadAloudNextChapter : ReadBookIntent
+    data class SetReadAloudTtsTimer(val value: Int) : ReadBookIntent
+    data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
+    data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
+    data object OpenSystemTtsSettings : ReadBookIntent
+    data object ClearTtsCache : ReadBookIntent
     data class SelectFont(val path: String) : ReadBookIntent
     data class SelectSystemTypeface(val index: Int) : ReadBookIntent
     data class SelectRegexColorFont(val ruleIndex: Int) : ReadBookIntent
@@ -317,13 +391,22 @@ sealed interface ReadBookIntent {
     data class ShowStackTrace(val text: String) : ReadBookIntent
 
     // Save chapter content (from chapter source change)
-    data class SaveChapterContent(val content: String) : ReadBookIntent
+    data class SaveChapterContent(val content: String, val chapterIndex: Int) : ReadBookIntent
+
+    // Lifecycle (from route DisposableEffect)
+    data object OnResume : ReadBookIntent
+    data object OnPause : ReadBookIntent
+    data object OnDispose : ReadBookIntent
+    data object CloseReadBook : ReadBookIntent
+    data object OpenBooksDirPicker : ReadBookIntent
+    data class BooksDirSelected(val uri: Uri) : ReadBookIntent
 }
 
 sealed interface ReadBookEffect {
     // Toast
     data class ShowToast(val message: String) : ReadBookEffect
     data class LongToast(val message: String) : ReadBookEffect
+    data class TtsCacheCleared(val message: String) : ReadBookEffect
 
     // Navigation / lifecycle
     data object Finish : ReadBookEffect
@@ -356,30 +439,36 @@ sealed interface ReadBookEffect {
     data object StopAutoPage : ReadBookEffect
 
     // Search
-    data class OpenSearchActivity(val word: String?) : ReadBookEffect
+    data class OpenSearchActivity(val word: String?, val bookUrl: String) : ReadBookEffect
     data class NavigateToSearchResult(val result: SearchResult) : ReadBookEffect
     data object ExitSearch : ReadBookEffect
 
     // Source actions
-    data object ShowLogin : ReadBookEffect
-    data object OpenSourceEdit : ReadBookEffect
-    data object OpenBookInfo : ReadBookEffect
-    data object OpenChapterList : ReadBookEffect
-    data class ShowPayDialog(val book: Book, val chapter: BookChapter) : ReadBookEffect
+    data class ShowLogin(val sourceUrl: String) : ReadBookEffect
+    data class OpenSourceEdit(val sourceUrl: String) : ReadBookEffect
+    data class OpenBookInfo(val name: String, val author: String, val bookUrl: String) : ReadBookEffect
+    data class OpenChapterList(val bookUrl: String) : ReadBookEffect
+    data class OpenWebView(
+        val title: String,
+        val url: String,
+        val sourceOrigin: String?,
+        val sourceName: String?,
+        val sourceType: Int?,
+    ) : ReadBookEffect
 
     // Menu actions that need Activity
     data object MenuChangeSource : ReadBookEffect
     data object MenuBookChangeSource : ReadBookEffect
     data object MenuChapterChangeSource : ReadBookEffect
     data object MenuSettingReplace : ReadBookEffect
-    data object MenuTocRegex : ReadBookEffect
+    data class MenuTocRegex(val tocRegex: String?) : ReadBookEffect
     data class MenuImageStyleChanged(val style: String) : ReadBookEffect
     data class SyncBookProgress(val book: Book) : ReadBookEffect
 
     // Text action menu (needs Activity for View operations)
     data object TextActionAloudSelect : ReadBookEffect
     data class TextActionSpeak(val text: String) : ReadBookEffect
-    data class TextActionReplace(val text: String) : ReadBookEffect
+    data class TextActionReplace(val text: String, val bookName: String?, val bookSourceUrl: String?) : ReadBookEffect
 
     // Screen / selection
     data object UpScreenTimeOut : ReadBookEffect
@@ -390,10 +479,6 @@ sealed interface ReadBookEffect {
 
     // Dialogs (Activity-driven)
     data object ShowConfirmSkipToChapter : ReadBookEffect
-    data object SelectSpeakEngine : ReadBookEffect
-    data object OpenPreDownloadNumPicker : ReadBookEffect
-    data object OpenCacheCleanTimePicker : ReadBookEffect
-
     // Replace editor (needs Activity context for ActivityResult)
     data class OpenReplaceEditor(val id: Long, val pattern: String?) : ReadBookEffect
 
@@ -404,6 +489,9 @@ sealed interface ReadBookEffect {
     data object OpenReadStyleImagePicker : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
     data object OpenReadStyleExport : ReadBookEffect
+    data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
+    data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
+    data object OpenSystemTtsSettings : ReadBookEffect
 
     // Day/night toggle
     data object ToggleDayNight : ReadBookEffect
@@ -414,8 +502,13 @@ sealed interface ReadBookEffect {
     // Download chapters — Activity calls CacheBook.start()
     data class DownloadChapters(val start: Int, val end: Int) : ReadBookEffect
 
-    // Show stack trace dialog
-    data class ShowStackTrace(val text: String) : ReadBookEffect
+    // Lifecycle — route-level Activity operations
+    data object RegisterTimeBatteryReceiver : ReadBookEffect
+    data object UnregisterTimeBatteryReceiver : ReadBookEffect
+    data object RegisterNetworkListener : ReadBookEffect
+    data object UnregisterNetworkListener : ReadBookEffect
+    data object OpenBooksDirPicker : ReadBookEffect
+    data object BackupNow : ReadBookEffect
 }
 
 @Immutable
@@ -438,6 +531,9 @@ sealed interface ReadBookSheet {
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
+    data object SpeakEngineConfig : ReadBookSheet
+    data object PreDownloadConfig : ReadBookSheet
+    data object AudioCacheCleanConfig : ReadBookSheet
     data object ClickActionConfig : ReadBookSheet
     data object PageKeyConfig : ReadBookSheet
     data object InfoConfig : ReadBookSheet
@@ -458,6 +554,8 @@ sealed interface ReadBookDialog {
     data class ConfirmRestoreProgress(val progress: BookProgress) : ReadBookDialog
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
+    data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
+    data class StackTrace(val text: String) : ReadBookDialog
 }
 
 /**

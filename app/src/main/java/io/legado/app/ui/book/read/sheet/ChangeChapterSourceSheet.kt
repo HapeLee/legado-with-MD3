@@ -1,6 +1,5 @@
 package io.legado.app.ui.book.read.sheet
 
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.filled.PauseCircleOutline
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,11 +29,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.ui.book.changesource.ChangeChapterSourceEffect
 import io.legado.app.ui.book.changesource.ChangeChapterSourceIntent
 import io.legado.app.ui.book.changesource.ChangeChapterSourceUiState
 import io.legado.app.ui.book.search.ScopeSelectSheet
-import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
@@ -47,55 +43,24 @@ import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.utils.StartActivityContract
-import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 fun ChangeChapterSourceSheet(
     state: ChangeChapterSourceUiState,
     onIntent: (ChangeChapterSourceIntent) -> Unit,
-    effects: Flow<ChangeChapterSourceEffect>,
+    show: Boolean = true,
     onDismissRequest: () -> Unit,
+    onAnimationFinish: () -> Unit = onDismissRequest,
     bookScoreFlow: (SearchBook) -> kotlinx.coroutines.flow.StateFlow<Int>,
     onBookScoreClick: (SearchBook) -> Unit,
     onEditSource: (String) -> Unit,
 ) {
-    val context = LocalContext.current
-
-    // Collect effects
-    LaunchedEffect(Unit) {
-        effects.collectLatest { effect ->
-            when (effect) {
-                is ChangeChapterSourceEffect.ReplaceContent -> {
-                    // Handled by caller
-                }
-
-                is ChangeChapterSourceEffect.ShowToast -> {
-                    context.toastOnUi(effect.message)
-                }
-
-                is ChangeChapterSourceEffect.Dismiss -> {
-                    onDismissRequest()
-                }
-            }
-        }
-    }
-
     var showOptionsMenu by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
-    val editSourceResult =
-        rememberLauncherForActivityResult(StartActivityContract(BookSourceEditActivity::class.java)) {
-            val origin =
-                it.data?.getStringExtra("origin") ?: return@rememberLauncherForActivityResult
-            onIntent(ChangeChapterSourceIntent.Refresh)
-        }
-
     AppModalBottomSheet(
-        show = true,
-        onDismissRequest = onDismissRequest,
+        show = show,
+        onDismissRequest = onAnimationFinish,
         title = if (state.showToc) state.selectedSourceName else stringResource(R.string.chapter_change_source),
         startAction = {
             if (!state.showToc) {

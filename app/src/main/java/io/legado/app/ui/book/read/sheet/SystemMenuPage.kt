@@ -1,8 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -91,6 +89,7 @@ private const val COLOR_BORDER_NIGHT = 12
 
 @Composable
 internal fun SystemMenuPage(
+    customIcons: Map<String, String>,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -108,24 +107,6 @@ internal fun SystemMenuPage(
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
     var showIconSheet by remember { mutableStateOf(false) }
-    var customIcons by remember { mutableStateOf(loadMenuCustomIcons(context)) }
-    var activeIconId by remember { mutableStateOf<String?>(null) }
-
-    val iconPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        val id = activeIconId ?: return@rememberLauncherForActivityResult
-        uri?.let {
-            val iconFile = File(context.filesDir, "read_menu_icons/$id.png")
-            iconFile.parentFile?.mkdirs()
-            context.contentResolver.openInputStream(it)?.use { input ->
-                iconFile.outputStream().use { output -> input.copyTo(output) }
-            }
-            customIcons = customIcons + (id to iconFile.absolutePath)
-            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuCustomIcon(id, iconFile.absolutePath)))
-        }
-        activeIconId = null
-    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.settledPage }.collect { selectedTab = it }
@@ -207,12 +188,10 @@ internal fun SystemMenuPage(
         MenuCustomIconSheet(
             customIcons = customIcons,
             onSelectIcon = { id ->
-                activeIconId = id
-                iconPicker.launch("image/*")
+                onIntent(ReadBookIntent.OpenMenuCustomIconPicker(id))
             },
             onClearIcon = { id ->
                 customIcons[id]?.let { File(it).delete() }
-                customIcons = customIcons - id
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuCustomIcon(id, "")))
             },
             onDismissRequest = { showIconSheet = false },
@@ -888,11 +867,6 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("replace_badge", R.drawable.ic_find_replace, context.getString(R.string.replace_purify_badge)),
     ReadMenuButtonInfo("translate", R.drawable.ic_translate, context.getString(R.string.translate)),
 )
-
-internal fun loadMenuCustomIcons(context: Context): Map<String, String> {
-    val supportedIds = readMenuButtonInfos(context).map { it.id }.toSet()
-    return ReadBookConfig.readMenuCustomIcons.filterKeys { it in supportedIds }
-}
 
 private fun loadMenuCustomIconItems(
     prefs: android.content.SharedPreferences,

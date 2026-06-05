@@ -3,6 +3,11 @@ package io.legado.app.ui.book.read
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -21,14 +26,17 @@ import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
+import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.RegexColorConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
+import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
-import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -51,82 +59,76 @@ fun ReadBookScreen(
     }
 
     // Dialogs driven by activeDialog state
-    when (state.activeDialog) {
+    when (val dialog = state.activeDialog) {
         is ReadBookDialog.ConfirmRestoreProgress -> {
-            androidx.compose.material3.AlertDialog(
+            AppAlertDialog(
+                show = true,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            onIntent(ReadBookIntent.SureNewProgress(state.activeDialog.progress))
-                            onIntent(ReadBookIntent.DismissDialog)
-                        }
-                    ) {
-                        androidx.compose.material3.Text("确定")
-                    }
+                title = stringResource(R.string.restore_progress),
+                text = stringResource(R.string.found_cloud_progress),
+                confirmText = stringResource(R.string.ok),
+                onConfirm = {
+                    onIntent(ReadBookIntent.SureNewProgress(dialog.progress))
+                    onIntent(ReadBookIntent.DismissDialog)
                 },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { onIntent(ReadBookIntent.DismissDialog) }
-                    ) {
-                        androidx.compose.material3.Text("取消")
-                    }
-                },
-                title = { androidx.compose.material3.Text("恢复进度") },
-                text = { androidx.compose.material3.Text("发现云端进度，是否恢复？") },
+                dismissText = stringResource(R.string.cancel),
+                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
             )
         }
 
         is ReadBookDialog.SureSyncProgress -> {
-            androidx.compose.material3.AlertDialog(
+            AppAlertDialog(
+                show = true,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            onIntent(ReadBookIntent.SureSyncProgress(state.activeDialog.progress))
-                            onIntent(ReadBookIntent.DismissDialog)
-                        }
-                    ) {
-                        androidx.compose.material3.Text("确定")
-                    }
+                title = stringResource(R.string.sync_progress),
+                text = stringResource(R.string.progress_exceeds_cloud),
+                confirmText = stringResource(R.string.ok),
+                onConfirm = {
+                    onIntent(ReadBookIntent.SureSyncProgress(dialog.progress))
+                    onIntent(ReadBookIntent.DismissDialog)
                 },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { onIntent(ReadBookIntent.DismissDialog) }
-                    ) {
-                        androidx.compose.material3.Text("取消")
-                    }
-                },
-                title = { androidx.compose.material3.Text("同步进度") },
-                text = { androidx.compose.material3.Text("当前阅读进度已超过云端，是否覆盖？") },
+                dismissText = stringResource(R.string.cancel),
+                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
             )
         }
 
         is ReadBookDialog.ConfirmSkipToChapter -> {
-            androidx.compose.material3.AlertDialog(
+            AppAlertDialog(
+                show = true,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                confirmButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = {
-                            onIntent(ReadBookIntent.DismissDialog)
-                            // The caller should handle the actual skip via a separate intent
-                        }
-                    ) {
-                        androidx.compose.material3.Text("确定")
-                    }
+                title = stringResource(R.string.chapter_list),
+                text = stringResource(R.string.confirm_skip_to_chapter),
+                confirmText = stringResource(R.string.ok),
+                onConfirm = { onIntent(ReadBookIntent.DismissDialog) },
+                dismissText = stringResource(R.string.cancel),
+                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+            )
+        }
+
+        is ReadBookDialog.ConfirmChapterPay -> {
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+                title = stringResource(R.string.chapter_pay),
+                text = dialog.chapterTitle,
+                confirmText = stringResource(R.string.ok),
+                onConfirm = {
+                    onIntent(ReadBookIntent.DismissDialog)
+                    onIntent(ReadBookIntent.ConfirmPayAction)
                 },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(
-                        onClick = { onIntent(ReadBookIntent.DismissDialog) }
-                    ) {
-                        androidx.compose.material3.Text("取消")
-                    }
-                },
-                title = { androidx.compose.material3.Text("跳转章节") },
-                text = { androidx.compose.material3.Text(stringResource(R.string.confirm_skip_to_chapter)) },
+                dismissText = stringResource(R.string.cancel),
+                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+            )
+        }
+
+        is ReadBookDialog.StackTrace -> {
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+                title = stringResource(R.string.log),
+                text = dialog.text,
+                confirmText = stringResource(R.string.ok),
+                onConfirm = { onIntent(ReadBookIntent.DismissDialog) },
             )
         }
 
@@ -177,6 +179,7 @@ fun ReadBookScreen(
 
         is ReadBookSheet.TitleBarIconConfig -> {
             TitleBarIconSheet(
+                customIcons = state.menuConfig.titleBarCustomIcons,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
                 onSaved = { onIntent(ReadBookIntent.RefreshTitleBarIcons) },
                 onIntent = onIntent,
@@ -195,6 +198,8 @@ fun ReadBookScreen(
 
         is ReadBookSheet.ContentEdit -> {
             ContentEditSheet(
+                state = state,
+                onIntent = onIntent,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
             )
         }
@@ -216,18 +221,50 @@ fun ReadBookScreen(
 
         is ReadBookSheet.ReadAloudConfig -> {
             ReadAloudConfigSheet(
+                state = state,
+                onIntent = onIntent,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onSelectSpeakEngine = {
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.SelectSpeakEngine)
+            )
+        }
+
+        is ReadBookSheet.SpeakEngineConfig -> {
+            SpeakEngineConfigSheet(
+                items = state.ttsEngineItems,
+                selectedValue = state.selectedTtsEngine,
+                onSelect = { onIntent(ReadBookIntent.ApplySpeakEngine(it)) },
+                onDismissRequest = {
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
                 },
-                onOpenPreDownloadNumPicker = {
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.OpenPreDownloadNumPicker)
+            )
+        }
+
+        is ReadBookSheet.PreDownloadConfig -> {
+            ReadAloudNumberConfigSheet(
+                title = stringResource(R.string.read_aloud_preload),
+                description = stringResource(R.string.read_aloud_preload_summary, state.preDownloadNum),
+                value = state.preDownloadNum,
+                defaultValue = 10,
+                valueRange = 0f..100f,
+                onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
+                onDismissRequest = {
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
                 },
-                onOpenCacheCleanTimePicker = {
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.OpenCacheCleanTimePicker)
+            )
+        }
+
+        is ReadBookSheet.AudioCacheCleanConfig -> {
+            ReadAloudNumberConfigSheet(
+                title = stringResource(R.string.audio_cache_clean_time),
+                description = stringResource(
+                    R.string.audio_cache_clean_time_summary,
+                    state.audioCacheCleanTime
+                ),
+                value = state.audioCacheCleanTime,
+                defaultValue = 10,
+                valueRange = 0f..10080f,
+                onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
+                onDismissRequest = {
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
                 },
             )
         }
@@ -302,11 +339,7 @@ fun ReadBookScreen(
         }
 
         is ReadBookSheet.Bookmark -> {
-            val bookmark = state.activeSheet.bookmark
-            LaunchedEffect(bookmark) {
-                onIntent(ReadBookIntent.DismissSheet)
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.Bookmark(bookmark)))
-            }
+            // Handled by ViewModel — redirects to menu route
         }
 
         is ReadBookSheet.Photo -> {
@@ -328,10 +361,20 @@ fun ReadBookScreen(
             val sheet = state.activeSheet
             val book = state.book
             if (book != null) {
+                var showSheet by remember { mutableStateOf(true) }
+                LaunchedEffect(showSheet) {
+                    if (!showSheet) {
+                        kotlinx.coroutines.delay(300)
+                        onIntent(ReadBookIntent.SetActiveSheet(null))
+                    }
+                }
                 val viewModel = androidx.compose.runtime.key(
                     "chapter-source-${book.bookUrl}-${sheet.chapterIndex}"
                 ) {
                     org.koin.androidx.compose.koinViewModel<io.legado.app.ui.book.changesource.ChangeChapterSourceViewModel>()
+                }
+                androidx.compose.runtime.DisposableEffect(viewModel) {
+                    onDispose { viewModel.dispose() }
                 }
                 LaunchedEffect(book.bookUrl, sheet.chapterIndex) {
                     viewModel.initData(
@@ -344,29 +387,31 @@ fun ReadBookScreen(
                 ChangeChapterSourceSheet(
                     state = viewModel.uiState.collectAsStateWithLifecycle().value,
                     onIntent = viewModel::onIntent,
-                    effects = viewModel.effects,
-                    onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                    show = showSheet,
+                    onDismissRequest = { showSheet = false },
+                    onAnimationFinish = { onIntent(ReadBookIntent.SetActiveSheet(null)) },
                     bookScoreFlow = viewModel::bookScoreFlow,
                     onBookScoreClick = viewModel::onBookScoreClick,
                     onEditSource = { sourceUrl ->
-                        val intent = android.content.Intent(
-                            context,
-                            io.legado.app.ui.book.source.edit.BookSourceEditActivity::class.java
-                        )
-                        intent.putExtra("sourceUrl", sourceUrl)
-                        context.startActivity(intent)
+                        onIntent(ReadBookIntent.OpenSourceEditByUrl(sourceUrl))
                     },
                 )
                 // Handle ReplaceContent effect
-                LaunchedEffect(Unit) {
+                LaunchedEffect(viewModel) {
                     viewModel.effects.collectLatest { effect ->
                         when (effect) {
                             is io.legado.app.ui.book.changesource.ChangeChapterSourceEffect.ReplaceContent -> {
-                                onIntent(ReadBookIntent.DismissSheet)
-                                onIntent(ReadBookIntent.SaveChapterContent(effect.content))
+                                showSheet = false
+                                onIntent(ReadBookIntent.SaveChapterContent(effect.content, sheet.chapterIndex))
                             }
 
-                            else -> {}
+                            is io.legado.app.ui.book.changesource.ChangeChapterSourceEffect.ShowToast -> {
+                                context.toastOnUi(effect.message)
+                            }
+
+                            is io.legado.app.ui.book.changesource.ChangeChapterSourceEffect.Dismiss -> {
+                                // Handled by showSheet animation — no-op
+                            }
                         }
                     }
                 }
@@ -390,8 +435,8 @@ fun ReadBookScreen(
                         onIntent(ReadBookIntent.ChangeSource(newBook, toc))
                     },
                     onAddAsNew = { newBook, toc ->
-                        // Add to bookshelf
                         onIntent(ReadBookIntent.DismissSheet)
+                        onIntent(ReadBookIntent.AddSourceAsNewBook(newBook, toc))
                     },
                 )
             } else {

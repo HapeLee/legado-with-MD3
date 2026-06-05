@@ -131,7 +131,6 @@ import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
 import io.legado.app.ui.book.read.sheet.ReadStyleContent
 import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
-import io.legado.app.ui.book.read.sheet.loadMenuCustomIcons
 import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.hazeStyle.HazeLegado
@@ -479,6 +478,7 @@ private fun ReadBookMenuSurface(
                                 onToggleDayNight = {
                                     onIntent(ReadBookIntent.ToggleDayNight)
                                 },
+                                readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
                                 onIntent = onIntent,
                             )
                         }
@@ -534,15 +534,14 @@ private fun ReadBookMenuSurface(
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadAloudContent(
+                                state = state,
+                                onIntent = onIntent,
                                 onDismissRequest = { onIntent(ReadBookIntent.HideMenu) },
                                 onOpenChapterList = {
                                     onIntent(ReadBookIntent.HideMenu)
                                     onIntent(ReadBookIntent.OpenChapterList)
                                 },
-                                onShowMainMenu = {
-                                    onIntent(ReadBookIntent.ReadMenuBack)
-                                },
-                                onStopAutoPage = { onIntent(ReadBookIntent.StopAutoPage) },
+                                onGoToBackground = { onIntent(ReadBookIntent.CloseReadBook) },
                                 onShowReadAloudConfig = {
                                     onIntent(ReadBookIntent.ShowReadAloudConfig)
                                 },
@@ -565,9 +564,6 @@ private fun ReadBookMenuSurface(
                             onOpenChapterList = {
                                 onIntent(ReadBookIntent.HideMenu)
                                 onIntent(ReadBookIntent.OpenChapterList)
-                            },
-                            onShowMainMenu = {
-                                onIntent(ReadBookIntent.ReadMenuBack)
                             },
                             onStopAutoPage = { onIntent(ReadBookIntent.StopAutoPage) },
                             onShowPageAnimConfig = {
@@ -1057,7 +1053,9 @@ private fun FloatingIconRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         titleBarIcons.forEach { iconDef ->
-            val customPath = remember { state.menuConfig.titleBarCustomIcons[iconDef.id] }
+            val customPath = remember(state.menuConfig.titleBarCustomIcons, iconDef.id) {
+                state.menuConfig.titleBarCustomIcons[iconDef.id]
+            }
             val isCustom = !customPath.isNullOrBlank()
             ReadMenuGlassButtonSurface(
                 onClick = iconDef.onClick,
@@ -1924,7 +1922,7 @@ private fun loadToolButtons(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<ToolButtonDef> {
-    val customIcons = loadMenuCustomIcons(context)
+    val customIcons = state.menuConfig.readMenuCustomIcons
     fun ReadMenuButtonInfo.toButton(isActive: Boolean = false, onClick: () -> Unit): ToolButtonDef {
         return ToolButtonDef(id, iconRes, label, customIcons[id], isActive, onClick)
     }

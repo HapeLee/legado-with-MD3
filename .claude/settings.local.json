@@ -111,7 +111,8 @@
       "Bash(Select-Object -First 10)",
       "Bash(Select-Object -Last 10)",
       "Bash(dir /s /b \"%USERPROFILE%\\\\.gradle\\\\caches\\\\*kyant*\")",
-      "Bash(Select-String -Pattern \"\\(BUILD|error:|FAILED\\)\")"
+      "Bash(Select-String -Pattern \"\\(BUILD|error:|FAILED\\)\")",
+      "PowerShell(grep *)"
     ]
   }
 }

@@ -1210,6 +1210,10 @@
     <string name="source_edit_max_line_summary">%s,Setting the number of rows less than the maximum number of rows that can be displayed on the screen makes it easier to slide to other fields for editing.</string>
     <string name="restore_last_book_process">Whether to return to the reading progress before the jump？</string>
     <string name="confirm_skip_to_chapter">Skip to this chapter?</string>
+    <string name="restore_progress">Restore Progress</string>
+    <string name="sync_progress">Sync Progress</string>
+    <string name="found_cloud_progress">Cloud progress found, restore?</string>
+    <string name="progress_exceeds_cloud">Current progress exceeds cloud, overwrite?</string>
     <string name="search_scope">Search scope</string>
     <string name="toggle_search_scope">Handover</string>
     <string name="sure_clear_search_history">Are you sure to clear all search history</string>

@@ -38,6 +38,7 @@ fun ReadStyleSheet(
     onOpenRegexColor: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
+    readMenuCustomIcons: Map<String, String> = emptyMap(),
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var showTextTitle by remember { mutableStateOf(false) }
@@ -57,6 +58,7 @@ fun ReadStyleSheet(
             onOpenTextTitle = { showTextTitle = true },
             onOpenFontSelect = onOpenFontSelect,
             onToggleDayNight = onToggleDayNight,
+            readMenuCustomIcons = readMenuCustomIcons,
             onIntent = onIntent,
         )
 
@@ -80,6 +82,7 @@ fun ReadStyleContent(
     onOpenTextTitle: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
+    readMenuCustomIcons: Map<String, String> = emptyMap(),
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -118,6 +121,7 @@ fun ReadStyleContent(
                 )
 
                 1 -> SystemMenuPage(
+                    customIcons = readMenuCustomIcons,
                     onIntent = onIntent,
                 )
                 2 -> HeaderFooterPage(

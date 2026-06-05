@@ -33,6 +33,7 @@ import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
 import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookRouteScreen
 import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewScreen
@@ -61,6 +62,7 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -264,15 +266,31 @@ fun MainActivity.mainEntryProvider(
                 chapterChanged = route.chapterChanged,
             )
         }
-
-        LaunchedEffect(route, readBookViewModel) {
-            readBookViewModel.initReadBookConfig(readIntent)
-            readBookViewModel.initData(readIntent)
-            controller.onRouteInitialized()
+        val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
+        val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
+        fun resumeReader() {
+            if (readerResumeState[0]) return
+            readerResumeState[0] = true
+            controller.onResume()
+            readBookViewModel.onIntent(ReadBookIntent.OnResume)
         }
 
+        fun pauseReader() {
+            if (!readerResumeState[0]) return
+            readerResumeState[0] = false
+            controller.onPause()
+            readBookViewModel.onIntent(ReadBookIntent.OnPause)
+        }
+
+        ReadBookRouteScreen(
+            viewModel = readBookViewModel,
+            host = controller,
+            controller = controller,
+            onEffectsReady = { effectsReady.complete(Unit) },
+        )
+
         DisposableEffect(controller, lifecycleOwner, route.readAloud) {
-            activeReadBookController = controller
+            activeReadBookInputHandler = controller
             MainActivity.hasActiveReadBookRoute = true
             controller.onClose = { onNavigateBack() }
             controller.onStartContentLoadFinish = {
@@ -280,33 +298,36 @@ fun MainActivity.mainEntryProvider(
                     io.legado.app.model.ReadBook.readAloud()
                 }
             }
+
             val lifecycleObserver = LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_RESUME -> controller.onResume()
-                    Lifecycle.Event.ON_PAUSE -> controller.onPause()
+                    Lifecycle.Event.ON_RESUME -> resumeReader()
+                    Lifecycle.Event.ON_PAUSE -> pauseReader()
                     else -> Unit
                 }
             }
             lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
-            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                controller.onResume()
-            }
             onDispose {
-                controller.onPause()
+                pauseReader()
+                readBookViewModel.onIntent(ReadBookIntent.OnDispose)
                 lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
-                if (activeReadBookController === controller) {
-                    activeReadBookController = null
+                if (activeReadBookInputHandler === controller) {
+                    activeReadBookInputHandler = null
                 }
                 MainActivity.hasActiveReadBookRoute = false
                 controller.clearTts()
             }
         }
 
-        ReadBookRouteScreen(
-            viewModel = readBookViewModel,
-            host = controller,
-            controller = controller,
-        )
+        LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
+            effectsReady.await()
+            readBookViewModel.initReadBookConfig(readIntent)
+            readBookViewModel.initData(readIntent)
+            controller.onRouteInitialized()
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                resumeReader()
+            }
+        }
     }
 
     entry<MainRouteSearch> { route ->

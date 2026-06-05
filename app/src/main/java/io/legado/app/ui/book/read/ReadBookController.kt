@@ -3,7 +3,6 @@ package io.legado.app.ui.book.read
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.net.Uri
 import android.os.Build
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -11,7 +10,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
-import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowInsetsCompat
@@ -19,19 +17,17 @@ import androidx.core.view.doOnAttach
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
 import com.script.rhino.runScriptWithContext
-import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookProgress
-import io.legado.app.data.entities.Bookmark
-import io.legado.app.help.IntentData
 import io.legado.app.help.TTS
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.SelectItem
+import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeRule
@@ -48,12 +44,9 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.login.SourceLoginJsExtensions
-import io.legado.app.ui.replace.ReplaceEditRoute
-import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.widget.PopupAction
 import io.legado.app.utils.Debounce
 import io.legado.app.utils.GSON
-import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
@@ -66,10 +59,6 @@ import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -80,6 +69,7 @@ class ReadBookController(
     val activity: AppCompatActivity,
     val viewModel: ReadBookViewModel,
 ) : ReadBookRouteHost,
+    ReadBookInputHandler,
     ReadView.CallBack,
     ContentTextView.CallBack,
     TextActionMenu.CallBack {
@@ -89,18 +79,6 @@ class ReadBookController(
     // Fallback handler for effects not yet migrated to controller
     var onUnhandledEffect: (ReadBookEffect) -> Unit = {}
     var onClose: (() -> Unit)? = null
-
-    // ActivityResult Launchers — registered from Compose via registerLaunchers()
-    private var tocLauncher: ActivityResultLauncher<String>? = null
-    private var sourceEditLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
-    private var replaceLauncher: ActivityResultLauncher<Intent>? = null
-    private var fontFolderPicker: ActivityResultLauncher<Uri?>? = null
-    private var readStyleImagePicker: ActivityResultLauncher<Array<String>>? = null
-    private var readStyleImportPicker: ActivityResultLauncher<Array<String>>? = null
-    private var readStyleExportPicker: ActivityResultLauncher<String>? = null
-    private var txtTocRuleLauncher: ActivityResultLauncher<Intent>? = null
-    private var searchContentLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
-    private var bookInfoLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>? = null
 
     // Page state — moved from Activity
     var pageChanged: Boolean = false
@@ -112,28 +90,16 @@ class ReadBookController(
 
     // Callbacks to Activity for operations that require Activity-level state
     var onScreenOffTimerStart: (() -> Unit)? = null
-    var onStartBackupJob: (() -> Unit)? = null
     var onStartContentLoadFinish: (() -> Unit)? = null
 
     // Phase 4: callbacks for Activity-dependent effects
     var onToggleReadAloud: (() -> Unit)? = null
     var onToggleAutoPage: (() -> Unit)? = null
     var onStopAutoPage: (() -> Unit)? = null
-    var onTextActionAloudSelect: (() -> Unit)? = null
-    var onNavigateToSearchResult: ((SearchResult, Int) -> Unit)? = null
-    var onShowPayDialog: (() -> Unit)? = null
-    var onSyncBookProgress: ((io.legado.app.data.entities.Book) -> Unit)? = null
-    var onShowConfirmSkipToChapter: (() -> Unit)? = null
-    var onSelectSpeakEngine: (() -> Unit)? = null
-    var onOpenPreDownloadNumPicker: (() -> Unit)? = null
-    var onOpenCacheCleanTimePicker: (() -> Unit)? = null
-    var onShowLogin: (() -> Unit)? = null
-    var onShowStackTrace: ((String) -> Unit)? = null
-    var onToggleDayNight: (() -> Unit)? = null
-    var onDownloadChapters: ((Int, Int) -> Unit)? = null
 
     private var tts: TTS? = null
     private val timeBatteryReceiver = TimeBatteryReceiver()
+    private var timeBatteryReceiverRegistered = false
     private val networkChangedListener by lazy { NetworkChangedListener(activity) }
     private val handler by lazy { buildMainHandler() }
     private val screenOffRunnable by lazy { Runnable { keepScreenOn(false) } }
@@ -146,8 +112,7 @@ class ReadBookController(
     }
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
-    private var backupJob: Job? = null
-    private var justInitData: Boolean = false
+    // justInitData moved to ViewModel (set on InitData intent)
 
     val isAutoPage: Boolean get() = refs?.readView?.isAutoPage == true
 
@@ -163,10 +128,9 @@ class ReadBookController(
         tts = null
         textActionMenu.dismiss()
         popupAction.dismiss()
-        backupJob?.cancel()
         refs?.readView?.onDestroy()
         networkChangedListener.unRegister()
-        kotlin.runCatching { activity.unregisterReceiver(timeBatteryReceiver) }
+        unregisterTimeBatteryReceiver()
     }
 
     // Phase 5: Key handling / page turn
@@ -182,41 +146,6 @@ class ReadBookController(
 
     private val upSeekBarThrottle = throttle(200) {
         onUnhandledEffect(ReadBookEffect.UpSeekBar)
-    }
-
-    init {
-        activity.lifecycleScope.launch {
-            viewModel.effects.collectLatest { effect ->
-                handleEffect(effect)
-            }
-        }
-    }
-
-    /**
-     * Called from Compose LaunchedEffect to wire all launchers at once.
-     */
-    fun registerLaunchers(
-        tocLauncher: ActivityResultLauncher<String>,
-        sourceEditLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
-        replaceLauncher: ActivityResultLauncher<Intent>,
-        fontFolderPicker: ActivityResultLauncher<Uri?>,
-        readStyleImagePicker: ActivityResultLauncher<Array<String>>,
-        readStyleImportPicker: ActivityResultLauncher<Array<String>>,
-        readStyleExportPicker: ActivityResultLauncher<String>,
-        txtTocRuleLauncher: ActivityResultLauncher<Intent>,
-        searchContentLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
-        bookInfoLauncher: ActivityResultLauncher<(Intent.() -> Unit)?>,
-    ) {
-        this.tocLauncher = tocLauncher
-        this.sourceEditLauncher = sourceEditLauncher
-        this.replaceLauncher = replaceLauncher
-        this.fontFolderPicker = fontFolderPicker
-        this.readStyleImagePicker = readStyleImagePicker
-        this.readStyleImportPicker = readStyleImportPicker
-        this.readStyleExportPicker = readStyleExportPicker
-        this.txtTocRuleLauncher = txtTocRuleLauncher
-        this.searchContentLauncher = searchContentLauncher
-        this.bookInfoLauncher = bookInfoLauncher
     }
 
     fun onRefsReady(newRefs: ReadBookViewRefs) {
@@ -238,58 +167,23 @@ class ReadBookController(
     }
 
     fun onRouteInitialized() {
-        justInitData = true
         upScreenTimeOut()
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    /**
+     * View/Window-only resume — business logic handled by ViewModel via OnResume intent.
+     */
     fun onResume() {
-        ReadBook.readStartTime = System.currentTimeMillis()
-        ReadBook.initReadTime()
-        ReadBook.startAutoSaveSession()
-        ReadBook.webBookProgress?.let {
-            ReadBook.setProgress(it)
-            ReadBook.webBookProgress = null
-        }
         upSystemUiVisibility()
-        kotlin.runCatching {
-            activity.registerReceiver(timeBatteryReceiver, timeBatteryReceiver.filter)
-        }
         refs?.readView?.upTime()
         screenOffTimerStart()
-        networkChangedListener.register()
-        networkChangedListener.onNetworkChanged = {
-            if (AppConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
-                ReadBook.syncProgress(newProgressAction = { progress ->
-                    viewModel.onIntent(
-                        ReadBookIntent.ShowDialog(
-                            ReadBookDialog.ConfirmRestoreProgress(progress)
-                        )
-                    )
-                })
-            }
-        }
     }
 
+    /**
+     * View/Window-only pause — business logic handled by ViewModel via OnPause intent.
+     */
     fun onPause() {
-        viewModel.onIntent(ReadBookIntent.StopAutoPage)
-        backupJob?.cancel()
-        ReadBook.saveRead()
-        ReadBook.stopAutoSaveSession()
-        ReadBook.commitReadSession()
-        ReadBook.cancelPreDownloadTask()
-        kotlin.runCatching { activity.unregisterReceiver(timeBatteryReceiver) }
         upSystemUiVisibility()
-        if (!BuildConfig.DEBUG) {
-            if (AppConfig.syncBookProgressPlus) {
-                ReadBook.syncProgress()
-            } else {
-                ReadBook.uploadProgress()
-            }
-            Backup.autoBack(activity)
-        }
-        justInitData = false
-        networkChangedListener.unRegister()
     }
 
     override val isInMultiWindowModeCompat: Boolean
@@ -386,7 +280,11 @@ class ReadBookController(
     }
 
     override fun openChapterList() {
-        ReadBook.book?.let { tocLauncher?.launch(it.bookUrl) }
+        viewModel.onIntent(ReadBookIntent.OpenChapterList)
+    }
+
+    override fun openContentEdit() {
+        viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
     }
 
     override fun addBookmark() {
@@ -408,18 +306,7 @@ class ReadBookController(
     }
 
     override fun openSearchActivity(searchWord: String?) {
-        val book = ReadBook.book ?: return
-        val lambda: (Intent.() -> Unit)? = { intent ->
-            intent.putExtra("bookUrl", book.bookUrl)
-            intent.putExtra("searchWord", searchWord)
-            intent.putExtra("searchResultIndex", viewModel.searchResultIndex)
-            viewModel.searchResultList?.first()?.let {
-                if (it.query == viewModel.searchContentQuery) {
-                    IntentData.put("searchResultList", viewModel.searchResultList)
-                }
-            }
-        }
-        searchContentLauncher?.launch(lambda)
+        viewModel.onIntent(ReadBookIntent.OpenSearch(searchWord))
     }
 
     override fun upSystemUiVisibility() {
@@ -671,7 +558,11 @@ class ReadBookController(
 
     // ── Effect handling ───────────────────────────────────────────────
 
-    private fun handleEffect(effect: ReadBookEffect) {
+    /**
+     * Handles View-layer and Activity-API effects.
+     * Launcher-dependent effects are handled by the route layer.
+     */
+    fun handleEffect(effect: ReadBookEffect) {
         when (effect) {
             // ── Already migrated (View-layer) ──
             is ReadBookEffect.Finish -> closeReadBook()
@@ -721,138 +612,9 @@ class ReadBookController(
                 activity.window.attributes = lp
             }
 
-            // ── Launcher-dependent effects ──
-            is ReadBookEffect.OpenChapterList -> openChapterList()
-            is ReadBookEffect.OpenSourceEdit -> {
-                ReadBook.bookSource?.let { src ->
-                    val lambda: Intent.() -> Unit = { putExtra("sourceUrl", src.bookSourceUrl) }
-                    sourceEditLauncher?.launch(lambda)
-                }
-            }
+            // ── Launcher-dependent effects — now handled by route layer ──
 
-            is ReadBookEffect.OpenBookInfo -> {
-                ReadBook.book?.let { book ->
-                    val lambda: Intent.() -> Unit = {
-                        putExtra("name", book.name)
-                        putExtra("author", book.author)
-                        putExtra("bookUrl", book.bookUrl)
-                    }
-                    bookInfoLauncher?.launch(lambda)
-                }
-            }
-
-            is ReadBookEffect.OpenSearchActivity -> openSearchActivity(effect.word)
-            is ReadBookEffect.MenuSettingReplace -> {
-                replaceLauncher?.launch(Intent(activity, ReplaceRuleActivity::class.java))
-            }
-
-            is ReadBookEffect.TextActionReplace -> {
-                val scopes = arrayListOf<String>()
-                ReadBook.book?.name?.let { scopes.add(it) }
-                ReadBook.bookSource?.bookSourceUrl?.let { scopes.add(it) }
-                val text = effect.text.lineSequence().map { it.trim() }.joinToString("\n")
-                val editRoute = ReplaceEditRoute(
-                    id = -1, pattern = text,
-                    scope = scopes.joinToString(";"),
-                    isScopeTitle = false, isScopeContent = true,
-                )
-                replaceLauncher?.launch(ReplaceRuleActivity.startIntent(activity, editRoute))
-            }
-
-            is ReadBookEffect.OpenReplaceEditor -> {
-                val editRoute = ReplaceEditRoute(id = effect.id, pattern = effect.pattern)
-                replaceLauncher?.launch(ReplaceRuleActivity.startIntent(activity, editRoute))
-            }
-
-            is ReadBookEffect.MenuTocRegex -> {
-                val intent =
-                    Intent(activity, io.legado.app.ui.book.toc.rule.TxtTocRuleActivity::class.java)
-                intent.putExtra("tocRegex", ReadBook.book?.tocUrl)
-                txtTocRuleLauncher?.launch(intent)
-            }
-
-            is ReadBookEffect.OpenFontFolderPicker -> {
-                fontFolderPicker?.launch(null)
-            }
-
-            is ReadBookEffect.OpenReadStyleImagePicker -> {
-                readStyleImagePicker?.launch(arrayOf("image/*"))
-            }
-
-            is ReadBookEffect.OpenReadStyleImport -> {
-                readStyleImportPicker?.launch(
-                    arrayOf("application/zip", "application/octet-stream", "*/*")
-                )
-            }
-
-            is ReadBookEffect.OpenReadStyleExport -> {
-                readStyleExportPicker?.launch("readConfig.zip")
-            }
-
-            // ── DB query + sheet effects ──
-            is ReadBookEffect.MenuChangeSource -> {
-                activity.lifecycleScope.launch {
-                    if (AppConfig.defaultSourceChangeAll) {
-                        viewModel.onIntent(ReadBookIntent.HideMenu)
-                        viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ChangeBookSource))
-                    } else {
-                        val book = ReadBook.book ?: return@launch
-                        val chapter =
-                            appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                                ?: return@launch
-                        viewModel.onIntent(ReadBookIntent.HideMenu)
-                        viewModel.onIntent(
-                            ReadBookIntent.ShowSheet(
-                                ReadBookSheet.ChangeChapterSource(
-                                    chapter.index,
-                                    chapter.title
-                                )
-                            )
-                        )
-                    }
-                }
-            }
-
-            is ReadBookEffect.MenuBookChangeSource -> {
-                viewModel.onIntent(ReadBookIntent.HideMenu)
-                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ChangeBookSource))
-            }
-
-            is ReadBookEffect.MenuChapterChangeSource -> {
-                activity.lifecycleScope.launch {
-                    val book = ReadBook.book ?: return@launch
-                    val chapter =
-                        appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                            ?: return@launch
-                    viewModel.onIntent(
-                        ReadBookIntent.ShowSheet(
-                            ReadBookSheet.ChangeChapterSource(
-                                chapter.index,
-                                chapter.title
-                            )
-                        )
-                    )
-                }
-            }
-
-            // ── Bookmark ──
-            is ReadBookEffect.AddBookmark -> {
-                activity.lifecycleScope.launch(IO) {
-                    val book = ReadBook.book ?: return@launch
-                    val chapter = ReadBook.curTextChapter ?: return@launch
-                    val page = chapter.pages.getOrNull(ReadBook.durPageIndex) ?: return@launch
-                    val bookmark = Bookmark(
-                        bookName = book.name,
-                        bookAuthor = book.author,
-                        chapterIndex = chapter.chapter.index,
-                        chapterName = chapter.title,
-                        chapterPos = ReadBook.durPageIndex,
-                        bookText = page.text,
-                        content = "",
-                    )
-                    viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Bookmark(bookmark)))
-                }
-            }
+            // ── DB query + bookmark effects — now handled by ViewModel ──
 
             // ── Phase 2: ViewRefs-only effects ──
             is ReadBookEffect.UpSeekBar -> { /* no-op: Compose menu reads from state */
@@ -896,7 +658,7 @@ class ReadBookController(
             is ReadBookEffect.PageChanged -> {
                 pageChanged = true
                 refs?.readView?.onPageChange()
-                ReadBook.executor.execute { onStartBackupJob?.invoke() ?: startBackupJob() }
+                viewModel.startBackupJob()
             }
 
             is ReadBookEffect.LayoutPageCompleted -> {
@@ -925,7 +687,7 @@ class ReadBookController(
 
             is ReadBookEffect.TextActionSpeak -> speak(effect.text)
             is ReadBookEffect.NavigateToSearchResult -> {
-                onNavigateToSearchResult?.invoke(effect.result, viewModel.searchResultIndex)
+                // Navigate handled by ReadView — no external callback needed
             }
 
             is ReadBookEffect.ExitSearch -> {
@@ -936,20 +698,76 @@ class ReadBookController(
                 }
             }
 
-            is ReadBookEffect.ShowPayDialog -> onShowPayDialog?.invoke()
             is ReadBookEffect.SyncBookProgress -> {
-                onSyncBookProgress?.invoke(effect.book)
+                viewModel.onIntent(ReadBookIntent.ShowDialog(
+                    ReadBookDialog.SureSyncProgress(BookProgress(effect.book))
+                ))
             }
 
-            is ReadBookEffect.ShowConfirmSkipToChapter -> onShowConfirmSkipToChapter?.invoke()
-            is ReadBookEffect.SelectSpeakEngine -> onSelectSpeakEngine?.invoke()
-            is ReadBookEffect.OpenPreDownloadNumPicker -> onOpenPreDownloadNumPicker?.invoke()
-            is ReadBookEffect.OpenCacheCleanTimePicker -> onOpenCacheCleanTimePicker?.invoke()
-            is ReadBookEffect.ShowLogin -> onShowLogin?.invoke()
-            is ReadBookEffect.ShowStackTrace -> onShowStackTrace?.invoke(effect.text)
-            is ReadBookEffect.ToggleDayNight -> onToggleDayNight?.invoke()
+            is ReadBookEffect.ShowConfirmSkipToChapter -> {
+                viewModel.onIntent(ReadBookIntent.ShowDialog(ReadBookDialog.ConfirmSkipToChapter))
+            }
+            is ReadBookEffect.ToggleDayNight -> {
+                // Handled directly by ViewModel — effect not currently emitted
+            }
             is ReadBookEffect.DownloadChapters -> {
-                onDownloadChapters?.invoke(effect.start, effect.end)
+                ReadBook.book?.let { book ->
+                    activity.lifecycleScope.launch {
+                        CacheBook.start(activity, book, effect.start, effect.end)
+                    }
+                }
+            }
+
+            // ── Lifecycle — route/bridge Activity operations ──
+            is ReadBookEffect.RegisterTimeBatteryReceiver -> {
+                registerTimeBatteryReceiver()
+            }
+
+            is ReadBookEffect.UnregisterTimeBatteryReceiver -> {
+                unregisterTimeBatteryReceiver()
+            }
+
+            is ReadBookEffect.RegisterNetworkListener -> {
+                networkChangedListener.register()
+                networkChangedListener.onNetworkChanged = {
+                    viewModel.onNetworkChanged()
+                }
+            }
+
+            is ReadBookEffect.UnregisterNetworkListener -> {
+                networkChangedListener.unRegister()
+            }
+
+            is ReadBookEffect.BackupNow -> {
+                Backup.autoBack(activity)
+            }
+
+            // Launcher-dependent effects — handled by route layer, ignored here
+            is ReadBookEffect.OpenChapterList,
+            is ReadBookEffect.OpenSourceEdit,
+            is ReadBookEffect.OpenBookInfo,
+            is ReadBookEffect.OpenSearchActivity,
+            is ReadBookEffect.ShowLogin,
+            is ReadBookEffect.OpenWebView,
+            is ReadBookEffect.MenuSettingReplace,
+            is ReadBookEffect.TextActionReplace,
+            is ReadBookEffect.OpenReplaceEditor,
+            is ReadBookEffect.MenuTocRegex,
+            is ReadBookEffect.OpenFontFolderPicker,
+            is ReadBookEffect.OpenBooksDirPicker,
+            is ReadBookEffect.OpenReadStyleImagePicker,
+            is ReadBookEffect.OpenReadStyleImport,
+            is ReadBookEffect.OpenReadStyleExport,
+            is ReadBookEffect.OpenMenuCustomIconPicker,
+            is ReadBookEffect.OpenTitleBarCustomIconPicker,
+            is ReadBookEffect.OpenSystemTtsSettings,
+            is ReadBookEffect.TtsCacheCleared,
+            // DB query + bookmark effects — handled by ViewModel, ignored here
+            is ReadBookEffect.MenuChangeSource,
+            is ReadBookEffect.MenuBookChangeSource,
+            is ReadBookEffect.MenuChapterChangeSource,
+            is ReadBookEffect.AddBookmark -> {
+                // Handled by route/ViewModel — no-op here
             }
         }
     }
@@ -1031,7 +849,11 @@ class ReadBookController(
         }
     }
 
-    fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+    override fun toggleMenu() {
+        viewModel.onIntent(ReadBookIntent.ToggleMenu)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (menuLayoutIsVisible) {
             return false
         }
@@ -1084,7 +906,7 @@ class ReadBookController(
         return false
     }
 
-    fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> {
                 if (volumeKeyPage(PageDirection.NONE, false)) {
@@ -1095,7 +917,7 @@ class ReadBookController(
         return false
     }
 
-    fun mouseWheelPage(direction: PageDirection) {
+    override fun mouseWheelPage(direction: PageDirection) {
         if (menuLayoutIsVisible || !AppConfig.mouseWheelPage) {
             return
         }
@@ -1113,7 +935,7 @@ class ReadBookController(
         return true
     }
 
-    fun handleKeyPage(direction: PageDirection, longPress: Boolean = false) {
+    override fun handleKeyPage(direction: PageDirection, longPress: Boolean) {
         if (AppConfig.keyPageOnLongPress || direction == PageDirection.NONE) {
             keyPage(direction)
         } else {
@@ -1186,16 +1008,16 @@ class ReadBookController(
         }
     }
 
-    private fun startBackupJob() {
-        backupJob?.cancel()
-        backupJob = activity.lifecycleScope.launch(IO) {
-            delay(300000)
-            ReadBook.book?.let {
-                viewModel.uploadBookProgress(it)
-                ensureActive()
-                Backup.autoBack(activity)
-            }
-        }
+    private fun registerTimeBatteryReceiver() {
+        if (timeBatteryReceiverRegistered) return
+        activity.registerReceiver(timeBatteryReceiver, timeBatteryReceiver.filter)
+        timeBatteryReceiverRegistered = true
+    }
+
+    private fun unregisterTimeBatteryReceiver() {
+        if (!timeBatteryReceiverRegistered) return
+        activity.unregisterReceiver(timeBatteryReceiver)
+        timeBatteryReceiverRegistered = false
     }
 
     private fun isPrevKey(keyCode: Int): Boolean {

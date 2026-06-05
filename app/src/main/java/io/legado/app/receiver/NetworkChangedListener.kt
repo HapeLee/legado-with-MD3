@@ -17,12 +17,10 @@ import splitties.systemservices.connectivityManager
 class NetworkChangedListener(private val context: Context) {
 
     var onNetworkChanged: (() -> Unit)? = null
+    private var registered = false
 
     private val receiver: NetworkChangedReceiver? by lazy {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-            NetworkChangedReceiver()
-        }
-        return@lazy null
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) NetworkChangedReceiver() else null
     }
 
     private val networkCallback: ConnectivityManager.NetworkCallback? by lazy {
@@ -38,25 +36,31 @@ class NetworkChangedListener(private val context: Context) {
 
     @SuppressLint("MissingPermission", "UnspecifiedRegisterReceiverFlag")
     fun register() {
+        if (registered) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             networkCallback?.let {
                 connectivityManager.registerDefaultNetworkCallback(it)
+                registered = true
             }
         } else {
             receiver?.let {
                 context.registerReceiver(it, it.filter)
+                registered = true
             }
         }
     }
 
     fun unRegister() {
+        if (!registered) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             networkCallback?.let {
                 connectivityManager.unregisterNetworkCallback(it)
+                registered = false
             }
         } else {
             receiver?.let {
                 context.unregisterReceiver(it)
+                registered = false
             }
         }
     }

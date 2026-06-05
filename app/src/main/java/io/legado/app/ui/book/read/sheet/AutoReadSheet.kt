@@ -38,7 +38,6 @@ fun AutoReadSheet(
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
     onOpenChapterList: () -> Unit,
-    onShowMainMenu: () -> Unit,
     onStopAutoPage: () -> Unit,
     onShowPageAnimConfig: () -> Unit,
 ) {
@@ -51,7 +50,6 @@ fun AutoReadSheet(
             onDismissRequest = onDismissRequest,
             onIntent = onIntent,
             onOpenChapterList = onOpenChapterList,
-            onShowMainMenu = onShowMainMenu,
             onStopAutoPage = onStopAutoPage,
             onShowPageAnimConfig = onShowPageAnimConfig,
             modifier = Modifier
@@ -66,7 +64,6 @@ fun AutoReadContent(
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
     onOpenChapterList: () -> Unit,
-    onShowMainMenu: () -> Unit,
     onStopAutoPage: () -> Unit,
     onShowPageAnimConfig: () -> Unit,
     modifier: Modifier = Modifier,
@@ -130,14 +127,6 @@ fun AutoReadContent(
                 onClick = {
                     onDismissRequest()
                     onOpenChapterList()
-                },
-            )
-            ActionButton(
-                icon = R.drawable.ic_menu,
-                label = stringResource(R.string.main_menu),
-                onClick = {
-                    onDismissRequest()
-                    onShowMainMenu()
                 },
             )
             ActionButton(

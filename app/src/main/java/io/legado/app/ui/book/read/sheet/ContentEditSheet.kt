@@ -15,68 +15,38 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
-import io.legado.app.data.appDb
-import io.legado.app.help.book.BookHelp
-import io.legado.app.help.book.ContentProcessor
-import io.legado.app.help.book.isLocal
-import io.legado.app.help.book.isLocalTxt
-import io.legado.app.model.ReadBook
-import io.legado.app.model.webBook.WebBook
+import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.sendToClip
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @Composable
 fun ContentEditSheet(
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(true) }
-    var content by remember { mutableStateOf("") }
-    var chapterTitle by remember { mutableStateOf("") }
-    var saveToSource by remember { mutableStateOf(false) }
-    val book = remember { ReadBook.book }
-    val isLocalTxt = remember { book?.isLocalTxt == true }
 
     LaunchedEffect(Unit) {
-        val loadedContent = withContext(Dispatchers.IO) {
-            val b = ReadBook.book ?: return@withContext null
-            val chapter = appDb.bookChapterDao
-                .getChapter(b.bookUrl, ReadBook.durChapterIndex)
-                ?: return@withContext null
-            chapterTitle = chapter.getDisplayTitle()
-            val contentProcessor = ContentProcessor.get(b.name, b.origin)
-            val rawContent = BookHelp.getContent(b, chapter) ?: return@withContext null
-            contentProcessor.getContent(b, chapter, rawContent, includeTitle = false)
-                .toString()
-        }
-        content = loadedContent ?: ""
-        isLoading = false
+        onIntent(ReadBookIntent.LoadContentEdit)
     }
 
     AppModalBottomSheet(
         show = true,
         onDismissRequest = {
-            scope.launch(Dispatchers.IO) {
-                saveContent(book, content, saveToSource)
+            if (state.contentEditTitle.isNotEmpty()) {
+                onIntent(ReadBookIntent.SaveContentEdit(state.contentEditText, state.contentEditSaveToSource))
             }
             onDismissRequest()
         },
-        title = chapterTitle,
+        title = state.contentEditTitle,
     ) {
         Column(
             modifier = Modifier
@@ -86,26 +56,18 @@ fun ContentEditSheet(
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        saveContent(book, content, saveToSource)
-                    }
+                    onIntent(ReadBookIntent.SaveContentEdit(state.contentEditText, state.contentEditSaveToSource))
                     onDismissRequest()
                 }) {
                     Text(stringResource(R.string.action_save))
                 }
                 TextButton(onClick = {
-                    scope.launch(Dispatchers.IO) {
-                        val resetText = resetContent()
-                        withContext(Dispatchers.Main) {
-                            content = resetText
-                        }
-                        ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
-                    }
+                    onIntent(ReadBookIntent.ResetContentEdit)
                 }) {
                     Text(stringResource(R.string.reset))
                 }
                 TextButton(onClick = {
-                    context.sendToClip("$chapterTitle\n$content")
+                    context.sendToClip("${state.contentEditTitle}\n${state.contentEditText}")
                 }) {
                     Text(stringResource(R.string.copy_all))
                 }
@@ -113,7 +75,7 @@ fun ContentEditSheet(
 
             Spacer(Modifier.height(8.dp))
 
-            if (isLoading) {
+            if (state.contentEditLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -124,8 +86,8 @@ fun ContentEditSheet(
                 }
             } else {
                 OutlinedTextField(
-                    value = content,
-                    onValueChange = { content = it },
+                    value = state.contentEditText,
+                    onValueChange = { onIntent(ReadBookIntent.SetContentEditText(it)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)
@@ -134,12 +96,12 @@ fun ContentEditSheet(
                 )
             }
 
-            if (isLocalTxt) {
+            if (state.contentEditIsLocalTxt) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
-                        checked = saveToSource,
-                        onCheckedChange = { saveToSource = it },
+                        checked = state.contentEditSaveToSource,
+                        onCheckedChange = { onIntent(ReadBookIntent.SetContentEditSaveToSource(it)) },
                     )
                     Text(
                         text = stringResource(R.string.save_to_source),
@@ -148,40 +110,5 @@ fun ContentEditSheet(
                 }
             }
         }
-    }
-}
-
-private suspend fun saveContent(
-    book: io.legado.app.data.entities.Book?,
-    content: String,
-    saveToSource: Boolean,
-) {
-    if (content.isEmpty()) return
-    val b = book ?: return
-    val chapter = appDb.bookChapterDao
-        .getChapter(b.bookUrl, ReadBook.durChapterIndex)
-        ?: return
-    BookHelp.saveText(b, chapter, content, saveToSource)
-    ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
-}
-
-private suspend fun resetContent(): String {
-    val book = ReadBook.book ?: return ""
-    val chapter = appDb.bookChapterDao
-        .getChapter(book.bookUrl, ReadBook.durChapterIndex)
-        ?: return ""
-    BookHelp.delContent(book, chapter)
-    if (!book.isLocal) {
-        ReadBook.bookSource?.let { bookSource ->
-            WebBook.getContentAwait(bookSource, book, chapter)
-        }
-    }
-    val contentProcessor = ContentProcessor.get(book.name, book.origin)
-    val rawContent = BookHelp.getContent(book, chapter)
-    return if (rawContent != null) {
-        contentProcessor.getContent(book, chapter, rawContent, includeTitle = false)
-            .toString()
-    } else {
-        ""
     }
 }

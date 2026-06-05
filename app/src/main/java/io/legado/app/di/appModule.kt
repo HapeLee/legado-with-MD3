@@ -267,7 +267,8 @@ val appModule = module {
             uploadReadingProgressUseCase = get(),
             translateChapterUseCase = get(),
             readSettingsRepository = get(),
-            readBookStyleConfigRepository = get()
+            readBookStyleConfigRepository = get(),
+            readAloudSettingsRepository = get()
         )
     }
     viewModelOf(::ChangeCoverViewModel)

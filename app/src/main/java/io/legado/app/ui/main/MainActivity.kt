@@ -41,7 +41,7 @@ import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
 import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
-import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.welcome.WelcomeActivity
@@ -140,7 +140,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     private val viewModel by viewModel<MainViewModel>()
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
-    internal var activeReadBookController: ReadBookController? = null
+    internal var activeReadBookInputHandler: ReadBookInputHandler? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -370,16 +370,14 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         val keyCode = event.keyCode
         val isDown = event.action == KeyEvent.ACTION_DOWN
         if (keyCode == KeyEvent.KEYCODE_MENU && isDown) {
-            activeReadBookController?.viewModel?.onIntent(
-                io.legado.app.ui.book.read.ReadBookIntent.ToggleMenu
-            )
-            if (activeReadBookController != null) return true
+            activeReadBookInputHandler?.toggleMenu()
+            if (activeReadBookInputHandler != null) return true
         }
         return super.dispatchKeyEvent(event)
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        val controller = activeReadBookController ?: return super.onGenericMotionEvent(event)
+        val controller = activeReadBookInputHandler ?: return super.onGenericMotionEvent(event)
         if (0 != (event.source and InputDevice.SOURCE_CLASS_POINTER) &&
             event.action == MotionEvent.ACTION_SCROLL
         ) {
@@ -405,12 +403,12 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeReadBookController?.onKeyDown(keyCode, event) == true) return true
+        if (activeReadBookInputHandler?.onKeyDown(keyCode, event) == true) return true
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (activeReadBookController?.onKeyUp(keyCode, event) == true) return true
+        if (activeReadBookInputHandler?.onKeyUp(keyCode, event) == true) return true
         return super.onKeyUp(keyCode, event)
     }
 
