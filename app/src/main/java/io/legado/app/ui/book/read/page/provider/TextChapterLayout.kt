@@ -288,7 +288,7 @@ class TextChapterLayout(
                     val matcher = AppPattern.imgPattern.matcher(text)
                     var start = 0
                     while (matcher.find()) {
-                        val imgSrc = matcher.group(1)!!
+                        val imgSrc = matcher.group(1) ?: continue
                         val iStyle = if (imgSrc.contains("TEXT")) "text" else imageStyle
                         if (start < matcher.start()) {
                             fullTextBuilder.append(text.substring(start, matcher.start()))
