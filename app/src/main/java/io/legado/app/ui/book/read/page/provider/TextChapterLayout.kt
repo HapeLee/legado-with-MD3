@@ -134,6 +134,8 @@ class TextChapterLayout(
 
     var channel = Channel<TextPage>(Channel.UNLIMITED)
 
+    private var globalRegexResult: RegexMatchResult? = null
+
 
     init {
         job = Coroutine.async(
@@ -241,8 +243,8 @@ class TextChapterLayout(
         val isSingleImageStyle = imageStyle.equals(Book.imgStyleSingle, true)
         val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
 
-        if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
-            val allTitleSegments = displayTitle.splitNotBlank("\n").flatMap { rawTitle ->
+        val allTitleSegments = if (titleMode != 2 || bookChapter.isVolume || contents.isEmpty()) {
+            displayTitle.splitNotBlank("\n").flatMap { rawTitle ->
                 TitleStyleParser.getSegments(
                     rawTitle,
                     titleSegType,
@@ -251,7 +253,66 @@ class TextChapterLayout(
                     titleSegScaling
                 )
             }
+        } else null
 
+        if (ReadBookConfig.regexColorRules.isNotEmpty()) {
+            val fullTextBuilder = StringBuilder()
+            allTitleSegments?.forEachIndexed { index, segment ->
+                val reviewImg = bookChapter.reviewImg
+                var reviewTxt = ""
+                if (index == allTitleSegments.lastIndex && reviewImg != null) {
+                    reviewTxt = if (reviewImg.contains("TEXT")) reviewChar else srcReplaceChar
+                }
+                fullTextBuilder.append(segment.text).append(reviewTxt).append("\n")
+            }
+            contents.forEach { content ->
+                if (adaptSpecialStyle) {
+                    val t = content.trim()
+                    if (t == "[newpage]" || t.startsWith("<usehtml>")) {
+                        fullTextBuilder.append(content).append("\n")
+                        return@forEach
+                    }
+                }
+                val text = content.replace(srcReplaceCharC, srcReplaceCharD)
+                if (isTextImageStyle) {
+                    val matcher = AppPattern.imgPattern.matcher(text)
+                    val ssb = StringBuffer()
+                    while (matcher.find()) {
+                        if (matcher.group(1) != null) {
+                            matcher.appendReplacement(ssb, srcReplaceChar)
+                        }
+                    }
+                    matcher.appendTail(ssb)
+                    fullTextBuilder.append(ssb.toString())
+                } else {
+                    val matcher = AppPattern.imgPattern.matcher(text)
+                    var start = 0
+                    while (matcher.find()) {
+                        val imgSrc = matcher.group(1) ?: continue
+                        val iStyle = if (imgSrc.contains("TEXT")) "text" else imageStyle
+                        if (start < matcher.start()) {
+                            fullTextBuilder.append(text.substring(start, matcher.start()))
+                        }
+                        if (iStyle == "text" || iStyle == "TEXT") {
+                            fullTextBuilder.append(if (iStyle == "TEXT") reviewChar else srcReplaceChar)
+                        } else {
+                            fullTextBuilder.append(" ")
+                        }
+                        start = matcher.end()
+                    }
+                    if (start < text.length) {
+                        fullTextBuilder.append(text.substring(start))
+                    }
+                    if (AppConfig.enableReview) fullTextBuilder.append(reviewChar)
+                }
+                fullTextBuilder.append("\n")
+            }
+            preApplyRegexColorRules(fullTextBuilder.toString())
+        }
+
+        var currentOffset = 0
+
+        if (allTitleSegments != null) {
             allTitleSegments.forEachIndexed { index, segment ->
                 val currentPaint: TextPaint
                 val currentHeight: Float
@@ -277,9 +338,10 @@ class TextChapterLayout(
                     reviewTxt = if (reviewImg.contains("TEXT")) reviewChar else srcReplaceChar
                 }
 
+                val text = segment.text + reviewTxt
                 setTypeText(
                     book = book,
-                    text = segment.text + reviewTxt,
+                    text = text,
                     textPaint = currentPaint,
                     textHeight = currentHeight,
                     fontMetrics = currentMetrics,
@@ -287,8 +349,10 @@ class TextChapterLayout(
                     srcList = srcList.ifEmpty { null },
                     isTitle = true,
                     emptyContent = contents.isEmpty(),
-                    isVolumeTitle = bookChapter.isVolume
+                    isVolumeTitle = bookChapter.isVolume,
+                    offset = currentOffset
                 )
+                currentOffset += text.length + 1
 
                 if (segment.scale != 1.0f) {
                     val currentLines = pendingTextPage.lines
@@ -319,9 +383,11 @@ class TextChapterLayout(
                 val text = content.trim()
                 if (text == "[newpage]") {
                     prepareNextPageIfNeed()
+                    currentOffset += content.length + 1
                     return@forEach
                 } else if (text.startsWith("<usehtml>")) {
                     setTypeHtml(imageStyle, book, text.substring(9, text.lastIndexOf("<")))
+                    currentOffset += content.length + 1
                     return@forEach
                 }
             }
@@ -347,8 +413,10 @@ class TextChapterLayout(
                     contentPaintTextHeight,
                     contentPaintFontMetrics,
                     imageStyle,
-                    srcList = srcList
+                    srcList = srcList,
+                    offset = currentOffset
                 )
+                currentOffset += text.length
             } else {
                 if (isSingleImageStyle && isSetTypedImage) {
                     isSetTypedImage = false
@@ -402,10 +470,12 @@ class TextChapterLayout(
                         }
 
                         if (start < matcher.start()) {
-                            sb.append(text.substring(start, matcher.start()))
+                            val textPart = text.substring(start, matcher.start())
+                            sb.append(textPart)
                         }
                         if (iStyle == "text" || iStyle == "TEXT") {
-                            sb.append(if (iStyle == "TEXT") reviewChar else srcReplaceChar)
+                            val charPart = if (iStyle == "TEXT") reviewChar else srcReplaceChar
+                            sb.append(charPart)
                             srcList.add(imgSrc)
                             clickList.add(click)
                         } else {
@@ -413,10 +483,12 @@ class TextChapterLayout(
                             if (textBefore.isNotBlank()) {
                                 wordCount += textBefore.replace(noWordCountRegex,"").length
                                 setTypeText(
-                                    book, sb.toString(), contentPaint, contentPaintTextHeight,
+                                    book, textBefore, contentPaint, contentPaintTextHeight,
                                     contentPaintFontMetrics, "TEXT", isFirstLine = isFirstLine,
-                                    srcList = srcList, clickList = clickList
+                                    srcList = srcList, clickList = clickList,
+                                    offset = currentOffset
                                 )
+                                currentOffset += textBefore.length
                                 sb.setLength(0)
                                 isFirstLine = false
                             }
@@ -428,6 +500,7 @@ class TextChapterLayout(
                                 imgSize,
                                 click
                             ) // 传递点击信息
+                            currentOffset += 1
                             isSetTypedImage = true
                         }
                         start = matcher.end()
@@ -444,21 +517,25 @@ class TextChapterLayout(
                 text = sb.toString()
                 if (text.isNotBlank()) {
                     wordCount += text.replace(noWordCountRegex,"").length
+                    val textToType = if (AppConfig.enableReview) text + reviewChar else text
                     setTypeText(
                         book,
-                        if (AppConfig.enableReview) text + reviewChar else text,
+                        textToType,
                         contentPaint,
                         contentPaintTextHeight,
                         contentPaintFontMetrics,
                         "TEXT",
                         isFirstLine = isFirstLine,
                         srcList = srcList.ifEmpty { null },
-                        clickList = clickList.ifEmpty { null }
+                        clickList = clickList.ifEmpty { null },
+                        offset = currentOffset
                     )
+                    currentOffset += textToType.length
                 }
             }
             pendingTextPage.lines.last().isParagraphEnd = true
             stringBuilder.append("\n")
+            currentOffset += 1
         }
         val chapterWordCount = StringUtils.wordCountFormat(wordCount.toString())
         bookChapter.wordCount = chapterWordCount
@@ -868,11 +945,12 @@ class TextChapterLayout(
         emptyContent: Boolean = false,
         isVolumeTitle: Boolean = false,
         srcList: LinkedList<String>? = null,
-        clickList: LinkedList<String?>? = null
+        clickList: LinkedList<String?>? = null,
+        offset: Int = -1
     ) {
         val widthsArray = allocateFloatArray(text.length)
         textPaint.getTextWidthsCompat(text, widthsArray)
-        val colorMap = applyRegexColorRules(text)
+        val colorMap = applyRegexColorRules(text, offset)
         val layout = if (useZhLayout) {
             val (words, widths) = measureTextSplit(text, widthsArray)
             val indentSize = if (isFirstLine) paragraphIndent.length else 0
@@ -1310,28 +1388,21 @@ class TextChapterLayout(
         val fontPathArray: Array<String?>
     )
 
-    private fun applyRegexColorRules(text: String): RegexMatchResult? {
+    private fun preApplyRegexColorRules(fullText: String) {
         val rules = ReadBookConfig.regexColorRules
-        if (rules.isEmpty()) return null
+        if (rules.isEmpty()) return
+        val colorArray = IntArray(fullText.length) { -1 }
+        val fontPathArray = arrayOfNulls<String>(fullText.length)
         var hasMatch = false
         for (rule in rules) {
             try {
-                val regex = regexCache.getOrPut(rule.pattern) { Regex(rule.pattern) }
-                if (regex.containsMatchIn(text)) {
-                    hasMatch = true
-                    break
+                val regex = synchronized(regexCache) {
+                    regexCache.getOrPut(rule.pattern) {
+                        Regex(rule.pattern, RegexOption.DOT_MATCHES_ALL)
+                    }
                 }
-            } catch (_: Exception) {
-            }
-        }
-        if (!hasMatch) return null
-        val colorArray = IntArray(text.length) { -1 }
-        val fontPathArray = arrayOfNulls<String>(text.length)
-        for (rule in rules) {
-            try {
-                val regex = regexCache.getOrPut(rule.pattern) { Regex(rule.pattern) }
-                val matches = regex.findAll(text)
-                for (match in matches) {
+                regex.findAll(fullText).forEach { match ->
+                    hasMatch = true
                     for (i in match.range) {
                         colorArray[i] = rule.color
                         if (rule.fontPath.isNotEmpty()) {
@@ -1340,6 +1411,34 @@ class TextChapterLayout(
                     }
                 }
             } catch (_: Exception) {
+            }
+        }
+        if (hasMatch) globalRegexResult = RegexMatchResult(colorArray, fontPathArray)
+    }
+
+    private fun applyRegexColorRules(text: String, offset: Int): RegexMatchResult? {
+        val globalResult = globalRegexResult ?: return null
+        if (offset < 0) return null
+        val endIdx = minOf(offset + text.length, globalResult.colorArray.size)
+        var hasMatch = false
+        for (globalIdx in offset until endIdx) {
+            if (globalResult.colorArray[globalIdx] != -1 || globalResult.fontPathArray[globalIdx] != null) {
+                hasMatch = true
+                break
+            }
+        }
+        if (!hasMatch) return null
+        val colorArray = IntArray(text.length) { -1 }
+        val fontPathArray = arrayOfNulls<String>(text.length)
+        for (i in text.indices) {
+            val globalIdx = offset + i
+            if (globalIdx >= 0 && globalIdx < globalResult.colorArray.size) {
+                if (globalResult.colorArray[globalIdx] != -1) {
+                    colorArray[i] = globalResult.colorArray[globalIdx]
+                }
+                if (globalResult.fontPathArray[globalIdx] != null) {
+                    fontPathArray[i] = globalResult.fontPathArray[globalIdx]
+                }
             }
         }
         return RegexMatchResult(colorArray, fontPathArray)
