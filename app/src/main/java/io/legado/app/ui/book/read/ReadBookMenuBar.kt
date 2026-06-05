@@ -350,6 +350,10 @@ private fun ReadBookMenuSurface(
     val bottomBarProgressiveBlur = route == ReadBookMenuRoute.Main &&
             !isFloating &&
             state.menuConfig.readMenuBottomBarBlurStyle == ReadMenuBlurStyle.Progressive
+    val surfaceWindowInsetSides = when {
+        isFloating || extendSurfaceToNavigationBar -> WindowInsetsSides.Horizontal
+        else -> WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
+    }
 
     Surface(
         modifier = Modifier
@@ -358,11 +362,14 @@ private fun ReadBookMenuSurface(
                 end = mainHorizontalMargin,
                 bottom = mainBottomMargin,
             )
-            .windowInsetsPadding(
-                WindowInsets.safeDrawing.only(
-                    if (isFloating || extendSurfaceToNavigationBar) WindowInsetsSides.Horizontal
-                    else WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
-                )
+            .then(
+                if (route == ReadBookMenuRoute.Main) {
+                    Modifier
+                } else {
+                    Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(surfaceWindowInsetSides)
+                    )
+                }
             )
             .width(surfaceWidth)
             .heightIn(max = maxHeight)
@@ -737,8 +744,14 @@ private fun MenuTitleBar(
                     .weight(1f)
                     .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
                     .padding(horizontal = 8.dp, vertical = 4.dp),
-                style = LegadoTheme.typography.titleMedium,
-                color = colors.content,
+                style = LegadoTheme.typography.titleMedium.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.12f),
+                        offset = Offset.Zero,
+                        blurRadius = 12f
+                    )
+                ),
+                color = colors.background,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1332,6 +1345,9 @@ private fun MenuBottomBar(
                     alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
                 )
             )
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+            )
             .padding(top = 8.dp, bottom = contentBottomPadding)
             .animateContentSize(),
     ) {
@@ -1368,7 +1384,9 @@ private fun MenuBottomBar(
                 enabled = seekMax > 0,
                 backdrop = backdrop,
                 glassThumbEnabled = buttonGlassEnabled,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
             )
 
             BottomBarGlassIconButton(
@@ -1408,7 +1426,7 @@ private fun MenuBottomBar(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = 14.dp)
                     .padding(bottom = toolButtonsBottomPadding),
             ) {
                 pageButtons.chunked(itemsPerRow).forEach { rowButtons ->
@@ -1647,8 +1665,22 @@ private fun ReadMenuLiquidSlider(
         Box(Modifier.layerBackdrop(trackBackdrop)) {
             Box(
                 Modifier
-                    .clip(ContinuousCapsule)
-                    .background(trackColor)
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousCapsule },
+                        effects = {},
+                        highlight = null,
+                        shadow = {
+                            Shadow(
+                                radius = 8.dp,
+                                color = Color.Black.copy(alpha = 0.12f),
+                            )
+                        },
+                        innerShadow = null,
+                        onDrawSurface = {
+                            drawRect(trackColor)
+                        },
+                    )
                     .pointerInput(enabled, animationScope, isLtr, trackWidth) {
                         if (!enabled) return@pointerInput
                         detectTapGestures { position ->
@@ -2161,8 +2193,13 @@ private fun Modifier.readMenuHazeEffect(
     progressiveBottomToTop: Boolean = false,
 ): Modifier {
     val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val hazeContainerColor = if (progressive) {
+        Color.Black.copy(alpha = surfaceAlpha)
+    } else {
+        colors.background.copy(alpha = surfaceAlpha)
+    }
     val style = HazeLegado.custom(
-        containerColor = colors.background.copy(alpha = surfaceAlpha),
+        containerColor = hazeContainerColor,
         blurRadius = menuConfig.readMenuBlurRadius,
         blurAlpha = menuConfig.readMenuBlurAlpha,
     )
