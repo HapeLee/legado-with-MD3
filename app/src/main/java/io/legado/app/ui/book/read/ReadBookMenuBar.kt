@@ -1080,7 +1080,7 @@ private fun FloatingIconRow(
                     )
                 } else {
                     Icon(
-                        painter = painterResource(iconDef.iconRes),
+                        imageVector = iconDef.icon,
                         contentDescription = iconDef.label,
                         tint = if (iconDef.isActive) LegadoTheme.colorScheme.primary else colors.content,
                         modifier = Modifier.size(20.dp),
@@ -1876,7 +1876,7 @@ private fun ToolButtonContent(
     ) {
         if (button.customIconPath.isNullOrBlank()) {
             Icon(
-                painter = painterResource(button.iconRes),
+                imageVector = button.icon,
                 contentDescription = button.description,
                 modifier = Modifier.size(20.dp),
                 tint = tint,
@@ -1910,7 +1910,7 @@ private fun ToolButtonContent(
 
 private data class ToolButtonDef(
     val id: String,
-    val iconRes: Int,
+    val icon: ImageVector,
     val description: String,
     val customIconPath: String?,
     val isActive: Boolean = false,
@@ -1924,7 +1924,7 @@ private fun loadToolButtons(
 ): List<ToolButtonDef> {
     val customIcons = state.menuConfig.readMenuCustomIcons
     fun ReadMenuButtonInfo.toButton(isActive: Boolean = false, onClick: () -> Unit): ToolButtonDef {
-        return ToolButtonDef(id, iconRes, label, customIcons[id], isActive, onClick)
+        return ToolButtonDef(id, icon, label, customIcons[id], isActive, onClick)
     }
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
     val allButtons = listOf(
@@ -2272,7 +2272,7 @@ private fun readMenuColors(): ReadMenuColors {
 
 private data class TitleBarIconDef(
     val id: String,
-    val iconRes: Int,
+    val icon: ImageVector,
     val label: String,
     val isActive: Boolean = false,
     val onClick: () -> Unit,
@@ -2343,7 +2343,7 @@ private fun loadFloatingIcons(
         .map { (id, _, info) ->
             TitleBarIconDef(
                 id = id,
-                iconRes = info.iconRes,
+                icon = info.icon,
                 label = info.label,
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},

@@ -22,14 +22,26 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,6 +72,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -752,17 +765,16 @@ private fun MenuCustomIconSheet(
                 }
             }
 
-            TextButton(
-                onClick = {
+            ConfirmDismissButtonsRow(
+                onDismiss = onDismissRequest,
+                onConfirm = {
                     saveMenuCustomIconOrder(prefs, items)
                     onDismissRequest()
                 },
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 8.dp),
-            ) {
-                Text(stringResource(R.string.action_save))
-            }
+                dismissText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.action_save),
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -792,7 +804,7 @@ private fun MenuCustomIconItem(
                 )
             } else {
                 Icon(
-                    painter = painterResource(item.iconRes),
+                    imageVector = item.icon,
                     contentDescription = item.label,
                     tint = LegadoTheme.colorScheme.onSurface,
                     modifier = Modifier.size(24.dp),
@@ -849,23 +861,23 @@ private fun SectionTitle(title: String) {
 
 internal data class ReadMenuButtonInfo(
     val id: String,
-    val iconRes: Int,
+    val icon: ImageVector,
     val label: String,
 )
 
 internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = listOf(
-    ReadMenuButtonInfo("search", R.drawable.ic_search, context.getString(R.string.search_content)),
-    ReadMenuButtonInfo("auto_page", R.drawable.ic_auto_page, context.getString(R.string.auto_next_page)),
-    ReadMenuButtonInfo("catalog", R.drawable.ic_toc, context.getString(R.string.chapter_list)),
-    ReadMenuButtonInfo("read_aloud", R.drawable.ic_read_aloud, context.getString(R.string.read_aloud)),
-    ReadMenuButtonInfo("setting", R.drawable.ic_settings, context.getString(R.string.setting)),
-    ReadMenuButtonInfo("addBookmark", R.drawable.ic_bookmark, context.getString(R.string.bookmark)),
-    ReadMenuButtonInfo("theme", R.drawable.ic_brightness, context.getString(R.string.day_night_switch)),
-    ReadMenuButtonInfo("prev_chapter", R.drawable.ic_previous, context.getString(R.string.previous_chapter)),
-    ReadMenuButtonInfo("next_chapter", R.drawable.ic_next, context.getString(R.string.next_chapter)),
-    ReadMenuButtonInfo("replace", R.drawable.ic_find_replace, context.getString(R.string.replace_purify)),
-    ReadMenuButtonInfo("replace_badge", R.drawable.ic_find_replace, context.getString(R.string.replace_purify_badge)),
-    ReadMenuButtonInfo("translate", R.drawable.ic_translate, context.getString(R.string.translate)),
+    ReadMenuButtonInfo("search", Icons.Default.Search, context.getString(R.string.search_content)),
+    ReadMenuButtonInfo("auto_page", Icons.Default.PlayArrow, context.getString(R.string.auto_next_page)),
+    ReadMenuButtonInfo("catalog", Icons.AutoMirrored.Filled.List, context.getString(R.string.chapter_list)),
+    ReadMenuButtonInfo("read_aloud", Icons.Default.RecordVoiceOver, context.getString(R.string.read_aloud)),
+    ReadMenuButtonInfo("setting", Icons.Default.Settings, context.getString(R.string.setting)),
+    ReadMenuButtonInfo("addBookmark", Icons.Default.Bookmark, context.getString(R.string.bookmark)),
+    ReadMenuButtonInfo("theme", Icons.Default.Brightness6, context.getString(R.string.day_night_switch)),
+    ReadMenuButtonInfo("prev_chapter", Icons.Default.SkipPrevious, context.getString(R.string.previous_chapter)),
+    ReadMenuButtonInfo("next_chapter", Icons.Default.SkipNext, context.getString(R.string.next_chapter)),
+    ReadMenuButtonInfo("replace", Icons.Default.FindReplace, context.getString(R.string.replace_purify)),
+    ReadMenuButtonInfo("replace_badge", Icons.Default.AutoAwesome, context.getString(R.string.replace_purify_badge)),
+    ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
 )
 
 private fun loadMenuCustomIconItems(

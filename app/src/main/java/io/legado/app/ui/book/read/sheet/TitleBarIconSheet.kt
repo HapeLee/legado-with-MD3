@@ -16,8 +16,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
@@ -25,7 +38,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,18 +45,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -80,7 +94,6 @@ fun TitleBarIconSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         ) {
             LazyColumn(
@@ -91,7 +104,11 @@ fun TitleBarIconSheet(
                 items(items, key = { it.id }) { item ->
                     ReorderableItem(reorderableState, key = item.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
-                        Surface(shadowElevation = elevation) {
+                        NormalCard(
+                            elevation = elevation,
+                            cornerRadius = 12.dp,
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow
+                        ) {
                             TitleBarIconItem(
                                 item = item,
                                 customIcon = customIcons[item.id],
@@ -119,18 +136,17 @@ fun TitleBarIconSheet(
                 }
             }
 
-            TextButton(
-                onClick = {
+            ConfirmDismissButtonsRow(
+                onDismiss = onDismissRequest,
+                onConfirm = {
                     saveTitleBarIconConfig(prefs, items)
                     onSaved()
                     onDismissRequest()
                 },
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 8.dp),
-            ) {
-                Text(stringResource(R.string.action_save))
-            }
+                dismissText = stringResource(R.string.cancel),
+                confirmText = stringResource(R.string.action_save),
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -149,7 +165,9 @@ private fun TitleBarIconItem(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(all = 12.dp),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -165,7 +183,7 @@ private fun TitleBarIconItem(
                 )
             } else {
                 Icon(
-                    painter = painterResource(iconRes),
+                    imageVector = iconRes,
                     contentDescription = name,
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
                     modifier = Modifier.size(24.dp),
@@ -244,7 +262,7 @@ private fun TitleBarIconItem(
 private data class TitleBarIconEntry(
     val id: String,
     val enabled: Boolean,
-    val info: Pair<Int, String>,
+    val info: Pair<ImageVector, String>,
 )
 
 private fun getAllTitleBarIconIds() = listOf(
@@ -262,21 +280,21 @@ private fun getAllTitleBarIconIds() = listOf(
     "translate",
 )
 
-private fun getTitleBarIconInfo(context: Context, id: String): Pair<Int, String> {
+private fun getTitleBarIconInfo(context: Context, id: String): Pair<ImageVector, String> {
     return when (id) {
-        "search" -> R.drawable.ic_search to context.getString(R.string.search_content)
-        "auto_page" -> R.drawable.ic_auto_page to context.getString(R.string.auto_next_page)
-        "catalog" -> R.drawable.ic_toc to context.getString(R.string.chapter_list)
-        "read_aloud" -> R.drawable.ic_read_aloud to context.getString(R.string.read_aloud)
-        "setting" -> R.drawable.ic_settings to context.getString(R.string.setting)
-        "addBookmark" -> R.drawable.ic_bookmark to context.getString(R.string.bookmark)
-        "theme" -> R.drawable.ic_daytime to context.getString(R.string.day_night_switch)
-        "prev_chapter" -> R.drawable.ic_previous to context.getString(R.string.previous_chapter)
-        "next_chapter" -> R.drawable.ic_next to context.getString(R.string.next_chapter)
-        "translate" -> R.drawable.ic_translate to context.getString(R.string.translate)
-        "replace" -> R.drawable.ic_find_replace to context.getString(R.string.replace_purify)
-        "replace_badge" -> R.drawable.ic_find_replace to context.getString(R.string.replace_purify_badge)
-        else -> R.drawable.ic_help to id
+        "search" -> Icons.Default.Search to context.getString(R.string.search_content)
+        "auto_page" -> Icons.Default.PlayArrow to context.getString(R.string.auto_next_page)
+        "catalog" -> Icons.AutoMirrored.Filled.List to context.getString(R.string.chapter_list)
+        "read_aloud" -> Icons.Default.RecordVoiceOver to context.getString(R.string.read_aloud)
+        "setting" -> Icons.Default.Settings to context.getString(R.string.setting)
+        "addBookmark" -> Icons.Default.Bookmark to context.getString(R.string.bookmark)
+        "theme" -> Icons.Default.Brightness6 to context.getString(R.string.day_night_switch)
+        "prev_chapter" -> Icons.Default.SkipPrevious to context.getString(R.string.previous_chapter)
+        "next_chapter" -> Icons.Default.SkipNext to context.getString(R.string.next_chapter)
+        "translate" -> Icons.Default.Translate to context.getString(R.string.translate)
+        "replace" -> Icons.Default.FindReplace to context.getString(R.string.replace_purify)
+        "replace_badge" -> Icons.Default.AutoAwesome to context.getString(R.string.replace_purify_badge)
+        else -> Icons.AutoMirrored.Filled.HelpOutline to id
     }
 }
 
