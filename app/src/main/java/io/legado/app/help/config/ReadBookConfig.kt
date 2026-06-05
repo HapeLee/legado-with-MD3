@@ -9,22 +9,22 @@ import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
-import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
-import io.legado.app.utils.putPrefString
 import splitties.init.appCtx
 import java.io.InputStream
 
@@ -226,7 +226,28 @@ object ReadBookConfig {
     private var readMenuIconRowCountValue = appCtx.getPrefInt(PreferKey.readMenuIconRowCount, 1)
     private var readMenuBottomCornerRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBottomCornerRadius)
     private var readMenuFloatingBottomBarValue = appCtx.getPrefBoolean(PreferKey.readMenuFloatingBottomBar)
-    private var readMenuLiquidGlassValue = appCtx.getPrefBoolean(PreferKey.readMenuLiquidGlass)
+    private var readMenuTopBarBlurModeValue = appCtx.getPrefInt(
+        PreferKey.readMenuTopBarBlurMode,
+        ReadMenuBlurMode.None
+    )
+    private var readMenuBottomBarBlurModeValue = appCtx.getPrefInt(
+        PreferKey.readMenuBottomBarBlurMode,
+        ReadMenuBlurMode.None
+    )
+    private var readMenuTopBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
+        PreferKey.readMenuTopBarLiquidGlassButtons
+    )
+    private var readMenuBottomBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
+        PreferKey.readMenuBottomBarLiquidGlassButtons
+    )
+    private var readMenuTopBarBlurStyleValue = appCtx.getPrefInt(
+        PreferKey.readMenuTopBarBlurStyle,
+        ReadMenuBlurStyle.Progressive
+    )
+    private var readMenuBottomBarBlurStyleValue = appCtx.getPrefInt(
+        PreferKey.readMenuBottomBarBlurStyle,
+        ReadMenuBlurStyle.Solid
+    )
     private var readMenuBlurRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBlurRadius, 24)
     private var readMenuBlurAlphaValue = appCtx.getPrefInt(PreferKey.readMenuBlurAlpha, 60)
     private var readMenuLensRadiusValue = appCtx.getPrefFloat(PreferKey.readMenuLensRadius, 24f)
@@ -263,7 +284,12 @@ object ReadBookConfig {
         readMenuIconRowCountValue = preferences.readMenuIconRowCount
         readMenuBottomCornerRadiusValue = preferences.readMenuBottomCornerRadius
         readMenuFloatingBottomBarValue = preferences.readMenuFloatingBottomBar
-        readMenuLiquidGlassValue = preferences.readMenuLiquidGlass
+        readMenuTopBarBlurModeValue = preferences.readMenuTopBarBlurMode
+        readMenuBottomBarBlurModeValue = preferences.readMenuBottomBarBlurMode
+        readMenuTopBarLiquidGlassButtonsValue = preferences.readMenuTopBarLiquidGlassButtons
+        readMenuBottomBarLiquidGlassButtonsValue = preferences.readMenuBottomBarLiquidGlassButtons
+        readMenuTopBarBlurStyleValue = preferences.readMenuTopBarBlurStyle
+        readMenuBottomBarBlurStyleValue = preferences.readMenuBottomBarBlurStyle
         readMenuBlurRadiusValue = preferences.readMenuBlurRadius
         readMenuBlurAlphaValue = preferences.readMenuBlurAlpha
         readMenuLensRadiusValue = preferences.readMenuLensRadius
@@ -362,10 +388,40 @@ object ReadBookConfig {
             readMenuFloatingBottomBarValue = value
         }
 
-    var readMenuLiquidGlass: Boolean
-        get() = readMenuLiquidGlassValue
+    var readMenuTopBarBlurMode: Int
+        get() = readMenuTopBarBlurModeValue.coerceIn(0, 2)
         set(value) {
-            readMenuLiquidGlassValue = value
+            readMenuTopBarBlurModeValue = value.coerceIn(0, 2)
+        }
+
+    var readMenuBottomBarBlurMode: Int
+        get() = readMenuBottomBarBlurModeValue.coerceIn(0, 2)
+        set(value) {
+            readMenuBottomBarBlurModeValue = value.coerceIn(0, 2)
+        }
+
+    var readMenuTopBarLiquidGlassButtons: Boolean
+        get() = readMenuTopBarLiquidGlassButtonsValue
+        set(value) {
+            readMenuTopBarLiquidGlassButtonsValue = value
+        }
+
+    var readMenuBottomBarLiquidGlassButtons: Boolean
+        get() = readMenuBottomBarLiquidGlassButtonsValue
+        set(value) {
+            readMenuBottomBarLiquidGlassButtonsValue = value
+        }
+
+    var readMenuTopBarBlurStyle: Int
+        get() = readMenuTopBarBlurStyleValue.coerceIn(0, 1)
+        set(value) {
+            readMenuTopBarBlurStyleValue = value.coerceIn(0, 1)
+        }
+
+    var readMenuBottomBarBlurStyle: Int
+        get() = readMenuBottomBarBlurStyleValue.coerceIn(0, 1)
+        set(value) {
+            readMenuBottomBarBlurStyleValue = value.coerceIn(0, 1)
         }
 
     var readMenuBlurRadius: Int

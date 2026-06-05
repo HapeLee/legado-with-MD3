@@ -10,13 +10,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
+import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentData
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.info.BookInfoActivity
@@ -68,6 +72,13 @@ fun ReadBookRouteScreen(
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val menuBackdrop = rememberLayerBackdrop()
+    val menuHazeState = remember { HazeState() }
+    val useMenuHazeSource = state.menuConfig.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze ||
+            state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.Haze ||
+            (
+                    !state.menuConfig.readMenuFloatingBottomBar &&
+                            state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
+                    )
 
     // ── ActivityResult Launchers ──────────────────────────────────────
 
@@ -186,7 +197,9 @@ fun ReadBookRouteScreen(
 
     Box(Modifier.fillMaxSize()) {
         ReadBookViewLayer(
-            modifier = Modifier.layerBackdrop(menuBackdrop),
+            modifier = Modifier
+                .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
+                .layerBackdrop(menuBackdrop),
             onRefsReady = { controller.onRefsReady(it) },
             onCursorTouch = controller,
             readViewCallBack = controller,
@@ -196,7 +209,12 @@ fun ReadBookRouteScreen(
             configUpdateTrigger = state.configUpdateTrigger,
             preferences = readPreferences,
         ) {
-            ReadBookMenuBar(state = state, onIntent = viewModel::onIntent, backdrop = menuBackdrop)
+            ReadBookMenuBar(
+                state = state,
+                onIntent = viewModel::onIntent,
+                backdrop = menuBackdrop,
+                hazeState = if (useMenuHazeSource) menuHazeState else null,
+            )
             ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
             ReadBookScreen(
                 state = state,

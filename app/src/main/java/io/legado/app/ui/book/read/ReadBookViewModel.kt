@@ -11,6 +11,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
+import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.Status
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -18,8 +19,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
-import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
@@ -115,6 +116,10 @@ class ReadBookViewModel(
     private var pendingRegexColorFontIndex: Int = -1
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
+
+    fun setAutoPage(active: Boolean) {
+        _uiState.update { it.copy(isAutoPage = active) }
+    }
 
     init {
         AppConfig.detectClickArea()
@@ -825,7 +830,12 @@ class ReadBookViewModel(
                 readMenuBlurAlpha = ReadBookConfig.readMenuBlurAlpha,
                 readMenuBlurRadius = ReadBookConfig.readMenuBlurRadius,
                 readMenuLensRadius = ReadBookConfig.readMenuLensRadius,
-                readMenuLiquidGlass = ReadBookConfig.readMenuLiquidGlass,
+                readMenuTopBarBlurMode = ReadBookConfig.readMenuTopBarBlurMode,
+                readMenuBottomBarBlurMode = ReadBookConfig.readMenuBottomBarBlurMode,
+                readMenuTopBarLiquidGlassButtons = ReadBookConfig.readMenuTopBarLiquidGlassButtons,
+                readMenuBottomBarLiquidGlassButtons = ReadBookConfig.readMenuBottomBarLiquidGlassButtons,
+                readMenuTopBarBlurStyle = ReadBookConfig.readMenuTopBarBlurStyle,
+                readMenuBottomBarBlurStyle = ReadBookConfig.readMenuBottomBarBlurStyle,
                 readMenuIconStyle = ReadBookConfig.readMenuIconStyle,
                 readMenuIconShowText = ReadBookConfig.readMenuIconShowText,
                 titleBarCustomIcons = ReadBookConfig.titleBarCustomIcons,
@@ -1624,12 +1634,80 @@ class ReadBookViewModel(
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuFloatingBottomBar = update.value)) }
             }
-            is ConfigUpdate.MenuLiquidGlass -> {
-                ReadBookConfig.readMenuLiquidGlass = update.value
-                viewModelScope.launch {
-                    readSettingsRepository.setReadMenuLiquidGlass(update.value)
+            is ConfigUpdate.MenuTopBarBlurMode -> {
+                val mode = update.value.coerceIn(0, 2).let {
+                    if (it == ReadMenuBlurMode.LiquidGlass) ReadMenuBlurMode.Haze else it
                 }
-                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuLiquidGlass = update.value)) }
+                ReadBookConfig.readMenuTopBarBlurMode = mode
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTopBarBlurMode(mode)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuTopBarBlurMode = mode))
+                }
+            }
+
+            is ConfigUpdate.MenuBottomBarBlurMode -> {
+                val mode = update.value.coerceIn(0, 2)
+                ReadBookConfig.readMenuBottomBarBlurMode = mode
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomBarBlurMode(mode)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuBottomBarBlurMode = mode))
+                }
+            }
+
+            is ConfigUpdate.MenuTopBarLiquidGlassButtons -> {
+                ReadBookConfig.readMenuTopBarLiquidGlassButtons = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTopBarLiquidGlassButtons(update.value)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuTopBarLiquidGlassButtons = update.value))
+                }
+            }
+
+            is ConfigUpdate.MenuBottomBarLiquidGlassButtons -> {
+                ReadBookConfig.readMenuBottomBarLiquidGlassButtons = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomBarLiquidGlassButtons(update.value)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuBottomBarLiquidGlassButtons = update.value))
+                }
+            }
+
+            is ConfigUpdate.MenuTopBarBlurSelection -> {
+                val mode = update.mode.coerceIn(0, 2).let {
+                    if (it == ReadMenuBlurMode.LiquidGlass) ReadMenuBlurMode.Haze else it
+                }
+                val style = update.style.coerceIn(0, 1)
+                ReadBookConfig.readMenuTopBarBlurMode = mode
+                ReadBookConfig.readMenuTopBarBlurStyle = style
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTopBarBlurMode(mode)
+                    readSettingsRepository.setReadMenuTopBarBlurStyle(style)
+                }
+                _uiState.update {
+                    it.copy(
+                        menuConfig = it.menuConfig.copy(
+                            readMenuTopBarBlurMode = mode,
+                            readMenuTopBarBlurStyle = style,
+                        )
+                    )
+                }
+            }
+
+            is ConfigUpdate.MenuBottomBarBlurStyle -> {
+                val style = update.value.coerceIn(0, 1)
+                ReadBookConfig.readMenuBottomBarBlurStyle = style
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBottomBarBlurStyle(style)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuBottomBarBlurStyle = style))
+                }
             }
             is ConfigUpdate.MenuBlurRadius -> {
                 ReadBookConfig.readMenuBlurRadius = update.value

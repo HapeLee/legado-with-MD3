@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Surface
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -30,8 +29,9 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import io.legado.app.R
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
@@ -61,21 +63,21 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
-import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
-import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
-import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.io.File
 
 private const val COLOR_BG = 5
@@ -174,7 +176,7 @@ internal fun SystemMenuPage(
                         showColorPicker = true
                     },
                 )
-                2 -> TopBarTab(onIntent = onIntent)
+                2 -> TopBarTab(preferences = preferences, onIntent = onIntent)
             }
         }
     }
@@ -418,26 +420,16 @@ private fun GlobalMenuTab(
 
         Spacer(Modifier.height(8.dp))
 
-        TinySwitchSettingItem(
-            title = stringResource(R.string.read_menu_liquid_glass),
-            description = stringResource(R.string.read_menu_liquid_glass_summary),
-            checked = preferences.readMenuLiquidGlass,
-            onCheckedChange = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuLiquidGlass(it)))
+        TinySliderSettingItem(
+            title = stringResource(R.string.read_menu_blur_radius),
+            value = preferences.readMenuBlurRadius.toFloat(),
+            valueRange = 0f..32f,
+            steps = 31,
+            description = stringResource(R.string.read_menu_blur_radius_summary),
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurRadius(it.toInt())))
             },
         )
-        AnimatedVisibility(visible = preferences.readMenuLiquidGlass) {
-            TinySliderSettingItem(
-                title = stringResource(R.string.read_menu_blur_radius),
-                value = preferences.readMenuBlurRadius.toFloat(),
-                valueRange = 0f..32f,
-                steps = 31,
-                description = stringResource(R.string.read_menu_blur_radius_summary),
-                onValueChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurRadius(it.toInt())))
-                },
-            )
-        }
         TinySliderSettingItem(
             title = stringResource(R.string.read_menu_blur_alpha),
             value = preferences.readMenuBlurAlpha.toFloat(),
@@ -466,6 +458,14 @@ private fun BottomBarTab(
     var iconRowCount by remember { mutableIntStateOf(preferences.readMenuIconRowCount) }
     var bottomCornerRadius by remember { mutableIntStateOf(preferences.readMenuBottomCornerRadius) }
     val floatingBottomBar = preferences.readMenuFloatingBottomBar
+    val bottomBarBlurMode = if (
+        !floatingBottomBar &&
+        preferences.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
+    ) {
+        ReadMenuBlurMode.Haze
+    } else {
+        preferences.readMenuBottomBarBlurMode
+    }
 
     Column(
         modifier = Modifier
@@ -543,7 +543,80 @@ private fun BottomBarTab(
             title = stringResource(R.string.read_menu_floating_bottom_bar),
             checked = floatingBottomBar,
             onCheckedChange = {
+                if (!it && preferences.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass) {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuBottomBarBlurMode(
+                                ReadMenuBlurMode.Haze
+                            )
+                        )
+                    )
+                }
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FloatingBottomBar(it)))
+            },
+        )
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_bar_blur),
+            checked = bottomBarBlurMode != ReadMenuBlurMode.None,
+            onCheckedChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuBottomBarBlurMode(
+                            if (it) ReadMenuBlurMode.Haze else ReadMenuBlurMode.None
+                        )
+                    )
+                )
+            },
+        )
+        AnimatedVisibility(visible = !floatingBottomBar && bottomBarBlurMode == ReadMenuBlurMode.Haze) {
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.read_menu_bar_blur_style),
+                selectedValue = preferences.readMenuBottomBarBlurStyle.toString(),
+                displayEntries = arrayOf(
+                    stringResource(R.string.read_menu_blur_style_solid),
+                    stringResource(R.string.read_menu_blur_style_progressive),
+                ),
+                entryValues = arrayOf(
+                    ReadMenuBlurStyle.Solid.toString(),
+                    ReadMenuBlurStyle.Progressive.toString(),
+                ),
+                onValueChange = {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuBottomBarBlurStyle(it.toInt())
+                        )
+                    )
+                },
+            )
+        }
+        AnimatedVisibility(visible = floatingBottomBar) {
+            TinySwitchSettingItem(
+                title = stringResource(R.string.read_menu_bar_liquid_glass),
+                description = stringResource(R.string.read_menu_bar_liquid_glass_summary),
+                checked = preferences.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass,
+                onCheckedChange = {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuBottomBarBlurMode(
+                                if (it) {
+                                    ReadMenuBlurMode.LiquidGlass
+                                } else if (bottomBarBlurMode != ReadMenuBlurMode.None) {
+                                    ReadMenuBlurMode.Haze
+                                } else {
+                                    ReadMenuBlurMode.None
+                                }
+                            )
+                        )
+                    )
+                },
+            )
+        }
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),
+            description = stringResource(R.string.read_menu_bottom_bar_liquid_glass_buttons_summary),
+            checked = preferences.readMenuBottomBarLiquidGlassButtons,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBottomBarLiquidGlassButtons(it)))
             },
         )
     }
@@ -553,9 +626,13 @@ private fun BottomBarTab(
 
 @Composable
 private fun TopBarTab(
+    preferences: ReadPreferences,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    val customIconCount = ReadBookConfig.titleBarCustomIcons.size
+    val customIconCount = remember(preferences.titleBarCustomIcons) {
+        countCustomIcons(preferences.titleBarCustomIcons)
+    }
+    val topBarBlurEnabled = preferences.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze
 
     Column(
         modifier = Modifier
@@ -574,7 +651,70 @@ private fun TopBarTab(
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleBarIconConfig))
             },
         )
+        Spacer(Modifier.height(8.dp))
+        TinySwitchSettingItem(
+            title = stringResource(R.string.read_menu_bar_blur),
+            checked = topBarBlurEnabled,
+            onCheckedChange = {
+                onIntent(
+                    ReadBookIntent.UpdateConfig(
+                        ConfigUpdate.MenuTopBarBlurSelection(
+                            mode = if (it) ReadMenuBlurMode.Haze else ReadMenuBlurMode.None,
+                            style = preferences.readMenuTopBarBlurStyle,
+                        )
+                    )
+                )
+            },
+        )
+        AnimatedVisibility(visible = topBarBlurEnabled) {
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.read_menu_bar_blur_style),
+                selectedValue = preferences.readMenuTopBarBlurStyle.toString(),
+                displayEntries = arrayOf(
+                    stringResource(R.string.read_menu_blur_style_solid),
+                    stringResource(R.string.read_menu_blur_style_progressive),
+                ),
+                entryValues = arrayOf(
+                    ReadMenuBlurStyle.Solid.toString(),
+                    ReadMenuBlurStyle.Progressive.toString(),
+                ),
+                onValueChange = {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuTopBarBlurSelection(
+                                mode = ReadMenuBlurMode.Haze,
+                                style = it.toInt(),
+                            )
+                        )
+                    )
+                },
+            )
+        }
+        AnimatedVisibility(visible = topBarBlurEnabled) {
+            TinySwitchSettingItem(
+                title = stringResource(R.string.read_menu_bar_liquid_glass_buttons),
+                description = stringResource(R.string.read_menu_top_bar_liquid_glass_buttons_summary),
+                checked = preferences.readMenuTopBarLiquidGlassButtons,
+                onCheckedChange = {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuTopBarLiquidGlassButtons(
+                                it
+                            )
+                        )
+                    )
+                },
+            )
+        }
     }
+}
+
+private fun countCustomIcons(value: String): Int {
+    if (value.isBlank()) return 0
+    return GSON.fromJsonObject<Map<String, String>>(value)
+        .getOrNull()
+        ?.count { it.value.isNotBlank() }
+        ?: 0
 }
 
 // ========== Icon Sheet (Bottom Bar) ==========

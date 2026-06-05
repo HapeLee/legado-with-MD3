@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import io.legado.app.constant.PreferKey
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -80,7 +82,12 @@ data class ReadPreferences(
     val readMenuIconRowCount: Int = 1,
     val readMenuBottomCornerRadius: Int = 0,
     val readMenuFloatingBottomBar: Boolean = false,
-    val readMenuLiquidGlass: Boolean = false,
+    val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
+    val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
+    val readMenuTopBarLiquidGlassButtons: Boolean = false,
+    val readMenuBottomBarLiquidGlassButtons: Boolean = false,
+    val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
+    val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuBlurRadius: Int = 24,
     val readMenuBlurAlpha: Int = 60,
     val readMenuLensRadius: Float = 24f,
@@ -287,8 +294,23 @@ class ReadSettingsRepository(
     suspend fun setReadMenuFloatingBottomBar(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.readMenuFloatingBottomBar, value)
 
-    suspend fun setReadMenuLiquidGlass(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.readMenuLiquidGlass, value)
+    suspend fun setReadMenuTopBarBlurMode(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuTopBarBlurMode, value.coerceIn(0, 2))
+
+    suspend fun setReadMenuBottomBarBlurMode(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuBottomBarBlurMode, value.coerceIn(0, 2))
+
+    suspend fun setReadMenuTopBarLiquidGlassButtons(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuTopBarLiquidGlassButtons, value)
+
+    suspend fun setReadMenuBottomBarLiquidGlassButtons(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuBottomBarLiquidGlassButtons, value)
+
+    suspend fun setReadMenuTopBarBlurStyle(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuTopBarBlurStyle, value.coerceIn(0, 1))
+
+    suspend fun setReadMenuBottomBarBlurStyle(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuBottomBarBlurStyle, value.coerceIn(0, 1))
 
     suspend fun setReadMenuBlurRadius(value: Int) =
         settingsRepository.putInt(PreferKey.readMenuBlurRadius, value.coerceIn(0, 32))
@@ -397,7 +419,16 @@ class ReadSettingsRepository(
             readMenuIconRowCount = this[Keys.ReadMenuIconRowCount] ?: 1,
             readMenuBottomCornerRadius = this[Keys.ReadMenuBottomCornerRadius] ?: 0,
             readMenuFloatingBottomBar = this[Keys.ReadMenuFloatingBottomBar] ?: false,
-            readMenuLiquidGlass = this[Keys.ReadMenuLiquidGlass] ?: false,
+            readMenuTopBarBlurMode = this[Keys.ReadMenuTopBarBlurMode] ?: ReadMenuBlurMode.None,
+            readMenuBottomBarBlurMode = this[Keys.ReadMenuBottomBarBlurMode]
+                ?: ReadMenuBlurMode.None,
+            readMenuTopBarLiquidGlassButtons = this[Keys.ReadMenuTopBarLiquidGlassButtons] ?: false,
+            readMenuBottomBarLiquidGlassButtons = this[Keys.ReadMenuBottomBarLiquidGlassButtons]
+                ?: false,
+            readMenuTopBarBlurStyle = this[Keys.ReadMenuTopBarBlurStyle]
+                ?: ReadMenuBlurStyle.Progressive,
+            readMenuBottomBarBlurStyle = this[Keys.ReadMenuBottomBarBlurStyle]
+                ?: ReadMenuBlurStyle.Solid,
             readMenuBlurRadius = this[Keys.ReadMenuBlurRadius] ?: 24,
             readMenuBlurAlpha = this[Keys.ReadMenuBlurAlpha] ?: 60,
             readMenuLensRadius = this[Keys.ReadMenuLensRadius] ?: 24f,
@@ -478,7 +509,14 @@ class ReadSettingsRepository(
         val ReadMenuIconRowCount = intPreferencesKey(PreferKey.readMenuIconRowCount)
         val ReadMenuBottomCornerRadius = intPreferencesKey(PreferKey.readMenuBottomCornerRadius)
         val ReadMenuFloatingBottomBar = booleanPreferencesKey(PreferKey.readMenuFloatingBottomBar)
-        val ReadMenuLiquidGlass = booleanPreferencesKey(PreferKey.readMenuLiquidGlass)
+        val ReadMenuTopBarBlurMode = intPreferencesKey(PreferKey.readMenuTopBarBlurMode)
+        val ReadMenuBottomBarBlurMode = intPreferencesKey(PreferKey.readMenuBottomBarBlurMode)
+        val ReadMenuTopBarLiquidGlassButtons =
+            booleanPreferencesKey(PreferKey.readMenuTopBarLiquidGlassButtons)
+        val ReadMenuBottomBarLiquidGlassButtons =
+            booleanPreferencesKey(PreferKey.readMenuBottomBarLiquidGlassButtons)
+        val ReadMenuTopBarBlurStyle = intPreferencesKey(PreferKey.readMenuTopBarBlurStyle)
+        val ReadMenuBottomBarBlurStyle = intPreferencesKey(PreferKey.readMenuBottomBarBlurStyle)
         val ReadMenuBlurRadius = intPreferencesKey(PreferKey.readMenuBlurRadius)
         val ReadMenuBlurAlpha = intPreferencesKey(PreferKey.readMenuBlurAlpha)
         val ReadMenuLensRadius = floatPreferencesKey(PreferKey.readMenuLensRadius)

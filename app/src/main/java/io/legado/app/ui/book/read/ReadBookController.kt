@@ -222,6 +222,9 @@ class ReadBookController(
     fun onRefsReady(newRefs: ReadBookViewRefs) {
         if (refs === newRefs) return
         refs = newRefs
+        newRefs.readView.autoPager.onStop = {
+            viewModel.setAutoPage(false)
+        }
         newRefs.navigationBar.doOnAttach {
             newRefs.navigationBar.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -348,7 +351,7 @@ class ReadBookController(
                 ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)
             )
 
-            isAutoPage -> viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AutoRead))
+            isAutoPage -> viewModel.onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
             state.isShowingSearchResult -> viewModel.onIntent(ReadBookIntent.ShowSearchMenu)
             else -> viewModel.onIntent(ReadBookIntent.ShowMenu)
         }
@@ -1014,6 +1017,7 @@ class ReadBookController(
             stopAutoPage()
         } else {
             refs?.readView?.autoPager?.start()
+            viewModel.setAutoPage(true)
             onScreenOffTimerStart?.invoke()
         }
     }
@@ -1021,6 +1025,7 @@ class ReadBookController(
     private fun stopAutoPage() {
         if (isAutoPage) {
             refs?.readView?.autoPager?.stop()
+            viewModel.setAutoPage(false)
             viewModel.onIntent(ReadBookIntent.DismissSheet)
             onScreenOffTimerStart?.invoke()
         }

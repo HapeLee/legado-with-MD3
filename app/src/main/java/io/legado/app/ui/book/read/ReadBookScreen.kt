@@ -8,7 +8,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.info.ChangeSourceSheet
 import io.legado.app.ui.book.read.sheet.AppLogSheet
-import io.legado.app.ui.book.read.sheet.AutoReadSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
@@ -26,8 +25,8 @@ import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.RegexColorConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
-import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
+import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.flow.collectLatest
@@ -140,17 +139,6 @@ fun ReadBookScreen(
             ShadowSetSheet(
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
                 onIntent = onIntent,
-            )
-        }
-
-        is ReadBookSheet.AutoRead -> {
-            AutoReadSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-                onOpenChapterList = { onIntent(ReadBookIntent.OpenChapterList) },
-                onShowMainMenu = { onIntent(ReadBookIntent.ShowMenu) },
-                onStopAutoPage = { onIntent(ReadBookIntent.StopAutoPage) },
-                onShowPageAnimConfig = { onIntent(ReadBookIntent.ShowPageAnimConfig) },
             )
         }
 

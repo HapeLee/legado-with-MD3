@@ -25,6 +25,7 @@ class AutoPager(private val readView: ReadView) : Runnable {
     private var lastTimeMillis = 0L
     private var canvasRecorder = CanvasRecorderFactory.create()
     private val paint by lazy { Paint() }
+    var onStop: (() -> Unit)? = null
 
 
     fun start() {
@@ -52,6 +53,7 @@ class AutoPager(private val readView: ReadView) : Runnable {
         readView.invalidate()
         reset()
         canvasRecorder.recycle()
+        onStop?.invoke()
     }
 
     fun pause() {

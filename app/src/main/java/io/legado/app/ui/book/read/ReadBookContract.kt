@@ -3,6 +3,8 @@ package io.legado.app.ui.book.read
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
@@ -31,6 +33,7 @@ sealed interface ReadBookMenuRoute {
     data object ReadStyle : ReadBookMenuRoute
     data object TextTitle : ReadBookMenuRoute
     data object ReadAloud : ReadBookMenuRoute
+    data object AutoRead : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
     data class Bookmark(val bookmark: io.legado.app.data.entities.Bookmark) : ReadBookMenuRoute
 }
@@ -108,7 +111,12 @@ data class ReadMenuConfig(
     val readMenuBlurAlpha: Int = 60,
     val readMenuBlurRadius: Int = 24,
     val readMenuLensRadius: Float = 24f,
-    val readMenuLiquidGlass: Boolean = false,
+    val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
+    val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
+    val readMenuTopBarLiquidGlassButtons: Boolean = false,
+    val readMenuBottomBarLiquidGlassButtons: Boolean = false,
+    val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
+    val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuIconStyle: Int = 0,
     val readMenuIconShowText: Boolean = true,
     val titleBarCustomIcons: Map<String, String> = emptyMap(),
@@ -424,7 +432,6 @@ sealed interface ReadBookSheet {
     data class ChangeChapterSource(val chapterIndex: Int, val chapterTitle: String) : ReadBookSheet
     data object ChangeBookSource : ReadBookSheet
     data object ShadowSet : ReadBookSheet
-    data object AutoRead : ReadBookSheet
     data object UnderlineConfig : ReadBookSheet
     data object FontSelect : ReadBookSheet
     data object RegexColorConfig : ReadBookSheet
@@ -563,7 +570,29 @@ sealed interface ConfigUpdate {
     data class MenuIconRowCount(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuBottomCornerRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class FloatingBottomBar(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuLiquidGlass(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuTopBarBlurMode(val value: Int) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
+
+    data class MenuBottomBarBlurMode(val value: Int) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
+
+    data class MenuTopBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
+
+    data class MenuBottomBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
+
+    data class MenuTopBarBlurSelection(val mode: Int, val style: Int) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
+
+    data class MenuBottomBarBlurStyle(val value: Int) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
     data class MenuBlurRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuBlurAlpha(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class MenuLensRadius(val value: Float) : ConfigUpdate { override val codes = emptyList<Int>() }

@@ -301,7 +301,12 @@ object PreferKey {
     const val readMenuIconRowCount = "readMenuIconRowCount"
     const val readMenuBottomCornerRadius = "readMenuBottomCornerRadius"
     const val readMenuFloatingBottomBar = "readMenuFloatingBottomBar"
-    const val readMenuLiquidGlass = "readMenuLiquidGlass"
+    const val readMenuTopBarBlurMode = "readMenuTopBarBlurMode"
+    const val readMenuBottomBarBlurMode = "readMenuBottomBarBlurMode"
+    const val readMenuTopBarLiquidGlassButtons = "readMenuTopBarLiquidGlassButtons"
+    const val readMenuBottomBarLiquidGlassButtons = "readMenuBottomBarLiquidGlassButtons"
+    const val readMenuTopBarBlurStyle = "readMenuTopBarBlurStyle"
+    const val readMenuBottomBarBlurStyle = "readMenuBottomBarBlurStyle"
     const val readMenuBlurRadius = "readMenuBlurRadius"
     const val readMenuBlurAlpha = "readMenuBlurAlpha"
     const val readMenuLensRadius = "readMenuLensRadius"
@@ -360,4 +365,15 @@ object PreferKey {
     const val homepageModuleHidden = "homepageModuleHidden"
     const val homepageLayoutMode = "homepageLayoutMode"
     const val navIconHome = "navIconHome"
+}
+
+object ReadMenuBlurMode {
+    const val None = 0
+    const val LiquidGlass = 1
+    const val Haze = 2
+}
+
+object ReadMenuBlurStyle {
+    const val Solid = 0
+    const val Progressive = 1
 }
