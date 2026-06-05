@@ -169,7 +169,9 @@ class WebService : BaseService() {
                 postEvent(EventBus.WEB_SERVICE, hostAddress)
                 FlowEventBus.post(EventBus.WEB_SERVICE, hostAddress)
                 startForegroundNotification()
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                ktorServer?.stop()
+                ktorServer = null
                 toastOnUi(e.localizedMessage ?: "")
                 e.printOnDebug()
                 stopSelf()

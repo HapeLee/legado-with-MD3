@@ -165,8 +165,8 @@ class KtorServer(private val port: Int) {
     }
 
     fun stop() {
-        server?.stop(1000, 1000)
-        wsServer?.stop(1000, 1000)
+        server?.stop(0, 0)
+        wsServer?.stop(0, 0)
     }
 
     private suspend fun PipelineContext<Unit, ApplicationCall>.handlePost(
