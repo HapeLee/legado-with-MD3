@@ -167,6 +167,14 @@ fun ExploreShowScreen(
         }
     }
 
+    // Auto-load next page when filter removes all books on the current page
+    // but the ViewModel hasn't reached the end of data yet.
+    LaunchedEffect(books.isEmpty(), state.isLoading, state.isEnd, state.books.size) {
+        if (books.isEmpty() && !state.isLoading && !state.isEnd && state.books.isNotEmpty()) {
+            viewModel.onIntent(ExploreShowIntent.ForceLoadNext)
+        }
+    }
+
     LaunchedEffect(isGridMode) {
         if (isGridMode) {
             if (listState.firstVisibleItemIndex > 0) {
