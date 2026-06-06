@@ -1,12 +1,13 @@
 package io.legado.app.ui.book.read
 
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.lifecycle.viewModelScope
-import io.legado.app.R
 import io.legado.app.BuildConfig
+import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
@@ -19,9 +20,9 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
@@ -133,6 +134,7 @@ class ReadBookViewModel(
     init {
         AppConfig.detectClickArea()
         ReadBook.register(this)
+        refreshButtonConfigs()
         collectReadPreferences()
         collectReadAloudPreferences()
         collectEventBus()
@@ -497,6 +499,8 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenTitleBarCustomIconPicker -> {
                 _effects.tryEmit(ReadBookEffect.OpenTitleBarCustomIconPicker(intent.id))
             }
+            is ReadBookIntent.SaveMenuButtonConfig -> saveMenuButtonConfig(intent.items)
+            is ReadBookIntent.SaveTitleBarButtonConfig -> saveTitleBarButtonConfig(intent.items)
 
             is ReadBookIntent.KeepLightChanged -> _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
             is ReadBookIntent.TextSelectAbleChanged -> _effects.tryEmit(
@@ -688,8 +692,6 @@ class ReadBookViewModel(
                     postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
                 }
             }
-            is ReadBookIntent.RefreshToolButtons -> _effects.tryEmit(ReadBookEffect.Recreate)
-            is ReadBookIntent.RefreshTitleBarIcons -> _effects.tryEmit(ReadBookEffect.Recreate)
             is ReadBookIntent.OpenBgTextConfig -> {
                 ReadBookConfig.styleSelect = intent.index
                 viewModelScope.launch {
@@ -1252,8 +1254,107 @@ class ReadBookViewModel(
                 readMenuIconShowText = ReadBookConfig.readMenuIconShowText,
                 titleBarCustomIcons = ReadBookConfig.titleBarCustomIcons.toImmutableMap(),
                 readMenuCustomIcons = ReadBookConfig.readMenuCustomIcons.toImmutableMap(),
+                titleBarButtons = current.menuConfig.titleBarButtons,
+                bottomBarButtons = current.menuConfig.bottomBarButtons,
             ),
         )
+    }
+
+    private fun refreshButtonConfigs() {
+        val titleBarButtons = loadButtonConfig(TITLE_BAR_ICON_PREFS, TITLE_BAR_ICON_KEY)
+        val bottomBarButtons = loadButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY)
+        _uiState.update {
+            it.copy(
+                menuConfig = it.menuConfig.copy(
+                    titleBarButtons = titleBarButtons.toImmutableList(),
+                    bottomBarButtons = bottomBarButtons.toImmutableList(),
+                ),
+            )
+        }
+    }
+
+    private fun saveTitleBarButtonConfig(items: List<ReadBookButtonConfigItem>) {
+        val normalized = normalizeButtonConfig(items)
+        saveButtonConfig(TITLE_BAR_ICON_PREFS, TITLE_BAR_ICON_KEY, normalized)
+        _uiState.update {
+            it.copy(
+                menuConfig = it.menuConfig.copy(
+                    titleBarButtons = normalized.toImmutableList(),
+                ),
+            )
+        }
+    }
+
+    private fun saveMenuButtonConfig(items: List<ReadBookButtonConfigItem>) {
+        val normalized = normalizeButtonConfig(items)
+        saveButtonConfig(TOOL_BUTTON_PREFS, TOOL_BUTTON_KEY, normalized)
+        _uiState.update {
+            it.copy(
+                menuConfig = it.menuConfig.copy(
+                    bottomBarButtons = normalized.toImmutableList(),
+                ),
+            )
+        }
+    }
+
+    private fun loadButtonConfig(
+        preferenceName: String,
+        key: String,
+    ): List<ReadBookButtonConfigItem> {
+        val prefs = context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+        val raw = prefs.getString(key, null)
+            ?.split(";")
+            ?.mapNotNull { token ->
+                val parts = token.split(",")
+                val id = parts.getOrNull(0)?.takeIf { it in ReadBookButtonIds }
+                val enabled = parts.getOrNull(1)?.toBooleanStrictOrNull()
+                if (id != null && enabled != null) {
+                    ReadBookButtonConfigItem(id, enabled)
+                } else {
+                    null
+                }
+            }
+            ?: emptyList()
+
+        return if (raw.isEmpty()) {
+            ReadBookButtonIds.mapIndexed { index, id ->
+                ReadBookButtonConfigItem(id, index < DEFAULT_ENABLED_BUTTON_COUNT)
+            }
+        } else {
+            normalizeButtonConfig(raw)
+        }
+    }
+
+    private fun saveButtonConfig(
+        preferenceName: String,
+        key: String,
+        items: List<ReadBookButtonConfigItem>,
+    ) {
+        val value = items.joinToString(";") { "${it.id},${it.enabled}" }
+        context.getSharedPreferences(preferenceName, Context.MODE_PRIVATE)
+            .edit()
+            .putString(key, value)
+            .apply()
+    }
+
+    private fun normalizeButtonConfig(
+        items: List<ReadBookButtonConfigItem>,
+    ): List<ReadBookButtonConfigItem> {
+        val seen = mutableSetOf<String>()
+        val normalized = items.mapNotNull { item ->
+            val id = item.id
+            if (id in ReadBookButtonIds && seen.add(id)) {
+                ReadBookButtonConfigItem(id, item.enabled)
+            } else {
+                null
+            }
+        }.toMutableList()
+        ReadBookButtonIds.forEach { id ->
+            if (seen.add(id)) {
+                normalized.add(ReadBookButtonConfigItem(id, true))
+            }
+        }
+        return normalized
     }
 
     private fun calculateSeekProgress(): Int {
@@ -2209,7 +2310,9 @@ class ReadBookViewModel(
             is ConfigUpdate.MenuCustomIcon -> {
                 val icons = ReadBookConfig.readMenuCustomIcons.toMutableMap()
                 if (update.path.isBlank()) {
-                    icons.remove(update.id)
+                    icons.remove(update.id)?.let { path ->
+                        runCatching { java.io.File(path).delete() }
+                    }
                 } else {
                     icons[update.id] = update.path
                 }
@@ -2224,7 +2327,9 @@ class ReadBookViewModel(
             is ConfigUpdate.TitleBarCustomIcon -> {
                 val icons = ReadBookConfig.titleBarCustomIcons.toMutableMap()
                 if (update.path.isBlank()) {
-                    icons.remove(update.id)
+                    icons.remove(update.id)?.let { path ->
+                        runCatching { java.io.File(path).delete() }
+                    }
                 } else {
                     icons[update.id] = update.path
                 }
@@ -2699,3 +2804,9 @@ class ReadBookViewModel(
         }
     }
 }
+
+private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
+private const val TITLE_BAR_ICON_KEY = "icons"
+private const val TOOL_BUTTON_PREFS = "tool_button_config"
+private const val TOOL_BUTTON_KEY = "tool_buttons"
+private const val DEFAULT_ENABLED_BUTTON_COUNT = 5

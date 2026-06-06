@@ -90,7 +90,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -479,6 +478,7 @@ private fun ReadBookMenuSurface(
                                     onIntent(ReadBookIntent.ToggleDayNight)
                                 },
                                 readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
+                                bottomBarButtons = state.menuConfig.bottomBarButtons,
                                 onIntent = onIntent,
                             )
                         }
@@ -1034,7 +1034,11 @@ private fun FloatingIconRow(
     backdrop: Backdrop?,
 ) {
     val context = LocalContext.current
-    val titleBarIcons = remember(state.isReadAloudRunning, state.isAutoPage) {
+    val titleBarIcons = remember(
+        state.menuConfig.titleBarButtons,
+        state.isReadAloudRunning,
+        state.isAutoPage,
+    ) {
         loadFloatingIcons(context, state, onIntent)
     }
 
@@ -1402,7 +1406,8 @@ private fun MenuBottomBar(
         // Tool buttons
         val toolButtons = remember(
             context,
-            state.configUpdateTrigger,
+            state.menuConfig.bottomBarButtons,
+            state.menuConfig.readMenuCustomIcons,
             state.isReadAloudRunning,
             state.isAutoPage
         ) {
@@ -1976,30 +1981,12 @@ private fun loadToolButtons(
         },
     )
 
-    val prefs = context.getSharedPreferences("tool_button_config", Context.MODE_PRIVATE)
-    val str = prefs.getString("tool_buttons", null)
-    val savedList = str?.split(";")?.mapNotNull {
-        val parts = it.split(",")
-        if (parts.size == 2) parts[0] to parts[1].toBoolean() else null
-    } ?: emptyList()
-
     val allMap = allButtons.associateBy { it.id }
-
-    return if (savedList.isNotEmpty()) {
-        val result = mutableListOf<ToolButtonDef>()
-        savedList.forEach { (id, enabled) ->
-            if (enabled) allMap[id]?.let { result.add(it) }
-        }
-        // Add any buttons not in saved config
-        allButtons.forEach { btn ->
-            if (savedList.none { it.first == btn.id }) {
-                result.add(btn)
-            }
-        }
-        result
-    } else {
-        allButtons.take(5)
-    }
+    return state.menuConfig.bottomBarButtons
+        .asSequence()
+        .filter { it.enabled }
+        .mapNotNull { allMap[it.id] }
+        .toList()
 }
 
 private data class ReadMenuColors(
@@ -2283,26 +2270,7 @@ private fun loadFloatingIcons(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
 ): List<TitleBarIconDef> {
-    val prefs = context.getSharedPreferences("title_bar_icons", Context.MODE_PRIVATE)
-    val str = prefs.getString("icons", null)
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
-
-    val savedList = if (str.isNullOrBlank()) {
-        // Default: first 5 enabled
-        readMenuButtonInfos(context).mapIndexed { index, info ->
-            Triple(info.id, index < 5, info)
-        }
-    } else {
-        str.split(";").mapNotNull {
-            val parts = it.split(",")
-            if (parts.size == 2) {
-                val id = parts[0]
-                val enabled = parts[1].toBoolean()
-                val info = infoMap[id]
-                if (info != null) Triple(id, enabled, info) else null
-            } else null
-        }
-    }
 
     val actionMap: Map<String, () -> Unit> = mapOf(
         "search" to { onIntent(ReadBookIntent.OpenSearch(null)) },
@@ -2338,9 +2306,12 @@ private fun loadFloatingIcons(
         if (state.isAutoPage) add("auto_page")
     }
 
-    return savedList
-        .filter { (_, enabled, _) -> enabled }
-        .map { (id, _, info) ->
+    return state.menuConfig.titleBarButtons
+        .asSequence()
+        .filter { it.enabled }
+        .mapNotNull { item ->
+            val id = item.id
+            val info = infoMap[id] ?: return@mapNotNull null
             TitleBarIconDef(
                 id = id,
                 icon = info.icon,
@@ -2349,4 +2320,5 @@ private fun loadFloatingIcons(
                 onClick = actionMap[id] ?: {},
             )
         }
+        .toList()
 }

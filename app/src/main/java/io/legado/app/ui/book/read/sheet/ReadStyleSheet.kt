@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
@@ -39,6 +40,7 @@ fun ReadStyleSheet(
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     readMenuCustomIcons: Map<String, String> = emptyMap(),
+    bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var showTextTitle by remember { mutableStateOf(false) }
@@ -59,6 +61,7 @@ fun ReadStyleSheet(
             onOpenFontSelect = onOpenFontSelect,
             onToggleDayNight = onToggleDayNight,
             readMenuCustomIcons = readMenuCustomIcons,
+            bottomBarButtons = bottomBarButtons,
             onIntent = onIntent,
         )
 
@@ -83,6 +86,7 @@ fun ReadStyleContent(
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     readMenuCustomIcons: Map<String, String> = emptyMap(),
+    bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -122,6 +126,7 @@ fun ReadStyleContent(
 
                 1 -> SystemMenuPage(
                     customIcons = readMenuCustomIcons,
+                    bottomBarButtons = bottomBarButtons,
                     onIntent = onIntent,
                 )
                 2 -> HeaderFooterPage(

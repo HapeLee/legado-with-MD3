@@ -3,11 +3,10 @@ package io.legado.app.ui.book.read
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -26,8 +25,8 @@ import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
-import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
+import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.RegexColorConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
@@ -172,16 +171,18 @@ fun ReadBookScreen(
 
         is ReadBookSheet.ToolButtonConfig -> {
             ToolButtonConfigSheet(
+                items = state.menuConfig.bottomBarButtons,
+                customIcons = state.menuConfig.readMenuCustomIcons,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onSaved = { onIntent(ReadBookIntent.RefreshToolButtons) },
+                onIntent = onIntent,
             )
         }
 
         is ReadBookSheet.TitleBarIconConfig -> {
             TitleBarIconSheet(
+                items = state.menuConfig.titleBarButtons,
                 customIcons = state.menuConfig.titleBarCustomIcons,
                 onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onSaved = { onIntent(ReadBookIntent.RefreshTitleBarIcons) },
                 onIntent = onIntent,
             )
         }

@@ -2,33 +2,21 @@ package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FindReplace
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Search
@@ -36,12 +24,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,17 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
@@ -69,13 +49,10 @@ import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
-import io.legado.app.ui.theme.LegadoTheme
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
-import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
@@ -87,9 +64,6 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.io.File
 
 private const val COLOR_BG = 5
 private const val COLOR_MENU_ACCENT = 6
@@ -103,6 +77,7 @@ private const val COLOR_BORDER_NIGHT = 12
 @Composable
 internal fun SystemMenuPage(
     customIcons: Map<String, String>,
+    bottomBarButtons: List<ReadBookButtonConfigItem>,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -198,16 +173,11 @@ internal fun SystemMenuPage(
     }
 
     if (showIconSheet) {
-        MenuCustomIconSheet(
+        BottomBarIconSheet(
+            items = bottomBarButtons,
             customIcons = customIcons,
-            onSelectIcon = { id ->
-                onIntent(ReadBookIntent.OpenMenuCustomIconPicker(id))
-            },
-            onClearIcon = { id ->
-                customIcons[id]?.let { File(it).delete() }
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuCustomIcon(id, "")))
-            },
             onDismissRequest = { showIconSheet = false },
+            onIntent = onIntent,
         )
     }
 }
@@ -510,7 +480,7 @@ private fun BottomBarTab(
             },
         )
         TinyClickableSettingItem(
-            title = stringResource(R.string.read_menu_custom_icons),
+            title = stringResource(R.string.config_btn),
             description = if (customIcons.isEmpty()) {
                 stringResource(R.string.read_menu_custom_icons_none)
             } else {
@@ -709,144 +679,6 @@ private fun countCustomIcons(value: String): Int {
         ?: 0
 }
 
-// ========== Icon Sheet (Bottom Bar) ==========
-
-@Composable
-private fun MenuCustomIconSheet(
-    customIcons: Map<String, String>,
-    onSelectIcon: (String) -> Unit,
-    onClearIcon: (String) -> Unit,
-    onDismissRequest: () -> Unit,
-) {
-    val context = LocalContext.current
-    val prefs = remember {
-        context.getSharedPreferences("tool_button_config", Context.MODE_PRIVATE)
-    }
-    var items by remember {
-        mutableStateOf(loadMenuCustomIconItems(prefs, context))
-    }
-
-    val lazyListState = rememberLazyListState()
-    val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        items = items.toMutableList().apply {
-            add(to.index, removeAt(from.index))
-        }
-    }
-
-    AppModalBottomSheet(
-        show = true,
-        onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.read_menu_custom_icons),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-        ) {
-            LazyColumn(
-                state = lazyListState,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.weight(1f, fill = false),
-            ) {
-                items(items, key = { it.id }) { item ->
-                    ReorderableItem(reorderableState, key = item.id) { isDragging ->
-                        val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
-                        Surface(shadowElevation = elevation) {
-                            MenuCustomIconItem(
-                                item = item,
-                                customIcon = customIcons[item.id],
-                                onSelectIcon = { onSelectIcon(item.id) },
-                                onClearIcon = { onClearIcon(item.id) },
-                                dragHandleModifier = Modifier.draggableHandle(),
-                            )
-                        }
-                    }
-                }
-            }
-
-            ConfirmDismissButtonsRow(
-                onDismiss = onDismissRequest,
-                onConfirm = {
-                    saveMenuCustomIconOrder(prefs, items)
-                    onDismissRequest()
-                },
-                dismissText = stringResource(R.string.cancel),
-                confirmText = stringResource(R.string.action_save),
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun MenuCustomIconItem(
-    item: ReadMenuButtonInfo,
-    customIcon: String?,
-    onSelectIcon: () -> Unit,
-    onClearIcon: () -> Unit,
-    dragHandleModifier: Modifier = Modifier,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(40.dp),
-        ) {
-            if (!customIcon.isNullOrBlank()) {
-                AsyncImage(
-                    model = customIcon,
-                    contentDescription = item.label,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = item.label,
-                    tint = LegadoTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        }
-        Text(
-            text = item.label,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 12.dp),
-        )
-        if (!customIcon.isNullOrBlank()) {
-            IconButton(
-                onClick = onClearIcon,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.delete))
-            }
-        } else {
-            SmallTonalButton(
-                onClick = onSelectIcon,
-                icon = Icons.Default.Add,
-                modifier = Modifier.size(36.dp),
-            )
-        }
-        IconButton(
-            modifier = dragHandleModifier.size(36.dp),
-            onClick = {},
-        ) {
-            Icon(
-                Icons.Default.Menu,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
-}
-
 // ========== Helpers ==========
 
 @Composable
@@ -879,42 +711,3 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("replace_badge", Icons.Default.AutoAwesome, context.getString(R.string.replace_purify_badge)),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
 )
-
-private fun loadMenuCustomIconItems(
-    prefs: android.content.SharedPreferences,
-    context: Context,
-): List<ReadMenuButtonInfo> {
-    val str = prefs.getString("tool_buttons", null)
-    val allInfos = readMenuButtonInfos(context).associateBy { it.id }
-
-    if (str.isNullOrBlank()) {
-        return allInfos.values.toList()
-    }
-
-    val savedOrder = str.split(";").mapNotNull {
-        val parts = it.split(",")
-        parts.getOrNull(0)
-    }
-    val ordered = savedOrder.mapNotNull { allInfos[it] }
-    val remaining = allInfos.values.filter { it.id !in savedOrder.toSet() }
-    return ordered + remaining
-}
-
-private fun saveMenuCustomIconOrder(
-    prefs: android.content.SharedPreferences,
-    list: List<ReadMenuButtonInfo>,
-) {
-    // Preserve enabled state from existing config
-    val existing = prefs.getString("tool_buttons", null)
-    val enabledMap = if (!existing.isNullOrBlank()) {
-        existing.split(";").associate {
-            val parts = it.split(",")
-            parts[0] to (parts.getOrNull(1)?.toBoolean() ?: true)
-        }
-    } else {
-        list.mapIndexed { index, item -> item.id to (index < 5) }.toMap()
-    }
-
-    val str = list.joinToString(";") { "${it.id},${enabledMap[it.id] ?: true}" }
-    prefs.edit().putString("tool_buttons", str).apply()
-}

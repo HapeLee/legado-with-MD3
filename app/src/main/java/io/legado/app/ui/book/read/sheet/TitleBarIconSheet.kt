@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,27 +15,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FindReplace
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SkipNext
-import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -54,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
+import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
@@ -62,26 +48,65 @@ import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.io.File
 
 @Composable
 fun TitleBarIconSheet(
+    items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
     onDismissRequest: () -> Unit,
-    onSaved: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
+    ButtonIconConfigSheet(
+        title = stringResource(R.string.title_bar_icons),
+        items = items,
+        customIcons = customIcons,
+        onDismissRequest = onDismissRequest,
+        onSaved = { onIntent(ReadBookIntent.SaveTitleBarButtonConfig(it)) },
+        onSelectIcon = { id -> onIntent(ReadBookIntent.OpenTitleBarCustomIconPicker(id)) },
+        onClearIcon = { id ->
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(id, "")))
+        },
+    )
+}
+
+@Composable
+internal fun BottomBarIconSheet(
+    items: List<ReadBookButtonConfigItem>,
+    customIcons: Map<String, String>,
+    onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
+) {
+    ButtonIconConfigSheet(
+        title = stringResource(R.string.config_btn),
+        items = items,
+        customIcons = customIcons,
+        onDismissRequest = onDismissRequest,
+        onSaved = { onIntent(ReadBookIntent.SaveMenuButtonConfig(it)) },
+        onSelectIcon = { id -> onIntent(ReadBookIntent.OpenMenuCustomIconPicker(id)) },
+        onClearIcon = { id ->
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuCustomIcon(id, "")))
+        },
+    )
+}
+
+@Composable
+private fun ButtonIconConfigSheet(
+    title: String,
+    items: List<ReadBookButtonConfigItem>,
+    customIcons: Map<String, String>,
+    onDismissRequest: () -> Unit,
+    onSaved: (List<ReadBookButtonConfigItem>) -> Unit,
+    onSelectIcon: (String) -> Unit,
+    onClearIcon: (String) -> Unit,
+) {
     val context = LocalContext.current
-    val prefs = remember {
-        context.getSharedPreferences("title_bar_icons", Context.MODE_PRIVATE)
-    }
-    var items by remember {
-        mutableStateOf(loadTitleBarIconConfig(prefs, context))
+    var draftItems by remember(items) {
+        mutableStateOf(buildButtonIconEntries(items, context))
     }
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        items = items.toMutableList().apply {
+        draftItems = draftItems.toMutableList().apply {
             add(to.index, removeAt(from.index))
         }
     }
@@ -89,7 +114,7 @@ fun TitleBarIconSheet(
     AppModalBottomSheet(
         show = true,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.title_bar_icons),
+        title = title,
     ) {
         Column(
             modifier = Modifier
@@ -101,7 +126,7 @@ fun TitleBarIconSheet(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.weight(1f, fill = false),
             ) {
-                items(items, key = { it.id }) { item ->
+                items(draftItems, key = { it.id }) { item ->
                     ReorderableItem(reorderableState, key = item.id) { isDragging ->
                         val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                         NormalCard(
@@ -113,22 +138,10 @@ fun TitleBarIconSheet(
                                 item = item,
                                 customIcon = customIcons[item.id],
                                 onToggleEnabled = {
-                                    items = items.toMutableList().also { list ->
-                                        val index = list.indexOfFirst { it.id == item.id }
-                                        list[index] = item.copy(enabled = !item.enabled)
-                                        if (!item.enabled) {
-                                            val moved = list.removeAt(index)
-                                            list.add(moved)
-                                        }
-                                    }
+                                    draftItems = draftItems.toggleButtonEnabled(item.id)
                                 },
-                                onSelectIcon = {
-                                    onIntent(ReadBookIntent.OpenTitleBarCustomIconPicker(item.id))
-                                },
-                                onClearIcon = {
-                                    customIcons[item.id]?.let { File(it).delete() }
-                                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarCustomIcon(item.id, "")))
-                                },
+                                onSelectIcon = { onSelectIcon(item.id) },
+                                onClearIcon = { onClearIcon(item.id) },
                                 dragHandleModifier = Modifier.draggableHandle(),
                             )
                         }
@@ -139,8 +152,7 @@ fun TitleBarIconSheet(
             ConfirmDismissButtonsRow(
                 onDismiss = onDismissRequest,
                 onConfirm = {
-                    saveTitleBarIconConfig(prefs, items)
-                    onSaved()
+                    onSaved(draftItems.map { ReadBookButtonConfigItem(it.id, it.enabled) })
                     onDismissRequest()
                 },
                 dismissText = stringResource(R.string.cancel),
@@ -153,14 +165,15 @@ fun TitleBarIconSheet(
 
 @Composable
 private fun TitleBarIconItem(
-    item: TitleBarIconEntry,
+    item: ButtonIconEntry,
     customIcon: String?,
     onToggleEnabled: () -> Unit,
     onSelectIcon: () -> Unit,
     onClearIcon: () -> Unit,
     dragHandleModifier: Modifier = Modifier,
 ) {
-    val (iconRes, name) = item.info
+    val icon = item.icon
+    val name = item.label
     val alpha = if (item.enabled) 1f else 0.38f
 
     Row(
@@ -183,7 +196,7 @@ private fun TitleBarIconItem(
                 )
             } else {
                 Icon(
-                    imageVector = iconRes,
+                    imageVector = icon,
                     contentDescription = name,
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
                     modifier = Modifier.size(24.dp),
@@ -259,78 +272,42 @@ private fun TitleBarIconItem(
     }
 }
 
-private data class TitleBarIconEntry(
+private data class ButtonIconEntry(
     val id: String,
     val enabled: Boolean,
-    val info: Pair<ImageVector, String>,
+    val icon: ImageVector,
+    val label: String,
 )
 
-private fun getAllTitleBarIconIds() = listOf(
-    "search",
-    "auto_page",
-    "catalog",
-    "read_aloud",
-    "setting",
-    "addBookmark",
-    "theme",
-    "prev_chapter",
-    "next_chapter",
-    "replace",
-    "replace_badge",
-    "translate",
-)
+private fun List<ButtonIconEntry>.toggleButtonEnabled(id: String): List<ButtonIconEntry> {
+    val index = indexOfFirst { it.id == id }
+    if (index < 0) return this
 
-private fun getTitleBarIconInfo(context: Context, id: String): Pair<ImageVector, String> {
-    return when (id) {
-        "search" -> Icons.Default.Search to context.getString(R.string.search_content)
-        "auto_page" -> Icons.Default.PlayArrow to context.getString(R.string.auto_next_page)
-        "catalog" -> Icons.AutoMirrored.Filled.List to context.getString(R.string.chapter_list)
-        "read_aloud" -> Icons.Default.RecordVoiceOver to context.getString(R.string.read_aloud)
-        "setting" -> Icons.Default.Settings to context.getString(R.string.setting)
-        "addBookmark" -> Icons.Default.Bookmark to context.getString(R.string.bookmark)
-        "theme" -> Icons.Default.Brightness6 to context.getString(R.string.day_night_switch)
-        "prev_chapter" -> Icons.Default.SkipPrevious to context.getString(R.string.previous_chapter)
-        "next_chapter" -> Icons.Default.SkipNext to context.getString(R.string.next_chapter)
-        "translate" -> Icons.Default.Translate to context.getString(R.string.translate)
-        "replace" -> Icons.Default.FindReplace to context.getString(R.string.replace_purify)
-        "replace_badge" -> Icons.Default.AutoAwesome to context.getString(R.string.replace_purify_badge)
-        else -> Icons.AutoMirrored.Filled.HelpOutline to id
-    }
-}
-
-private fun loadTitleBarIconConfig(
-    prefs: SharedPreferences,
-    context: Context,
-): List<TitleBarIconEntry> {
-    val str = prefs.getString("icons", null)
-
-    val rawList = if (str.isNullOrBlank()) {
-        getAllTitleBarIconIds().mapIndexed { index, id ->
-            Pair(id, index < 5)
-        }
+    val target = this[index]
+    val toggled = target.copy(enabled = !target.enabled)
+    val remaining = toMutableList().apply { removeAt(index) }
+    val insertIndex = if (toggled.enabled) {
+        remaining.indexOfLast { it.enabled } + 1
     } else {
-        val saved = str.split(";").mapNotNull {
-            val parts = it.split(",")
-            if (parts.size == 2) Pair(parts[0], parts[1].toBoolean()) else null
-        }.toMutableList()
-        val allIds = getAllTitleBarIconIds()
-        for (id in allIds) {
-            if (saved.none { it.first == id }) {
-                saved.add(Pair(id, true))
-            }
-        }
-        saved
+        remaining.indexOfFirst { !it.enabled }
+            .takeIf { it >= 0 }
+            ?: remaining.size
     }
 
-    return rawList.map { (id, enabled) ->
-        TitleBarIconEntry(id, enabled, getTitleBarIconInfo(context, id))
+    return remaining.apply {
+        add(insertIndex.coerceIn(0, size), toggled)
     }
 }
 
-private fun saveTitleBarIconConfig(
-    prefs: SharedPreferences,
-    list: List<TitleBarIconEntry>,
-) {
-    val str = list.joinToString(";") { "${it.id},${it.enabled}" }
-    prefs.edit().putString("icons", str).apply()
+private fun buildButtonIconEntries(
+    items: List<ReadBookButtonConfigItem>,
+    context: Context,
+): List<ButtonIconEntry> {
+    val infoMap = readMenuButtonInfos(context).associateBy { it.id }
+    return items.mapNotNull { item ->
+        val id = item.id
+        infoMap[id]?.let { info ->
+            ButtonIconEntry(id, item.enabled, info.icon, info.label)
+        }
+    }
 }

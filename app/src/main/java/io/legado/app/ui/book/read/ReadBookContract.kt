@@ -3,8 +3,6 @@ package io.legado.app.ui.book.read
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import kotlinx.collections.immutable.ImmutableMap
-import kotlinx.collections.immutable.persistentMapOf
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.entities.Book
@@ -15,7 +13,9 @@ import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.searchContent.SearchResult
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentMapOf
 
 @Stable
 data class ReadBookMenuState(
@@ -143,12 +143,35 @@ data class ReadMenuConfig(
     val readMenuIconShowText: Boolean = true,
     val titleBarCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
+    val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
+    val bottomBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
 )
 
 @Immutable
 data class ReadBookTtsEngineItem(
     val title: String,
     val value: String?,
+)
+
+@Immutable
+data class ReadBookButtonConfigItem(
+    val id: String,
+    val enabled: Boolean,
+)
+
+internal val ReadBookButtonIds = listOf(
+    "search",
+    "auto_page",
+    "catalog",
+    "read_aloud",
+    "setting",
+    "addBookmark",
+    "theme",
+    "prev_chapter",
+    "next_chapter",
+    "replace",
+    "replace_badge",
+    "translate",
 )
 
 sealed interface ReadBookIntent {
@@ -316,10 +339,8 @@ sealed interface ReadBookIntent {
     data class SaveTitleBarCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookIntent
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookIntent
-
-    // Tool buttons config saved — recreate to refresh toolbar
-    data object RefreshToolButtons : ReadBookIntent
-    data object RefreshTitleBarIcons : ReadBookIntent
+    data class SaveMenuButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
+    data class SaveTitleBarButtonConfig(val items: List<ReadBookButtonConfigItem>) : ReadBookIntent
 
     // BgTextConfig (needs Activity for DialogFragment)
     data class OpenBgTextConfig(val index: Int) : ReadBookIntent
