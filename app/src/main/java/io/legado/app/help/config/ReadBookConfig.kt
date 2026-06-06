@@ -259,6 +259,7 @@ object ReadBookConfig {
     private var titleBarCustomIconsValue =
         parseReadMenuCustomIcons(appCtx.getPrefString(PreferKey.titleBarCustomIcons))
     private var titleBarIconPositionValue = appCtx.getPrefInt(PreferKey.titleBarIconPosition)
+    private var showTitleBarIconsValue = appCtx.getPrefBoolean(PreferKey.showTitleBarIcons, true)
 
     fun syncPreferences(preferences: ReadPreferences) {
         readBodyToLhValue = preferences.readBodyToLh
@@ -299,6 +300,7 @@ object ReadBookConfig {
         readMenuCustomIconsValue = parseReadMenuCustomIcons(preferences.readMenuCustomIcons)
         titleBarCustomIconsValue = parseReadMenuCustomIcons(preferences.titleBarCustomIcons)
         titleBarIconPositionValue = preferences.titleBarIconPosition
+        showTitleBarIconsValue = preferences.showTitleBarIcons
     }
 
     var readMenuBgColor: Int
@@ -480,6 +482,12 @@ object ReadBookConfig {
         get() = titleBarIconPositionValue.coerceIn(0, 3)
         set(value) {
             titleBarIconPositionValue = value.coerceIn(0, 3)
+        }
+
+    var showTitleBarIcons: Boolean
+        get() = showTitleBarIconsValue
+        set(value) {
+            showTitleBarIconsValue = value
         }
 
     fun encodeReadMenuCustomIcons(value: Map<String, String>): String {

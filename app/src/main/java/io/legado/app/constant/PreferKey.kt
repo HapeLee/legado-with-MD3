@@ -316,6 +316,7 @@ object PreferKey {
     const val readMenuCustomIcons = "readMenuCustomIcons"
     const val titleBarCustomIcons = "titleBarCustomIcons"
     const val titleBarIconPosition = "titleBarIconPosition"
+    const val showTitleBarIcons = "showTitleBarIcons"
     const val disableReturnKey = "disableReturnKey"
     const val selectText = "selectText"
     //我在干什么

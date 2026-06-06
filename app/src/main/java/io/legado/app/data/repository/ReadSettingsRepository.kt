@@ -97,6 +97,7 @@ data class ReadPreferences(
     val readMenuCustomIcons: String = "",
     val titleBarCustomIcons: String = "",
     val titleBarIconPosition: Int = 0,
+    val showTitleBarIcons: Boolean = true,
     val chineseConverterType: Int = 0,
 )
 
@@ -339,6 +340,9 @@ class ReadSettingsRepository(
     suspend fun setTitleBarIconPosition(value: Int) =
         settingsRepository.putInt(PreferKey.titleBarIconPosition, value.coerceIn(0, 3))
 
+    suspend fun setShowTitleBarIcons(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.showTitleBarIcons, value)
+
     suspend fun setChineseConverterType(value: Int) =
         settingsRepository.putInt(PreferKey.chineseConverterType, value)
 
@@ -438,6 +442,7 @@ class ReadSettingsRepository(
             readMenuCustomIcons = this[Keys.ReadMenuCustomIcons] ?: "",
             titleBarCustomIcons = this[Keys.TitleBarCustomIcons] ?: "",
             titleBarIconPosition = this[Keys.TitleBarIconPosition] ?: 0,
+            showTitleBarIcons = this[Keys.ShowTitleBarIcons] ?: true,
             chineseConverterType = this[Keys.ChineseConverterType] ?: 0,
         )
     }
@@ -526,6 +531,7 @@ class ReadSettingsRepository(
         val ReadMenuCustomIcons = stringPreferencesKey(PreferKey.readMenuCustomIcons)
         val TitleBarCustomIcons = stringPreferencesKey(PreferKey.titleBarCustomIcons)
         val TitleBarIconPosition = intPreferencesKey(PreferKey.titleBarIconPosition)
+        val ShowTitleBarIcons = booleanPreferencesKey(PreferKey.showTitleBarIcons)
         val ChineseConverterType = intPreferencesKey(PreferKey.chineseConverterType)
     }
 }

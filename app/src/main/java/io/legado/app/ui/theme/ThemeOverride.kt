@@ -67,16 +67,16 @@ fun ProvideThemeOverride(
     }
 
     val currentTheme = appliedTheme
-        ?: ThemeOverrideState(
-            seedColor = baseTheme.seedColor,
-            colorScheme = baseTheme.colorScheme
-        )
 
-    ProvideColorSchemeOverride(
-        colorScheme = currentTheme.colorScheme,
-        seedColor = currentTheme.seedColor,
-        content = content
-    )
+    if (currentTheme != null) {
+        ProvideColorSchemeOverride(
+            colorScheme = currentTheme.colorScheme,
+            seedColor = currentTheme.seedColor,
+            content = content
+        )
+    } else {
+        content()
+    }
 }
 
 @Composable

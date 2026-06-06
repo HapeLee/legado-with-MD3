@@ -71,9 +71,6 @@ fun MoreConfigSheet(
                 onPaddingDisplayCutoutsChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PaddingDisplayCutouts(it)))
                 },
-                onTitleBarModeChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarMode(it)))
-                },
                 onReadBodyToLhChange = {
                     scope.launch { readSettingsRepository.setReadBodyToLh(it) }
                 },
@@ -180,7 +177,6 @@ private fun ScreenSettings(
     onHideStatusBarChange: (Boolean) -> Unit,
     onHideNavigationBarChange: (Boolean) -> Unit,
     onPaddingDisplayCutoutsChange: (Boolean) -> Unit,
-    onTitleBarModeChange: (String) -> Unit,
     onReadBodyToLhChange: (Boolean) -> Unit,
     onTextFullJustifyChange: (Boolean) -> Unit,
     onTextBottomJustifyChange: (Boolean) -> Unit,
@@ -193,8 +189,6 @@ private fun ScreenSettings(
     val screenDirectionValues = stringArrayResource(R.array.screen_direction_value)
     val keepLightEntries = stringArrayResource(R.array.screen_time_out)
     val keepLightValues = stringArrayResource(R.array.screen_time_out_value)
-    val titleBarModeEntries = stringArrayResource(R.array.title_bar_mode)
-    val titleBarModeValues = stringArrayResource(R.array.title_bar_mode_value)
 
     TinyDropdownSettingItem(
         title = stringResource(R.string.screen_direction),
@@ -224,13 +218,6 @@ private fun ScreenSettings(
         title = stringResource(R.string.padding_display_cutouts),
         checked = preferences.paddingDisplayCutouts,
         onCheckedChange = onPaddingDisplayCutoutsChange,
-    )
-    TinyDropdownSettingItem(
-        title = stringResource(R.string.title_bar_mode),
-        selectedValue = preferences.titleBarMode,
-        displayEntries = titleBarModeEntries,
-        entryValues = titleBarModeValues,
-        onValueChange = onTitleBarModeChange,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.read_body_to_lh),

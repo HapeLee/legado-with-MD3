@@ -38,6 +38,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -106,7 +107,7 @@ internal fun SystemMenuPage(
         val tabTitles = listOf(
             stringResource(R.string.read_config_menu_system),
             stringResource(R.string.read_menu_bottom_bar_layout),
-            stringResource(R.string.title_bar_icons),
+            stringResource(R.string.title_bar_layout),
         )
         CardTabRow(
             tabTitles = tabTitles,
@@ -332,6 +333,13 @@ private fun GlobalMenuTab(
             onValueChange = {
                 iconPosition = it.toInt()
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarIconPosition(iconPosition)))
+            },
+        )
+        TinySwitchSettingItem(
+            title = stringResource(R.string.show_title_bar_icons),
+            checked = preferences.showTitleBarIcons,
+            onCheckedChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowTitleBarIcons(it)))
             },
         )
 
@@ -596,12 +604,24 @@ private fun TopBarTab(
     }
     val topBarBlurEnabled = preferences.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze
 
+    val titleBarModeEntries = stringArrayResource(R.array.title_bar_mode)
+    val titleBarModeValues = stringArrayResource(R.array.title_bar_mode_value)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.title_bar_mode),
+            selectedValue = preferences.titleBarMode,
+            displayEntries = titleBarModeEntries,
+            entryValues = titleBarModeValues,
+            onValueChange = { value ->
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBarMode(value)))
+            },
+        )
         TinyClickableSettingItem(
             title = stringResource(R.string.title_bar_icons),
             description = if (customIconCount == 0) {

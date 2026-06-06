@@ -1234,6 +1234,7 @@ class ReadBookViewModel(
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
             menuConfig = ReadMenuConfig(
                 titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
+                showTitleBarIcons = ReadBookConfig.showTitleBarIcons,
                 readMenuFloatingBottomBar = ReadBookConfig.readMenuFloatingBottomBar,
                 readMenuBottomCornerRadius = ReadBookConfig.readMenuBottomCornerRadius,
                 readMenuIconItemsPerRow = ReadBookConfig.readMenuIconItemsPerRow,
@@ -2347,6 +2348,13 @@ class ReadBookViewModel(
                     readSettingsRepository.setTitleBarIconPosition(update.value)
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(titleBarIconPosition = update.value)) }
+            }
+            is ConfigUpdate.ShowTitleBarIcons -> {
+                ReadBookConfig.showTitleBarIcons = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setShowTitleBarIcons(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(showTitleBarIcons = update.value)) }
             }
 
             // --- System UI (also persists to DataStore) ---

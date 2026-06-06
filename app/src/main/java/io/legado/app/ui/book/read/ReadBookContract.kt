@@ -123,6 +123,7 @@ data class ReadBookUiState(
 @Stable
 data class ReadMenuConfig(
     val titleBarIconPosition: Int = 0,
+    val showTitleBarIcons: Boolean = true,
     val readMenuFloatingBottomBar: Boolean = false,
     val readMenuBottomCornerRadius: Int = 0,
     val readMenuIconItemsPerRow: Int = 5,
@@ -718,6 +719,9 @@ sealed interface ConfigUpdate {
     data class MenuCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class TitleBarCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
     data class TitleBarIconPosition(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class ShowTitleBarIcons(val value: Boolean) : ConfigUpdate {
+        override val codes = emptyList<Int>()
+    }
 
     // --- System UI (also updates AppConfig) ---
     data class HideStatusBar(val value: Boolean) : ConfigUpdate { override val codes = listOf(0, 2) }
