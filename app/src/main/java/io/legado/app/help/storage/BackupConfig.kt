@@ -88,7 +88,35 @@ object BackupConfig {
         PreferKey.bgImage,
         PreferKey.bgImageBlurring,
         PreferKey.bgImageN,
-        PreferKey.bgImageNBlurring
+        PreferKey.bgImageNBlurring,
+        PreferKey.themeColor,
+        PreferKey.secondaryThemeColor,
+        PreferKey.paletteStyle,
+        PreferKey.materialVersion,
+        PreferKey.composeEngine,
+        PreferKey.customContrast,
+        PreferKey.customMode,
+        PreferKey.useMiuixMonet,
+        PreferKey.containerOpacity,
+        PreferKey.topBarOpacity,
+        PreferKey.bottomBarOpacity,
+        PreferKey.enableBlur,
+        PreferKey.enableProgressiveBlur,
+        PreferKey.topBarBlurRadius,
+        PreferKey.bottomBarBlurRadius,
+        PreferKey.topBarBlurAlpha,
+        PreferKey.bottomBarBlurAlpha,
+        PreferKey.bottomBarLensRadius,
+        PreferKey.useFlexibleTopAppBar,
+        PreferKey.cBackground,
+        PreferKey.cBBackground,
+        PreferKey.cNBackground,
+        PreferKey.cNBBackground,
+        PreferKey.enableDeepPersonalization,
+        PreferKey.primaryTextColor,
+        PreferKey.secondaryTextColor,
+        PreferKey.themeBackgroundColor,
+        PreferKey.labelContainerColor
     )
 
     private val coverPrefKeys = arrayOf(
@@ -100,9 +128,10 @@ object BackupConfig {
         PreferKey.coverShowAuthorN
     )
 
-    fun keyIsNotIgnore(key: String): Boolean {
+    fun keyIsNotIgnore(key: String, isBackup: Boolean = false): Boolean {
+        if (ignorePrefKeys.contains(key)) return false
+        if (isBackup) return true
         return when {
-            ignorePrefKeys.contains(key) -> false
             ignoreReadConfig && readPrefKeys.contains(key) -> false
             ignoreThemeConfig && themePrefKeys.contains(key) -> false
             ignoreCoverConfig && coverPrefKeys.contains(key) -> false
@@ -116,17 +145,17 @@ object BackupConfig {
 
     val ignoreReadConfig: Boolean
         get() = ignoreConfig[readConfigKey] == true
-    private val ignoreThemeMode: Boolean
+    val ignoreThemeMode: Boolean
         get() = ignoreConfig[PreferKey.themeMode] == true
-    private val ignoreThemeConfig: Boolean
+    val ignoreThemeConfig: Boolean
         get() = ignoreConfig[themeConfigKey] == true
-    private val ignoreCoverConfig: Boolean
+    val ignoreCoverConfig: Boolean
         get() = ignoreConfig[coverConfigKey] == true
-    private val ignoreBookshelfLayout: Boolean
+    val ignoreBookshelfLayout: Boolean
         get() = ignoreConfig[PreferKey.bookshelfLayout] == true
-    private val ignoreShowRss: Boolean
+    val ignoreShowRss: Boolean
         get() = ignoreConfig[PreferKey.showRss] == true
-    private val ignoreThreadCount: Boolean
+    val ignoreThreadCount: Boolean
         get() = ignoreConfig[PreferKey.threadCount] == true
     val ignoreLocalBook: Boolean
         get() = ignoreConfig[localBookKey] == true

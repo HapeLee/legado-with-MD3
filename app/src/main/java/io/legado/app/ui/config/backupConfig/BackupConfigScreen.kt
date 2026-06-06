@@ -374,7 +374,7 @@ fun BackupConfigScreen(
                 AppTextField(
                     value = tempPassword,
                     onValueChange = { tempPassword = it },
-                    backgroundColor = MiuixTheme.colorScheme.surface,
+                    backgroundColor = LegadoTheme.colorScheme.surface,
                     label = stringResource(R.string.web_dav_pw),
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
