@@ -16,23 +16,17 @@ class SearchActivity : BaseComposeActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        dispatchInit(intent)
+        // Only dispatch init on fresh launch, not on config change
+        // (ViewModel is retained by Koin and already has correct state).
+        if (savedInstanceState == null) {
+            dispatchInit(intent)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         dispatchInit(intent)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        viewModel.onIntent(SearchIntent.ResumeEngine)
-    }
-
-    override fun onPause() {
-        viewModel.onIntent(SearchIntent.PauseEngine)
-        super.onPause()
     }
 
     @Composable

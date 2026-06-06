@@ -191,10 +191,11 @@ class SearchBooksUseCase(
                     source,
                     keyword,
                     page,
-                    filter = { name, author ->
+                    filter = { name, author, kind ->
                         matchMode == MatchMode.DEFAULT ||
                             name.contains(keyword, ignoreCase = true) ||
-                            author.contains(keyword, ignoreCase = true)
+                            author.contains(keyword, ignoreCase = true) ||
+                            kind?.contains(keyword, ignoreCase = true) == true
                     }
                 )
             }
@@ -230,19 +231,21 @@ class SearchBooksUseCase(
         }
 
         private val equalBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val tagsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val containsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val otherBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         var resultLimitReached = false
             private set
 
         val count: Int
-            get() = equalBooks.size + containsBooks.size + otherBooks.size
+            get() = equalBooks.size + tagsBooks.size + containsBooks.size + otherBooks.size
 
         suspend fun merge(newBooks: List<SearchBook>): SearchBookChange {
             if (newBooks.isEmpty()) return SearchBookChange()
 
             val upsertBooks = arrayListOf<SearchBook>()
             val removedBookUrls = linkedSetOf<String>()
+            val touchedBuckets = linkedSetOf<LinkedHashMap<SearchBookKey, SearchBook>>()
             newBooks.forEach { newBook ->
                 coroutineContext.ensureActive()
                 val bucket = classifyBucket(newBook) ?: return@forEach
@@ -255,33 +258,71 @@ class SearchBooksUseCase(
                     currentBook.addOrigin(newBook.origin)
                     upsertBooks.add(currentBook)
                 }
+                touchedBuckets.add(bucket)
                 trimSearchBooks()?.let { removed ->
                     removedBookUrls.add(removed.bookUrl)
                     upsertBooks.removeAll { it.bookUrl == removed.bookUrl }
                 }
             }
+            // Re-sort touched buckets by origins.size descending
+            touchedBuckets.forEach { bucket ->
+                sortBucket(bucket)
+            }
             return SearchBookChange(upsertBooks, removedBookUrls.toList())
         }
 
+        /**
+         * 将书籍分类到对应的优先级桶中：
+         * - equalBooks: 书名或作者完全等于搜索词
+         * - tagsBooks:   分类标签包含搜索词
+         * - containsBooks: 书名或作者包含搜索词（非精确匹配）
+         * - otherBooks:  其他结果（仅 DEFAULT 模式保留）
+         */
         private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
             return when {
                 book.name.equals(keyword, ignoreCase = true) ||
                     book.author.equals(keyword, ignoreCase = true) -> equalBooks
+                book.kind?.contains(keyword, ignoreCase = true) == true -> {
+                    if (matchMode != MatchMode.DEFAULT) null else tagsBooks
+                }
                 book.name.contains(keyword, ignoreCase = true) ||
-                        book.author.contains(
-                            keyword,
-                            ignoreCase = true
-                        ) -> if (matchMode == MatchMode.EXACT) null else containsBooks
-
+                    book.author.contains(keyword, ignoreCase = true) -> {
+                    if (matchMode == MatchMode.EXACT) null else containsBooks
+                }
                 matchMode != MatchMode.DEFAULT -> null
                 else -> otherBooks
             }
+        }
+
+        /**
+         * 按 origins.size 降序重新排列桶内元素。
+         * 使用 sortedEntries 重建 LinkedHashMap 以保持排序后的迭代顺序。
+         */
+        private fun sortBucket(bucket: LinkedHashMap<SearchBookKey, SearchBook>) {
+            if (bucket.size <= 1) return
+            val sorted = bucket.entries.sortedByDescending { it.value.origins.size }
+            bucket.clear()
+            sorted.forEach { (k, v) -> bucket[k] = v }
+        }
+
+        /**
+         * 获取排序后的最终结果列表。
+         * 每个桶内按来源数量降序排列（多源 = 更可靠），桶间按优先级拼接。
+         */
+        fun getSortedList(): List<SearchBook> {
+            val sorted = ArrayList<SearchBook>(count)
+            sorted.addAll(equalBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(tagsBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(containsBooks.values.sortedByDescending { it.origins.size })
+            sorted.addAll(otherBooks.values)
+            return sorted
         }
 
         private fun trimSearchBooks(): SearchBook? {
             if (count <= MAX_RETAINED_SEARCH_RESULTS) return null
             resultLimitReached = true
             return removeLast(otherBooks)
+                ?: removeLast(tagsBooks)
                 ?: removeLowestOrigin(containsBooks)
                 ?: removeLowestOrigin(equalBooks)
         }

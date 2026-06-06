@@ -108,6 +108,7 @@ fun SearchScreen(
     var previewBook by remember { mutableStateOf<SearchBook?>(null) }
     var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
+    val groupedListState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
@@ -123,6 +124,14 @@ fun SearchScreen(
         derivedStateOf {
             val totalCount = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            totalCount > 0 && lastVisible >= totalCount - 3
+        }
+    }
+
+    val shouldLoadMoreGrouped by remember {
+        derivedStateOf {
+            val totalCount = groupedListState.layoutInfo.totalItemsCount
+            val lastVisible = groupedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             totalCount > 0 && lastVisible >= totalCount - 3
         }
     }
@@ -150,20 +159,19 @@ fun SearchScreen(
 
     LaunchedEffect(
         shouldLoadMore,
+        shouldLoadMoreGrouped,
         state.isSearching,
         state.hasMore,
         state.isManualStop,
         state.showSuggestions,
         isSourceGroupedMode,
     ) {
-        if (
-            shouldLoadMore &&
-            !state.isSearching &&
+        val readyToLoad = !state.isSearching &&
             state.hasMore &&
             !state.isManualStop &&
-            !state.showSuggestions &&
-            !isSourceGroupedMode
-        ) {
+            !state.showSuggestions
+        val nearEnd = if (isSourceGroupedMode) shouldLoadMoreGrouped else shouldLoadMore
+        if (readyToLoad && nearEnd) {
             viewModel.onIntent(SearchIntent.LoadMore)
         }
     }
@@ -416,6 +424,7 @@ fun SearchScreen(
                             ) { isSourceGrouped ->
                                 if (isSourceGrouped) {
                                     LazyColumn(
+                                        state = groupedListState,
                                         modifier = Modifier.fillMaxSize(),
                                         contentPadding = adaptiveContentPaddingOnlyVertical(
                                             top = 48.dp,
@@ -477,11 +486,11 @@ fun SearchScreen(
                                     ) {
                                         itemsIndexed(
                                             items = state.results,
-                                            key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
+                                            key = { _, item -> "${item.book.origin}:${item.book.bookUrl}" }
                                         ) { index, item ->
                                             val sharedCoverKey = bookCoverSharedElementKey(
                                                 item.book.bookUrl,
-                                                "search:${item.book.origin}:$index"
+                                                "search:${item.book.origin}"
                                             )
                                             SearchBookListItem(
                                                 book = item.book,
@@ -636,7 +645,7 @@ fun SearchScreen(
                 AppIcon(Icons.Default.Layers, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = "搜索类型",
+                    text = stringResource(R.string.search_type),
                     style = LegadoTheme.typography.titleSmall
                 )
             }
@@ -679,9 +688,11 @@ fun SearchScreen(
         }
     }
 
+    val resultsByBookUrl = remember(state.results) {
+        state.results.associateBy { it.book.bookUrl }
+    }
     val previewShelfState = previewBook?.let { book ->
-        state.results.find { it.book.bookUrl == book.bookUrl }?.shelfState
-            ?: BookShelfState.NOT_IN_SHELF
+        resultsByBookUrl[book.bookUrl]?.shelfState ?: BookShelfState.NOT_IN_SHELF
     }
     SearchBookPreviewSheet(
         data = previewBook,
@@ -864,7 +875,7 @@ private fun SearchResultFooter(
 
             hasMore -> {
                 Text(
-                    text = stringResource(R.string.search_empty),
+                    text = stringResource(R.string.search_has_more),
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }

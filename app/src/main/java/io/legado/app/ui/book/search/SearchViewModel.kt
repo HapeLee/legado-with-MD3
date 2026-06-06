@@ -20,7 +20,9 @@ import io.legado.app.domain.usecase.SearchRunEvent
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -107,7 +109,7 @@ class SearchViewModel(
     fun onIntent(intent: SearchIntent) {
         when (intent) {
             is SearchIntent.Initialize -> initialize(intent.key, intent.scopeRaw)
-            is SearchIntent.UpdateQuery -> updateQuery(intent.query, showSuggestions = true)
+            is SearchIntent.UpdateQuery -> updateQuery(intent.query, intent.showSuggestions)
             SearchIntent.SubmitSearch -> submitSearch()
             SearchIntent.LoadMore -> loadMore()
             SearchIntent.StopSearch -> stopSearch()
@@ -185,12 +187,17 @@ class SearchViewModel(
                 _uiState.update { state ->
                     val current = state.selectedSourceTypes
                     val next = if (current.contains(intent.type)) {
-                        current - intent.type
+                        (current - intent.type).toImmutableSet()
                     } else {
-                        current + intent.type
+                        (current + intent.type).toImmutableSet()
                     }
                     state.copy(selectedSourceTypes = next)
                 }
+                restartCommittedSearchIfNeeded()
+            }
+
+            SearchIntent.ClearAllSourceTypes -> {
+                _uiState.update { it.copy(selectedSourceTypes = persistentSetOf()) }
                 restartCommittedSearchIfNeeded()
             }
 
@@ -310,6 +317,10 @@ class SearchViewModel(
         }
         syncScopeState()
 
+        // Always reset search state so the screen starts clean,
+        // regardless of whether the ViewModel was retained by navigation.
+        clearSearchResults()
+
         val initKey = key?.trim().orEmpty()
         if (initKey.isNotEmpty()) {
             updateQuery(initKey, showSuggestions = false)
@@ -412,6 +423,11 @@ class SearchViewModel(
         if (keyword.isBlank()) return
 
         updateQuery(keyword, showSuggestions = false)
+
+        // Cancel the old search job BEFORE clearing results to prevent
+        // stale Progress events from re-inserting books into the map.
+        searchJob?.cancel()
+        searchJob = null
 
         currentSearchPage = 1
         searchResultBooks.clear()
@@ -546,6 +562,7 @@ class SearchViewModel(
     private fun clearSearchResults() {
         stopSearch(manualStop = true)
         searchResultBooks.clear()
+        queryFlow.value = ""
         _uiState.update {
             it.copy(
                 query = "",
@@ -646,7 +663,7 @@ class SearchViewModel(
             it.copy(
                 scopeDisplay = searchScope.display,
                 scopeDisplayNames = searchScope.displayNames.toImmutableList(),
-                selectedScopeSourceUrls = searchScope.sourceUrls.toSet(),
+                selectedScopeSourceUrls = searchScope.sourceUrls.toImmutableSet(),
                 isAllScope = searchScope.isAll(),
                 isSourceScope = searchScope.isSource(),
             )

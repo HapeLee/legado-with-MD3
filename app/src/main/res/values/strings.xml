@@ -1684,6 +1684,8 @@
     <string name="search_source_progress"> · Progress %1$d/%2$d</string>
     <string name="search_empty_scope_disable_precision">%1$s group search returned no results. Disable precise search?</string>
     <string name="search_empty_scope_switch_all">%1$s group search returned no results. Switch to all groups?</string>
+    <string name="search_type">Search type</string>
+    <string name="search_has_more">Pull up or tap button to load more</string>
     <string name="search_layout_list">List layout</string>
     <string name="search_layout_source_grouped">Source grouped</string>
     <string name="download_cache_config">Download &amp; Cache</string>

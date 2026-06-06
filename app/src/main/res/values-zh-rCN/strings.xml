@@ -1648,6 +1648,8 @@
     <string name="search_source_progress"> · 进度 %1$d/%2$d</string>
     <string name="search_empty_scope_disable_precision">%1$s分组搜索结果为空，是否关闭精准搜索？</string>
     <string name="search_empty_scope_switch_all">%1$s分组搜索结果为空，是否切换到全部分组？</string>
+    <string name="search_type">搜索类型</string>
+    <string name="search_has_more">上拉或点击按钮加载更多</string>
     <string name="search_layout_list">列表布局</string>
     <string name="search_layout_source_grouped">来源分组</string>
     <string name="download_cache_config">下载与缓存</string>

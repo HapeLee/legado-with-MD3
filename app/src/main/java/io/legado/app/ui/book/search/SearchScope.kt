@@ -120,6 +120,7 @@ data class SearchScope(private var scope: String) {
             this.scope = stringBuilder.toString()
         }
         stateLiveData.postValue(this.scope)
+        save()
     }
 
     /**

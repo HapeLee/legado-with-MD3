@@ -8,7 +8,9 @@ import io.legado.app.domain.model.BookShelfState
 import io.legado.app.domain.model.MatchMode
 import io.legado.app.ui.main.bookshelf.BookShelfItem
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.persistentSetOf
 
 @Stable
 data class SearchResultItemUi(
@@ -27,7 +29,7 @@ data class SearchUiState(
     val enabledSources: ImmutableList<BookSourcePart> = persistentListOf(),
     val scopeDisplay: String = "",
     val scopeDisplayNames: ImmutableList<String> = persistentListOf(),
-    val selectedScopeSourceUrls: Set<String> = emptySet(),
+    val selectedScopeSourceUrls: ImmutableSet<String> = persistentSetOf(),
     val isAllScope: Boolean = true,
     val isSourceScope: Boolean = false,
     val matchMode: MatchMode = MatchMode.DEFAULT,
@@ -36,7 +38,7 @@ data class SearchUiState(
     val hasMore: Boolean = true,
     val processedSources: Int = 0,
     val totalSources: Int = 0,
-    val selectedSourceTypes: Set<Int> = emptySet(),
+    val selectedSourceTypes: ImmutableSet<Int> = persistentSetOf(),
     val showScopeSheet: Boolean = false,
     val showSettingsSheet: Boolean = false,
     val showClearHistoryDialog: Boolean = false,
@@ -63,7 +65,7 @@ data class SearchEmptyScopeAction(
 
 sealed interface SearchIntent {
     data class Initialize(val key: String?, val scopeRaw: String?) : SearchIntent
-    data class UpdateQuery(val query: String) : SearchIntent
+    data class UpdateQuery(val query: String, val showSuggestions: Boolean = true) : SearchIntent
     data object SubmitSearch : SearchIntent
     data object LoadMore : SearchIntent
     data object StopSearch : SearchIntent
@@ -84,6 +86,7 @@ sealed interface SearchIntent {
     data class SetScopeSheetVisible(val visible: Boolean) : SearchIntent
     data class SetSettingsSheetVisible(val visible: Boolean) : SearchIntent
     data class ToggleSourceType(val type: Int) : SearchIntent
+    data object ClearAllSourceTypes : SearchIntent
     data object SelectAllScope : SearchIntent
     data class ToggleScopeGroup(val groupName: String) : SearchIntent
     data class ToggleScopeSource(val source: BookSourcePart) : SearchIntent
