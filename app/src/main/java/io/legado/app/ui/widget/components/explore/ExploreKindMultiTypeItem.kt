@@ -140,6 +140,7 @@ fun ExploreKindMultiTypeItem(
                     valueOverride,
                     onValueChange,
                     onRunAction,
+                    modifier,
                     BaseItem
                 )
             }
@@ -289,6 +290,7 @@ private fun SelectTypeItem(
     valueOverride: String?,
     onValueChange: ((String) -> Unit)?,
     onRunAction: (() -> Unit)?,
+    modifier: Modifier = Modifier,
     BaseItem: @Composable (String, () -> Unit) -> Unit
 ) {
     val chars = remember(kind.chars) {
@@ -309,7 +311,7 @@ private fun SelectTypeItem(
     }
     var showSelector by remember(sourceUrl, kind.title) { mutableStateOf(false) }
 
-    Box {
+    Box(modifier = modifier) {
         val internalOnClick = { showSelector = true }
         val displayText = "${state.displayName} $selected"
 
