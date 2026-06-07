@@ -61,6 +61,14 @@ data class MainRouteCache(val groupId: Long) : MainRoute
 data object MainRouteBookCacheManage : MainRoute
 
 @Serializable
+data class MainRouteReadBook(
+    val bookUrl: String? = null,
+    val readAloud: Boolean = false,
+    val inBookshelf: Boolean = true,
+    val chapterChanged: Boolean = false,
+) : MainRoute
+
+@Serializable
 data class MainRouteSearch(
     val key: String?,
     val scopeRaw: String? = null
@@ -108,6 +116,7 @@ object MainRouteConst {
     const val ROUTE_IMPORT_REMOTE = "import/remote"
     const val ROUTE_CACHE = "cache"
     const val ROUTE_BOOK_CACHE_MANAGE = "book/cache/manage"
+    const val ROUTE_READ_BOOK = "book/read"
     const val ROUTE_SEARCH = "search"
     const val ROUTE_BOOK_INFO = "book/info"
     const val ROUTE_EXPLORE_SHOW = "explore/show"

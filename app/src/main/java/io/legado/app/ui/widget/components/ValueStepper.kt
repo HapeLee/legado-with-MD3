@@ -19,26 +19,28 @@ fun ValueStepper(
     displayValue: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         SmallOutlinedButton(
             onClick = {
                 val newValue = (value.toInt() - 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Remove
+            enabled = enabled,
+            icon = Icons.Default.Remove,
         )
         TextCard(
             cornerRadius = 8.dp,
             horizontalPadding = 8.dp,
             verticalPadding = 4.dp,
             text = displayValue.toInt().toString(),
-            backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+            backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
             contentColor = LegadoTheme.colorScheme.onSurface
         )
         SmallOutlinedButton(
@@ -46,7 +48,8 @@ fun ValueStepper(
                 val newValue = (value.toInt() + 1).toFloat().coerceIn(valueRange)
                 onValueChange(newValue)
             },
-            icon = Icons.Default.Add
+            enabled = enabled,
+            icon = Icons.Default.Add,
         )
     }
 }

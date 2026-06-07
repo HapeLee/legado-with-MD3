@@ -18,7 +18,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.book.read.ContentEditDialog
+
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
 import io.legado.app.ui.book.read.page.delegate.FadePageDelegate
@@ -40,7 +40,7 @@ import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.utils.activity
 import io.legado.app.utils.invisible
 import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.showDialogFragment
+
 import io.legado.app.utils.throttle
 import java.text.BreakIterator
 import java.util.Locale
@@ -49,11 +49,17 @@ import kotlin.math.abs
 /**
  * 阅读视图
  */
-class ReadView(context: Context, attrs: AttributeSet) :
+class ReadView(
+    context: Context,
+    attrs: AttributeSet? = null,
+    callBack: CallBack? = null,
+    contentCallBack: ContentTextView.CallBack? = null,
+) :
     FrameLayout(context, attrs),
     DataSource, LayoutProgressListener {
 
-    val callBack: CallBack get() = activity as CallBack
+    private var injectedCallBack: CallBack? = callBack
+    val callBack: CallBack get() = injectedCallBack ?: activity as CallBack
     var pageFactory: TextPageFactory = TextPageFactory(this)
     var pageDelegate: PageDelegate? = null
         private set(value) {
@@ -63,9 +69,9 @@ class ReadView(context: Context, attrs: AttributeSet) :
             upContent()
         }
     override var isScroll = false
-    val prevPage by lazy { PageView(context) }
-    val curPage by lazy { PageView(context) }
-    val nextPage by lazy { PageView(context) }
+    val prevPage by lazy { PageView(context, contentCallBack) }
+    val curPage by lazy { PageView(context, contentCallBack) }
+    val nextPage by lazy { PageView(context, contentCallBack) }
     val defaultAnimationSpeed = 300
     private var pressDown = false
     private var isMove = false
@@ -446,7 +452,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
             5 -> ReadAloud.prevParagraph(context)
             6 -> ReadAloud.nextParagraph(context)
             7 -> callBack.addBookmark()
-            8 -> activity?.showDialogFragment(ContentEditDialog())
+            8 -> callBack.openContentEdit()
             9 -> callBack.changeReplaceRuleState()
             10 -> callBack.openChapterList()
             11 -> callBack.openSearchActivity(null)
@@ -760,6 +766,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
         fun showTextActionMenu()
         fun autoPageStop()
         fun openChapterList()
+        fun openContentEdit()
         fun addBookmark()
         fun changeReplaceRuleState()
         fun openSearchActivity(searchWord: String?)

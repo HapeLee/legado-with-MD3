@@ -62,21 +62,6 @@ object OtherConfig {
         true
     )
 
-    var mediaButtonOnExit by prefDelegate(
-        PreferKey.mediaButtonOnExit,
-        true
-    )
-
-    var readAloudByMediaButton by prefDelegate(
-        PreferKey.readAloudByMediaButton,
-        false
-    )
-
-    var ignoreAudioFocus by prefDelegate(
-        PreferKey.ignoreAudioFocus,
-        false
-    )
-
     var autoClearExpired by prefDelegate(
         PreferKey.autoClearExpired,
         true
@@ -84,11 +69,6 @@ object OtherConfig {
 
     var showAddToShelfAlert by prefDelegate(
         PreferKey.showAddToShelfAlert,
-        true
-    )
-
-    var showMangaUi by prefDelegate(
-        PreferKey.showMangaUi,
         true
     )
 

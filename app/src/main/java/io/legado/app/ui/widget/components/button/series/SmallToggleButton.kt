@@ -8,16 +8,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButtonShapes
-import androidx.compose.material3.OutlinedIconToggleButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TonalToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,6 +32,7 @@ fun SmallToggleButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     enabled: Boolean = true,
     style: ToggleStyle = ToggleStyle.Outlined,
     icon: ImageVector? = null,
@@ -86,19 +82,23 @@ fun SmallToggleButton(
                 }
             }
         } else {
-            MiuixIconButton(
+            SeriesIconButton(
+                icon = if (checked) (iconChecked ?: icon)!! else icon!!,
+                contentDescription = contentDescription,
                 onClick = { onCheckedChange(!checked) },
-                modifier = modifier.size(SmallMiuixButtonSize),
+                modifier = modifier,
                 enabled = enabled,
-                backgroundColor = containerColor
-            ) {
-                MiuixIcon(
-                    imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                    contentDescription = contentDescription,
-                    tint = iconTint,
-                    modifier = Modifier.size(SmallMiuixIconSize)
-                )
-            }
+                selected = checked,
+                onLongClick = onLongClick,
+                size = squareSize(SmallMiuixButtonSize),
+                iconSize = SmallMiuixIconSize,
+                style = when (style) {
+                    ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
+                    ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
+                },
+                selectedContainerColor = containerColor,
+                selectedContentColor = iconTint
+            )
         }
     } else {
         SmallNoMinTouchTarget {
@@ -129,49 +129,21 @@ fun SmallToggleButton(
                     }
                 }
             } else {
-                when (style) {
-                    ToggleStyle.Outlined -> {
-                        val defaultShape = IconButtonDefaults.extraSmallRoundShape
-                        val pressedShape = IconButtonDefaults.extraSmallPressedShape
-                        val checkedShape = IconButtonDefaults.extraSmallSelectedRoundShape
-
-                        val toggleShapes = remember(defaultShape, checkedShape) {
-                            IconToggleButtonShapes(
-                                shape = defaultShape,
-                                pressedShape = pressedShape,
-                                checkedShape = checkedShape
-                            )
-                        }
-
-                        OutlinedIconToggleButton(
-                            checked = checked,
-                            onCheckedChange = onCheckedChange,
-                            modifier = modifier.size(smallContainerSize()),
-                            enabled = enabled,
-                            shapes = toggleShapes
-                        ) {
-                            Icon(
-                                imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                                contentDescription = contentDescription,
-                                modifier = Modifier.size(smallIconSize),
-                            )
-                        }
+                SeriesIconButton(
+                    icon = if (checked) (iconChecked ?: icon)!! else icon!!,
+                    contentDescription = contentDescription,
+                    onClick = { onCheckedChange(!checked) },
+                    modifier = modifier,
+                    enabled = enabled,
+                    selected = checked,
+                    onLongClick = onLongClick,
+                    size = smallContainerSize(),
+                    iconSize = smallIconSize,
+                    style = when (style) {
+                        ToggleStyle.Outlined -> SeriesIconButtonStyle.Outlined
+                        ToggleStyle.Tonal -> SeriesIconButtonStyle.Tonal
                     }
-
-                    ToggleStyle.Tonal -> {
-                        FilledTonalButton(
-                            onClick = { onCheckedChange(!checked) },
-                            modifier = modifier.size(smallContainerSize()),
-                            enabled = enabled,
-                        ) {
-                            Icon(
-                                imageVector = if (checked) (iconChecked ?: icon)!! else icon!!,
-                                contentDescription = contentDescription,
-                                modifier = Modifier.size(smallIconSize),
-                            )
-                        }
-                    }
-                }
+                )
             }
         }
     }

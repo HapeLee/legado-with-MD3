@@ -11,6 +11,7 @@ import com.jaredrummler.android.colorpicker.ColorPickerDialog
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.constant.EventBus
+import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.databinding.DialogMangaFooterSettingBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.book.manga.entities.MangaFooterConfig
@@ -20,6 +21,7 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import org.koin.android.ext.android.inject
 
 class MangaFooterSettingDialog :
     BaseBottomSheetDialogFragment(R.layout.dialog_manga_footer_setting) {
@@ -37,6 +39,7 @@ class MangaFooterSettingDialog :
     var callback: Callback? = null
 
     private val binding by viewBinding(DialogMangaFooterSettingBinding::bind)
+    private val mangaSettingsRepository by inject<MangaSettingsRepository>()
 
     override fun onStart() {
         super.onStart()
@@ -255,7 +258,11 @@ class MangaFooterSettingDialog :
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        AppConfig.mangaFooterConfig = GSON.toJson(config)
+        val footerConfig = GSON.toJson(config)
+        AppConfig.mangaFooterConfig = footerConfig
+        execute {
+            mangaSettingsRepository.setMangaFooterConfig(footerConfig)
+        }
     }
 
     private fun updateChapterText() {

@@ -3,7 +3,6 @@ package io.legado.app.ui.book.toc
 import android.app.Application
 import android.net.Uri
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.snapshotFlow
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -14,6 +13,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.ReplaceRule
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
@@ -24,7 +24,6 @@ import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
 import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.LocalBook
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -102,6 +101,11 @@ private data class TocUiConfig(
     val isReverse: Boolean
 )
 
+private data class TocPreferences(
+    val useReplace: Boolean,
+    val showWordCount: Boolean
+)
+
 private data class TitleCacheKey(
     val bookUrl: String,
     val useReplace: Boolean,
@@ -114,7 +118,8 @@ private data class TitleCacheKey(
 class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
-    private val cacheBookChaptersUseCase: CacheBookChaptersUseCase
+    private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
+    private val readSettingsRepository: ReadSettingsRepository
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
@@ -204,6 +209,19 @@ class TocViewModel(
         bookState.map { it?.getReverseToc() ?: false }
             .distinctUntilChanged()
 
+    private val tocPreferences = readSettingsRepository.preferences
+        .map {
+            TocPreferences(
+                useReplace = it.tocUiUseReplace,
+                showWordCount = it.tocCountWords
+            )
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = TocPreferences(useReplace = false, showWordCount = true)
+        )
+
     private val downloadContextFlow = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged(),
         CacheBook.downloadStateFlow,
@@ -214,11 +232,10 @@ class TocViewModel(
 
     private val uiConfigFlow = combine(
         _collapsedVolumes,
-        snapshotFlow { ReadConfig.tocUiUseReplace },
-        snapshotFlow { ReadConfig.tocCountWords },
+        tocPreferences,
         reverseFlow
-    ) { collapsed, useReplace, showWordCount, isReverse ->
-        TocUiConfig(collapsed, useReplace, showWordCount, isReverse)
+    ) { collapsed, tocPreferences, isReverse ->
+        TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, isReverse)
     }
 
     private val titleReplaceCache = MutableStateFlow<Map<Int, String>>(emptyMap())
@@ -284,8 +301,8 @@ class TocViewModel(
 
     }.flowOn(Dispatchers.Default)
 
-    val useReplace get() = ReadConfig.tocUiUseReplace
-    val showWordCount get() = ReadConfig.tocCountWords
+    val useReplace get() = tocPreferences.value.useReplace
+    val showWordCount get() = tocPreferences.value.showWordCount
 
     override fun filterData(data: List<TocDomainItem>, key: String): List<TocDomainItem> {
         val collapsed = _collapsedVolumes.value
@@ -375,11 +392,15 @@ class TocViewModel(
     }
 
     fun toggleUseReplace() {
-        ReadConfig.tocUiUseReplace = !ReadConfig.tocUiUseReplace
+        viewModelScope.launch {
+            readSettingsRepository.setTocUiUseReplace(!tocPreferences.value.useReplace)
+        }
     }
 
     fun toggleShowWordCount() {
-        ReadConfig.tocCountWords = !ReadConfig.tocCountWords
+        viewModelScope.launch {
+            readSettingsRepository.setTocCountWords(!tocPreferences.value.showWordCount)
+        }
     }
 
     fun toggleVolume(volumeIndex: Int) {

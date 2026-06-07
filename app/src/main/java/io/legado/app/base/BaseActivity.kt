@@ -27,7 +27,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.utils.applyOpenTint
 import io.legado.app.utils.applyTint
@@ -36,7 +36,6 @@ import io.legado.app.utils.fullScreen
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hideSoftInput
 import io.legado.app.utils.observeEvent
-import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.setStatusBarColorAuto
 import io.legado.app.utils.themeColor
 import io.legado.app.utils.toastOnUi
@@ -101,7 +100,6 @@ abstract class BaseActivity<VB : ViewBinding>(
         else{
             setupSystemBar()
         }
-        window.setNavigationBarColorAuto(themeColor(com.google.android.material.R.attr.colorSurface))
         //setupSystemBar()
         setContentView(binding.root)
         upBackgroundImage()
@@ -231,7 +229,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun upBackgroundImage() {
         if (imageBg) {
             try {
-                OldThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
+                ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
                     window.decorView.background = it.toDrawable(resources)
                 }
             } catch (e: OutOfMemoryError) {

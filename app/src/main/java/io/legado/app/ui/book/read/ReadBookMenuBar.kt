@@ -1,0 +1,2310 @@
+package io.legado.app.ui.book.read
+
+import android.content.Context
+import android.os.Build
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
+import coil.compose.AsyncImage
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import com.kyant.capsule.ContinuousCapsule
+import dev.chrisbanes.haze.HazeProgressive
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import io.legado.app.R
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
+import io.legado.app.data.entities.Book
+import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadStyleResolver
+import io.legado.app.ui.animation.DampedDragAnimation
+import io.legado.app.ui.animation.InteractiveHighlight
+import io.legado.app.ui.book.read.sheet.AutoReadContent
+import io.legado.app.ui.book.read.sheet.PaddingConfigContent
+import io.legado.app.ui.book.read.sheet.ReadAloudContent
+import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
+import io.legado.app.ui.book.read.sheet.ReadStyleContent
+import io.legado.app.ui.book.read.sheet.ReadStyleTextTitleContent
+import io.legado.app.ui.book.read.sheet.readMenuButtonInfos
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.theme.hazeStyle.HazeLegado
+import io.legado.app.ui.widget.components.AppSlider
+import io.legado.app.ui.widget.components.bookmark.BookmarkEditContent
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
+import io.legado.app.ui.widget.components.text.AppText
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.tanh
+
+/**
+ * Compose replacement for ReadMenu — main reading menu overlay.
+ */
+@Composable
+fun ReadBookMenuBar(
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop? = null,
+    hazeState: HazeState? = null,
+) {
+    val context = LocalContext.current
+    val currentRoute = state.menuState.currentRoute
+    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.PaddingConfig
+    val menuColors = readMenuColors()
+
+    Box(Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = state.menuVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) { onIntent(ReadBookIntent.HideMenu) }
+            )
+        }
+
+        // Top title bar + floating icon row (top positions)
+        AnimatedVisibility(
+            visible = state.menuVisible && !dialogLikeRoute,
+            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter),
+        ) {
+            Column {
+                MenuTitleBar(
+                    state = state,
+                    colors = menuColors,
+                    onIntent = onIntent,
+                    backdrop = backdrop,
+                    hazeState = hazeState,
+                )
+                if (state.menuConfig.showTitleBarIcons && state.menuConfig.titleBarIconPosition <= 1) {
+                    FloatingIconRow(
+                        state = state,
+                        colors = menuColors,
+                        alignment = if (state.menuConfig.titleBarIconPosition == 0) {
+                            Alignment.Start
+                        } else {
+                            Alignment.End
+                        },
+                        onIntent = onIntent,
+                        backdrop = backdrop,
+                    )
+                }
+            }
+        }
+
+        // Bottom menu + floating icon row (bottom positions)
+        AnimatedVisibility(
+            visible = state.menuVisible,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (state.menuConfig.showTitleBarIcons && state.menuConfig.titleBarIconPosition >= 2) {
+                    FloatingIconRow(
+                        state = state,
+                        colors = menuColors,
+                        alignment = if (state.menuConfig.titleBarIconPosition == 2) {
+                            Alignment.Start
+                        } else {
+                            Alignment.End
+                        },
+                        onIntent = onIntent,
+                        backdrop = backdrop,
+                    )
+                }
+                ReadBookMenuSurface(
+                    route = currentRoute,
+                    state = state,
+                    colors = menuColors,
+                    onIntent = onIntent,
+                    context = context,
+                    backdrop = backdrop,
+                    hazeState = hazeState,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadBookMenuSurface(
+    route: ReadBookMenuRoute,
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    context: Context,
+    backdrop: Backdrop?,
+    hazeState: HazeState?,
+) {
+    val expanded = route != ReadBookMenuRoute.Main
+    val dialogLikeRoute = route == ReadBookMenuRoute.PaddingConfig
+    val density = LocalDensity.current
+    val windowSize = LocalWindowInfo.current.containerSize
+    var surfaceHeightPx by remember { mutableIntStateOf(0) }
+    val morphProgress by animateFloatAsState(
+        targetValue = if (dialogLikeRoute) 1f else 0f,
+        label = "ReadBookMenuMorph",
+    )
+    val maxHeight = with(density) {
+        windowSize.height.toDp() * 0.64f
+    }
+    val screenWidth = with(density) { windowSize.width.toDp() }
+    val dialogAvailableWidth = screenWidth - 48.dp
+    val dialogWidth = if (dialogAvailableWidth < 560.dp) {
+        dialogAvailableWidth
+    } else {
+        560.dp
+    }
+    val isFloating = state.menuConfig.readMenuFloatingBottomBar
+    val navBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
+    val floatingBottomMargin = if (isFloating) 16.dp + navBarHeight else 0.dp
+    val mainHorizontalMargin =
+        if (expanded && !isFloating) 0.dp else floatingHorizontalMargin
+    val mainBottomMargin =
+        if (expanded && !isFloating) 0.dp else floatingBottomMargin
+    val mainCorner = state.menuConfig.readMenuBottomCornerRadius.dp
+    val mainWidth = (screenWidth - mainHorizontalMargin * 2).coerceAtLeast(0.dp)
+    val surfaceWidth = if (expanded) {
+        if (isFloating && !dialogLikeRoute) mainWidth
+        else lerp(screenWidth, dialogWidth, morphProgress)
+    } else {
+        mainWidth
+    }
+    val bottomTopCorner by animateDpAsState(
+        targetValue = if (expanded && !isFloating) 24.dp else 0.dp,
+        label = "ReadBookMenuCorner",
+    )
+    val corner = lerp(bottomTopCorner, 28.dp, morphProgress)
+    val bottomCorner = lerp(0.dp, 28.dp, morphProgress)
+    val surfaceShape = if (expanded) {
+        if (isFloating && !dialogLikeRoute) {
+            RoundedCornerShape(mainCorner)
+        } else {
+            RoundedCornerShape(
+                topStart = corner,
+                topEnd = corner,
+                bottomStart = bottomCorner,
+                bottomEnd = bottomCorner,
+            )
+        }
+    } else if (isFloating) {
+        RoundedCornerShape(mainCorner)
+    } else {
+        RoundedCornerShape(topStart = mainCorner, topEnd = mainCorner)
+    }
+
+    val bottomBarBorderWidth = state.menuConfig.readMenuBorderWidth
+    val bottomBarBorderColor = (if (ReadStyleResolver.isNightTheme()) {
+        state.menuConfig.readMenuBorderColorNight
+    } else {
+        state.menuConfig.readMenuBorderColor
+    }).takeIf { it != 0 }
+        ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
+    val extendSurfaceToNavigationBar = !isFloating && !dialogLikeRoute
+    val useLiquidGlass = readMenuBottomBarLiquidGlassEnabled(
+        backdrop = backdrop,
+        menuConfig = state.menuConfig,
+        isFloating = isFloating,
+    )
+    val useHaze = readMenuBottomBarHazeEnabled(
+        hazeState = hazeState,
+        menuConfig = state.menuConfig,
+        isFloating = isFloating,
+    )
+    val useBottomBarButtonGlass = readMenuBottomBarButtonLiquidGlassEnabled(
+        backdrop = backdrop,
+        menuConfig = state.menuConfig,
+    )
+    val useLens = useLiquidGlass && isFloating && mainCorner > 0.dp
+    val bottomBarProgressiveBlur = route == ReadBookMenuRoute.Main &&
+            !isFloating &&
+            state.menuConfig.readMenuBottomBarBlurStyle == ReadMenuBlurStyle.Progressive
+    val bottomBarTextColor = if (bottomBarProgressiveBlur) {
+        Color.White.copy(alpha = 0.87f).compositeOver(colors.background)
+    } else {
+        LegadoTheme.colorScheme.onSurface
+    }
+    val surfaceWindowInsetSides = when {
+        isFloating || extendSurfaceToNavigationBar -> WindowInsetsSides.Horizontal
+        else -> WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal
+    }
+
+    Surface(
+        modifier = Modifier
+            .padding(
+                start = mainHorizontalMargin,
+                end = mainHorizontalMargin,
+                bottom = mainBottomMargin,
+            )
+            .then(
+                if (route == ReadBookMenuRoute.Main) {
+                    Modifier
+                } else {
+                    Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(surfaceWindowInsetSides)
+                    )
+                }
+            )
+            .width(surfaceWidth)
+            .heightIn(max = maxHeight)
+            .onSizeChanged { surfaceHeightPx = it.height }
+            .offset {
+                val liftPx = ((windowSize.height - surfaceHeightPx) / 2f) * morphProgress
+                IntOffset(x = 0, y = -liftPx.roundToInt())
+            }
+            .then(
+                if (useLiquidGlass) {
+                    Modifier.readMenuLiquidGlass(
+                        backdrop = backdrop,
+                        colors = colors,
+                        shape = surfaceShape,
+                        useTopBarStyle = false,
+                        useLens = useLens,
+                        menuConfig = state.menuConfig,
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .then(
+                if (useHaze && hazeState != null) {
+                    Modifier.readMenuBottomBarHazeEffect(
+                        state = hazeState,
+                        colors = colors,
+                        shape = surfaceShape,
+                        menuConfig = state.menuConfig,
+                        progressive = bottomBarProgressiveBlur,
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .drawWithCache {
+                val strokeWidthPx = bottomBarBorderWidth.dp.toPx()
+                val outline = surfaceShape.createOutline(size, layoutDirection, this)
+                val strokeStyle = Stroke(width = strokeWidthPx * 2)
+                val outlinePath = when (outline) {
+                    is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
+                    is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
+                    is Outline.Generic -> outline.path
+                }
+                onDrawBehind {
+                    if (bottomBarBorderWidth > 0) {
+                        drawPath(
+                            path = outlinePath,
+                            color = Color(bottomBarBorderColor),
+                            style = strokeStyle,
+                        )
+                    }
+                }
+            },
+        shape = surfaceShape,
+        color = if (useLiquidGlass || useHaze) Color.Transparent else colors.background.copy(
+            alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+        ),
+        contentColor = colors.content
+    ) {
+        AnimatedContent(
+            targetState = route,
+            transitionSpec = {
+                (slideInVertically { it / 4 } + fadeIn())
+                    .togetherWith(slideOutVertically { -it / 4 } + fadeOut())
+                    .using(SizeTransform(clip = true))
+            },
+            label = "ReadBookMenuRoute",
+        ) { targetRoute ->
+            when (targetRoute) {
+                ReadBookMenuRoute.Main -> {
+                    MenuBottomBar(
+                        state = state,
+                        colors = colors,
+                        onIntent = onIntent,
+                        context = context,
+                        bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight + 16.dp else 16.dp,
+                        surfaceEffectEnabled = useLiquidGlass || useHaze,
+                        buttonGlassEnabled = useBottomBarButtonGlass,
+                        backdrop = backdrop,
+                        labelColor = bottomBarTextColor,
+                    )
+                }
+
+                    ReadBookMenuRoute.ReadStyle -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.read_config),
+                            maxHeight = maxHeight,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ReadStyleContent(
+                                onOpenPaddingConfig = {
+                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.PaddingConfig))
+                                },
+                                onOpenMoreConfig = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreConfig))
+                                },
+                                onOpenBgTextConfig = { index ->
+                                    onIntent(ReadBookIntent.OpenBgTextConfig(index))
+                                },
+                                onOpenTextTitle = {
+                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
+                                },
+                                onOpenFontSelect = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
+                                },
+                                onToggleDayNight = {
+                                    onIntent(ReadBookIntent.ToggleDayNight)
+                                },
+                                readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
+                                bottomBarButtons = state.menuConfig.bottomBarButtons,
+                                onIntent = onIntent,
+                                styleConfig = state.styleConfig,
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.PaddingConfig -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.padding),
+                            maxHeight = maxHeight,
+                            scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            PaddingConfigContent(
+                                onIntent = onIntent,
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.TextTitle -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.read_config_text_effects),
+                            maxHeight = maxHeight,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ReadStyleTextTitleContent(
+                                onOpenShadowSet = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ShadowSet))
+                                },
+                                onOpenUnderlineConfig = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.UnderlineConfig))
+                                },
+                                onOpenHighlightRule = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig))
+                                },
+                                onOpenFontSelect = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                onIntent = onIntent,
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.ReadAloud -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.aloud_config),
+                            maxHeight = maxHeight,
+                            scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            ReadAloudContent(
+                                state = state,
+                                onIntent = onIntent,
+                                onDismissRequest = { onIntent(ReadBookIntent.HideMenu) },
+                                onOpenChapterList = {
+                                    onIntent(ReadBookIntent.HideMenu)
+                                    onIntent(ReadBookIntent.OpenChapterList)
+                                },
+                                onGoToBackground = { onIntent(ReadBookIntent.CloseReadBook) },
+                                onShowReadAloudConfig = {
+                                    onIntent(ReadBookIntent.ShowReadAloudConfig)
+                                },
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                ReadBookMenuRoute.AutoRead -> {
+                    ReadBookMenuRoutePage(
+                        title = stringResource(R.string.auto_page_speed),
+                        maxHeight = maxHeight,
+                        scrollContent = true,
+                        bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                        onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                    ) {
+                        AutoReadContent(
+                            onDismissRequest = { onIntent(ReadBookIntent.HideMenu) },
+                            onIntent = onIntent,
+                            onOpenChapterList = {
+                                onIntent(ReadBookIntent.HideMenu)
+                                onIntent(ReadBookIntent.OpenChapterList)
+                            },
+                            onStopAutoPage = { onIntent(ReadBookIntent.StopAutoPage) },
+                            onShowPageAnimConfig = {
+                                onIntent(ReadBookIntent.ShowPageAnimConfig)
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+
+                    is ReadBookMenuRoute.Bookmark -> {
+                        ReadBookMenuRoutePage(
+                            title = targetRoute.bookmark.chapterName,
+                            maxHeight = maxHeight,
+                            scrollContent = true,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            Box(Modifier.padding(horizontal = 16.dp)) {
+                                BookmarkEditContent(
+                                    bookmark = targetRoute.bookmark,
+                                    onSave = { onIntent(ReadBookIntent.SaveBookmark(it)) },
+                                    onDelete = { onIntent(ReadBookIntent.DeleteBookmark(it)) },
+                                )
+                            }
+                        }
+                    }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadBookMenuRoutePage(
+    title: String,
+    maxHeight: Dp,
+    scrollContent: Boolean = false,
+    bottomPadding: Dp = 0.dp,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = maxHeight)
+            .animateContentSize()
+            .padding(top = 16.dp, bottom = 16.dp + bottomPadding),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SmallTonalButton(
+                onClick = onBack,
+                icon = Icons.AutoMirrored.Filled.ArrowBack
+            )
+            Text(
+                text = title,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp),
+                style = LegadoTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(48.dp))
+        }
+
+        if (scrollContent) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                content()
+            }
+        } else {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun MenuTitleBar(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+    hazeState: HazeState?,
+) {
+    val titleBarMode = AppConfig.titleBarMode
+
+    var expanded by remember { mutableStateOf(false) }
+
+    val topBarBorderWidth = state.menuConfig.readMenuBorderWidth
+    val topBarBorderColor = (if (ReadStyleResolver.isNightTheme()) {
+        state.menuConfig.readMenuBorderColorNight
+    } else {
+        state.menuConfig.readMenuBorderColor
+    }).takeIf { it != 0 }
+        ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
+    val topBarAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val useTopBarBlur = readMenuTopBarHazeEnabled(hazeState, state.menuConfig)
+    val topBarProgressiveBlur = state.menuConfig.readMenuTopBarBlurStyle ==
+            ReadMenuBlurStyle.Progressive
+    val progressiveBlurActive = useTopBarBlur && topBarProgressiveBlur
+    val titleTextColor = if (progressiveBlurActive) {
+        Color.White.copy(alpha = 0.72f).compositeOver(colors.background)
+    } else {
+        LegadoTheme.colorScheme.onSurface
+    }
+    val labelStyle = if (progressiveBlurActive) {
+        LegadoTheme.typography.labelSmallEmphasized.copy(
+            shadow = androidx.compose.ui.graphics.Shadow(
+                color = Color.Black.copy(alpha = 0.12f),
+                offset = Offset.Zero,
+                blurRadius = 12f,
+            )
+        )
+    } else {
+        LegadoTheme.typography.labelSmallEmphasized
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (useTopBarBlur && hazeState != null) {
+                    Modifier
+                        .background(
+                            if (topBarProgressiveBlur) {
+                                readMenuTopBarSurfaceBrush(
+                                    colors = colors,
+                                    alpha = topBarAlpha,
+                                )
+                            } else {
+                                readMenuTopBarSurfaceBrush(colors, topBarAlpha)
+                            }
+                        )
+                        .readMenuHazeEffect(
+                            state = hazeState,
+                            colors = colors,
+                            menuConfig = state.menuConfig,
+                            progressive = topBarProgressiveBlur,
+                        )
+                } else {
+                    Modifier.background(colors.background)
+                }
+            )
+            .then(
+                if (topBarBorderWidth > 0) {
+                    Modifier.drawBehind {
+                        val strokeWidth = topBarBorderWidth.dp.toPx()
+                        drawLine(
+                            color = Color(topBarBorderColor),
+                            start = Offset(0f, size.height),
+                            end = Offset(size.width, size.height),
+                            strokeWidth = strokeWidth,
+                        )
+                    }
+                } else Modifier
+            )
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(
+                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal
+                )
+            )
+    ) {
+        // Title row: back + title + actions + overflow
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Back button
+            MenuTitleGlassButton(
+                onClick = { onIntent(ReadBookIntent.ReadMenuBack) },
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                state = state,
+                colors = colors,
+                backdrop = backdrop,
+            )
+
+            if (titleBarMode != "1" && titleBarMode != "3") {
+                AppText(
+                    text = state.bookName,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = LegadoTheme.typography.titleMedium.copy(
+                        shadow = androidx.compose.ui.graphics.Shadow(
+                            color = Color.Black.copy(alpha = 0.12f),
+                            offset = Offset.Zero,
+                            blurRadius = 12f
+                        )
+                    ),
+                    color = titleTextColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Source action button (non-local books only)
+                if (!state.isLocalBook) {
+                    SourceActionButton(
+                        state = state,
+                        colors = colors,
+                        onIntent = onIntent,
+                        backdrop = backdrop,
+                    )
+                    RefreshActionButton(
+                        state = state,
+                        colors = colors,
+                        onIntent = onIntent,
+                        backdrop = backdrop,
+                    )
+                }
+
+                Box {
+                    MenuTitleGlassButton(
+                        onClick = { expanded = true },
+                        icon = Icons.Default.MoreVert,
+                        state = state,
+                        colors = colors,
+                        backdrop = backdrop,
+                    )
+                    OverflowDropdownMenu(
+                        state = state,
+                        onIntent = onIntent,
+                        expanded = expanded,
+                        onDismiss = { expanded = false },
+                    )
+                }
+            }
+        }
+
+        // Book name on its own line (mode "1")
+        if (titleBarMode == "1") {
+            AppText(
+                text = state.bookName,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                style = LegadoTheme.typography.titleMedium.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.12f),
+                        offset = Offset.Zero,
+                        blurRadius = 12f
+                    )
+                ),
+                color = titleTextColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // Chapter name + source action (modes "0" and "1")
+        if (titleBarMode == "0" || titleBarMode == "1") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = state.chapterName,
+                    modifier = Modifier.weight(1f),
+                    style = labelStyle,
+                    color = titleTextColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                if (!state.isLocalBook && state.bookSource != null) {
+                    Text(
+                        text = state.bookSource.bookSourceName,
+                        modifier = Modifier
+                            .clickable { onIntent(ReadBookIntent.OpenSourceEdit) }
+                            .padding(start = 8.dp),
+                        style = labelStyle,
+                        color = titleTextColor,
+                        maxLines = 1,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MenuTitleGlassButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    backdrop: Backdrop?,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    contentDescription: String? = null,
+) {
+    ReadMenuGlassIconButton(
+        onClick = onClick,
+        icon = icon,
+        colors = colors,
+        backdrop = backdrop,
+        menuConfig = state.menuConfig,
+        glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig),
+        modifier = modifier,
+        onLongClick = onLongClick,
+        contentDescription = contentDescription,
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ReadMenuGlassIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    colors: ReadMenuColors,
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+    glassEnabled: Boolean,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    contentDescription: String? = null,
+) {
+    ReadMenuGlassButtonSurface(
+        onClick = onClick,
+        colors = colors,
+        backdrop = backdrop,
+        menuConfig = menuConfig,
+        glassEnabled = glassEnabled,
+        modifier = modifier,
+        onLongClick = onLongClick,
+        selected = selected,
+    ) { tint ->
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ReadMenuGlassButtonSurface(
+    onClick: () -> Unit,
+    colors: ReadMenuColors,
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+    glassEnabled: Boolean,
+    modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    content: @Composable (Color) -> Unit,
+) {
+    val shape = CircleShape
+    val tint = when {
+        selected -> LegadoTheme.colorScheme.onPrimaryContainer
+        else -> LegadoTheme.colorScheme.onSurfaceVariant
+    }
+    val containerColor = when {
+        selected -> LegadoTheme.colorScheme.primaryContainer
+        else -> LegadoTheme.colorScheme.surfaceContainerLow
+    }
+    val border = if (selected) {
+        BorderStroke(1.5.dp, LegadoTheme.colorScheme.primary)
+    } else {
+        null
+    }
+    val outerSize = if (glassEnabled) 48.dp else 40.dp
+    val innerSize = 40.dp
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .size(outerSize),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(innerSize)
+                .then(
+                    if (glassEnabled) {
+                        Modifier.readMenuLiquidGlass(
+                            backdrop = backdrop,
+                            colors = colors,
+                            shape = shape,
+                            useTopBarStyle = true,
+                            useLens = true,
+                            blurRadius = 32.dp,
+                            interactive = true,
+                            menuConfig = menuConfig,
+                        )
+                    } else {
+                        Modifier
+                            .clip(shape)
+                            .background(containerColor, shape)
+                    }
+                )
+                .then(if (border != null) Modifier.border(border, shape) else Modifier)
+                .combinedClickable(
+                    indication = if (glassEnabled) null else LocalIndication.current,
+                    interactionSource = remember { MutableInteractionSource() },
+                    role = Role.Button,
+                    onLongClick = onLongClick,
+                    onClick = onClick,
+                ),
+        ) {
+            content(tint)
+        }
+    }
+}
+
+@Composable
+private fun SourceActionButton(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        MenuTitleGlassButton(
+            onClick = { onIntent(ReadBookIntent.MenuChangeSource) },
+            onLongClick = { expanded = true },
+            icon = Icons.Default.SwapHoriz,
+            contentDescription = stringResource(R.string.change_origin),
+            state = state,
+            colors = colors,
+            backdrop = backdrop,
+        )
+
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.change_origin),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.chapter_change_source),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuChapterChangeSource) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun RefreshActionButton(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        MenuTitleGlassButton(
+            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+            onLongClick = { expanded = true },
+            icon = Icons.Default.Refresh,
+            contentDescription = stringResource(R.string.menu_refresh_after),
+            state = state,
+            colors = colors,
+            backdrop = backdrop,
+        )
+
+        RoundDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) { dismiss ->
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.menu_refresh_dur),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshDur) },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.menu_refresh_after),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAfter) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FloatingIconRow(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    alignment: Alignment.Horizontal = Alignment.CenterHorizontally,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    val context = LocalContext.current
+    val titleBarIcons = remember(
+        state.menuConfig.titleBarButtons,
+        state.isReadAloudRunning,
+        state.isAutoPage,
+    ) {
+        loadFloatingIcons(context, state, onIntent)
+    }
+
+    if (titleBarIcons.isEmpty()) return
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
+            .padding(all = 16.dp),
+        horizontalArrangement = when (alignment) {
+            Alignment.Start -> Arrangement.Start
+            Alignment.End -> Arrangement.End
+            else -> Arrangement.Center
+        },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        titleBarIcons.forEach { iconDef ->
+            val customPath = remember(state.menuConfig.titleBarCustomIcons, iconDef.id) {
+                state.menuConfig.titleBarCustomIcons[iconDef.id]
+            }
+            val isCustom = !customPath.isNullOrBlank()
+            ReadMenuGlassButtonSurface(
+                onClick = iconDef.onClick,
+                colors = colors,
+                backdrop = backdrop,
+                menuConfig = state.menuConfig,
+                glassEnabled = !isCustom && readMenuTopBarButtonLiquidGlassEnabled(
+                    backdrop,
+                    state.menuConfig
+                ),
+                selected = iconDef.isActive,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            ) {
+                if (isCustom) {
+                    AsyncImage(
+                        model = customPath,
+                        contentDescription = iconDef.label,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape),
+                    )
+                } else {
+                    Icon(
+                        imageVector = iconDef.icon,
+                        contentDescription = iconDef.label,
+                        tint = if (iconDef.isActive) LegadoTheme.colorScheme.primary else colors.content,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverflowDropdownMenu(
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+) {
+    RoundDropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+    ) { dismiss ->
+        var imageStyleExpanded by remember { mutableStateOf(false) }
+
+        // Source actions
+        if (!state.isLocalBook) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.menu_refresh_all),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAll) },
+            )
+        }
+
+        // TXT
+        if (state.isLocalTxt) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.txt_toc_rule),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuTocRegex) },
+            )
+        }
+
+        // Local book
+        if (state.isLocalBook) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.set_charset),
+                onClick = {
+                    dismiss()
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset))
+                },
+            )
+        }
+
+        PillDivider()
+
+        // Content operations
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.bookmark_add),
+            onClick = { dismiss(); onIntent(ReadBookIntent.AddBookmark) },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.edit_content),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
+            },
+        )
+        if (!state.isLocalBook) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.offline_cache),
+                onClick = {
+                    dismiss()
+                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download))
+                },
+            )
+        }
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.update_toc),
+            onClick = { dismiss(); onIntent(ReadBookIntent.MenuUpdateToc) },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.simulated_reading),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SimulatedReading))
+            },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.reverse_content),
+            onClick = { dismiss(); onIntent(ReadBookIntent.MenuReverseContent) },
+        )
+
+        PillDivider()
+
+        // Checkable items
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.replace_rule_title),
+            isSelected = state.useReplaceRule,
+            onClick = { onIntent(ReadBookIntent.MenuEnableReplace) },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.replace_rule_title_setting),
+            onClick = { dismiss(); onIntent(ReadBookIntent.MenuSettingReplace) },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.effective_replaces),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EffectiveReplaces))
+            },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.same_title_removed),
+            isSelected = state.sameTitleRemoved,
+            onClick = { onIntent(ReadBookIntent.MenuSameTitleRemoved) },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.re_segment),
+            isSelected = state.reSegment,
+            onClick = { onIntent(ReadBookIntent.MenuReSegment) },
+        )
+
+        // EPUB
+        if (state.isEpub) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.del_ruby_tag),
+                isSelected = state.delRubyTag,
+                onClick = { onIntent(ReadBookIntent.MenuDelRubyTag) },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.del_h_tag),
+                isSelected = state.delHTag,
+                onClick = { onIntent(ReadBookIntent.MenuDelHTag) },
+            )
+        }
+
+        PillDivider()
+
+        // Config
+        Box {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.image_style),
+                onClick = { imageStyleExpanded = true },
+            )
+            RoundDropdownMenu(
+                expanded = imageStyleExpanded,
+                onDismissRequest = { imageStyleExpanded = false },
+            ) { subDismiss ->
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.btn_default_s),
+                    onClick = {
+                        subDismiss()
+                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleDefault))
+                    },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.image_style_full),
+                    onClick = {
+                        subDismiss()
+                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleFull))
+                    },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.image_style_text),
+                    onClick = {
+                        subDismiss()
+                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleText))
+                    },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.image_style_single),
+                    onClick = {
+                        subDismiss()
+                        onIntent(ReadBookIntent.MenuImageStyle(Book.imgStyleSingle))
+                    },
+                )
+            }
+        }
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.book_page_anim),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageAnim))
+            },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.config_btn),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
+            },
+        )
+
+        // Progress sync
+        if (state.isReadingProgressSyncConfigured) {
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.get_book_progress),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuGetProgress) },
+            )
+            RoundDropdownMenuItem(
+                text = stringResource(R.string.cover_book_progress),
+                onClick = { dismiss(); onIntent(ReadBookIntent.MenuCoverProgress) },
+            )
+        }
+
+        PillDivider()
+
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.log),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AppLog))
+            },
+        )
+    }
+}
+
+@Composable
+private fun MenuBottomBar(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    context: Context,
+    bottomPadding: Dp = 0.dp,
+    surfaceEffectEnabled: Boolean = false,
+    buttonGlassEnabled: Boolean = false,
+    backdrop: Backdrop? = null,
+    labelColor: Color = LegadoTheme.colorScheme.onSurface,
+) {
+    val seekMax = state.seekMax.coerceAtLeast(0)
+    val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
+    var sliderValue by remember { mutableFloatStateOf(state.seekProgress.coerceIn(0, seekMax).toFloat()) }
+    var sliderDragging by remember { mutableStateOf(false) }
+    val toolButtonsBottomPadding = if (buttonGlassEnabled) 6.dp else 0.dp
+    val contentBottomPadding = if (bottomPadding > toolButtonsBottomPadding) {
+        bottomPadding - toolButtonsBottomPadding
+    } else {
+        0.dp
+    }
+
+    fun commitSliderValue(value: Float) {
+        val target = value.roundToInt().coerceIn(0, seekMax)
+        sliderDragging = false
+        sliderValue = target.toFloat()
+        val behavior = AppConfig.progressBarBehavior
+        if (behavior == "page") {
+            onIntent(ReadBookIntent.SkipToPage(target))
+        } else {
+            onIntent(ReadBookIntent.SeekToChapter(target))
+        }
+    }
+
+    LaunchedEffect(state.seekProgress, seekMax) {
+        if (!sliderDragging) {
+            sliderValue = state.seekProgress.coerceIn(0, seekMax).toFloat()
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (surfaceEffectEnabled) Color.Transparent else colors.background.copy(
+                    alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+                )
+            )
+            .windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+            )
+            .padding(top = 8.dp, bottom = contentBottomPadding)
+            .animateContentSize(),
+    ) {
+        // Seek bar row: prev + slider + next
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            BottomBarGlassIconButton(
+                onClick = { onIntent(ReadBookIntent.PrevChapter) },
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                colors = colors,
+                backdrop = backdrop,
+                menuConfig = state.menuConfig,
+                glassEnabled = buttonGlassEnabled,
+            )
+
+            ReadMenuSlider(
+                value = sliderValue.coerceIn(0f, sliderMax),
+                onValueChange = { value ->
+                    sliderDragging = true
+                    sliderValue = value.coerceIn(0f, sliderMax)
+                },
+                onValueChangeFinished = {
+                    commitSliderValue(sliderValue)
+                },
+                onValueCommit = ::commitSliderValue,
+                valueRange = 0f..sliderMax,
+                steps = (seekMax - 1).coerceAtLeast(0),
+                enabled = seekMax > 0,
+                backdrop = backdrop,
+                glassThumbEnabled = buttonGlassEnabled,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 8.dp)
+            )
+
+            BottomBarGlassIconButton(
+                onClick = { onIntent(ReadBookIntent.NextChapter) },
+                icon = Icons.AutoMirrored.Filled.ArrowForward,
+                colors = colors,
+                backdrop = backdrop,
+                menuConfig = state.menuConfig,
+                glassEnabled = buttonGlassEnabled,
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Tool buttons
+        val toolButtons = remember(
+            context,
+            state.menuConfig.bottomBarButtons,
+            state.menuConfig.readMenuCustomIcons,
+            state.isReadAloudRunning,
+            state.isAutoPage
+        ) {
+            loadToolButtons(context, state, onIntent)
+        }
+        val itemsPerRow = state.menuConfig.readMenuIconItemsPerRow
+        val rowCount = state.menuConfig.readMenuIconRowCount
+        val pageSize = (itemsPerRow * rowCount).coerceAtLeast(1)
+        val pageCount = ceil(toolButtons.size / pageSize.toFloat()).roundToInt().coerceAtLeast(1)
+        val pagerState = rememberPagerState(pageCount = { pageCount })
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth(),
+        ) { page ->
+            val pageButtons = toolButtons.drop(page * pageSize).take(pageSize)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = toolButtonsBottomPadding),
+            ) {
+                pageButtons.chunked(itemsPerRow).forEach { rowButtons ->
+                    Row(
+                        horizontalArrangement = when {
+                            rowButtons.size > 3 -> Arrangement.SpaceBetween
+                            else -> Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                    ) {
+                        rowButtons.forEach { button ->
+                            ToolButtonItem(
+                                button = button,
+                                state = state,
+                                colors = colors,
+                                backdrop = backdrop,
+                                glassEnabled = buttonGlassEnabled,
+                                labelColor = labelColor,
+                                modifier = Modifier.width(if (buttonGlassEnabled) 48.dp else 40.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BottomBarGlassIconButton(
+    onClick: () -> Unit,
+    icon: ImageVector,
+    colors: ReadMenuColors,
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+    glassEnabled: Boolean,
+    contentDescription: String? = null,
+) {
+    ReadMenuGlassIconButton(
+        onClick = onClick,
+        icon = icon,
+        colors = colors,
+        backdrop = backdrop,
+        menuConfig = menuConfig,
+        glassEnabled = glassEnabled,
+        contentDescription = contentDescription,
+    )
+}
+
+@Composable
+private fun ReadMenuSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    steps: Int = 0,
+    onValueChangeFinished: (() -> Unit)? = null,
+    onValueCommit: ((Float) -> Unit)? = null,
+    backdrop: Backdrop?,
+    glassThumbEnabled: Boolean,
+) {
+    if (glassThumbEnabled && backdrop != null) {
+        ReadMenuLiquidSlider(
+            value = { value },
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            visibilityThreshold = 0.001f,
+            backdrop = backdrop,
+            modifier = modifier,
+            enabled = enabled,
+            onValueChangeFinished = onValueChangeFinished,
+            onValueCommit = onValueCommit,
+        )
+        return
+    }
+
+    val commitAction = onValueChangeFinished ?: onValueCommit?.let { commit -> { commit(value) } }
+
+    AppSlider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.padding(horizontal = 5.dp),
+        enabled = enabled,
+        valueRange = valueRange,
+        steps = steps,
+        onValueChangeFinished = commitAction,
+    )
+}
+
+@Composable
+private fun ReadMenuLiquidSlider(
+    value: () -> Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    visibilityThreshold: Float,
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null,
+    onValueCommit: ((Float) -> Unit)? = null,
+) {
+    val accentColor = LegadoTheme.colorScheme.secondary
+    val trackColor = LegadoTheme.colorScheme.surfaceContainerLow
+    val thumbColor = Color.White.copy(alpha = 0.9f).compositeOver(LegadoTheme.colorScheme.surfaceContainerLow)
+
+    val trackBackdrop = rememberLayerBackdrop()
+
+    BoxWithConstraints(
+        modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val trackWidth = constraints.maxWidth
+        val rangeStart = valueRange.start
+        val rangeEnd = valueRange.endInclusive
+        val range = rangeEnd - rangeStart
+        val animationScope = rememberCoroutineScope()
+        var didDrag by remember { mutableStateOf(false) }
+        val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+        val dampedDragAnimation = remember(animationScope) {
+            DampedDragAnimation(
+                animationScope = animationScope,
+                initialValue = value(),
+                valueRange = valueRange,
+                visibilityThreshold = visibilityThreshold,
+                initialScale = 1f,
+                pressedScale = 1.5f,
+                onDragStarted = {},
+                onDragStopped = {
+                    if (didDrag) {
+                        onValueChange(targetValue)
+                        onValueCommit?.invoke(targetValue)
+                    } else {
+                        onValueChangeFinished?.invoke()
+                    }
+                },
+                onDrag = { _, dragAmount ->
+                    if (!didDrag) {
+                        didDrag = dragAmount.x != 0f
+                    }
+                    val delta = range * (dragAmount.x / trackWidth)
+                    val nextValue = if (isLtr) {
+                        (targetValue + delta).coerceIn(valueRange)
+                    } else {
+                        (targetValue - delta).coerceIn(valueRange)
+                    }
+                    updateValue(nextValue)
+                    onValueChange(nextValue)
+                },
+            )
+        }
+
+        LaunchedEffect(dampedDragAnimation) {
+            snapshotFlow { value() }
+                .collectLatest { currentValue ->
+                    if (dampedDragAnimation.targetValue != currentValue) {
+                        dampedDragAnimation.updateValue(currentValue)
+                    }
+                }
+        }
+
+        val progress = if (range == 0f) {
+            0f
+        } else {
+            ((dampedDragAnimation.value - rangeStart) / range).coerceIn(0f, 1f)
+        }
+
+        Box(Modifier.layerBackdrop(trackBackdrop)) {
+            Box(
+                Modifier
+                    .drawBackdrop(
+                        backdrop = backdrop,
+                        shape = { ContinuousCapsule },
+                        effects = {},
+                        highlight = null,
+                        shadow = {
+                            Shadow(
+                                radius = 8.dp,
+                                color = Color.Black.copy(alpha = 0.12f),
+                            )
+                        },
+                        innerShadow = null,
+                        onDrawSurface = {
+                            drawRect(trackColor)
+                        },
+                    )
+                    .pointerInput(enabled, animationScope, isLtr, trackWidth) {
+                        if (!enabled) return@pointerInput
+                        detectTapGestures { position ->
+                            val delta = range * (position.x / trackWidth)
+                            val targetValue =
+                                (if (isLtr) rangeStart + delta else rangeEnd - delta)
+                                    .coerceIn(valueRange)
+                            dampedDragAnimation.animateToValue(targetValue)
+                            onValueChange(targetValue)
+                            onValueCommit?.invoke(targetValue) ?: onValueChangeFinished?.invoke()
+                        }
+                    }
+                    .height(6f.dp)
+                    .fillMaxWidth(),
+            )
+            Box(
+                Modifier
+                    .clip(ContinuousCapsule)
+                    .background(accentColor)
+                    .height(6f.dp)
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        val width = (constraints.maxWidth * progress).roundToInt()
+                        layout(width, placeable.height) {
+                            placeable.place(0, 0)
+                        }
+                    },
+            )
+        }
+
+        Box(
+            Modifier
+                .graphicsLayer {
+                    translationX =
+                        (-size.width / 2f + trackWidth * progress)
+                            .coerceIn(-size.width / 4f, trackWidth - size.width * 3f / 4f) *
+                                if (isLtr) 1f else -1f
+                }
+                .then(dampedDragAnimation.modifier)
+                .drawBackdrop(
+                    backdrop = rememberCombinedBackdrop(
+                        backdrop,
+                        rememberBackdrop(trackBackdrop) { drawBackdrop ->
+                            val pressProgress = dampedDragAnimation.pressProgress
+                            val scaleX = 2f / 3f + (1f / 3f) * pressProgress
+                            scale(scaleX, pressProgress) {
+                                drawBackdrop()
+                            }
+                        },
+                    ),
+                    shape = { ContinuousCapsule },
+                    effects = {
+                        val pressProgress = dampedDragAnimation.pressProgress
+                        blur(8.dp.toPx() * (1f - pressProgress))
+                        lens(
+                            10.dp.toPx() * pressProgress,
+                            14.dp.toPx() * pressProgress,
+                            chromaticAberration = true,
+                        )
+                    },
+                    highlight = {
+                        Highlight.Ambient.copy(
+                            width = Highlight.Ambient.width / 1.5f,
+                            blurRadius = Highlight.Ambient.blurRadius / 1.5f,
+                            alpha = dampedDragAnimation.pressProgress,
+                        )
+                    },
+                    shadow = {
+                        Shadow(
+                            radius = 8.dp,
+                            color = Color.Black.copy(alpha = 0.12f),
+                        )
+                    },
+                    innerShadow = {
+                        InnerShadow(
+                            radius = 4.dp * dampedDragAnimation.pressProgress,
+                            alpha = dampedDragAnimation.pressProgress,
+                        )
+                    },
+                    layerBlock = {
+                        scaleX = dampedDragAnimation.scaleX
+                        scaleY = dampedDragAnimation.scaleY
+                        val velocity = dampedDragAnimation.velocity / 10f
+                        scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                        scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                    },
+                    onDrawSurface = {
+                        val pressProgress = dampedDragAnimation.pressProgress
+                        drawRect(thumbColor.copy(alpha = 1f - pressProgress))
+                    },
+                )
+                .size(40f.dp, 24f.dp),
+        )
+    }
+}
+
+@Composable
+private fun ToolButtonItem(
+    button: ToolButtonDef,
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    backdrop: Backdrop?,
+    glassEnabled: Boolean,
+    labelColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val iconTint = if (button.isActive) LegadoTheme.colorScheme.primary else colors.content
+    val badgeCount = when (button.id) {
+        "replace_badge" -> state.effectiveReplaceCount
+        else -> 0
+    }
+    val buttonShape = RoundedCornerShape(16.dp)
+    val containerColor = when {
+        button.isActive -> LegadoTheme.colorScheme.secondaryContainer
+        state.menuConfig.readMenuIconStyle == 1 -> LegadoTheme.colorScheme.surfaceContainerLow
+        else -> Color.Transparent
+    }
+    val borderStroke = when {
+        button.isActive -> BorderStroke(1.5.dp, LegadoTheme.colorScheme.primary)
+        state.menuConfig.readMenuIconStyle == 2 -> BorderStroke(1.dp, iconTint.copy(alpha = 0.45f))
+        else -> null
+    }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        if (glassEnabled) {
+            ReadMenuGlassButtonSurface(
+                onClick = button.onClick,
+                colors = colors,
+                backdrop = backdrop,
+                menuConfig = state.menuConfig,
+                glassEnabled = true,
+                selected = button.isActive,
+            ) { tint ->
+                ToolButtonContent(
+                    button = button,
+                    tint = if (button.isActive) iconTint else tint,
+                    badgeCount = badgeCount,
+                )
+            }
+        } else {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(buttonShape)
+                    .background(containerColor, buttonShape)
+                    .then(
+                        if (borderStroke != null) Modifier.border(
+                            borderStroke,
+                            buttonShape
+                        ) else Modifier
+                    )
+                    .combinedClickable(
+                        indication = LocalIndication.current,
+                        interactionSource = remember { MutableInteractionSource() },
+                        role = Role.Button,
+                        onClick = button.onClick,
+                    ),
+            ) {
+                ToolButtonContent(
+                    button = button,
+                    tint = iconTint,
+                    badgeCount = badgeCount,
+                )
+            }
+        }
+        if (state.menuConfig.readMenuIconShowText) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = button.description,
+                style = LegadoTheme.typography.labelSmall.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.12f),
+                        offset = Offset.Zero,
+                        blurRadius = 12f,
+                    )
+                ),
+                color = labelColor,
+                maxLines = 1,
+                modifier = Modifier.wrapContentWidth(
+                    align = Alignment.CenterHorizontally,
+                    unbounded = true,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ToolButtonContent(
+    button: ToolButtonDef,
+    tint: Color,
+    badgeCount: Int,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (button.customIconPath.isNullOrBlank()) {
+            Icon(
+                imageVector = button.icon,
+                contentDescription = button.description,
+                modifier = Modifier.size(20.dp),
+                tint = tint,
+            )
+        } else {
+            AsyncImage(
+                model = button.customIconPath,
+                contentDescription = button.description,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape),
+            )
+        }
+        if (badgeCount > 0) {
+            Text(
+                text = badgeCount.toString(),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .background(
+                        LegadoTheme.colorScheme.error,
+                        RoundedCornerShape(8.dp),
+                    )
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                style = LegadoTheme.typography.labelSmall,
+                color = LegadoTheme.colorScheme.onError,
+            )
+        }
+    }
+}
+
+private data class ToolButtonDef(
+    val id: String,
+    val icon: ImageVector,
+    val description: String,
+    val customIconPath: String?,
+    val isActive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+private fun loadToolButtons(
+    context: Context,
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
+): List<ToolButtonDef> {
+    val customIcons = state.menuConfig.readMenuCustomIcons
+    fun ReadMenuButtonInfo.toButton(isActive: Boolean = false, onClick: () -> Unit): ToolButtonDef {
+        return ToolButtonDef(id, icon, label, customIcons[id], isActive, onClick)
+    }
+    val infoMap = readMenuButtonInfos(context).associateBy { it.id }
+    val allButtons = listOf(
+        infoMap.getValue("search").toButton {
+            onIntent(ReadBookIntent.OpenSearch(null))
+        },
+        infoMap.getValue("catalog").toButton {
+            onIntent(ReadBookIntent.OpenChapterList)
+        },
+        infoMap.getValue("read_aloud").toButton(isActive = state.isReadAloudRunning) {
+            if (state.isReadAloudRunning) {
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+            } else {
+                onIntent(ReadBookIntent.ToggleReadAloud)
+                onIntent(ReadBookIntent.HideMenu)
+            }
+        },
+        infoMap.getValue("setting").toButton {
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle))
+        },
+        infoMap.getValue("addBookmark").toButton {
+            onIntent(ReadBookIntent.AddBookmark)
+        },
+        infoMap.getValue("theme").toButton {
+            onIntent(ReadBookIntent.ToggleDayNight)
+        },
+        infoMap.getValue("prev_chapter").toButton {
+            onIntent(ReadBookIntent.PrevChapter)
+        },
+        infoMap.getValue("next_chapter").toButton {
+            onIntent(ReadBookIntent.NextChapter)
+        },
+        infoMap.getValue("replace").toButton {
+            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+        },
+        infoMap.getValue("replace_badge").toButton {
+            onIntent(ReadBookIntent.ChangeReplaceRule(true))
+        },
+        infoMap.getValue("auto_page").toButton(isActive = state.isAutoPage) {
+            if (state.isAutoPage) {
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
+            } else {
+                onIntent(ReadBookIntent.ToggleAutoPage)
+                onIntent(ReadBookIntent.HideMenu)
+            }
+        },
+        infoMap.getValue("translate").toButton {
+            onIntent(ReadBookIntent.ToggleTranslation)
+        },
+    )
+
+    val allMap = allButtons.associateBy { it.id }
+    return state.menuConfig.bottomBarButtons
+        .asSequence()
+        .filter { it.enabled }
+        .mapNotNull { allMap[it.id] }
+        .toList()
+}
+
+private data class ReadMenuColors(
+    val background: Color,
+    val content: Color,
+)
+
+private fun readMenuLiquidGlassAvailable(backdrop: Backdrop?): Boolean {
+    return backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+}
+
+private fun readMenuTopBarButtonLiquidGlassEnabled(
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+): Boolean {
+    return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
+            menuConfig.readMenuTopBarLiquidGlassButtons &&
+            readMenuLiquidGlassAvailable(backdrop)
+}
+
+private fun readMenuBottomBarButtonLiquidGlassEnabled(
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+): Boolean {
+    return menuConfig.readMenuBottomBarLiquidGlassButtons &&
+            readMenuLiquidGlassAvailable(backdrop)
+}
+
+private fun readMenuTopBarHazeEnabled(
+    hazeState: HazeState?,
+    menuConfig: ReadMenuConfig,
+): Boolean {
+    return hazeState != null && menuConfig.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze
+}
+
+private fun readMenuBottomBarEffectiveBlurMode(
+    menuConfig: ReadMenuConfig,
+    isFloating: Boolean,
+): Int {
+    val mode = menuConfig.readMenuBottomBarBlurMode
+    return if (!isFloating && mode == ReadMenuBlurMode.LiquidGlass) {
+        ReadMenuBlurMode.Haze
+    } else {
+        mode
+    }
+}
+
+private fun readMenuBottomBarLiquidGlassEnabled(
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+    isFloating: Boolean,
+): Boolean {
+    return isFloating &&
+            readMenuBottomBarEffectiveBlurMode(
+                menuConfig,
+                isFloating
+            ) == ReadMenuBlurMode.LiquidGlass &&
+            readMenuLiquidGlassAvailable(backdrop)
+}
+
+private fun readMenuBottomBarHazeEnabled(
+    hazeState: HazeState?,
+    menuConfig: ReadMenuConfig,
+    isFloating: Boolean,
+): Boolean {
+    return hazeState != null &&
+            readMenuBottomBarEffectiveBlurMode(menuConfig, isFloating) == ReadMenuBlurMode.Haze
+}
+
+@Composable
+private fun Modifier.readMenuLiquidGlass(
+    backdrop: Backdrop?,
+    colors: ReadMenuColors,
+    shape: Shape,
+    useTopBarStyle: Boolean,
+    useLens: Boolean,
+    blurRadius: Dp? = null,
+    interactive: Boolean = false,
+    menuConfig: ReadMenuConfig,
+): Modifier {
+    if (!readMenuLiquidGlassAvailable(backdrop)) return this
+    val animationScope = rememberCoroutineScope()
+    val interactiveHighlight = if (interactive) {
+        remember(animationScope) { InteractiveHighlight(animationScope = animationScope) }
+    } else {
+        null
+    }
+    val resolvedBlurRadius = blurRadius ?: menuConfig.readMenuBlurRadius.dp
+    val blurAlpha = menuConfig.readMenuBlurAlpha
+    val containerColor = colors.background.copy(
+        alpha = (blurAlpha.coerceIn(0, 100) / 100f).coerceAtMost(0.6f)
+    )
+    val topBarSurfaceBrush = readMenuTopBarSurfaceBrush(
+        colors = colors,
+        alpha = containerColor.alpha,
+    )
+
+    return drawBackdrop(
+        backdrop = backdrop!!,
+        shape = { shape },
+        effects = {
+            vibrancy()
+            blur(resolvedBlurRadius.coerceAtLeast(0.dp).toPx())
+            if (useLens) {
+                val lensRadius = menuConfig.readMenuLensRadius
+                lens(lensRadius.dp.toPx(), lensRadius.dp.toPx())
+            }
+        },
+        highlight = {
+            Highlight.Default
+        },
+        shadow = null,
+        layerBlock = if (interactiveHighlight != null) {
+            {
+                val width = size.width
+                val height = size.height
+                if (width > 0f && height > 0f) {
+                    val progress = interactiveHighlight.pressProgress
+                    val scale = 1f + 4.dp.toPx() / height * progress
+                    val maxOffset = size.minDimension
+                    val initialDerivative = 0.05f
+                    val offset = interactiveHighlight.offset
+                    translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+                    translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+
+                    val maxDragScale = 4.dp.toPx() / height
+                    val offsetAngle = atan2(offset.y, offset.x)
+                    scaleX = scale + maxDragScale *
+                            abs(cos(offsetAngle) * offset.x / size.maxDimension) *
+                            (width / height).coerceAtMost(1f)
+                    scaleY = scale + maxDragScale *
+                            abs(sin(offsetAngle) * offset.y / size.maxDimension) *
+                            (height / width).coerceAtMost(1f)
+                }
+            }
+        } else {
+            null
+        },
+        onDrawSurface = {
+            if (useTopBarStyle) {
+                drawRect(topBarSurfaceBrush)
+            } else {
+                drawRect(containerColor)
+            }
+        },
+    )
+        .then(if (interactiveHighlight != null) interactiveHighlight.modifier else Modifier)
+        .then(if (interactiveHighlight != null) interactiveHighlight.gestureModifier else Modifier)
+}
+
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun Modifier.readMenuBottomBarHazeEffect(
+    state: HazeState,
+    colors: ReadMenuColors,
+    shape: Shape,
+    menuConfig: ReadMenuConfig,
+    progressive: Boolean,
+): Modifier {
+    val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val backgroundModifier = if (progressive) {
+        Modifier.background(
+            readMenuBottomBarSurfaceBrush(
+                colors = colors,
+                alpha = surfaceAlpha,
+            )
+        )
+    } else {
+        Modifier
+    }
+    return clip(shape)
+        .then(backgroundModifier)
+        .readMenuHazeEffect(
+            state = state,
+            colors = colors,
+            menuConfig = menuConfig,
+            progressive = progressive,
+            progressiveBottomToTop = progressive,
+        )
+}
+
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun Modifier.readMenuHazeEffect(
+    state: HazeState,
+    colors: ReadMenuColors,
+    menuConfig: ReadMenuConfig,
+    progressive: Boolean = false,
+    progressiveBottomToTop: Boolean = false,
+): Modifier {
+    val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val hazeContainerColor = if (progressive) {
+        Color.Black.copy(alpha = surfaceAlpha)
+    } else {
+        colors.background.copy(alpha = surfaceAlpha)
+    }
+    val style = HazeLegado.custom(
+        containerColor = hazeContainerColor,
+        blurRadius = menuConfig.readMenuBlurRadius,
+        blurAlpha = menuConfig.readMenuBlurAlpha,
+    )
+
+    return hazeEffect(
+        state = state,
+        style = style,
+    ) {
+        this.progressive = if (progressive) {
+            HazeProgressive.verticalGradient(
+                startIntensity = if (progressiveBottomToTop) 0f else 1f,
+                endIntensity = if (progressiveBottomToTop) 1f else 0f,
+            )
+        } else {
+            null
+        }
+    }
+}
+
+@Composable
+private fun readMenuTopBarSurfaceBrush(
+    colors: ReadMenuColors,
+    alpha: Float,
+): Brush {
+    val topColor = colors.background.copy(
+        alpha = alpha.coerceIn(0f, 1f),
+    )
+    val bottomColor = colors.background.copy(
+        alpha = (alpha * 0.72f).coerceIn(0f, 1f),
+    )
+    return Brush.verticalGradient(
+        colors = listOf(topColor, bottomColor),
+    )
+}
+
+@Composable
+private fun readMenuBottomBarSurfaceBrush(
+    colors: ReadMenuColors,
+    alpha: Float,
+): Brush {
+    val strongColor = colors.background.copy(
+        alpha = alpha.coerceIn(0f, 1f),
+    )
+    val weakColor = colors.background.copy(
+        alpha = (alpha * 0.72f).coerceIn(0f, 1f),
+    )
+    return Brush.verticalGradient(
+        colors = listOf(weakColor, strongColor),
+    )
+}
+
+@Composable
+private fun readMenuColors(): ReadMenuColors {
+    val themeBackground = LegadoTheme.colorScheme.surfaceContainerHigh
+    val themeContent = LegadoTheme.colorScheme.onSurface
+    return when (AppConfig.readBarStyle) {
+        1 -> ReadMenuColors(
+            background = themeBackground,
+            content = themeContent,
+        )
+
+        2 -> ReadMenuColors(
+            background = LegadoTheme.colorScheme.surfaceContainerHigh,
+            content = LegadoTheme.colorScheme.primary,
+        )
+
+        else -> ReadMenuColors(themeBackground, themeContent)
+    }
+}
+
+// ========== Title Bar Icons ==========
+
+private data class TitleBarIconDef(
+    val id: String,
+    val icon: ImageVector,
+    val label: String,
+    val isActive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+private fun loadFloatingIcons(
+    context: Context,
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
+): List<TitleBarIconDef> {
+    val infoMap = readMenuButtonInfos(context).associateBy { it.id }
+
+    val actionMap: Map<String, () -> Unit> = mapOf(
+        "search" to { onIntent(ReadBookIntent.OpenSearch(null)) },
+        "catalog" to { onIntent(ReadBookIntent.OpenChapterList) },
+        "read_aloud" to {
+            if (state.isReadAloudRunning) {
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+            } else {
+                onIntent(ReadBookIntent.ToggleReadAloud)
+                onIntent(ReadBookIntent.HideMenu)
+            }
+        },
+        "setting" to { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) },
+        "addBookmark" to { onIntent(ReadBookIntent.AddBookmark) },
+        "theme" to { onIntent(ReadBookIntent.ToggleDayNight) },
+        "prev_chapter" to { onIntent(ReadBookIntent.PrevChapter) },
+        "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
+        "replace" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
+        "replace_badge" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
+        "auto_page" to {
+            if (state.isAutoPage) {
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
+            } else {
+                onIntent(ReadBookIntent.ToggleAutoPage)
+                onIntent(ReadBookIntent.HideMenu)
+            }
+        },
+        "translate" to { onIntent(ReadBookIntent.ToggleTranslation) },
+    )
+
+    val activeIds = buildSet {
+        if (state.isReadAloudRunning) add("read_aloud")
+        if (state.isAutoPage) add("auto_page")
+    }
+
+    return state.menuConfig.titleBarButtons
+        .asSequence()
+        .filter { it.enabled }
+        .mapNotNull { item ->
+            val id = item.id
+            val info = infoMap[id] ?: return@mapNotNull null
+            TitleBarIconDef(
+                id = id,
+                icon = info.icon,
+                label = info.label,
+                isActive = id in activeIds,
+                onClick = actionMap[id] ?: {},
+            )
+        }
+        .toList()
+}

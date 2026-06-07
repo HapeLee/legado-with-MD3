@@ -10,6 +10,8 @@ import io.legado.app.domain.usecase.ChangeSourceMigrationOptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
+const val READER_RESULT_DELETED = 100
+
 data class BookInfoUiState(
     val book: Book? = null,
     val chapterList: List<BookChapter> = emptyList(),

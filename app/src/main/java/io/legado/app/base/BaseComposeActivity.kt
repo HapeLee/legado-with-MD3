@@ -1,7 +1,9 @@
 package io.legado.app.base
 
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.core.graphics.drawable.toDrawable
@@ -9,7 +11,7 @@ import androidx.core.view.WindowCompat
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
@@ -34,6 +36,10 @@ abstract class BaseComposeActivity(
         AppContextWrapper.applyLocaleAndFont(this)
 
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         setupSystemBar()
         // Compose 入口
@@ -66,7 +72,7 @@ abstract class BaseComposeActivity(
 
     open fun upBackgroundImage() {
         try {
-            OldThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
+            ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
                 window.setBackgroundDrawable(it.toDrawable(resources))
             }
         } catch (_: Exception) {}

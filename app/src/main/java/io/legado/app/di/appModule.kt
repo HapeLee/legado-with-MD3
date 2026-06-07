@@ -25,7 +25,11 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LlmTranslateRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
+import io.legado.app.data.repository.MangaSettingsRepository
+import io.legado.app.data.repository.ReadBookStyleConfigRepository
+import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.SearchContentRepository
@@ -57,11 +61,13 @@ import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
 import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.domain.usecase.ChangeBookSourceUseCase
+import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
 import io.legado.app.domain.usecase.ClearBookCacheUseCase
 import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.domain.usecase.ExportBookshelfUseCase
+import io.legado.app.domain.usecase.GetChapterContentUseCase
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
@@ -85,6 +91,7 @@ import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceComposeViewModel
 import io.legado.app.ui.book.changesource.ChangeBookSourceViewModel
+import io.legado.app.ui.book.changesource.ChangeChapterSourceViewModel
 import io.legado.app.ui.book.explore.ExploreShowViewModel
 import io.legado.app.ui.book.group.GroupViewModel
 import io.legado.app.ui.book.import.local.ImportBookViewModel
@@ -147,6 +154,10 @@ val appModule = module {
     singleOf(::SearchContentRepository)
     singleOf(::RemoteBookRepository)
     singleOf(::SettingsRepository)
+    singleOf(::ReadSettingsRepository)
+    singleOf(::ReadAloudSettingsRepository)
+    singleOf(::ReadBookStyleConfigRepository)
+    singleOf(::MangaSettingsRepository)
     singleOf(::LocalPreferencesRepository)
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)
@@ -194,6 +205,8 @@ val appModule = module {
     single<SearchRepository> { get<SearchRepositoryImpl>() }
     single<BookSearchGateway> { get<SearchRepositoryImpl>() }
     singleOf(::SearchBooksUseCase)
+    singleOf(::ChangeSourceSearchUseCase)
+    singleOf(::GetChapterContentUseCase)
     single<LlmGateway> { LlmTranslateRepositoryImpl() }
     single<DictionaryGateway> { DictionaryRepositoryImpl() }
     singleOf(::TranslateChapterUseCase)
@@ -252,12 +265,16 @@ val appModule = module {
             application = get(),
             getReadingProgressUseCase = get(),
             uploadReadingProgressUseCase = get(),
-            translateChapterUseCase = get()
+            translateChapterUseCase = get(),
+            readSettingsRepository = get(),
+            readBookStyleConfigRepository = get(),
+            readAloudSettingsRepository = get()
         )
     }
     viewModelOf(::ChangeCoverViewModel)
     viewModelOf(::ChangeBookSourceComposeViewModel)
     viewModelOf(::ChangeBookSourceViewModel)
+    viewModelOf(::ChangeChapterSourceViewModel)
     viewModelOf(::ExploreViewModel)
     viewModelOf(::RssViewModel)
     viewModelOf(::SearchViewModel)

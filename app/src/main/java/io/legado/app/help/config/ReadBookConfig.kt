@@ -1,40 +1,32 @@
 package io.legado.app.help.config
 
-import android.graphics.Color
+import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
-import com.google.android.material.color.MaterialColors
-import io.legado.app.constant.AppLog
+import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
+import io.legado.app.constant.ReadMenuBlurMode
+import io.legado.app.constant.ReadMenuBlurStyle
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.utils.BitmapUtils
-import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
-import io.legado.app.utils.compress.ZipUtils
-import io.legado.app.utils.createFolderReplace
-import io.legado.app.utils.externalCache
-import io.legado.app.utils.externalFiles
-import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getFile
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
-import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
-import io.legado.app.utils.putPrefString
-import io.legado.app.utils.resizeAndRecycle
 import splitties.init.appCtx
-import java.io.File
+import java.io.InputStream
 
 /**
  * 阅读界面配置
@@ -42,10 +34,33 @@ import java.io.File
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
+    private val readStyleRepository = ReadStyleRepository()
+
+    // region Tip position constants
+    const val tipNone = 0
+    const val tipChapterTitle = 1
+    const val tipTime = 2
+    const val tipBattery = 3
+    const val tipBatteryPercentage = 10
+    const val tipPage = 4
+    const val tipTotalProgress = 5
+    const val tipPageAndTotal = 6
+    const val tipBookName = 7
+    const val tipTimeBattery = 8
+    const val tipTimeBatteryPercentage = 9
+    const val tipTotalProgress1 = 11
+    const val tipChapterTitleArrow = 12
+    const val tipBatteryInside = 13
+    const val tipBatteryIcon = 14
+    const val tipBatteryClassic = 15
+    const val tipTimeBatteryClassic = 16
+    const val tipChapterTitleArrowClassic = 17
+    // endregion
+
     const val configFileName = "readConfig.json"
     const val shareConfigFileName = "shareReadConfig.json"
-    val configFilePath = FileUtils.getPath(appCtx.filesDir, configFileName)
-    val shareConfigFilePath = FileUtils.getPath(appCtx.filesDir, shareConfigFileName)
+    val configFilePath: String get() = readStyleRepository.configFilePath
+    val shareConfigFilePath: String get() = readStyleRepository.shareConfigFilePath
     val configList: ArrayList<Config> = arrayListOf()
     lateinit var shareConfig: Config
     var durConfig
@@ -63,7 +78,7 @@ object ReadBookConfig {
     val textColor: Int get() = durConfig.curTextColor()
     val textAccentColor: Int get() = durConfig.curTextAccentColor()
     val textShadowColor: Int get() = durConfig.curTextShadowColor()
-    val menuColor: Int get() = durConfig.curMenuAc()
+    val menuColor: Int get() = readMenuAccentColor
     init {
         initConfigs()
         initShareConfig()
@@ -78,34 +93,14 @@ object ReadBookConfig {
     }
 
     fun initConfigs() {
-        val configFile = File(configFilePath)
-        var configs: List<Config>? = null
-        if (configFile.exists()) {
-            try {
-                val json = configFile.readText()
-                configs = GSON.fromJsonArray<Config>(json).getOrThrow()
-            } catch (e: Exception) {
-                AppLog.put("读取排版配置文件出错", e)
-            }
-        }
-        (configs ?: DefaultData.readConfigs).let {
+        readStyleRepository.readConfigs().let {
             configList.clear()
             configList.addAll(it)
         }
     }
 
     fun initShareConfig() {
-        val configFile = File(shareConfigFilePath)
-        var c: Config? = null
-        if (configFile.exists()) {
-            try {
-                val json = configFile.readText()
-                c = GSON.fromJsonObject<Config>(json).getOrThrow()
-            } catch (e: Exception) {
-                e.printOnDebug()
-            }
-        }
-        shareConfig = c ?: configList.getOrNull(5) ?: Config()
+        shareConfig = readStyleRepository.readShareConfig(configList.getOrNull(5) ?: Config())
     }
 
     fun upBg(width: Int, height: Int) {
@@ -121,32 +116,13 @@ object ReadBookConfig {
     fun save() {
         Coroutine.async {
             synchronized(this) {
-                GSON.toJson(configList).let {
-                    FileUtils.delete(configFilePath)
-                    FileUtils.createFileIfNotExist(configFilePath).writeText(it)
-                }
-                GSON.toJson(shareConfig).let {
-                    FileUtils.delete(shareConfigFilePath)
-                    FileUtils.createFileIfNotExist(shareConfigFilePath).writeText(it)
-                }
+                readStyleRepository.save(configList, shareConfig)
             }
         }
     }
 
     fun getAllPicBgStr(): ArrayList<String> {
-        val list = arrayListOf<String>()
-        configList.forEach {
-            if (it.bgType == 2) {
-                list.add(it.bgStr)
-            }
-            if (it.bgTypeNight == 2) {
-                list.add(it.bgStrNight)
-            }
-            if (it.bgTypeEInk == 2) {
-                list.add(it.bgStrEInk)
-            }
-        }
-        return list
+        return readStyleRepository.getAllPicBgStr(configList)
     }
 
     fun deleteDur(): Boolean {
@@ -165,22 +141,7 @@ object ReadBookConfig {
     }
 
     fun clearBgAndCache() {
-        val bgs = hashSetOf<String>()
-        configList.forEach { config ->
-            repeat(3) {
-                config.getBgPath(it)?.let { path ->
-                    bgs.add(path)
-                }
-            }
-        }
-        appCtx.externalFiles.getFile("bg").listFiles()?.forEach {
-            if (!bgs.contains(it.absolutePath)) {
-                it.delete()
-            }
-        }
-        FileUtils.delete(appCtx.externalCache.getFile("readConfig"))
-        val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
-        FileUtils.delete(configZipPath)
+        readStyleRepository.clearBgAndCache(configList)
     }
 
     private fun resetAll() {
@@ -191,13 +152,22 @@ object ReadBookConfig {
         }
     }
 
-    //配置写入读取
-    var readBodyToLh = appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)
-    var autoReadSpeed = appCtx.getPrefInt(PreferKey.autoReadSpeed, 10)
+    // Runtime compatibility snapshot. New write/read flows should use ReadSettingsRepository.
+    private var readBodyToLhValue = appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)
+    var readBodyToLh: Boolean
+        get() = readBodyToLhValue
         set(value) {
-            field = value
+            readBodyToLhValue = value
+        }
+
+    private var autoReadSpeedValue = appCtx.getPrefInt(PreferKey.autoReadSpeed, 10)
+    var autoReadSpeed: Int
+        get() = autoReadSpeedValue
+        set(value) {
+            autoReadSpeedValue = value
             appCtx.putPrefInt(PreferKey.autoReadSpeed, value)
         }
+
     var styleSelect: Int
         get() = if (isComic) comicStyleSelect else readStyleSelect
         set(value) {
@@ -207,27 +177,331 @@ object ReadBookConfig {
                 readStyleSelect = value
             }
         }
-    var readStyleSelect = appCtx.getPrefInt(PreferKey.readStyleSelect)
+
+    private var readStyleSelectValue = appCtx.getPrefInt(PreferKey.readStyleSelect)
+    var readStyleSelect: Int
+        get() = readStyleSelectValue
         set(value) {
-            field = value
+            readStyleSelectValue = value
             if (appCtx.getPrefInt(PreferKey.readStyleSelect) != value) {
                 appCtx.putPrefInt(PreferKey.readStyleSelect, value)
             }
         }
-    var comicStyleSelect = appCtx.getPrefInt(PreferKey.comicStyleSelect, readStyleSelect)
+
+    private var comicStyleSelectValue = appCtx.getPrefInt(PreferKey.comicStyleSelect, readStyleSelect)
+    var comicStyleSelect: Int
+        get() = comicStyleSelectValue
         set(value) {
-            field = value
+            comicStyleSelectValue = value
             if (appCtx.getPrefInt(PreferKey.comicStyleSelect) != value) {
                 appCtx.putPrefInt(PreferKey.comicStyleSelect, value)
             }
         }
-    var shareLayout = appCtx.getPrefBoolean(PreferKey.shareLayout)
+
+    private var shareLayoutValue = appCtx.getPrefBoolean(PreferKey.shareLayout)
+    var shareLayout: Boolean
+        get() = shareLayoutValue
         set(value) {
-            field = value
+            shareLayoutValue = value
             if (appCtx.getPrefBoolean(PreferKey.shareLayout) != value) {
                 appCtx.putPrefBoolean(PreferKey.shareLayout, value)
             }
         }
+
+    private var textFullJustifyValue = appCtx.getPrefBoolean(PreferKey.textFullJustify, true)
+    private var textBottomJustifyValue = appCtx.getPrefBoolean(PreferKey.textBottomJustify, true)
+    private var hideStatusBarValue = appCtx.getPrefBoolean(PreferKey.hideStatusBar)
+    private var hideNavigationBarValue = appCtx.getPrefBoolean(PreferKey.hideNavigationBar)
+    private var useZhLayoutValue = appCtx.getPrefBoolean(PreferKey.useZhLayout)
+    private var readMenuBgColorValue = appCtx.getPrefInt(PreferKey.readMenuBgColor)
+    private var readMenuAccentColorValue = appCtx.getPrefInt(PreferKey.readMenuAccentColor)
+    private var readMenuContainerColorValue = appCtx.getPrefInt(PreferKey.readMenuContainerColor)
+    private var readMenuBgColorNightValue = appCtx.getPrefInt(PreferKey.readMenuBgColorNight)
+    private var readMenuAccentColorNightValue = appCtx.getPrefInt(PreferKey.readMenuAccentColorNight)
+    private var readMenuContainerColorNightValue = appCtx.getPrefInt(PreferKey.readMenuContainerColorNight)
+    private var readMenuColorModeValue = appCtx.getPrefInt(PreferKey.readMenuColorMode, 1)
+    private var readMenuIconShowTextValue = appCtx.getPrefBoolean(PreferKey.readMenuIconShowText, true)
+    private var readMenuIconStyleValue = appCtx.getPrefInt(PreferKey.readMenuIconStyle)
+    private var readMenuIconItemsPerRowValue = appCtx.getPrefInt(PreferKey.readMenuIconItemsPerRow, 5)
+    private var readMenuIconRowCountValue = appCtx.getPrefInt(PreferKey.readMenuIconRowCount, 1)
+    private var readMenuBottomCornerRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBottomCornerRadius)
+    private var readMenuFloatingBottomBarValue = appCtx.getPrefBoolean(PreferKey.readMenuFloatingBottomBar)
+    private var readMenuTopBarBlurModeValue = appCtx.getPrefInt(
+        PreferKey.readMenuTopBarBlurMode,
+        ReadMenuBlurMode.None
+    )
+    private var readMenuBottomBarBlurModeValue = appCtx.getPrefInt(
+        PreferKey.readMenuBottomBarBlurMode,
+        ReadMenuBlurMode.None
+    )
+    private var readMenuTopBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
+        PreferKey.readMenuTopBarLiquidGlassButtons
+    )
+    private var readMenuBottomBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
+        PreferKey.readMenuBottomBarLiquidGlassButtons
+    )
+    private var readMenuTopBarBlurStyleValue = appCtx.getPrefInt(
+        PreferKey.readMenuTopBarBlurStyle,
+        ReadMenuBlurStyle.Progressive
+    )
+    private var readMenuBottomBarBlurStyleValue = appCtx.getPrefInt(
+        PreferKey.readMenuBottomBarBlurStyle,
+        ReadMenuBlurStyle.Solid
+    )
+    private var readMenuBlurRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBlurRadius, 24)
+    private var readMenuBlurAlphaValue = appCtx.getPrefInt(PreferKey.readMenuBlurAlpha, 60)
+    private var readMenuLensRadiusValue = appCtx.getPrefFloat(PreferKey.readMenuLensRadius, 24f)
+    private var readMenuBorderWidthValue = appCtx.getPrefInt(PreferKey.readMenuBorderWidth)
+    private var readMenuBorderColorValue = appCtx.getPrefInt(PreferKey.readMenuBorderColor)
+    private var readMenuBorderColorNightValue = appCtx.getPrefInt(PreferKey.readMenuBorderColorNight)
+    private var readMenuCustomIconsValue =
+        parseReadMenuCustomIcons(appCtx.getPrefString(PreferKey.readMenuCustomIcons))
+    private var titleBarCustomIconsValue =
+        parseReadMenuCustomIcons(appCtx.getPrefString(PreferKey.titleBarCustomIcons))
+    private var titleBarIconPositionValue = appCtx.getPrefInt(PreferKey.titleBarIconPosition)
+    private var showTitleBarIconsValue = appCtx.getPrefBoolean(PreferKey.showTitleBarIcons, true)
+
+    fun syncPreferences(preferences: ReadPreferences) {
+        readBodyToLhValue = preferences.readBodyToLh
+        autoReadSpeedValue = preferences.autoReadSpeed
+        readStyleSelectValue = preferences.readStyleSelect
+        comicStyleSelectValue = preferences.comicStyleSelect
+        shareLayoutValue = preferences.shareLayout
+        textFullJustifyValue = preferences.textFullJustify
+        textBottomJustifyValue = preferences.textBottomJustify
+        hideStatusBarValue = preferences.hideStatusBar
+        hideNavigationBarValue = preferences.hideNavigationBar
+        useZhLayoutValue = preferences.useZhLayout
+        readMenuBgColorValue = preferences.readMenuBgColor
+        readMenuAccentColorValue = preferences.readMenuAccentColor
+        readMenuContainerColorValue = preferences.readMenuContainerColor
+        readMenuBgColorNightValue = preferences.readMenuBgColorNight
+        readMenuAccentColorNightValue = preferences.readMenuAccentColorNight
+        readMenuContainerColorNightValue = preferences.readMenuContainerColorNight
+        readMenuColorModeValue = preferences.readMenuColorMode
+        readMenuIconShowTextValue = preferences.readMenuIconShowText
+        readMenuIconStyleValue = preferences.readMenuIconStyle
+        readMenuIconItemsPerRowValue = preferences.readMenuIconItemsPerRow
+        readMenuIconRowCountValue = preferences.readMenuIconRowCount
+        readMenuBottomCornerRadiusValue = preferences.readMenuBottomCornerRadius
+        readMenuFloatingBottomBarValue = preferences.readMenuFloatingBottomBar
+        readMenuTopBarBlurModeValue = preferences.readMenuTopBarBlurMode
+        readMenuBottomBarBlurModeValue = preferences.readMenuBottomBarBlurMode
+        readMenuTopBarLiquidGlassButtonsValue = preferences.readMenuTopBarLiquidGlassButtons
+        readMenuBottomBarLiquidGlassButtonsValue = preferences.readMenuBottomBarLiquidGlassButtons
+        readMenuTopBarBlurStyleValue = preferences.readMenuTopBarBlurStyle
+        readMenuBottomBarBlurStyleValue = preferences.readMenuBottomBarBlurStyle
+        readMenuBlurRadiusValue = preferences.readMenuBlurRadius
+        readMenuBlurAlphaValue = preferences.readMenuBlurAlpha
+        readMenuLensRadiusValue = preferences.readMenuLensRadius
+        readMenuBorderWidthValue = preferences.readMenuBorderWidth
+        readMenuBorderColorValue = preferences.readMenuBorderColor
+        readMenuBorderColorNightValue = preferences.readMenuBorderColorNight
+        readMenuCustomIconsValue = parseReadMenuCustomIcons(preferences.readMenuCustomIcons)
+        titleBarCustomIconsValue = parseReadMenuCustomIcons(preferences.titleBarCustomIcons)
+        titleBarIconPositionValue = preferences.titleBarIconPosition
+        showTitleBarIconsValue = preferences.showTitleBarIcons
+    }
+
+    var readMenuBgColor: Int
+        get() = readMenuBgColorValue.takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = false)
+        set(value) {
+            readMenuBgColorValue = value
+        }
+
+    var readMenuAccentColor: Int
+        get() = readMenuAccentColorValue.takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = false)
+        set(value) {
+            readMenuAccentColorValue = value
+        }
+
+    var readMenuContainerColor: Int
+        get() = readMenuContainerColorValue.takeIf { it != 0 } ?: readMenuBgColor
+        set(value) {
+            readMenuContainerColorValue = value
+        }
+
+    var readMenuBgColorNight: Int
+        get() = readMenuBgColorNightValue.takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = true)
+        set(value) {
+            readMenuBgColorNightValue = value
+        }
+
+    var readMenuAccentColorNight: Int
+        get() = readMenuAccentColorNightValue.takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = true)
+        set(value) {
+            readMenuAccentColorNightValue = value
+        }
+
+    var readMenuContainerColorNight: Int
+        get() = readMenuContainerColorNightValue.takeIf { it != 0 } ?: readMenuBgColorNight
+        set(value) {
+            readMenuContainerColorNightValue = value
+        }
+
+    val resolvedMenuBgColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuBgColorNight else readMenuBgColor
+
+    val resolvedMenuAccentColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuAccentColorNight else readMenuAccentColor
+
+    val resolvedMenuContainerColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuContainerColorNight else readMenuContainerColor
+
+    var readMenuColorMode: Int
+        get() = readMenuColorModeValue.coerceIn(0, 1)
+        set(value) {
+            readMenuColorModeValue = value.coerceIn(0, 1)
+        }
+
+    var readMenuIconShowText: Boolean
+        get() = readMenuIconShowTextValue
+        set(value) {
+            readMenuIconShowTextValue = value
+        }
+
+    var readMenuIconStyle: Int
+        get() = readMenuIconStyleValue.coerceIn(0, 2)
+        set(value) {
+            readMenuIconStyleValue = value.coerceIn(0, 2)
+        }
+
+    var readMenuIconItemsPerRow: Int
+        get() = readMenuIconItemsPerRowValue.coerceIn(2, 8)
+        set(value) {
+            readMenuIconItemsPerRowValue = value.coerceIn(2, 8)
+        }
+
+    var readMenuIconRowCount: Int
+        get() = readMenuIconRowCountValue.coerceIn(1, 2)
+        set(value) {
+            readMenuIconRowCountValue = value.coerceIn(1, 2)
+        }
+
+    var readMenuBottomCornerRadius: Int
+        get() = readMenuBottomCornerRadiusValue.coerceIn(0, 32)
+        set(value) {
+            readMenuBottomCornerRadiusValue = value.coerceIn(0, 32)
+        }
+
+    var readMenuFloatingBottomBar: Boolean
+        get() = readMenuFloatingBottomBarValue
+        set(value) {
+            readMenuFloatingBottomBarValue = value
+        }
+
+    var readMenuTopBarBlurMode: Int
+        get() = readMenuTopBarBlurModeValue.coerceIn(0, 2)
+        set(value) {
+            readMenuTopBarBlurModeValue = value.coerceIn(0, 2)
+        }
+
+    var readMenuBottomBarBlurMode: Int
+        get() = readMenuBottomBarBlurModeValue.coerceIn(0, 2)
+        set(value) {
+            readMenuBottomBarBlurModeValue = value.coerceIn(0, 2)
+        }
+
+    var readMenuTopBarLiquidGlassButtons: Boolean
+        get() = readMenuTopBarLiquidGlassButtonsValue
+        set(value) {
+            readMenuTopBarLiquidGlassButtonsValue = value
+        }
+
+    var readMenuBottomBarLiquidGlassButtons: Boolean
+        get() = readMenuBottomBarLiquidGlassButtonsValue
+        set(value) {
+            readMenuBottomBarLiquidGlassButtonsValue = value
+        }
+
+    var readMenuTopBarBlurStyle: Int
+        get() = readMenuTopBarBlurStyleValue.coerceIn(0, 1)
+        set(value) {
+            readMenuTopBarBlurStyleValue = value.coerceIn(0, 1)
+        }
+
+    var readMenuBottomBarBlurStyle: Int
+        get() = readMenuBottomBarBlurStyleValue.coerceIn(0, 1)
+        set(value) {
+            readMenuBottomBarBlurStyleValue = value.coerceIn(0, 1)
+        }
+
+    var readMenuBlurRadius: Int
+        get() = readMenuBlurRadiusValue.coerceIn(0, 32)
+        set(value) {
+            readMenuBlurRadiusValue = value.coerceIn(0, 32)
+        }
+
+    var readMenuBlurAlpha: Int
+        get() = readMenuBlurAlphaValue.coerceIn(0, 100)
+        set(value) {
+            readMenuBlurAlphaValue = value.coerceIn(0, 100)
+        }
+
+    var readMenuLensRadius: Float
+        get() = readMenuLensRadiusValue.coerceIn(0f, 48f)
+        set(value) {
+            readMenuLensRadiusValue = value.coerceIn(0f, 48f)
+        }
+
+    var readMenuBorderWidth: Int
+        get() = readMenuBorderWidthValue.coerceIn(0, 4)
+        set(value) {
+            readMenuBorderWidthValue = value.coerceIn(0, 4)
+        }
+
+    var readMenuBorderColor: Int
+        get() = readMenuBorderColorValue
+        set(value) {
+            readMenuBorderColorValue = value
+        }
+
+    var readMenuBorderColorNight: Int
+        get() = readMenuBorderColorNightValue
+        set(value) {
+            readMenuBorderColorNightValue = value
+        }
+
+    val resolvedMenuBorderColor: Int
+        get() = if (ReadStyleResolver.isNightTheme()) readMenuBorderColorNight else readMenuBorderColor
+
+    var readMenuCustomIcons: Map<String, String>
+        get() = readMenuCustomIconsValue
+        set(value) {
+            readMenuCustomIconsValue = value.filterValues { it.isNotBlank() }
+        }
+
+    var titleBarCustomIcons: Map<String, String>
+        get() = titleBarCustomIconsValue
+        set(value) {
+            titleBarCustomIconsValue = value.filterValues { it.isNotBlank() }
+        }
+
+    // 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right
+    var titleBarIconPosition: Int
+        get() = titleBarIconPositionValue.coerceIn(0, 3)
+        set(value) {
+            titleBarIconPositionValue = value.coerceIn(0, 3)
+        }
+
+    var showTitleBarIcons: Boolean
+        get() = showTitleBarIconsValue
+        set(value) {
+            showTitleBarIconsValue = value
+        }
+
+    fun encodeReadMenuCustomIcons(value: Map<String, String>): String {
+        return GSON.toJson(value.filterValues { it.isNotBlank() })
+    }
+
+    private fun parseReadMenuCustomIcons(value: String?): Map<String, String> {
+        if (value.isNullOrBlank()) {
+            return emptyMap()
+        }
+        return GSON.fromJsonObject<Map<String, String>>(value).getOrNull()
+            ?.filterValues { it.isNotBlank() }
+            ?: emptyMap()
+    }
     
     val regexColorRules: ArrayList<RegexColorRule> get() = durConfig.regexColorRules
 
@@ -238,15 +512,27 @@ object ReadBookConfig {
     /**
      * 两端对齐
      */
-    val textFullJustify get() = appCtx.getPrefBoolean(PreferKey.textFullJustify, true)
+    val textFullJustify get() = textFullJustifyValue
 
     /**
      * 底部对齐
      */
-    val textBottomJustify get() = appCtx.getPrefBoolean(PreferKey.textBottomJustify, true)
-    var hideStatusBar = appCtx.getPrefBoolean(PreferKey.hideStatusBar)
-    var hideNavigationBar = appCtx.getPrefBoolean(PreferKey.hideNavigationBar)
-    var useZhLayout = appCtx.getPrefBoolean(PreferKey.useZhLayout)
+    val textBottomJustify get() = textBottomJustifyValue
+    var hideStatusBar: Boolean
+        get() = hideStatusBarValue
+        set(value) {
+            hideStatusBarValue = value
+        }
+    var hideNavigationBar: Boolean
+        get() = hideNavigationBarValue
+        set(value) {
+            hideNavigationBarValue = value
+        }
+    var useZhLayout: Boolean
+        get() = useZhLayoutValue
+        set(value) {
+            useZhLayoutValue = value
+        }
 
     val config get() = if (shareLayout) shareConfig else durConfig
 
@@ -576,15 +862,15 @@ object ReadBookConfig {
         }
 
     var menuBgColor: Int
-        get() = config.curMenuBg()
+        get() = readMenuBgColor
         set(value) {
-            config.setMenuCurBg(value)
+            readMenuBgColor = value
         }
 
     var menuAcColor: Int
-        get() = config.curMenuAc()
+        get() = readMenuAccentColor
         set(value) {
-            config.setMenuCurAc(value)
+            readMenuAccentColor = value
         }
 
     var shadowColor: Int
@@ -592,6 +878,101 @@ object ReadBookConfig {
         set(value) {
             config.setCurShadColor(value)
         }
+
+    // region Tip / Header / Footer
+
+    var tipHeaderLeft: Int
+        get() = config.tipHeaderLeft
+        set(value) {
+            config.tipHeaderLeft = value
+        }
+
+    var tipHeaderMiddle: Int
+        get() = config.tipHeaderMiddle
+        set(value) {
+            config.tipHeaderMiddle = value
+        }
+
+    var tipHeaderRight: Int
+        get() = config.tipHeaderRight
+        set(value) {
+            config.tipHeaderRight = value
+        }
+
+    var tipFooterLeft: Int
+        get() = config.tipFooterLeft
+        set(value) {
+            config.tipFooterLeft = value
+        }
+
+    var tipFooterMiddle: Int
+        get() = config.tipFooterMiddle
+        set(value) {
+            config.tipFooterMiddle = value
+        }
+
+    var tipFooterRight: Int
+        get() = config.tipFooterRight
+        set(value) {
+            config.tipFooterRight = value
+        }
+
+    var headerMode: Int
+        get() = config.headerMode
+        set(value) {
+            config.headerMode = value
+        }
+
+    var footerMode: Int
+        get() = config.footerMode
+        set(value) {
+            config.footerMode = value
+        }
+
+    var tipHeaderColor: Int
+        get() = config.tipHeaderColor
+        set(value) {
+            config.tipHeaderColor = value
+        }
+
+    var tipFooterColor: Int
+        get() = config.tipFooterColor
+        set(value) {
+            config.tipFooterColor = value
+        }
+
+    var tipDividerColor: Int
+        get() = config.tipDividerColor
+        set(value) {
+            config.tipDividerColor = value
+        }
+
+    val tipValues = arrayOf(
+        tipNone, tipBookName, tipChapterTitle, tipChapterTitleArrow, tipChapterTitleArrowClassic,
+        tipTime, tipBattery, tipBatteryClassic, tipBatteryInside, tipBatteryIcon, tipBatteryPercentage,
+        tipPage, tipTotalProgress, tipTotalProgress1, tipPageAndTotal, tipTimeBattery,
+        tipTimeBatteryClassic, tipTimeBatteryPercentage
+    )
+    val tipNames get() = appCtx.resources.getStringArray(R.array.read_tip).toList()
+    val tipColorNames get() = appCtx.resources.getStringArray(R.array.tip_color).toList()
+    val tipDividerColorNames get() = appCtx.resources.getStringArray(R.array.tip_divider_color).toList()
+
+    fun getHeaderModes(context: Context): LinkedHashMap<Int, String> {
+        return linkedMapOf(
+            Pair(0, context.getString(R.string.hide_when_status_bar_show)),
+            Pair(1, context.getString(R.string.show)),
+            Pair(2, context.getString(R.string.hide))
+        )
+    }
+
+    fun getFooterModes(context: Context): LinkedHashMap<Int, String> {
+        return linkedMapOf(
+            Pair(0, context.getString(R.string.show)),
+            Pair(1, context.getString(R.string.hide))
+        )
+    }
+
+    // endregion
 
     fun getExportConfig(): Config {
         val exportConfig = durConfig.copy(regexColorRules = ArrayList(durConfig.regexColorRules.map { it.copy() }))
@@ -661,76 +1042,16 @@ object ReadBookConfig {
         return exportConfig
     }
 
+    fun export(): ByteArray {
+        return readStyleRepository.export(getExportConfig())
+    }
+
     fun import(byteArray: ByteArray): Config {
-        val configZipPath = FileUtils.getPath(appCtx.externalCache, "readConfig.zip")
-        FileUtils.delete(configZipPath)
-        val zipFile = FileUtils.createFileIfNotExist(configZipPath)
-        zipFile.writeBytes(byteArray)
-        val configDir = appCtx.externalCache.getFile("readConfig")
-        configDir.createFolderReplace()
-        ZipUtils.unZipToPath(zipFile, configDir)
-        val configFile = configDir.getFile(configFileName)
-        val config: Config = GSON.fromJsonObject<Config>(configFile.readText()).getOrThrow()
-        if (config.textFont.isNotEmpty()) {
-            val fontName = config.textFont
-            val fontPath =
-                FileUtils.getPath(appCtx.externalFiles, "font", fontName)
-            val fontFile = configDir.getFile(fontName)
-            if (fontFile.exists()) {
-                if (!FileUtils.exist(fontPath)) {
-                    fontFile.copyTo(File(fontPath))
-                }
-                config.textFont = fontPath
-            } else {
-                config.textFont = ""
-            }
-        }
-        if (config.titleFont.isNotEmpty()) {
-            val fontName = config.titleFont
-            val fontPath =
-                FileUtils.getPath(appCtx.externalFiles, "font", fontName)
-            val fontFile = configDir.getFile(fontName)
-            if (fontFile.exists()) {
-                if (!FileUtils.exist(fontPath)) {
-                    fontFile.copyTo(File(fontPath))
-                }
-                config.titleFont = fontPath
-            } else {
-                config.titleFont = ""
-            }
-        }
-        if (config.bgType == 2) {
-            val bgName = FileUtils.getName(config.bgStr)
-            config.bgStr = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrNight = bgPath
-        } else if (config.bgTypeNight == 0) {
-            config.bgStrNight.toColorInt()
-        }
-        if (config.bgTypeEInk == 2) {
-            val bgName = FileUtils.getName(config.bgStrEInk)
-            config.bgStrEInk = bgName
-            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
-            if (!FileUtils.exist(bgPath)) {
-                val bgFile = configDir.getFile(bgName)
-                if (bgFile.exists()) {
-                    bgFile.copyTo(File(bgPath))
-                }
-            }
-            config.bgStrEInk = bgPath
-        } else if (config.bgTypeEInk == 0) {
-            config.bgStrEInk.toColorInt()
-        }
-        config.curTextColor()
-        config.curTextAccentColor()
-        config.curTextShadowColor()
-        return config
+        return readStyleRepository.import(byteArray)
+    }
+
+    fun saveBackgroundImage(inputStream: InputStream, displayName: String?): String {
+        return readStyleRepository.saveBackgroundImage(inputStream, displayName)
     }
 
     @Keep
@@ -738,9 +1059,13 @@ object ReadBookConfig {
         var name: String = "",
         var bgStr: String = "#EEEEEE",//白天背景
         var bgStrNight: String = "#000000",//夜间背景
+        @Transient
         var menuBgColor: String = "#EEEFE3",
+        @Transient
         var menuAcColor: String = "#EEEFE3",
+        @Transient
         var menuBgColorNight: String = "#BFCBAD",
+        @Transient
         var menuAcColorNight: String = "#586249",
         var bgStrEInk: String = "#FFFFFF",//EInk背景
         var bgAlpha: Int = 100,//背景透明度
@@ -812,17 +1137,31 @@ object ReadBookConfig {
         var footerPaddingTop: Int = 6,
         var showHeaderLine: Boolean = false,
         var showFooterLine: Boolean = true,
-        var tipHeaderLeft: Int = ReadTipConfig.time,
-        var tipHeaderMiddle: Int = ReadTipConfig.none,
-        var tipHeaderRight: Int = ReadTipConfig.battery,
-        var tipFooterLeft: Int = ReadTipConfig.chapterTitle,
-        var tipFooterMiddle: Int = ReadTipConfig.none,
-        var tipFooterRight: Int = ReadTipConfig.pageAndTotal,
+        var tipHeaderLeft: Int = tipTime,
+        var tipHeaderMiddle: Int = tipNone,
+        var tipHeaderRight: Int = tipBattery,
+        var tipFooterLeft: Int = tipChapterTitle,
+        var tipFooterMiddle: Int = tipNone,
+        var tipFooterRight: Int = tipPageAndTotal,
         var tipHeaderColor: Int = 0,
         var tipFooterColor: Int = 0,
         var tipDividerColor: Int = -1,
         var headerMode: Int = 0,
         var footerMode: Int = 0,
+        @Transient
+        var menuIconShowText: Boolean = true,
+        @Transient
+        var menuIconStyle: Int = 0,
+        @Transient
+        var menuIconItemsPerRow: Int = 5,
+        @Transient
+        var menuIconRowCount: Int = 1,
+        @Transient
+        var menuBottomCornerRadius: Int = 0,
+        @Transient
+        var menuBottomHorizontalMargin: Int = 0,
+        @Transient
+        var menuBottomBottomMargin: Int = 0,
         var regexColorRules: ArrayList<RegexColorRule> = arrayListOf()
     ) {
 
@@ -946,30 +1285,59 @@ object ReadBookConfig {
         )
 
         fun getBgPath(bgIndex: Int): String? {
-            val bgType = when (bgIndex) {
-                0 -> bgType
-                1 -> bgTypeNight
-                2 -> bgTypeEInk
-                else -> error("unknown bgIndex: $bgIndex")
-            }
-            if (bgType != 2) {
-                return null
-            }
-            val bgStr = when (bgIndex) {
-                0 -> bgStr
-                1 -> bgStrNight
-                2 -> bgStrEInk
-                else -> error("unknown bgIndex: $bgIndex")
-            }
-            val path = if (bgStr.contains(File.separator)) {
-                bgStr
-            } else {
-                FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
-            }
-            return path
+            return ReadStyleResolver.backgroundPath(this, bgIndex)
         }
 
-        private fun initColorInt() {
+        private inline fun updateCurrentMode(
+            eInk: () -> Unit,
+            night: () -> Unit,
+            day: () -> Unit
+        ) {
+            when (ReadStyleResolver.currentMode()) {
+                ReadStyleResolver.ReadStyleMode.EInk -> eInk()
+                ReadStyleResolver.ReadStyleMode.Night -> night()
+                ReadStyleResolver.ReadStyleMode.Day -> day()
+            }
+        }
+
+        private inline fun <T> currentModeValue(
+            eInk: () -> T,
+            night: () -> T,
+            day: () -> T
+        ): T {
+            return when (ReadStyleResolver.currentMode()) {
+                ReadStyleResolver.ReadStyleMode.EInk -> eInk()
+                ReadStyleResolver.ReadStyleMode.Night -> night()
+                ReadStyleResolver.ReadStyleMode.Day -> day()
+            }
+        }
+
+        private inline fun updateNightTheme(
+            night: () -> Unit,
+            day: () -> Unit
+        ) {
+            if (ReadStyleResolver.isNightTheme()) {
+                night()
+            } else {
+                day()
+            }
+        }
+
+        private inline fun <T> nightThemeValue(
+            night: () -> T,
+            day: () -> T
+        ): T {
+            return if (ReadStyleResolver.isNightTheme()) {
+                night()
+            } else {
+                day()
+            }
+        }
+
+        private fun ensureColorInts() {
+            if (initColorInt) {
+                return
+            }
             textColorIntEInk = textColorEInk.toColorInt()
             textColorIntNight = textColorNight.toColorInt()
             textColorInt = textColor.toColorInt()
@@ -984,7 +1352,10 @@ object ReadBookConfig {
             initColorInt = true
         }
 
-        private fun initAccentColorInt() {
+        private fun ensureAccentColorInts() {
+            if (initAccentColorInt) {
+                return
+            }
             textAccentColorIntEInk = textAccentColorEInk.toColorInt()
             textAccentColorIntNight = textAccentColorNight.toColorInt()
             textAccentColorInt = textAccentColor.toColorInt()
@@ -992,250 +1363,207 @@ object ReadBookConfig {
         }
 
         fun setCurTextAccentColor(color: Int) {
-            when {
-                AppConfig.isEInkMode -> {
+            updateCurrentMode(
+                eInk = {
                     textAccentColorEInk = "#${color.hexString}"
                     textAccentColorIntEInk = color
-                }
-
-                AppConfig.isNightTheme -> {
+                },
+                night = {
                     textAccentColorNight = "#${color.hexString}"
                     textAccentColorIntNight = color
-                }
-
-                else -> {
+                },
+                day = {
                     textAccentColor = "#${color.hexString}"
                     textAccentColorInt = color
                 }
-            }
+            )
         }
 
         fun curTextAccentColor(): Int {
-            if (!initAccentColorInt) {
-                initAccentColorInt()
-            }
-            return when {
-                AppConfig.isEInkMode -> textAccentColorIntEInk
-                AppConfig.isNightTheme -> textAccentColorIntNight
-                else -> textAccentColorInt
-            }
+            ensureAccentColorInts()
+            return currentModeValue(
+                eInk = { textAccentColorIntEInk },
+                night = { textAccentColorIntNight },
+                day = { textAccentColorInt }
+            )
         }
 
         fun setCurShadColor(color: Int){
-            when {
-                AppConfig.isNightTheme -> {
+            updateNightTheme(
+                night = {
                     shadowColorN = "#${color.hexString}"
                     shadowColorNightInt = color
-                }
-                else -> {
+                },
+                day = {
                     shadowColor = "#${color.hexString}"
                     shadowColorInt = color
                 }
-            }
+            )
         }
 
         fun setCurTextColor(color: Int) {
-            when {
-                AppConfig.isEInkMode -> {
+            updateCurrentMode(
+                eInk = {
                     textColorEInk = "#${color.hexString}"
                     textColorIntEInk = color
-                }
-
-                AppConfig.isNightTheme -> {
+                },
+                night = {
                     textColorNight = "#${color.hexString}"
                     textColorIntNight = color
-                }
-
-                else -> {
+                },
+                day = {
                     textColor = "#${color.hexString}"
                     textColorInt = color
                 }
-            }
+            )
         }
 
         fun curTextColor(): Int {
-            if (!initColorInt) {
-                initColorInt()
-            }
-            return when {
-                AppConfig.isEInkMode -> textColorIntEInk
-                AppConfig.isNightTheme -> textColorIntNight
-                else -> textColorInt
-            }
+            ensureColorInts()
+            return currentModeValue(
+                eInk = { textColorIntEInk },
+                night = { textColorIntNight },
+                day = { textColorInt }
+            )
         }
 
         fun curTextShadowColor(): Int {
-            if (!initColorInt) {
-                initColorInt()
-            }
-            return when {
-                AppConfig.isNightTheme -> shadowColorNightInt
-                else -> shadowColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { shadowColorNightInt },
+                day = { shadowColorInt }
+            )
         }
 
         fun setCurStatusIconDark(isDark: Boolean) {
-            when {
-                AppConfig.isEInkMode -> darkStatusIconEInk = isDark
-                AppConfig.isNightTheme -> darkStatusIconNight = isDark
-                else -> darkStatusIcon = isDark
-            }
+            updateCurrentMode(
+                eInk = { darkStatusIconEInk = isDark },
+                night = { darkStatusIconNight = isDark },
+                day = { darkStatusIcon = isDark }
+            )
         }
 
         fun curStatusIconDark(): Boolean {
-            return when {
-                AppConfig.isEInkMode -> darkStatusIconEInk
-                AppConfig.isNightTheme -> darkStatusIconNight
-                else -> darkStatusIcon
-            }
+            return currentModeValue(
+                eInk = { darkStatusIconEInk },
+                night = { darkStatusIconNight },
+                day = { darkStatusIcon }
+            )
         }
 
         fun setCurPageAnim(@PageAnim.Anim anim: Int) {
-            when {
-                AppConfig.isEInkMode -> pageAnimEInk = anim
-                else -> pageAnim = anim
-            }
+            updateCurrentMode(
+                eInk = { pageAnimEInk = anim },
+                night = { pageAnim = anim },
+                day = { pageAnim = anim }
+            )
         }
 
         fun curPageAnim(): Int {
-            return when {
-                AppConfig.isEInkMode -> pageAnimEInk
-                else -> pageAnim
-            }
+            return currentModeValue(
+                eInk = { pageAnimEInk },
+                night = { pageAnim },
+                day = { pageAnim }
+            )
         }
 
+        // Public getters for mode-specific values (for ReadBookStyleConfig)
+        fun getDarkStatusIcon(): Boolean = darkStatusIcon
+        fun getDarkStatusIconNight(): Boolean = darkStatusIconNight
+        fun getDarkStatusIconEInk(): Boolean = darkStatusIconEInk
+        fun getTextColor(): String = textColor
+        fun getTextColorNight(): String = textColorNight
+        fun getTextColorEInk(): String = textColorEInk
+        fun getPageAnim(): Int = pageAnim
+        fun getPageAnimEInk(): Int = pageAnimEInk
+
         fun setCurBg(bgType: Int, bg: String) {
-            when {
-                AppConfig.isEInkMode -> {
-                    bgTypeEInk = bgType
-                    bgStrEInk = bg
-                }
-
-                AppConfig.isNightTheme -> {
-                    bgTypeNight = bgType
-                    bgStrNight = bg
-                }
-
-                else -> {
-                    this.bgType = bgType
-                    bgStr = bg
-                }
-            }
+            ReadStyleResolver.setCurrentBackground(this, bgType, bg)
         }
 
         fun curBgStr(): String {
-            return when {
-                AppConfig.isEInkMode -> bgStrEInk
-                AppConfig.isNightTheme -> bgStrNight
-                else -> bgStr
-            }
+            return ReadStyleResolver.currentBackground(this).value
         }
 
         fun curMenuBg(): Int {
-            return when {
-                AppConfig.isNightTheme -> menuBgColorNightInt
-                else -> menuBgColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { menuBgColorNightInt },
+                day = { menuBgColorInt }
+            )
+        }
+
+        fun menuBgColor(isNight: Boolean): Int {
+            ensureColorInts()
+            return if (isNight) menuBgColorNightInt else menuBgColorInt
         }
 
         fun setMenuCurBg(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
+            updateNightTheme(
+                night = {
                     menuBgColorNight = "#${bg.hexString}"
                     menuBgColorNightInt = bg
-                }
-
-                else -> {
+                },
+                day = {
                     menuBgColor = "#${bg.hexString}"
                     menuBgColorInt = bg
                 }
-            }
+            )
         }
 
         fun curMenuAc(): Int {
-            return when {
-                AppConfig.isNightTheme -> menuAcColorNightInt
-                else -> menuAcColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { menuAcColorNightInt },
+                day = { menuAcColorInt }
+            )
+        }
+
+        fun menuAccentColor(isNight: Boolean): Int {
+            ensureColorInts()
+            return if (isNight) menuAcColorNightInt else menuAcColorInt
         }
 
         fun setMenuCurAc(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
+            updateNightTheme(
+                night = {
                     menuAcColorNight = "#${bg.hexString}"
                     menuAcColorNightInt = bg
-                }
-
-                else -> {
+                },
+                day = {
                     menuAcColor = "#${bg.hexString}"
                     menuAcColorInt = bg
                 }
-            }
+            )
         }
 
         fun curUnderlineColor(): Int {
-            return when {
-                AppConfig.isNightTheme -> underlineColorNightInt
-                else -> underlineColorInt
-            }
+            ensureColorInts()
+            return nightThemeValue(
+                night = { underlineColorNightInt },
+                day = { underlineColorInt }
+            )
         }
 
         fun setUnderlineColor(bg: Int) {
-            when {
-                AppConfig.isNightTheme -> {
+            updateNightTheme(
+                night = {
                     underlineColorNight = "#${bg.hexString}"
                     underlineColorNightInt = bg
-                }
-
-                else -> {
+                },
+                day = {
                     underlineColor = "#${bg.hexString}"
                     underlineColorInt = bg
                 }
-            }
+            )
         }
 
         fun curBgType(): Int {
-            return when {
-                AppConfig.isEInkMode -> bgTypeEInk
-                AppConfig.isNightTheme -> bgTypeNight
-                else -> bgType
-            }
+            return ReadStyleResolver.currentBackground(this).type
         }
 
         fun curBgDrawable(width: Int, height: Int): Drawable {
-            if (width == 0 || height == 0) {
-                val backgroundColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-                return backgroundColor.toDrawable()
-            }
-
-            var bgDrawable: Drawable? = null
-            val resources = appCtx.resources
-            try {
-                bgDrawable = when (curBgType()) {
-                    0 -> curBgStr().toColorInt().toDrawable()
-                    1 -> {
-                        val path = "bg" + File.separator + curBgStr()
-                        val bitmap = BitmapUtils.decodeAssetsBitmap(appCtx, path, width, height)
-                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
-                    }
-                    else -> {
-                        val path = curBgStr().let {
-                            if (it.contains(File.separator)) it
-                            else FileUtils.getPath(appCtx.externalFiles, "bg", curBgStr())
-                        }
-                        val bitmap = BitmapUtils.decodeBitmap(path, width, height)
-                        bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
-                    }
-                }
-            } catch (e: OutOfMemoryError) {
-                e.printOnDebug()
-            } catch (e: Exception) {
-                e.printOnDebug()
-            }
-
-            // fallback 使用 MD3 的 colorSurface 作为背景色
-            val fallbackColor = MaterialColors.getColor(appCtx, com.google.android.material.R.attr.colorSurface, Color.WHITE)
-            return bgDrawable ?: fallbackColor.toDrawable()
+            return ReadStyleResolver.currentBackgroundDrawable(this, width, height)
         }
     }
 }

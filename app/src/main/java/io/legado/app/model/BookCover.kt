@@ -63,9 +63,6 @@ object BookCover {
             }.getOrDefault(appCtx.resources.getDrawable(R.drawable.image_cover_default, null))
         }
 
-    // 兼容旧代码，空实现
-    fun upDefaultCover() {}
-
     fun getRandomDefaultPath(
         seed: Any? = null,
         isNight: Boolean = AppConfig.isNightTheme

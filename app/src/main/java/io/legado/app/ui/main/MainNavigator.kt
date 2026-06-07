@@ -46,7 +46,8 @@ object MainNavigator {
             MainRouteImportLocal,
             MainRouteImportRemote,
             is MainRouteCache,
-            MainRouteBookCacheManage -> {
+            MainRouteBookCacheManage,
+            is MainRouteReadBook -> {
                 if (currentRoute == MainRouteHome) {
                     backStack.add(route)
                 } else {
@@ -245,6 +246,15 @@ object MainNavigator {
             )
 
             MainRouteConst.ROUTE_BOOK_CACHE_MANAGE -> MainRouteBookCacheManage
+            MainRouteConst.ROUTE_READ_BOOK -> MainRouteReadBook(
+                bookUrl = intent?.getStringExtra(MainIntent.EXTRA_BOOK_URL),
+                readAloud = intent?.getBooleanExtra(MainIntent.EXTRA_READ_ALOUD, false) == true,
+                inBookshelf = intent?.getBooleanExtra(MainIntent.EXTRA_IN_BOOKSHELF, true) != false,
+                chapterChanged = intent?.getBooleanExtra(
+                    MainIntent.EXTRA_CHAPTER_CHANGED,
+                    false
+                ) == true,
+            )
             MainRouteConst.ROUTE_SEARCH -> MainRouteSearch(
                 key = intent?.getStringExtra(MainIntent.EXTRA_SEARCH_KEY),
                 scopeRaw = intent?.getStringExtra(MainIntent.EXTRA_SEARCH_SCOPE)

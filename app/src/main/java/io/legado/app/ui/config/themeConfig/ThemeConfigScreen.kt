@@ -3,7 +3,6 @@ package io.legado.app.ui.config.themeConfig
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.widget.TextView
@@ -30,8 +29,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,9 +70,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
@@ -83,7 +80,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -91,6 +88,7 @@ import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
+import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -98,7 +96,6 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
@@ -141,10 +138,6 @@ fun ThemeConfigScreen(
         mutableStateOf(
             context.getPrefString(PreferKey.fontFolder)?.toUri()
         )
-    }
-
-    val fontItems = remember(fontFolderUri) {
-        loadFontFiles(context, fontFolderUri)
     }
 
     val fontFolderLauncher = rememberLauncherForActivityResult(
@@ -250,7 +243,7 @@ fun ThemeConfigScreen(
                             onValueChange = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                OldThemeConfig.applyDayNight(context)
+                                ThemeConfigStore.applyDayNight(context)
                             }
                         )
 
@@ -290,7 +283,7 @@ fun ThemeConfigScreen(
                             onModeSelected = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                OldThemeConfig.applyDayNight(context)
+                                ThemeConfigStore.applyDayNight(context)
                             }
                         )
                     }
@@ -876,10 +869,24 @@ fun ThemeConfigScreen(
         }
     )
 
-    AppModalBottomSheet(
+    val curName = remember(ThemeConfig.appFontPath) {
+        ThemeConfig.appFontPath?.let { uri ->
+            runCatching {
+                DocumentFile.fromSingleUri(context, uri.toUri())?.name
+            }.getOrNull()
+        }
+    }
+
+    FontSelectSheet(
         show = showFontSheet,
-        onDismissRequest = { showFontSheet = false },
         title = stringResource(R.string.font_setting),
+        fontFolderUri = fontFolderUri,
+        selectedFontName = curName,
+        onDismissRequest = { showFontSheet = false },
+        onSelectFont = { doc ->
+            ThemeConfig.appFontPath = doc.uri.toString()
+        },
+        onOpenFolderPicker = { fontFolderLauncher.launch(null) },
         startAction = {
             SmallPlainButton(
                 icon = Icons.Default.Delete,
@@ -890,77 +897,9 @@ fun ThemeConfigScreen(
                 }
             )
         },
-        endAction = {
-            SmallPlainButton(
-                icon = Icons.Default.Add,
-                contentDescription = stringResource(R.string.select_folder),
-                onClick = { fontFolderLauncher.launch(null) }
-            )
-        },
-        content = {
-            if (fontItems.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.theme_config_no_font_files),
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    fontItems.forEach { fontDoc ->
-                        item {
-                            val textColor = LegadoTheme.colorScheme.onSurface.toArgb()
-                            NormalCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(100.dp),
-                                onClick = {
-                                    ThemeConfig.appFontPath = fontDoc.uri.toString()
-                                    showFontSheet = false
-                                },
-                                containerColor = LegadoTheme.colorScheme.onSheetContent
-                            ) {
-                                AndroidView(
-                                    factory = { ctx ->
-                                        TextView(ctx).apply {
-                                            text = fontDoc.name
-                                            textSize = 14f
-                                            setTextColor(textColor)
-                                            gravity = android.view.Gravity.CENTER
-                                            maxLines = 2
-                                            ellipsize = android.text.TextUtils.TruncateAt.END
-                                            runCatching {
-                                                val typeface: Typeface? = if (fontDoc.uri.scheme == "content") {
-                                                    ctx.contentResolver.openFileDescriptor(fontDoc.uri, "r")?.use {
-                                                        Typeface.Builder(it.fileDescriptor).build()
-                                                    }
-                                                } else {
-                                                    Typeface.createFromFile(fontDoc.uri.path!!)
-                                                }
-                                                this.typeface = typeface
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        folderIcon = Icons.Default.Add,
+        folderContentDescription = stringResource(R.string.select_folder),
+        emptyText = stringResource(R.string.theme_config_no_font_files),
     )
 
 }

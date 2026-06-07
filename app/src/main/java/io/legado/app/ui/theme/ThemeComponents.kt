@@ -154,7 +154,7 @@ fun MiuixThemeWrapper(
                 onErrorContainer = miuixColorScheme.onErrorContainer,
 
                 outline = miuixColorScheme.outline,
-                outlineVariant = miuixColorScheme.dividerLine,
+                outlineVariant = miuixColorScheme.secondary.copy(alpha = 0.32f),
                 scrim = miuixColorScheme.windowDimming,
 
                 surfaceBright = miuixColorScheme.surface,

@@ -18,9 +18,7 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.databinding.ViewBookPageBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ReadTipConfig
 import io.legado.app.model.ReadBook
-import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
@@ -41,10 +39,12 @@ import java.util.Date
 /**
  * 页面视图
  */
-class PageView(context: Context) : FrameLayout(context) {
+class PageView(
+    context: Context,
+    callBack: ContentTextView.CallBack? = null,
+) : FrameLayout(context) {
 
     private val binding = ViewBookPageBinding.inflate(LayoutInflater.from(context), this, true)
-    private val readBookActivity get() = activity as? ReadBookActivity
     private var battery = 100
     private var tvTitle: BatteryView? = null
     private var tvTime: BatteryView? = null
@@ -80,6 +80,7 @@ class PageView(context: Context) : FrameLayout(context) {
         }
 
     init {
+        callBack?.let { binding.contentTextView.setCallBack(it) }
         upStyle()
         binding.vwStatusBar.applyStatusBarPadding()
         binding.vwNavigationBar.applyNavigationBarPadding()
@@ -94,13 +95,13 @@ class PageView(context: Context) : FrameLayout(context) {
         upTipStyle()
         ReadBookConfig.let {
             val textColor = it.textColor
-            val headerColor = with(ReadTipConfig) {
+            val headerColor = with(ReadBookConfig) {
                 if (tipHeaderColor == 0) textColor else tipHeaderColor
             }
-            val footerColor = with(ReadTipConfig) {
+            val footerColor = with(ReadBookConfig) {
                 if (tipFooterColor == 0) textColor else tipFooterColor
             }
-            val tipDividerColor = with(ReadTipConfig) {
+            val tipDividerColor = with(ReadBookConfig) {
                 when (tipDividerColor) {
                     -1 -> ContextCompat.getColor(context, R.color.divider)
                     0 -> textColor
@@ -160,7 +161,7 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     fun upStatusBar() = with(binding.vwStatusBar) {
         setPadding(paddingLeft, context.statusBarHeight, paddingRight, paddingBottom)
-        isGone = ReadBookConfig.hideStatusBar || readBookActivity?.isInMultiWindow == true
+        isGone = ReadBookConfig.hideStatusBar || activity?.isInMultiWindowMode == true
     }
 
     fun upNavigationBar() {
@@ -195,20 +196,20 @@ class PageView(context: Context) : FrameLayout(context) {
         tvFooterLeft.tag = null
         tvFooterMiddle.tag = null
         tvFooterRight.tag = null
-        llHeader.isGone = when (ReadTipConfig.headerMode) {
+        llHeader.isGone = when (ReadBookConfig.headerMode) {
             1 -> false
             2 -> true
             else -> !ReadBookConfig.hideStatusBar
         }
-        llFooter.isGone = when (ReadTipConfig.footerMode) {
+        llFooter.isGone = when (ReadBookConfig.footerMode) {
             1 -> true
             else -> false
         }
-        ReadTipConfig.apply {
-            tvHeaderLeft.isGone = tipHeaderLeft == none
-            tvHeaderMiddle.isGone = tipHeaderMiddle == none
-            if (tipHeaderRight == none) {
-                if (tipHeaderMiddle == none && tipHeaderLeft == none) {
+        ReadBookConfig.apply {
+            tvHeaderLeft.isGone = tipHeaderLeft == tipNone
+            tvHeaderMiddle.isGone = tipHeaderMiddle == tipNone
+            if (tipHeaderRight == tipNone) {
+                if (tipHeaderMiddle == tipNone && tipHeaderLeft == tipNone) {
                     tvHeaderRight.isGone = true
                 } else {
                     tvHeaderRight.isGone = false
@@ -218,10 +219,10 @@ class PageView(context: Context) : FrameLayout(context) {
                 tvHeaderRight.isGone = false
                 tvHeaderRight.batteryMode = BatteryView.BatteryMode.NO_BATTERY
             }
-            tvFooterLeft.isGone = tipFooterLeft == none
-            tvFooterMiddle.isGone = tipFooterMiddle == none
-            if (tipFooterRight == none) {
-                if (tipFooterLeft == none && tipFooterMiddle == none) {
+            tvFooterLeft.isGone = tipFooterLeft == tipNone
+            tvFooterMiddle.isGone = tipFooterMiddle == tipNone
+            if (tipFooterRight == tipNone) {
+                if (tipFooterLeft == tipNone && tipFooterMiddle == tipNone) {
                     tvFooterRight.isGone = true
                 } else {
                     tvFooterRight.isGone = false
@@ -234,103 +235,103 @@ class PageView(context: Context) : FrameLayout(context) {
         }
         val tipTypeface = loadTypeface(ReadBookConfig.headerFont) ?: ChapterProvider.typeface
         val tipTextSize = ReadBookConfig.headerFontSize.toFloat()
-        tvTitle = getTipView(ReadTipConfig.chapterTitle)?.apply {
-            tag = ReadTipConfig.chapterTitle
+        tvTitle = getTipView(ReadBookConfig.tipChapterTitle)?.apply {
+            tag = ReadBookConfig.tipChapterTitle
             typeface = tipTypeface
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvTitleArrow = getTipView(ReadTipConfig.chapterTitleArrow)?.apply {
-            tag = ReadTipConfig.chapterTitleArrow
+        tvTitleArrow = getTipView(ReadBookConfig.tipChapterTitleArrow)?.apply {
+            tag = ReadBookConfig.tipChapterTitleArrow
             typeface = Typeface.DEFAULT
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
-        tvTitleArrowClassic = getTipView(ReadTipConfig.chapterTitleArrowClassic)?.apply {
-            tag = ReadTipConfig.chapterTitleArrowClassic
+        tvTitleArrowClassic = getTipView(ReadBookConfig.tipChapterTitleArrowClassic)?.apply {
+            tag = ReadBookConfig.tipChapterTitleArrowClassic
             typeface = tipTypeface
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ARROW
         }
-        tvTime = getTipView(ReadTipConfig.time)?.apply {
-            tag = ReadTipConfig.time
+        tvTime = getTipView(ReadBookConfig.tipTime)?.apply {
+            tag = ReadBookConfig.tipTime
             typeface = tipTypeface
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvBattery = getTipView(ReadTipConfig.battery)?.apply {
-            tag = ReadTipConfig.battery
+        tvBattery = getTipView(ReadBookConfig.tipBattery)?.apply {
+            tag = ReadBookConfig.tipBattery
             typeface = Typeface.DEFAULT
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.OUTER
         }
-        tvBatteryClassic = getTipView(ReadTipConfig.batteryClassic)?.apply {
-            tag = ReadTipConfig.batteryClassic
+        tvBatteryClassic = getTipView(ReadBookConfig.tipBatteryClassic)?.apply {
+            tag = ReadBookConfig.tipBatteryClassic
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
-        tvBatteryInside = getTipView(ReadTipConfig.batteryInside)?.apply {
-            tag = ReadTipConfig.batteryInside
+        tvBatteryInside = getTipView(ReadBookConfig.tipBatteryInside)?.apply {
+            tag = ReadBookConfig.tipBatteryInside
             typeface = Typeface.DEFAULT
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.INNER
         }
-        tvBatteryIcon = getTipView(ReadTipConfig.batteryIcon)?.apply {
-            tag = ReadTipConfig.batteryIcon
+        tvBatteryIcon = getTipView(ReadBookConfig.tipBatteryIcon)?.apply {
+            tag = ReadBookConfig.tipBatteryIcon
             typeface = Typeface.DEFAULT
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.ICON
         }
-        tvPage = getTipView(ReadTipConfig.page)?.apply {
-            tag = ReadTipConfig.page
+        tvPage = getTipView(ReadBookConfig.tipPage)?.apply {
+            tag = ReadBookConfig.tipPage
             typeface = tipTypeface
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
         }
-        tvTotalProgress = getTipView(ReadTipConfig.totalProgress)?.apply {
-            tag = ReadTipConfig.totalProgress
+        tvTotalProgress = getTipView(ReadBookConfig.tipTotalProgress)?.apply {
+            tag = ReadBookConfig.tipTotalProgress
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        tvTotalProgress1 = getTipView(ReadTipConfig.totalProgress1)?.apply {
-            tag = ReadTipConfig.totalProgress1
+        tvTotalProgress1 = getTipView(ReadBookConfig.tipTotalProgress1)?.apply {
+            tag = ReadBookConfig.tipTotalProgress1
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        tvPageAndTotal = getTipView(ReadTipConfig.pageAndTotal)?.apply {
-            tag = ReadTipConfig.pageAndTotal
+        tvPageAndTotal = getTipView(ReadBookConfig.tipPageAndTotal)?.apply {
+            tag = ReadBookConfig.tipPageAndTotal
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        tvBookName = getTipView(ReadTipConfig.bookName)?.apply {
-            tag = ReadTipConfig.bookName
+        tvBookName = getTipView(ReadBookConfig.tipBookName)?.apply {
+            tag = ReadBookConfig.tipBookName
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        tvTimeBattery = getTipView(ReadTipConfig.timeBattery)?.apply {
-            tag = ReadTipConfig.timeBattery
+        tvTimeBattery = getTipView(ReadBookConfig.tipTimeBattery)?.apply {
+            tag = ReadBookConfig.tipTimeBattery
             typeface = Typeface.DEFAULT
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.TIME
         }
-        tvTimeBatteryClassic = getTipView(ReadTipConfig.timeBatteryClassic)?.apply {
-            tag = ReadTipConfig.timeBatteryClassic
+        tvTimeBatteryClassic = getTipView(ReadBookConfig.tipTimeBatteryClassic)?.apply {
+            tag = ReadBookConfig.tipTimeBatteryClassic
             typeface = tipTypeface
             textSize = tipTextSize
             batteryMode = BatteryView.BatteryMode.CLASSIC
         }
-        tvBatteryP = getTipView(ReadTipConfig.batteryPercentage)?.apply {
-            tag = ReadTipConfig.batteryPercentage
+        tvBatteryP = getTipView(ReadBookConfig.tipBatteryPercentage)?.apply {
+            tag = ReadBookConfig.tipBatteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
         }
-        tvTimeBatteryP = getTipView(ReadTipConfig.timeBatteryPercentage)?.apply {
-            tag = ReadTipConfig.timeBatteryPercentage
+        tvTimeBatteryP = getTipView(ReadBookConfig.tipTimeBatteryPercentage)?.apply {
+            tag = ReadBookConfig.tipTimeBatteryPercentage
             batteryMode = BatteryView.BatteryMode.NO_BATTERY
             typeface = tipTypeface
             textSize = tipTextSize
@@ -343,12 +344,12 @@ class PageView(context: Context) : FrameLayout(context) {
      */
     private fun getTipView(tip: Int): BatteryView? = binding.run {
         return when (tip) {
-            ReadTipConfig.tipHeaderLeft -> tvHeaderLeft
-            ReadTipConfig.tipHeaderMiddle -> tvHeaderMiddle
-            ReadTipConfig.tipHeaderRight -> tvHeaderRight
-            ReadTipConfig.tipFooterLeft -> tvFooterLeft
-            ReadTipConfig.tipFooterMiddle -> tvFooterMiddle
-            ReadTipConfig.tipFooterRight -> tvFooterRight
+            ReadBookConfig.tipHeaderLeft -> tvHeaderLeft
+            ReadBookConfig.tipHeaderMiddle -> tvHeaderMiddle
+            ReadBookConfig.tipHeaderRight -> tvHeaderRight
+            ReadBookConfig.tipFooterLeft -> tvFooterLeft
+            ReadBookConfig.tipFooterMiddle -> tvFooterMiddle
+            ReadBookConfig.tipFooterRight -> tvFooterRight
             else -> null
         }
     }

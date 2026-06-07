@@ -9,6 +9,7 @@ import androidx.compose.material3.SwitchColors
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
@@ -35,6 +36,39 @@ fun AdaptiveSwitch(
         )
     } else {
         IconSwitch(
+            modifier = modifier,
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            checkedIcon = checkedIcon,
+            uncheckedIcon = uncheckedIcon,
+            showIcon = showIcon
+        )
+    }
+}
+
+@Composable
+fun TinySwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    checkedIcon: ImageVector = Icons.Filled.Check,
+    uncheckedIcon: ImageVector? = null,
+    showIcon: Boolean = true
+) {
+    val composeEngine = LegadoTheme.composeEngine
+
+    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+        MiuixSwitch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.scale(0.9f),
+            enabled = enabled
+        )
+    } else {
+        IconSwitch(
+            modifier = Modifier.scale(0.8f),
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
@@ -47,6 +81,7 @@ fun AdaptiveSwitch(
 
 @Composable
 fun IconSwitch(
+    modifier: Modifier,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
@@ -56,6 +91,7 @@ fun IconSwitch(
     colors: SwitchColors = SwitchDefaults.colors()
 ) {
     Switch(
+        modifier = modifier,
         checked = checked,
         onCheckedChange = onCheckedChange,
         enabled = enabled,

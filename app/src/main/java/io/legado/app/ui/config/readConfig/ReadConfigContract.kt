@@ -1,0 +1,77 @@
+package io.legado.app.ui.config.readConfig
+
+data class ReadConfigUiState(
+    val screenOrientation: String = "0",
+    val keepLight: String = "0",
+    val hideStatusBar: Boolean = false,
+    val hideNavigationBar: Boolean = false,
+    val paddingDisplayCutouts: Boolean = false,
+    val titleBarMode: String = "1",
+    val menuAlpha: Int = 100,
+    val readBodyToLh: Boolean = true,
+    val defaultSourceChangeAll: Boolean = true,
+    val textFullJustify: Boolean = true,
+    val textBottomJustify: Boolean = true,
+    val adaptSpecialStyle: Boolean = true,
+    val useZhLayout: Boolean = false,
+    val showBrightnessView: Boolean = true,
+    val useUnderline: Boolean = false,
+    val readSliderMode: String = "0",
+    val doubleHorizontalPage: String = "0",
+    val progressBarBehavior: String = "page",
+    val mouseWheelPage: Boolean = true,
+    val volumeKeyPage: Boolean = true,
+    val volumeKeyPageOnPlay: Boolean = true,
+    val keyPageOnLongPress: Boolean = false,
+    val pageTouchSlop: Int = 0,
+    val sliderVibrator: Boolean = false,
+    val selectVibrator: Boolean = false,
+    val autoChangeSource: Boolean = true,
+    val selectText: Boolean = true,
+    val noAnimScrollPage: Boolean = false,
+    val clickImgWay: String = "2",
+    val optimizeRender: Boolean = false,
+    val disableReturnKey: Boolean = false,
+    val expandTextMenu: Boolean = false,
+    val showReadTitleAddition: Boolean = true,
+    val autoReadSpeed: Int = 10,
+    val prevKeys: String = "",
+    val nextKeys: String = ""
+)
+
+sealed interface ReadConfigIntent {
+    data class ScreenOrientationChanged(val value: String) : ReadConfigIntent
+    data class KeepLightChanged(val value: String) : ReadConfigIntent
+    data class HideStatusBarChanged(val value: Boolean) : ReadConfigIntent
+    data class HideNavigationBarChanged(val value: Boolean) : ReadConfigIntent
+    data class PaddingDisplayCutoutsChanged(val value: Boolean) : ReadConfigIntent
+    data class TitleBarModeChanged(val value: String) : ReadConfigIntent
+    data class MenuAlphaChanged(val value: Int) : ReadConfigIntent
+    data class ReadBodyToLhChanged(val value: Boolean) : ReadConfigIntent
+    data class DefaultSourceChangeAllChanged(val value: Boolean) : ReadConfigIntent
+    data class TextFullJustifyChanged(val value: Boolean) : ReadConfigIntent
+    data class TextBottomJustifyChanged(val value: Boolean) : ReadConfigIntent
+    data class AdaptSpecialStyleChanged(val value: Boolean) : ReadConfigIntent
+    data class UseZhLayoutChanged(val value: Boolean) : ReadConfigIntent
+    data class ShowBrightnessViewChanged(val value: Boolean) : ReadConfigIntent
+    data class UseUnderlineChanged(val value: Boolean) : ReadConfigIntent
+    data class ReadSliderModeChanged(val value: String) : ReadConfigIntent
+    data class DoubleHorizontalPageChanged(val value: String) : ReadConfigIntent
+    data class ProgressBarBehaviorChanged(val value: String) : ReadConfigIntent
+    data class MouseWheelPageChanged(val value: Boolean) : ReadConfigIntent
+    data class VolumeKeyPageChanged(val value: Boolean) : ReadConfigIntent
+    data class VolumeKeyPageOnPlayChanged(val value: Boolean) : ReadConfigIntent
+    data class KeyPageOnLongPressChanged(val value: Boolean) : ReadConfigIntent
+    data class PageTouchSlopChanged(val value: Int) : ReadConfigIntent
+    data class SliderVibratorChanged(val value: Boolean) : ReadConfigIntent
+    data class SelectVibratorChanged(val value: Boolean) : ReadConfigIntent
+    data class AutoChangeSourceChanged(val value: Boolean) : ReadConfigIntent
+    data class SelectTextChanged(val value: Boolean) : ReadConfigIntent
+    data class NoAnimScrollPageChanged(val value: Boolean) : ReadConfigIntent
+    data class ClickImgWayChanged(val value: String) : ReadConfigIntent
+    data class OptimizeRenderChanged(val value: Boolean) : ReadConfigIntent
+    data class DisableReturnKeyChanged(val value: Boolean) : ReadConfigIntent
+    data class ExpandTextMenuChanged(val value: Boolean) : ReadConfigIntent
+    data class ShowReadTitleAdditionChanged(val value: Boolean) : ReadConfigIntent
+    data class PageKeysChanged(val prevKeys: String, val nextKeys: String) : ReadConfigIntent
+}

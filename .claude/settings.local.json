@@ -109,10 +109,10 @@
       "Bash(node *)",
       "Bash(Select-String -Pattern \"BUILD|error|Error\")",
       "Bash(Select-Object -First 10)",
-      "Bash(git push *)",
-      "Bash(gh run *)",
-      "WebFetch(domain:ktor.io)",
-      "WebFetch(domain:api.ktor.io)"
+      "Bash(Select-Object -Last 10)",
+      "Bash(dir /s /b \"%USERPROFILE%\\\\.gradle\\\\caches\\\\*kyant*\")",
+      "Bash(Select-String -Pattern \"\\(BUILD|error:|FAILED\\)\")",
+      "PowerShell(grep *)"
     ]
   }
 }

@@ -22,7 +22,6 @@ import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
-import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
@@ -48,6 +47,7 @@ fun BookInfoRouteScreen(
     onBack: () -> Unit,
     onFinish: (resultCode: Int?, afterTransition: Boolean) -> Unit,
     onOpenSearch: (String) -> Unit,
+    onOpenReader: (bookUrl: String, inBookshelf: Boolean, chapterChanged: Boolean) -> Unit = { _, _, _ -> },
     onNavigateToBookInfo: (name: String?, author: String?, bookUrl: String, origin: String?, coverPath: String?) -> Unit = { _, _, _, _, _ -> },
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit = { _, _, _ -> },
     sharedTransitionScope: SharedTransitionScope? = null,
@@ -123,7 +123,15 @@ fun BookInfoRouteScreen(
                             ReadMangaActivity::class.java
                         }
 
-                        else -> ReadBookActivity::class.java
+                        else -> null
+                    }
+                    if (cls == null) {
+                        onOpenReader(
+                            effect.book.bookUrl,
+                            effect.inBookshelf,
+                            effect.chapterChanged,
+                        )
+                        return@collectLatest
                     }
                     readBookResult.launch(
                         Intent(activity, cls).apply {

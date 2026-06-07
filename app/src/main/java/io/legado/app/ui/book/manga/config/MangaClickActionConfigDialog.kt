@@ -8,15 +8,17 @@ import android.widget.TextView
 import io.legado.app.R
 import io.legado.app.base.BaseOverlayDialogFragment
 import io.legado.app.constant.PreferKey
+import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.databinding.DialogClickActionConfigBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.getCompatColor
-import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import org.koin.android.ext.android.inject
 
 class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_click_action_config) {
     private val binding by viewBinding(DialogClickActionConfigBinding::bind)
+    private val mangaSettingsRepository by inject<MangaSettingsRepository>()
 
     private val actions by lazy {
         linkedMapOf(
@@ -66,65 +68,82 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
 
         binding.tvTopLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTL, action)
+                setClickAction(PreferKey.mangaClickActionTL, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTC, action)
+                setClickAction(PreferKey.mangaClickActionTC, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvTopRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionTR, action)
+                setClickAction(PreferKey.mangaClickActionTR, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionML, action)
+                setClickAction(PreferKey.mangaClickActionML, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionMC, action)
+                setClickAction(PreferKey.mangaClickActionMC, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvMiddleRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionMR, action)
+                setClickAction(PreferKey.mangaClickActionMR, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomLeft.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBL, action)
+                setClickAction(PreferKey.mangaClickActionBL, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomCenter.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBC, action)
+                setClickAction(PreferKey.mangaClickActionBC, action)
                 (it as? TextView)?.text = actions[action]
             }
         }
 
         binding.tvBottomRight.setOnClickListener {
             selectAction { action ->
-                putPrefInt(PreferKey.mangaClickActionBR, action)
+                setClickAction(PreferKey.mangaClickActionBR, action)
                 (it as? TextView)?.text = actions[action]
             }
+        }
+    }
+
+    private fun setClickAction(key: String, action: Int) {
+        when (key) {
+            PreferKey.mangaClickActionTL -> AppConfig.mangaClickActionTL = action
+            PreferKey.mangaClickActionTC -> AppConfig.mangaClickActionTC = action
+            PreferKey.mangaClickActionTR -> AppConfig.mangaClickActionTR = action
+            PreferKey.mangaClickActionML -> AppConfig.mangaClickActionML = action
+            PreferKey.mangaClickActionMC -> AppConfig.mangaClickActionMC = action
+            PreferKey.mangaClickActionMR -> AppConfig.mangaClickActionMR = action
+            PreferKey.mangaClickActionBL -> AppConfig.mangaClickActionBL = action
+            PreferKey.mangaClickActionBC -> AppConfig.mangaClickActionBC = action
+            PreferKey.mangaClickActionBR -> AppConfig.mangaClickActionBR = action
+        }
+        execute {
+            mangaSettingsRepository.setMangaClickAction(key, action)
         }
     }
 
@@ -138,7 +157,20 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
     }
 
     override fun onDestroy() {
+        if (!hasMenuClickArea()) {
+            AppConfig.detectMangaClickArea()
+            execute {
+                mangaSettingsRepository.setMangaClickAction(PreferKey.mangaClickActionMC, 0)
+            }
+        }
         super.onDestroy()
-        AppConfig.detectMangaClickArea()
+    }
+
+    private fun hasMenuClickArea(): Boolean {
+        return AppConfig.mangaClickActionTL * AppConfig.mangaClickActionTC *
+                AppConfig.mangaClickActionTR * AppConfig.mangaClickActionML *
+                AppConfig.mangaClickActionMC * AppConfig.mangaClickActionMR *
+                AppConfig.mangaClickActionBL * AppConfig.mangaClickActionBC *
+                AppConfig.mangaClickActionBR == 0
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.service.WebService
 import io.legado.app.ui.theme.LegadoTheme
@@ -47,6 +48,8 @@ fun OtherConfigScreen(
     viewModel: OtherConfigViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
+    val readAloudPreferences by viewModel.readAloudPreferences.collectAsStateWithLifecycle()
+    val mangaPreferences by viewModel.mangaPreferences.collectAsStateWithLifecycle()
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -200,22 +203,22 @@ fun OtherConfigScreen(
                 SwitchSettingItem(
                     title = stringResource(R.string.media_button_on_exit_title),
                     description = stringResource(R.string.media_button_on_exit_summary),
-                    checked = OtherConfig.mediaButtonOnExit,
-                    onCheckedChange = { OtherConfig.mediaButtonOnExit = it }
+                    checked = readAloudPreferences.mediaButtonOnExit,
+                    onCheckedChange = { viewModel.setMediaButtonOnExit(it) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.read_aloud_by_media_button_title),
                     description = stringResource(R.string.read_aloud_by_media_button_summary),
-                    checked = OtherConfig.readAloudByMediaButton,
-                    onCheckedChange = { OtherConfig.readAloudByMediaButton = it }
+                    checked = readAloudPreferences.readAloudByMediaButton,
+                    onCheckedChange = { viewModel.setReadAloudByMediaButton(it) }
                 )
 
                 SwitchSettingItem(
                     title = stringResource(R.string.ignore_audio_focus_title),
                     description = stringResource(R.string.ignore_audio_focus_summary),
-                    checked = OtherConfig.ignoreAudioFocus,
-                    onCheckedChange = { OtherConfig.ignoreAudioFocus = it }
+                    checked = readAloudPreferences.ignoreAudioFocus,
+                    onCheckedChange = { viewModel.setIgnoreAudioFocus(it) }
                 )
 
                 SwitchSettingItem(
@@ -234,8 +237,8 @@ fun OtherConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_manga_ui),
-                    checked = OtherConfig.showMangaUi,
-                    onCheckedChange = { OtherConfig.showMangaUi = it }
+                    checked = mangaPreferences.showMangaUi,
+                    onCheckedChange = { viewModel.setShowMangaUi(it) }
                 )
             }
 

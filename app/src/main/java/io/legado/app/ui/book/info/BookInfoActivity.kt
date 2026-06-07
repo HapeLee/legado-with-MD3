@@ -29,6 +29,16 @@ class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
             onOpenSearch = { keyword ->
                 startActivity(MainActivity.createSearchIntent(this, key = keyword))
             },
+            onOpenReader = { bookUrl, inBookshelf, chapterChanged ->
+                startActivity(
+                    MainActivity.createReadBookIntent(
+                        context = this,
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
+                        chapterChanged = chapterChanged,
+                    )
+                )
+            },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
                 startActivity<BookInfoActivity> {
                     putExtra("bookUrl", bookUrl)

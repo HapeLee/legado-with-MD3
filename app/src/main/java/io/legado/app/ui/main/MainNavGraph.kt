@@ -6,8 +6,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
@@ -27,6 +32,10 @@ import io.legado.app.ui.book.import.remote.RemoteBookScreen
 import io.legado.app.ui.book.info.BookInfoRouteScreen
 import io.legado.app.ui.book.info.BookInfoViewModel
 import io.legado.app.ui.book.manage.BookshelfManageRouteScreen
+import io.legado.app.ui.book.read.ReadBookController
+import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookRouteScreen
+import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewScreen
 import io.legado.app.ui.book.readRecord.ReadRecordScreen
 import io.legado.app.ui.book.search.SearchIntent
@@ -54,6 +63,7 @@ import io.legado.app.utils.openUrl
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -245,6 +255,87 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    entry<MainRouteReadBook> { route ->
+        val readBookViewModel = koinViewModel<ReadBookViewModel>(
+            key = route.bookUrl ?: "last-read"
+        )
+        val controller = remember(readBookViewModel) {
+            ReadBookController(this@mainEntryProvider, readBookViewModel)
+        }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val readIntent = remember(route) {
+            MainActivity.createReadBookIntent(
+                context = this@mainEntryProvider,
+                bookUrl = route.bookUrl,
+                readAloud = route.readAloud,
+                inBookshelf = route.inBookshelf,
+                chapterChanged = route.chapterChanged,
+            )
+        }
+        val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
+        val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
+        fun resumeReader() {
+            if (readerResumeState[0]) return
+            readerResumeState[0] = true
+            controller.onResume()
+            readBookViewModel.onIntent(ReadBookIntent.OnResume)
+        }
+
+        fun pauseReader() {
+            if (!readerResumeState[0]) return
+            readerResumeState[0] = false
+            controller.onPause()
+            readBookViewModel.onIntent(ReadBookIntent.OnPause)
+        }
+
+        ReadBookRouteScreen(
+            viewModel = readBookViewModel,
+            host = controller,
+            controller = controller,
+            onEffectsReady = { effectsReady.complete(Unit) },
+        )
+
+        DisposableEffect(controller, lifecycleOwner, route.readAloud) {
+            activeReadBookInputHandler = controller
+            MainActivity.hasActiveReadBookRoute = true
+            controller.onClose = { onNavigateBack() }
+            controller.onStartContentLoadFinish = {
+                if (route.readAloud) {
+                    io.legado.app.model.ReadBook.readAloud()
+                }
+            }
+
+            val lifecycleObserver = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> resumeReader()
+                    Lifecycle.Event.ON_PAUSE -> pauseReader()
+                    else -> Unit
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+            onDispose {
+                pauseReader()
+                readBookViewModel.onIntent(ReadBookIntent.OnDispose)
+                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+                if (activeReadBookInputHandler === controller) {
+                    activeReadBookInputHandler = null
+                }
+                MainActivity.hasActiveReadBookRoute = false
+                controller.clearTts()
+            }
+        }
+
+        LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
+            effectsReady.await()
+            readBookViewModel.initReadBookConfig(readIntent)
+            readBookViewModel.initData(readIntent)
+            controller.onRouteInitialized()
+            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                resumeReader()
+            }
+        }
+    }
+
     entry<MainRouteSearch> { route ->
         val searchViewModel = koinViewModel<SearchViewModel>()
 
@@ -427,6 +518,15 @@ fun MainActivity.mainEntryProvider(
             onFinish = { _, _ -> onNavigateBack() },
             onOpenSearch = { keyword ->
                 onNavigateToRoute(MainRouteSearch(key = keyword))
+            },
+            onOpenReader = { bookUrl, inBookshelf, chapterChanged ->
+                onNavigateToRoute(
+                    MainRouteReadBook(
+                        bookUrl = bookUrl,
+                        inBookshelf = inBookshelf,
+                        chapterChanged = chapterChanged,
+                    )
+                )
             },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath ->
                 onNavigateToRoute(MainRouteBookInfo(name, author, bookUrl, origin, coverPath))
