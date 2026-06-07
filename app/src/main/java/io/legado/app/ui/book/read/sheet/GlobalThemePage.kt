@@ -1,7 +1,7 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,23 +17,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,14 +45,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import coil.compose.AsyncImage
 import io.legado.app.R
-import kotlinx.coroutines.launch
+import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.help.config.ReadStyleResolver
+import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.help.config.ReadStyleResolver
-import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -66,7 +62,6 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.text.AppText
-import kotlin.time.Duration.Companion.milliseconds
 
 // ========== Page 0: Global & Theme ==========
 
@@ -200,7 +195,10 @@ fun GlobalThemePage(
                     } else {
                         LegadoTheme.colorScheme.surfaceContainerLow
                     },
-                    border = BorderStroke(1.dp, LegadoTheme.colorScheme.surfaceContainerHigh),
+                    border = BorderStroke(
+                        1.dp,
+                        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                    ),
                     contentColor = if (shareLayout) LegadoTheme.colorScheme.onSecondaryContainer else null
                 ) {
                     Box(
@@ -392,34 +390,47 @@ fun StyleCard(
             .height(56.dp),
         cornerRadius = 8.dp,
         containerColor = bgColor,
-        elevation = if (isSelected) 4.dp else 0.dp,
-        border = if (isSelected) {
-            BorderStroke(2.dp, LegadoTheme.colorScheme.outlineVariant)
-        } else null,
         onClick = onClick,
         onLongClick = onLongClick,
     ) {
-        if (bgPath != null) {
-            AsyncImage(
-                model = bgPath,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (bgPath != null) {
+                AsyncImage(
+                    model = bgPath,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             AppText(
                 text = name,
                 style = LegadoTheme.typography.labelSmall,
                 color = textColor,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 8.dp),
             )
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .background(
+                            color = LegadoTheme.colorScheme.surfaceContainerHigh
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(10.dp),
+                        tint = LegadoTheme.colorScheme.primary,
+                    )
+                }
+            }
         }
     }
 }
