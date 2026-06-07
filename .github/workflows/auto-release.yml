@@ -354,3 +354,160 @@ jobs:
             artifacts/legado-${{ needs.prepare.outputs.versionL }}*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 发布到 Telegram 群组
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VERSION: ${{ needs.prepare.outputs.versionL }}
+          IS_RELEASE: ${{ needs.prepare.outputs.is_release }}
+          RELEASE_BODY: ${{ steps.get_commits.outputs.release_body }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          python3 <<'PY'
+          import glob
+          import json
+          import os
+          import subprocess
+          import sys
+
+          MAX_BOT_API_FILE_BYTES = 50 * 1024 * 1024
+          MEDIA_GROUP_LIMIT = 10
+          MESSAGE_LIMIT = 4096
+          CAPTION_LIMIT = 1024
+
+          bot_token = os.environ.get("TG_BOT_TOKEN", "")
+          chat_id = os.environ.get("TG_CHAT_ID", "")
+          version = os.environ["VERSION"]
+          is_release = os.environ["IS_RELEASE"] == "true"
+          repo_url = os.environ["REPO_URL"]
+          release_body = os.environ.get("RELEASE_BODY", "").strip()
+          release_link = f"{repo_url}/releases/tag/{version}"
+
+          missing = [name for name, value in {
+              "TELEGRAM_BOT_TOKEN": bot_token,
+              "TELEGRAM_CHAT_ID": chat_id,
+          }.items() if not value]
+          if missing:
+              print(f"缺少 Telegram Secret: {', '.join(missing)}")
+              sys.exit(1)
+
+          def to_plain_text(text):
+              lines = []
+              for line in text.splitlines():
+                  if line.startswith("### "):
+                      line = line[4:]
+                  lines.append(line.replace("**", ""))
+              return "\n".join(lines).strip()
+
+          def limited_text(prefix, body, suffix, limit):
+              fixed_len = len(prefix) + len(suffix)
+              if fixed_len >= limit:
+                  return (prefix + suffix)[:limit - 3] + "..."
+              budget = limit - fixed_len
+              if len(body) <= budget:
+                  return f"{prefix}{body}{suffix}"
+              return f"{prefix}{body[:budget - 3]}...{suffix}"
+
+          def tg_call(method, fields, files=None):
+              cmd = [
+                  "curl", "-sS", "--retry", "3", "--retry-delay", "2",
+                  "--connect-timeout", "20", "--max-time", "600",
+                  "-X", "POST",
+                  f"https://api.telegram.org/bot{bot_token}/{method}",
+              ]
+              for key, value in fields.items():
+                  cmd.extend(["--form-string", f"{key}={value}"])
+              for key, path in files or []:
+                  cmd.extend(["-F", f"{key}=@{path}"])
+
+              result = subprocess.run(cmd, capture_output=True, text=True)
+              if result.stderr:
+                  print(result.stderr, file=sys.stderr)
+
+              try:
+                  response = json.loads(result.stdout)
+              except json.JSONDecodeError:
+                  print(f"Telegram {method} 返回非 JSON 响应:")
+                  print(result.stdout)
+                  sys.exit(1)
+
+              if result.returncode != 0 or not response.get("ok"):
+                  print(f"Telegram {method} 调用失败:")
+                  print(json.dumps(response, ensure_ascii=False, indent=2))
+                  sys.exit(1)
+
+              return response
+
+          title = f"{'Release' if is_release else 'Pre-release'} {version}"
+          body = to_plain_text(release_body)
+          notes = limited_text(
+              f"{title}\n\n",
+              body,
+              f"\n\n完整更新日志: {release_link}",
+              MESSAGE_LIMIT,
+          )
+          caption = limited_text(
+              "",
+              title,
+              f"\n完整更新日志: {release_link}",
+              CAPTION_LIMIT,
+          )
+
+          apk_files = sorted(glob.glob(f"artifacts/legado-{version}*.apk"))
+          if not apk_files:
+              print("未找到 APK 文件！")
+              sys.exit(1)
+
+          too_large = [
+              (apk, os.path.getsize(apk))
+              for apk in apk_files
+              if os.path.getsize(apk) > MAX_BOT_API_FILE_BYTES
+          ]
+          if too_large:
+              print("Telegram Bot API 云端 sendDocument 限制单文件最大 50 MB，以下 APK 无法上传:")
+              for apk, size in too_large:
+                  print(f"  - {os.path.basename(apk)}: {size / 1024 / 1024:.2f} MB")
+              print(f"GitHub Release: {release_link}")
+              sys.exit(1)
+
+          print(f"准备发送 Release Notes，并上传 {len(apk_files)} 个 APK:")
+          for apk in apk_files:
+              print(f"  - {os.path.basename(apk)} ({os.path.getsize(apk) / 1024 / 1024:.2f} MB)")
+
+          tg_call("sendMessage", {
+              "chat_id": chat_id,
+              "text": notes,
+              "disable_web_page_preview": "true",
+          })
+          print("Release Notes 已发送。")
+
+          caption_used = False
+          for start in range(0, len(apk_files), MEDIA_GROUP_LIMIT):
+              batch = apk_files[start:start + MEDIA_GROUP_LIMIT]
+              batch_caption = caption if not caption_used else ""
+
+              if len(batch) == 1:
+                  fields = {"chat_id": chat_id}
+                  if batch_caption:
+                      fields["caption"] = batch_caption
+                  tg_call("sendDocument", fields, [("document", batch[0])])
+              else:
+                  media = []
+                  files = []
+                  for index, apk in enumerate(batch):
+                      field_name = f"file{index}"
+                      item = {"type": "document", "media": f"attach://{field_name}"}
+                      if index == 0 and batch_caption:
+                          item["caption"] = batch_caption
+                      media.append(item)
+                      files.append((field_name, apk))
+                  tg_call("sendMediaGroup", {
+                      "chat_id": chat_id,
+                      "media": json.dumps(media, ensure_ascii=False),
+                  }, files)
+
+              caption_used = True
+
+          print("所有 APK 已发送到 Telegram。")
+          PY
