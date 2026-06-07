@@ -355,7 +355,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 发布到 Telegram 群组
+      - name: 发布到 Telegram 频道
         env:
           TG_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -371,8 +371,7 @@ jobs:
           import subprocess
           import sys
 
-          MAX_BOT_API_FILE_BYTES = 50 * 1024 * 1024
-          MEDIA_GROUP_LIMIT = 10
+          MAX_BOT_API_FILE_BYTES = 50_000_000
           MESSAGE_LIMIT = 4096
           CAPTION_LIMIT = 1024
 
@@ -459,19 +458,30 @@ jobs:
               print("未找到 APK 文件！")
               sys.exit(1)
 
-          too_large = [
+          oversized_files = [
               (apk, os.path.getsize(apk))
               for apk in apk_files
               if os.path.getsize(apk) > MAX_BOT_API_FILE_BYTES
           ]
-          if too_large:
-              print("Telegram Bot API 云端 sendDocument 限制单文件最大 50 MB，以下 APK 无法上传:")
-              for apk, size in too_large:
+          uploadable_files = [
+              apk for apk in apk_files
+              if os.path.getsize(apk) <= MAX_BOT_API_FILE_BYTES
+          ]
+          if oversized_files:
+              print("Telegram Bot API 云端 sendDocument 限制单文件最大 50 MB，以下 APK 将改为发布下载链接:")
+              for apk, size in oversized_files:
                   print(f"  - {os.path.basename(apk)}: {size / 1024 / 1024:.2f} MB")
-              print(f"GitHub Release: {release_link}")
-              sys.exit(1)
 
-          print(f"准备发送 Release Notes，并上传 {len(apk_files)} 个 APK:")
+          if not uploadable_files:
+              tg_call("sendMessage", {
+                  "chat_id": chat_id,
+                  "text": f"所有 APK 均超过 Telegram Bot API 50 MB 上传限制，请前往 GitHub Release 下载: {release_link}",
+                  "disable_web_page_preview": "true",
+              })
+              print("所有 APK 均超过 Telegram 上传限制，已发送 GitHub Release 链接。")
+              sys.exit(0)
+
+          print(f"准备发送 Release Notes，并上传 {len(uploadable_files)} 个 APK:")
           for apk in apk_files:
               print(f"  - {os.path.basename(apk)} ({os.path.getsize(apk) / 1024 / 1024:.2f} MB)")
 
@@ -482,32 +492,20 @@ jobs:
           })
           print("Release Notes 已发送。")
 
-          caption_used = False
-          for start in range(0, len(apk_files), MEDIA_GROUP_LIMIT):
-              batch = apk_files[start:start + MEDIA_GROUP_LIMIT]
-              batch_caption = caption if not caption_used else ""
+          for index, apk in enumerate(uploadable_files):
+              fields = {"chat_id": chat_id}
+              if index == 0:
+                  fields["caption"] = caption
+              tg_call("sendDocument", fields, [("document", apk)])
+              print(f"已发送 APK: {os.path.basename(apk)}")
 
-              if len(batch) == 1:
-                  fields = {"chat_id": chat_id}
-                  if batch_caption:
-                      fields["caption"] = batch_caption
-                  tg_call("sendDocument", fields, [("document", batch[0])])
-              else:
-                  media = []
-                  files = []
-                  for index, apk in enumerate(batch):
-                      field_name = f"file{index}"
-                      item = {"type": "document", "media": f"attach://{field_name}"}
-                      if index == 0 and batch_caption:
-                          item["caption"] = batch_caption
-                      media.append(item)
-                      files.append((field_name, apk))
-                  tg_call("sendMediaGroup", {
-                      "chat_id": chat_id,
-                      "media": json.dumps(media, ensure_ascii=False),
-                  }, files)
+          if oversized_files:
+              skipped = "\n".join(f"- {os.path.basename(apk)} ({size / 1024 / 1024:.2f} MB)" for apk, size in oversized_files)
+              tg_call("sendMessage", {
+                  "chat_id": chat_id,
+                  "text": f"以下 APK 超过 Telegram Bot API 50 MB 上传限制，请前往 GitHub Release 下载:\n{skipped}\n\n{release_link}",
+                  "disable_web_page_preview": "true",
+              })
 
-              caption_used = True
-
-          print("所有 APK 已发送到 Telegram。")
+          print("Telegram APK 发布完成。")
           PY
