@@ -163,9 +163,21 @@ class ReadStyleRepository {
                     bgFile.copyTo(File(bgPath))
                 }
             }
-            config.bgStrNight = bgPath
+            config.bgStr = bgPath
         } else if (config.bgTypeNight == 0) {
             config.bgStrNight.toColorInt()
+        }
+        if (config.bgTypeNight == 2) {
+            val bgName = FileUtils.getName(config.bgStrNight)
+            config.bgStrNight = bgName
+            val bgPath = FileUtils.getPath(appCtx.externalFiles, "bg", bgName)
+            if (!FileUtils.exist(bgPath)) {
+                val bgFile = configDir.getFile(bgName)
+                if (bgFile.exists()) {
+                    bgFile.copyTo(File(bgPath))
+                }
+            }
+            config.bgStrNight = bgPath
         }
         if (config.bgTypeEInk == 2) {
             val bgName = FileUtils.getName(config.bgStrEInk)

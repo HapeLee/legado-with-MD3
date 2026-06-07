@@ -2,11 +2,12 @@ package io.legado.app.data.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "highlightRules")
 data class HighlightRule(
     @PrimaryKey
-    var id: String = System.currentTimeMillis().toString(),
+    var id: String = UUID.randomUUID().toString(),
     var name: String = "",
     var pattern: String = "",
     var sampleText: String = "",
@@ -80,7 +81,7 @@ data class HighlightRule(
     }
 
     fun copyWithNewId(): HighlightRule {
-        return copy(id = "${System.currentTimeMillis()}_${name.hashCode()}")
+        return copy(id = UUID.randomUUID().toString())
     }
 
     companion object {

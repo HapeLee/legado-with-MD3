@@ -217,11 +217,13 @@ class ChangeSourceSearchUseCase(
         fromReadBookActivity: Boolean,
         contentProcessor: ContentProcessor,
     ) {
+        if (chapters.isEmpty()) return
         val chapterIndex = if (fromReadBookActivity) {
             BookHelp.getDurChapter(oldBook, chapters)
         } else {
             chapters.lastIndex
         }
+        if (chapterIndex !in chapters.indices) return
         val bookChapter = chapters[chapterIndex]
         var title = bookChapter.title.trim()
         if (title.length > 20) {
