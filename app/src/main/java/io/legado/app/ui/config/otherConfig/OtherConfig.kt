@@ -8,7 +8,8 @@ object OtherConfig {
 
     var language by prefDelegate(
         PreferKey.language,
-        "auto"
+        "auto",
+        sync = true
     )
 
     var updateToVariant by prefDelegate(

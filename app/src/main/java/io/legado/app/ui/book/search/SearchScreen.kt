@@ -108,6 +108,7 @@ fun SearchScreen(
     var previewBook by remember { mutableStateOf<SearchBook?>(null) }
     var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
+    val groupedListState = rememberLazyListState()
     val lifecycleOwner = LocalLifecycleOwner.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
@@ -123,6 +124,14 @@ fun SearchScreen(
         derivedStateOf {
             val totalCount = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            totalCount > 0 && lastVisible >= totalCount - 3
+        }
+    }
+
+    val shouldLoadMoreGrouped by remember {
+        derivedStateOf {
+            val totalCount = groupedListState.layoutInfo.totalItemsCount
+            val lastVisible = groupedListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             totalCount > 0 && lastVisible >= totalCount - 3
         }
     }
@@ -150,20 +159,19 @@ fun SearchScreen(
 
     LaunchedEffect(
         shouldLoadMore,
+        shouldLoadMoreGrouped,
         state.isSearching,
         state.hasMore,
         state.isManualStop,
         state.showSuggestions,
         isSourceGroupedMode,
     ) {
-        if (
-            shouldLoadMore &&
-            !state.isSearching &&
+        val readyToLoad = !state.isSearching &&
             state.hasMore &&
             !state.isManualStop &&
-            !state.showSuggestions &&
-            !isSourceGroupedMode
-        ) {
+            !state.showSuggestions
+        val nearEnd = if (isSourceGroupedMode) shouldLoadMoreGrouped else shouldLoadMore
+        if (readyToLoad && nearEnd) {
             viewModel.onIntent(SearchIntent.LoadMore)
         }
     }
@@ -269,7 +277,7 @@ fun SearchScreen(
                     },
                     actions = {
                         TopBarAnimatedActionButton(
-                            checked = isSourceGroupedMode || state.matchMode == MatchMode.EXACT || state.selectedSourceTypes.isNotEmpty(),
+                            checked = isSourceGroupedMode || state.selectedSourceTypes.isNotEmpty(),
                             onCheckedChange = {
                                 viewModel.onIntent(SearchIntent.SetSettingsSheetVisible(true))
                             },
@@ -277,6 +285,17 @@ fun SearchScreen(
                             iconUnchecked = AppIcons.Settings,
                             activeText = stringResource(R.string.setting),
                             inactiveText = stringResource(R.string.setting),
+                        )
+                        TopBarAnimatedActionButton(
+                            checked = state.matchMode == MatchMode.EXACT,
+                            onCheckedChange = {
+                                val newMode = if (state.matchMode == MatchMode.EXACT) MatchMode.DEFAULT else MatchMode.EXACT
+                                viewModel.onIntent(SearchIntent.SetMatchMode(newMode))
+                            },
+                            iconChecked = AppIcons.PrecisionSearch,
+                            iconUnchecked = AppIcons.UnPrecisionSearch,
+                            activeText = stringResource(R.string.precision_search),
+                            inactiveText = stringResource(R.string.precision_search),
                         )
                         TopBarAnimatedActionButton(
                             checked = !state.isAllScope,
@@ -405,6 +424,7 @@ fun SearchScreen(
                             ) { isSourceGrouped ->
                                 if (isSourceGrouped) {
                                     LazyColumn(
+                                        state = groupedListState,
                                         modifier = Modifier.fillMaxSize(),
                                         contentPadding = adaptiveContentPaddingOnlyVertical(
                                             top = 48.dp,
@@ -466,11 +486,11 @@ fun SearchScreen(
                                     ) {
                                         itemsIndexed(
                                             items = state.results,
-                                            key = { index, item -> "${item.book.origin}:${item.book.bookUrl}:$index" }
+                                            key = { _, item -> "${item.book.origin}:${item.book.bookUrl}" }
                                         ) { index, item ->
                                             val sharedCoverKey = bookCoverSharedElementKey(
                                                 item.book.bookUrl,
-                                                "search:${item.book.origin}:$index"
+                                                "search:${item.book.origin}"
                                             )
                                             SearchBookListItem(
                                                 book = item.book,
@@ -616,26 +636,6 @@ fun SearchScreen(
                 }
             )
 
-            CompactDropdownSettingItem(
-                title = stringResource(R.string.precision_search),
-                selectedValue = state.matchMode.value.toString(),
-                displayEntries = arrayOf(
-                    stringResource(R.string.precision_search),
-                    stringResource(R.string.search)
-                ),
-                entryValues = arrayOf(
-                    MatchMode.EXACT.value.toString(),
-                    MatchMode.DEFAULT.value.toString()
-                ),
-                imageVector = if (state.matchMode == MatchMode.EXACT) AppIcons.PrecisionSearch else AppIcons.UnPrecisionSearch,
-                onValueChange = { newValue ->
-                    val mode = MatchMode.of(newValue.toInt())
-                    if (mode != state.matchMode) {
-                        viewModel.onIntent(SearchIntent.SetMatchMode(mode))
-                    }
-                }
-            )
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -645,13 +645,12 @@ fun SearchScreen(
                 AppIcon(Icons.Default.Layers, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = "搜索类型",
+                    text = stringResource(R.string.search_type),
                     style = LegadoTheme.typography.titleSmall
                 )
             }
 
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 SelectionItemCard(
@@ -689,9 +688,11 @@ fun SearchScreen(
         }
     }
 
+    val resultsByBookUrl = remember(state.results) {
+        state.results.associateBy { it.book.bookUrl }
+    }
     val previewShelfState = previewBook?.let { book ->
-        state.results.find { it.book.bookUrl == book.bookUrl }?.shelfState
-            ?: BookShelfState.NOT_IN_SHELF
+        resultsByBookUrl[book.bookUrl]?.shelfState ?: BookShelfState.NOT_IN_SHELF
     }
     SearchBookPreviewSheet(
         data = previewBook,
@@ -708,14 +709,19 @@ fun SearchScreen(
     )
 
     ExpandedSourceSheet(
-        show = state.expandedSourceUrl != null,
+        show = state.showExpandedSource,
         sourceName = state.expandedSourceName ?: "",
         books = state.expandedSourceBooks,
         isLoading = state.expandedSourceLoading,
         isEnd = state.expandedSourceEnd,
         errorMsg = state.expandedSourceError,
+        savedScrollIndex = state.expandedSourceSavedScrollIndex,
+        savedScrollOffset = state.expandedSourceSavedScrollOffset,
         onDismiss = { viewModel.onIntent(SearchIntent.DismissExpandedSource) },
         onLoadMore = { viewModel.onIntent(SearchIntent.LoadMoreExpandedSource) },
+        onSaveScrollState = { index, offset ->
+            viewModel.onIntent(SearchIntent.SaveExpandedSourceScrollState(index, offset))
+        },
         onBookClick = { book, coverKey ->
             viewModel.onIntent(SearchIntent.OpenExpandedSourceBook(book, coverKey))
         },
@@ -869,7 +875,7 @@ private fun SearchResultFooter(
 
             hasMore -> {
                 Text(
-                    text = stringResource(R.string.search_empty),
+                    text = stringResource(R.string.search_has_more),
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -898,8 +904,11 @@ private fun ExpandedSourceSheet(
     isLoading: Boolean,
     isEnd: Boolean,
     errorMsg: String?,
+    savedScrollIndex: Int,
+    savedScrollOffset: Int,
     onDismiss: () -> Unit,
     onLoadMore: () -> Unit,
+    onSaveScrollState: (Int, Int) -> Unit,
     onBookClick: (SearchBook, String?) -> Unit,
     onBookLongClick: ((SearchBook, String?) -> Unit)? = null,
 ) {
@@ -909,7 +918,8 @@ private fun ExpandedSourceSheet(
         title = sourceName,
     ) {
         val listState = rememberLazyListState()
-
+        val showLoadMoreFooter = isLoading || errorMsg != null || isEnd
+        val currentOnSaveScrollState by rememberUpdatedState(onSaveScrollState)
         val shouldLoadMore by remember {
             derivedStateOf {
                 val total = listState.layoutInfo.totalItemsCount
@@ -921,6 +931,23 @@ private fun ExpandedSourceSheet(
         LaunchedEffect(shouldLoadMore, isLoading, isEnd) {
             if (shouldLoadMore && !isLoading && !isEnd) {
                 onLoadMore()
+            }
+        }
+
+        LaunchedEffect(savedScrollIndex, savedScrollOffset) {
+            if (savedScrollIndex > 0 || savedScrollOffset > 0) {
+                listState.scrollToItem(savedScrollIndex, savedScrollOffset)
+                onSaveScrollState(0, 0)
+            }
+        }
+
+        DisposableEffect(listState) {
+            onDispose {
+                val first = listState.firstVisibleItemIndex
+                val offset = listState.firstVisibleItemScrollOffset
+                if (first > 0 || offset > 0) {
+                    currentOnSaveScrollState(first, offset)
+                }
             }
         }
 
@@ -945,13 +972,16 @@ private fun ExpandedSourceSheet(
                 )
             }
 
-            item {
-                LoadMoreFooter(
-                    isLoading = isLoading,
-                    errorMsg = errorMsg,
-                    isEnd = isEnd,
-                    onRetry = onLoadMore,
-                )
+            if (showLoadMoreFooter) {
+                item {
+                    LoadMoreFooter(
+                        isLoading = isLoading,
+                        errorMsg = errorMsg,
+                        isEnd = isEnd,
+                        onRetry = onLoadMore,
+                        autoLoad = false,
+                    )
+                }
             }
         }
     }

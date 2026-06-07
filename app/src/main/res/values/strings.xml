@@ -1746,6 +1746,8 @@
     <string name="search_source_progress"> · Progress %1$d/%2$d</string>
     <string name="search_empty_scope_disable_precision">%1$s group search returned no results. Disable precise search?</string>
     <string name="search_empty_scope_switch_all">%1$s group search returned no results. Switch to all groups?</string>
+    <string name="search_type">Search type</string>
+    <string name="search_has_more">Pull up or tap button to load more</string>
     <string name="search_layout_list">List layout</string>
     <string name="search_layout_source_grouped">Source grouped</string>
     <string name="download_cache_config">Download &amp; Cache</string>
@@ -1771,6 +1773,8 @@
     <string name="llm_max_chars_per_chunk">Max Chars Per Chunk</string>
     <string name="llm_concurrent_chunks">Concurrent Chunks</string>
     <string name="llm_retry_count">Retry Count</string>
+    <string name="llm_temperature">Temperature</string>
+    <string name="llm_temperature_description">Allowed range: 0-2. Closer to 0 is stricter; closer to 2 is more creative.</string>
     <string name="translation_prompt">Translation Prompt</string>
     <string name="llm_prompt">Prompt</string>
     <string name="translate_chapter">Translate Chapter</string>
@@ -1897,4 +1901,27 @@
     <string name="read_menu_border_color">Color</string>
     <string name="read_menu_bar_blur">Enable Blur</string>
     <string name="read_menu_bar_liquid_glass">Liquid glass background</string>
+
+    <!-- Lab -->
+    <string name="lab_setting">Lab</string>
+    <string name="lab_enabled_title">Enable Lab</string>
+    <string name="lab_enabled_summary">Turn on to show experimental features. These may be unstable.</string>
+    <string name="lab_display">Display</string>
+    <string name="lab_eink_display_title">E-Ink Display</string>
+    <string name="lab_eink_display_summary">Show E-Ink display option in the tablet interface</string>
+    <string name="lab_eink_display_hint">You can adjust E-Ink display settings in Theme → Display options</string>
+    <string name="lab_eye_protection_title">Eye Protection</string>
+    <string name="lab_eye_protection_summary">Apply warm color tint to comic and novel readers to reduce eye strain</string>
+    <string name="lab_eye_protection_hint">You can adjust eye protection settings in Theme → Appearance</string>
+
+    <!-- Eye Protection -->
+    <string name="eye_protection">Eye Protection</string>
+    <string name="eye_protection_enabled">Enable Eye Protection</string>
+    <string name="eye_protection_enabled_summary">Reduce blue light via warm color tint</string>
+    <string name="color_temperature">Color Temperature</string>
+    <string name="color_temperature_summary">Current temperature: %1$d</string>
+    <string name="eye_protection_schedule">Scheduled</string>
+    <string name="eye_protection_schedule_summary">Only apply during the configured time range</string>
+    <string name="eye_protection_start_time">Start Time</string>
+    <string name="eye_protection_end_time">End Time</string>
 </resources>

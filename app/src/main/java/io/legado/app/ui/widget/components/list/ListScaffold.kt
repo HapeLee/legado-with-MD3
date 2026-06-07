@@ -55,6 +55,7 @@ fun <T> ListScaffold(
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
+    onClearSelection: (() -> Unit)? = null,
     selectionActions: SelectionActions? = null,
     onAddClick: (() -> Unit)? = null,
     floatingActionButton: @Composable () -> Unit = {
@@ -99,7 +100,7 @@ fun <T> ListScaffold(
                 onSearchSubmit = onSearchSubmit,
                 searchTrailingIcon = searchTrailingIcon,
                 searchPlaceholder = searchPlaceholder,
-                onClearSelection = { selectionActions?.onClearSelection?.invoke() },
+                onClearSelection = { onClearSelection?.invoke() ?: selectionActions?.onClearSelection?.invoke() },
                 topBarActions = topBarActions,
                 dropDownMenuContent = dropDownMenuContent,
                 bottomContent = bottomContent

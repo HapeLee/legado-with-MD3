@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationSearching
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
@@ -40,6 +41,7 @@ import top.yukonga.miuix.kmp.icon.extended.Edit
 import top.yukonga.miuix.kmp.icon.extended.Favorites
 import top.yukonga.miuix.kmp.icon.extended.Filter
 import top.yukonga.miuix.kmp.icon.extended.More
+import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.icon.extended.Notes
 import top.yukonga.miuix.kmp.icon.extended.Pin
 import top.yukonga.miuix.kmp.icon.extended.Refresh
@@ -104,6 +106,11 @@ object AppIcons {
     val Replay: ImageVector
         @Composable
         get() = if (isMiuix) MiuixIcons.Refresh else Icons.Default.Replay
+
+    val MoreCircle: ImageVector
+        @Composable
+        get() = if (isMiuix) MiuixIcons.MoreCircle else Icons.Default.MoreHoriz
+
 
     @Composable
     fun mainDestination(destination: MainDestination, selected: Boolean): ImageVector {

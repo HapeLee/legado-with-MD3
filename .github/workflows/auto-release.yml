@@ -142,11 +142,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: 17
+          java-version: 21
       - name: Clear 18PlusList.txt
         run: |
           echo "清空18PlusList.txt"
@@ -169,6 +169,10 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
 
+      - name: Remove Aliyun mirrors (unreliable in CI)
+        run: |
+          sed -i '/maven.aliyun.com/d' settings.gradle
+
       - name: Build With Gradle
         run: |
           echo "开始${{ env.product }}${{ env.type }}构建"
@@ -177,7 +181,7 @@ jobs:
           chmod +x gradlew
           # 将 type 首字母大写以匹配 Gradle Task
           TYPE_CAP=$(echo ${{ env.type }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')
-          ./gradlew assemble${{ env.product }}${TYPE_CAP}
+          ./gradlew assemble${{ env.product }}${TYPE_CAP} --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}

@@ -1,9 +1,6 @@
-@file:Suppress("DEPRECATION")
-
 package io.legado.app.ui.rss.article
 
 import android.app.Activity
-import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,15 +11,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.appcompat.app.AppCompatActivity
 import io.legado.app.R
 import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.rss.read.RedirectPolicy
 import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
-import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.StartActivityContract
-import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +34,6 @@ fun RssSortRouteScreen(
     viewModel: RssSortViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    val activity = LocalActivity.current as? AppCompatActivity
     val scope = rememberCoroutineScope()
 
     var sortList by remember(sourceUrl) { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
@@ -52,6 +45,7 @@ fun RssSortRouteScreen(
 
     var showReadRecordSheet by remember { mutableStateOf(false) }
     var readRecords by remember { mutableStateOf<List<RssReadRecord>>(emptyList()) }
+    var sourceVariableSheet by remember { mutableStateOf<RssSourceVariableSheetState?>(null) }
 
     suspend fun reloadSourceState() {
         withContext(Dispatchers.IO) {
@@ -83,6 +77,7 @@ fun RssSortRouteScreen(
         redirectPolicy = redirectPolicy,
         showReadRecordSheet = showReadRecordSheet,
         readRecords = readRecords,
+        sourceVariableSheet = sourceVariableSheet,
         onBackClick = onBackClick,
         onLogin = {
             context.startActivity<SourceLoginActivity> {
@@ -105,15 +100,18 @@ fun RssSortRouteScreen(
                 }
                 val comment = source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
                 val variable = withContext(Dispatchers.IO) { source.getVariable() }
-                activity?.showDialogFragment(
-                    VariableDialog(
-                        setSourceVariableText,
-                        source.getKey(),
-                        variable,
-                        comment
-                    )
+                sourceVariableSheet = RssSourceVariableSheetState(
+                    title = setSourceVariableText,
+                    variable = variable,
+                    comment = comment
                 )
             }
+        },
+        onDismissSourceVariable = { sourceVariableSheet = null },
+        onSaveSourceVariable = { variable ->
+            viewModel.setSourceVariable(variable)
+            sourceVariableSheet = null
+            context.toastOnUi(R.string.save_success)
         },
         onEditSource = {
             viewModel.rssSource?.sourceUrl?.let { srcUrl ->

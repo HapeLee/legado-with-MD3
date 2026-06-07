@@ -953,7 +953,7 @@
     <string name="show_hide">显示/隐藏</string>
     <string name="header_footer">信息</string>
     <string name="rule_subscription">规则</string>
-    <string name="rule_sub_empty_msg">添加大佬们提供的规则导入地址\n添加后点击可导入规则</string>
+    <string name="rule_sub_empty_msg">还没有规则订阅！</string>
     <string name="get_book_progress">拉取云端进度</string>
     <string name="cover_book_progress">覆盖云端进度</string>
     <string name="current_progress_exceeds_cloud">当前进度超过云端进度，是否同步？</string>
@@ -1010,7 +1010,7 @@
     <string name="hide_when_status_bar_show">状态栏显示时隐藏</string>
     <string name="reverse_toc">反转目录</string>
     <string name="show_discovery">显示发现</string>
-    <string name="show_home">显示首页</string>
+    <string name="show_home">显示主页</string>
     <string name="style">样式</string>
     <string name="group_style">分组样式</string>
     <string name="export_file_name">导出文件名</string>
@@ -1710,6 +1710,8 @@
     <string name="search_source_progress"> · 进度 %1$d/%2$d</string>
     <string name="search_empty_scope_disable_precision">%1$s分组搜索结果为空，是否关闭精准搜索？</string>
     <string name="search_empty_scope_switch_all">%1$s分组搜索结果为空，是否切换到全部分组？</string>
+    <string name="search_type">搜索类型</string>
+    <string name="search_has_more">上拉或点击按钮加载更多</string>
     <string name="search_layout_list">列表布局</string>
     <string name="search_layout_source_grouped">来源分组</string>
     <string name="download_cache_config">下载与缓存</string>
@@ -1830,6 +1832,8 @@
     <string name="llm_max_chars_per_chunk">每块最大字符数</string>
     <string name="llm_concurrent_chunks">并发块数</string>
     <string name="llm_retry_count">重试次数</string>
+    <string name="llm_temperature">温度</string>
+    <string name="llm_temperature_description">允许值：0-2。越靠近 0 越严谨，越靠近 2 越有创造力。</string>
     <string name="translation_prompt">翻译提示词</string>
     <string name="llm_prompt">提示词</string>
     <string name="translate_chapter">翻译章节</string>
@@ -1891,4 +1895,27 @@
     <string name="read_menu_bar_liquid_glass_buttons">液态玻璃按钮</string>
     <string name="read_menu_bar_blur">模糊效果</string>
     <string name="read_menu_bar_liquid_glass">液态玻璃背景</string>
+
+    <!-- 实验室 -->
+    <string name="lab_setting">实验室</string>
+    <string name="lab_enabled_title">启用实验室</string>
+    <string name="lab_enabled_summary">开启后显示实验性功能，可能不稳定</string>
+    <string name="lab_display">显示</string>
+    <string name="lab_eink_display_title">墨水屏显示</string>
+    <string name="lab_eink_display_summary">在平板界面显示墨水屏选项</string>
+    <string name="lab_eink_display_hint">可在 主题 → 显示 中调整墨水屏设置</string>
+    <string name="lab_eye_protection_title">护眼模式</string>
+    <string name="lab_eye_protection_summary">为漫画和小说阅读器叠加暖色滤镜，减少蓝光</string>
+    <string name="lab_eye_protection_hint">可在 主题 → 外观 中调整护眼模式</string>
+
+    <!-- 护眼模式 -->
+    <string name="eye_protection">护眼模式</string>
+    <string name="eye_protection_enabled">启用护眼模式</string>
+    <string name="eye_protection_enabled_summary">使用暖色调降低蓝光</string>
+    <string name="color_temperature">屏幕色温</string>
+    <string name="color_temperature_summary">当前色温：%1$d</string>
+    <string name="eye_protection_schedule">按时间段启用</string>
+    <string name="eye_protection_schedule_summary">仅在配置的时间段内生效</string>
+    <string name="eye_protection_start_time">开始时间</string>
+    <string name="eye_protection_end_time">结束时间</string>
 </resources>

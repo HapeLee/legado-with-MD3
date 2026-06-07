@@ -238,9 +238,7 @@ object ThemeImportExport {
             "navIconExplore" to ThemeConfig.navIconExplore,
             "navIconRss" to ThemeConfig.navIconRss,
             "navIconMy" to ThemeConfig.navIconMy,
-            "appFontPath" to ThemeConfig.appFontPath,
-            "coverDefaultImage" to CoverConfig.defaultCover,
-            "coverDefaultImageDark" to CoverConfig.defaultCoverDark
+            "appFontPath" to ThemeConfig.appFontPath
         )
 
         assetPaths.forEach { (key, path) ->
@@ -259,7 +257,35 @@ object ThemeImportExport {
                 }
             }
         }
+
+        // 处理封面图集（可能包含多个逗号分隔的路径）
+        exportCoverAssets(assets, "coverDefaultImage", CoverConfig.defaultCover)
+        exportCoverAssets(assets, "coverDefaultImageDark", CoverConfig.defaultCoverDark)
+
         return assets
+    }
+
+    /**
+     * 导出封面图集资源（支持多个逗号分隔的路径）
+     */
+    private fun exportCoverAssets(assets: MutableMap<String, String>, keyPrefix: String, paths: String?) {
+        if (paths.isNullOrBlank()) return
+        val pathList = paths.split(",").filter { it.isNotBlank() }
+        pathList.forEachIndexed { index, path ->
+            try {
+                val file = if (path.startsWith("content://")) {
+                    null
+                } else {
+                    File(path)
+                }
+                if (file?.exists() == true) {
+                    val key = if (pathList.size == 1) keyPrefix else "${keyPrefix}_$index"
+                    assets[key] = EncoderUtils.base64Encode(file.readBytes())
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     /**
@@ -373,6 +399,8 @@ object ThemeImportExport {
     }
 
     private fun applyAssets(assets: Map<String, String>) {
+        val coverPaths = mutableMapOf<String, MutableList<String>>()
+
         assets.forEach { (key, base64) ->
             try {
                 val bytes = EncoderUtils.base64DecodeToByteArray(base64)
@@ -409,22 +437,37 @@ object ThemeImportExport {
                 destFile?.let { file ->
                     FileOutputStream(file).use { it.write(bytes) }
                     val path = file.absolutePath
-                    when (key) {
-                        "bgImageLight" -> ThemeConfig.bgImageLight = path
-                        "bgImageDark" -> ThemeConfig.bgImageDark = path
-                        "navIconHome" -> ThemeConfig.navIconHome = path
-                        "navIconBookshelf" -> ThemeConfig.navIconBookshelf = path
-                        "navIconExplore" -> ThemeConfig.navIconExplore = path
-                        "navIconRss" -> ThemeConfig.navIconRss = path
-                        "navIconMy" -> ThemeConfig.navIconMy = path
-                        "appFontPath" -> ThemeConfig.appFontPath = path
-                        "coverDefaultImage" -> CoverConfig.defaultCover = path
-                        "coverDefaultImageDark" -> CoverConfig.defaultCoverDark = path
+                    when {
+                        key == "bgImageLight" -> ThemeConfig.bgImageLight = path
+                        key == "bgImageDark" -> ThemeConfig.bgImageDark = path
+                        key == "navIconHome" -> ThemeConfig.navIconHome = path
+                        key == "navIconBookshelf" -> ThemeConfig.navIconBookshelf = path
+                        key == "navIconExplore" -> ThemeConfig.navIconExplore = path
+                        key == "navIconRss" -> ThemeConfig.navIconRss = path
+                        key == "navIconMy" -> ThemeConfig.navIconMy = path
+                        key == "appFontPath" -> ThemeConfig.appFontPath = path
+                        key.startsWith("coverDefaultImage") -> {
+                            // 判断是日间还是夜间封面
+                            val baseKey = if (key.removePrefix("coverDefaultImage").startsWith("Dark")) {
+                                "coverDefaultImageDark"
+                            } else {
+                                "coverDefaultImage"
+                            }
+                            coverPaths.getOrPut(baseKey) { mutableListOf() }.add(path)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        // 将收集到的封面路径合并为逗号分隔的字符串
+        coverPaths["coverDefaultImage"]?.let { paths ->
+            CoverConfig.defaultCover = paths.joinToString(",")
+        }
+        coverPaths["coverDefaultImageDark"]?.let { paths ->
+            CoverConfig.defaultCoverDark = paths.joinToString(",")
         }
     }
 

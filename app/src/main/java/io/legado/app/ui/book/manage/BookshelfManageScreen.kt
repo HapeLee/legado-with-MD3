@@ -8,6 +8,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
@@ -187,6 +188,7 @@ private fun BookshelfManageScreen(
     var deleteOriginalBookFile by remember { mutableStateOf(state.deleteBookOriginal) }
     val exportBookPathKey = remember { "exportBookPath" }
     val exportTypes = remember { arrayListOf("txt", "epub") }
+    val commonCharsets = remember { listOf("UTF-8", "GBK", "GB2312", "GB18030", "Big5", "UTF-16") }
     val focusRequester = remember { FocusRequester() }
     val exportFolderText = stringResource(R.string.export_folder)
     val exportAllText = stringResource(R.string.export_all)
@@ -468,6 +470,7 @@ private fun BookshelfManageScreen(
                 searchKey = ""
             }
         },
+        onClearSelection = clearSelection,
         onSearchQueryChange = { searchKey = it },
         searchPlaceholder = "筛选书名/作者/书源/分组",
         topBarActions = {
@@ -495,6 +498,7 @@ private fun BookshelfManageScreen(
             }
         },
         dropDownMenuContent = { dismiss ->
+            var showCharsetMenu by remember { mutableStateOf(false) }
             RoundDropdownMenuItem(
                 text = stringResource(R.string.download_all),
                 onClick = {
@@ -530,14 +534,37 @@ private fun BookshelfManageScreen(
                     showExportTypeDialog = true
                 }
             )
-            RoundDropdownMenuItem(
-                text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
-                onClick = {
-                    dismiss()
-                    exportCharsetInput = state.exportConfig.exportCharset
-                    showCharsetDialog = true
+            Box {
+                RoundDropdownMenuItem(
+                    text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
+                    onClick = { showCharsetMenu = true }
+                )
+                RoundDropdownMenu(
+                    expanded = showCharsetMenu,
+                    onDismissRequest = { showCharsetMenu = false }
+                ) { subDismiss ->
+                    commonCharsets.forEach { charset ->
+                        RoundDropdownMenuItem(
+                            text = charset,
+                            isSelected = state.exportConfig.exportCharset == charset,
+                            onClick = {
+                                viewModel.dispatch(BookshelfManageScreenIntent.SetExportCharset(charset))
+                                subDismiss()
+                                dismiss()
+                            }
+                        )
+                    }
+                    PillDivider()
+                    RoundDropdownMenuItem(
+                        text = "自定义...",
+                        onClick = {
+                            subDismiss()
+                            exportCharsetInput = state.exportConfig.exportCharset
+                            showCharsetDialog = true
+                        }
+                    )
                 }
-            )
+            }
             PillDivider()
             RoundDropdownMenuItem(
                 text = "替换净化",

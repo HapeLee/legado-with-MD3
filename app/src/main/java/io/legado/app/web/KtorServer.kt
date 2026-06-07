@@ -13,8 +13,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
-import io.ktor.util.pipeline.*
-import io.ktor.util.toMap
+import io.ktor.utils.io.readAvailable
 import io.legado.app.api.ReturnData
 import io.legado.app.api.controller.BookController
 import io.legado.app.api.controller.BookSourceController
@@ -35,8 +34,8 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 
 class KtorServer(private val port: Int) {
-    private var server: ApplicationEngine? = null
-    private var wsServer: ApplicationEngine? = null
+    private var server: EmbeddedServer<*, *>? = null
+    private var wsServer: EmbeddedServer<*, *>? = null
     private val assetsWeb = AssetsWeb("web")
 
     fun start() {
@@ -73,9 +72,13 @@ class KtorServer(private val port: Int) {
                                     if (part.name == "fileName") fileName = part.value
                                 }
                                 is PartData.FileItem -> {
-                                    part.streamProvider().use { input ->
-                                        tempFile.outputStream().use { output ->
-                                            input.copyTo(output)
+                                    val channel = part.provider()
+                                    tempFile.outputStream().use { output ->
+                                        val buffer = ByteArray(8192)
+                                        while (true) {
+                                            val bytesRead = channel.readAvailable(buffer)
+                                            if (bytesRead == -1) break
+                                            output.write(buffer, 0, bytesRead)
                                         }
                                     }
                                     if (fileName == null) {
@@ -165,11 +168,11 @@ class KtorServer(private val port: Int) {
     }
 
     fun stop() {
-        server?.stop(1000, 1000)
-        wsServer?.stop(1000, 1000)
+        server?.stop(0, 0)
+        wsServer?.stop(0, 0)
     }
 
-    private suspend fun PipelineContext<Unit, ApplicationCall>.handlePost(
+    private suspend fun RoutingContext.handlePost(
         block: suspend (String?) -> ReturnData
     ) {
         WebService.serve()
@@ -183,12 +186,13 @@ class KtorServer(private val port: Int) {
         }
     }
 
-    private suspend fun PipelineContext<Unit, ApplicationCall>.handleGet(
+    private suspend fun RoutingContext.handleGet(
         block: (Map<String, List<String>>) -> ReturnData?
     ) {
         WebService.serve()
         try {
-            val parameters = call.request.queryParameters.toMap()
+            val parameters = call.queryParameters.entries()
+                .associate { it.key to it.value }
             val returnData = block(parameters)
             if (returnData != null) {
                 respondReturnData(returnData)
@@ -201,7 +205,7 @@ class KtorServer(private val port: Int) {
         }
     }
 
-    private suspend fun PipelineContext<Unit, ApplicationCall>.respondReturnData(returnData: ReturnData) {
+    private suspend fun RoutingContext.respondReturnData(returnData: ReturnData) {
         if (returnData.data is Bitmap) {
             val bitmap = returnData.data as Bitmap
             val outputStream = ByteArrayOutputStream()

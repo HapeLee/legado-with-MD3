@@ -25,7 +25,6 @@ import io.legado.app.utils.createFolderIfNotExist
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.externalFiles
 import io.legado.app.utils.getFile
-import io.legado.app.utils.getSharedPreferences
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.normalizeFileName
 import io.legado.app.utils.openOutputStream
@@ -34,8 +33,6 @@ import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.File
@@ -57,8 +54,6 @@ object Backup {
     val zipFilePath = "${appCtx.externalFiles.absolutePath}${File.separator}tmp_backup.zip"
 
     private const val TAG = "Backup"
-
-    private val mutex = Mutex()
 
     private val backupFileNames by lazy {
         arrayOf(
@@ -107,7 +102,7 @@ object Backup {
     fun autoBack(context: Context) {
         if (shouldBackup()) {
             Coroutine.async {
-                mutex.withLock {
+                BackupRestoreLock.withLock {
                     if (shouldBackup()) {
                         val backupZipFileName = getNowZipFileName()
                         if (!AppWebDav.hasBackUp(backupZipFileName)) {
@@ -124,7 +119,7 @@ object Backup {
     }
 
     suspend fun backupLocked(context: Context, path: String?, mode: String = "both") {
-        mutex.withLock {
+        BackupRestoreLock.withLock {
             withContext(IO) {
                 backup(context, path, mode)
             }
@@ -182,29 +177,29 @@ object Backup {
                 .writeText(GSON.toJson(it))
         }
         currentCoroutineContext().ensureActive()
-        appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
-            sp.edit(commit = true) {
-                appCtx.defaultSharedPreferences.all.forEach { (key, value) ->
-                    if (BackupConfig.keyIsNotIgnore(key)) {
-                        when (key) {
-                            PreferKey.webDavPassword -> {
-                                putString(key, aes.runCatching {
-                                    encryptBase64(value.toString())
-                                }.getOrDefault(value.toString()))
-                            }
+        val configMap = appCtx.defaultSharedPreferences.all
+        val xmlBuilder = StringBuilder()
+        xmlBuilder.append("<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n")
+        xmlBuilder.append("<map>\n")
+        configMap.forEach { (key, value) ->
+            if (BackupConfig.keyIsNotIgnore(key, true)) {
+                val finalValue = if (key == PreferKey.webDavPassword) {
+                    aes.runCatching { encryptBase64(value.toString()) }.getOrDefault(value.toString())
+                } else value
 
-                            else -> when (value) {
-                                is Int -> putInt(key, value)
-                                is Boolean -> putBoolean(key, value)
-                                is Long -> putLong(key, value)
-                                is Float -> putFloat(key, value)
-                                is String -> putString(key, value)
-                            }
-                        }
-                    }
+                when (finalValue) {
+                    is String -> xmlBuilder.append("    <string name=\"$key\">${finalValue.replace("&", "&amp;").replace("<", "&lt;")}</string>\n")
+                    is Int -> xmlBuilder.append("    <int name=\"$key\" value=\"$finalValue\" />\n")
+                    is Long -> xmlBuilder.append("    <long name=\"$key\" value=\"$finalValue\" />\n")
+                    is Float -> xmlBuilder.append("    <float name=\"$key\" value=\"$finalValue\" />\n")
+                    is Boolean -> xmlBuilder.append("    <boolean name=\"$key\" value=\"$finalValue\" />\n")
                 }
             }
         }
+        xmlBuilder.append("</map>")
+        FileUtils.createFileIfNotExist(backupPath + File.separator + "config.xml")
+            .writeText(xmlBuilder.toString())
+
         currentCoroutineContext().ensureActive()
         val zipFileName = getNowZipFileName()
         val paths = arrayListOf(*backupFileNames)

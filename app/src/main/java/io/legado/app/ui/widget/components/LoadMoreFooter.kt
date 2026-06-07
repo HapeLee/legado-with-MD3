@@ -42,15 +42,23 @@ fun LoadMoreFooter(
     isLoading: Boolean,
     errorMsg: String?,
     isEnd: Boolean,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    onLoadMore: (() -> Unit)? = null,
+    autoLoad: Boolean = true,
 ) {
     val context = LocalContext.current
     var showFullError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(isLoading, errorMsg, isEnd) {
-        if (!isLoading && errorMsg == null && !isEnd) {
-            onRetry()
+    if (autoLoad) {
+        LaunchedEffect(isLoading, errorMsg, isEnd) {
+            if (!isLoading && errorMsg == null && !isEnd) {
+                onRetry()
+            }
         }
+    }
+
+    if (autoLoad && !isLoading && errorMsg == null && !isEnd) {
+        return
     }
 
     AppAlertDialog(
@@ -179,77 +187,131 @@ fun LoadMoreFooter(
                 }
 
                 end -> {
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
+                    if (onLoadMore != null) {
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = LegadoTheme.colorScheme.surfaceContainer,
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        all = 16.dp
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(all = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    AppIcon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.onSurface
+                                    )
+                                    AppText(
+                                        text = "已经到底了~",
+                                        color = LegadoTheme.colorScheme.onSurface,
+                                        style = LegadoTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
 
-                                AppIcon(
-                                    imageVector = Icons.Outlined.Info,
-                                    contentDescription = null,
-                                    tint = LegadoTheme.colorScheme.onSurface
+                                HorizontalDivider(
+                                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                                 )
 
-                                AppText(
-                                    text = "已经到底了~",
-                                    color = LegadoTheme.colorScheme.onSurface,
-                                    style = LegadoTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(onClick = onLoadMore)
+                                        .padding(vertical = 10.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        AppIcon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            tint = LegadoTheme.colorScheme.primary
+                                        )
+                                        AppText(
+                                            text = "尝试加载下一页",
+                                            color = LegadoTheme.colorScheme.primary,
+                                            style = LegadoTheme.typography.labelMedium
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(all = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    AppIcon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.onSurface
+                                    )
+                                    AppText(
+                                        text = "已经到底了~",
+                                        color = LegadoTheme.colorScheme.onSurface,
+                                        style = LegadoTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
                 else -> {
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        containerColor = LegadoTheme.colorScheme.surfaceContainer,
-                        onClick = onRetry
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
+                    if (!autoLoad) {
+                        GlassCard(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            containerColor = LegadoTheme.colorScheme.surfaceContainer,
+                            onClick = onRetry
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        all = 16.dp
-                                    ),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
                             ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(
+                                            all = 16.dp
+                                        ),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
 
-                                AppIcon(
-                                    imageVector = Icons.Outlined.Info,
-                                    contentDescription = null,
-                                    tint = LegadoTheme.colorScheme.onSurface
-                                )
+                                    AppIcon(
+                                        imageVector = Icons.Outlined.Info,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.onSurface
+                                    )
 
-                                AppText(
-                                    text = "加载更多",
-                                    color = LegadoTheme.colorScheme.onSurface,
-                                    style = LegadoTheme.typography.bodySmall,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
+                                    AppText(
+                                        text = "加载更多",
+                                        color = LegadoTheme.colorScheme.onSurface,
+                                        style = LegadoTheme.typography.bodySmall,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
                             }
                         }
                     }

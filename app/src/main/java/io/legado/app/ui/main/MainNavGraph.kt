@@ -51,6 +51,7 @@ import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
+import io.legado.app.ui.config.labConfig.LabConfigScreen
 import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
@@ -169,7 +170,8 @@ fun MainActivity.mainEntryProvider(
             onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
             onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
             onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
-            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) }
+            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
+            onNavigateToLab = { backStack.add(MainRouteSettingsLabConfig) }
         )
     }
 
@@ -203,6 +205,10 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSettingsTranslation> {
         TranslationConfigScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsLabConfig> {
+        LabConfigScreen(onBackClick = { onNavigateBack() })
     }
 
     entry<MainRouteSettingsCustomTheme> {

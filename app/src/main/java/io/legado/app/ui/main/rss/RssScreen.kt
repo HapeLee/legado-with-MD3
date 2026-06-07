@@ -333,11 +333,11 @@ fun RssSourceGridItem(
                     leadingIcon = {
                         MenuItemIcon(
                             Icons.Default.Delete,
-                            tint = MaterialTheme.colorScheme.error
+                            tint = LegadoTheme.colorScheme.error
                         )
                     },
                     text = stringResource(R.string.delete),
-                    color = MaterialTheme.colorScheme.error,
+                    color = LegadoTheme.colorScheme.error,
                     onClick = {
                         onDelete()
                         showMenu = false

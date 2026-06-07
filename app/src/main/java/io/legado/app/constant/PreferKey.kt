@@ -364,12 +364,25 @@ object PreferKey {
     const val llmMaxCharsPerChunk = "llmMaxCharsPerChunk"
     const val llmConcurrentChunks = "llmConcurrentChunks"
     const val llmRetryCount = "llmRetryCount"
+    const val llmTemperature = "llmTemperature"
     const val llmPrompt = "llmPrompt"
 
     const val homepageModuleOrder = "homepageModuleOrder"
     const val homepageModuleHidden = "homepageModuleHidden"
     const val homepageLayoutMode = "homepageLayoutMode"
     const val navIconHome = "navIconHome"
+
+    // Lab
+    const val labEnabled = "labEnabled"
+    const val labEInkDisplay = "labEInkDisplay"
+    const val labEyeProtection = "labEyeProtection"
+
+    // Eye Protection
+    const val eyeProtectionEnabled = "eyeProtectionEnabled"
+    const val colorTemperature = "colorTemperature"
+    const val eyeProtectionSchedule = "eyeProtectionSchedule"
+    const val eyeProtectionStartTime = "eyeProtectionStartTime"
+    const val eyeProtectionEndTime = "eyeProtectionEndTime"
 }
 
 object ReadMenuBlurMode {

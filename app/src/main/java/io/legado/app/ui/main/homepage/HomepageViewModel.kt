@@ -104,9 +104,6 @@ class HomepageViewModel(
     private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
     private val _pendingEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
-    private val _exploreKindsCache =
-        MutableStateFlow<Map<String, List<Pair<String, String>>>>(emptyMap())
-
     // 2. 数据库同步流
     private val localModulesFlow = gateway.flowEnabled()
     val allModulesCache =
@@ -228,27 +225,44 @@ class HomepageViewModel(
         rawModulesFlow,
         _bookshelf
     ) { modules, bookshelf ->
-        modules.map { module ->
-            val state = module.state
-            if (state is ModuleLoadState.Loaded) {
-                module.copy(
-                    state = state.copy(
+        if (bookshelf.isEmpty()) {
+            modules.map { module ->
+                val state = module.state
+                if (state is ModuleLoadState.Loaded) {
+                    module.copy(state = state.copy(
                         books = state.books.map { item ->
-                            item.copy(
-                                shelfState = resolveBookShelfStateUseCase.execute(
-                                    name = item.book.name,
-                                    author = item.book.author,
-                                    url = item.book.bookUrl,
-                                    shelf = bookshelf
-                                )
-                            )
+                            if (item.shelfState == BookShelfState.NOT_IN_SHELF) item
+                            else item.copy(shelfState = BookShelfState.NOT_IN_SHELF)
                         }.toImmutableList()
-                    )
-                )
-            } else {
-                module
+                    ))
+                } else module
+            }.toImmutableList()
+        } else {
+            val exactKeys = HashSet<Triple<String, String, String?>>(bookshelf.size)
+            val nameAuthorKeys = HashSet<Pair<String, String>>(bookshelf.size)
+            for (key in bookshelf) {
+                exactKeys.add(Triple(key.name, key.author, key.url))
+                nameAuthorKeys.add(key.name to key.author)
             }
-        }.toImmutableList()
+            modules.map { module ->
+                val state = module.state
+                if (state is ModuleLoadState.Loaded) {
+                    module.copy(state = state.copy(
+                        books = state.books.map { item ->
+                            val bookTriple = Triple(item.book.name, item.book.author, item.book.bookUrl)
+                            val newShelfState = when {
+                                bookTriple in exactKeys -> BookShelfState.IN_SHELF
+                                (item.book.name to item.book.author) in nameAuthorKeys ->
+                                    BookShelfState.SAME_NAME_AUTHOR
+                                else -> BookShelfState.NOT_IN_SHELF
+                            }
+                            if (item.shelfState == newShelfState) item
+                            else item.copy(shelfState = newShelfState)
+                        }.toImmutableList()
+                    ))
+                } else module
+            }.toImmutableList()
+        }
     }
 
     // 5. 最终 UI 状态
@@ -308,6 +322,10 @@ class HomepageViewModel(
             allModulesCache.collect { modules ->
                 val dbIds = modules.map { it.id }.toSet()
                 _pendingUserModules.update { pending -> pending.filter { it.id !in dbIds } }
+                _moduleContentStates.update { states ->
+                    if (states.keys.any { it !in dbIds }) states.filterKeys { it in dbIds }
+                    else states
+                }
             }
         }
 
@@ -614,8 +632,7 @@ class HomepageViewModel(
         }
     }
 
-    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> =
-        _exploreKindsCache.value[sourceUrl].orEmpty()
+    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> = emptyList()
 
     fun updateModule(globalId: String, def: ModuleDef) {
         viewModelScope.launch {

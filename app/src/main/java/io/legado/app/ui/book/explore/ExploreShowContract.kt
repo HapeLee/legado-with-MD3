@@ -36,11 +36,12 @@ sealed interface ExploreShowSheet {
 
 sealed interface ExploreShowIntent {
     data class InitData(
-        val sourceUrl: String?,
+        val sourceUrl: String,
         val exploreUrl: String?,
     ) : ExploreShowIntent
 
     data object LoadMore : ExploreShowIntent
+    data object ForceLoadNext : ExploreShowIntent
     data object Refresh : ExploreShowIntent
     data class SwitchKind(val kind: ExploreKind) : ExploreShowIntent
     data object ToggleLayout : ExploreShowIntent

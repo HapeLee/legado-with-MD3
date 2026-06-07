@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.CompactDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 
 @Composable
@@ -39,7 +40,7 @@ fun <T> HomepageLayoutSheet(
         title = stringResource(R.string.homepage_layout_settings),
     ) {
         Column {
-            DropdownListSettingItem(
+            CompactDropdownSettingItem(
                 title = stringResource(R.string.homepage_layout_mode),
                 selectedValue = layoutMode.toString(),
                 displayEntries = arrayOf(

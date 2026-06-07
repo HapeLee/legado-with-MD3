@@ -122,7 +122,7 @@ fun RoundDropdownMenuItem(
         }
     } else {
         val colorScheme = rememberOpaqueColorScheme()
-        val selectedContentColor = colorScheme.onPrimaryContainer
+        val selectedContentColor = colorScheme.primary
         val defaultContentColor = colorScheme.onSurface
         val contentColor = if (enabled) {
             when {

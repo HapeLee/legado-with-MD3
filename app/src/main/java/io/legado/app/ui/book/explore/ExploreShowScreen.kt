@@ -135,28 +135,44 @@ fun ExploreShowScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val isGridMode = state.layoutState == 1
     val hazeState = remember { HazeState() }
-    val shouldLoadMoreList = remember {
+    val showLoadMoreFooter = !state.isRefreshing &&
+        (state.isLoading || state.errorMsg != null || state.isEnd)
+    val canLoadMore = state.books.isNotEmpty() &&
+        !state.isLoading &&
+        !state.isRefreshing &&
+        !state.isEnd &&
+        state.errorMsg == null
+    val shouldLoadMore by remember(isGridMode) {
         derivedStateOf {
-            val total = listState.layoutInfo.totalItemsCount
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 3
+            if (isGridMode) {
+                val total = gridState.layoutInfo.totalItemsCount
+                val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                total > 0 && last >= total - 1
+            } else {
+                val total = listState.layoutInfo.totalItemsCount
+                val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                total > 0 && last >= total - 3
+            }
         }
     }
 
-    val shouldLoadMoreGrid = remember {
-        derivedStateOf {
-            val total = gridState.layoutInfo.totalItemsCount
-            val last = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            total > 0 && last >= total - 1
+    LaunchedEffect(
+        shouldLoadMore,
+        isGridMode,
+        canLoadMore,
+        state.books.size,
+    ) {
+        if (shouldLoadMore && canLoadMore) {
+            viewModel.onIntent(ExploreShowIntent.LoadMore)
         }
     }
 
-    LaunchedEffect(shouldLoadMoreList.value, isGridMode) {
-        if (!isGridMode && shouldLoadMoreList.value) viewModel.onIntent(ExploreShowIntent.LoadMore)
-    }
-
-    LaunchedEffect(shouldLoadMoreGrid.value, isGridMode) {
-        if (isGridMode && shouldLoadMoreGrid.value) viewModel.onIntent(ExploreShowIntent.LoadMore)
+    // Auto-load next page when filter removes all books on the current page
+    // but the ViewModel hasn't reached the end of data yet.
+    LaunchedEffect(books.isEmpty(), state.isLoading, state.isEnd, state.books.size) {
+        if (books.isEmpty() && !state.isLoading && !state.isEnd && state.books.isNotEmpty()) {
+            viewModel.onIntent(ExploreShowIntent.ForceLoadNext)
+        }
     }
 
     LaunchedEffect(isGridMode) {
@@ -325,13 +341,14 @@ fun ExploreShowScreen(
                             )
                         }
 
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            LoadMoreFooter(
-                                isLoading = state.isLoading,
-                                errorMsg = state.errorMsg,
-                                isEnd = state.isEnd,
-                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
-                            )
+                        if (showLoadMoreFooter) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                ExploreShowLoadMoreFooter(
+                                    state = state,
+                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                )
+                            }
                         }
                     }
                 } else {
@@ -375,13 +392,14 @@ fun ExploreShowScreen(
                             )
                         }
 
-                        item {
-                            LoadMoreFooter(
-                                isLoading = state.isLoading,
-                                errorMsg = state.errorMsg,
-                                isEnd = state.isEnd,
-                                onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) }
-                            )
+                        if (showLoadMoreFooter) {
+                            item {
+                                ExploreShowLoadMoreFooter(
+                                    state = state,
+                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                )
+                            }
                         }
                     }
                 }
@@ -405,6 +423,22 @@ fun ExploreShowScreen(
         onAddToShelf = { book ->
             viewModel.onIntent(ExploreShowIntent.AddToShelf(book))
         },
+    )
+}
+
+@Composable
+private fun ExploreShowLoadMoreFooter(
+    state: ExploreShowUiState,
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
+) {
+    LoadMoreFooter(
+        isLoading = state.isLoading,
+        errorMsg = state.errorMsg,
+        isEnd = state.isEnd,
+        onRetry = onRetry,
+        onLoadMore = onLoadMore,
+        autoLoad = false,
     )
 }
 

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.widget.TextView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -51,6 +52,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +60,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
@@ -65,6 +68,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.net.toUri
@@ -77,6 +81,8 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.help.loadFontFiles
+import io.legado.app.ui.config.labConfig.LabConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -87,6 +93,7 @@ import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
@@ -284,9 +291,12 @@ fun ThemeConfigScreen(
                     if (!isMiuixEngine) {
                         Spacer(modifier = Modifier.height(16.dp))
 
+                        val visibleThemes = themes.filter { (_, value) ->
+                            value != "4" || (LabConfig.labEnabled && LabConfig.eInkDisplay)
+                        }
                         ThemeColorSelector(
                             context = context,
-                            themes = themes,
+                            themes = visibleThemes,
                             selectedTheme = selectedTheme,
                             isDark = isDarkTheme,
                             isAmoled = ThemeConfig.isPureBlack,
@@ -450,6 +460,119 @@ fun ThemeConfigScreen(
                         entryValues = stringArrayResource(R.array.default_home_page_value),
                         onValueChange = { ThemeConfig.defaultHomePage = it }
                     )
+                }
+
+                SplicedColumnGroup(title = stringResource(R.string.eye_protection)) {
+                    var eyeProtectionEnabled by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionEnabled)
+                    }
+                    var colorTemperature by remember {
+                        mutableIntStateOf(ThemeConfig.colorTemperature)
+                    }
+                    var eyeProtectionSchedule by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionSchedule)
+                    }
+                    var eyeProtectionStartTime by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionStartTime)
+                    }
+                    var eyeProtectionEndTime by remember {
+                        mutableStateOf(ThemeConfig.eyeProtectionEndTime)
+                    }
+
+                    SwitchSettingItem(
+                        title = stringResource(R.string.eye_protection_enabled),
+                        description = stringResource(R.string.eye_protection_enabled_summary),
+                        checked = eyeProtectionEnabled,
+                        onCheckedChange = {
+                            eyeProtectionEnabled = it
+                            ThemeConfig.eyeProtectionEnabled = it
+                        }
+                    )
+
+                    AnimatedVisibility(visible = eyeProtectionEnabled) {
+                        Column {
+                            SliderSettingItem(
+                                title = stringResource(R.string.color_temperature),
+                                description = stringResource(
+                                    R.string.color_temperature_summary,
+                                    colorTemperature
+                                ),
+                                value = colorTemperature.toFloat(),
+                                defaultValue = 50f,
+                                valueRange = 0f..100f,
+                                steps = 99,
+                                onValueChange = {
+                                    colorTemperature = it.toInt()
+                                    ThemeConfig.colorTemperature = it.toInt()
+                                }
+                            )
+
+                            SwitchSettingItem(
+                                title = stringResource(R.string.eye_protection_schedule),
+                                description = stringResource(R.string.eye_protection_schedule_summary),
+                                checked = eyeProtectionSchedule,
+                                onCheckedChange = {
+                                    eyeProtectionSchedule = it
+                                    ThemeConfig.eyeProtectionSchedule = it
+                                }
+                            )
+
+                            AnimatedVisibility(visible = eyeProtectionSchedule) {
+                                Column {
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_start_time),
+                                        option = eyeProtectionStartTime,
+                                        onClick = {
+                                            val parts = eyeProtectionStartTime.split(":")
+                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 22
+                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, h, m ->
+                                                    val timeStr = String.format(
+                                                        java.util.Locale.US,
+                                                        "%02d:%02d",
+                                                        h.coerceIn(0, 23),
+                                                        m.coerceIn(0, 59)
+                                                    )
+                                                    eyeProtectionStartTime = timeStr
+                                                    ThemeConfig.eyeProtectionStartTime = timeStr
+                                                },
+                                                hour.coerceIn(0, 23),
+                                                minute.coerceIn(0, 59),
+                                                true
+                                            ).show()
+                                        }
+                                    )
+                                    ClickableSettingItem(
+                                        title = stringResource(R.string.eye_protection_end_time),
+                                        option = eyeProtectionEndTime,
+                                        onClick = {
+                                            val parts = eyeProtectionEndTime.split(":")
+                                            val hour = parts.getOrNull(0)?.toIntOrNull() ?: 7
+                                            val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, h, m ->
+                                                    val timeStr = String.format(
+                                                        java.util.Locale.US,
+                                                        "%02d:%02d",
+                                                        h.coerceIn(0, 23),
+                                                        m.coerceIn(0, 59)
+                                                    )
+                                                    eyeProtectionEndTime = timeStr
+                                                    ThemeConfig.eyeProtectionEndTime = timeStr
+                                                },
+                                                hour.coerceIn(0, 23),
+                                                minute.coerceIn(0, 59),
+                                                true
+                                            ).show()
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.compose_related)) {
@@ -826,7 +949,11 @@ fun ThemeModeSelector(
 
                 Spacer(Modifier.size(ToggleButtonDefaults.IconSpacing))
 
-                Text(text = label)
+                Text(
+                    text = label,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
+                )
             }
         }
     }
