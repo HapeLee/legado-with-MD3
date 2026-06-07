@@ -39,10 +39,9 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
+import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
@@ -53,15 +52,19 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
+import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
-import splitties.init.appCtx
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.StringUtils
 import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isTrue
@@ -525,7 +528,13 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ShowReadAloudConfig -> {
-                _uiState.update { it.copy(activeSheet = ReadBookSheet.ReadAloudConfig) }
+                _uiState.update {
+                    it.copy(
+                        speakEngineName = computeSpeakEngineName(),
+                        activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+                loadTtsEngineItems()
             }
 
             is ReadBookIntent.SelectSpeakEngine -> {
@@ -554,7 +563,8 @@ class ReadBookViewModel(
                 AppConfig.ttsEngine = intent.value
                 _uiState.update {
                     it.copy(
-                        selectedTtsEngine = intent.value,
+                        selectedTtsEngine = ReadAloud.ttsEngine,
+                        speakEngineName = computeSpeakEngineName(),
                         activeSheet = ReadBookSheet.ReadAloudConfig,
                     )
                 }
@@ -850,6 +860,12 @@ class ReadBookViewModel(
     }
 
     private fun showSpeakEngineConfig() {
+        loadTtsEngineItems {
+            _uiState.update { it.copy(activeSheet = ReadBookSheet.SpeakEngineConfig) }
+        }
+    }
+
+    private fun loadTtsEngineItems(onSuccess: (() -> Unit)? = null) {
         execute {
             buildList {
                 add(ReadBookTtsEngineItem(context.getString(R.string.system_tts), null))
@@ -861,11 +877,23 @@ class ReadBookViewModel(
             _uiState.update {
                 it.copy(
                     ttsEngineItems = items.toImmutableList(),
-                    selectedTtsEngine = AppConfig.ttsEngine,
-                    activeSheet = ReadBookSheet.SpeakEngineConfig,
+                    selectedTtsEngine = ReadAloud.ttsEngine,
                 )
             }
+            onSuccess?.invoke()
         }
+    }
+
+    private fun computeSpeakEngineName(): String {
+        val ttsEngine = ReadAloud.ttsEngine
+            ?: return context.getString(R.string.system_tts)
+        if (StringUtils.isNumeric(ttsEngine)) {
+            return appDb.httpTTSDao.getName(ttsEngine.toLong())
+                ?: context.getString(R.string.system_tts)
+        }
+        return GSON.fromJsonObject<SelectItem<String>>(ttsEngine)
+            .getOrNull()?.title
+            ?: context.getString(R.string.system_tts)
     }
 
     /**
