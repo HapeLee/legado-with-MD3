@@ -62,8 +62,12 @@ fun BgTextConfigSheet(
     val styleName = styleConfig.styleName
     val darkStatusIcon = styleConfig.darkStatusIcon
     val bgAlpha = styleConfig.bgAlpha
-    val dayBgColor = if (styleConfig.bgType == 0) styleConfig.bgStr.toColorInt() else 0
-    val nightBgColor = if (styleConfig.bgTypeNight == 0) styleConfig.bgStrNight.toColorInt() else 0
+    val dayBgColor = if (styleConfig.bgType == 0) {
+        runCatching { styleConfig.bgStr.toColorInt() }.getOrDefault(0xFFEEEEEE.toInt())
+    } else 0
+    val nightBgColor = if (styleConfig.bgTypeNight == 0) {
+        runCatching { styleConfig.bgStrNight.toColorInt() }.getOrDefault(0xFF000000.toInt())
+    } else 0
     val dayBgImage = if (styleConfig.bgType != 0) styleConfig.bgStr else null
     val nightBgImage = if (styleConfig.bgTypeNight != 0) styleConfig.bgStrNight else null
 
