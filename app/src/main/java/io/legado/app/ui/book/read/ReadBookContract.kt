@@ -876,22 +876,22 @@ sealed interface ConfigUpdate {
 
     // --- Background / display ---
     data class BgStr(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgStrNight(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgStrEInk(val value: String) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgType(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgTypeNight(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgTypeEInk(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class BgAlpha(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackgroundAlpha)
