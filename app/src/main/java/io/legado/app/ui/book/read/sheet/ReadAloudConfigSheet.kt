@@ -97,6 +97,9 @@ fun ReadAloudConfigSheet(
             )
             TinyClickableSettingItem(
                 title = stringResource(R.string.speak_engine),
+                description = state.speakEngineName.ifEmpty {
+                    stringResource(R.string.system_tts)
+                },
                 onClick = { onIntent(ReadBookIntent.SelectSpeakEngine) },
             )
             TinyClickableSettingItem(

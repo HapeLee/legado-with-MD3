@@ -133,6 +133,7 @@ data class ReadBookUiState(
     val contentEditSaveToSource: Boolean = false,
     val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
     val selectedTtsEngine: String? = null,
+    val speakEngineName: String = "",
     val preDownloadNum: Int = 10,
     val audioCacheCleanTime: Int = 10,
     // Read aloud config
