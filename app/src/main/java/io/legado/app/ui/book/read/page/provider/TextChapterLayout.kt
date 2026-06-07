@@ -147,8 +147,6 @@ class TextChapterLayout(
 
     var channel = Channel<TextPage>(Channel.UNLIMITED)
 
-    private var globalRegexResult: RegexMatchResult? = null
-
 
     init {
         job = Coroutine.async(
@@ -267,61 +265,6 @@ class TextChapterLayout(
                 )
             }
         } else null
-
-        if (ReadBookConfig.regexColorRules.isNotEmpty()) {
-            val fullTextBuilder = StringBuilder()
-            allTitleSegments?.forEachIndexed { index, segment ->
-                val reviewImg = bookChapter.reviewImg
-                var reviewTxt = ""
-                if (index == allTitleSegments.lastIndex && reviewImg != null) {
-                    reviewTxt = if (reviewImg.contains("TEXT")) reviewChar else srcReplaceChar
-                }
-                fullTextBuilder.append(segment.text).append(reviewTxt).append("\n")
-            }
-            contents.forEach { content ->
-                if (adaptSpecialStyle) {
-                    val t = content.trim()
-                    if (t == "[newpage]" || t.startsWith("<usehtml>")) {
-                        fullTextBuilder.append(content).append("\n")
-                        return@forEach
-                    }
-                }
-                val text = content.replace(srcReplaceCharC, srcReplaceCharD)
-                if (isTextImageStyle) {
-                    val matcher = AppPattern.imgPattern.matcher(text)
-                    val ssb = StringBuffer()
-                    while (matcher.find()) {
-                        if (matcher.group(1) != null) {
-                            matcher.appendReplacement(ssb, srcReplaceChar)
-                        }
-                    }
-                    matcher.appendTail(ssb)
-                    fullTextBuilder.append(ssb.toString())
-                } else {
-                    val matcher = AppPattern.imgPattern.matcher(text)
-                    var start = 0
-                    while (matcher.find()) {
-                        val imgSrc = matcher.group(1) ?: continue
-                        val iStyle = if (imgSrc.contains("TEXT")) "text" else imageStyle
-                        if (start < matcher.start()) {
-                            fullTextBuilder.append(text.substring(start, matcher.start()))
-                        }
-                        if (iStyle == "text" || iStyle == "TEXT") {
-                            fullTextBuilder.append(if (iStyle == "TEXT") reviewChar else srcReplaceChar)
-                        } else {
-                            fullTextBuilder.append(" ")
-                        }
-                        start = matcher.end()
-                    }
-                    if (start < text.length) {
-                        fullTextBuilder.append(text.substring(start))
-                    }
-                    if (AppConfig.enableReview) fullTextBuilder.append(reviewChar)
-                }
-                fullTextBuilder.append("\n")
-            }
-            preApplyRegexColorRules(fullTextBuilder.toString())
-        }
 
         var currentOffset = 0
 

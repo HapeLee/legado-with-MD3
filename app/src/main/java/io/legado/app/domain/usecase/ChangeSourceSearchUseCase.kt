@@ -118,7 +118,7 @@ class ChangeSourceSearchUseCase(
 
         val resultBooks = WebBook.searchBookAwait(
             source, name,
-            filter = { fName, fAuthor ->
+            filter = { fName, fAuthor, _ ->
                 fName == name && (!checkAuthor || fAuthor.contains(author))
             }
         )
