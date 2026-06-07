@@ -22,8 +22,9 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.createFolderIfNotExist
-import io.legado.app.utils.defaultSharedPreferences
+import io.legado.app.data.repository.dataStore
 import io.legado.app.utils.externalFiles
+import kotlinx.coroutines.flow.first
 import io.legado.app.utils.getFile
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.normalizeFileName
@@ -177,7 +178,9 @@ object Backup {
                 .writeText(GSON.toJson(it))
         }
         currentCoroutineContext().ensureActive()
-        val configMap = appCtx.defaultSharedPreferences.all
+        val configMap = appCtx.dataStore.data.first()
+            .asMap()
+            .mapKeys { it.key.name }
         val xmlBuilder = StringBuilder()
         xmlBuilder.append("<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n")
         xmlBuilder.append("<map>\n")

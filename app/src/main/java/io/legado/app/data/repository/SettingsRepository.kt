@@ -8,12 +8,6 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import io.legado.app.constant.PreferKey
 import io.legado.app.utils.defaultSharedPreferences
-import io.legado.app.utils.putPrefBoolean
-import io.legado.app.utils.putPrefFloat
-import io.legado.app.utils.putPrefInt
-import io.legado.app.utils.putPrefLong
-import io.legado.app.utils.putPrefString
-import io.legado.app.utils.putPrefStringSet
 import io.legado.app.utils.removePref
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -35,9 +29,8 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
 
 /**
  * 设置仓储
- * 采用 DataStore + SharedPreferences 桥接模式
- * 写入时同时写入两者，读取时以 DataStore 为准
- * 这样可以保持现有的基于 SP 的备份恢复功能正常工作
+ * 以 DataStore 为唯一写入源，读取以 DataStore 为准。
+ * SP 同步由 PrefDelegate 双写保证（阶段 1），此处不再回写 SP。
  */
 class SettingsRepository(private val context: Context) {
 
@@ -58,26 +51,8 @@ class SettingsRepository(private val context: Context) {
     }
 
     suspend fun <T> updatePreference(key: Preferences.Key<T>, value: T) {
-        // 1. 写入 DataStore (UI 响应式来源)
         dataStore.edit { preferences ->
             preferences[key] = value
-        }
-        // 2. 桥接：写回 SharedPreferences (保证备份功能正常)
-        syncToSharedPrefs(key.name, value)
-    }
-
-    private fun syncToSharedPrefs(key: String, value: Any?) {
-        when (value) {
-            is String -> context.putPrefString(key, value)
-            is Int -> context.putPrefInt(key, value)
-            is Boolean -> context.putPrefBoolean(key, value)
-            is Long -> context.putPrefLong(key, value)
-            is Float -> context.putPrefFloat(key, value)
-            is Set<*> -> {
-                @Suppress("UNCHECKED_CAST")
-                context.putPrefStringSet(key, value as MutableSet<String>)
-            }
-            null -> context.removePref(key)
         }
     }
 
@@ -93,9 +68,6 @@ class SettingsRepository(private val context: Context) {
             values.forEach { (key, value) ->
                 preferences[stringPreferencesKey(key)] = value
             }
-        }
-        values.forEach { (key, value) ->
-            syncToSharedPrefs(key, value)
         }
     }
 
@@ -176,7 +148,7 @@ class SettingsRepository(private val context: Context) {
         val editor = mutableMapOf<String, String>()
         for (key in themeKeys) {
             if (!sp.contains(key)) {
-                val dsValue = prefs[stringPreferencesKey(key)]
+                val dsValue = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
                 if (dsValue != null) {
                     editor[key] = dsValue
                     needsWrite = true
