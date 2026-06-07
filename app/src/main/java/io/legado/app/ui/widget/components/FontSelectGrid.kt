@@ -19,13 +19,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,42 +34,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
 import io.legado.app.help.loadFontFiles
-import io.legado.app.ui.widget.components.button.series.SmallPlainButton
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.utils.FileDoc
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Shared font selection grid with search and system typeface support.
+ * Shared font selection grid with search support.
  *
  * @param fontFolderUri URI of the font folder to load from
  * @param selectedFontName currently selected font name (for check mark), null to hide
- * @param showPreview true to render font preview with real typeface, false for plain text
  * @param onSelectFont called when a font file is selected
- * @param onSelectSystemTypeface called when a system typeface is selected (index-based), null to hide system typeface button
- * @param systemTypefaces list of system typeface names, null to hide
  * @param emptyText text to show when no fonts found
  */
 @Composable
 fun FontSelectGrid(
     fontFolderUri: android.net.Uri?,
     selectedFontName: String?,
-    showPreview: Boolean,
     onSelectFont: (FileDoc) -> Unit,
-    onSelectSystemTypeface: ((Int) -> Unit)? = null,
-    systemTypefaces: Array<String>? = null,
     emptyText: String? = null,
 ) {
     val context = LocalContext.current
     var fontItems by remember { mutableStateOf<List<FileDoc>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
-    var showTypefaceMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(fontFolderUri) {
         isLoading = true
@@ -91,43 +79,14 @@ fun FontSelectGrid(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
     ) {
-        // Search + system typeface
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text(stringResource(R.string.search_content)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            if (systemTypefaces != null && onSelectSystemTypeface != null) {
-                Box {
-                    SmallPlainButton(
-                        onClick = { showTypefaceMenu = true },
-                        icon = Icons.Default.TextFields,
-                    )
-                    DropdownMenu(
-                        expanded = showTypefaceMenu,
-                        onDismissRequest = { showTypefaceMenu = false },
-                    ) {
-                        systemTypefaces.forEachIndexed { index, name ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = {
-                                    onSelectSystemTypeface(index)
-                                    showTypefaceMenu = false
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        // Search
+        SearchBar(
+            query = searchQuery,
+            onQueryChange = { searchQuery = it },
+            placeholder = stringResource(R.string.search_content),
+            autoFocus = false,
+        )
 
         Spacer(Modifier.height(4.dp))
 
@@ -166,7 +125,6 @@ fun FontSelectGrid(
                     FontItem(
                         item = item,
                         isSelected = item.name == selectedFontName,
-                        showPreview = showPreview,
                         onClick = { onSelectFont(item) },
                     )
                 }
@@ -179,54 +137,43 @@ fun FontSelectGrid(
 private fun FontItem(
     item: FileDoc,
     isSelected: Boolean,
-    showPreview: Boolean,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(LegadoTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(12.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (showPreview) {
-                val context = LocalContext.current
-                AndroidView(
-                    factory = { ctx ->
-                        android.widget.TextView(ctx).apply {
-                            text = item.name
-                            textSize = 14f
-                            gravity = android.view.Gravity.CENTER
-                            maxLines = 2
-                            ellipsize = android.text.TextUtils.TruncateAt.END
-                            runCatching {
-                                val uri = item.uri
-                                val typeface: Typeface? = if (uri.scheme == "content") {
-                                    ctx.contentResolver.openFileDescriptor(uri, "r")?.use {
-                                        Typeface.Builder(it.fileDescriptor).build()
-                                    }
-                                } else {
-                                    uri.path?.let { Typeface.createFromFile(it) }
+            val context = LocalContext.current
+            AndroidView(
+                factory = { ctx ->
+                    android.widget.TextView(ctx).apply {
+                        text = item.name
+                        textSize = 14f
+                        gravity = android.view.Gravity.CENTER
+                        maxLines = 2
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        runCatching {
+                            val uri = item.uri
+                            val typeface: Typeface? = if (uri.scheme == "content") {
+                                ctx.contentResolver.openFileDescriptor(uri, "r")?.use {
+                                    Typeface.Builder(it.fileDescriptor).build()
                                 }
-                                this.typeface = typeface
+                            } else {
+                                uri.path?.let { Typeface.createFromFile(it) }
                             }
+                            this.typeface = typeface
                         }
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                Text(
-                    text = item.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+                    }
+                },
+                modifier = Modifier.weight(1f),
+            )
             if (isSelected) {
                 Icon(
                     Icons.Default.Check,

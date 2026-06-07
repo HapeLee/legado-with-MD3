@@ -17,12 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.TextFields
@@ -32,21 +35,26 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
+import coil.compose.AsyncImage
 import io.legado.app.R
+import kotlinx.coroutines.launch
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
@@ -58,11 +66,12 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.settingItem.TinySettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.text.AppText
+import kotlin.time.Duration.Companion.milliseconds
 
 // ========== Page 0: Global & Theme ==========
 
 @Composable
-internal fun GlobalThemePage(
+fun GlobalThemePage(
     onToggleDayNight: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenTextTitle: () -> Unit,
@@ -71,11 +80,21 @@ internal fun GlobalThemePage(
     onStyleSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
+    styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
 ) {
-    var textSize by remember { mutableIntStateOf(ReadBookConfig.textSize) }
-    var pageAnim by remember { mutableIntStateOf(ReadBook.pageAnim()) }
-    var styleSelect by remember { mutableIntStateOf(ReadBookConfig.styleSelect) }
-    var shareLayout by remember { mutableStateOf(ReadBookConfig.shareLayout) }
+    // Derive values directly from styleConfig (reactive state)
+    val textSize = styleConfig.textSize
+    val pageAnim = styleConfig.pageAnim
+    val styleSelect = styleConfig.styleSelect
+    val shareLayout = styleConfig.shareLayout
+    // configList needs to be read from ReadBookConfig since it's a list of Config objects
+    // We use styleConfig.configCount to detect when the list changes
+    var configList by remember { mutableStateOf(ReadBookConfig.configList.toList()) }
+
+    // Re-read configList when configCount changes (indicates list was modified)
+    LaunchedEffect(styleConfig.configCount) {
+        configList = ReadBookConfig.configList.toList()
+    }
 
     Column(
         modifier = modifier
@@ -93,7 +112,6 @@ internal fun GlobalThemePage(
                 steps = 44,
                 modifier = Modifier.weight(1f),
                 onValueChange = { value ->
-                    textSize = value.toInt()
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextSize(value.toInt())))
                 },
             )
@@ -142,9 +160,19 @@ internal fun GlobalThemePage(
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                val themeMode = ThemeConfig.themeMode
                 SmallTonalButton(
                     onClick = onToggleDayNight,
-                    icon = Icons.Default.Brightness6
+                    icon = when (themeMode) {
+                        "1" -> Icons.Default.LightMode
+                        "2" -> Icons.Default.DarkMode
+                        else -> Icons.Default.BrightnessAuto
+                    },
+                    contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                    containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    selectedContainerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
+                    selectedContentColor = LegadoTheme.colorScheme.onSurfaceVariant,
+                    contentDescription = stringResource(R.string.theme_mode),
                 )
             }
 
@@ -159,20 +187,21 @@ internal fun GlobalThemePage(
             ) {
                 NormalCard(
                     onClick = {
-                        shareLayout = !shareLayout
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(shareLayout)))
-                        onShareLayoutChange(shareLayout)
+                        val newShareLayout = !shareLayout
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(newShareLayout)))
+                        onShareLayoutChange(newShareLayout)
                     },
                     modifier = Modifier
                         .width(40.dp)
                         .height(56.dp),
                     cornerRadius = 8.dp,
                     containerColor = if (shareLayout) {
-                        LegadoTheme.colorScheme.primaryContainer
+                        LegadoTheme.colorScheme.secondaryContainer
                     } else {
                         LegadoTheme.colorScheme.surfaceContainerLow
                     },
-                    contentColor = if (shareLayout) LegadoTheme.colorScheme.onPrimaryContainer else null
+                    border = BorderStroke(1.dp, LegadoTheme.colorScheme.surfaceContainerHigh),
+                    contentColor = if (shareLayout) LegadoTheme.colorScheme.onSecondaryContainer else null
                 ) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -186,6 +215,21 @@ internal fun GlobalThemePage(
                     }
                 }
                 val styleListState = rememberLazyListState()
+
+                // Auto-scroll to selected item (position as 2nd visible card)
+                LaunchedEffect(styleSelect) {
+                    styleListState.animateScrollToItem(maxOf(0, styleSelect - 1))
+                }
+
+                // Auto-scroll to newly added style config (skip initial composition)
+                var previousSize by remember { mutableStateOf(configList.size) }
+                LaunchedEffect(configList.size) {
+                    if (configList.size > previousSize) {
+                        styleListState.animateScrollToItem(configList.size)
+                    }
+                    previousSize = configList.size
+                }
+
                 LazyRow(
                     state = styleListState,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -194,17 +238,15 @@ internal fun GlobalThemePage(
                         .padding(start = 8.dp)
                         .fadingEdge(styleListState),
                 ) {
-                    itemsIndexed(ReadBookConfig.configList) { index, config ->
+                    itemsIndexed(configList) { index, config ->
                         StyleCard(
                             config = config,
                             isSelected = styleSelect == index,
                             onClick = {
-                                styleSelect = index
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
                                 onStyleSelect(index)
                             },
                             onLongClick = {
-                                styleSelect = index
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
                                 onStyleSelect(index)
                                 onOpenBgTextConfig(index)
@@ -215,8 +257,6 @@ internal fun GlobalThemePage(
                         NormalCard(
                             onClick = {
                                 onIntent(ReadBookIntent.AddReadStyleConfig)
-                                styleSelect = ReadBookConfig.styleSelect
-                                onStyleSelect(styleSelect)
                             },
                             modifier = Modifier
                                 .width(40.dp)
@@ -239,7 +279,7 @@ internal fun GlobalThemePage(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
 
         val pageAnimOptions = listOf(
             R.string.page_anim_cover,
@@ -283,7 +323,6 @@ internal fun GlobalThemePage(
                         RoundDropdownMenuItem(
                             text = display,
                             onClick = {
-                                pageAnim = index
                                 ReadBook.book?.setPageAnim(-1)
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
                                 ReadBook.loadContent(false)
@@ -319,13 +358,14 @@ internal fun GlobalThemePage(
 // ========== Shared Components ==========
 
 @Composable
-internal fun StyleCard(
+fun StyleCard(
     config: ReadBookConfig.Config,
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
-    val bgColor = if (config.curBgType() == 0) {
+    val bgType = config.curBgType()
+    val bgColor = if (bgType == 0) {
         try {
             Color(config.curBgStr().toColorInt())
         } catch (_: Exception) {
@@ -336,6 +376,15 @@ internal fun StyleCard(
     }
     val textColor = Color(config.curTextColor())
     val name = config.name.ifBlank { stringResource(R.string.text_bg_style) }
+    val bgPath = if (bgType != 0) {
+        ReadStyleResolver.backgroundPath(config, when {
+            ReadStyleResolver.currentMode() == ReadStyleResolver.ReadStyleMode.Night -> 1
+            ReadStyleResolver.currentMode() == ReadStyleResolver.ReadStyleMode.EInk -> 2
+            else -> 0
+        })
+    } else {
+        null
+    }
 
     NormalCard(
         modifier = Modifier
@@ -343,14 +392,21 @@ internal fun StyleCard(
             .height(56.dp),
         cornerRadius = 8.dp,
         containerColor = bgColor,
+        elevation = if (isSelected) 4.dp else 0.dp,
         border = if (isSelected) {
-            BorderStroke(2.dp, LegadoTheme.colorScheme.secondary)
-        } else {
-            BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant)
-        },
+            BorderStroke(2.dp, LegadoTheme.colorScheme.outlineVariant)
+        } else null,
         onClick = onClick,
         onLongClick = onLongClick,
     ) {
+        if (bgPath != null) {
+            AsyncImage(
+                model = bgPath,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()

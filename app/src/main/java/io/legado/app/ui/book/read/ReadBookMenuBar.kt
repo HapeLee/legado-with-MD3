@@ -480,6 +480,7 @@ private fun ReadBookMenuSurface(
                                 readMenuCustomIcons = state.menuConfig.readMenuCustomIcons,
                                 bottomBarButtons = state.menuConfig.bottomBarButtons,
                                 onIntent = onIntent,
+                                styleConfig = state.styleConfig,
                             )
                         }
                     }
@@ -513,8 +514,8 @@ private fun ReadBookMenuSurface(
                                 onOpenUnderlineConfig = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.UnderlineConfig))
                                 },
-                                onOpenRegexColor = {
-                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.RegexColorConfig))
+                                onOpenHighlightRule = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.HighlightRuleConfig))
                                 },
                                 onOpenFontSelect = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
@@ -1581,6 +1582,7 @@ private fun ReadMenuLiquidSlider(
 ) {
     val accentColor = LegadoTheme.colorScheme.secondary
     val trackColor = LegadoTheme.colorScheme.surfaceContainerLow
+    val thumbColor = Color.White.copy(alpha = 0.9f).compositeOver(LegadoTheme.colorScheme.surfaceContainerLow)
 
     val trackBackdrop = rememberLayerBackdrop()
 
@@ -1707,8 +1709,7 @@ private fun ReadMenuLiquidSlider(
                         rememberBackdrop(trackBackdrop) { drawBackdrop ->
                             val pressProgress = dampedDragAnimation.pressProgress
                             val scaleX = 2f / 3f + (1f / 3f) * pressProgress
-                            val scaleY = pressProgress
-                            scale(scaleX, scaleY) {
+                            scale(scaleX, pressProgress) {
                                 drawBackdrop()
                             }
                         },
@@ -1751,7 +1752,7 @@ private fun ReadMenuLiquidSlider(
                     },
                     onDrawSurface = {
                         val pressProgress = dampedDragAnimation.pressProgress
-                        drawRect(trackColor.copy(alpha = 1f - pressProgress))
+                        drawRect(thumbColor.copy(alpha = 1f - pressProgress))
                     },
                 )
                 .size(40f.dp, 24f.dp),

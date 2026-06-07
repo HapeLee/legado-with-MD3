@@ -22,12 +22,13 @@ import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 
 @Composable
 fun ReadAloudConfigSheet(
+    show: Boolean,
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.aloud_config),
     ) {
@@ -120,13 +121,14 @@ fun ReadAloudConfigSheet(
 
 @Composable
 fun SpeakEngineConfigSheet(
+    show: Boolean,
     items: List<ReadBookTtsEngineItem>,
     selectedValue: String?,
     onSelect: (String?) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.speak_engine),
     ) {
@@ -152,6 +154,7 @@ fun SpeakEngineConfigSheet(
 
 @Composable
 fun ReadAloudNumberConfigSheet(
+    show: Boolean,
     title: String,
     description: String,
     value: Int,
@@ -161,7 +164,7 @@ fun ReadAloudNumberConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = title,
     ) {

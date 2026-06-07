@@ -28,18 +28,20 @@ import io.legado.app.utils.sendToClip
 
 @Composable
 fun ContentEditSheet(
+    show: Boolean,
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(show) {
+        if (!show) return@LaunchedEffect
         onIntent(ReadBookIntent.LoadContentEdit)
     }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = {
             if (state.contentEditTitle.isNotEmpty()) {
                 onIntent(ReadBookIntent.SaveContentEdit(state.contentEditText, state.contentEditSaveToSource))
@@ -51,7 +53,6 @@ fun ContentEditSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {

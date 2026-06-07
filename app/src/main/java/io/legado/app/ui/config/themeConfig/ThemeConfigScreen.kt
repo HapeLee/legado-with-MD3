@@ -76,7 +76,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeEngine
 import io.legado.app.ui.theme.ThemeResolver
@@ -236,7 +236,7 @@ fun ThemeConfigScreen(
                             onValueChange = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                OldThemeConfig.applyDayNight(context)
+                                ThemeConfigStore.applyDayNight(context)
                             }
                         )
 
@@ -276,7 +276,7 @@ fun ThemeConfigScreen(
                             onModeSelected = { mode ->
                                 selectedThemeMode = mode
                                 ThemeConfig.themeMode = mode
-                                OldThemeConfig.applyDayNight(context)
+                                ThemeConfigStore.applyDayNight(context)
                             }
                         )
                     }
@@ -759,7 +759,6 @@ fun ThemeConfigScreen(
         title = stringResource(R.string.font_setting),
         fontFolderUri = fontFolderUri,
         selectedFontName = curName,
-        showPreview = true,
         onDismissRequest = { showFontSheet = false },
         onSelectFont = { doc ->
             ThemeConfig.appFontPath = doc.uri.toString()

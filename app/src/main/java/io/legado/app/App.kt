@@ -45,8 +45,8 @@ import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
-import io.legado.app.help.config.OldThemeConfig.applyDayNightInit
+import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.Cronet
@@ -57,6 +57,7 @@ import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.BookCover
+import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.utils.ChineseUtils
 import io.legado.app.utils.FirebaseManager
 import io.legado.app.utils.LogUtils
@@ -161,7 +162,7 @@ class App : Application(), ImageLoaderFactory {
             BookHelp.clearInvalidCache()
             Backup.clearCache()
             ReadBookConfig.clearBgAndCache()
-            OldThemeConfig.clearBg()
+            ThemeConfigStore.clearBg()
             //初始化简繁转换引擎
             when (AppConfig.chineseConverterType) {
                 1 -> {
@@ -188,6 +189,11 @@ class App : Application(), ImageLoaderFactory {
 //        }
 //        oldConfig = Configuration(newConfig)
 //    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        TextLine.trimCaches(level)
+    }
 
     /**
      * 尝试在安装了GMS的设备上(GMS或者MicroG)使用GMS内置的Conscrypt

@@ -34,6 +34,7 @@ import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun DictSheet(
+    show: Boolean,
     word: String,
     onDismissRequest: () -> Unit,
     viewModel: DictViewModel = koinViewModel(),
@@ -46,7 +47,8 @@ fun DictSheet(
     var emptyMessage by remember { mutableStateOf<String?>(null) }
     var glideImageGetter by remember { mutableStateOf<GlideImageGetter?>(null) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(show) {
+        if (!show) return@LaunchedEffect
         viewModel.initData { rules ->
             dictRules = rules
             if (rules.isEmpty()) {
@@ -68,7 +70,7 @@ fun DictSheet(
     }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = {
             glideImageGetter?.clear()
             glideImageGetter = null
@@ -159,7 +161,7 @@ fun DictSheet(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+,
                     )
                 }
             }

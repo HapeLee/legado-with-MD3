@@ -47,4 +47,15 @@ class ReadBookStyleConfigRepository {
         ReadBookConfig.durConfig.setCurBg(2, path)
         save()
     }
+
+    fun setCurrentBackgroundImageForMode(path: String, isNight: Boolean) {
+        if (isNight) {
+            ReadBookConfig.durConfig.bgTypeNight = 2
+            ReadBookConfig.durConfig.bgStrNight = path
+        } else {
+            ReadBookConfig.durConfig.bgType = 2
+            ReadBookConfig.durConfig.bgStr = path
+        }
+        save()
+    }
 }

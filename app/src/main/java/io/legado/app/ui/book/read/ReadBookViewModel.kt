@@ -39,6 +39,8 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
 import io.legado.app.model.ImageProvider
@@ -55,6 +57,7 @@ import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
+import splitties.init.appCtx
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.ImageSaveUtils
@@ -122,7 +125,6 @@ class ReadBookViewModel(
     val readPreferences = _readPreferences.asStateFlow()
 
     private var changeSourceCoroutine: Coroutine<*>? = null
-    private var pendingRegexColorFontIndex: Int = -1
     private var pendingBooksDirReloadChapterList: Boolean = false
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
@@ -484,8 +486,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.RemoveFromBookshelf -> removeFromBookshelf()
             is ReadBookIntent.OnConfigUpdated -> {
-                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
-                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(intent.values))
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(intent.actions))
             }
 
             is ReadBookIntent.UpdateConfig -> {
@@ -630,16 +632,9 @@ class ReadBookViewModel(
             is ReadBookIntent.SelectSystemTypeface -> {
                 AppConfig.systemTypefaces = intent.index
                 ReadBookConfig.textFont = ""
-                postEvent(EventBus.UP_CONFIG, arrayListOf(2, 5))
-            }
-
-            is ReadBookIntent.SelectRegexColorFont -> {
-                pendingRegexColorFontIndex = intent.ruleIndex
-                _uiState.update { it.copy(activeSheet = ReadBookSheet.FontSelect) }
-            }
-
-            is ReadBookIntent.ApplyRegexColorFont -> {
-                applyRegexColorFont(intent.path)
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                ))
             }
 
             is ReadBookIntent.ColorSelected -> colorSelected(intent.dialogId, intent.color)
@@ -659,6 +654,9 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenReadStyleImagePicker -> {
                 _effects.tryEmit(ReadBookEffect.OpenReadStyleImagePicker)
             }
+            is ReadBookIntent.OpenReadStyleImagePickerForMode -> {
+                _effects.tryEmit(ReadBookEffect.OpenReadStyleImagePickerForMode(intent.isNight))
+            }
             is ReadBookIntent.OpenReadStyleImport -> {
                 _effects.tryEmit(ReadBookEffect.OpenReadStyleImport)
             }
@@ -667,6 +665,9 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.ReadStyleImageSelected -> {
                 applyReadStyleBackgroundImage(intent.uri)
+            }
+            is ReadBookIntent.ReadStyleImageSelectedForMode -> {
+                applyReadStyleBackgroundImageForMode(intent.uri, intent.isNight)
             }
             is ReadBookIntent.ReadStyleConfigImportSelected -> {
                 importReadStyleConfig(intent.uri)
@@ -685,11 +686,13 @@ class ReadBookViewModel(
                 if (readBookStyleConfigRepository.deleteCurrentStyle()) {
                     _uiState.update {
                         it.copy(
-                            configUpdateTrigger = it.configUpdateTrigger + 1,
+                            styleConfig = buildStyleConfig(),
                             activeSheet = null,
                         )
                     }
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                    ))
                 }
             }
             is ReadBookIntent.OpenBgTextConfig -> {
@@ -769,10 +772,6 @@ class ReadBookViewModel(
 
             is ReadBookIntent.DownloadChapters -> {
                 _effects.tryEmit(ReadBookEffect.DownloadChapters(intent.start, intent.end))
-            }
-
-            is ReadBookIntent.ShowStackTrace -> {
-                _uiState.update { it.copy(activeDialog = ReadBookDialog.StackTrace(intent.text)) }
             }
 
             is ReadBookIntent.SaveChapterContent -> {
@@ -1067,9 +1066,28 @@ class ReadBookViewModel(
         viewModelScope.launch {
             eventFlow<ArrayList<Int>>(EventBus.UP_CONFIG).collect { values ->
                 _uiState.update {
-                    it.copy(configUpdateTrigger = it.configUpdateTrigger + 1)
+                    it.copy(styleConfig = buildStyleConfig())
                 }
-                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(values))
+                // Convert legacy integer codes to ConfigUpdateAction set
+                val actions = values.mapNotNull { code ->
+                    when (code) {
+                        0 -> ConfigUpdateAction.UpdateSystemUi
+                        1 -> ConfigUpdateAction.UpdateBackground
+                        2 -> ConfigUpdateAction.UpdateStyle
+                        3 -> ConfigUpdateAction.UpdateBackgroundAlpha
+                        4 -> ConfigUpdateAction.UpdatePageSlopSquare
+                        5 -> ConfigUpdateAction.ReloadContent
+                        6 -> ConfigUpdateAction.UpdateContent
+                        8 -> ConfigUpdateAction.UpdateChapterStyle
+                        9 -> ConfigUpdateAction.InvalidateTextPage
+                        10 -> ConfigUpdateAction.UpdateLayout
+                        11 -> ConfigUpdateAction.SubmitRenderTask
+                        else -> null
+                    }
+                }.toSet()
+                if (actions.isNotEmpty()) {
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(actions))
+                }
             }
         }
         viewModelScope.launch {
@@ -1203,6 +1221,33 @@ class ReadBookViewModel(
 
     // --- State Sync ---
 
+    private fun buildStyleConfig(): ReadBookStyleConfig {
+        val config = ReadBookConfig
+        val dur = config.durConfig
+        return ReadBookStyleConfig(
+            styleSelect = config.styleSelect,
+            styleName = dur.name.ifBlank { "文字" },
+            bgAlpha = config.bgAlpha.toFloat(),
+            bgType = dur.bgType,
+            bgStr = dur.bgStr,
+            darkStatusIcon = dur.getDarkStatusIcon(),
+            bgTypeNight = dur.bgTypeNight,
+            bgStrNight = dur.bgStrNight,
+            darkStatusIconNight = dur.getDarkStatusIconNight(),
+            bgTypeEInk = dur.bgTypeEInk,
+            bgStrEInk = dur.bgStrEInk,
+            darkStatusIconEInk = dur.getDarkStatusIconEInk(),
+            textSize = config.textSize,
+            textColor = dur.getTextColor(),
+            textColorNight = dur.getTextColorNight(),
+            textColorEInk = dur.getTextColorEInk(),
+            pageAnim = dur.getPageAnim(),
+            pageAnimEInk = dur.getPageAnimEInk(),
+            shareLayout = config.shareLayout,
+            configCount = config.configList.size,
+        )
+    }
+
     private fun syncFromReadBook(current: ReadBookUiState): ReadBookUiState {
         val book = ReadBook.book
         val textChapter = ReadBook.curTextChapter
@@ -1232,6 +1277,7 @@ class ReadBookViewModel(
             delHTag = book?.getDelTag(Book.hTag) ?: false,
             sameTitleRemoved = textChapter?.sameTitleRemoved ?: false,
             isReadingProgressSyncConfigured = isReadingProgressSyncConfigured(),
+            styleConfig = buildStyleConfig(),
             menuConfig = ReadMenuConfig(
                 titleBarIconPosition = ReadBookConfig.titleBarIconPosition,
                 showTitleBarIcons = ReadBookConfig.showTitleBarIcons,
@@ -2164,6 +2210,12 @@ class ReadBookViewModel(
             is ConfigUpdate.ShowFooterLine -> ReadBookConfig.showFooterLine = update.value
 
             // --- Background / display ---
+            is ConfigUpdate.BgStr -> ReadBookConfig.durConfig.bgStr = update.value
+            is ConfigUpdate.BgStrNight -> ReadBookConfig.durConfig.bgStrNight = update.value
+            is ConfigUpdate.BgStrEInk -> ReadBookConfig.durConfig.bgStrEInk = update.value
+            is ConfigUpdate.BgType -> ReadBookConfig.durConfig.bgType = update.value
+            is ConfigUpdate.BgTypeNight -> ReadBookConfig.durConfig.bgTypeNight = update.value
+            is ConfigUpdate.BgTypeEInk -> ReadBookConfig.durConfig.bgTypeEInk = update.value
             is ConfigUpdate.BgAlpha -> ReadBookConfig.bgAlpha = update.value
             is ConfigUpdate.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(update.value)
             is ConfigUpdate.MenuIconShowText -> {
@@ -2432,7 +2484,7 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setProgressBarBehavior(update.value)
                 }
-                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
             }
             is ConfigUpdate.NoAnimScrollPage -> {
                 viewModelScope.launch {
@@ -2447,12 +2499,10 @@ class ReadBookViewModel(
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
 
-            // --- Regex color rules ---
-            is ConfigUpdate.RegexColorRules -> {
-                ReadBookConfig.regexColorRules.clear()
-                ReadBookConfig.regexColorRules.addAll(update.rules)
-                ReadBookConfig.saveRegexColorRules()
-                io.legado.app.ui.book.read.page.provider.TextChapterLayout.invalidateRegexCache()
+            // --- Highlight rules ---
+            is ConfigUpdate.HighlightRules -> {
+                HighlightRuleStore.save(update.rules)
+                TextChapterLayout.invalidateRegexCache()
             }
 
             // --- Auto read ---
@@ -2465,11 +2515,11 @@ class ReadBookViewModel(
         }
 
         // Notify rendering layer
-        if (update.codes.isNotEmpty()) {
-            _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
-            postEvent(EventBus.UP_CONFIG, ArrayList(update.codes))
+        if (update.actions.isNotEmpty()) {
+            _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+            _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(update.actions))
         } else {
-            _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
+            _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         }
     }
 
@@ -2496,31 +2546,28 @@ class ReadBookViewModel(
     }
 
     private fun selectFont(path: String) {
-        if (pendingRegexColorFontIndex >= 0) {
-            applyRegexColorFont(path)
-            return
-        }
         ReadBookConfig.textFont = path
-        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5, 2))
-    }
-
-    private fun applyRegexColorFont(path: String) {
-        val index = pendingRegexColorFontIndex
-        pendingRegexColorFontIndex = -1
-        if (index in ReadBookConfig.regexColorRules.indices) {
-            ReadBookConfig.regexColorRules[index].fontPath = path
-            ReadBookConfig.saveRegexColorRules()
-            TextChapterLayout.invalidateRegexCache()
-            postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
-        }
-        // Re-open the regex color config sheet
-        _uiState.update { it.copy(activeSheet = ReadBookSheet.RegexColorConfig) }
+        _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+            setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateStyle)
+        ))
     }
 
     private fun toggleDayNight() {
-        AppConfig.isNightTheme = !AppConfig.isNightTheme
-        _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
-        postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+        val nextMode = when (ThemeConfig.themeMode) {
+            "0" -> "1"  // follow system → light
+            "1" -> "2"  // light → dark
+            else -> "0" // dark → follow system
+        }
+        ThemeConfig.themeMode = nextMode
+        AppConfig.themeMode = nextMode
+        _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+        _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+            setOf(
+                ConfigUpdateAction.UpdateBackground,
+                ConfigUpdateAction.UpdateStyle,
+                ConfigUpdateAction.UpdateContent
+            )
+        ))
         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
     }
 
@@ -2532,8 +2579,32 @@ class ReadBookViewModel(
                     readBookStyleConfigRepository.saveBackgroundImage(it, name)
                 } ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.setCurrentBackgroundImage(path)
-                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
-                postEvent(EventBus.UP_CONFIG, arrayListOf(1))
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateBackground)
+                ))
+                context.getString(R.string.success)
+            }.onSuccess { message ->
+                _effects.tryEmit(ReadBookEffect.ShowToast(message))
+            }.onFailure { throwable ->
+                AppLog.put("选择阅读背景图失败", throwable)
+                _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
+            }
+        }
+    }
+
+    private fun applyReadStyleBackgroundImageForMode(uri: Uri, isNight: Boolean) {
+        viewModelScope.launch(IO) {
+            runCatching {
+                val name = queryDisplayName(uri)
+                val path = context.contentResolver.openInputStream(uri)?.use {
+                    readBookStyleConfigRepository.saveBackgroundImage(it, name)
+                } ?: throw FileNotFoundException(uri.toString())
+                readBookStyleConfigRepository.setCurrentBackgroundImageForMode(path, isNight)
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateBackground)
+                ))
                 context.getString(R.string.success)
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
@@ -2550,8 +2621,10 @@ class ReadBookViewModel(
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                     ?: throw FileNotFoundException(uri.toString())
                 readBookStyleConfigRepository.importCurrentStyle(bytes)
-                _uiState.update { it.copy(configUpdateTrigger = it.configUpdateTrigger + 1) }
-                postEvent(EventBus.UP_CONFIG, arrayListOf(1, 2, 5))
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                ))
                 context.getString(R.string.success)
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
@@ -2600,12 +2673,16 @@ class ReadBookViewModel(
             when (dialogId) {
                 ReadBookColorPickerIds.SHADOW_COLOR -> {
                     setCurShadColor(color)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                    ))
                 }
 
                 ReadBookColorPickerIds.TEXT_COLOR -> {
                     setCurTextColor(color)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                    ))
                     if (AppConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
@@ -2613,7 +2690,9 @@ class ReadBookViewModel(
 
                 ReadBookColorPickerIds.TEXT_ACCENT_COLOR -> {
                     setCurTextAccentColor(color)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2, 6, 9, 11))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                    ))
                     if (AppConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
@@ -2621,7 +2700,9 @@ class ReadBookViewModel(
 
                 ReadBookColorPickerIds.BG_COLOR -> {
                     setCurBg(0, "#${color.hexString}")
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(1))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateBackground)
+                    ))
                     if (AppConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
@@ -2630,33 +2711,43 @@ class ReadBookViewModel(
                 ReadBookColorPickerIds.TIP_HEADER_COLOR -> {
                     ReadBookConfig.tipHeaderColor = color
                     postEvent(EventBus.TIP_COLOR, "")
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle)
+                    ))
                 }
 
                 ReadBookColorPickerIds.TIP_FOOTER_COLOR -> {
                     ReadBookConfig.tipFooterColor = color
                     postEvent(EventBus.TIP_COLOR, "")
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle)
+                    ))
                 }
 
                 ReadBookColorPickerIds.TIP_DIVIDER_COLOR -> {
                     ReadBookConfig.tipDividerColor = color
                     postEvent(EventBus.TIP_COLOR, "")
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle)
+                    ))
                 }
 
                 ReadBookColorPickerIds.TITLE_COLOR -> {
                     ReadBookConfig.titleColor = color
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+                    ))
                 }
 
-                ReadBookColorPickerIds.REGEX_RULE_COLOR -> {
-                    val pos = ReadBookColorPickerIds.pendingRegexColorPosition
-                    if (pos in ReadBookConfig.regexColorRules.indices) {
-                        ReadBookConfig.regexColorRules[pos].color = color
-                        ReadBookConfig.saveRegexColorRules()
-                        io.legado.app.ui.book.read.page.provider.TextChapterLayout.invalidateRegexCache()
-                        postEvent(EventBus.UP_CONFIG, arrayListOf(8, 5))
+                ReadBookColorPickerIds.HIGHLIGHT_RULE_COLOR -> {
+                    val pos = ReadBookColorPickerIds.pendingHighlightRulePosition
+                    val rules = HighlightRuleStore.load()
+                    if (pos in rules.indices) {
+                        HighlightRuleStore.update(rules[pos].copy(textColor = color))
+                        TextChapterLayout.invalidateRegexCache()
+                        _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                            setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+                        ))
                     }
                 }
 
@@ -2678,8 +2769,9 @@ class ReadBookViewModel(
 
                 ReadBookColorPickerIds.UNDERLINE_COLOR -> {
                     setUnderlineColor(color)
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(2))
-                    postEvent(EventBus.UP_CONFIG, arrayListOf(6, 9, 11))
+                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                        setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+                    ))
                 }
             }
         }

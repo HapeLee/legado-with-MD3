@@ -25,7 +25,7 @@ fun ValueStepper(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         SmallOutlinedButton(
             onClick = {
@@ -40,7 +40,7 @@ fun ValueStepper(
             horizontalPadding = 8.dp,
             verticalPadding = 4.dp,
             text = displayValue.toInt().toString(),
-            backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+            backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
             contentColor = LegadoTheme.colorScheme.onSurface
         )
         SmallOutlinedButton(

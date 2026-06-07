@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,12 +16,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookStyleConfig
+import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
@@ -36,12 +35,13 @@ fun ReadStyleSheet(
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenRegexColor: () -> Unit,
+    onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
     readMenuCustomIcons: Map<String, String> = emptyMap(),
     bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     onIntent: (ReadBookIntent) -> Unit,
+    styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
 ) {
     var showTextTitle by remember { mutableStateOf(false) }
 
@@ -63,6 +63,7 @@ fun ReadStyleSheet(
             readMenuCustomIcons = readMenuCustomIcons,
             bottomBarButtons = bottomBarButtons,
             onIntent = onIntent,
+            styleConfig = styleConfig,
         )
 
         TextTitlePage(
@@ -70,7 +71,7 @@ fun ReadStyleSheet(
             onDismissRequest = { showTextTitle = false },
             onOpenShadowSet = onOpenShadowSet,
             onOpenUnderlineConfig = onOpenUnderlineConfig,
-            onOpenRegexColor = onOpenRegexColor,
+            onOpenHighlightRule = onOpenHighlightRule,
             onOpenFontSelect = onOpenFontSelect,
             onIntent = onIntent,
         )
@@ -89,6 +90,7 @@ fun ReadStyleContent(
     bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
+    styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
 ) {
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -122,6 +124,7 @@ fun ReadStyleContent(
                     },
                     modifier = Modifier.padding(horizontal = 16.dp),
                     onIntent = onIntent,
+                    styleConfig = styleConfig,
                 )
 
                 1 -> SystemMenuPage(
@@ -155,14 +158,4 @@ fun ReadStyleContent(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
         )
     }
-}
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
 }

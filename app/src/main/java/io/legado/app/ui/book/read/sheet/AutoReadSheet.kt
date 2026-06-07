@@ -53,7 +53,6 @@ fun AutoReadSheet(
             onStopAutoPage = onStopAutoPage,
             onShowPageAnimConfig = onShowPageAnimConfig,
             modifier = Modifier
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         )
     }

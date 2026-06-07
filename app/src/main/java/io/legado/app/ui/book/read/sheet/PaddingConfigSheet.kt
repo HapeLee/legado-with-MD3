@@ -24,7 +24,6 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
-import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
 
@@ -44,7 +43,6 @@ fun PaddingConfigSheet(
         PaddingConfigContent(
             onIntent = onIntent,
             modifier = Modifier
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         )
     }
@@ -70,9 +68,6 @@ fun PaddingConfigContent(
     var footerPaddingBottom by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingBottom.toFloat()) }
     var footerPaddingLeft by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingLeft.toFloat()) }
     var footerPaddingRight by remember { mutableFloatStateOf(ReadBookConfig.footerPaddingRight.toFloat()) }
-    // Line toggles
-    var showHeaderLine by remember { mutableStateOf(ReadBookConfig.showHeaderLine) }
-    var showFooterLine by remember { mutableStateOf(ReadBookConfig.showFooterLine) }
 
     val scope = rememberCoroutineScope()
     val tabTitles = listOf(
@@ -105,14 +100,6 @@ fun PaddingConfigContent(
         ) { page ->
             when (page) {
                 0 -> Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    TinySwitchSettingItem(
-                        title = stringResource(R.string.showLine),
-                        checked = showHeaderLine,
-                        onCheckedChange = {
-                            showHeaderLine = it
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowHeaderLine(it)))
-                        },
-                    )
                     PaddingSliders(
                         top = headerPaddingTop, bottom = headerPaddingBottom,
                         left = headerPaddingLeft, right = headerPaddingRight,
@@ -159,14 +146,6 @@ fun PaddingConfigContent(
                 }
 
                 2 -> Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                    TinySwitchSettingItem(
-                        title = stringResource(R.string.showLine),
-                        checked = showFooterLine,
-                        onCheckedChange = {
-                            showFooterLine = it
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowFooterLine(it)))
-                        },
-                    )
                     PaddingSliders(
                         top = footerPaddingTop, bottom = footerPaddingBottom,
                         left = footerPaddingLeft, right = footerPaddingRight,

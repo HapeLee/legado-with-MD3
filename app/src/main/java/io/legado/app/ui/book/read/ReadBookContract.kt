@@ -41,6 +41,41 @@ sealed interface ReadBookMenuRoute {
 }
 
 @Stable
+data class ReadBookStyleConfig(
+    val styleSelect: Int = 0,
+    val styleName: String = "文字",
+    val bgAlpha: Float = 1f,
+    // Day mode
+    val bgType: Int = 0,
+    val bgStr: String = "#EEEEEE",
+    val darkStatusIcon: Boolean = true,
+    // Night mode
+    val bgTypeNight: Int = 0,
+    val bgStrNight: String = "#000000",
+    val darkStatusIconNight: Boolean = false,
+    // E-Ink mode
+    val bgTypeEInk: Int = 0,
+    val bgStrEInk: String = "#FFFFFF",
+    val darkStatusIconEInk: Boolean = true,
+    // Text
+    val textSize: Int = 20,
+    val textColor: String = "#3E3D3B",
+    val textColorNight: String = "#CCCCCC",
+    val textColorEInk: String = "#000000",
+    // Page anim
+    val pageAnim: Int = 0,
+    val pageAnimEInk: Int = 4,
+    // Layout
+    val shareLayout: Boolean = false,
+    // Config list for style selector
+    val configCount: Int = 1,
+) {
+    // Computed properties for background mode
+    val isDayBgImage: Boolean get() = bgType != 0
+    val isNightBgImage: Boolean get() = bgTypeNight != 0
+}
+
+@Stable
 data class ReadBookUiState(
     val book: Book? = null,
     val bookSource: BookSource? = null,
@@ -111,8 +146,8 @@ data class ReadBookUiState(
     val readAloudTtsFollowSys: Boolean = false,
     val readAloudTtsSpeechRate: Int = 10,
     val readAloudTtsTimer: Int = 0,
-    // Config update trigger (notifies ReadView to run upBg/upStyle etc.)
-    val configUpdateTrigger: Int = 0,
+    // Style config (reactive state for ReadBookConfig)
+    val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
 ) {
@@ -317,9 +352,11 @@ sealed interface ReadBookIntent {
 
     // Read style SAF actions
     data object OpenReadStyleImagePicker : ReadBookIntent
+    data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookIntent
     data object OpenReadStyleImport : ReadBookIntent
     data object OpenReadStyleExport : ReadBookIntent
     data class ReadStyleImageSelected(val uri: Uri) : ReadBookIntent
+    data class ReadStyleImageSelectedForMode(val uri: Uri, val isNight: Boolean) : ReadBookIntent
     data class ReadStyleConfigImportSelected(val uri: Uri) : ReadBookIntent
     data class ReadStyleConfigExportSelected(val uri: Uri) : ReadBookIntent
     data object SaveReadStyleConfig : ReadBookIntent
@@ -330,7 +367,7 @@ sealed interface ReadBookIntent {
     data object RemoveFromBookshelf : ReadBookIntent
 
     // Config update (triggers ReadView upBg/upStyle etc.)
-    data class OnConfigUpdated(val values: List<Int>) : ReadBookIntent
+    data class OnConfigUpdated(val actions: Set<ConfigUpdateAction>) : ReadBookIntent
 
     // Typed config mutation — single entry point for all ReadBookConfig changes
     data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
@@ -396,8 +433,6 @@ sealed interface ReadBookIntent {
     data object ClearTtsCache : ReadBookIntent
     data class SelectFont(val path: String) : ReadBookIntent
     data class SelectSystemTypeface(val index: Int) : ReadBookIntent
-    data class SelectRegexColorFont(val ruleIndex: Int) : ReadBookIntent
-    data class ApplyRegexColorFont(val path: String) : ReadBookIntent
     data class ColorSelected(val dialogId: Int, val color: Int) : ReadBookIntent
 
     // Simulated reading apply (clear chapter cache + reinit)
@@ -408,9 +443,6 @@ sealed interface ReadBookIntent {
 
     // Download chapters
     data class DownloadChapters(val start: Int, val end: Int) : ReadBookIntent
-
-    // Show stack trace dialog
-    data class ShowStackTrace(val text: String) : ReadBookIntent
 
     // Save chapter content (from chapter source change)
     data class SaveChapterContent(val content: String, val chapterIndex: Int) : ReadBookIntent
@@ -435,7 +467,7 @@ sealed interface ReadBookEffect {
     data object Recreate : ReadBookEffect
 
     // ReadView operations (require Activity/View reference)
-    data class UpdateReadViewConfig(val values: List<Int>) : ReadBookEffect
+    data class UpdateReadViewConfig(val actions: Set<ConfigUpdateAction>) : ReadBookEffect
     data class UpContent(val relativePosition: Int, val resetPageOffset: Boolean) : ReadBookEffect
     data class UpPageAnim(val upRecorder: Boolean) : ReadBookEffect
     data object UpTime : ReadBookEffect
@@ -509,6 +541,7 @@ sealed interface ReadBookEffect {
 
     // Read style SAF actions
     data object OpenReadStyleImagePicker : ReadBookEffect
+    data class OpenReadStyleImagePickerForMode(val isNight: Boolean) : ReadBookEffect
     data object OpenReadStyleImport : ReadBookEffect
     data object OpenReadStyleExport : ReadBookEffect
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
@@ -549,7 +582,7 @@ sealed interface ReadBookSheet {
     data object ShadowSet : ReadBookSheet
     data object UnderlineConfig : ReadBookSheet
     data object FontSelect : ReadBookSheet
-    data object RegexColorConfig : ReadBookSheet
+    data object HighlightRuleConfig : ReadBookSheet
     data object MoreConfig : ReadBookSheet
     data object BgTextConfig : ReadBookSheet
     data object ReadAloudConfig : ReadBookSheet
@@ -577,174 +610,409 @@ sealed interface ReadBookDialog {
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
-    data class StackTrace(val text: String) : ReadBookDialog
+}
+
+/**
+ * Typed config update actions — replaces magic integer codes.
+ * Each action represents a specific UI update operation.
+ */
+@Immutable
+sealed interface ConfigUpdateAction {
+    data object UpdateSystemUi : ConfigUpdateAction
+    data object UpdateBackground : ConfigUpdateAction
+    data object UpdateStyle : ConfigUpdateAction
+    data object UpdateBackgroundAlpha : ConfigUpdateAction
+    data object UpdatePageSlopSquare : ConfigUpdateAction
+    data object ReloadContent : ConfigUpdateAction
+    data object UpdateContent : ConfigUpdateAction
+    data object UpdateChapterStyle : ConfigUpdateAction
+    data object InvalidateTextPage : ConfigUpdateAction
+    data object UpdateLayout : ConfigUpdateAction
+    data object SubmitRenderTask : ConfigUpdateAction
 }
 
 /**
  * Typed config mutations — replaces direct `ReadBookConfig.xxx = value` + `postEvent(UP_CONFIG, ...)`.
- * Each variant carries [codes] that map to the legacy UP_CONFIG integer codes for rendering layer compatibility.
+ * Each variant carries [actions] that describe which UI updates are needed.
  */
 @Immutable
 sealed interface ConfigUpdate {
-    val codes: List<Int>
+    val actions: Set<ConfigUpdateAction>
 
     // --- Text style ---
-    data class TextSize(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class LetterSpacing(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class LineSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ParagraphSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ParagraphIndent(val value: String) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TextItalic(val value: Boolean) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TextBold(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
-    data class TextColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
-    data class TextAccentColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+    data class TextSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class LetterSpacing(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class LineSpacing(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ParagraphSpacing(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ParagraphIndent(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TextItalic(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TextBold(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
+    }
+    data class TextColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
+    }
+    data class TextAccentColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
+    }
 
     // --- Title style ---
-    data class TitleMode(val value: Int) : ConfigUpdate { override val codes = listOf(5) }
-    data class TitleBold(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
-    data class TitleSegScaling(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleLineSpacingExtra(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleLineSpacingSub(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleSize(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleTopSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleBottomSpacing(val value: Int) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class TitleColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+    data class TitleMode(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleBold(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
+    }
+    data class TitleSegScaling(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleLineSpacingExtra(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleLineSpacingSub(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleTopSpacing(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleBottomSpacing(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class TitleColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
+    }
 
     // --- Header / footer tips ---
-    data class HeaderMode(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class FooterMode(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class TipHeaderLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class TipHeaderMiddle(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class TipHeaderRight(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class TipFooterLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class TipFooterMiddle(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class TipFooterRight(val value: Int) : ConfigUpdate { override val codes = listOf(2, 6) }
-    data class HeaderFontSize(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class TipHeaderColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class TipFooterColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class TipDividerColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class HeaderMode(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterMode(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TipHeaderLeft(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class TipHeaderMiddle(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class TipHeaderRight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class TipFooterLeft(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class TipFooterMiddle(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class TipFooterRight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
+    }
+    data class HeaderFontSize(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TipHeaderColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TipFooterColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TipDividerColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
 
     // --- Layout / style ---
-    data class StyleSelect(val index: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class ShareLayout(val value: Boolean) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class PageAnim(val value: Int) : ConfigUpdate { override val codes = listOf(1) }
+    data class StyleSelect(val index: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ShareLayout(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class PageAnim(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground)
+    }
 
     // --- Menu colors ---
-    data class MenuBgColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuAccentColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuContainerColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuBgColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuAccentColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuContainerColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class MenuColorMode(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class ReadBarStyle(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBgColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuAccentColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuContainerColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuBgColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuAccentColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuContainerColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuColorMode(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class ReadBarStyle(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
 
     // --- Menu bar border ---
-    data class BorderWidth(val value: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class BorderColor(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
-    data class BorderColorNight(val color: Int) : ConfigUpdate { override val codes = listOf(1, 2, 5) }
+    data class BorderWidth(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class BorderColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class BorderColorNight(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+    }
 
     // --- Shadow ---
-    data class TextShadow(val value: Boolean) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ShadowRadius(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ShadowDx(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ShadowDy(val value: Float) : ConfigUpdate { override val codes = listOf(8, 5) }
-    data class ShadowColor(val color: Int) : ConfigUpdate { override val codes = listOf(2, 5, 9) }
+    data class TextShadow(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ShadowRadius(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ShadowDx(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ShadowDy(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
+    data class ShadowColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.InvalidateTextPage)
+    }
 
     // --- Underline ---
-    data class Underline(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
-    data class DottedLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
-    data class UnderlineExtend(val value: Boolean) : ConfigUpdate { override val codes = listOf(6, 9, 11) }
-    data class UnderlineHeight(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
-    data class UnderlinePadding(val value: Int) : ConfigUpdate { override val codes = listOf(8, 9, 6) }
-    data class DottedBase(val value: Float) : ConfigUpdate { override val codes = listOf(6, 8, 10) }
-    data class DottedRatio(val value: Float) : ConfigUpdate { override val codes = listOf(6, 8, 10) }
-    data class UnderlineColor(val color: Int) : ConfigUpdate { override val codes = listOf(2) }
+    data class Underline(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+    }
+    data class DottedLine(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+    }
+    data class UnderlineExtend(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
+    }
+    data class UnderlineHeight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
+    }
+    data class UnderlinePadding(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.UpdateContent)
+    }
+    data class DottedBase(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.UpdateLayout)
+    }
+    data class DottedRatio(val value: Float) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateContent, ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.UpdateLayout)
+    }
+    data class UnderlineColor(val color: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
 
     // --- Body padding ---
-    data class PaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
-    data class PaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
-    data class PaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
-    data class PaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(10, 5) }
+    data class PaddingTop(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
+    }
+    data class PaddingBottom(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
+    }
+    data class PaddingLeft(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
+    }
+    data class PaddingRight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
+    }
 
     // --- Header padding ---
-    data class HeaderPaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class HeaderPaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class HeaderPaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class HeaderPaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class ShowHeaderLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
+    data class HeaderPaddingTop(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class HeaderPaddingBottom(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class HeaderPaddingLeft(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class HeaderPaddingRight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class ShowHeaderLine(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
 
     // --- Footer padding ---
-    data class FooterPaddingTop(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class FooterPaddingBottom(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class FooterPaddingLeft(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class FooterPaddingRight(val value: Int) : ConfigUpdate { override val codes = listOf(2) }
-    data class ShowFooterLine(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
+    data class FooterPaddingTop(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterPaddingBottom(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterPaddingLeft(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class FooterPaddingRight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class ShowFooterLine(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
 
     // --- Background / display ---
-    data class BgAlpha(val value: Int) : ConfigUpdate { override val codes = listOf(3) }
-    data class StatusIconDark(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class MenuIconShowText(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuIconStyle(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuIconRowCount(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuBottomCornerRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class FloatingBottomBar(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class BgStr(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgStrNight(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgStrEInk(val value: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgType(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgTypeNight(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgTypeEInk(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateBackgroundAlpha, ConfigUpdateAction.ReloadContent)
+    }
+    data class BgAlpha(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateBackgroundAlpha)
+    }
+    data class StatusIconDark(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class MenuIconShowText(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuIconStyle(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuIconItemsPerRow(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuIconRowCount(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuBottomCornerRadius(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class FloatingBottomBar(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class MenuTopBarBlurMode(val value: Int) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-
     data class MenuBottomBarBlurMode(val value: Int) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-
     data class MenuTopBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-
     data class MenuBottomBarLiquidGlassButtons(val value: Boolean) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-
     data class MenuTopBarBlurSelection(val mode: Int, val style: Int) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-
     data class MenuBottomBarBlurStyle(val value: Int) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
-    data class MenuBlurRadius(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuBlurAlpha(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuLensRadius(val value: Float) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class MenuCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class TitleBarCustomIcon(val id: String, val path: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class TitleBarIconPosition(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class MenuBlurRadius(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuBlurAlpha(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuLensRadius(val value: Float) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class MenuCustomIcon(val id: String, val path: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class TitleBarCustomIcon(val id: String, val path: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class TitleBarIconPosition(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
     data class ShowTitleBarIcons(val value: Boolean) : ConfigUpdate {
-        override val codes = emptyList<Int>()
+        override val actions = emptySet<ConfigUpdateAction>()
     }
 
     // --- System UI (also updates AppConfig) ---
-    data class HideStatusBar(val value: Boolean) : ConfigUpdate { override val codes = listOf(0, 2) }
-    data class HideNavigationBar(val value: Boolean) : ConfigUpdate { override val codes = listOf(0, 2) }
+    data class HideStatusBar(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi, ConfigUpdateAction.UpdateStyle)
+    }
+    data class HideNavigationBar(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi, ConfigUpdateAction.UpdateStyle)
+    }
 
     // --- Display toggles ---
-    data class PaddingDisplayCutouts(val value: Boolean) : ConfigUpdate { override val codes = listOf(2) }
-    data class TitleBarMode(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class TextFullJustify(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class TextBottomJustify(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class AdaptSpecialStyle(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class UseZhLayout(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class ShowBrightnessView(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class UseUnderlineGlobal(val value: Boolean) : ConfigUpdate { override val codes = listOf(5) }
-    data class ReadSliderMode(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class DoubleHorizontalPage(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class ProgressBarBehavior(val value: String) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class NoAnimScrollPage(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
-    data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class PaddingDisplayCutouts(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
+    data class TitleBarMode(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class TextFullJustify(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class TextBottomJustify(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class AdaptSpecialStyle(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class UseZhLayout(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class ShowBrightnessView(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class UseUnderlineGlobal(val value: Boolean) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class ReadSliderMode(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class DoubleHorizontalPage(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class ProgressBarBehavior(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class NoAnimScrollPage(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+    data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
 
-    // --- Regex color rules ---
-    data class RegexColorRules(val rules: List<io.legado.app.help.config.RegexColorRule>) : ConfigUpdate { override val codes = listOf(8, 5) }
+    // --- Highlight rules ---
+    data class HighlightRules(val rules: List<io.legado.app.data.entities.HighlightRule>) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+    }
 
     // --- Auto read ---
-    data class AutoReadSpeed(val value: Int) : ConfigUpdate { override val codes = emptyList<Int>() }
+    data class AutoReadSpeed(val value: Int) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
 }

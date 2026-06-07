@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.ReadBookConfig
@@ -36,6 +37,7 @@ import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.utils.getCompatColor
 import kotlinx.coroutines.launch
@@ -73,6 +75,10 @@ internal fun HeaderFooterPage(
     var footerLeft by remember { mutableIntStateOf(ReadBookConfig.tipFooterLeft) }
     var footerMiddle by remember { mutableIntStateOf(ReadBookConfig.tipFooterMiddle) }
     var footerRight by remember { mutableIntStateOf(ReadBookConfig.tipFooterRight) }
+
+    // Line toggles
+    var showHeaderLine by remember { mutableStateOf(ReadBookConfig.showHeaderLine) }
+    var showFooterLine by remember { mutableStateOf(ReadBookConfig.showFooterLine) }
 
     // Global state
     var headerFontSize by remember { mutableIntStateOf(ReadBookConfig.headerFontSize) }
@@ -142,6 +148,14 @@ internal fun HeaderFooterPage(
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.showLine),
+                            checked = showHeaderLine,
+                            onCheckedChange = {
+                                showHeaderLine = it
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowHeaderLine(it)))
+                            },
+                        )
                         val headerModes = ReadBookConfig.getHeaderModes(context)
                         TinyDropdownSettingItem(
                             title = stringResource(R.string.header),
@@ -214,6 +228,14 @@ internal fun HeaderFooterPage(
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
+                        TinySwitchSettingItem(
+                            title = stringResource(R.string.showLine),
+                            checked = showFooterLine,
+                            onCheckedChange = {
+                                showFooterLine = it
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowFooterLine(it)))
+                            },
+                        )
                         val footerModes = ReadBookConfig.getFooterModes(context)
                         TinyDropdownSettingItem(
                             title = stringResource(R.string.footer),
@@ -288,9 +310,11 @@ internal fun HeaderFooterPage(
                     ) {
                         Text(
                             text = stringResource(R.string.read_config_divider_line),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            textAlign = TextAlign.Center,
                         )
                         TinyColorSettingItem(
                             title = stringResource(R.string.tip_divider_color),
@@ -314,9 +338,11 @@ internal fun HeaderFooterPage(
 
                         Text(
                             text = stringResource(R.string.text_typeface),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp),
+                            style = MaterialTheme.typography.titleSmallEmphasized,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            textAlign = TextAlign.Center,
                         )
                         TinyClickableSettingItem(
                             title = stringResource(R.string.header_font),

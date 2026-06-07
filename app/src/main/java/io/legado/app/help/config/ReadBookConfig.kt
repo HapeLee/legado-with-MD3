@@ -1467,6 +1467,16 @@ object ReadBookConfig {
             )
         }
 
+        // Public getters for mode-specific values (for ReadBookStyleConfig)
+        fun getDarkStatusIcon(): Boolean = darkStatusIcon
+        fun getDarkStatusIconNight(): Boolean = darkStatusIconNight
+        fun getDarkStatusIconEInk(): Boolean = darkStatusIconEInk
+        fun getTextColor(): String = textColor
+        fun getTextColorNight(): String = textColorNight
+        fun getTextColorEInk(): String = textColorEInk
+        fun getPageAnim(): Int = pageAnim
+        fun getPageAnimEInk(): Int = pageAnimEInk
+
         fun setCurBg(bgType: Int, bg: String) {
             ReadStyleResolver.setCurrentBackground(this, bgType, bg)
         }

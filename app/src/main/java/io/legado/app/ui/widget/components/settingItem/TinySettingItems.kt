@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -44,8 +45,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AccentColorButton
 import io.legado.app.ui.widget.components.AppSlider
@@ -592,5 +597,141 @@ private fun ClearColorModePill(
             onClickColor = onClickColor,
             enabled = enabled,
         )
+    }
+}
+
+/**
+ * A background image mode setting item with separate day/night cards.
+ * Each card shows the selected image and a reset button when an image is set.
+ */
+@Composable
+fun TinyBgImageModeSettingItem(
+    title: String,
+    dayBgImage: String?,
+    nightBgImage: String?,
+    onClickImage: (isNight: Boolean) -> Unit,
+    onClearImage: (isNight: Boolean) -> Unit,
+    description: String? = null,
+    imageVector: ImageVector? = null,
+    modifier: Modifier = Modifier,
+    color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
+    enabled: Boolean = true,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    TinySettingItem(
+        title = title,
+        description = description,
+        imageVector = imageVector,
+        modifier = modifier,
+        color = color,
+        enabled = enabled,
+        expanded = expanded,
+        onExpandChange = { expanded = it },
+        expandContent = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                BgImageCard(
+                    label = stringResource(R.string.day),
+                    bgImage = dayBgImage,
+                    enabled = enabled,
+                    onClick = { onClickImage(false) },
+                    onReset = { onClearImage(false) },
+                    modifier = Modifier.weight(1f),
+                )
+                BgImageCard(
+                    label = stringResource(R.string.night),
+                    bgImage = nightBgImage,
+                    enabled = enabled,
+                    onClick = { onClickImage(true) },
+                    onReset = { onClearImage(true) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        },
+    )
+}
+
+@Composable
+private fun BgImageCard(
+    label: String,
+    bgImage: String?,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onReset: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hasImage = !bgImage.isNullOrBlank()
+
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(LegadoTheme.colorScheme.surfaceContainerHigh)
+            .clickable(enabled = enabled, onClick = onClick),
+    ) {
+        if (hasImage) {
+            AsyncImage(
+                model = bgImage,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+                alpha = 0.6f,
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            val labelStyle = if (hasImage) {
+                LegadoTheme.typography.labelSmall.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        offset = androidx.compose.ui.geometry.Offset(1f, 1f),
+                        blurRadius = 3f,
+                    )
+                )
+            } else {
+                LegadoTheme.typography.labelSmall
+            }
+            AppText(
+                text = label,
+                style = labelStyle,
+                color = if (hasImage) Color.White else LegadoTheme.colorScheme.onSurfaceVariant,
+            )
+
+            if (hasImage) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(LegadoTheme.colorScheme.surface.copy(alpha = 0.7f))
+                        .clickable(enabled = enabled, onClick = onReset),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = LegadoTheme.colorScheme.onSurface,
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }

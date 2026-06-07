@@ -51,12 +51,14 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
 fun TitleBarIconSheet(
+    show: Boolean,
     items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     ButtonIconConfigSheet(
+        show = show,
         title = stringResource(R.string.title_bar_icons),
         items = items,
         customIcons = customIcons,
@@ -71,12 +73,14 @@ fun TitleBarIconSheet(
 
 @Composable
 internal fun BottomBarIconSheet(
+    show: Boolean,
     items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     ButtonIconConfigSheet(
+        show = show,
         title = stringResource(R.string.config_btn),
         items = items,
         customIcons = customIcons,
@@ -91,6 +95,7 @@ internal fun BottomBarIconSheet(
 
 @Composable
 private fun ButtonIconConfigSheet(
+    show: Boolean,
     title: String,
     items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
@@ -112,7 +117,7 @@ private fun ButtonIconConfigSheet(
     }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = title,
     ) {

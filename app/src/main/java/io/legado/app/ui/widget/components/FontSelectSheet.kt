@@ -3,7 +3,15 @@ package io.legado.app.ui.widget.components
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -15,7 +23,6 @@ fun FontSelectSheet(
     title: String,
     fontFolderUri: Uri?,
     selectedFontName: String?,
-    showPreview: Boolean,
     onDismissRequest: () -> Unit,
     onSelectFont: (FileDoc) -> Unit,
     onOpenFolderPicker: () -> Unit,
@@ -26,11 +33,36 @@ fun FontSelectSheet(
     systemTypefaces: Array<String>? = null,
     emptyText: String? = null,
 ) {
+    var showTypefaceMenu by remember { mutableStateOf(false) }
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        startAction = startAction,
+        startAction = {
+            startAction?.invoke()
+            if (systemTypefaces != null && onSelectSystemTypeface != null) {
+                DropdownMenu(
+                    expanded = showTypefaceMenu,
+                    onDismissRequest = { showTypefaceMenu = false },
+                ) {
+                    systemTypefaces.forEachIndexed { index, name ->
+                        DropdownMenuItem(
+                            text = { Text(name) },
+                            onClick = {
+                                onSelectSystemTypeface(index)
+                                showTypefaceMenu = false
+                                onDismissRequest()
+                            },
+                        )
+                    }
+                }
+                SmallPlainButton(
+                    onClick = { showTypefaceMenu = true },
+                    icon = Icons.Default.TextFields,
+                )
+            }
+        },
         endAction = {
             SmallPlainButton(
                 onClick = onOpenFolderPicker,
@@ -42,18 +74,10 @@ fun FontSelectSheet(
         FontSelectGrid(
             fontFolderUri = fontFolderUri,
             selectedFontName = selectedFontName,
-            showPreview = showPreview,
             onSelectFont = { doc ->
                 onSelectFont(doc)
                 onDismissRequest()
             },
-            onSelectSystemTypeface = onSelectSystemTypeface?.let { callback ->
-                { index ->
-                    callback(index)
-                    onDismissRequest()
-                }
-            },
-            systemTypefaces = systemTypefaces,
             emptyText = emptyText,
         )
     }

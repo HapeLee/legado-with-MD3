@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.ReadBookConfig
@@ -29,6 +30,7 @@ import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 
 @Composable
 fun UnderlineConfigSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -43,14 +45,13 @@ fun UnderlineConfigSheet(
     var showColorPicker by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.text_underline),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         ) {
             TinySwitchSettingItem(
@@ -113,8 +114,11 @@ fun UnderlineConfigSheet(
             // Dotted line section title
             Text(
                 text = stringResource(R.string.text_dottedline),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
+                style = MaterialTheme.typography.titleSmallEmphasized,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                textAlign = TextAlign.Center,
             )
 
             Spacer(Modifier.height(8.dp))

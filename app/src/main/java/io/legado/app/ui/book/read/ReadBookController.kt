@@ -569,19 +569,19 @@ class ReadBookController(
             is ReadBookEffect.Recreate -> activity.recreate()
             is ReadBookEffect.UpdateReadViewConfig -> {
                 val r = refs ?: return
-                effect.values.forEach { v ->
-                    when (v) {
-                        0 -> upSystemUiVisibility()
-                        1 -> r.readView.upBg()
-                        2 -> r.readView.upStyle()
-                        3 -> r.readView.upBgAlpha()
-                        4 -> r.readView.upPageSlopSquare()
-                        5 -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
-                        6 -> r.readView.upContent(resetPageOffset = false)
-                        8 -> ChapterProvider.upStyle()
-                        9 -> r.readView.invalidateTextPage()
-                        10 -> ChapterProvider.upLayout()
-                        11 -> r.readView.submitRenderTask()
+                effect.actions.forEach { action ->
+                    when (action) {
+                        ConfigUpdateAction.UpdateSystemUi -> upSystemUiVisibility()
+                        ConfigUpdateAction.UpdateBackground -> r.readView.upBg()
+                        ConfigUpdateAction.UpdateStyle -> r.readView.upStyle()
+                        ConfigUpdateAction.UpdateBackgroundAlpha -> r.readView.upBgAlpha()
+                        ConfigUpdateAction.UpdatePageSlopSquare -> r.readView.upPageSlopSquare()
+                        ConfigUpdateAction.ReloadContent -> if (viewModel.isInitFinish) ReadBook.loadContent(resetPageOffset = false)
+                        ConfigUpdateAction.UpdateContent -> r.readView.upContent(resetPageOffset = false)
+                        ConfigUpdateAction.UpdateChapterStyle -> ChapterProvider.upStyle()
+                        ConfigUpdateAction.InvalidateTextPage -> r.readView.invalidateTextPage()
+                        ConfigUpdateAction.UpdateLayout -> ChapterProvider.upLayout()
+                        ConfigUpdateAction.SubmitRenderTask -> r.readView.submitRenderTask()
                     }
                 }
             }
@@ -756,6 +756,7 @@ class ReadBookController(
             is ReadBookEffect.OpenFontFolderPicker,
             is ReadBookEffect.OpenBooksDirPicker,
             is ReadBookEffect.OpenReadStyleImagePicker,
+            is ReadBookEffect.OpenReadStyleImagePickerForMode,
             is ReadBookEffect.OpenReadStyleImport,
             is ReadBookEffect.OpenReadStyleExport,
             is ReadBookEffect.OpenMenuCustomIconPicker,

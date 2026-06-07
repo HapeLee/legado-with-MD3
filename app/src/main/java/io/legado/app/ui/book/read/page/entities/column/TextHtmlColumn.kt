@@ -20,8 +20,19 @@ data class TextHtmlColumn(
     override val charData: String,
     val mTextSize: Float,
     val mTextColor: Int?,
-    val linkUrl: String?
+    val linkUrl: String?,
+    override val bgColor: Int? = null,
+    override val underlineMode: Int = 0,
+    override val underlineColor: Int? = null,
+    override val underlineWidth: Float = 1f,
+    override val underlineOffset: Float = 2f,
+    override val underlineSvgPath: String = "",
+    override val bgImage: String = "",
+    override val bgImageFit: Int = 0,
+    override val bgImageScale: Float = 1f,
 ) : TextBaseColumn {
+
+    override val textColor: Int? get() = mTextColor
 
     override var textLine: TextLine = emptyTextLine
 

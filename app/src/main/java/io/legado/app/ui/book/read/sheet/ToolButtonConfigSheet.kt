@@ -6,12 +6,14 @@ import io.legado.app.ui.book.read.ReadBookIntent
 
 @Composable
 fun ToolButtonConfigSheet(
+    show: Boolean,
     items: List<ReadBookButtonConfigItem>,
     customIcons: Map<String, String>,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     BottomBarIconSheet(
+        show = show,
         items = items,
         customIcons = customIcons,
         onDismissRequest = onDismissRequest,

@@ -1,0 +1,513 @@
+package io.legado.app.ui.book.read.sheet
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.legado.app.R
+import io.legado.app.data.entities.HighlightRule
+import io.legado.app.ui.book.read.config.HighlightRuleStore
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.SectionTitle
+import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
+import splitties.init.appCtx
+import java.io.File
+
+@Composable
+fun HighlightRuleEditSheet(
+    show: Boolean,
+    rule: HighlightRule?,
+    onDismissRequest: () -> Unit,
+    onSave: (HighlightRule) -> Unit,
+) {
+    val isNew = rule == null
+    val initial = rule ?: HighlightRule()
+    val context = LocalContext.current
+
+    // Rule info state
+    var pattern by remember { mutableStateOf(initial.pattern) }
+    var name by remember { mutableStateOf(initial.name) }
+    var targetScope by remember { mutableIntStateOf(initial.targetScope) }
+    var enabled by remember { mutableStateOf(initial.enabled) }
+    var sampleText by remember {
+        mutableStateOf(initial.sampleText.ifBlank { "她轻声说：今晚就出发。" })
+    }
+
+    // Style state
+    var textColor by remember { mutableIntStateOf(initial.textColor ?: 0xFF63C37D.toInt()) }
+    var hasTextColor by remember { mutableStateOf(initial.textColor != null) }
+    var bgColor by remember { mutableIntStateOf(initial.bgColor ?: 0x20FFEB3B) }
+    var hasBgColor by remember { mutableStateOf(initial.bgColor != null) }
+    var hasUnderline by remember { mutableStateOf(initial.underlineMode > 0) }
+    var underlineMode by remember { mutableIntStateOf(if (initial.underlineMode > 0) initial.underlineMode else 1) }
+    var underlineColor by remember { mutableIntStateOf(initial.underlineColor ?: 0xFF63C37D.toInt()) }
+    var hasUnderlineColor by remember { mutableStateOf(initial.underlineColor != null) }
+    var underlineWidth by remember { mutableFloatStateOf(initial.underlineWidth) }
+    var underlineOffset by remember { mutableFloatStateOf(initial.underlineOffset) }
+    var underlineSvgPath by remember { mutableStateOf(initial.underlineSvgPath.orEmpty()) }
+    var bgImage by remember { mutableStateOf(initial.bgImage.orEmpty()) }
+    var bgImageFit by remember { mutableIntStateOf(initial.bgImageFit) }
+    var bgImageScale by remember { mutableFloatStateOf(initial.bgImageScale) }
+    var hasBgImage by remember { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
+
+    // Color picker state
+    var showTextColorPicker by remember { mutableStateOf(false) }
+    var showBgColorPicker by remember { mutableStateOf(false) }
+    var showUnderlineColorPicker by remember { mutableStateOf(false) }
+
+    // Validation
+    var patternError by remember { mutableStateOf<String?>(null) }
+
+    // SAF image picker
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val dir = File(appCtx.filesDir, "bg_images")
+            if (!dir.exists()) dir.mkdirs()
+            val target = File(dir, "bg_${System.currentTimeMillis()}.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                target.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            bgImage = target.absolutePath
+        }
+    }
+
+    val titleRes = if (isNew) R.string.new_rule else R.string.edit_rule
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(titleRes),
+        endAction = {
+            androidx.compose.material3.IconButton(onClick = {
+                if (pattern.isNotBlank()) {
+                    val result = runCatching { Regex(pattern) }
+                    if (result.isFailure) {
+                        patternError = result.exceptionOrNull()?.message
+                        return@IconButton
+                    }
+                }
+                patternError = null
+                val sanitized = HighlightRuleStore.sanitizeRule(
+                    HighlightRule(
+                        id = initial.id,
+                        name = name,
+                        pattern = pattern,
+                        sampleText = sampleText,
+                        targetScope = targetScope,
+                        enabled = enabled,
+                        position = initial.position,
+                        textColor = if (hasTextColor) textColor else null,
+                        bgColor = if (hasBgColor) bgColor else null,
+                        underlineMode = if (hasUnderline) underlineMode else 0,
+                        underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
+                        underlineWidth = underlineWidth,
+                        underlineOffset = underlineOffset,
+                        underlineSvgPath = underlineSvgPath.ifBlank { null },
+                        bgImage = if (hasBgImage) bgImage.ifBlank { null } else null,
+                        bgImageFit = bgImageFit,
+                        bgImageScale = bgImageScale,
+                    )
+                )
+                onSave(sanitized)
+            }) {
+                androidx.compose.material3.Icon(
+                    Icons.Default.Done,
+                    contentDescription = null,
+                )
+            }
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            // === Section 1: Rule Info ===
+            SectionTitle(stringResource(R.string.rule_info))
+
+            AppTextField(
+                value = pattern,
+                onValueChange = {
+                    pattern = it
+                    patternError = null
+                },
+                label = stringResource(R.string.rule_pattern),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                isError = patternError != null,
+                supportingText = patternError?.let {
+                    { AppText(it, color = MaterialTheme.colorScheme.error) }
+                },
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            AppTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = stringResource(R.string.rule_name),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            val scopeEntries = arrayOf(
+                stringResource(R.string.target_all),
+                stringResource(R.string.target_title),
+                stringResource(R.string.target_body),
+            )
+            val scopeValues = arrayOf(
+                HighlightRule.TARGET_ALL.toString(),
+                HighlightRule.TARGET_TITLE.toString(),
+                HighlightRule.TARGET_BODY.toString(),
+            )
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.target_scope),
+                selectedValue = targetScope.toString(),
+                displayEntries = scopeEntries,
+                entryValues = scopeValues,
+                onValueChange = { targetScope = it.toIntOrNull() ?: HighlightRule.TARGET_ALL },
+            )
+
+            TinySwitchSettingItem(
+                title = stringResource(R.string.enable_rule),
+                checked = enabled,
+                onCheckedChange = { enabled = it },
+            )
+
+            // === Section 2: Style Settings ===
+            SectionTitle(stringResource(R.string.style_settings))
+
+            // Text color
+            TinySwitchSettingItem(
+                title = stringResource(R.string.text_color),
+                checked = hasTextColor,
+                onCheckedChange = { hasTextColor = it },
+            )
+            if (hasTextColor) {
+                TinyColorSettingItem(
+                    title = stringResource(R.string.select_color),
+                    colorValue = textColor,
+                    onClick = { showTextColorPicker = true },
+                )
+            }
+
+            // Underline
+            TinySwitchSettingItem(
+                title = stringResource(R.string.underline_style),
+                checked = hasUnderline,
+                onCheckedChange = { hasUnderline = it },
+            )
+            if (hasUnderline) {
+                val underlineEntries = arrayOf(
+                    stringResource(R.string.underline_solid),
+                    stringResource(R.string.underline_dashed),
+                    stringResource(R.string.underline_wave),
+                    stringResource(R.string.underline_title_bar),
+                    stringResource(R.string.underline_svg),
+                )
+                val underlineValues = arrayOf("1", "2", "3", "4", "5")
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.underline_style),
+                    selectedValue = underlineMode.toString(),
+                    displayEntries = underlineEntries,
+                    entryValues = underlineValues,
+                    onValueChange = { underlineMode = it.toIntOrNull() ?: 1 },
+                )
+
+                TinySwitchSettingItem(
+                    title = stringResource(R.string.underline_color),
+                    checked = hasUnderlineColor,
+                    onCheckedChange = { hasUnderlineColor = it },
+                )
+                if (hasUnderlineColor) {
+                    TinyColorSettingItem(
+                        title = stringResource(R.string.select_color),
+                        colorValue = underlineColor,
+                        onClick = { showUnderlineColorPicker = true },
+                    )
+                }
+
+                TinySliderSettingItem(
+                    title = stringResource(R.string.underline_width),
+                    value = underlineWidth,
+                    valueRange = 0.1f..10f,
+                    description = String.format("%.1f dp", underlineWidth),
+                    onValueChange = { underlineWidth = (it * 10).toInt() / 10f },
+                )
+
+                TinySliderSettingItem(
+                    title = stringResource(R.string.underline_offset),
+                    value = underlineOffset,
+                    valueRange = 0f..20f,
+                    description = String.format("%.1f dp", underlineOffset),
+                    onValueChange = { underlineOffset = (it * 10).toInt() / 10f },
+                )
+
+                if (underlineMode == 5) {
+                    AppTextField(
+                        value = underlineSvgPath,
+                        onValueChange = { underlineSvgPath = it },
+                        label = stringResource(R.string.svg_path),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            // Background color
+            TinySwitchSettingItem(
+                title = stringResource(R.string.bg_color),
+                checked = hasBgColor,
+                onCheckedChange = { hasBgColor = it },
+            )
+            if (hasBgColor) {
+                TinyColorSettingItem(
+                    title = stringResource(R.string.select_color),
+                    colorValue = bgColor,
+                    onClick = { showBgColorPicker = true },
+                )
+            }
+
+            // Background image
+            TinySwitchSettingItem(
+                title = stringResource(R.string.highlight_bg_image),
+                checked = hasBgImage,
+                onCheckedChange = { hasBgImage = it },
+            )
+            if (hasBgImage) {
+                TinyClickableSettingItem(
+                    title = stringResource(R.string.highlight_bg_image),
+                    description = bgImage.ifBlank { null }?.let { File(it).name },
+                    onClick = { imagePicker.launch("image/*") },
+                )
+            }
+            if (hasBgImage && bgImage.isNotBlank()) {
+                val fitEntries = arrayOf(
+                    stringResource(R.string.bg_fit_tile),
+                    stringResource(R.string.bg_fit_stretch),
+                    stringResource(R.string.bg_fit_crop),
+                )
+                val fitValues = arrayOf("0", "1", "2")
+                TinyDropdownSettingItem(
+                    title = stringResource(R.string.bg_image_fit),
+                    selectedValue = bgImageFit.toString(),
+                    displayEntries = fitEntries,
+                    entryValues = fitValues,
+                    onValueChange = { bgImageFit = it.toIntOrNull() ?: 0 },
+                )
+
+                TinySliderSettingItem(
+                    title = stringResource(R.string.highlight_bg_image_scale),
+                    value = bgImageScale,
+                    valueRange = 0.1f..5f,
+                    description = String.format("%.1fx", bgImageScale),
+                    onValueChange = { bgImageScale = (it * 10).toInt() / 10f },
+                )
+            }
+
+            // === Section 3: Preview ===
+            SectionTitle(stringResource(R.string.preview_effect))
+
+            AppTextField(
+                value = sampleText,
+                onValueChange = { sampleText = it },
+                label = stringResource(R.string.sample_text),
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            HighlightRulePreview(
+                sampleText = sampleText,
+                textColor = if (hasTextColor) textColor else null,
+                bgColor = if (hasBgColor) bgColor else null,
+                underlineMode = if (hasUnderline) underlineMode else 0,
+                underlineColor = if (hasUnderlineColor && hasUnderline) underlineColor else null,
+                underlineWidth = underlineWidth,
+                underlineOffset = underlineOffset,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(80.dp)
+                    .padding(top = 8.dp),
+            )
+        }
+    }
+
+    // Color pickers
+    if (showTextColorPicker) {
+        ColorPickerSheet(
+            show = true,
+            initialColor = textColor,
+            onDismissRequest = { showTextColorPicker = false },
+            onColorSelected = { color ->
+                textColor = color
+                showTextColorPicker = false
+            },
+        )
+    }
+    if (showBgColorPicker) {
+        ColorPickerSheet(
+            show = true,
+            initialColor = bgColor,
+            onDismissRequest = { showBgColorPicker = false },
+            onColorSelected = { color ->
+                bgColor = color
+                showBgColorPicker = false
+            },
+        )
+    }
+    if (showUnderlineColorPicker) {
+        ColorPickerSheet(
+            show = true,
+            initialColor = underlineColor,
+            onDismissRequest = { showUnderlineColorPicker = false },
+            onColorSelected = { color ->
+                underlineColor = color
+                showUnderlineColorPicker = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun HighlightRulePreview(
+    sampleText: String,
+    textColor: Int?,
+    bgColor: Int?,
+    underlineMode: Int,
+    underlineColor: Int?,
+    underlineWidth: Float,
+    underlineOffset: Float,
+    modifier: Modifier = Modifier,
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val defaultTextColor = LegadoTheme.colorScheme.onSurface
+    val resolvedTextColor = textColor?.let { Color(it) } ?: defaultTextColor
+    val resolvedUnderlineColor = underlineColor?.let { Color(it) } ?: resolvedTextColor
+
+    val textStyle = TextStyle(
+        fontSize = 16.sp,
+        color = resolvedTextColor,
+    )
+
+    Canvas(modifier = modifier) {
+        val textResult = textMeasurer.measure(
+            text = sampleText,
+            style = textStyle,
+            maxLines = 3,
+        )
+        if (bgColor != null) {
+            drawRect(
+                color = Color(bgColor),
+                topLeft = Offset(0f, 0f),
+                size = size.copy(height = textResult.size.height.toFloat()),
+            )
+        }
+        drawText(textResult)
+
+        if (underlineMode > 0) {
+            val strokeWidth = underlineWidth.dp.toPx()
+            val yBaseline = textResult.size.height.toFloat() - underlineOffset.dp.toPx()
+
+            when (underlineMode) {
+                1 -> {
+                    drawLine(
+                        color = resolvedUnderlineColor,
+                        start = Offset(0f, yBaseline),
+                        end = Offset(textResult.size.width.toFloat(), yBaseline),
+                        strokeWidth = strokeWidth,
+                    )
+                }
+                2 -> {
+                    val dashLength = 8.dp.toPx()
+                    val gapLength = 4.dp.toPx()
+                    var x = 0f
+                    while (x < textResult.size.width) {
+                        val endX = minOf(x + dashLength, textResult.size.width.toFloat())
+                        drawLine(
+                            color = resolvedUnderlineColor,
+                            start = Offset(x, yBaseline),
+                            end = Offset(endX, yBaseline),
+                            strokeWidth = strokeWidth,
+                        )
+                        x += dashLength + gapLength
+                    }
+                }
+                3 -> {
+                    val amplitude = 2.dp.toPx()
+                    val period = 12.dp.toPx()
+                    val path = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(0f, yBaseline)
+                        var x = 0f
+                        while (x < textResult.size.width) {
+                            val nextX = minOf(x + period / 2, textResult.size.width.toFloat())
+                            val controlY = if ((x / period).toInt() % 2 == 0) {
+                                yBaseline - amplitude
+                            } else {
+                                yBaseline + amplitude
+                            }
+                            quadraticTo(x, controlY, nextX, yBaseline)
+                            x += period / 2
+                        }
+                    }
+                    drawPath(
+                        path = path,
+                        color = resolvedUnderlineColor,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+                    )
+                }
+                4 -> {
+                    val barHeight = 3.dp.toPx()
+                    drawLine(
+                        color = resolvedUnderlineColor,
+                        start = Offset(0f, yBaseline),
+                        end = Offset(textResult.size.width.toFloat(), yBaseline),
+                        strokeWidth = barHeight,
+                        cap = StrokeCap.Round,
+                    )
+                }
+            }
+        }
+    }
+}

@@ -9,7 +9,6 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
-import io.legado.app.model.BookCover
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
@@ -57,7 +56,6 @@ class CoverConfigViewModel : ViewModel() {
                     } else {
                         CoverConfig.defaultCoverDark = newCovers
                     }
-                    BookCover.upDefaultCover()
                 }.onFailure {
                     appCtx.toastOnUi(it.localizedMessage)
                 }
@@ -112,7 +110,6 @@ class CoverConfigViewModel : ViewModel() {
         } else {
             CoverConfig.defaultCoverDark = newCovers
         }
-        BookCover.upDefaultCover()
     }
 
     fun updateShowName(show: Boolean, isNight: Boolean = false) {
@@ -121,7 +118,6 @@ class CoverConfigViewModel : ViewModel() {
         } else {
             CoverConfig.coverShowName = show
         }
-        BookCover.upDefaultCover()
     }
 
     fun updateShowAuthor(show: Boolean, isNight: Boolean = false) {
@@ -130,10 +126,9 @@ class CoverConfigViewModel : ViewModel() {
         } else {
             CoverConfig.coverShowAuthor = show
         }
-        BookCover.upDefaultCover()
     }
 
     fun updateCoverStyle() {
-        BookCover.upDefaultCover()
+        // no-op: Compose CoilBookCover reads CoverConfig preferences directly
     }
 }

@@ -50,7 +50,6 @@ fun ReadAloudSheet(
             onGoToBackground = onGoToBackground,
             onShowReadAloudConfig = onShowReadAloudConfig,
             modifier = Modifier
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp),
         )
     }

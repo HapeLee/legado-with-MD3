@@ -20,8 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,41 +32,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookColorPickerIds
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.settingItem.TinyBgImageModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
-import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
+import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.utils.hexString
 
 @Composable
 fun BgTextConfigSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
     onSelectImage: () -> Unit,
+    onSelectImageForMode: (isNight: Boolean) -> Unit,
     onImportConfig: () -> Unit,
     onExportConfig: () -> Unit,
+    styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
 ) {
-    var styleName by remember { mutableStateOf(ReadBookConfig.durConfig.name.ifBlank { "文字" }) }
-    var darkStatusIcon by remember { mutableStateOf(ReadBookConfig.durConfig.curStatusIconDark()) }
-    var bgAlpha by remember { mutableFloatStateOf(ReadBookConfig.bgAlpha.toFloat()) }
-    var bgColor by remember {
-        mutableIntStateOf(
-            ReadBookConfig.durConfig.run {
-                if (curBgType() == 0) curBgStr().toColorInt() else "#015A86".toColorInt()
-            }
-        )
-    }
+    // Derive values directly from styleConfig (reactive state)
+    val styleName = styleConfig.styleName
+    val darkStatusIcon = styleConfig.darkStatusIcon
+    val bgAlpha = styleConfig.bgAlpha
+    val dayBgColor = if (styleConfig.bgType == 0) styleConfig.bgStr.toColorInt() else 0
+    val nightBgColor = if (styleConfig.bgTypeNight == 0) styleConfig.bgStrNight.toColorInt() else 0
+    val dayBgImage = if (styleConfig.bgType != 0) styleConfig.bgStr else null
+    val nightBgImage = if (styleConfig.bgTypeNight != 0) styleConfig.bgStrNight else null
+
     var showColorPicker by remember { mutableStateOf(false) }
+    var colorPickerIsNight by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = {
             onIntent(ReadBookIntent.SaveReadStyleConfig)
             onDismissRequest()
@@ -78,7 +81,6 @@ fun BgTextConfigSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
@@ -151,16 +153,67 @@ fun BgTextConfigSheet(
                 title = stringResource(R.string.dark_status_icon),
                 checked = darkStatusIcon,
                 onCheckedChange = {
-                    darkStatusIcon = it
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StatusIconDark(it)))
                 },
             )
 
-            TinyColorSettingItem(
-                title = stringResource(R.string.bg_color),
-                colorValue = bgColor,
-                onClick = { showColorPicker = true },
+            // Background mode switch: color vs image
+            val isDayBgImage = styleConfig.isDayBgImage
+            val isNightBgImage = styleConfig.isNightBgImage
+            val useBgImage = isDayBgImage || isNightBgImage
+
+            TinySwitchSettingItem(
+                title = stringResource(R.string.use_bg_image),
+                checked = useBgImage,
+                onCheckedChange = { useImage ->
+                    if (useImage) {
+                        // Switch to image mode: set bgType to 1 (assets image) with empty path
+                        // This will show the image picker UI
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(1)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("")))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(1)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("")))
+                    } else {
+                        // Switch to color mode: reset both day and night to color
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#EEEEEE")))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
+                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#000000")))
+                    }
+                },
             )
+
+            if (!useBgImage) {
+                // Color mode
+                TinyColorModeSettingItem(
+                    title = stringResource(R.string.bg_color),
+                    dayColor = dayBgColor,
+                    nightColor = nightBgColor,
+                    onClickColor = { isNight ->
+                        colorPickerIsNight = isNight
+                        showColorPicker = true
+                    },
+                )
+            } else {
+                // Image mode
+                TinyBgImageModeSettingItem(
+                    title = stringResource(R.string.bg_image),
+                    dayBgImage = dayBgImage,
+                    nightBgImage = nightBgImage,
+                    onClickImage = { isNight ->
+                        onSelectImageForMode(isNight)
+                    },
+                    onClearImage = { isNight ->
+                        if (isNight) {
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#000000")))
+                        } else {
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#EEEEEE")))
+                        }
+                    },
+                )
+            }
 
             TinySliderSettingItem(
                 title = stringResource(R.string.bg_alpha),
@@ -168,15 +221,8 @@ fun BgTextConfigSheet(
                 valueRange = 0f..100f,
                 steps = 99,
                 onValueChange = {
-                    bgAlpha = it
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgAlpha(it.toInt())))
                 },
-            )
-
-            TinyClickableSettingItem(
-                title = stringResource(R.string.bg_image),
-                description = stringResource(R.string.select_image),
-                onClick = onSelectImage,
             )
 
             // TODO: Add background image grid from assets
@@ -184,13 +230,19 @@ fun BgTextConfigSheet(
     }
 
     if (showColorPicker) {
+        val initialColor = if (colorPickerIsNight) nightBgColor else dayBgColor
         ColorPickerSheet(
             show = true,
-            initialColor = bgColor,
+            initialColor = if (initialColor != 0) initialColor else if (colorPickerIsNight) 0xFF000000.toInt() else 0xFFEEEEEE.toInt(),
             onDismissRequest = { showColorPicker = false },
             onColorSelected = { color ->
-                bgColor = color
-                onIntent(ReadBookIntent.ColorSelected(ReadBookColorPickerIds.BG_COLOR, color))
+                if (colorPickerIsNight) {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight("#${color.hexString}")))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(0)))
+                } else {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr("#${color.hexString}")))
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(0)))
+                }
                 showColorPicker = false
             },
         )

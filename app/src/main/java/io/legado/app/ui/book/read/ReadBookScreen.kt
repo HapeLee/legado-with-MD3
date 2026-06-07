@@ -11,7 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.info.ChangeSourceSheet
-import io.legado.app.ui.book.read.sheet.AppLogSheet
+import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
@@ -27,7 +27,7 @@ import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
-import io.legado.app.ui.book.read.sheet.RegexColorConfigSheet
+import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
@@ -120,178 +120,172 @@ fun ReadBookScreen(
             )
         }
 
-        is ReadBookDialog.StackTrace -> {
-            AppAlertDialog(
-                show = true,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                title = stringResource(R.string.log),
-                text = dialog.text,
-                confirmText = stringResource(R.string.ok),
-                onConfirm = { onIntent(ReadBookIntent.DismissDialog) },
-            )
-        }
-
         null -> {}
     }
 
-    // Sheets driven by activeSheet state
+    // AppModalBottomSheet-based sheets — always composed, controlled by show flag
+    // for proper enter/exit animations
+    val dismissSheet = { onIntent(ReadBookIntent.DismissSheet) }
+
+    ShadowSetSheet(
+        show = state.activeSheet is ReadBookSheet.ShadowSet,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    EffectiveReplacesSheet(
+        show = state.activeSheet is ReadBookSheet.EffectiveReplaces,
+        onDismissRequest = dismissSheet,
+        onOpenReplaceEditor = { id, pattern ->
+            onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
+        },
+        onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
+    )
+    UnderlineConfigSheet(
+        show = state.activeSheet is ReadBookSheet.UnderlineConfig,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    FontSelectSheet(
+        show = state.activeSheet is ReadBookSheet.FontSelect,
+        onDismissRequest = dismissSheet,
+        onSelectFont = { onIntent(ReadBookIntent.SelectFont(it)) },
+        onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectSystemTypeface(it)) },
+        onOpenFolderPicker = { onIntent(ReadBookIntent.OpenFontFolderPicker) },
+    )
+    ToolButtonConfigSheet(
+        show = state.activeSheet is ReadBookSheet.ToolButtonConfig,
+        items = state.menuConfig.bottomBarButtons,
+        customIcons = state.menuConfig.readMenuCustomIcons,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    TitleBarIconSheet(
+        show = state.activeSheet is ReadBookSheet.TitleBarIconConfig,
+        items = state.menuConfig.titleBarButtons,
+        customIcons = state.menuConfig.titleBarCustomIcons,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    HighlightRuleConfigSheet(
+        show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+    )
+    ContentEditSheet(
+        show = state.activeSheet is ReadBookSheet.ContentEdit,
+        state = state,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    MoreConfigSheet(
+        show = state.activeSheet is ReadBookSheet.MoreConfig,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        onOpenClickRegionalConfig = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ClickActionConfig))
+        },
+        onOpenPageKeyConfig = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
+        },
+    )
+    ReadAloudConfigSheet(
+        show = state.activeSheet is ReadBookSheet.ReadAloudConfig,
+        state = state,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    SpeakEngineConfigSheet(
+        show = state.activeSheet is ReadBookSheet.SpeakEngineConfig,
+        items = state.ttsEngineItems,
+        selectedValue = state.selectedTtsEngine,
+        onSelect = { onIntent(ReadBookIntent.ApplySpeakEngine(it)) },
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
+    ReadAloudNumberConfigSheet(
+        show = state.activeSheet is ReadBookSheet.PreDownloadConfig,
+        title = stringResource(R.string.read_aloud_preload),
+        description = stringResource(R.string.read_aloud_preload_summary, state.preDownloadNum),
+        value = state.preDownloadNum,
+        defaultValue = 10,
+        valueRange = 0f..100f,
+        onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
+    ReadAloudNumberConfigSheet(
+        show = state.activeSheet is ReadBookSheet.AudioCacheCleanConfig,
+        title = stringResource(R.string.audio_cache_clean_time),
+        description = stringResource(
+            R.string.audio_cache_clean_time_summary,
+            state.audioCacheCleanTime
+        ),
+        value = state.audioCacheCleanTime,
+        defaultValue = 10,
+        valueRange = 0f..10080f,
+        onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
+    AppLogSheet(
+        show = state.activeSheet is ReadBookSheet.AppLog,
+        onDismissRequest = dismissSheet,
+    )
+    BgTextConfigSheet(
+        show = state.activeSheet is ReadBookSheet.BgTextConfig,
+        onDismissRequest = dismissSheet,
+        onIntent = onIntent,
+        onSelectImage = { onIntent(ReadBookIntent.OpenReadStyleImagePicker) },
+        onSelectImageForMode = { isNight ->
+            onIntent(ReadBookIntent.OpenReadStyleImagePickerForMode(isNight))
+        },
+        onImportConfig = { onIntent(ReadBookIntent.OpenReadStyleImport) },
+        onExportConfig = { onIntent(ReadBookIntent.OpenReadStyleExport) },
+        styleConfig = state.styleConfig,
+    )
+    val dictSheet = state.activeSheet as? ReadBookSheet.Dict
+    DictSheet(
+        show = dictSheet != null,
+        word = dictSheet?.word ?: "",
+        onDismissRequest = dismissSheet,
+    )
+    val photoSheet = state.activeSheet as? ReadBookSheet.Photo
+    PhotoSheet(
+        show = photoSheet != null,
+        src = photoSheet?.src ?: "",
+        sourceOrigin = photoSheet?.sourceOrigin,
+        onDismissRequest = dismissSheet,
+    )
+
+    // AlertDialog-based sheets and special cases — conditionally composed
     when (state.activeSheet) {
-        is ReadBookSheet.ShadowSet -> {
-            ShadowSetSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-            )
-        }
-
-        is ReadBookSheet.EffectiveReplaces -> {
-            EffectiveReplacesSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onOpenReplaceEditor = { id, pattern ->
-                    onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
-                },
-                onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
-            )
-        }
-
-        is ReadBookSheet.UnderlineConfig -> {
-            UnderlineConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-            )
-        }
-
-        is ReadBookSheet.FontSelect -> {
-            FontSelectSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onSelectFont = { onIntent(ReadBookIntent.SelectFont(it)) },
-                onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectSystemTypeface(it)) },
-                onOpenFolderPicker = { onIntent(ReadBookIntent.OpenFontFolderPicker) },
-            )
-        }
-
-        is ReadBookSheet.ToolButtonConfig -> {
-            ToolButtonConfigSheet(
-                items = state.menuConfig.bottomBarButtons,
-                customIcons = state.menuConfig.readMenuCustomIcons,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-            )
-        }
-
-        is ReadBookSheet.TitleBarIconConfig -> {
-            TitleBarIconSheet(
-                items = state.menuConfig.titleBarButtons,
-                customIcons = state.menuConfig.titleBarCustomIcons,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-            )
-        }
-
-        is ReadBookSheet.RegexColorConfig -> {
-            RegexColorConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-                onOpenFontSelect = { index ->
-                    onIntent(ReadBookIntent.SelectRegexColorFont(index))
-                },
-            )
-        }
-
-        is ReadBookSheet.ContentEdit -> {
-            ContentEditSheet(
-                state = state,
-                onIntent = onIntent,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-            )
-        }
-
-        is ReadBookSheet.MoreConfig -> {
-            MoreConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-                onOpenClickRegionalConfig = {
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ClickActionConfig))
-                },
-                onOpenPageKeyConfig = {
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageKeyConfig))
-                },
-            )
-        }
-
-        is ReadBookSheet.ReadAloudConfig -> {
-            ReadAloudConfigSheet(
-                state = state,
-                onIntent = onIntent,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-            )
-        }
-
-        is ReadBookSheet.SpeakEngineConfig -> {
-            SpeakEngineConfigSheet(
-                items = state.ttsEngineItems,
-                selectedValue = state.selectedTtsEngine,
-                onSelect = { onIntent(ReadBookIntent.ApplySpeakEngine(it)) },
-                onDismissRequest = {
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
-                },
-            )
-        }
-
-        is ReadBookSheet.PreDownloadConfig -> {
-            ReadAloudNumberConfigSheet(
-                title = stringResource(R.string.read_aloud_preload),
-                description = stringResource(R.string.read_aloud_preload_summary, state.preDownloadNum),
-                value = state.preDownloadNum,
-                defaultValue = 10,
-                valueRange = 0f..100f,
-                onValueChange = { onIntent(ReadBookIntent.ApplyPreDownloadNum(it)) },
-                onDismissRequest = {
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
-                },
-            )
-        }
-
-        is ReadBookSheet.AudioCacheCleanConfig -> {
-            ReadAloudNumberConfigSheet(
-                title = stringResource(R.string.audio_cache_clean_time),
-                description = stringResource(
-                    R.string.audio_cache_clean_time_summary,
-                    state.audioCacheCleanTime
-                ),
-                value = state.audioCacheCleanTime,
-                defaultValue = 10,
-                valueRange = 0f..10080f,
-                onValueChange = { onIntent(ReadBookIntent.ApplyAudioCacheCleanTime(it)) },
-                onDismissRequest = {
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
-                },
-            )
-        }
-
         is ReadBookSheet.ClickActionConfig -> {
             ClickActionConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
             )
         }
 
         is ReadBookSheet.PageKeyConfig -> {
             PageKeyConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
             )
         }
 
         is ReadBookSheet.PageAnim -> {
             PageAnimConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
                 onAnimChanged = { onIntent(ReadBookIntent.PageAnimChanged) },
             )
         }
 
         is ReadBookSheet.Download -> {
             DownloadSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
                 onDownload = { start, end ->
                     onIntent(ReadBookIntent.DismissSheet)
                     onIntent(ReadBookIntent.DownloadChapters(start, end))
@@ -301,54 +295,19 @@ fun ReadBookScreen(
 
         is ReadBookSheet.Charset -> {
             CharsetConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
             )
         }
 
         is ReadBookSheet.SimulatedReading -> {
             SimulatedReadingSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
+                onDismissRequest = dismissSheet,
                 onApply = { onIntent(ReadBookIntent.ApplySimulatedReading) },
-            )
-        }
-
-        is ReadBookSheet.AppLog -> {
-            AppLogSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onShowStackTrace = { text ->
-                    onIntent(ReadBookIntent.DismissSheet)
-                    onIntent(ReadBookIntent.ShowStackTrace(text))
-                },
-            )
-        }
-
-        is ReadBookSheet.BgTextConfig -> {
-            BgTextConfigSheet(
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-                onIntent = onIntent,
-                onSelectImage = { onIntent(ReadBookIntent.OpenReadStyleImagePicker) },
-                onImportConfig = { onIntent(ReadBookIntent.OpenReadStyleImport) },
-                onExportConfig = { onIntent(ReadBookIntent.OpenReadStyleExport) },
-            )
-        }
-
-        is ReadBookSheet.Dict -> {
-            DictSheet(
-                word = state.activeSheet.word,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
             )
         }
 
         is ReadBookSheet.Bookmark -> {
             // Handled by ViewModel — redirects to menu route
-        }
-
-        is ReadBookSheet.Photo -> {
-            PhotoSheet(
-                src = state.activeSheet.src,
-                sourceOrigin = state.activeSheet.sourceOrigin,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
-            )
         }
 
         is ReadBookSheet.InfoConfig -> {
@@ -448,5 +407,8 @@ fun ReadBookScreen(
         }
 
         null -> {}
+
+        // Sheets using AppModalBottomSheet are composed unconditionally above
+        else -> {}
     }
 }

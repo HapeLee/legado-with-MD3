@@ -4,15 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.DisplayMetrics
 import androidx.annotation.Keep
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.graphics.toColorInt
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.R
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.DefaultData
-import io.legado.app.model.BookCover
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
@@ -26,13 +24,12 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.stackBlur
 import splitties.init.appCtx
 import java.io.File
 
 @Keep
-object OldThemeConfig {
+object ThemeConfigStore {
     const val configFileName = "themeConfig.json"
     val configFilePath = FileUtils.getPath(appCtx.filesDir, configFileName)
 
@@ -46,13 +43,8 @@ object OldThemeConfig {
         else -> Theme.Light
     }
 
-    fun isDarkTheme(): Boolean {
-        return getTheme() == Theme.Dark
-    }
-
     fun applyDayNight(context: Context) {
         initNightMode()
-        BookCover.upDefaultCover()
         postEvent(EventBus.RECREATE, "")
         postEvent(EventBus.UP_CONFIG, arrayListOf(2))
     }
@@ -62,17 +54,7 @@ object OldThemeConfig {
     }
 
     private fun initNightMode() {
-        when (appCtx.getPrefString(PreferKey.themeMode, "0")) {
-            "1" -> {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
-            }
-            "2" -> {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
-            }
-            else -> {
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-            }
-        }
+        ThemeConfig.initNightMode()
     }
 
     fun getBgImage(context: Context, metrics: DisplayMetrics): Bitmap? {
@@ -108,11 +90,6 @@ object OldThemeConfig {
         val json = GSON.toJson(configList)
         FileUtils.delete(configFilePath)
         FileUtils.createFileIfNotExist(configFilePath).writeText(json)
-    }
-
-    fun delConfig(index: Int) {
-        configList.removeAt(index)
-        save()
     }
 
     fun addConfig(json: String): Boolean {
@@ -165,33 +142,8 @@ object OldThemeConfig {
         return null
     }
 
-    fun applyConfig(context: Context, config: Config) {
-        try {
-            val primary = config.primaryColor.toColorInt()
-            if (config.isNightTheme) {
-                context.putPrefInt(PreferKey.cNPrimary, primary)
-            } else {
-                context.putPrefInt(PreferKey.cPrimary, primary)
-            }
-            AppConfig.isNightTheme = config.isNightTheme
-            applyDayNight(context)
-        } catch (e: Exception) {
-            AppLog.put("设置主题出错\n$e", e, true)
-        }
-    }
-
-    fun saveDayTheme(context: Context, name: String) {
-        val config = getDayTheme(context, name)
-        addConfig(config)
-    }
-
-    fun saveNightTheme(context: Context, name: String) {
-        val config = getNightTheme(context, name)
-        addConfig(config)
-    }
-
     /**
-     * 更新主题
+     * 清理无用背景图片
      */
     fun clearBg() {
         val bgImagePath = appCtx.getPrefString(PreferKey.bgImage)

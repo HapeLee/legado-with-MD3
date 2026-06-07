@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ConfigUpdate
@@ -62,7 +63,7 @@ internal fun TextTitlePage(
     onDismissRequest: () -> Unit,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenRegexColor: () -> Unit,
+    onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -91,7 +92,7 @@ internal fun TextTitlePage(
             pagerState = pagerState,
             onOpenShadowSet = onOpenShadowSet,
             onOpenUnderlineConfig = onOpenUnderlineConfig,
-            onOpenRegexColor = onOpenRegexColor,
+            onOpenHighlightRule = onOpenHighlightRule,
             onOpenFontSelect = onOpenFontSelect,
             animateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
             onIntent = onIntent,
@@ -103,7 +104,7 @@ internal fun TextTitlePage(
 fun ReadStyleTextTitleContent(
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenRegexColor: () -> Unit,
+    onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
@@ -128,7 +129,7 @@ fun ReadStyleTextTitleContent(
         pagerState = pagerState,
         onOpenShadowSet = onOpenShadowSet,
         onOpenUnderlineConfig = onOpenUnderlineConfig,
-        onOpenRegexColor = onOpenRegexColor,
+        onOpenHighlightRule = onOpenHighlightRule,
         onOpenFontSelect = onOpenFontSelect,
         animateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
         modifier = modifier,
@@ -144,7 +145,7 @@ internal fun ReadStyleTextTitleContent(
     pagerState: PagerState,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenRegexColor: () -> Unit,
+    onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     animateToPage: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -171,7 +172,7 @@ internal fun ReadStyleTextTitleContent(
                 0 -> TextEffectsPage(
                     onOpenShadowSet = onOpenShadowSet,
                     onOpenUnderlineConfig = onOpenUnderlineConfig,
-                    onOpenRegexColor = onOpenRegexColor,
+                    onOpenHighlightRule = onOpenHighlightRule,
                     onOpenFontSelect = onOpenFontSelect,
                     onIntent = onIntent,
                 )
@@ -201,9 +202,11 @@ internal fun LayoutSpacingPage(
     ) {
         Text(
             text = stringResource(R.string.read_config_body_spacing),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 8.dp),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
         )
 
         TinySliderSettingItem(
@@ -252,7 +255,7 @@ internal fun LayoutSpacingPage(
 internal fun TextEffectsPage(
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
-    onOpenRegexColor: () -> Unit,
+    onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -270,9 +273,11 @@ internal fun TextEffectsPage(
     ) {
         Text(
             text = stringResource(R.string.text_typeface),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 8.dp),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
         )
         TinySwitchSettingItem(
             title = stringResource(R.string.read_config_italic),
@@ -304,9 +309,11 @@ internal fun TextEffectsPage(
         // Colors
         Text(
             text = stringResource(R.string.read_color),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(4.dp))
         TinyColorSettingItem(
@@ -332,9 +339,11 @@ internal fun TextEffectsPage(
 
         Text(
             text = stringResource(R.string.read_config_effects),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(vertical = 8.dp),
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            textAlign = TextAlign.Center,
         )
         TinyClickableSettingItem(
             title = stringResource(R.string.text_shadow_set),
@@ -349,10 +358,10 @@ internal fun TextEffectsPage(
             onClick = onOpenUnderlineConfig,
         )
         TinyClickableSettingItem(
-            title = stringResource(R.string.regex_color_config),
+            title = stringResource(R.string.highlight_rule_config),
             description = stringResource(R.string.read_config_regex_desc),
             imageVector = Icons.Default.Tune,
-            onClick = onOpenRegexColor,
+            onClick = onOpenHighlightRule,
         )
 
         Spacer(Modifier.height(8.dp))

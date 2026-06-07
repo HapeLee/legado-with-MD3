@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
@@ -18,6 +19,10 @@ fun SmallTonalButton(
     selected: Boolean = false,
     icon: ImageVector? = null,
     text: String? = null,
+    contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,
+    containerColor: Color? = null,
+    selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
+    selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
     contentDescription: String? = null
 ) {
     SmallNoMinTouchTarget {
@@ -28,7 +33,11 @@ fun SmallTonalButton(
             selected = selected,
             onLongClick = onLongClick,
             size = if (text == null) smallContainerSize() else null,
-            style = SeriesIconButtonStyle.Tonal
+            style = SeriesIconButtonStyle.Tonal,
+            contentColor = contentColor,
+            containerColor = containerColor,
+            selectedContainerColor = selectedContainerColor,
+            selectedContentColor = selectedContentColor
         ) { contentColor ->
             SeriesButtonContent(
                 icon = icon,

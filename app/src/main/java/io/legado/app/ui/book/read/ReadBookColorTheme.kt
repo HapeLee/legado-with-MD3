@@ -27,13 +27,13 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun ReadBookColorTheme(
-    configUpdateTrigger: Int,
+    styleConfig: ReadBookStyleConfig,
     preferences: ReadPreferences,
     content: @Composable () -> Unit,
 ) {
     ProvideThemeOverride(
         theme = rememberReadBookColorTheme(
-            configUpdateTrigger = configUpdateTrigger,
+            styleConfig = styleConfig,
             preferences = preferences,
         ),
         content = content
@@ -42,14 +42,14 @@ fun ReadBookColorTheme(
 
 @Composable
 private fun rememberReadBookColorTheme(
-    configUpdateTrigger: Int,
+    styleConfig: ReadBookStyleConfig,
     preferences: ReadPreferences,
 ): ThemeOverrideState? {
     val isAppDark = LegadoTheme.isDark
     return when (preferences.readBarStyle) {
-        1 -> rememberReadBackgroundTheme(configUpdateTrigger, isAppDark)
+        1 -> rememberReadBackgroundTheme(styleConfig, isAppDark)
         2 -> rememberCustomReadMenuTheme(
-            configUpdateTrigger = configUpdateTrigger,
+            styleConfig = styleConfig,
             preferences = preferences,
             isAppDark = isAppDark,
         )
@@ -59,15 +59,15 @@ private fun rememberReadBookColorTheme(
 
 @Composable
 private fun rememberReadBackgroundTheme(
-    configUpdateTrigger: Int,
+    styleConfig: ReadBookStyleConfig,
     isAppDark: Boolean,
 ): ThemeOverrideState? {
-    val background = remember(configUpdateTrigger, isAppDark) {
+    val background = remember(styleConfig, isAppDark) {
         runCatching { ReadStyleResolver.currentBackground(ReadBookConfig.durConfig) }.getOrNull()
     } ?: return null
     var seedColor by remember(background) { mutableStateOf<Color?>(null) }
 
-    LaunchedEffect(background, configUpdateTrigger, isAppDark) {
+    LaunchedEffect(background, styleConfig, isAppDark) {
         seedColor = when (background.type) {
             0 -> background.value.toColorOrNull()
             else -> extractCurrentReadBackgroundSeed()
@@ -90,12 +90,12 @@ private fun rememberReadBackgroundTheme(
 
 @Composable
 private fun rememberCustomReadMenuTheme(
-    configUpdateTrigger: Int,
+    styleConfig: ReadBookStyleConfig,
     preferences: ReadPreferences,
     isAppDark: Boolean,
 ): ThemeOverrideState {
     val menuBackgroundColor = remember(
-        configUpdateTrigger,
+        styleConfig,
         preferences.readMenuBgColor,
         preferences.readMenuBgColorNight,
         isAppDark,
@@ -103,7 +103,7 @@ private fun rememberCustomReadMenuTheme(
         Color(preferences.readMenuBackgroundColor(isAppDark))
     }
     val accentColor = remember(
-        configUpdateTrigger,
+        styleConfig,
         preferences.readMenuAccentColor,
         preferences.readMenuAccentColorNight,
         isAppDark,
@@ -111,7 +111,7 @@ private fun rememberCustomReadMenuTheme(
         Color(preferences.readMenuAccentColor(isAppDark))
     }
     val menuContainerColor = remember(
-        configUpdateTrigger,
+        styleConfig,
         preferences.readMenuContainerColor,
         preferences.readMenuContainerColorNight,
         preferences.readMenuBgColor,

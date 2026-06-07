@@ -23,6 +23,7 @@ import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 
 @Composable
 fun ShadowSetSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -34,7 +35,7 @@ fun ShadowSetSheet(
     var showColorPicker by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.text_shadow_set),
     ) {

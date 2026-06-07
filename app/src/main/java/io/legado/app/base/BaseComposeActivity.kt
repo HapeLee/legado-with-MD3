@@ -11,7 +11,7 @@ import androidx.core.view.WindowCompat
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.utils.disableAutoFill
 import io.legado.app.utils.fullScreen
@@ -72,7 +72,7 @@ abstract class BaseComposeActivity(
 
     open fun upBackgroundImage() {
         try {
-            OldThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
+            ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
                 window.setBackgroundDrawable(it.toDrawable(resources))
             }
         } catch (_: Exception) {}

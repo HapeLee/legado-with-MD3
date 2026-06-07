@@ -157,6 +157,15 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleImageSelected(it)) }
     }
 
+    var pendingReadStyleImageIsNight by remember { mutableStateOf(false) }
+    val readStyleImagePickerForMode = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            viewModel.onIntent(ReadBookIntent.ReadStyleImageSelectedForMode(it, pendingReadStyleImageIsNight))
+        }
+    }
+
     val readStyleImportPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -307,6 +316,10 @@ fun ReadBookRouteScreen(
                         is ReadBookEffect.OpenReadStyleImagePicker -> {
                             readStyleImagePicker.launch(arrayOf("image/*"))
                         }
+                        is ReadBookEffect.OpenReadStyleImagePickerForMode -> {
+                            pendingReadStyleImageIsNight = effect.isNight
+                            readStyleImagePickerForMode.launch(arrayOf("image/*"))
+                        }
                         is ReadBookEffect.OpenReadStyleImport -> {
                             readStyleImportPicker.launch(
                                 arrayOf("application/zip", "application/octet-stream", "*/*")
@@ -361,7 +374,7 @@ fun ReadBookRouteScreen(
             )
         }
         ReadBookColorTheme(
-            configUpdateTrigger = state.configUpdateTrigger,
+            styleConfig = state.styleConfig,
             preferences = readPreferences,
         ) {
             ReadBookMenuBar(

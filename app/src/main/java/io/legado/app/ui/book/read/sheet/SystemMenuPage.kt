@@ -24,8 +24,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,7 +38,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -53,6 +50,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
+import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -173,14 +171,13 @@ internal fun SystemMenuPage(
         )
     }
 
-    if (showIconSheet) {
-        BottomBarIconSheet(
-            items = bottomBarButtons,
-            customIcons = customIcons,
-            onDismissRequest = { showIconSheet = false },
-            onIntent = onIntent,
-        )
-    }
+    BottomBarIconSheet(
+        show = showIconSheet,
+        items = bottomBarButtons,
+        customIcons = customIcons,
+        onDismissRequest = { showIconSheet = false },
+        onIntent = onIntent,
+    )
 }
 
 // ========== Tab 0: Global ==========
@@ -700,16 +697,6 @@ private fun countCustomIcons(value: String): Int {
 }
 
 // ========== Helpers ==========
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
-}
 
 internal data class ReadMenuButtonInfo(
     val id: String,

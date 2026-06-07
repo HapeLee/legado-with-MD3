@@ -33,6 +33,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun EffectiveReplacesSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onOpenReplaceEditor: (id: Long, pattern: String?) -> Unit,
     onReplaceRuleChanged: () -> Unit,
@@ -55,7 +56,7 @@ fun EffectiveReplacesSheet(
     var showChineseConvertDialog by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = {
             if (isEdited) onReplaceRuleChanged()
             onDismissRequest()
@@ -78,7 +79,7 @@ fun EffectiveReplacesSheet(
                                 onOpenReplaceEditor(rule.id, rule.pattern)
                             }
                         }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(vertical = 12.dp),
                 )
                 HorizontalDivider()
             }

@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream
 
 @Composable
 fun PhotoSheet(
+    show: Boolean,
     src: String,
     sourceOrigin: String? = null,
     onDismissRequest: () -> Unit,
@@ -35,7 +36,7 @@ fun PhotoSheet(
     val context = LocalContext.current
 
     AppModalBottomSheet(
-        show = true,
+        show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.photo),
     ) {
@@ -98,7 +99,7 @@ fun PhotoSheet(
             },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(vertical = 8.dp),
         )
     }
 }

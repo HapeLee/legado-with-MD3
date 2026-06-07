@@ -18,6 +18,7 @@ import io.legado.app.ui.widget.components.FontSelectSheet as SharedFontSelectShe
 
 @Composable
 fun FontSelectSheet(
+    show: Boolean,
     onDismissRequest: () -> Unit,
     onSelectFont: (String) -> Unit,
     onSelectSystemTypeface: (Int) -> Unit,
@@ -40,10 +41,10 @@ fun FontSelectSheet(
     }
 
     SharedFontSelectSheet(
+        show = show,
         title = stringResource(R.string.select_font),
         fontFolderUri = fontFolderUri,
         selectedFontName = curName,
-        showPreview = false,
         onDismissRequest = onDismissRequest,
         onSelectFont = { doc -> onSelectFont(doc.toString()) },
         onOpenFolderPicker = onOpenFolderPicker,

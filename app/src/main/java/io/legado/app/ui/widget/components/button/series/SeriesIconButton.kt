@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -65,6 +64,7 @@ internal fun SeriesButton(
     size: DpSize? = null,
     style: SeriesIconButtonStyle = SeriesIconButtonStyle.Plain,
     contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,
+    containerColor: Color? = null,
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
     content: @Composable (Color) -> Unit
@@ -73,7 +73,7 @@ internal fun SeriesButton(
         targetValue = when {
             !enabled -> disabledContainerColor(style)
             selected -> selectedContainerColor
-            else -> containerColor(style)
+            else -> containerColor ?: containerColor(style)
         },
         animationSpec = tween(150),
         label = "SeriesIconContainerColor"
@@ -129,6 +129,7 @@ internal fun SeriesIconButton(
     iconSize: Dp,
     style: SeriesIconButtonStyle = SeriesIconButtonStyle.Plain,
     contentColor: Color = LegadoTheme.colorScheme.onSurfaceVariant,
+    containerColor: Color? = null,
     selectedContainerColor: Color = LegadoTheme.colorScheme.primaryContainer,
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
 ) {
@@ -141,6 +142,7 @@ internal fun SeriesIconButton(
         size = size,
         style = style,
         contentColor = contentColor,
+        containerColor = containerColor,
         selectedContainerColor = selectedContainerColor,
         selectedContentColor = selectedContentColor
     ) { resolvedContentColor ->
@@ -290,7 +292,7 @@ private fun disabledContainerColor(style: SeriesIconButtonStyle): Color {
     return when (style) {
         SeriesIconButtonStyle.Plain -> Color.Transparent
         SeriesIconButtonStyle.Tonal,
-        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+        SeriesIconButtonStyle.Outlined -> LegadoTheme.colorScheme.outlineVariant
     }
 }
 
@@ -302,9 +304,9 @@ private fun disabledContentColor(contentColor: Color): Color {
 private fun borderStroke(style: SeriesIconButtonStyle, enabled: Boolean): BorderStroke? {
     return when (style) {
         SeriesIconButtonStyle.Outlined -> if (enabled) {
-            ButtonDefaults.outlinedButtonBorder()
+            BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant)
         } else {
-            BorderStroke(1.dp, LegadoTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+            BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
         }
 
         SeriesIconButtonStyle.Plain,

@@ -27,7 +27,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Theme
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.OldThemeConfig
+import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.lib.theme.primaryColor
 import io.legado.app.utils.applyOpenTint
 import io.legado.app.utils.applyTint
@@ -229,7 +229,7 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun upBackgroundImage() {
         if (imageBg) {
             try {
-                OldThemeConfig.getBgImage(this, windowManager.windowSize)?.let {
+                ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
                     window.decorView.background = it.toDrawable(resources)
                 }
             } catch (e: OutOfMemoryError) {
