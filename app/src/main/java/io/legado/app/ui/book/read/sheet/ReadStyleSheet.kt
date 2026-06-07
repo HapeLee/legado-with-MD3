@@ -97,7 +97,7 @@ fun ReadStyleContent(
     var currentPage by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { page ->
+        snapshotFlow { pagerState.currentPage }.collect { page ->
             currentPage = page
         }
     }
