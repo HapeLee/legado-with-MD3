@@ -45,6 +45,7 @@ import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
+import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.Debounce
 import io.legado.app.utils.GSON
 import io.legado.app.utils.buildMainHandler
@@ -231,6 +232,8 @@ class ReadBookController(
 
         if (toolBarHide) {
             activity.setLightStatusBar(ReadBookConfig.durConfig.curStatusIconDark())
+        } else {
+            activity.setLightStatusBar(ColorUtils.isColorLight(ReadBookConfig.resolvedMenuBgColor))
         }
     }
 

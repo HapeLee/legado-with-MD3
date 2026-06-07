@@ -737,7 +737,7 @@ sealed interface ConfigUpdate {
 
     // --- Layout / style ---
     data class StyleSelect(val index: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class ShareLayout(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
@@ -748,7 +748,7 @@ sealed interface ConfigUpdate {
 
     // --- Menu colors ---
     data class MenuBgColor(val color: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class MenuAccentColor(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
@@ -757,7 +757,7 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
     }
     data class MenuBgColorNight(val color: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
     }
     data class MenuAccentColorNight(val color: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
@@ -766,10 +766,10 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
     }
     data class MenuColorMode(val value: Int) : ConfigUpdate {
-        override val actions = emptySet<ConfigUpdateAction>()
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
     }
     data class ReadBarStyle(val value: Int) : ConfigUpdate {
-        override val actions = emptySet<ConfigUpdateAction>()
+        override val actions = setOf(ConfigUpdateAction.UpdateSystemUi)
     }
 
     // --- Menu bar border ---

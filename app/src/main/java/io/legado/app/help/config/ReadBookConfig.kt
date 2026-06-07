@@ -1,6 +1,7 @@
 package io.legado.app.help.config
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -340,7 +341,29 @@ object ReadBookConfig {
         }
 
     val resolvedMenuBgColor: Int
-        get() = if (ReadStyleResolver.isNightTheme()) readMenuBgColorNight else readMenuBgColor
+        get() {
+            val isNight = ReadStyleResolver.isNightTheme()
+            return when (AppConfig.readBarStyle) {
+                1 -> { // 跟随阅读背景
+                    val background = ReadStyleResolver.currentBackground(durConfig)
+                    if (background.type == 0) {
+                        try {
+                            background.value.toColorInt()
+                        } catch (_: Exception) {
+                            if (isNight) Color.BLACK else Color.WHITE
+                        }
+                    } else {
+                        bgMeanColor.takeIf { it != 0 } ?: (if (isNight) Color.BLACK else Color.WHITE)
+                    }
+                }
+                2 -> { // 自定义
+                    if (isNight) readMenuBgColorNight else readMenuBgColor
+                }
+                else -> {
+                    if (isNight) Color.BLACK else Color.WHITE
+                }
+            }
+        }
 
     val resolvedMenuAccentColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuAccentColorNight else readMenuAccentColor
