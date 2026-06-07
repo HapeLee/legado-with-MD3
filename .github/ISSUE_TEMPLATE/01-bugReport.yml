@@ -51,8 +51,7 @@ body:
   - type: input
     attributes:
       label: 阅读版本 / Legado version
-      description: "请务必填写具体的 noR8 版本号 (例如: 3.22.110823_noR8)"
-      placeholder: "3.22.110823_noR8"
+      placeholder: "3.26.13-beta.10"
     validations:
       required: true
   - type: input
