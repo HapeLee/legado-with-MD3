@@ -13,8 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
@@ -32,6 +30,7 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
 import io.legado.app.ui.widget.components.button.series.AnimatedActionButtonCore
 import io.legado.app.ui.widget.components.button.series.AnimatedIcon
+import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.icon.AppIcons
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.basic.Icon as MiuixIcon
@@ -115,15 +114,11 @@ fun TopBarActionButton(
                 modifier = modifier
             )
         } else {
-            IconButton(
+            MediumPlainButton(
                 onClick = onClick,
-                modifier = modifier
-            ) {
-                Icon(
-                    imageVector = imageVector,
-                    contentDescription = contentDescription
-                )
-            }
+                modifier = modifier,
+                icon = imageVector
+            )
         }
     }
 }
