@@ -44,6 +44,7 @@ import io.legado.app.help.DispatchersMonitor
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
@@ -136,6 +137,10 @@ class App : Application(), ImageLoaderFactory {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
             LogUtils.logDeviceInfo()
+            // 确保 DataStore 迁移后 SP 中的主题配置值未丢失
+            kotlin.runCatching {
+                get<SettingsRepository>().postMigrationSync()
+            }
             //预下载Cronet so
             Cronet.preDownload()
             createNotificationChannels()
