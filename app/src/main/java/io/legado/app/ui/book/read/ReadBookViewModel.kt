@@ -2565,7 +2565,8 @@ class ReadBookViewModel(
             setOf(
                 ConfigUpdateAction.UpdateBackground,
                 ConfigUpdateAction.UpdateStyle,
-                ConfigUpdateAction.UpdateContent
+                ConfigUpdateAction.UpdateContent,
+                ConfigUpdateAction.UpdateSystemUi
             )
         ))
         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
