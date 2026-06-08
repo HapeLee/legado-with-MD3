@@ -97,9 +97,6 @@ fun MoreConfigSheet(
             SectionTitle(stringResource(R.string.page_control))
             PageControlSettings(
                 preferences = preferences,
-                onReadSliderModeChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ReadSliderMode(it)))
-                },
                 onDoubleHorizontalPageChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.DoubleHorizontalPage(it)))
                 },
@@ -248,7 +245,6 @@ private fun ScreenSettings(
 @Composable
 private fun PageControlSettings(
     preferences: ReadPreferences,
-    onReadSliderModeChange: (String) -> Unit,
     onDoubleHorizontalPageChange: (String) -> Unit,
     onProgressBarBehaviorChange: (String) -> Unit,
     onMouseWheelPageChange: (Boolean) -> Unit,
@@ -256,20 +252,11 @@ private fun PageControlSettings(
     onVolumeKeyPageOnPlayChange: (Boolean) -> Unit,
     onKeyPageOnLongPressChange: (Boolean) -> Unit,
 ) {
-    val readSliderModeEntries = stringArrayResource(R.array.read_slider_mode)
-    val readSliderModeValues = stringArrayResource(R.array.read_slider_mode_value)
     val doublePageEntries = stringArrayResource(R.array.double_page_title)
     val doublePageValues = stringArrayResource(R.array.double_page_value)
     val progressBarEntries = stringArrayResource(R.array.progress_bar_behavior_title)
     val progressBarValues = stringArrayResource(R.array.progress_bar_behavior_value)
 
-    TinyDropdownSettingItem(
-        title = stringResource(R.string.read_slider_mode),
-        selectedValue = preferences.readSliderMode,
-        displayEntries = readSliderModeEntries,
-        entryValues = readSliderModeValues,
-        onValueChange = onReadSliderModeChange,
-    )
     TinyDropdownSettingItem(
         title = stringResource(R.string.double_page_horizontal),
         selectedValue = preferences.doubleHorizontalPage,

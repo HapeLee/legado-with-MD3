@@ -178,6 +178,7 @@ data class ReadMenuConfig(
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuIconStyle: Int = 0,
     val readMenuIconShowText: Boolean = true,
+    val readSliderMode: String = "0",
     val titleBarCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),

@@ -1348,6 +1348,7 @@ class ReadBookViewModel(
                 readMenuBottomBarBlurStyle = ReadBookConfig.readMenuBottomBarBlurStyle,
                 readMenuIconStyle = ReadBookConfig.readMenuIconStyle,
                 readMenuIconShowText = ReadBookConfig.readMenuIconShowText,
+                readSliderMode = ReadBookConfig.readSliderMode,
                 titleBarCustomIcons = ReadBookConfig.titleBarCustomIcons.toImmutableMap(),
                 readMenuCustomIcons = ReadBookConfig.readMenuCustomIcons.toImmutableMap(),
                 titleBarButtons = current.menuConfig.titleBarButtons,
@@ -2518,10 +2519,13 @@ class ReadBookViewModel(
                 }
             }
             is ConfigUpdate.ReadSliderMode -> {
+                ReadBookConfig.readSliderMode = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setReadSliderMode(update.value)
                 }
-                postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readSliderMode = update.value))
+                }
             }
             is ConfigUpdate.DoubleHorizontalPage -> {
                 viewModelScope.launch {

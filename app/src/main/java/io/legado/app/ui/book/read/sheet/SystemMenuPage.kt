@@ -419,6 +419,7 @@ private fun BottomBarTab(
     onShowIconSheet: () -> Unit,
     onShowColorPicker: (Int, Int) -> Unit,
 ) {
+    var readSliderMode by remember { mutableStateOf(preferences.readSliderMode) }
     var showIconText by remember { mutableStateOf(preferences.readMenuIconShowText) }
     var iconStyle by remember { mutableIntStateOf(preferences.readMenuIconStyle) }
     var iconsPerRow by remember { mutableIntStateOf(preferences.readMenuIconItemsPerRow) }
@@ -440,6 +441,20 @@ private fun BottomBarTab(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
+        val readSliderModeEntries = stringArrayResource(R.array.read_slider_mode)
+        val readSliderModeValues = stringArrayResource(R.array.read_slider_mode_value)
+
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.read_slider_mode),
+            selectedValue = readSliderMode,
+            displayEntries = readSliderModeEntries,
+            entryValues = readSliderModeValues,
+            onValueChange = {
+                readSliderMode = it
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ReadSliderMode(it)))
+            },
+        )
+
         SectionTitle(stringResource(R.string.read_menu_icon_style))
 
         TinySwitchSettingItem(

@@ -103,9 +103,6 @@
 	<string-array name="read_slider_mode">
 		<item>Always</item>
 		<item>Disable</item>
-		<item>Left button</item>
-		<item>Right button</item>
-		<item>Only slider</item>
 	</string-array>
 
 	<string-array name="title_bar_mode">

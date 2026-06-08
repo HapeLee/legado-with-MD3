@@ -1400,51 +1400,53 @@ private fun MenuBottomBar(
             .animateContentSize(),
     ) {
         // Seek bar row: prev + slider + next
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            BottomBarGlassIconButton(
-                onClick = { onIntent(ReadBookIntent.PrevChapter) },
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                colors = colors,
-                backdrop = backdrop,
-                menuConfig = state.menuConfig,
-                glassEnabled = buttonGlassEnabled,
-            )
-
-            ReadMenuSlider(
-                value = sliderValue.coerceIn(0f, sliderMax),
-                onValueChange = { value ->
-                    sliderDragging = true
-                    sliderValue = value.coerceIn(0f, sliderMax)
-                },
-                onValueChangeFinished = {
-                    commitSliderValue(sliderValue)
-                },
-                onValueCommit = ::commitSliderValue,
-                valueRange = 0f..sliderMax,
-                steps = (seekMax - 1).coerceAtLeast(0),
-                enabled = seekMax > 0,
-                backdrop = backdrop,
-                glassThumbEnabled = buttonGlassEnabled,
+        AnimatedVisibility(visible = state.menuConfig.readSliderMode != "1") {
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
-            )
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BottomBarGlassIconButton(
+                    onClick = { onIntent(ReadBookIntent.PrevChapter) },
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    colors = colors,
+                    backdrop = backdrop,
+                    menuConfig = state.menuConfig,
+                    glassEnabled = buttonGlassEnabled,
+                )
 
-            BottomBarGlassIconButton(
-                onClick = { onIntent(ReadBookIntent.NextChapter) },
-                icon = Icons.AutoMirrored.Filled.ArrowForward,
-                colors = colors,
-                backdrop = backdrop,
-                menuConfig = state.menuConfig,
-                glassEnabled = buttonGlassEnabled,
-            )
+                ReadMenuSlider(
+                    value = sliderValue.coerceIn(0f, sliderMax),
+                    onValueChange = { value ->
+                        sliderDragging = true
+                        sliderValue = value.coerceIn(0f, sliderMax)
+                    },
+                    onValueChangeFinished = {
+                        commitSliderValue(sliderValue)
+                    },
+                    onValueCommit = ::commitSliderValue,
+                    valueRange = 0f..sliderMax,
+                    steps = (seekMax - 1).coerceAtLeast(0),
+                    enabled = seekMax > 0,
+                    backdrop = backdrop,
+                    glassThumbEnabled = buttonGlassEnabled,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                )
+
+                BottomBarGlassIconButton(
+                    onClick = { onIntent(ReadBookIntent.NextChapter) },
+                    icon = Icons.AutoMirrored.Filled.ArrowForward,
+                    colors = colors,
+                    backdrop = backdrop,
+                    menuConfig = state.menuConfig,
+                    glassEnabled = buttonGlassEnabled,
+                )
+            }
         }
 
         Spacer(Modifier.height(8.dp))

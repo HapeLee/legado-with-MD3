@@ -210,9 +210,6 @@
     <string-array name="read_slider_mode">
         <item>常驻</item>
         <item>不显示</item>
-        <item>按钮置左</item>
-        <item>按钮置右</item>
-        <item>仅显示滑动条</item>
     </string-array>
 
     <string-array name="title_bar_mode">
