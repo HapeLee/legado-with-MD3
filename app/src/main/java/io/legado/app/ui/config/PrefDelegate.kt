@@ -3,8 +3,16 @@ package io.legado.app.ui.config
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import io.legado.app.data.repository.dataStore
+import io.legado.app.help.config.DsSync
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.getPrefFloat
 import io.legado.app.utils.getPrefInt
@@ -16,20 +24,15 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
-import io.legado.app.help.config.DsSync
-import androidx.datastore.preferences.core.*
-import io.legado.app.data.repository.dataStore
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.IOException
 import kotlin.properties.ReadWriteProperty
@@ -37,13 +40,11 @@ import kotlin.reflect.KProperty
 
 interface PrefDelegate<T> : ReadWriteProperty<Any?, T> {
     val state: State<T>
-    val ready: CompletableDeferred<Unit>
     fun dispose()
 }
 
 class PrefStateDelegate<T>(private val delegate: PrefDelegate<T>) : ReadWriteProperty<Any?, T> by delegate {
     val state: State<T> get() = delegate.state
-    val ready: CompletableDeferred<Unit> get() = delegate.ready
 }
 
 fun <T> prefDelegate(
@@ -54,24 +55,15 @@ fun <T> prefDelegate(
     onValueChange: ((T) -> Unit)? = null
 ): PrefDelegate<T> {
     return object : PrefDelegate<T>, DefaultLifecycleObserver {
-        private var _value: MutableState<T> = mutableStateOf(defaultValue)
+        private var _value: MutableState<T>
         override val state: State<T> get() = _value
         private val scope = CoroutineScope(Dispatchers.IO)
         private var dsObserverJob: Job? = null
-        override val ready = CompletableDeferred<Unit>()
 
         init {
-            // 从 DataStore 读取初始值（DS 为唯一读取源）
-            // 在 IO 线程读取，切换到 Main 线程更新 MutableState，确保 snapshotFlow 能检测到变化
-            scope.launch {
-                val dsValue = readFromDs()
-                if (dsValue != null) {
-                    withContext(Dispatchers.Main) {
-                        _value.value = dsValue
-                    }
-                }
-                ready.complete(Unit)
-            }
+            // 同步从 DataStore 读取初始值，确保构造完成后即为最新值
+            val initialValue = runBlocking(Dispatchers.IO) { readFromDs() } ?: defaultValue
+            _value = mutableStateOf(initialValue)
             // 观察 DataStore 变化，用于跨实例同步
             dsObserverJob = scope.launch {
                 appCtx.dataStore.data
@@ -100,9 +92,7 @@ fun <T> prefDelegate(
                     .distinctUntilChanged()
                     .collect { dsValue ->
                         if (dsValue != null && _value.value != dsValue) {
-                            withContext(Dispatchers.Main) {
-                                _value.value = dsValue
-                            }
+                            _value.value = dsValue
                             onValueChange?.invoke(dsValue)
                         }
                     }

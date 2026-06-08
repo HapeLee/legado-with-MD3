@@ -71,6 +71,5 @@ class DownloadCacheConfigViewModel(
 
     fun saveUserAgent(input: String) {
         DownloadCacheConfig.userAgent = input
-        AppConfig.userAgent = DownloadCacheConfig.userAgent
     }
 }

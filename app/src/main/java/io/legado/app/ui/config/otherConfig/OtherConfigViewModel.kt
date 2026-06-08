@@ -14,7 +14,6 @@ import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.ReadAloudPreferences
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.help.DirectLinkUpload
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.model.CheckSource
 import io.legado.app.receiver.SharedReceiverActivity
@@ -122,7 +121,6 @@ class OtherConfigViewModel(
 
     fun saveUserAgent(input: String) {
         DownloadCacheConfig.userAgent = input
-        AppConfig.userAgent = DownloadCacheConfig.userAgent
     }
 
     fun updateLocalBookDir(path: String) {
