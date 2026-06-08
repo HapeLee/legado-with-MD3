@@ -25,6 +25,7 @@ import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentData
 import io.legado.app.help.IntentHelp
@@ -235,6 +236,7 @@ fun ReadBookRouteScreen(
         coroutineScope {
             val collector = launch {
                 viewModel.effects.collect { effect ->
+                try {
                     when (effect) {
                         // Launcher-dependent effects — handled directly by route
                         is ReadBookEffect.OpenChapterList -> {
@@ -346,6 +348,9 @@ fun ReadBookRouteScreen(
                         // All other effects — delegate to bridge (View/Window/Activity operations)
                         else -> controller.handleEffect(effect)
                     }
+                } catch (e: Exception) {
+                    AppLog.put("ReadBook effect处理异常: ${effect::class.simpleName}", e)
+                }
                 }
             }
             yield()

@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
@@ -1014,7 +1015,10 @@ class ReadBookController(
 
     private fun registerTimeBatteryReceiver() {
         if (timeBatteryReceiverRegistered) return
-        activity.registerReceiver(timeBatteryReceiver, timeBatteryReceiver.filter)
+        ContextCompat.registerReceiver(
+            activity, timeBatteryReceiver, timeBatteryReceiver.filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
         timeBatteryReceiverRegistered = true
     }
 

@@ -109,7 +109,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     val executor = globalExecutor
 
-    private val ioScope = CoroutineScope(IO)
+    private val ioScope = CoroutineScope(SupervisorJob() + IO)
 
     private var autoSaveJob: Job? = null
 
@@ -376,27 +376,46 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun commitReadSession() {
+        val sessionToCommit = currentActiveSession ?: return
+        currentActiveSession = null
         ioScope.launch {
-            commitSessionInternal()
+            saveSessionToDb(sessionToCommit)
         }
     }
 
     /**
-     * 内部提交逻辑
+     * 内部提交逻辑（auto-save 专用）：保存后立即创建新 session 保证连续记录
      */
     private suspend fun commitSessionInternal() {
         val sessionToSave = currentActiveSession ?: return
         val sessionDuration = sessionToSave.endTime - sessionToSave.startTime
         if (sessionDuration < MIN_READ_DURATION) {
-            currentActiveSession = null
             return
         }
         try {
             readRecordRepository.saveReadSession(sessionToSave)
         } catch (e: Exception) {
             AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
-        } finally {
-            currentActiveSession = null
+            return
+        }
+        // 保存成功后立即创建新 session，避免 auto-save 空窗期
+        currentActiveSession = sessionToSave.copy(
+            startTime = sessionToSave.endTime,
+            endTime = sessionToSave.endTime,
+            words = durChapterIndex.toLong()
+        )
+    }
+
+    /**
+     * 将 session 写入数据库（pause 专用，不重建 session）
+     */
+    private suspend fun saveSessionToDb(session: ReadRecordSession) {
+        val sessionDuration = session.endTime - session.startTime
+        if (sessionDuration < MIN_READ_DURATION) return
+        try {
+            readRecordRepository.saveReadSession(session)
+        } catch (e: Exception) {
+            AppLog.put("保存阅读会话出错: ${session.bookName}", e)
         }
     }
 
