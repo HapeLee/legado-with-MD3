@@ -16,6 +16,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
@@ -1196,7 +1197,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     @JavascriptInterface
     fun getThemeMode(): String {
-        return AppConfig.themeMode ?: "0"
+        return ThemeConfig.themeMode
     }
 
     /**

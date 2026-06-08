@@ -51,7 +51,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var mangaClickActionBC = appCtx.getPrefInt(PreferKey.mangaClickActionBC, 1)
     var mangaClickActionBR = appCtx.getPrefInt(PreferKey.mangaClickActionBR, 1)
 
-    val themeMode get() = ThemeConfig.themeMode
     var AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
 
     var swipeAnimation = appCtx.getPrefBoolean(PreferKey.swipeAnimation, true)
@@ -282,15 +281,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     }
 
     var isNightTheme: Boolean
-        get() = when (themeMode) {
+        get() = when (ThemeConfig.themeMode) {
             "1" -> false
             "2" -> true
             else -> sysConfiguration.isNightMode
         }
         set(value) {
             val newMode = if (value) "2" else "1"
-            if (themeMode != newMode) {
-                appCtx.putPrefString(PreferKey.themeMode, newMode)
+            if (ThemeConfig.themeMode != newMode) {
+                ThemeConfig.themeMode = newMode
             }
         }
 
