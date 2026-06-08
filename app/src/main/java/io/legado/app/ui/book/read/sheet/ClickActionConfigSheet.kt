@@ -1,18 +1,14 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,7 +17,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +26,9 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.card.GlassCard
+import io.legado.app.ui.widget.components.text.AppText
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -38,39 +36,38 @@ import org.koin.compose.koinInject
 fun ClickActionConfigSheet(
     onDismissRequest: () -> Unit,
 ) {
-    val context = LocalContext.current
+    BackHandler(onBack = onDismissRequest)
+
     val readSettingsRepository: ReadSettingsRepository = koinInject()
     val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
         initialValue = ReadPreferences()
     )
     val scope = rememberCoroutineScope()
 
-    val actions = remember {
-        linkedMapOf(
-            -1 to context.getString(R.string.non_action),
-            0 to context.getString(R.string.menu),
-            1 to context.getString(R.string.next_page),
-            2 to context.getString(R.string.prev_page),
-            3 to context.getString(R.string.next_chapter),
-            4 to context.getString(R.string.previous_chapter),
-            5 to context.getString(R.string.read_aloud_prev_paragraph),
-            6 to context.getString(R.string.read_aloud_next_paragraph),
-            7 to context.getString(R.string.bookmark_add),
-            8 to context.getString(R.string.edit_content),
-            9 to context.getString(R.string.replace_state_change),
-            10 to context.getString(R.string.chapter_list),
-            11 to context.getString(R.string.search_content),
-            12 to context.getString(R.string.sync_book_progress_t),
-            13 to context.getString(R.string.read_aloud_pause_resume),
-        )
-    }
+    val actions = linkedMapOf(
+        -1 to stringResource(R.string.non_action),
+        0 to stringResource(R.string.menu),
+        1 to stringResource(R.string.next_page),
+        2 to stringResource(R.string.prev_page),
+        3 to stringResource(R.string.next_chapter),
+        4 to stringResource(R.string.previous_chapter),
+        5 to stringResource(R.string.read_aloud_prev_paragraph),
+        6 to stringResource(R.string.read_aloud_next_paragraph),
+        7 to stringResource(R.string.bookmark_add),
+        8 to stringResource(R.string.edit_content),
+        9 to stringResource(R.string.replace_state_change),
+        10 to stringResource(R.string.chapter_list),
+        11 to stringResource(R.string.search_content),
+        12 to stringResource(R.string.sync_book_progress_t),
+        13 to stringResource(R.string.read_aloud_pause_resume),
+    )
 
     var selectingPrefKey by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+            .background(LegadoTheme.colorScheme.scrim.copy(alpha = 0.6f))
             .clickable(onClick = onDismissRequest),
     ) {
         Column(
@@ -78,23 +75,11 @@ fun ClickActionConfigSheet(
                 .fillMaxSize()
                 .padding(12.dp),
         ) {
-            // Title bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = stringResource(R.string.click_regional_config),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                TextButton(onClick = onDismissRequest) {
-                    Text(stringResource(R.string.close))
-                }
-            }
+            AppText(
+                text = stringResource(R.string.click_regional_config),
+                style = LegadoTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
 
             // 3x3 grid
             Row(
@@ -191,18 +176,20 @@ fun ClickActionConfigSheet(
     }
 
     // Action selector dialog
-    if (selectingPrefKey != null) {
-        val actionKeys = actions.keys.toList()
-        val actionValues = actions.values.toList()
-        AlertDialog(
-            onDismissRequest = { selectingPrefKey = null },
-            containerColor = LegadoTheme.colorScheme.surfaceContainer,
-            title = { Text(stringResource(R.string.select_action)) },
-            text = {
-                Column {
-                    actionValues.forEachIndexed { index, label ->
-                        TextButton(
-                            onClick = {
+    val actionKeys = actions.keys.toList()
+    val actionValues = actions.values.toList()
+    AppAlertDialog(
+        show = selectingPrefKey != null,
+        onDismissRequest = { selectingPrefKey = null },
+        title = stringResource(R.string.select_action),
+        content = {
+            Column {
+                actionValues.forEachIndexed { index, label ->
+                    AppText(
+                        text = label,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
                                 val selectedAction = actionKeys[index]
                                 selectingPrefKey?.let { key ->
                                     scope.launch {
@@ -210,17 +197,14 @@ fun ClickActionConfigSheet(
                                     }
                                 }
                                 selectingPrefKey = null
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(label)
-                        }
-                    }
+                            }
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        style = LegadoTheme.typography.bodyLarge,
+                    )
                 }
-            },
-            confirmButton = {},
-        )
-    }
+            }
+        },
+    )
 }
 
 @Composable
@@ -229,20 +213,21 @@ private fun ClickAreaCell(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = modifier
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                MaterialTheme.shapes.medium,
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+    GlassCard(
+        modifier = modifier,
+        onClick = onClick,
+        containerColor = LegadoTheme.colorScheme.surfaceVariant
+            .copy(alpha = 0.5f),
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            AppText(
+                text = label,
+                style = LegadoTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
