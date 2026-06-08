@@ -7,6 +7,8 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
 import androidx.core.graphics.toColorInt
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.intPreferencesKey
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
@@ -14,6 +16,7 @@ import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadStyleRepository
+import io.legado.app.data.repository.dataStore
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.utils.GSON
@@ -26,7 +29,13 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
+import java.io.IOException
 import java.io.InputStream
 
 /**
@@ -83,6 +92,23 @@ object ReadBookConfig {
     init {
         initConfigs()
         initShareConfig()
+    }
+
+    /**
+     * 从 DataStore 读取 Int 值，DS 无值时回退到 SharedPreferences。
+     * 与 PrefDelegate.readFromDs() 逻辑一致。
+     */
+    private fun readIntFromDataStore(key: String, defaultValue: Int): Int {
+        return runBlocking(Dispatchers.IO) {
+            try {
+                appCtx.dataStore.data
+                    .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+                    .map { it[intPreferencesKey(key)] }
+                    .first() ?: defaultValue
+            } catch (_: Exception) {
+                appCtx.getPrefInt(key, defaultValue)
+            }
+        }
     }
 
     @Synchronized
@@ -179,7 +205,7 @@ object ReadBookConfig {
             }
         }
 
-    private var readStyleSelectValue = appCtx.getPrefInt(PreferKey.readStyleSelect)
+    private var readStyleSelectValue = readIntFromDataStore(PreferKey.readStyleSelect, 0)
     var readStyleSelect: Int
         get() = readStyleSelectValue
         set(value) {
@@ -189,7 +215,8 @@ object ReadBookConfig {
             }
         }
 
-    private var comicStyleSelectValue = appCtx.getPrefInt(PreferKey.comicStyleSelect, readStyleSelect)
+    private var comicStyleSelectValue =
+        readIntFromDataStore(PreferKey.comicStyleSelect, readStyleSelect)
     var comicStyleSelect: Int
         get() = comicStyleSelectValue
         set(value) {

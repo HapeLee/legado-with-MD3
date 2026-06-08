@@ -363,6 +363,7 @@ sealed interface ReadBookIntent {
     data object SaveReadStyleConfig : ReadBookIntent
     data object AddReadStyleConfig : ReadBookIntent
     data object DeleteCurrentReadStyleConfig : ReadBookIntent
+    data class ApplyPresetTheme(val presetIndex: Int) : ReadBookIntent
 
     // Bookshelf
     data object RemoveFromBookshelf : ReadBookIntent
@@ -899,6 +900,9 @@ sealed interface ConfigUpdate {
     }
     data class StatusIconDark(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.ReloadContent)
+    }
+    data class StyleName(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
     }
     data class MenuIconShowText(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()

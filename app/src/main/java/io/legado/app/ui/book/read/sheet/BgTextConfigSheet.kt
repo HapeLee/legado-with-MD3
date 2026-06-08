@@ -1,6 +1,8 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,15 +10,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,26 +29,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
+import io.legado.app.help.DefaultData
 import io.legado.app.ui.book.read.ConfigUpdate
-import io.legado.app.ui.book.read.ReadBookColorPickerIds
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.dialog.TextListInputDialog
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyBgImageModeSettingItem
-import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.hexString
 
 @Composable
@@ -73,6 +79,8 @@ fun BgTextConfigSheet(
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerIsNight by remember { mutableStateOf(false) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var showPresetDialog by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(
         show = show,
@@ -80,7 +88,7 @@ fun BgTextConfigSheet(
             onIntent(ReadBookIntent.SaveReadStyleConfig)
             onDismissRequest()
         },
-        title = stringResource(R.string.style_name),
+        title = styleName,
     ) {
         Column(
             modifier = Modifier
@@ -88,54 +96,28 @@ fun BgTextConfigSheet(
                 .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            // Style name section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.style_name),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = styleName,
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                }
-                Row {
-                    IconButton(onClick = {
-                        // TODO: Show edit name dialog
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_edit),
-                            contentDescription = stringResource(R.string.edit),
-                        )
-                    }
-                    IconButton(onClick = {
-                        onIntent(ReadBookIntent.DeleteCurrentReadStyleConfig)
-                    }) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_clear_all),
-                            contentDescription = stringResource(R.string.delete),
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
             // Action buttons row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 ActionCard(
+                    title = stringResource(R.string.edit),
+                    imageVector = Icons.Default.Edit,
+                    modifier = Modifier.weight(1f),
+                    onClick = { showEditNameDialog = true },
+                )
+                ActionCard(
+                    title = stringResource(R.string.delete),
+                    imageVector = Icons.Default.Delete,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onIntent(ReadBookIntent.DeleteCurrentReadStyleConfig) },
+                )
+                ActionCard(
                     title = stringResource(R.string.restore),
                     imageVector = Icons.Default.Refresh,
                     modifier = Modifier.weight(1f),
-                    onClick = { /* TODO: Show restore presets dialog */ },
+                    onClick = { showPresetDialog = true },
                 )
                 ActionCard(
                     title = stringResource(R.string.import_str),
@@ -251,6 +233,69 @@ fun BgTextConfigSheet(
             },
         )
     }
+
+
+    TextListInputDialog(
+        show = showEditNameDialog,
+        title = stringResource(R.string.style_name),
+        hint = stringResource(R.string.style_name),
+        initialValue = styleName,
+        onDismissRequest = { showEditNameDialog = false },
+        onConfirm = { newName ->
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleName(newName)))
+            showEditNameDialog = false
+        },
+    )
+
+    val presets = DefaultData.readConfigs
+    AppAlertDialog(
+        show = showPresetDialog,
+        onDismissRequest = { showPresetDialog = false },
+        title = stringResource(R.string.restore),
+        content = {
+            presets.forEachIndexed { index, preset ->
+                val bgColor = runCatching { preset.bgStr.toColorInt() }
+                    .getOrDefault(0xFFEEEEEE.toInt())
+                val textColor = runCatching { preset.curTextColor() }
+                    .getOrDefault(0xFF000000.toInt())
+                NormalCard(
+                    onClick = {
+                        onIntent(ReadBookIntent.ApplyPresetTheme(index))
+                        showPresetDialog = false
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color(bgColor))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color(textColor))
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        AppText(
+                            text = preset.name.ifBlank { "预设${index}" },
+                            style = LegadoTheme.typography.labelMediumEmphasized
+                        )
+                    }
+                }
+            }
+        },
+    )
 }
 
 @Composable

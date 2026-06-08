@@ -28,6 +28,7 @@ import io.legado.app.domain.model.ReadingProgress
 import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.DefaultData
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -63,8 +64,8 @@ import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
 import io.legado.app.utils.NetworkUtils
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.StringUtils
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isTrue
@@ -704,6 +705,26 @@ class ReadBookViewModel(
                         setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
                     ))
                 }
+            }
+            is ReadBookIntent.ApplyPresetTheme -> {
+                val presets = DefaultData.readConfigs
+                val preset = presets.getOrNull(intent.presetIndex) ?: return@onIntent
+                ReadBookConfig.durConfig =
+                    GSON.fromJsonObject<ReadBookConfig.Config>(GSON.toJson(preset)).getOrNull()
+                        ?: return@onIntent
+                readBookStyleConfigRepository.save()
+                _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
+                _effects.tryEmit(
+                    ReadBookEffect.UpdateReadViewConfig(
+                        setOf(
+                            ConfigUpdateAction.UpdateBackground,
+                            ConfigUpdateAction.UpdateBackgroundAlpha,
+                            ConfigUpdateAction.UpdateStyle,
+                            ConfigUpdateAction.UpdateSystemUi,
+                            ConfigUpdateAction.ReloadContent
+                        )
+                    )
+                )
             }
             is ReadBookIntent.OpenBgTextConfig -> {
                 ReadBookConfig.styleSelect = intent.index
@@ -2246,6 +2267,7 @@ class ReadBookViewModel(
             is ConfigUpdate.BgTypeEInk -> ReadBookConfig.durConfig.bgTypeEInk = update.value
             is ConfigUpdate.BgAlpha -> ReadBookConfig.bgAlpha = update.value
             is ConfigUpdate.StatusIconDark -> ReadBookConfig.durConfig.setCurStatusIconDark(update.value)
+            is ConfigUpdate.StyleName -> ReadBookConfig.durConfig.name = update.value
             is ConfigUpdate.MenuIconShowText -> {
                 ReadBookConfig.readMenuIconShowText = update.value
                 viewModelScope.launch {
