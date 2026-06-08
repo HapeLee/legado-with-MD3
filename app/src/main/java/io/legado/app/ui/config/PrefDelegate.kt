@@ -1,17 +1,10 @@
 package io.legado.app.ui.config
 
-import android.content.SharedPreferences
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
-import io.legado.app.utils.defaultSharedPreferences
-import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.getPrefFloat
-import io.legado.app.utils.getPrefInt
-import io.legado.app.utils.getPrefLong
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
@@ -24,8 +17,10 @@ import io.legado.app.data.repository.dataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
@@ -49,39 +44,41 @@ fun <T> prefDelegate(
     sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefDelegate<T> {
-    return object : PrefDelegate<T>, SharedPreferences.OnSharedPreferenceChangeListener, DefaultLifecycleObserver {
-        private var _value: MutableState<T> = mutableStateOf(readInitialValue())
+    return object : PrefDelegate<T>, DefaultLifecycleObserver {
+        private var _value: MutableState<T> = mutableStateOf(defaultValue)
         override val state: State<T> get() = _value
+        private val scope = CoroutineScope(Dispatchers.IO)
         private var dsObserverJob: Job? = null
 
         init {
-            if (lifecycleOwner != null) {
-                lifecycleOwner.lifecycle.addObserver(this)
-            } else {
-                appCtx.defaultSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+            // 从 DataStore 读取初始值（DS 为唯一读取源）
+            scope.launch {
+                val dsValue = readFromDs()
+                if (dsValue != null) {
+                    _value.value = dsValue
+                }
             }
-            // 观察 DataStore，以 DS 为读取权威源
-            dsObserverJob = CoroutineScope(Dispatchers.IO).launch {
+            // 观察 DataStore 变化，用于跨实例同步
+            dsObserverJob = scope.launch {
                 appCtx.dataStore.data
                     .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
                     .map { prefs ->
-                        // 安全读取 String 值，用于类型回退（类型不匹配时返回 null）
                         val strVal = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
                         @Suppress("UNCHECKED_CAST")
                         when {
                             defaultValue is String || defaultValue == null ->
                                 strVal as T?
                             defaultValue is Int ->
-                                (prefs[intPreferencesKey(key)]
+                                (runCatching { prefs[intPreferencesKey(key)] }.getOrNull()
                                     ?: strVal?.toIntOrNull()) as T?
                             defaultValue is Boolean ->
-                                (prefs[booleanPreferencesKey(key)]
+                                (runCatching { prefs[booleanPreferencesKey(key)] }.getOrNull()
                                     ?: strVal?.toBooleanStrictOrNull()) as T?
                             defaultValue is Long ->
-                                (prefs[longPreferencesKey(key)]
+                                (runCatching { prefs[longPreferencesKey(key)] }.getOrNull()
                                     ?: strVal?.toLongOrNull()) as T?
                             defaultValue is Float ->
-                                (prefs[floatPreferencesKey(key)]
+                                (runCatching { prefs[floatPreferencesKey(key)] }.getOrNull()
                                     ?: strVal?.toFloatOrNull()) as T?
                             else -> null
                         }
@@ -94,10 +91,10 @@ fun <T> prefDelegate(
                         }
                     }
             }
-        }
-
-        override fun onCreate(owner: LifecycleOwner) {
-            appCtx.defaultSharedPreferences.registerOnSharedPreferenceChangeListener(this)
+            // 注册生命周期观察者（如果有）
+            if (lifecycleOwner != null) {
+                lifecycleOwner.lifecycle.addObserver(this)
+            }
         }
 
         override fun onDestroy(owner: LifecycleOwner) {
@@ -105,25 +102,7 @@ fun <T> prefDelegate(
         }
 
         override fun dispose() {
-            appCtx.defaultSharedPreferences.unregisterOnSharedPreferenceChangeListener(this)
             dsObserverJob?.cancel()
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        private fun readInitialValue(): T {
-            val prefs = appCtx.defaultSharedPreferences
-            return when {
-                defaultValue is String -> appCtx.getPrefString(key, defaultValue) as T
-                defaultValue == null && prefs.contains(key) -> {
-                    appCtx.getPrefString(key, null) as T
-                }
-
-                defaultValue is Int -> appCtx.getPrefInt(key, defaultValue) as T
-                defaultValue is Boolean -> appCtx.getPrefBoolean(key, defaultValue) as T
-                defaultValue is Long -> appCtx.getPrefLong(key, defaultValue) as T
-                defaultValue is Float -> appCtx.getPrefFloat(key, defaultValue) as T
-                else -> defaultValue
-            }
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): T {
@@ -132,6 +111,8 @@ fun <T> prefDelegate(
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
             if (_value.value != value) {
+                _value.value = value
+                // 同步写入 SP（向后兼容：AppConfig/MainViewModel 等仍直接读 SP）
                 when (value) {
                     is String? -> if (sync) appCtx.putPrefStringSync(key, value) else appCtx.putPrefString(key, value)
                     is Int -> appCtx.putPrefInt(key, value)
@@ -139,8 +120,8 @@ fun <T> prefDelegate(
                     is Long -> appCtx.putPrefLong(key, value)
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
-                // 同步写入 DataStore，保持 SP/DS 一致
-                CoroutineScope(Dispatchers.IO).launch {
+                // 同步写入 DataStore（权威存储），确保持久化后再返回
+                runBlocking(Dispatchers.IO) {
                     when (value) {
                         is String? -> DsSync.putString(key, value)
                         is Int -> DsSync.putInt(key, value)
@@ -149,18 +130,42 @@ fun <T> prefDelegate(
                         is Float -> DsSync.putFloat(key, value)
                     }
                 }
-                _value.value = value
                 onValueChange?.invoke(value)
             }
         }
 
-        override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, changedKey: String?) {
-            if (changedKey == key) {
-                val newValue = readInitialValue()
-                if (_value.value != newValue) {
-                    _value.value = newValue
-                    onValueChange?.invoke(newValue)
-                }
+        /**
+         * 从 DataStore 读取当前值。
+         * DS 为唯一读取源，类型不匹配时安全回退到 String 解析。
+         */
+        @Suppress("UNCHECKED_CAST")
+        private suspend fun readFromDs(): T? {
+            return try {
+                appCtx.dataStore.data
+                    .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
+                    .map { prefs ->
+                        val strVal = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
+                        when {
+                            defaultValue is String || defaultValue == null ->
+                                strVal as T?
+                            defaultValue is Int ->
+                                (runCatching { prefs[intPreferencesKey(key)] }.getOrNull()
+                                    ?: strVal?.toIntOrNull()) as T?
+                            defaultValue is Boolean ->
+                                (runCatching { prefs[booleanPreferencesKey(key)] }.getOrNull()
+                                    ?: strVal?.toBooleanStrictOrNull()) as T?
+                            defaultValue is Long ->
+                                (runCatching { prefs[longPreferencesKey(key)] }.getOrNull()
+                                    ?: strVal?.toLongOrNull()) as T?
+                            defaultValue is Float ->
+                                (runCatching { prefs[floatPreferencesKey(key)] }.getOrNull()
+                                    ?: strVal?.toFloatOrNull()) as T?
+                            else -> null
+                        }
+                    }
+                    .first()
+            } catch (e: Exception) {
+                null
             }
         }
     }

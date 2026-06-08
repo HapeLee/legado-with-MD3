@@ -2587,7 +2587,6 @@ class ReadBookViewModel(
             else -> "0" // dark → follow system
         }
         ThemeConfig.themeMode = nextMode
-        AppConfig.themeMode = nextMode
         _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(

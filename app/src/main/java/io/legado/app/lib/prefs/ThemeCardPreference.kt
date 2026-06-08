@@ -19,7 +19,6 @@ import com.google.android.material.card.MaterialCardView
 import io.legado.app.R
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
@@ -90,7 +89,7 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
                             context.toastOnUi(R.string.transparent_theme_alarm)
                             return@setOnClickListener
                         } else {
-                            AppConfig.containerOpacity = 0
+                            ThemeConfig.containerOpacity = 0
                         }
                     }
                     val oldValue = currentValue

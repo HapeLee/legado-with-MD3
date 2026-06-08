@@ -1007,7 +1007,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var pureBlack
         get() = appCtx.getPrefBoolean(PreferKey.pureBlack, false)
         set(value) {
-            appCtx.getPrefBoolean(PreferKey.pureBlack, value)
+            appCtx.putPrefBoolean(PreferKey.pureBlack, value)
         }
 
     val hasLightBg: Boolean

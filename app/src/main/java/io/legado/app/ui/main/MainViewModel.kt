@@ -1,19 +1,16 @@
 package io.legado.app.ui.main
 
 import android.app.Application
-import android.content.SharedPreferences
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.snapshotFlow
+import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.EventBus
-import io.legado.app.constant.PreferKey
 import io.legado.app.domain.usecase.AppStartupMaintenanceUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.my.PrefClickEvent
-import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.eventBus.FlowEventBus
-import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.getPrefString
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -21,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 class MainViewModel(
     application: Application,
@@ -28,38 +26,23 @@ class MainViewModel(
     private val webDavBackupUseCase: WebDavBackupUseCase
 ) : BaseViewModel(application) {
 
-    private val prefs = context.defaultSharedPreferences
-    private val mainPreferenceKeys = setOf(
-        PreferKey.showDiscovery,
-        PreferKey.showHome,
-        PreferKey.showRss,
-        PreferKey.showBottomView,
-        PreferKey.useFloatingBottomBar,
-        PreferKey.useFloatingBottomBarLiquidGlass,
-        PreferKey.defaultHomePage,
-        PreferKey.labelVisibilityMode,
-        NAV_EXTENDED_KEY
-    )
-    private val preferenceListener =
-        SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key in mainPreferenceKeys) {
-                _uiState.value = readMainUiState()
-            }
-        }
-
     private val _uiState = MutableStateFlow(readMainUiState())
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<MainEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
 
     init {
-        prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
+        // 通过 snapshotFlow 直接观察 ThemeConfig 的 Compose State，全链路走 DS
+        viewModelScope.launch {
+            snapshotFlow {
+                readMainUiState()
+            }.collect { newState ->
+                if (_uiState.value != newState) {
+                    _uiState.value = newState
+                }
+            }
+        }
         deleteNotShelfBook()
-    }
-
-    override fun onCleared() {
-        prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener)
-        super.onCleared()
     }
 
     fun upAllBookToc() {
@@ -149,31 +132,22 @@ data class MainUiState(
     val navExtended: Boolean = false
 )
 
-private const val NAV_EXTENDED_KEY = "navExtended"
-
 private fun MainViewModel.readMainUiState(): MainUiState {
-    val showDiscovery = context.getPrefBoolean(PreferKey.showDiscovery, true)
-    val showHome = context.getPrefBoolean(PreferKey.showHome, true)
-    val showRss = context.getPrefBoolean(PreferKey.showRss, true)
     val destinations = MainDestination.mainDestinations.filter {
         when (it) {
-            MainDestination.Explore -> showDiscovery
-            MainDestination.Home -> showHome
-            MainDestination.Rss -> showRss
+            MainDestination.Explore -> ThemeConfig.showDiscovery
+            MainDestination.Home -> ThemeConfig.showHome
+            MainDestination.Rss -> ThemeConfig.showRss
             else -> true
         }
     }.toImmutableList()
     return MainUiState(
         destinations = destinations,
-        defaultHomePage = context.getPrefString(PreferKey.defaultHomePage, "bookshelf")
-            ?: "bookshelf",
-        showBottomView = context.getPrefBoolean(PreferKey.showBottomView, true),
-        useFloatingBottomBar = context.getPrefBoolean(PreferKey.useFloatingBottomBar, false),
-        useFloatingBottomBarLiquidGlass = context.getPrefBoolean(
-            PreferKey.useFloatingBottomBarLiquidGlass,
-            false
-        ),
-        labelVisibilityMode = context.getPrefString(PreferKey.labelVisibilityMode, "auto") ?: "auto",
-        navExtended = context.getPrefBoolean(NAV_EXTENDED_KEY, false)
+        defaultHomePage = ThemeConfig.defaultHomePage,
+        showBottomView = ThemeConfig.showBottomView,
+        useFloatingBottomBar = ThemeConfig.useFloatingBottomBar,
+        useFloatingBottomBarLiquidGlass = ThemeConfig.useFloatingBottomBarLiquidGlass,
+        labelVisibilityMode = ThemeConfig.labelVisibilityMode,
+        navExtended = ThemeConfig.navExtended
     )
 }

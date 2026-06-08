@@ -79,7 +79,6 @@ import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.help.LauncherIconHelp
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.config.labConfig.LabConfig
@@ -311,7 +310,7 @@ fun ThemeConfigScreen(
                                         context.toastOnUi(R.string.transparent_theme_alarm)
                                         return@ThemeColorSelector
                                     } else {
-                                        AppConfig.containerOpacity = 0
+                                        ThemeConfig.containerOpacity = 0
                                     }
                                 }
                                 val oldTheme = selectedTheme

@@ -36,7 +36,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.core.net.toUri
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.preference.PreferenceManager
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -463,8 +462,6 @@ val Context.channel: String
 
 val Context.isDebuggable: Boolean
     get() = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
-
-val Context.dataStore by preferencesDataStore(name = "settings")
 
 val Context.bookshelfLayoutMode: Int
     get() = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
