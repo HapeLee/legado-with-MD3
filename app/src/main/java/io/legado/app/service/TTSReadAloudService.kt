@@ -10,6 +10,7 @@ import io.legado.app.constant.AppPattern
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ReadAloud
@@ -152,13 +153,13 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
      * 更新朗读速度
      */
     override fun upSpeechRate(reset: Boolean) {
-        if (AppConfig.ttsFlowSys) {
+        if (ReadConfig.ttsFollowSys) {
             if (reset) {
                 clearTTS()
                 initTts()
             }
         } else {
-            val speechRate = (AppConfig.ttsSpeechRate + 5) / 10f
+            val speechRate = (ReadConfig.ttsSpeechRate + 5) / 10f
             textToSpeech?.setSpeechRate(speechRate)
         }
     }

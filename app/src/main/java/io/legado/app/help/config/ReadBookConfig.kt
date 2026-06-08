@@ -7,36 +7,25 @@ import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
 import androidx.core.graphics.toColorInt
-import androidx.datastore.preferences.core.emptyPreferences
-import androidx.datastore.preferences.core.intPreferencesKey
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
-import io.legado.app.data.repository.ReadPreferences
+import androidx.compose.runtime.State
 import io.legado.app.data.repository.ReadStyleRepository
-import io.legado.app.data.repository.dataStore
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.ui.config.PrefDelegate
+import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getMeanColor
-import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.getPrefFloat
-import io.legado.app.utils.getPrefInt
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.hexString
-import io.legado.app.utils.putPrefBoolean
-import io.legado.app.utils.putPrefInt
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
-import java.io.IOException
 import java.io.InputStream
+import kotlin.properties.ReadWriteProperty
+import kotlin.reflect.KProperty
 
 /**
  * 阅读界面配置
@@ -45,6 +34,40 @@ import java.io.InputStream
 @Keep
 object ReadBookConfig {
     private val readStyleRepository = ReadStyleRepository()
+
+    // region prefDelegate helpers
+
+    /** 读写时自动 coerceIn 的 prefDelegate */
+    private fun <T : Comparable<T>> clampedPrefDelegate(
+        key: String,
+        defaultValue: T,
+        range: ClosedRange<T>,
+    ): PrefDelegate<T> {
+        val raw = prefDelegate(key, defaultValue)
+        return object : PrefDelegate<T> {
+            override val state: State<T> get() = raw.state
+            override fun dispose() = raw.dispose()
+            override fun getValue(thisRef: Any?, property: KProperty<*>): T =
+                raw.getValue(thisRef, property).coerceIn(range)
+            override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) =
+                raw.setValue(thisRef, property, value.coerceIn(range))
+        }
+    }
+
+    /** Map<String,String> 存储为 JSON String 的 prefDelegate */
+    private class PrefDelegateMap(
+        key: String,
+        private val parse: (String?) -> Map<String, String>,
+        private val encode: (Map<String, String>) -> String,
+    ) : ReadWriteProperty<Any?, Map<String, String>> {
+        private val raw = prefDelegate<String?>(key, null)
+        override fun getValue(thisRef: Any?, property: KProperty<*>): Map<String, String> =
+            parse(raw.getValue(thisRef, property))
+        override fun setValue(thisRef: Any?, property: KProperty<*>, value: Map<String, String>) =
+            raw.setValue(thisRef, property, encode(value))
+    }
+
+    // endregion
 
     // region Tip position constants
     const val tipNone = 0
@@ -92,23 +115,6 @@ object ReadBookConfig {
     init {
         initConfigs()
         initShareConfig()
-    }
-
-    /**
-     * 从 DataStore 读取 Int 值，DS 无值时回退到 SharedPreferences。
-     * 与 PrefDelegate.readFromDs() 逻辑一致。
-     */
-    private fun readIntFromDataStore(key: String, defaultValue: Int): Int {
-        return runBlocking(Dispatchers.IO) {
-            try {
-                appCtx.dataStore.data
-                    .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-                    .map { it[intPreferencesKey(key)] }
-                    .first() ?: defaultValue
-            } catch (_: Exception) {
-                appCtx.getPrefInt(key, defaultValue)
-            }
-        }
     }
 
     @Synchronized
@@ -179,195 +185,115 @@ object ReadBookConfig {
         }
     }
 
-    // Runtime compatibility snapshot. New write/read flows should use ReadSettingsRepository.
-    private var readBodyToLhValue = appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)
-    var readBodyToLh: Boolean
-        get() = readBodyToLhValue
-        set(value) {
-            readBodyToLhValue = value
-        }
+    // region Scalar properties (prefDelegate — auto-syncs SP + DataStore)
 
-    private var autoReadSpeedValue = appCtx.getPrefInt(PreferKey.autoReadSpeed, 10)
-    var autoReadSpeed: Int
-        get() = autoReadSpeedValue
-        set(value) {
-            autoReadSpeedValue = value
-            appCtx.putPrefInt(PreferKey.autoReadSpeed, value)
-        }
+    var readBodyToLh by prefDelegate(PreferKey.readBodyToLh, true)
+    var autoReadSpeed by prefDelegate(PreferKey.autoReadSpeed, 10)
+    var readStyleSelect by prefDelegate(PreferKey.readStyleSelect, 0)
+    var comicStyleSelect by prefDelegate(PreferKey.comicStyleSelect, 0)
+    var shareLayout by prefDelegate(PreferKey.shareLayout, false)
+    var textFullJustify by prefDelegate(PreferKey.textFullJustify, true)
+    var textBottomJustify by prefDelegate(PreferKey.textBottomJustify, true)
+    var hideStatusBar by prefDelegate(PreferKey.hideStatusBar, false)
+    var hideNavigationBar by prefDelegate(PreferKey.hideNavigationBar, false)
+    var useZhLayout by prefDelegate(PreferKey.useZhLayout, false)
+    var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, true)
+    var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, false)
+    var readMenuTopBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuTopBarLiquidGlassButtons, false)
+    var readMenuBottomBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuBottomBarLiquidGlassButtons, false)
+    var readMenuBorderColor by prefDelegate(PreferKey.readMenuBorderColor, 0)
+    var readMenuBorderColorNight by prefDelegate(PreferKey.readMenuBorderColorNight, 0)
+    var showTitleBarIcons by prefDelegate(PreferKey.showTitleBarIcons, true)
+    var readSliderMode by prefDelegate(PreferKey.readSliderMode, "0")
 
     var styleSelect: Int
         get() = if (isComic) comicStyleSelect else readStyleSelect
         set(value) {
-            if (isComic) {
-                comicStyleSelect = value
-            } else {
-                readStyleSelect = value
-            }
+            if (isComic) comicStyleSelect = value else readStyleSelect = value
         }
 
-    private var readStyleSelectValue = readIntFromDataStore(PreferKey.readStyleSelect, 0)
-    var readStyleSelect: Int
-        get() = readStyleSelectValue
-        set(value) {
-            readStyleSelectValue = value
-            if (appCtx.getPrefInt(PreferKey.readStyleSelect) != value) {
-                appCtx.putPrefInt(PreferKey.readStyleSelect, value)
-            }
-        }
+    // endregion
 
-    private var comicStyleSelectValue =
-        readIntFromDataStore(PreferKey.comicStyleSelect, readStyleSelect)
-    var comicStyleSelect: Int
-        get() = comicStyleSelectValue
-        set(value) {
-            comicStyleSelectValue = value
-            if (appCtx.getPrefInt(PreferKey.comicStyleSelect) != value) {
-                appCtx.putPrefInt(PreferKey.comicStyleSelect, value)
-            }
-        }
+    // region coerceIn properties (clampedPrefDelegate)
 
-    private var shareLayoutValue = appCtx.getPrefBoolean(PreferKey.shareLayout)
-    var shareLayout: Boolean
-        get() = shareLayoutValue
-        set(value) {
-            shareLayoutValue = value
-            if (appCtx.getPrefBoolean(PreferKey.shareLayout) != value) {
-                appCtx.putPrefBoolean(PreferKey.shareLayout, value)
-            }
-        }
+    var readMenuColorMode by clampedPrefDelegate(PreferKey.readMenuColorMode, 1, 0..1)
+    var readMenuIconStyle by clampedPrefDelegate(PreferKey.readMenuIconStyle, 0, 0..2)
+    var readMenuIconItemsPerRow by clampedPrefDelegate(PreferKey.readMenuIconItemsPerRow, 5, 2..8)
+    var readMenuIconRowCount by clampedPrefDelegate(PreferKey.readMenuIconRowCount, 1, 1..2)
+    var readMenuBottomCornerRadius by clampedPrefDelegate(PreferKey.readMenuBottomCornerRadius, 0, 0..32)
+    var readMenuTopBarBlurMode by clampedPrefDelegate(PreferKey.readMenuTopBarBlurMode, ReadMenuBlurMode.None, 0..2)
+    var readMenuBottomBarBlurMode by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurMode, ReadMenuBlurMode.None, 0..2)
+    var readMenuTopBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuTopBarBlurStyle, ReadMenuBlurStyle.Progressive, 0..1)
+    var readMenuBottomBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurStyle, ReadMenuBlurStyle.Solid, 0..1)
+    var readMenuBlurRadius by clampedPrefDelegate(PreferKey.readMenuBlurRadius, 24, 0..32)
+    var readMenuBlurAlpha by clampedPrefDelegate(PreferKey.readMenuBlurAlpha, 60, 0..100)
+    var readMenuLensRadius by clampedPrefDelegate(PreferKey.readMenuLensRadius, 24f, 0f..48f)
+    var readMenuBorderWidth by clampedPrefDelegate(PreferKey.readMenuBorderWidth, 0, 0..4)
+    var titleBarIconPosition by clampedPrefDelegate(PreferKey.titleBarIconPosition, 0, 0..3)
 
-    private var textFullJustifyValue = appCtx.getPrefBoolean(PreferKey.textFullJustify, true)
-    private var textBottomJustifyValue = appCtx.getPrefBoolean(PreferKey.textBottomJustify, true)
-    private var hideStatusBarValue = appCtx.getPrefBoolean(PreferKey.hideStatusBar)
-    private var hideNavigationBarValue = appCtx.getPrefBoolean(PreferKey.hideNavigationBar)
-    private var useZhLayoutValue = appCtx.getPrefBoolean(PreferKey.useZhLayout)
-    private var readMenuBgColorValue = appCtx.getPrefInt(PreferKey.readMenuBgColor)
-    private var readMenuAccentColorValue = appCtx.getPrefInt(PreferKey.readMenuAccentColor)
-    private var readMenuContainerColorValue = appCtx.getPrefInt(PreferKey.readMenuContainerColor)
-    private var readMenuBgColorNightValue = appCtx.getPrefInt(PreferKey.readMenuBgColorNight)
-    private var readMenuAccentColorNightValue = appCtx.getPrefInt(PreferKey.readMenuAccentColorNight)
-    private var readMenuContainerColorNightValue = appCtx.getPrefInt(PreferKey.readMenuContainerColorNight)
-    private var readMenuColorModeValue = appCtx.getPrefInt(PreferKey.readMenuColorMode, 1)
-    private var readMenuIconShowTextValue = appCtx.getPrefBoolean(PreferKey.readMenuIconShowText, true)
-    private var readMenuIconStyleValue = appCtx.getPrefInt(PreferKey.readMenuIconStyle)
-    private var readMenuIconItemsPerRowValue = appCtx.getPrefInt(PreferKey.readMenuIconItemsPerRow, 5)
-    private var readMenuIconRowCountValue = appCtx.getPrefInt(PreferKey.readMenuIconRowCount, 1)
-    private var readMenuBottomCornerRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBottomCornerRadius)
-    private var readMenuFloatingBottomBarValue = appCtx.getPrefBoolean(PreferKey.readMenuFloatingBottomBar)
-    private var readMenuTopBarBlurModeValue = appCtx.getPrefInt(
-        PreferKey.readMenuTopBarBlurMode,
-        ReadMenuBlurMode.None
-    )
-    private var readMenuBottomBarBlurModeValue = appCtx.getPrefInt(
-        PreferKey.readMenuBottomBarBlurMode,
-        ReadMenuBlurMode.None
-    )
-    private var readMenuTopBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
-        PreferKey.readMenuTopBarLiquidGlassButtons
-    )
-    private var readMenuBottomBarLiquidGlassButtonsValue = appCtx.getPrefBoolean(
-        PreferKey.readMenuBottomBarLiquidGlassButtons
-    )
-    private var readMenuTopBarBlurStyleValue = appCtx.getPrefInt(
-        PreferKey.readMenuTopBarBlurStyle,
-        ReadMenuBlurStyle.Progressive
-    )
-    private var readMenuBottomBarBlurStyleValue = appCtx.getPrefInt(
-        PreferKey.readMenuBottomBarBlurStyle,
-        ReadMenuBlurStyle.Solid
-    )
-    private var readMenuBlurRadiusValue = appCtx.getPrefInt(PreferKey.readMenuBlurRadius, 24)
-    private var readMenuBlurAlphaValue = appCtx.getPrefInt(PreferKey.readMenuBlurAlpha, 60)
-    private var readMenuLensRadiusValue = appCtx.getPrefFloat(PreferKey.readMenuLensRadius, 24f)
-    private var readMenuBorderWidthValue = appCtx.getPrefInt(PreferKey.readMenuBorderWidth)
-    private var readMenuBorderColorValue = appCtx.getPrefInt(PreferKey.readMenuBorderColor)
-    private var readMenuBorderColorNightValue = appCtx.getPrefInt(PreferKey.readMenuBorderColorNight)
-    private var readMenuCustomIconsValue =
-        parseReadMenuCustomIcons(appCtx.getPrefString(PreferKey.readMenuCustomIcons))
-    private var titleBarCustomIconsValue =
-        parseReadMenuCustomIcons(appCtx.getPrefString(PreferKey.titleBarCustomIcons))
-    private var titleBarIconPositionValue = appCtx.getPrefInt(PreferKey.titleBarIconPosition)
-    private var showTitleBarIconsValue = appCtx.getPrefBoolean(PreferKey.showTitleBarIcons, true)
-    private var readSliderModeValue = appCtx.getPrefString(PreferKey.readSliderMode) ?: "0"
+    // endregion
 
-    fun syncPreferences(preferences: ReadPreferences) {
-        readBodyToLhValue = preferences.readBodyToLh
-        autoReadSpeedValue = preferences.autoReadSpeed
-        readStyleSelectValue = preferences.readStyleSelect
-        comicStyleSelectValue = preferences.comicStyleSelect
-        shareLayoutValue = preferences.shareLayout
-        textFullJustifyValue = preferences.textFullJustify
-        textBottomJustifyValue = preferences.textBottomJustify
-        hideStatusBarValue = preferences.hideStatusBar
-        hideNavigationBarValue = preferences.hideNavigationBar
-        useZhLayoutValue = preferences.useZhLayout
-        readMenuBgColorValue = preferences.readMenuBgColor
-        readMenuAccentColorValue = preferences.readMenuAccentColor
-        readMenuContainerColorValue = preferences.readMenuContainerColor
-        readMenuBgColorNightValue = preferences.readMenuBgColorNight
-        readMenuAccentColorNightValue = preferences.readMenuAccentColorNight
-        readMenuContainerColorNightValue = preferences.readMenuContainerColorNight
-        readMenuColorModeValue = preferences.readMenuColorMode
-        readMenuIconShowTextValue = preferences.readMenuIconShowText
-        readMenuIconStyleValue = preferences.readMenuIconStyle
-        readMenuIconItemsPerRowValue = preferences.readMenuIconItemsPerRow
-        readMenuIconRowCountValue = preferences.readMenuIconRowCount
-        readMenuBottomCornerRadiusValue = preferences.readMenuBottomCornerRadius
-        readMenuFloatingBottomBarValue = preferences.readMenuFloatingBottomBar
-        readMenuTopBarBlurModeValue = preferences.readMenuTopBarBlurMode
-        readMenuBottomBarBlurModeValue = preferences.readMenuBottomBarBlurMode
-        readMenuTopBarLiquidGlassButtonsValue = preferences.readMenuTopBarLiquidGlassButtons
-        readMenuBottomBarLiquidGlassButtonsValue = preferences.readMenuBottomBarLiquidGlassButtons
-        readMenuTopBarBlurStyleValue = preferences.readMenuTopBarBlurStyle
-        readMenuBottomBarBlurStyleValue = preferences.readMenuBottomBarBlurStyle
-        readMenuBlurRadiusValue = preferences.readMenuBlurRadius
-        readMenuBlurAlphaValue = preferences.readMenuBlurAlpha
-        readMenuLensRadiusValue = preferences.readMenuLensRadius
-        readMenuBorderWidthValue = preferences.readMenuBorderWidth
-        readMenuBorderColorValue = preferences.readMenuBorderColor
-        readMenuBorderColorNightValue = preferences.readMenuBorderColorNight
-        readMenuCustomIconsValue = parseReadMenuCustomIcons(preferences.readMenuCustomIcons)
-        titleBarCustomIconsValue = parseReadMenuCustomIcons(preferences.titleBarCustomIcons)
-        titleBarIconPositionValue = preferences.titleBarIconPosition
-        showTitleBarIconsValue = preferences.showTitleBarIcons
-        readSliderModeValue = preferences.readSliderMode
+    // region Color properties (prefDelegate backing + custom fallback getter)
+
+    private val readMenuBgColorDelegate = prefDelegate(PreferKey.readMenuBgColor, 0)
+    var readMenuBgColor: Int
+        get() = readMenuBgColorDelegate.getValue(this, ::readMenuBgColor)
+            .takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = false)
+        set(value) = readMenuBgColorDelegate.setValue(this, ::readMenuBgColor, value)
+
+    private val readMenuAccentColorDelegate = prefDelegate(PreferKey.readMenuAccentColor, 0)
+    var readMenuAccentColor: Int
+        get() = readMenuAccentColorDelegate.getValue(this, ::readMenuAccentColor)
+            .takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = false)
+        set(value) = readMenuAccentColorDelegate.setValue(this, ::readMenuAccentColor, value)
+
+    private val readMenuContainerColorDelegate = prefDelegate(PreferKey.readMenuContainerColor, 0)
+    var readMenuContainerColor: Int
+        get() = readMenuContainerColorDelegate.getValue(this, ::readMenuContainerColor)
+            .takeIf { it != 0 } ?: readMenuBgColor
+        set(value) = readMenuContainerColorDelegate.setValue(this, ::readMenuContainerColor, value)
+
+    private val readMenuBgColorNightDelegate = prefDelegate(PreferKey.readMenuBgColorNight, 0)
+    var readMenuBgColorNight: Int
+        get() = readMenuBgColorNightDelegate.getValue(this, ::readMenuBgColorNight)
+            .takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = true)
+        set(value) = readMenuBgColorNightDelegate.setValue(this, ::readMenuBgColorNight, value)
+
+    private val readMenuAccentColorNightDelegate = prefDelegate(PreferKey.readMenuAccentColorNight, 0)
+    var readMenuAccentColorNight: Int
+        get() = readMenuAccentColorNightDelegate.getValue(this, ::readMenuAccentColorNight)
+            .takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = true)
+        set(value) = readMenuAccentColorNightDelegate.setValue(this, ::readMenuAccentColorNight, value)
+
+    private val readMenuContainerColorNightDelegate = prefDelegate(PreferKey.readMenuContainerColorNight, 0)
+    var readMenuContainerColorNight: Int
+        get() = readMenuContainerColorNightDelegate.getValue(this, ::readMenuContainerColorNight)
+            .takeIf { it != 0 } ?: readMenuBgColorNight
+        set(value) = readMenuContainerColorNightDelegate.setValue(this, ::readMenuContainerColorNight, value)
+
+    // endregion
+
+    // region Map properties (PrefDelegateMap — JSON string serialization)
+
+    fun encodeReadMenuCustomIcons(value: Map<String, String>): String {
+        return GSON.toJson(value.filterValues { it.isNotBlank() })
     }
 
-    var readMenuBgColor: Int
-        get() = readMenuBgColorValue.takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = false)
-        set(value) {
-            readMenuBgColorValue = value
-        }
+    private fun parseReadMenuCustomIcons(value: String?): Map<String, String> {
+        if (value.isNullOrBlank()) return emptyMap()
+        return GSON.fromJsonObject<Map<String, String>>(value).getOrNull()
+            ?.filterValues { it.isNotBlank() } ?: emptyMap()
+    }
 
-    var readMenuAccentColor: Int
-        get() = readMenuAccentColorValue.takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = false)
-        set(value) {
-            readMenuAccentColorValue = value
-        }
+    var readMenuCustomIcons: Map<String, String> by PrefDelegateMap(
+        PreferKey.readMenuCustomIcons, ::parseReadMenuCustomIcons, ::encodeReadMenuCustomIcons,
+    )
 
-    var readMenuContainerColor: Int
-        get() = readMenuContainerColorValue.takeIf { it != 0 } ?: readMenuBgColor
-        set(value) {
-            readMenuContainerColorValue = value
-        }
+    var titleBarCustomIcons: Map<String, String> by PrefDelegateMap(
+        PreferKey.titleBarCustomIcons, ::parseReadMenuCustomIcons, ::encodeReadMenuCustomIcons,
+    )
 
-    var readMenuBgColorNight: Int
-        get() = readMenuBgColorNightValue.takeIf { it != 0 } ?: durConfig.menuBgColor(isNight = true)
-        set(value) {
-            readMenuBgColorNightValue = value
-        }
-
-    var readMenuAccentColorNight: Int
-        get() = readMenuAccentColorNightValue.takeIf { it != 0 } ?: durConfig.menuAccentColor(isNight = true)
-        set(value) {
-            readMenuAccentColorNightValue = value
-        }
-
-    var readMenuContainerColorNight: Int
-        get() = readMenuContainerColorNightValue.takeIf { it != 0 } ?: readMenuBgColorNight
-        set(value) {
-            readMenuContainerColorNightValue = value
-        }
+    // endregion
 
     val resolvedMenuBgColor: Int
         get() {
@@ -400,197 +326,14 @@ object ReadBookConfig {
     val resolvedMenuContainerColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuContainerColorNight else readMenuContainerColor
 
-    var readMenuColorMode: Int
-        get() = readMenuColorModeValue.coerceIn(0, 1)
-        set(value) {
-            readMenuColorModeValue = value.coerceIn(0, 1)
-        }
-
-    var readMenuIconShowText: Boolean
-        get() = readMenuIconShowTextValue
-        set(value) {
-            readMenuIconShowTextValue = value
-        }
-
-    var readMenuIconStyle: Int
-        get() = readMenuIconStyleValue.coerceIn(0, 2)
-        set(value) {
-            readMenuIconStyleValue = value.coerceIn(0, 2)
-        }
-
-    var readMenuIconItemsPerRow: Int
-        get() = readMenuIconItemsPerRowValue.coerceIn(2, 8)
-        set(value) {
-            readMenuIconItemsPerRowValue = value.coerceIn(2, 8)
-        }
-
-    var readMenuIconRowCount: Int
-        get() = readMenuIconRowCountValue.coerceIn(1, 2)
-        set(value) {
-            readMenuIconRowCountValue = value.coerceIn(1, 2)
-        }
-
-    var readMenuBottomCornerRadius: Int
-        get() = readMenuBottomCornerRadiusValue.coerceIn(0, 32)
-        set(value) {
-            readMenuBottomCornerRadiusValue = value.coerceIn(0, 32)
-        }
-
-    var readMenuFloatingBottomBar: Boolean
-        get() = readMenuFloatingBottomBarValue
-        set(value) {
-            readMenuFloatingBottomBarValue = value
-        }
-
-    var readMenuTopBarBlurMode: Int
-        get() = readMenuTopBarBlurModeValue.coerceIn(0, 2)
-        set(value) {
-            readMenuTopBarBlurModeValue = value.coerceIn(0, 2)
-        }
-
-    var readMenuBottomBarBlurMode: Int
-        get() = readMenuBottomBarBlurModeValue.coerceIn(0, 2)
-        set(value) {
-            readMenuBottomBarBlurModeValue = value.coerceIn(0, 2)
-        }
-
-    var readMenuTopBarLiquidGlassButtons: Boolean
-        get() = readMenuTopBarLiquidGlassButtonsValue
-        set(value) {
-            readMenuTopBarLiquidGlassButtonsValue = value
-        }
-
-    var readMenuBottomBarLiquidGlassButtons: Boolean
-        get() = readMenuBottomBarLiquidGlassButtonsValue
-        set(value) {
-            readMenuBottomBarLiquidGlassButtonsValue = value
-        }
-
-    var readMenuTopBarBlurStyle: Int
-        get() = readMenuTopBarBlurStyleValue.coerceIn(0, 1)
-        set(value) {
-            readMenuTopBarBlurStyleValue = value.coerceIn(0, 1)
-        }
-
-    var readMenuBottomBarBlurStyle: Int
-        get() = readMenuBottomBarBlurStyleValue.coerceIn(0, 1)
-        set(value) {
-            readMenuBottomBarBlurStyleValue = value.coerceIn(0, 1)
-        }
-
-    var readMenuBlurRadius: Int
-        get() = readMenuBlurRadiusValue.coerceIn(0, 32)
-        set(value) {
-            readMenuBlurRadiusValue = value.coerceIn(0, 32)
-        }
-
-    var readMenuBlurAlpha: Int
-        get() = readMenuBlurAlphaValue.coerceIn(0, 100)
-        set(value) {
-            readMenuBlurAlphaValue = value.coerceIn(0, 100)
-        }
-
-    var readMenuLensRadius: Float
-        get() = readMenuLensRadiusValue.coerceIn(0f, 48f)
-        set(value) {
-            readMenuLensRadiusValue = value.coerceIn(0f, 48f)
-        }
-
-    var readMenuBorderWidth: Int
-        get() = readMenuBorderWidthValue.coerceIn(0, 4)
-        set(value) {
-            readMenuBorderWidthValue = value.coerceIn(0, 4)
-        }
-
-    var readMenuBorderColor: Int
-        get() = readMenuBorderColorValue
-        set(value) {
-            readMenuBorderColorValue = value
-        }
-
-    var readMenuBorderColorNight: Int
-        get() = readMenuBorderColorNightValue
-        set(value) {
-            readMenuBorderColorNightValue = value
-        }
-
     val resolvedMenuBorderColor: Int
         get() = if (ReadStyleResolver.isNightTheme()) readMenuBorderColorNight else readMenuBorderColor
 
-    var readMenuCustomIcons: Map<String, String>
-        get() = readMenuCustomIconsValue
-        set(value) {
-            readMenuCustomIconsValue = value.filterValues { it.isNotBlank() }
-        }
-
-    var titleBarCustomIcons: Map<String, String>
-        get() = titleBarCustomIconsValue
-        set(value) {
-            titleBarCustomIconsValue = value.filterValues { it.isNotBlank() }
-        }
-
-    // 0=top-left, 1=top-right, 2=bottom-left, 3=bottom-right
-    var titleBarIconPosition: Int
-        get() = titleBarIconPositionValue.coerceIn(0, 3)
-        set(value) {
-            titleBarIconPositionValue = value.coerceIn(0, 3)
-        }
-
-    var showTitleBarIcons: Boolean
-        get() = showTitleBarIconsValue
-        set(value) {
-            showTitleBarIconsValue = value
-        }
-
-    var readSliderMode: String
-        get() = readSliderModeValue
-        set(value) {
-            readSliderModeValue = value
-        }
-
-    fun encodeReadMenuCustomIcons(value: Map<String, String>): String {
-        return GSON.toJson(value.filterValues { it.isNotBlank() })
-    }
-
-    private fun parseReadMenuCustomIcons(value: String?): Map<String, String> {
-        if (value.isNullOrBlank()) {
-            return emptyMap()
-        }
-        return GSON.fromJsonObject<Map<String, String>>(value).getOrNull()
-            ?.filterValues { it.isNotBlank() }
-            ?: emptyMap()
-    }
-    
     val regexColorRules: ArrayList<RegexColorRule> get() = durConfig.regexColorRules
 
     fun saveRegexColorRules() {
         save()
     }
-
-    /**
-     * 两端对齐
-     */
-    val textFullJustify get() = textFullJustifyValue
-
-    /**
-     * 底部对齐
-     */
-    val textBottomJustify get() = textBottomJustifyValue
-    var hideStatusBar: Boolean
-        get() = hideStatusBarValue
-        set(value) {
-            hideStatusBarValue = value
-        }
-    var hideNavigationBar: Boolean
-        get() = hideNavigationBarValue
-        set(value) {
-            hideNavigationBarValue = value
-        }
-    var useZhLayout: Boolean
-        get() = useZhLayoutValue
-        set(value) {
-            useZhLayoutValue = value
-        }
 
     val config get() = if (shareLayout) shareConfig else durConfig
 

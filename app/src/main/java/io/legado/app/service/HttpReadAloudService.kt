@@ -35,6 +35,7 @@ import io.legado.app.data.entities.HttpTTS
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.InputStreamDataSource
 import io.legado.app.help.http.okHttpClient
@@ -128,7 +129,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             ReadBook.readAloud()
         } else {
             super.play()
-            if (AppConfig.streamReadAloudAudio) {
+            if (ReadConfig.streamReadAloudAudio) {
                 downloadAndPlayAudiosStream()
             } else {
                 downloadAndPlayAudios()
@@ -572,7 +573,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         downloadTask?.cancel()
         exoPlayer.stop()
         speechRate = AppConfig.speechRatePlay + 5
-        if (AppConfig.streamReadAloudAudio) {
+        if (ReadConfig.streamReadAloudAudio) {
             downloadAndPlayAudiosStream()
         } else {
             downloadAndPlayAudios()
@@ -650,7 +651,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun deleteCurrentSpeakFile() {
-        if (AppConfig.streamReadAloudAudio) {
+        if (ReadConfig.streamReadAloudAudio) {
             return
         }
         val mediaItem = exoPlayer.currentMediaItem ?: return

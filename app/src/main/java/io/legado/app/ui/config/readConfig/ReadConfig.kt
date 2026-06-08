@@ -189,4 +189,56 @@ object ReadConfig {
         PreferKey.nextKeys,
         ""
     )
+
+    // --- Read Aloud ---
+
+    var ignoreAudioFocus by prefDelegate(
+        PreferKey.ignoreAudioFocus,
+        false
+    )
+
+    var pauseReadAloudWhilePhoneCalls by prefDelegate(
+        PreferKey.pauseReadAloudWhilePhoneCalls,
+        false
+    )
+
+    var readAloudWakeLock by prefDelegate(
+        PreferKey.readAloudWakeLock,
+        false
+    )
+
+    var mediaButtonPerNext by prefDelegate(
+        "mediaButtonPerNext",
+        false
+    )
+
+    var readAloudByPage by prefDelegate(
+        PreferKey.readAloudByPage,
+        false
+    )
+
+    var systemMediaControlCompatibilityChange by prefDelegate(
+        PreferKey.systemMediaControlCompatibilityChange,
+        true
+    )
+
+    var streamReadAloudAudio by prefDelegate(
+        PreferKey.streamReadAloudAudio,
+        false
+    )
+
+    var ttsTimer by prefDelegate(
+        PreferKey.ttsTimer,
+        0
+    )
+
+    var ttsFollowSys by prefDelegate(
+        PreferKey.ttsFollowSys,
+        true
+    )
+
+    var ttsSpeechRate by prefDelegate(
+        PreferKey.ttsSpeechRate,
+        5
+    )
 }

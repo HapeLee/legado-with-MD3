@@ -20,6 +20,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
@@ -590,6 +591,90 @@ class ReadBookViewModel(
                     )
                 }
             }
+
+            is ReadBookIntent.EditHttpTts -> {
+                if (intent.engineId == null) {
+                    _uiState.update {
+                        it.copy(
+                            editingHttpTts = HttpTTS(),
+                            activeSheet = ReadBookSheet.HttpTtsEdit(),
+                        )
+                    }
+                } else {
+                    execute {
+                        appDb.httpTTSDao.get(intent.engineId)
+                    }.onSuccess { tts ->
+                        _uiState.update {
+                            it.copy(
+                                editingHttpTts = tts,
+                                activeSheet = ReadBookSheet.HttpTtsEdit(intent.engineId),
+                            )
+                        }
+                    }
+                }
+            }
+
+            is ReadBookIntent.DeleteHttpTts -> {
+                execute {
+                    appDb.httpTTSDao.get(intent.engineId)?.let { tts ->
+                        appDb.httpTTSDao.delete(tts)
+                    }
+                }.onSuccess {
+                    loadTtsEngineItems()
+                    if (ReadAloud.ttsEngine == intent.engineId.toString()) {
+                        AppConfig.ttsEngine = null
+                        ReadAloud.upReadAloudClass()
+                    }
+                }
+            }
+
+            is ReadBookIntent.SaveHttpTts -> {
+                execute {
+                    appDb.httpTTSDao.insert(intent.httpTTS)
+                }.onSuccess {
+                    loadTtsEngineItems()
+                    _uiState.update {
+                        it.copy(
+                            editingHttpTts = null,
+                            activeSheet = ReadBookSheet.SpeakEngineConfig,
+                        )
+                    }
+                }
+            }
+
+            is ReadBookIntent.ApplySpeakEnginePerBook -> {
+                ReadBook.book?.setTtsEngine(intent.value)
+                _uiState.update {
+                    it.copy(
+                        selectedTtsEngine = ReadAloud.ttsEngine,
+                        speakEngineName = computeSpeakEngineName(),
+                        activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+            }
+
+            is ReadBookIntent.ImportHttpTtsJson -> {
+                execute {
+                    HttpTTS.fromJsonArray(intent.json).getOrDefault(arrayListOf())
+                }.onSuccess { list ->
+                    if (list.isNotEmpty()) {
+                        execute {
+                            appDb.httpTTSDao.insert(*list.toTypedArray())
+                        }.onSuccess {
+                            loadTtsEngineItems()
+                        }
+                    }
+                }
+            }
+
+            is ReadBookIntent.ExportAllHttpTts -> {
+                execute {
+                    GSON.toJson(appDb.httpTTSDao.all)
+                }.onSuccess { json ->
+                    _effects.tryEmit(ReadBookEffect.ExportJson(json))
+                }
+            }
+
             is ReadBookIntent.SetReadAloudIgnoreAudioFocus -> {
                 viewModelScope.launch { readAloudSettingsRepository.setIgnoreAudioFocus(intent.value) }
             }
@@ -1191,7 +1276,6 @@ class ReadBookViewModel(
             readSettingsRepository.preferences.collect { preferences ->
                 val old = previous
                 previous = preferences
-                ReadBookConfig.syncPreferences(preferences)
                 AppConfig.syncReadPreferences(preferences)
                 _readPreferences.value = preferences
                 if (!preferences.hasMenuClickArea()) {

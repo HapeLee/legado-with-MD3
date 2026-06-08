@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import io.legado.app.constant.PreferKey
+import io.legado.app.ui.config.readConfig.ReadConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -42,41 +43,53 @@ class ReadAloudSettingsRepository(
             preferences.toReadAloudPreferences()
         }
 
-    suspend fun setIgnoreAudioFocus(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.ignoreAudioFocus, value)
+    suspend fun setIgnoreAudioFocus(value: Boolean) {
+        ReadConfig.ignoreAudioFocus = value
+    }
 
-    suspend fun setMediaButtonOnExit(value: Boolean) =
+    suspend fun setMediaButtonOnExit(value: Boolean) {
         settingsRepository.putBoolean(PreferKey.mediaButtonOnExit, value)
+    }
 
-    suspend fun setReadAloudByMediaButton(value: Boolean) =
+    suspend fun setReadAloudByMediaButton(value: Boolean) {
         settingsRepository.putBoolean(PreferKey.readAloudByMediaButton, value)
+    }
 
-    suspend fun setPauseReadAloudWhilePhoneCalls(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, value)
+    suspend fun setPauseReadAloudWhilePhoneCalls(value: Boolean) {
+        ReadConfig.pauseReadAloudWhilePhoneCalls = value
+    }
 
-    suspend fun setReadAloudWakeLock(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.readAloudWakeLock, value)
+    suspend fun setReadAloudWakeLock(value: Boolean) {
+        ReadConfig.readAloudWakeLock = value
+    }
 
-    suspend fun setMediaButtonPerNext(value: Boolean) =
-        settingsRepository.putBoolean(KEY_MEDIA_BUTTON_PER_NEXT, value)
+    suspend fun setMediaButtonPerNext(value: Boolean) {
+        ReadConfig.mediaButtonPerNext = value
+    }
 
-    suspend fun setReadAloudByPage(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.readAloudByPage, value)
+    suspend fun setReadAloudByPage(value: Boolean) {
+        ReadConfig.readAloudByPage = value
+    }
 
-    suspend fun setSystemMediaControlCompatibilityChange(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
+    suspend fun setSystemMediaControlCompatibilityChange(value: Boolean) {
+        ReadConfig.systemMediaControlCompatibilityChange = value
+    }
 
-    suspend fun setStreamReadAloudAudio(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.streamReadAloudAudio, value)
+    suspend fun setStreamReadAloudAudio(value: Boolean) {
+        ReadConfig.streamReadAloudAudio = value
+    }
 
-    suspend fun setTtsTimer(value: Int) =
-        settingsRepository.putInt(PreferKey.ttsTimer, value.coerceIn(0, 180))
+    suspend fun setTtsTimer(value: Int) {
+        ReadConfig.ttsTimer = value.coerceIn(0, 180)
+    }
 
-    suspend fun setTtsFollowSys(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.ttsFollowSys, value)
+    suspend fun setTtsFollowSys(value: Boolean) {
+        ReadConfig.ttsFollowSys = value
+    }
 
-    suspend fun setTtsSpeechRate(value: Int) =
-        settingsRepository.putInt(PreferKey.ttsSpeechRate, value.coerceIn(0, 80))
+    suspend fun setTtsSpeechRate(value: Int) {
+        ReadConfig.ttsSpeechRate = value.coerceIn(0, 80)
+    }
 
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
         return ReadAloudPreferences(

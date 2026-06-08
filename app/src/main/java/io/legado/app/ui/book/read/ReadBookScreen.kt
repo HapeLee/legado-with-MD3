@@ -30,6 +30,7 @@ import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
+import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
@@ -198,11 +199,18 @@ fun ReadBookScreen(
     )
     SpeakEngineConfigSheet(
         show = state.activeSheet is ReadBookSheet.SpeakEngineConfig,
-        items = state.ttsEngineItems,
-        selectedValue = state.selectedTtsEngine,
-        onSelect = { onIntent(ReadBookIntent.ApplySpeakEngine(it)) },
+        state = state,
+        onIntent = onIntent,
         onDismissRequest = {
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
+    HttpTtsEditSheet(
+        show = state.activeSheet is ReadBookSheet.HttpTtsEdit,
+        httpTTS = state.editingHttpTts,
+        onIntent = onIntent,
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SpeakEngineConfig))
         },
     )
     ReadAloudNumberConfigSheet(

@@ -36,6 +36,7 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.constant.Status
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.lib.permission.Permissions
@@ -92,7 +93,7 @@ abstract class BaseReadAloudService : BaseService(),
 
     }
 
-    private val useWakeLock = appCtx.getPrefBoolean(PreferKey.readAloudWakeLock, false)
+    private val useWakeLock = ReadConfig.readAloudWakeLock
     private val wakeLock by lazy {
         powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "legado:ReadAloudService")
             .apply {
@@ -151,9 +152,9 @@ abstract class BaseReadAloudService : BaseService(),
         initBroadcastReceiver()
         initPhoneStateListener()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
-        setTimer(AppConfig.ttsTimer)
-        if (AppConfig.ttsTimer > 0) {
-            toastOnUi("朗读定时 ${AppConfig.ttsTimer} 分钟")
+        setTimer(ReadConfig.ttsTimer)
+        if (ReadConfig.ttsTimer > 0) {
+            toastOnUi("朗读定时 ${ReadConfig.ttsTimer} 分钟")
         }
         execute {
             ImageLoader
@@ -238,7 +239,7 @@ abstract class BaseReadAloudService : BaseService(),
                 return@execute
             }
             readAloudNumber = textChapter.getReadLength(pageIndex) + startPos
-            readAloudByPage = getPrefBoolean(PreferKey.readAloudByPage)
+            readAloudByPage = ReadConfig.readAloudByPage
             contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0)
                 .split("\n")
                 .filter { it.isNotEmpty() }
@@ -429,7 +430,7 @@ abstract class BaseReadAloudService : BaseService(),
      * @return 音频焦点
      */
     fun requestFocus(): Boolean {
-        if (AppConfig.ignoreAudioFocus) {
+        if (ReadConfig.ignoreAudioFocus) {
             return true
         }
         val requestFocus = MediaHelp.requestFocus(mFocusRequest)
@@ -495,7 +496,7 @@ abstract class BaseReadAloudService : BaseService(),
      */
     @SuppressLint("UnspecifiedImmutableFlag")
     private fun initMediaSession() {
-        if (AppConfig.systemMediaControlCompatibilityChange) {
+        if (ReadConfig.systemMediaControlCompatibilityChange) {
             mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
                 override fun onPlay() {
                     resumeReadAloud()
@@ -506,7 +507,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
 
                 override fun onSkipToNext() {
-                    if (getPrefBoolean("mediaButtonPerNext", false)) {
+                    if (ReadConfig.mediaButtonPerNext) {
                         nextChapter()
                     } else {
                         nextP()
@@ -514,7 +515,7 @@ abstract class BaseReadAloudService : BaseService(),
                 }
 
                 override fun onSkipToPrevious() {
-                    if (getPrefBoolean("mediaButtonPerNext", false)) {
+                    if (ReadConfig.mediaButtonPerNext) {
                         prevChapter()
                     } else {
                         prevP()
@@ -558,7 +559,7 @@ abstract class BaseReadAloudService : BaseService(),
      * 音频焦点变化
      */
     override fun onAudioFocusChange(focusChange: Int) {
-        if (AppConfig.ignoreAudioFocus) {
+        if (ReadConfig.ignoreAudioFocus) {
             AppLog.put("忽略音频焦点处理(TTS)")
             return
         }
@@ -606,7 +607,7 @@ abstract class BaseReadAloudService : BaseService(),
     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
             .setShowActionsInCompactView(1, 2, 4)
-        if (AppConfig.systemMediaControlCompatibilityChange) {
+        if (ReadConfig.systemMediaControlCompatibilityChange) {
             //fix #4090 android 14 can not show play control in lock screen
             mediaStyle.setMediaSession(mediaSessionCompat.sessionToken)
         }
@@ -720,7 +721,7 @@ abstract class BaseReadAloudService : BaseService(),
     }
 
     private fun initPhoneStateListener() {
-        val needRegister = AppConfig.ignoreAudioFocus && AppConfig.pauseReadAloudWhilePhoneCalls
+        val needRegister = ReadConfig.ignoreAudioFocus && ReadConfig.pauseReadAloudWhilePhoneCalls
         if (needRegister && registeredPhoneStateListener) {
             return
         }

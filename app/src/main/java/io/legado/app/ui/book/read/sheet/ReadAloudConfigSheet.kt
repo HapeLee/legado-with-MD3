@@ -1,24 +1,56 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.data.entities.HttpTTS
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookTtsEngineItem
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
+import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import io.legado.app.utils.GSON
 
 @Composable
 fun ReadAloudConfigSheet(
@@ -125,32 +157,274 @@ fun ReadAloudConfigSheet(
 @Composable
 fun SpeakEngineConfigSheet(
     show: Boolean,
-    items: List<ReadBookTtsEngineItem>,
-    selectedValue: String?,
-    onSelect: (String?) -> Unit,
+    state: ReadBookUiState,
+    onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val items = state.ttsEngineItems
+    val selectedValue = state.selectedTtsEngine
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.speak_engine),
+        startAction = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
+                    icon = Icons.Default.Add
+                )
+                //TODO: 导入
+                SmallTonalButton(
+                    onClick = {
+                        clipboardManager.getText()?.text?.let { text ->
+                            if (text.isNotBlank()) {
+                                onIntent(ReadBookIntent.ImportHttpTtsJson(text))
+                            }
+                        }
+                    },
+                    icon = Icons.Default.Description
+                )
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.ExportAllHttpTts) },
+                    icon = Icons.Default.FileDownload
+                )
+            }
+        },
+        endAction = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.ApplySpeakEnginePerBook(selectedValue)) },
+                    text = stringResource(R.string.book)
+                )
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.ApplySpeakEngine(selectedValue)) },
+                    text = stringResource(R.string.general)
+                )
+            }
+        }
     ) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .weight(1f, fill = false)
+                .padding(bottom = 8.dp),
         ) {
             items(items) { item ->
+                val isHttpTts = item.value != null
+                val isSelected = item.value == selectedValue
                 TinyClickableSettingItem(
                     title = item.title,
-                    description = if (item.value == selectedValue) {
+                    description = if (isSelected) {
                         stringResource(R.string.default_version)
                     } else {
                         null
                     },
-                    onClick = { onSelect(item.value) },
+                    onClick = { onIntent(ReadBookIntent.ApplySpeakEngine(item.value)) },
+                    trailingContent = if (isHttpTts) {
+                        {
+                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                SmallTonalButton(
+                                    onClick = { onIntent(ReadBookIntent.EditHttpTts(item.value!!.toLong())) },
+                                    icon = Icons.Default.Edit,
+                                )
+                                SmallTonalButton(
+                                    onClick = { onIntent(ReadBookIntent.DeleteHttpTts(item.value!!.toLong())) },
+                                    icon = Icons.Default.Delete,
+                                )
+                            }
+                        }
+                    } else null,
                 )
             }
+        }
+
+    }
+}
+
+@Composable
+fun HttpTtsEditSheet(
+    show: Boolean,
+    httpTTS: HttpTTS?,
+    onIntent: (ReadBookIntent) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    val tts = httpTTS ?: return
+    val clipboardManager = LocalClipboardManager.current
+    var name by remember(httpTTS) { mutableStateOf(tts.name) }
+    var url by remember(httpTTS) { mutableStateOf(tts.url) }
+    var contentType by remember(httpTTS) { mutableStateOf(tts.contentType ?: "") }
+    var concurrentRate by remember(httpTTS) { mutableStateOf(tts.concurrentRate ?: "0") }
+    var header by remember(httpTTS) { mutableStateOf(tts.header ?: "") }
+    var loginUrl by remember(httpTTS) { mutableStateOf(tts.loginUrl ?: "") }
+    var loginUi by remember(httpTTS) { mutableStateOf(tts.loginUi ?: "") }
+    var loginCheckJs by remember(httpTTS) { mutableStateOf(tts.loginCheckJs ?: "") }
+    var jsLib by remember(httpTTS) { mutableStateOf(tts.jsLib ?: "") }
+
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.speak_engine),
+        startAction = {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                SmallTonalButton(
+                    onClick = { expanded = true },
+                    icon = Icons.Default.MoreVert
+                )
+                RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.copy_text),
+                        onClick = {
+                            expanded = false
+                            val json = GSON.toJson(
+                                tts.copy(
+                                    name = name, url = url, contentType = contentType,
+                                    concurrentRate = concurrentRate, header = header,
+                                    loginUrl = loginUrl, loginUi = loginUi,
+                                    loginCheckJs = loginCheckJs, jsLib = jsLib,
+                                )
+                            )
+                            clipboardManager.setText(AnnotatedString(json))
+                        },
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.paste_source),
+                        onClick = {
+                            expanded = false
+                            clipboardManager.getText()?.text?.let { text ->
+                                HttpTTS.fromJson(text).getOrNull()?.let { imported ->
+                                    name = imported.name
+                                    url = imported.url
+                                    contentType = imported.contentType ?: ""
+                                    concurrentRate = imported.concurrentRate ?: "0"
+                                    header = imported.header ?: ""
+                                    loginUrl = imported.loginUrl ?: ""
+                                    loginUi = imported.loginUi ?: ""
+                                    loginCheckJs = imported.loginCheckJs ?: ""
+                                    jsLib = imported.jsLib ?: ""
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+        },
+        endAction = {
+            SmallTonalButton(
+                icon = Icons.Default.Save,
+                onClick = {
+                    onIntent(
+                        ReadBookIntent.SaveHttpTts(
+                            tts.copy(
+                                name = name, url = url,
+                                contentType = contentType.ifBlank { null },
+                                concurrentRate = concurrentRate,
+                                header = header.ifBlank { null },
+                                loginUrl = loginUrl.ifBlank { null },
+                                loginUi = loginUi.ifBlank { null },
+                                loginCheckJs = loginCheckJs.ifBlank { null },
+                                jsLib = jsLib.ifBlank { null },
+                            )
+                        )
+                    )
+                },
+            )
+        },
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                AppTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = stringResource(R.string.name),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = "URL",
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = contentType,
+                    onValueChange = { contentType = it },
+                    label = "Content-Type",
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = concurrentRate,
+                    onValueChange = { concurrentRate = it },
+                    label = stringResource(R.string.concurrent_rate),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = header,
+                    onValueChange = { header = it },
+                    label = stringResource(R.string.source_http_header),
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = loginUrl,
+                    onValueChange = { loginUrl = it },
+                    label = stringResource(R.string.login_url),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = loginUi,
+                    onValueChange = { loginUi = it },
+                    label = stringResource(R.string.login_ui),
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = loginCheckJs,
+                    onValueChange = { loginCheckJs = it },
+                    label = stringResource(R.string.login_check_js),
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item {
+                AppTextField(
+                    value = jsLib,
+                    onValueChange = { jsLib = it },
+                    label = "jsLib",
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }

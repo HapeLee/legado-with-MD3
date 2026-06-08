@@ -376,9 +376,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var ttsFlowSys: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.ttsFollowSys, true)
+        get() = ReadConfig.ttsFollowSys
         set(value) {
-            appCtx.putPrefBoolean(PreferKey.ttsFollowSys, value)
+            ReadConfig.ttsFollowSys = value
         }
 
     val noAnimScrollPage: Boolean
@@ -387,15 +387,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     const val defaultSpeechRate = 5
 
     var ttsSpeechRate: Int
-        get() = appCtx.getPrefInt(PreferKey.ttsSpeechRate, defaultSpeechRate)
+        get() = ReadConfig.ttsSpeechRate
         set(value) {
-            appCtx.putPrefInt(PreferKey.ttsSpeechRate, value)
+            ReadConfig.ttsSpeechRate = value
         }
 
     var ttsTimer: Int
-        get() = appCtx.getPrefInt(PreferKey.ttsTimer, 0)
+        get() = ReadConfig.ttsTimer
         set(value) {
-            appCtx.putPrefInt(PreferKey.ttsTimer, value)
+            ReadConfig.ttsTimer = value
         }
 
     val speechRatePlay: Int get() = if (ttsFlowSys) defaultSpeechRate else ttsSpeechRate
@@ -604,11 +604,17 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val showAddToShelfAlert get() = OtherConfig.showAddToShelfAlert
 
-    val ignoreAudioFocus get() = appCtx.getPrefBoolean(PreferKey.ignoreAudioFocus, false)
+    var ignoreAudioFocus
+        get() = ReadConfig.ignoreAudioFocus
+        set(value) {
+            ReadConfig.ignoreAudioFocus = value
+        }
 
     var pauseReadAloudWhilePhoneCalls
-        get() = appCtx.getPrefBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, false)
-        set(value) = appCtx.putPrefBoolean(PreferKey.pauseReadAloudWhilePhoneCalls, value)
+        get() = ReadConfig.pauseReadAloudWhilePhoneCalls
+        set(value) {
+            ReadConfig.pauseReadAloudWhilePhoneCalls = value
+        }
 
     val onlyLatestBackup get() = BackupConfig.onlyLatestBackup
 
@@ -618,7 +624,11 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val updateToVariant get() = OtherConfig.updateToVariant
 
-    val streamReadAloudAudio get() = appCtx.getPrefBoolean(PreferKey.streamReadAloudAudio, false)
+    var streamReadAloudAudio
+        get() = ReadConfig.streamReadAloudAudio
+        set(value) {
+            ReadConfig.streamReadAloudAudio = value
+        }
 
     val doublePageHorizontal: String?
         get() = ReadConfig.doubleHorizontalPage
@@ -940,9 +950,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var systemMediaControlCompatibilityChange: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, true)
+        get() = ReadConfig.systemMediaControlCompatibilityChange
         set(value) {
-            appCtx.putPrefBoolean(PreferKey.systemMediaControlCompatibilityChange, value)
+            ReadConfig.systemMediaControlCompatibilityChange = value
         }
 
     var isPredictiveBackEnabled: Boolean

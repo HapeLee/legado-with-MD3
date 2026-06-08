@@ -31,6 +31,7 @@ import io.legado.app.constant.NotificationId
 import io.legado.app.constant.Status
 import io.legado.app.help.MediaHelp
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.ExoPlayerHelper
 import io.legado.app.help.glide.ImageLoader
@@ -469,7 +470,7 @@ class AudioPlayService : BaseService(),
     @SuppressLint("UnspecifiedImmutableFlag")
     private fun initMediaSession() {
         mediaSessionCompat = MediaSessionCompat(this, "readAloud")
-        if (AppConfig.systemMediaControlCompatibilityChange) {
+        if (ReadConfig.systemMediaControlCompatibilityChange) {
             mediaSessionCompat?.setCallback(object : MediaSessionCompat.Callback() {
                 override fun onSeekTo(pos: Long) {
                     position = pos.toInt()
@@ -534,7 +535,7 @@ class AudioPlayService : BaseService(),
      * 音频焦点变化
      */
     override fun onAudioFocusChange(focusChange: Int) {
-        if (AppConfig.ignoreAudioFocus) {
+        if (ReadConfig.ignoreAudioFocus) {
             AppLog.put("忽略音频焦点处理(有声)")
             return
         }
@@ -630,7 +631,7 @@ class AudioPlayService : BaseService(),
     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
         mediaStyle.setShowActionsInCompactView(1,2,4)
-        if (AppConfig.systemMediaControlCompatibilityChange) {
+        if (ReadConfig.systemMediaControlCompatibilityChange) {
             //fix #4090 android 14 can not show play control in lock screen
             mediaStyle.setMediaSession(mediaSessionCompat?.sessionToken)
         }
@@ -669,7 +670,7 @@ class AudioPlayService : BaseService(),
      * @return 音频焦点
      */
     private fun requestFocus(): Boolean {
-        if (AppConfig.ignoreAudioFocus) {
+        if (ReadConfig.ignoreAudioFocus) {
             return true
         }
         return MediaHelp.requestFocus(mFocusRequest)

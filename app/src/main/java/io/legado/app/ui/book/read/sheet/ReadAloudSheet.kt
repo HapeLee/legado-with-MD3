@@ -7,23 +7,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
@@ -77,55 +81,34 @@ fun ReadAloudContent(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilledTonalIconButton(
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ReadAloudPrevParagraph) },
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_skip_previous),
-                    contentDescription = stringResource(R.string.prev_sentence),
-                )
-            }
+                icon = Icons.Default.SkipPrevious,
+                contentDescription = stringResource(R.string.prev_sentence),
+            )
             Spacer(Modifier.width(6.dp))
-            FilledTonalIconButton(
-                onClick = {
-                    onIntent(ReadBookIntent.ReadAloudTogglePause)
-                },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    painter = painterResource(
-                        if (state.isReadAloudPaused) R.drawable.ic_play else R.drawable.ic_pause
-                    ),
-                    contentDescription = stringResource(
-                        if (state.isReadAloudPaused) R.string.audio_play else R.string.pause
-                    ),
-                )
-            }
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.ReadAloudTogglePause) },
+                icon = if (state.isReadAloudPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                contentDescription = stringResource(
+                    if (state.isReadAloudPaused) R.string.audio_play else R.string.pause
+                ),
+            )
             Spacer(Modifier.width(6.dp))
-            FilledTonalIconButton(
+            MediumTonalButton(
                 onClick = {
                     onIntent(ReadBookIntent.ReadAloudStop)
                     onDismissRequest()
                 },
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_stop_black_24dp),
-                    contentDescription = stringResource(R.string.stop),
-                )
-            }
+                icon = Icons.Default.Stop,
+                contentDescription = stringResource(R.string.stop),
+            )
             Spacer(Modifier.width(6.dp))
-            FilledTonalButton(
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ReadAloudNextParagraph) },
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_skip_next),
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.next_sentence))
-            }
+                icon = Icons.Default.SkipNext,
+                text = stringResource(R.string.next_sentence),
+            )
         }
 
         Spacer(Modifier.height(12.dp))
@@ -147,26 +130,21 @@ fun ReadAloudContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ReadAloudPrevChapter) },
+                text = stringResource(R.string.previous_chapter),
                 modifier = Modifier.weight(1f),
-            ) {
-                Text(stringResource(R.string.previous_chapter))
-            }
-            FilledTonalButton(
-                onClick = {
-                    onIntent(ReadBookIntent.SetReadAloudTtsTimer(timerMinute))
-                },
+            )
+            MediumTonalButton(
+                onClick = { onIntent(ReadBookIntent.SetReadAloudTtsTimer(timerMinute)) },
+                text = stringResource(R.string.timer_m, timerMinute),
                 modifier = Modifier.weight(1f),
-            ) {
-                Text(stringResource(R.string.timer_m, timerMinute))
-            }
-            OutlinedButton(
+            )
+            MediumTonalButton(
                 onClick = { onIntent(ReadBookIntent.ReadAloudNextChapter) },
+                text = stringResource(R.string.next_chapter),
                 modifier = Modifier.weight(1f),
-            ) {
-                Text(stringResource(R.string.next_chapter))
-            }
+            )
         }
 
         Spacer(Modifier.height(12.dp))
@@ -197,17 +175,17 @@ fun ReadAloudContent(
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             ActionButton(
-                icon = R.drawable.ic_toc,
+                icon = Icons.AutoMirrored.Filled.List,
                 label = stringResource(R.string.chapter_list),
                 onClick = onOpenChapterList,
             )
             ActionButton(
-                icon = R.drawable.ic_visibility_off,
+                icon = Icons.Default.VisibilityOff,
                 label = stringResource(R.string.to_backstage),
                 onClick = onGoToBackground,
             )
             ActionButton(
-                icon = R.drawable.ic_settings,
+                icon = Icons.Default.Settings,
                 label = stringResource(R.string.setting),
                 onClick = onShowReadAloudConfig,
             )
@@ -217,19 +195,18 @@ fun ReadAloudContent(
 
 @Composable
 private fun ActionButton(
-    icon: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     onClick: () -> Unit,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        FilledTonalIconButton(onClick = onClick) {
-            Icon(
-                painter = painterResource(icon),
-                contentDescription = label,
-            )
-        }
+        MediumTonalButton(
+            onClick = onClick,
+            icon = icon,
+            contentDescription = label,
+        )
         Spacer(Modifier.height(4.dp))
         Text(
             text = label,
