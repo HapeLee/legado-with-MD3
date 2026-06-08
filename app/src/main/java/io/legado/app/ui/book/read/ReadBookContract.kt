@@ -159,7 +159,7 @@ data class ReadBookUiState(
 @Stable
 data class ReadMenuConfig(
     val titleBarIconPosition: Int = 0,
-    val showTitleBarIcons: Boolean = true,
+    val showTitleBarIcons: Boolean = false,
     val readMenuFloatingBottomBar: Boolean = false,
     val readMenuBottomCornerRadius: Int = 0,
     val readMenuIconItemsPerRow: Int = 5,

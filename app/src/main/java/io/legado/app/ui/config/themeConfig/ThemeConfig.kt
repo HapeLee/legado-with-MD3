@@ -52,7 +52,9 @@ object ThemeConfig {
 
     var appTheme by prefDelegate(PreferKey.appTheme, "0")
 
-    var themeMode by prefDelegate(PreferKey.themeMode, "0")
+    var themeMode by prefDelegate(PreferKey.themeMode, "0") {
+        initNightMode()
+    }
 
     fun initNightMode() {
         when (appCtx.getPrefString(PreferKey.themeMode, "0")) {

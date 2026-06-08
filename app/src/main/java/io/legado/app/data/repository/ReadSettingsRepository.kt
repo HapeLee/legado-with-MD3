@@ -442,7 +442,7 @@ class ReadSettingsRepository(
             readMenuCustomIcons = this[Keys.ReadMenuCustomIcons] ?: "",
             titleBarCustomIcons = this[Keys.TitleBarCustomIcons] ?: "",
             titleBarIconPosition = this[Keys.TitleBarIconPosition] ?: 0,
-            showTitleBarIcons = this[Keys.ShowTitleBarIcons] ?: true,
+            showTitleBarIcons = this[Keys.ShowTitleBarIcons] ?: false,
             chineseConverterType = this[Keys.ChineseConverterType] ?: 0,
         )
     }
