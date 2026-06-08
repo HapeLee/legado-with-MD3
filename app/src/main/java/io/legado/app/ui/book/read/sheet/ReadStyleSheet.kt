@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -108,7 +109,9 @@ fun ReadStyleContent(
     ) {
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.weight(1f, fill = false),
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .animateContentSize(),
         ) { page ->
             when (page) {
                 0 -> GlobalThemePage(
@@ -150,6 +153,7 @@ fun ReadStyleContent(
             selectedTabIndex = currentPage,
             onTabSelected = { index ->
                 if (index < 3) {
+                    currentPage = index
                     scope.launch { pagerState.animateScrollToPage(index) }
                 } else {
                     onOpenMoreConfig()
