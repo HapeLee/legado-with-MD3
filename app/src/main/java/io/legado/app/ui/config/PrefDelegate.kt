@@ -19,6 +19,7 @@ import io.legado.app.utils.putPrefStringSync
 import io.legado.app.help.config.DsSync
 import androidx.datastore.preferences.core.*
 import io.legado.app.data.repository.dataStore
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.IOException
 import kotlin.properties.ReadWriteProperty
@@ -35,11 +37,13 @@ import kotlin.reflect.KProperty
 
 interface PrefDelegate<T> : ReadWriteProperty<Any?, T> {
     val state: State<T>
+    val ready: CompletableDeferred<Unit>
     fun dispose()
 }
 
 class PrefStateDelegate<T>(private val delegate: PrefDelegate<T>) : ReadWriteProperty<Any?, T> by delegate {
     val state: State<T> get() = delegate.state
+    val ready: CompletableDeferred<Unit> get() = delegate.ready
 }
 
 fun <T> prefDelegate(
@@ -54,14 +58,19 @@ fun <T> prefDelegate(
         override val state: State<T> get() = _value
         private val scope = CoroutineScope(Dispatchers.IO)
         private var dsObserverJob: Job? = null
+        override val ready = CompletableDeferred<Unit>()
 
         init {
             // 从 DataStore 读取初始值（DS 为唯一读取源）
+            // 在 IO 线程读取，切换到 Main 线程更新 MutableState，确保 snapshotFlow 能检测到变化
             scope.launch {
                 val dsValue = readFromDs()
                 if (dsValue != null) {
-                    _value.value = dsValue
+                    withContext(Dispatchers.Main) {
+                        _value.value = dsValue
+                    }
                 }
+                ready.complete(Unit)
             }
             // 观察 DataStore 变化，用于跨实例同步
             dsObserverJob = scope.launch {
@@ -91,7 +100,9 @@ fun <T> prefDelegate(
                     .distinctUntilChanged()
                     .collect { dsValue ->
                         if (dsValue != null && _value.value != dsValue) {
-                            _value.value = dsValue
+                            withContext(Dispatchers.Main) {
+                                _value.value = dsValue
+                            }
                             onValueChange?.invoke(dsValue)
                         }
                     }
@@ -126,7 +137,6 @@ fun <T> prefDelegate(
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
                 // 同步写入 DataStore，确保持久化后再返回
-                // 异常不阻断流程：SP 已写入，readFromDs() 会回退到 SP 读取
                 runCatching {
                     runBlocking(Dispatchers.IO) {
                         when (value) {
