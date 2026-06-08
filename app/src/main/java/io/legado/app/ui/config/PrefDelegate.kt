@@ -5,6 +5,11 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.getPrefFloat
+import io.legado.app.utils.getPrefInt
+import io.legado.app.utils.getPrefLong
+import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefBoolean
 import io.legado.app.utils.putPrefFloat
 import io.legado.app.utils.putPrefInt
@@ -135,12 +140,11 @@ fun <T> prefDelegate(
         }
 
         /**
-         * 从 DataStore 读取当前值。
-         * DS 为唯一读取源，类型不匹配时安全回退到 String 解析。
+         * 从 DataStore 读取当前值，DS 读不到时回退到 SP 并补写入 DS。
          */
         @Suppress("UNCHECKED_CAST")
         private suspend fun readFromDs(): T? {
-            return try {
+            val dsValue = try {
                 appCtx.dataStore.data
                     .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
                     .map { prefs ->
@@ -167,6 +171,33 @@ fun <T> prefDelegate(
             } catch (e: Exception) {
                 null
             }
+            // DS 有值，直接返回
+            if (dsValue != null) return dsValue
+            // DS 无值，回退到 SP（迁移遗漏时的补偿）
+            val spValue: T? = when {
+                defaultValue is String || defaultValue == null ->
+                    appCtx.getPrefString(key, defaultValue as String?) as T?
+                defaultValue is Int ->
+                    appCtx.getPrefInt(key, defaultValue) as T
+                defaultValue is Boolean ->
+                    appCtx.getPrefBoolean(key, defaultValue) as T
+                defaultValue is Long ->
+                    appCtx.getPrefLong(key, defaultValue) as T
+                defaultValue is Float ->
+                    appCtx.getPrefFloat(key, defaultValue) as T
+                else -> null
+            }
+            // SP 有值但 DS 没有，补写入 DS 修复迁移遗漏
+            if (spValue != null && spValue != defaultValue) {
+                when (spValue) {
+                    is String? -> DsSync.putString(key, spValue)
+                    is Int -> DsSync.putInt(key, spValue)
+                    is Boolean -> DsSync.putBoolean(key, spValue)
+                    is Long -> DsSync.putLong(key, spValue)
+                    is Float -> DsSync.putFloat(key, spValue)
+                }
+            }
+            return spValue
         }
     }
 }
