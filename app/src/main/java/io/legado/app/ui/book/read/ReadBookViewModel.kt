@@ -2587,6 +2587,8 @@ class ReadBookViewModel(
             else -> "0" // dark → follow system
         }
         ThemeConfig.themeMode = nextMode
+        // 同步更新 AppConfig 缓存，确保 View 层 ReadStyleResolver 立即读到新值
+        AppConfig.themeMode = nextMode
         _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(
