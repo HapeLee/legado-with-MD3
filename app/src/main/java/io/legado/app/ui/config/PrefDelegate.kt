@@ -59,7 +59,6 @@ fun <T> prefDelegate(
             // 从 DataStore 读取初始值（DS 为唯一读取源）
             scope.launch {
                 val dsValue = readFromDs()
-                android.util.Log.d("PrefDelegate", "readFromDs key=$key defaultValue=$defaultValue dsValue=$dsValue")
                 if (dsValue != null) {
                     _value.value = dsValue
                 }
@@ -128,7 +127,7 @@ fun <T> prefDelegate(
                 }
                 // 同步写入 DataStore，确保持久化后再返回
                 // 异常不阻断流程：SP 已写入，readFromDs() 会回退到 SP 读取
-                val dsResult = runCatching {
+                runCatching {
                     runBlocking(Dispatchers.IO) {
                         when (value) {
                             is String? -> DsSync.putString(key, value)
@@ -139,7 +138,6 @@ fun <T> prefDelegate(
                         }
                     }
                 }
-                android.util.Log.d("PrefDelegate", "setValue key=$key value=$value dsResult=${dsResult.isSuccess}")
                 onValueChange?.invoke(value)
             }
         }
@@ -177,12 +175,8 @@ fun <T> prefDelegate(
                 null
             }
             // DS 有值，直接返回
-            if (dsValue != null) {
-                android.util.Log.d("PrefDelegate", "readFromDs key=$key DS hit=$dsValue")
-                return dsValue
-            }
+            if (dsValue != null) return dsValue
             // DS 无值，回退到 SP（迁移遗漏时的补偿）
-            android.util.Log.d("PrefDelegate", "readFromDs key=$key DS miss, falling back to SP")
             val spValue: T? = when {
                 defaultValue is String || defaultValue == null ->
                     appCtx.getPrefString(key, defaultValue as String?) as T?
@@ -208,7 +202,6 @@ fun <T> prefDelegate(
                     }
                 }
             }
-            android.util.Log.d("PrefDelegate", "readFromDs key=$key SP fallback=$spValue (defaultValue=$defaultValue)")
             return spValue
         }
     }

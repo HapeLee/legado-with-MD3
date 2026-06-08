@@ -846,9 +846,12 @@ fun BookshelfScreen(
                             val group = uiState.groups.getOrNull(pageIndex)
                             if (group != null) {
                                 val isSelectedGroup = group.groupId == uiState.selectedGroupId
-                                val books = if (isSelectedGroup) uiState.items
-                                    else uiState.allGroupBooks[group.groupId]
-                                    ?: persistentListOf()
+                                val books = if (isSelectedGroup && uiState.isSearch) {
+                                    uiState.items
+                                } else {
+                                    uiState.allGroupBooks[group.groupId]
+                                        ?: persistentListOf()
+                                }
                                 val canReorderBooks = isEditMode &&
                                         !uiState.isSearch &&
                                         (group.bookSort.takeIf { it >= 0 }
