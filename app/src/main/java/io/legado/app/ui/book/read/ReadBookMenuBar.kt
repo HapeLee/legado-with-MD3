@@ -52,7 +52,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
@@ -139,6 +143,7 @@ import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditContent
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.text.AppText
@@ -842,7 +847,7 @@ private fun MenuTitleBar(
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
+                AppText(
                     text = state.chapterName,
                     modifier = Modifier.weight(1f),
                     style = labelStyle,
@@ -852,15 +857,57 @@ private fun MenuTitleBar(
                 )
 
                 if (!state.isLocalBook && state.bookSource != null) {
-                    Text(
-                        text = state.bookSource.bookSourceName,
-                        modifier = Modifier
-                            .clickable { onIntent(ReadBookIntent.OpenSourceEdit) }
-                            .padding(start = 8.dp),
-                        style = labelStyle,
-                        color = titleTextColor,
-                        maxLines = 1,
-                    )
+                    var sourceMenuExpanded by remember { mutableStateOf(false) }
+                    Box {
+                        AppText(
+                            text = state.bookSource.bookSourceName,
+                            modifier = Modifier
+                                .clickable { sourceMenuExpanded = true }
+                                .padding(start = 8.dp),
+                            style = labelStyle,
+                            color = titleTextColor,
+                            maxLines = 1,
+                        )
+                        RoundDropdownMenu(
+                            expanded = sourceMenuExpanded,
+                            onDismissRequest = { sourceMenuExpanded = false },
+                        ) {
+                            if (!state.bookSource.loginUrl.isNullOrBlank()) {
+                                RoundDropdownMenuItem(
+                                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                    text = stringResource(R.string.login),
+                                    onClick = {
+                                        sourceMenuExpanded = false
+                                        onIntent(ReadBookIntent.ShowLogin)
+                                    },
+                                )
+                            }
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Payment) },
+                                text = stringResource(R.string.chapter_pay),
+                                onClick = {
+                                    sourceMenuExpanded = false
+                                    onIntent(ReadBookIntent.PayAction)
+                                },
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                                text = stringResource(R.string.edit_source),
+                                onClick = {
+                                    sourceMenuExpanded = false
+                                    onIntent(ReadBookIntent.OpenSourceEdit)
+                                },
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Block) },
+                                text = stringResource(R.string.disable_source),
+                                onClick = {
+                                    sourceMenuExpanded = false
+                                    onIntent(ReadBookIntent.DisableSource)
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }
