@@ -153,7 +153,6 @@ fun ReadStyleContent(
             selectedTabIndex = currentPage,
             onTabSelected = { index ->
                 if (index < 3) {
-                    currentPage = index
                     scope.launch { pagerState.animateScrollToPage(index) }
                 } else {
                     onOpenMoreConfig()
