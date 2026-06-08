@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -28,36 +27,8 @@ import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
-
-@Composable
-fun ReadAloudSheet(
-    state: ReadBookUiState,
-    onIntent: (ReadBookIntent) -> Unit,
-    onDismissRequest: () -> Unit,
-    onOpenChapterList: () -> Unit,
-    onGoToBackground: () -> Unit,
-    onShowReadAloudConfig: () -> Unit,
-) {
-    AppModalBottomSheet(
-        show = true,
-        onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.aloud_config),
-    ) {
-        ReadAloudContent(
-            state = state,
-            onIntent = onIntent,
-            onDismissRequest = onDismissRequest,
-            onOpenChapterList = onOpenChapterList,
-            onGoToBackground = onGoToBackground,
-            onShowReadAloudConfig = onShowReadAloudConfig,
-            modifier = Modifier
-                .padding(bottom = 16.dp),
-        )
-    }
-}
 
 @Composable
 fun ReadAloudContent(
