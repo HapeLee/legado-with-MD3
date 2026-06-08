@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.data.appDb
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.ui.book.manga.config.MangaScrollMode
@@ -50,7 +51,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var mangaClickActionBC = appCtx.getPrefInt(PreferKey.mangaClickActionBC, 1)
     var mangaClickActionBR = appCtx.getPrefInt(PreferKey.mangaClickActionBR, 1)
 
-    var themeMode = appCtx.getPrefString(PreferKey.themeMode, "0")
+    val themeMode get() = ThemeConfig.themeMode
     var AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
 
     var swipeAnimation = appCtx.getPrefBoolean(PreferKey.swipeAnimation, true)
@@ -203,10 +204,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
             PreferKey.appTheme -> {
                 AppTheme = appCtx.getPrefString(PreferKey.appTheme, "0")
-            }
-
-            PreferKey.themeMode -> {
-                themeMode = appCtx.getPrefString(PreferKey.themeMode, "0")
             }
 
             PreferKey.clickActionTL -> clickActionTL =

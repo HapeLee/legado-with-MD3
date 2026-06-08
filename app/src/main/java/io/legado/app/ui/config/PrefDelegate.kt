@@ -125,14 +125,17 @@ fun <T> prefDelegate(
                     is Long -> appCtx.putPrefLong(key, value)
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
-                // 同步写入 DataStore（权威存储），确保持久化后再返回
-                runBlocking(Dispatchers.IO) {
-                    when (value) {
-                        is String? -> DsSync.putString(key, value)
-                        is Int -> DsSync.putInt(key, value)
-                        is Boolean -> DsSync.putBoolean(key, value)
-                        is Long -> DsSync.putLong(key, value)
-                        is Float -> DsSync.putFloat(key, value)
+                // 同步写入 DataStore，确保持久化后再返回
+                // 异常不阻断流程：SP 已写入，readFromDs() 会回退到 SP 读取
+                runCatching {
+                    runBlocking(Dispatchers.IO) {
+                        when (value) {
+                            is String? -> DsSync.putString(key, value)
+                            is Int -> DsSync.putInt(key, value)
+                            is Boolean -> DsSync.putBoolean(key, value)
+                            is Long -> DsSync.putLong(key, value)
+                            is Float -> DsSync.putFloat(key, value)
+                        }
                     }
                 }
                 onValueChange?.invoke(value)
