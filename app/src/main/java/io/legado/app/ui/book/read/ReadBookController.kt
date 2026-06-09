@@ -176,6 +176,7 @@ class ReadBookController(
      * View/Window-only resume — business logic handled by ViewModel via OnResume intent.
      */
     fun onResume() {
+        setOrientation()
         upSystemUiVisibility()
         refs?.readView?.upTime()
         screenOffTimerStart()
@@ -740,6 +741,10 @@ class ReadBookController(
 
             is ReadBookEffect.UnregisterNetworkListener -> {
                 networkChangedListener.unRegister()
+            }
+
+            is ReadBookEffect.SetOrientation -> {
+                setOrientation()
             }
 
             is ReadBookEffect.BackupNow -> {

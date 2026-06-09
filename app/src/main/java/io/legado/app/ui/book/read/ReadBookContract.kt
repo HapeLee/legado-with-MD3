@@ -573,6 +573,7 @@ sealed interface ReadBookEffect {
     data object UnregisterTimeBatteryReceiver : ReadBookEffect
     data object RegisterNetworkListener : ReadBookEffect
     data object UnregisterNetworkListener : ReadBookEffect
+    data object SetOrientation : ReadBookEffect
     data object OpenBooksDirPicker : ReadBookEffect
     data object BackupNow : ReadBookEffect
 

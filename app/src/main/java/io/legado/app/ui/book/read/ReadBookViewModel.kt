@@ -1285,6 +1285,9 @@ class ReadBookViewModel(
                 if (old != null && old.keepLight != preferences.keepLight) {
                     _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
                 }
+                if (old != null && old.screenOrientation != preferences.screenOrientation) {
+                    _effects.tryEmit(ReadBookEffect.SetOrientation)
+                }
             }
         }
     }
