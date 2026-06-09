@@ -4,7 +4,6 @@ package io.legado.app.ui.about
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.constant.AppConst.appInfo
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.util.BlurredBar
 import io.legado.app.ui.util.LocalAppState
 import io.legado.app.ui.util.LocalIsWideScreen
@@ -212,7 +212,7 @@ private fun AboutContent(
             .calculateRightPadding(LayoutDirection.Ltr) + 16.dp,
     )
 
-    val isInDark = isSystemInDarkTheme()
+    val isInDark = LegadoTheme.isDark
     val dynamicBackground = isRuntimeShaderSupported()
 
     val cardBlend =

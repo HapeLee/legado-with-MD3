@@ -1,6 +1,5 @@
 package io.legado.app.ui.widget.components
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -46,7 +45,7 @@ fun AppScaffold(
     disableHazeSource: Boolean = false,
     content: @Composable (PaddingValues) -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = LegadoTheme.isDark
     val hasImageBg = ThemeConfig.hasImageBg(isDark)
     val hazeState = remember { HazeState() }
     val composeEngine = LegadoTheme.composeEngine

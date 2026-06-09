@@ -59,7 +59,7 @@ object ThemeConfig {
     }
 
     fun initNightMode() {
-        when (appCtx.getPrefString(PreferKey.themeMode, "0")) {
+        when (themeMode) {
             "1" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             "2" -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
             else -> AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)

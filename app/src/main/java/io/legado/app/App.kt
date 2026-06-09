@@ -34,6 +34,7 @@ import io.legado.app.data.entities.rule.BookInfoRule
 import io.legado.app.data.entities.rule.ContentRule
 import io.legado.app.data.entities.rule.ExploreRule
 import io.legado.app.data.entities.rule.SearchRule
+import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.di.appDatabaseModule
 import io.legado.app.di.appModule
 import io.legado.app.help.AppFreezeMonitor
@@ -44,11 +45,10 @@ import io.legado.app.help.DispatchersMonitor
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
-import io.legado.app.data.repository.SettingsRepository
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.help.config.ThemeConfigStore.applyDayNightInit
-import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.Cronet
 import io.legado.app.help.http.ObsoleteUrlFactory
@@ -91,6 +91,7 @@ class App : Application(), ImageLoaderFactory {
             androidContext(this@App)
             modules(appDatabaseModule, appModule)
         }
+        applyDayNightInit(this)
         if (getPrefString("app_theme", "0") == "12") {
             if (AppConfig.customMode == "accent")
                 setTheme(R.style.ThemeOverlay_WhiteBackground)
@@ -130,7 +131,6 @@ class App : Application(), ImageLoaderFactory {
             ThreadUtils.setThreadAssertsDisabledForTesting(true)
         }
         oldConfig = Configuration(resources.configuration)
-        applyDayNightInit(this)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         Coroutine.async {

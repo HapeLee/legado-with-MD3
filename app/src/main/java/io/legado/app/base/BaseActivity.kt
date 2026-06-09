@@ -128,12 +128,7 @@ abstract class BaseActivity<VB : ViewBinding>(
             true,
             fullScreen
         )
-        val isDarkTheme = when (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) {
-            Configuration.UI_MODE_NIGHT_YES -> true
-            Configuration.UI_MODE_NIGHT_NO,
-            Configuration.UI_MODE_NIGHT_UNDEFINED -> false
-            else -> false
-        }
+        val isDarkTheme = AppConfig.isNightTheme
         WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !isDarkTheme
     }
 

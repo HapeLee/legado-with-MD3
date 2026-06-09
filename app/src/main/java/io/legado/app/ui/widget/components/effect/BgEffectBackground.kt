@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.components.effect
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.util.shouldShowSplitPane
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -39,7 +39,7 @@ fun BgEffectBackground(
     ) {
         val surface = MiuixTheme.colorScheme.surface
         val deviceType = if (shouldShowSplitPane()) DeviceType.PAD else DeviceType.PHONE
-        val isDarkTheme = isSystemInDarkTheme()
+        val isDarkTheme = LegadoTheme.isDark
         val painter = remember(isOs3Effect) { BgEffectPainter(isOs3Effect) }
 
         val preset = remember(deviceType, isDarkTheme, isOs3Effect) {
