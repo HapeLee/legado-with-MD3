@@ -600,8 +600,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val recordHeapDump get() = OtherConfig.recordHeapDump
 
-    val loadCoverOnlyWifi get() = appCtx.getPrefBoolean(PreferKey.loadCoverOnlyWifi, false)
-
     val showAddToShelfAlert get() = OtherConfig.showAddToShelfAlert
 
     var ignoreAudioFocus
