@@ -7,25 +7,22 @@ import android.view.WindowManager
 import androidx.core.view.isVisible
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
-import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.databinding.DialogMangaColorFilterBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.invisible
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
-import org.koin.android.ext.android.inject
 
 class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_manga_color_filter) {
     private val binding by viewBinding(DialogMangaColorFilterBinding::bind)
-    private val mangaSettingsRepository by inject<MangaSettingsRepository>()
     private val mConfig =
-        GSON.fromJsonObject<MangaColorFilterConfig>(AppConfig.mangaColorFilter).getOrNull()
+        GSON.fromJsonObject<MangaColorFilterConfig>(ReadMangaConfig.mangaColorFilter).getOrNull()
             ?: MangaColorFilterConfig()
     private val callback: Callback? get() = activity as? Callback
 
-    private var mMangaEInkThreshold = AppConfig.mangaEInkThreshold
+    private var mMangaEInkThreshold = ReadMangaConfig.mangaEInkThreshold
 
 
     override fun onStart() {
@@ -42,13 +39,13 @@ class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_man
         binding.run {
             chipAutoBrightness.isChecked = mConfig.autoBrightness
 
-            if (AppConfig.enableMangaEInk) dsbEpaper.visible()
+            if (ReadMangaConfig.enableMangaEInk) dsbEpaper.visible()
             else dsbEpaper.invisible()
 
             dsbEpaper.progress = mMangaEInkThreshold
 
-            cpEpaper.isChecked = AppConfig.enableMangaEInk
-            cpEnableGray.isChecked = AppConfig.enableMangaGray
+            cpEpaper.isChecked = ReadMangaConfig.enableMangaEInk
+            cpEnableGray.isChecked = ReadMangaConfig.enableMangaGray
 
             dsbBrightness.isEnabled = !mConfig.autoBrightness
             dsbBrightness.progress = mConfig.l
@@ -117,13 +114,8 @@ class MangaColorFilterDialog : BaseBottomSheetDialogFragment(R.layout.dialog_man
 
     override fun onDismiss(dialog: DialogInterface) {
         super.onDismiss(dialog)
-        val colorFilter = mConfig.toJson()
-        AppConfig.mangaColorFilter = colorFilter
-        AppConfig.mangaEInkThreshold = mMangaEInkThreshold
-        execute {
-            mangaSettingsRepository.setMangaAutoColorFilter(colorFilter)
-            mangaSettingsRepository.setMangaEInkThreshold(mMangaEInkThreshold)
-        }
+        ReadMangaConfig.mangaColorFilter = mConfig.toJson()
+        ReadMangaConfig.mangaEInkThreshold = mMangaEInkThreshold
     }
 
     interface Callback {

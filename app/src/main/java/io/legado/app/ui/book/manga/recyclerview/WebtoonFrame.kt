@@ -9,7 +9,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.widget.FrameLayout
 import androidx.recyclerview.widget.RecyclerView
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.findCenterViewPosition
 
 class WebtoonFrame : FrameLayout {
@@ -46,7 +46,7 @@ class WebtoonFrame : FrameLayout {
     private val gestureDetector =
         GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onLongPress(e: MotionEvent) {
-                if (AppConfig.mangaLongClick)
+                if (ReadMangaConfig.mangaLongClick)
                 {
                     recycler?.let {
                         val centerPos = it.findCenterViewPosition()
@@ -69,15 +69,15 @@ class WebtoonFrame : FrameLayout {
                 regionRects.entries.find { it.value.contains(x, y) }?.key ?: return@tapListener
 
             val action = when (key) {
-                "TL" -> AppConfig.mangaClickActionTL
-                "TC" -> AppConfig.mangaClickActionTC
-                "TR" -> AppConfig.mangaClickActionTR
-                "ML" -> AppConfig.mangaClickActionML
-                "MC" -> AppConfig.mangaClickActionMC
-                "MR" -> AppConfig.mangaClickActionMR
-                "BL" -> AppConfig.mangaClickActionBL
-                "BC" -> AppConfig.mangaClickActionBC
-                "BR" -> AppConfig.mangaClickActionBR
+                "TL" -> ReadMangaConfig.mangaClickActionTL
+                "TC" -> ReadMangaConfig.mangaClickActionTC
+                "TR" -> ReadMangaConfig.mangaClickActionTR
+                "ML" -> ReadMangaConfig.mangaClickActionML
+                "MC" -> ReadMangaConfig.mangaClickActionMC
+                "MR" -> ReadMangaConfig.mangaClickActionMR
+                "BL" -> ReadMangaConfig.mangaClickActionBL
+                "BC" -> ReadMangaConfig.mangaClickActionBC
+                "BR" -> ReadMangaConfig.mangaClickActionBR
                 else -> -1
             }
 

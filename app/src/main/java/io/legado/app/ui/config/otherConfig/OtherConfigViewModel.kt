@@ -9,8 +9,6 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.repository.MangaPreferences
-import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.ReadAloudPreferences
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.help.DirectLinkUpload
@@ -30,8 +28,7 @@ import kotlinx.coroutines.launch
 import splitties.init.appCtx
 
 class OtherConfigViewModel(
-    private val readAloudSettingsRepository: ReadAloudSettingsRepository,
-    private val mangaSettingsRepository: MangaSettingsRepository
+    private val readAloudSettingsRepository: ReadAloudSettingsRepository
 ) : ViewModel() {
 
     private val packageManager = appCtx.packageManager
@@ -52,12 +49,6 @@ class OtherConfigViewModel(
         initialValue = ReadAloudPreferences()
     )
 
-    val mangaPreferences = mangaSettingsRepository.preferences.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = MangaPreferences()
-    )
-
     fun setMediaButtonOnExit(value: Boolean) {
         viewModelScope.launch {
             readAloudSettingsRepository.setMediaButtonOnExit(value)
@@ -73,12 +64,6 @@ class OtherConfigViewModel(
     fun setIgnoreAudioFocus(value: Boolean) {
         viewModelScope.launch {
             readAloudSettingsRepository.setIgnoreAudioFocus(value)
-        }
-    }
-
-    fun setShowMangaUi(value: Boolean) {
-        viewModelScope.launch {
-            mangaSettingsRepository.setShowMangaUi(value)
         }
     }
 

@@ -25,7 +25,6 @@ import io.legado.app.data.repository.ExploreRepositoryImpl
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LlmTranslateRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
-import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadRecordRepository
@@ -157,7 +156,6 @@ val appModule = module {
     singleOf(::ReadSettingsRepository)
     singleOf(::ReadAloudSettingsRepository)
     singleOf(::ReadBookStyleConfigRepository)
-    singleOf(::MangaSettingsRepository)
     singleOf(::LocalPreferencesRepository)
     singleOf(::ExploreBooksUseCase)
     singleOf(::ExploreKindUiUseCase)

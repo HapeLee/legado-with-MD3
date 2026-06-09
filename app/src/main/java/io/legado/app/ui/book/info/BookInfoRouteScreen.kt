@@ -18,6 +18,7 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.model.SourceCallBack
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.info.edit.BookInfoEditActivity
@@ -119,7 +120,7 @@ fun BookInfoRouteScreen(
                 is BookInfoEffect.OpenReader -> {
                     val cls = when {
                         effect.book.isAudio -> AudioPlayActivity::class.java
-                        !effect.book.isLocal && effect.book.isImage && AppConfig.showMangaUi -> {
+                        !effect.book.isLocal && effect.book.isImage && ReadMangaConfig.showMangaUi -> {
                             ReadMangaActivity::class.java
                         }
 

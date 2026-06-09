@@ -19,6 +19,7 @@ import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.webBook.WebBook
@@ -349,7 +350,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 0
             }
             pos += durChapterPos
-            if (!AppConfig.hideMangaTitle && it.imageCount > 0) {
+            if (!ReadMangaConfig.hideMangaTitle && it.imageCount > 0) {
                 pos++
             }
         }
@@ -696,7 +697,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
             it.imageCount = imageCount
         }
 
-        if (AppConfig.hideMangaTitle && imageCount > 0) {
+        if (ReadMangaConfig.hideMangaTitle && imageCount > 0) {
             return MangaChapter(chapter, list, imageCount)
         }
 

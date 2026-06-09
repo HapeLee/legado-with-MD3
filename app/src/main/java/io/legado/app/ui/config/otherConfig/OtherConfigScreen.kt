@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.service.WebService
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -49,7 +50,6 @@ fun OtherConfigScreen(
 ) {
     val context = LocalContext.current
     val readAloudPreferences by viewModel.readAloudPreferences.collectAsStateWithLifecycle()
-    val mangaPreferences by viewModel.mangaPreferences.collectAsStateWithLifecycle()
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -237,8 +237,8 @@ fun OtherConfigScreen(
 
                 SwitchSettingItem(
                     title = stringResource(R.string.show_manga_ui),
-                    checked = mangaPreferences.showMangaUi,
-                    onCheckedChange = { viewModel.setShowMangaUi(it) }
+                    checked = ReadMangaConfig.showMangaUi,
+                    onCheckedChange = { ReadMangaConfig.showMangaUi = it }
                 )
             }
 

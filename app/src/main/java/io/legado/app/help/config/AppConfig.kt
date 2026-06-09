@@ -5,7 +5,6 @@ import io.legado.app.BuildConfig
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.ui.book.manga.config.MangaScrollMode
 import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
@@ -13,6 +12,7 @@ import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfig
 import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import io.legado.app.utils.getPrefBoolean
@@ -46,15 +46,33 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var clickActionBR = appCtx.getPrefInt(PreferKey.clickActionBR, 1)
 
     //    -1无操作 1下一页 2上一页 0显示菜单
-    var mangaClickActionTL = appCtx.getPrefInt(PreferKey.mangaClickActionTL, -1)
-    var mangaClickActionTC = appCtx.getPrefInt(PreferKey.mangaClickActionTC, -1)
-    var mangaClickActionTR = appCtx.getPrefInt(PreferKey.mangaClickActionTR, 1)
-    var mangaClickActionML = appCtx.getPrefInt(PreferKey.mangaClickActionML, 2)
-    var mangaClickActionMC = appCtx.getPrefInt(PreferKey.mangaClickActionMC, 0)
-    var mangaClickActionMR = appCtx.getPrefInt(PreferKey.mangaClickActionMR, 1)
-    var mangaClickActionBL = appCtx.getPrefInt(PreferKey.mangaClickActionBL, 2)
-    var mangaClickActionBC = appCtx.getPrefInt(PreferKey.mangaClickActionBC, 1)
-    var mangaClickActionBR = appCtx.getPrefInt(PreferKey.mangaClickActionBR, 1)
+    var mangaClickActionTL
+        get() = ReadMangaConfig.mangaClickActionTL
+        set(value) { ReadMangaConfig.mangaClickActionTL = value }
+    var mangaClickActionTC
+        get() = ReadMangaConfig.mangaClickActionTC
+        set(value) { ReadMangaConfig.mangaClickActionTC = value }
+    var mangaClickActionTR
+        get() = ReadMangaConfig.mangaClickActionTR
+        set(value) { ReadMangaConfig.mangaClickActionTR = value }
+    var mangaClickActionML
+        get() = ReadMangaConfig.mangaClickActionML
+        set(value) { ReadMangaConfig.mangaClickActionML = value }
+    var mangaClickActionMC
+        get() = ReadMangaConfig.mangaClickActionMC
+        set(value) { ReadMangaConfig.mangaClickActionMC = value }
+    var mangaClickActionMR
+        get() = ReadMangaConfig.mangaClickActionMR
+        set(value) { ReadMangaConfig.mangaClickActionMR = value }
+    var mangaClickActionBL
+        get() = ReadMangaConfig.mangaClickActionBL
+        set(value) { ReadMangaConfig.mangaClickActionBL = value }
+    var mangaClickActionBC
+        get() = ReadMangaConfig.mangaClickActionBC
+        set(value) { ReadMangaConfig.mangaClickActionBC = value }
+    var mangaClickActionBR
+        get() = ReadMangaConfig.mangaClickActionBR
+        set(value) { ReadMangaConfig.mangaClickActionBR = value }
 
     val AppTheme get() = ThemeConfig.appTheme
 
@@ -159,33 +177,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
             PreferKey.clickActionBR -> clickActionBR =
                 appCtx.getPrefInt(PreferKey.clickActionBR, 1)
-
-            PreferKey.mangaClickActionTL -> mangaClickActionTL =
-                appCtx.getPrefInt(PreferKey.mangaClickActionTL, -1)
-
-            PreferKey.mangaClickActionTC -> mangaClickActionTC =
-                appCtx.getPrefInt(PreferKey.mangaClickActionTC, -1)
-
-            PreferKey.mangaClickActionTR -> mangaClickActionTR =
-                appCtx.getPrefInt(PreferKey.mangaClickActionTR, 1)
-
-            PreferKey.mangaClickActionML -> mangaClickActionML =
-                appCtx.getPrefInt(PreferKey.mangaClickActionML, 2)
-
-            PreferKey.mangaClickActionMC -> mangaClickActionMC =
-                appCtx.getPrefInt(PreferKey.mangaClickActionMC, 0)
-
-            PreferKey.mangaClickActionMR -> mangaClickActionMR =
-                appCtx.getPrefInt(PreferKey.mangaClickActionMR, 1)
-
-            PreferKey.mangaClickActionBL -> mangaClickActionBL =
-                appCtx.getPrefInt(PreferKey.mangaClickActionBL, 2)
-
-            PreferKey.mangaClickActionBC -> mangaClickActionBC =
-                appCtx.getPrefInt(PreferKey.mangaClickActionBC, 1)
-
-            PreferKey.mangaClickActionBR -> mangaClickActionBR =
-                appCtx.getPrefInt(PreferKey.mangaClickActionBR, 1)
 
             PreferKey.readBodyToLh -> ReadBookConfig.readBodyToLh =
                 appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)
@@ -745,13 +736,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     }
 
     fun detectMangaClickArea() {
-        if (mangaClickActionTL * mangaClickActionTC * mangaClickActionTR
-            * mangaClickActionML * mangaClickActionMC * mangaClickActionMR
-            * mangaClickActionBL * mangaClickActionBC * mangaClickActionBR != 0
-        ) {
-            appCtx.putPrefInt(PreferKey.mangaClickActionMC, 0)
-            appCtx.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
-        }
+        ReadMangaConfig.detectMangaClickArea()
     }
 
     var firebaseEnable: Boolean
@@ -762,26 +747,20 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     //跳转到漫画界面不使用富文本模式
     val showMangaUi: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.showMangaUi, true)
+        get() = ReadMangaConfig.showMangaUi
 
     //禁用漫画缩放
     var disableMangaScale: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.disableMangaScale, true)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.disableMangaScale, value)
-        }
+        get() = ReadMangaConfig.disableMangaScale
+        set(value) { ReadMangaConfig.disableMangaScale = value }
 
     var disableMangaScrollAnimation: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.disableMangaScrollAnimation, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.disableMangaScrollAnimation, value)
-        }
+        get() = ReadMangaConfig.disableMangaScrollAnimation
+        set(value) { ReadMangaConfig.disableMangaScrollAnimation = value }
 
     var disableMangaCrossFade: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.disableMangaCrossFade, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.disableMangaCrossFade, value)
-        }
+        get() = ReadMangaConfig.disableMangaCrossFade
+        set(value) { ReadMangaConfig.disableMangaCrossFade = value }
 
     var titleBarMode
         get() = ReadConfig.titleBarMode
@@ -791,105 +770,75 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     //漫画预加载数量
     var mangaPreDownloadNum
-        get() = appCtx.getPrefInt(PreferKey.mangaPreDownloadNum, 10)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.mangaPreDownloadNum, value)
-        }
+        get() = ReadMangaConfig.mangaPreDownloadNum
+        set(value) { ReadMangaConfig.mangaPreDownloadNum = value }
 
     //点击翻页
     var disableClickScroll
-        get() = appCtx.getPrefBoolean(PreferKey.disableClickScroll, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.disableClickScroll, value)
-        }
+        get() = ReadMangaConfig.disableClickScroll
+        set(value) { ReadMangaConfig.disableClickScroll = value }
 
     //漫画滚动速度
     var mangaAutoPageSpeed
-        get() = appCtx.getPrefInt(PreferKey.mangaAutoPageSpeed, 3)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.mangaAutoPageSpeed, value)
-        }
+        get() = ReadMangaConfig.mangaAutoPageSpeed
+        set(value) { ReadMangaConfig.mangaAutoPageSpeed = value }
 
     //漫画页脚配置
     var mangaFooterConfig
-        get() = appCtx.getPrefString(PreferKey.mangaFooterConfig, "")
-        set(value) {
-            appCtx.putPrefString(PreferKey.mangaFooterConfig, value)
-        }
+        get() = ReadMangaConfig.mangaFooterConfig
+        set(value) { ReadMangaConfig.mangaFooterConfig = value }
 
     //漫画滚动方式
     var mangaScrollMode: Int
-        get() = appCtx.getPrefInt(PreferKey.mangaScrollMode, MangaScrollMode.WEBTOON)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.mangaScrollMode, value)
-        }
+        get() = ReadMangaConfig.mangaScrollMode
+        set(value) { ReadMangaConfig.mangaScrollMode = value }
 
     var mangaLongClick
-        get() = appCtx.getPrefBoolean(PreferKey.mangaLongClick, true)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.mangaLongClick, value)
-        }
+        get() = ReadMangaConfig.mangaLongClick
+        set(value) { ReadMangaConfig.mangaLongClick = value }
 
     var mangaBackground: Int
-        get() = appCtx.getPrefInt(PreferKey.mangaBackground, 0xFF000000.toInt())
-        set(value) {
-            appCtx.putPrefInt(PreferKey.mangaBackground, value)
-        }
+        get() = ReadMangaConfig.mangaBackground
+        set(value) { ReadMangaConfig.mangaBackground = value }
 
     //漫画滤镜
     var mangaColorFilter
-        get() = appCtx.getPrefString(PreferKey.mangaColorFilter, "")
-        set(value) {
-            appCtx.putPrefString(PreferKey.mangaColorFilter, value)
-        }
+        get() = ReadMangaConfig.mangaColorFilter
+        set(value) { ReadMangaConfig.mangaColorFilter = value }
 
     //禁用漫画内标题
     var hideMangaTitle
-        get() = appCtx.getPrefBoolean(PreferKey.hideMangaTitle, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.hideMangaTitle, value)
-        }
+        get() = ReadMangaConfig.hideMangaTitle
+        set(value) { ReadMangaConfig.hideMangaTitle = value }
 
     //开启墨水屏模式
     var enableMangaEInk
-        get() = appCtx.getPrefBoolean(PreferKey.enableMangaEInk, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.enableMangaEInk, value)
-        }
+        get() = ReadMangaConfig.enableMangaEInk
+        set(value) { ReadMangaConfig.enableMangaEInk = value }
 
     //墨水屏阈值
     var mangaEInkThreshold
-        get() = appCtx.getPrefInt(PreferKey.mangaEInkThreshold, 150)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.mangaEInkThreshold, value)
-        }
+        get() = ReadMangaConfig.mangaEInkThreshold
+        set(value) { ReadMangaConfig.mangaEInkThreshold = value }
 
     //漫画灰度
     var enableMangaGray
-        get() = appCtx.getPrefBoolean(PreferKey.enableMangaGray, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.enableMangaGray, value)
-        }
+        get() = ReadMangaConfig.enableMangaGray
+        set(value) { ReadMangaConfig.enableMangaGray = value }
 
     //条漫侧边距
     var webtoonSidePaddingDp: Int
-        get() = appCtx.getPrefInt(PreferKey.webtoonSidePaddingDp, 0)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.webtoonSidePaddingDp, value)
-        }
+        get() = ReadMangaConfig.webtoonSidePaddingDp
+        set(value) { ReadMangaConfig.webtoonSidePaddingDp = value }
 
     //漫画音量键翻页
     var MangaVolumeKeyPage: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.mangaVolumeKeyPage, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.mangaVolumeKeyPage, value)
-        }
+        get() = ReadMangaConfig.mangaVolumeKeyPage
+        set(value) { ReadMangaConfig.mangaVolumeKeyPage = value }
 
     var reverseVolumeKeyPage: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.reverseVolumeKeyPage, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.reverseVolumeKeyPage, value)
-        }
+        get() = ReadMangaConfig.reverseVolumeKeyPage
+        set(value) { ReadMangaConfig.reverseVolumeKeyPage = value }
 
     var tabletInterface
         get() = ThemeConfig.tabletInterface

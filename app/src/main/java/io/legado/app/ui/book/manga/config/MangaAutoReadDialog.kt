@@ -5,7 +5,7 @@ import android.view.View
 import io.legado.app.R
 import io.legado.app.base.BaseBottomSheetDialogFragment
 import io.legado.app.databinding.DialogMangaAutoReadBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class MangaAutoReadDialog : BaseBottomSheetDialogFragment(R.layout.dialog_manga_auto_read) {
@@ -37,7 +37,7 @@ class MangaAutoReadDialog : BaseBottomSheetDialogFragment(R.layout.dialog_manga_
         binding.scvAutoPageSpeed.run {
             isEnabled = boolean
             valueFormat = { "$it 秒" }
-            progress = AppConfig.mangaAutoPageSpeed
+            progress = ReadMangaConfig.mangaAutoPageSpeed
 
             onChanged = { newValue ->
                 callback?.onAutoPageSpeedChanged(newValue)

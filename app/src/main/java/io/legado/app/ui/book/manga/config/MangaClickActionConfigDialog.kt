@@ -8,17 +8,14 @@ import android.widget.TextView
 import io.legado.app.R
 import io.legado.app.base.BaseOverlayDialogFragment
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.repository.MangaSettingsRepository
 import io.legado.app.databinding.DialogClickActionConfigBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import org.koin.android.ext.android.inject
 
 class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_click_action_config) {
     private val binding by viewBinding(DialogClickActionConfigBinding::bind)
-    private val mangaSettingsRepository by inject<MangaSettingsRepository>()
 
     private val actions by lazy {
         linkedMapOf(
@@ -50,15 +47,15 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
     }
 
     private fun initData() = binding.run {
-        tvTopLeft.text = actions[AppConfig.mangaClickActionTL]
-        tvTopCenter.text = actions[AppConfig.mangaClickActionTC]
-        tvTopRight.text = actions[AppConfig.mangaClickActionTR]
-        tvMiddleLeft.text = actions[AppConfig.mangaClickActionML]
-        tvMiddleCenter.text = actions[AppConfig.mangaClickActionMC]
-        tvMiddleRight.text = actions[AppConfig.mangaClickActionMR]
-        tvBottomLeft.text = actions[AppConfig.mangaClickActionBL]
-        tvBottomCenter.text = actions[AppConfig.mangaClickActionBC]
-        tvBottomRight.text = actions[AppConfig.mangaClickActionBR]
+        tvTopLeft.text = actions[ReadMangaConfig.mangaClickActionTL]
+        tvTopCenter.text = actions[ReadMangaConfig.mangaClickActionTC]
+        tvTopRight.text = actions[ReadMangaConfig.mangaClickActionTR]
+        tvMiddleLeft.text = actions[ReadMangaConfig.mangaClickActionML]
+        tvMiddleCenter.text = actions[ReadMangaConfig.mangaClickActionMC]
+        tvMiddleRight.text = actions[ReadMangaConfig.mangaClickActionMR]
+        tvBottomLeft.text = actions[ReadMangaConfig.mangaClickActionBL]
+        tvBottomCenter.text = actions[ReadMangaConfig.mangaClickActionBC]
+        tvBottomRight.text = actions[ReadMangaConfig.mangaClickActionBR]
     }
 
     private fun initViewEvent() {
@@ -132,18 +129,15 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
 
     private fun setClickAction(key: String, action: Int) {
         when (key) {
-            PreferKey.mangaClickActionTL -> AppConfig.mangaClickActionTL = action
-            PreferKey.mangaClickActionTC -> AppConfig.mangaClickActionTC = action
-            PreferKey.mangaClickActionTR -> AppConfig.mangaClickActionTR = action
-            PreferKey.mangaClickActionML -> AppConfig.mangaClickActionML = action
-            PreferKey.mangaClickActionMC -> AppConfig.mangaClickActionMC = action
-            PreferKey.mangaClickActionMR -> AppConfig.mangaClickActionMR = action
-            PreferKey.mangaClickActionBL -> AppConfig.mangaClickActionBL = action
-            PreferKey.mangaClickActionBC -> AppConfig.mangaClickActionBC = action
-            PreferKey.mangaClickActionBR -> AppConfig.mangaClickActionBR = action
-        }
-        execute {
-            mangaSettingsRepository.setMangaClickAction(key, action)
+            PreferKey.mangaClickActionTL -> ReadMangaConfig.mangaClickActionTL = action
+            PreferKey.mangaClickActionTC -> ReadMangaConfig.mangaClickActionTC = action
+            PreferKey.mangaClickActionTR -> ReadMangaConfig.mangaClickActionTR = action
+            PreferKey.mangaClickActionML -> ReadMangaConfig.mangaClickActionML = action
+            PreferKey.mangaClickActionMC -> ReadMangaConfig.mangaClickActionMC = action
+            PreferKey.mangaClickActionMR -> ReadMangaConfig.mangaClickActionMR = action
+            PreferKey.mangaClickActionBL -> ReadMangaConfig.mangaClickActionBL = action
+            PreferKey.mangaClickActionBC -> ReadMangaConfig.mangaClickActionBC = action
+            PreferKey.mangaClickActionBR -> ReadMangaConfig.mangaClickActionBR = action
         }
     }
 
@@ -158,19 +152,16 @@ class MangaClickActionConfigDialog : BaseOverlayDialogFragment(R.layout.dialog_c
 
     override fun onDestroy() {
         if (!hasMenuClickArea()) {
-            AppConfig.detectMangaClickArea()
-            execute {
-                mangaSettingsRepository.setMangaClickAction(PreferKey.mangaClickActionMC, 0)
-            }
+            ReadMangaConfig.detectMangaClickArea()
         }
         super.onDestroy()
     }
 
     private fun hasMenuClickArea(): Boolean {
-        return AppConfig.mangaClickActionTL * AppConfig.mangaClickActionTC *
-                AppConfig.mangaClickActionTR * AppConfig.mangaClickActionML *
-                AppConfig.mangaClickActionMC * AppConfig.mangaClickActionMR *
-                AppConfig.mangaClickActionBL * AppConfig.mangaClickActionBC *
-                AppConfig.mangaClickActionBR == 0
+        return ReadMangaConfig.mangaClickActionTL * ReadMangaConfig.mangaClickActionTC *
+                ReadMangaConfig.mangaClickActionTR * ReadMangaConfig.mangaClickActionML *
+                ReadMangaConfig.mangaClickActionMC * ReadMangaConfig.mangaClickActionMR *
+                ReadMangaConfig.mangaClickActionBL * ReadMangaConfig.mangaClickActionBC *
+                ReadMangaConfig.mangaClickActionBR == 0
     }
 }

@@ -46,6 +46,7 @@ import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.manga.ReadMangaActivity
 import io.legado.app.ui.main.MainActivity
@@ -70,13 +71,13 @@ fun Context.startActivityForBook(
 ) {
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
-        !book.isLocal && book.isImage && AppConfig.showMangaUi ->
+        !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
             Intent(this, ReadMangaActivity::class.java)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (!book.isLocal && book.isImage && AppConfig.showMangaUi)) {
+    if (book.isAudio || (!book.isLocal && book.isImage && ReadMangaConfig.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)
@@ -89,13 +90,13 @@ fun Context.startActivityForBook(
 ) {
     val intent = when {
         book.isAudio -> Intent(this, AudioPlayActivity::class.java)
-        !book.isLocal && book.isImage && AppConfig.showMangaUi ->
+        !book.isLocal && book.isImage && ReadMangaConfig.showMangaUi ->
             Intent(this, ReadMangaActivity::class.java)
 
         else -> MainActivity.createReadBookIntent(this, book.bookUrl)
     }
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    if (book.isAudio || (!book.isLocal && book.isImage && AppConfig.showMangaUi)) {
+    if (book.isAudio || (!book.isLocal && book.isImage && ReadMangaConfig.showMangaUi)) {
         intent.putExtra("bookUrl", book.bookUrl)
     }
     intent.apply(configIntent)

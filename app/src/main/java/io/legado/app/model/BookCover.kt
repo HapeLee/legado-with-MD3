@@ -25,6 +25,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.help.CacheManager
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.help.glide.BlurTransformation
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.help.glide.OkHttpModelLoader
@@ -172,7 +173,7 @@ object BookCover {
         if (transformation != null) {
             builder = builder.transform(transformation)
         }
-        builder = if (AppConfig.disableMangaCrossFade) {
+        builder = if (ReadMangaConfig.disableMangaCrossFade) {
             builder
         } else {
             builder.transition(DrawableTransitionOptions.withCrossFade())

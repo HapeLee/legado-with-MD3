@@ -43,6 +43,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
 import io.legado.app.help.storage.Backup
@@ -147,7 +148,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
     private val mScrollTimer by lazy {
         ScrollTimer(this, binding.recyclerView, lifecycleScope).apply {
-            setSpeed(AppConfig.mangaAutoPageSpeed)
+            setSpeed(ReadMangaConfig.mangaAutoPageSpeed)
         }
     }
     private var enableAutoScrollPage = false
@@ -232,7 +233,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         loadMoreView.gone()
         mMangaFooterConfig =
-            GSON.fromJsonObject<MangaFooterConfig>(AppConfig.mangaFooterConfig).getOrNull()
+            GSON.fromJsonObject<MangaFooterConfig>(ReadMangaConfig.mangaFooterConfig).getOrNull()
                 ?: MangaFooterConfig()
 
         onBackPressedDispatcher.addCallback(this){
@@ -258,12 +259,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     private fun initRecyclerView() {
         val mangaColorFilter =
-            GSON.fromJsonObject<MangaColorFilterConfig>(AppConfig.mangaColorFilter).getOrNull()
+            GSON.fromJsonObject<MangaColorFilterConfig>(ReadMangaConfig.mangaColorFilter).getOrNull()
                 ?: MangaColorFilterConfig()
         mAdapter.run {
             setMangaImageColorFilter(mangaColorFilter)
-            enableMangaEInk(AppConfig.enableMangaEInk, AppConfig.mangaEInkThreshold)
-            enableGray(AppConfig.enableMangaGray)
+            enableMangaEInk(ReadMangaConfig.enableMangaEInk, ReadMangaConfig.mangaEInkThreshold)
+            enableGray(ReadMangaConfig.enableMangaGray)
         }
 
         viewModel.initData(intent) {
@@ -276,8 +277,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             itemAnimator = null
             layoutManager = mLayoutManager
             setHasFixedSize(true)
-            setDisableMangaScale(AppConfig.disableMangaScale)
-            setRecyclerViewPreloader(AppConfig.mangaPreDownloadNum)
+            setDisableMangaScale(ReadMangaConfig.disableMangaScale)
+            setRecyclerViewPreloader(ReadMangaConfig.mangaPreDownloadNum)
             setPreScrollListener { _, _, _, position ->
                 if (mAdapter.isNotEmpty()) {
                     val item = mAdapter.getItem(position)
@@ -498,7 +499,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     override fun onColorSelected(dialogId: Int, color: Int){
         if (dialogId == MANGA_B)
         {
-            viewModel.setMangaBackground(color)
+            ReadMangaConfig.mangaBackground = color
             setBackground()
         }
     }
@@ -701,9 +702,9 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 showNumberPickerDialog(
                     0,
                     getString(R.string.pre_download),
-                    AppConfig.mangaPreDownloadNum
+                    ReadMangaConfig.mangaPreDownloadNum
                 ) {
-                    viewModel.setMangaPreDownloadNum(it)
+                    ReadMangaConfig.mangaPreDownloadNum = it
                     item.title = getString(R.string.pre_download_m, it)
                     setRecyclerViewPreloader(it)
                 }
@@ -751,26 +752,26 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             mangaScrollMode = mode
         }
         setScrollMode(mode)
-        updateWebtoonSidePadding(AppConfig.webtoonSidePaddingDp)
+        updateWebtoonSidePadding(ReadMangaConfig.webtoonSidePaddingDp)
         setAutoReadEnabled(false)
     }
 
     //点击滑动
     override fun onClickScrollDisabledChanged(disabled: Boolean) {
-        viewModel.setDisableClickScroll(disabled)
+        ReadMangaConfig.disableClickScroll = disabled
     }
 
     override fun onScrollAniDisabledChanged(disabled: Boolean) {
-        viewModel.setDisableMangaScrollAnimation(disabled)
+        ReadMangaConfig.disableMangaScrollAnimation = disabled
     }
 
     override fun onCrossFadeDisabledChanged(disabled: Boolean) {
-        viewModel.setDisableMangaCrossFade(disabled)
+        ReadMangaConfig.disableMangaCrossFade = disabled
     }
 
     //双击缩放
     override fun onMangaScaleDisabledChanged(disabled: Boolean) {
-        viewModel.setDisableMangaScale(disabled)
+        ReadMangaConfig.disableMangaScale = disabled
         setDisableMangaScale(disabled)
     }
 
@@ -784,13 +785,16 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
 
     //墨水屏
     override fun updateEpaperMode(enabled: Boolean, threshold: Int) {
-        viewModel.setEInkMode(enabled, threshold)
+        ReadMangaConfig.enableMangaEInk = enabled
+        ReadMangaConfig.enableMangaGray = false
+        ReadMangaConfig.mangaEInkThreshold = threshold
         mAdapter.enableMangaEInk(enabled, threshold)
     }
 
     //灰度
     override fun updateGrayMode(enabled: Boolean) {
-        viewModel.setGrayMode(enabled)
+        ReadMangaConfig.enableMangaGray = enabled
+        ReadMangaConfig.enableMangaEInk = false
         mAdapter.enableGray(enabled)
     }
 
@@ -808,28 +812,25 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     //自动翻页速度
     override fun onAutoPageSpeedChanged(speed: Int) {
         setAutoReadEnabled(false)
-        viewModel.setMangaAutoPageSpeed(speed)
+        ReadMangaConfig.mangaAutoPageSpeed = speed
         mScrollTimer.setSpeed(speed)
         setAutoReadEnabled(enableScroll)
-//        if (enableAutoScrollPage) {
-//            mScrollTimer.isEnabledPage = true
-//        }
     }
 
     override fun onMangaLongClickChanged(checked: Boolean) {
-        viewModel.setMangaLongClick(checked)
+        ReadMangaConfig.mangaLongClick = checked
     }
 
     override fun onVolumeKeyPageChanged(enable: Boolean) {
-        viewModel.setMangaVolumeKeyPage(enable)
+        ReadMangaConfig.mangaVolumeKeyPage = enable
     }
 
     override fun onReverseVolumeKeyPageChanged(enable: Boolean) {
-        viewModel.setReverseVolumeKeyPage(enable)
+        ReadMangaConfig.reverseVolumeKeyPage = enable
     }
 
     override fun onHideMangaTitleChanged(hide: Boolean) {
-        viewModel.setHideMangaTitle(hide)
+        ReadMangaConfig.hideMangaTitle = hide
         ReadManga.loadContent()
     }
 
@@ -946,8 +947,8 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private fun setBackground() {
-        binding.webtoonFrame.setBackgroundColor(AppConfig.mangaBackground)
-        binding.recyclerView.setBackgroundColor(AppConfig.mangaBackground)
+        binding.webtoonFrame.setBackgroundColor(ReadMangaConfig.mangaBackground)
+        binding.recyclerView.setBackgroundColor(ReadMangaConfig.mangaBackground)
         mAdapter.notifyItemRangeChanged(0, mAdapter.itemCount)
     }
 
@@ -966,7 +967,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     private fun upMenu(menu: Menu) {
         this.mMenu = menu
         menu.findItem(R.id.menu_pre_manga_number).title =
-            getString(R.string.pre_download_m, AppConfig.mangaPreDownloadNum)
+            getString(R.string.pre_download_m, ReadMangaConfig.mangaPreDownloadNum)
     }
 
     private fun setDisableMangaScale(disable: Boolean) {
@@ -987,12 +988,12 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     private fun scrollToNext() {
-        if (!AppConfig.disableClickScroll)
+        if (!ReadMangaConfig.disableClickScroll)
             scrollPageTo(1)
     }
 
     private fun scrollToPrev() {
-        if (!AppConfig.disableClickScroll)
+        if (!ReadMangaConfig.disableClickScroll)
             scrollPageTo(-1)
     }
 
@@ -1018,7 +1019,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
         dx *= direction
         dy *= direction
-        if (!AppConfig.disableMangaScrollAnimation)
+        if (!ReadMangaConfig.disableMangaScrollAnimation)
             binding.recyclerView.smoothScrollBy(dx, dy)
         else
             binding.recyclerView.scrollBy(dx, dy)
@@ -1082,11 +1083,11 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (!AppConfig.MangaVolumeKeyPage) {
+        if (!ReadMangaConfig.mangaVolumeKeyPage) {
             return super.onKeyDown(keyCode, event)
         }
 
-        val isReverse = AppConfig.reverseVolumeKeyPage
+        val isReverse = ReadMangaConfig.reverseVolumeKeyPage
 
         when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP -> {
