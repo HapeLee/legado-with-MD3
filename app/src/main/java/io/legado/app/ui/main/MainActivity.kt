@@ -20,6 +20,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
@@ -43,12 +44,12 @@ import io.legado.app.ui.about.CrashLogsDialog
 import io.legado.app.ui.about.UpdateDialog
 import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.LogUtils
-import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.Dispatchers.IO
@@ -190,7 +191,11 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             else -> false
         }
 
-        val backStack = rememberNavBackStack(MainNavigator.resolveStartRoute(intent))
+        val startRoute = remember {
+            if (OtherConfig.defaultToRead) MainRouteReadBook()
+            else MainNavigator.resolveStartRoute(intent)
+        }
+        val backStack = rememberNavBackStack(startRoute)
 
         LaunchedEffect(backStack) {
             routeEvents.collect { route ->
@@ -272,10 +277,6 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 startActivity<WelcomeActivity>()
                 finish()
                 true
-            }
-            getPrefBoolean(PreferKey.defaultToRead) -> {
-                setIntent(createReadBookIntent(this))
-                false
             }
             else -> false
         }
