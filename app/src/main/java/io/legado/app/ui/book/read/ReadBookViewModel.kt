@@ -17,12 +17,14 @@ import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.Status
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
-import io.legado.app.data.local.preferences.LocalPreferencesKeys
-import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
+import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
 import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadPreferences
@@ -42,7 +44,6 @@ import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.AppConfig
-import io.legado.app.utils.openUrl
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
@@ -57,7 +58,6 @@ import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
-import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
@@ -74,6 +74,7 @@ import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapParallelSafe
+import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.toStringArray
@@ -120,7 +121,8 @@ class ReadBookViewModel(
     private val readSettingsRepository: ReadSettingsRepository,
     private val readBookStyleConfigRepository: ReadBookStyleConfigRepository,
     private val readAloudSettingsRepository: ReadAloudSettingsRepository,
-    private val localPreferencesRepository: LocalPreferencesRepository
+    private val localPreferencesRepository: LocalPreferencesRepository,
+    private val highlightRuleRepository: HighlightRuleRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -296,6 +298,9 @@ class ReadBookViewModel(
                 if (intent.sheet is ReadBookSheet.Bookmark) {
                     // Bookmark is shown as a menu route, not a sheet
                     openReadMenuRoute(ReadBookMenuRoute.Bookmark(intent.sheet.bookmark))
+                } else if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
+                    loadHighlightRules()
+                    _uiState.update { it.copy(activeSheet = intent.sheet) }
                 } else {
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 }
@@ -308,6 +313,15 @@ class ReadBookViewModel(
                         contentEditTitle = "",
                         contentEditLoading = false,
                         contentEditSaveToSource = false,
+                    )
+                } else if (it.activeSheet is ReadBookSheet.HighlightRuleConfig) {
+                    it.copy(
+                        activeSheet = null,
+                        highlightRuleConfig = it.highlightRuleConfig.copy(
+                            editingRule = null,
+                            showNewRule = false,
+                            deleteRule = null,
+                        ),
                     )
                 } else {
                     it.copy(activeSheet = null)
@@ -505,6 +519,48 @@ class ReadBookViewModel(
 
             is ReadBookIntent.UpdateConfig -> {
                 handleConfigUpdate(intent.update)
+            }
+            is ReadBookIntent.AddHighlightRule -> _uiState.update {
+                it.copy(highlightRuleConfig = it.highlightRuleConfig.copy(showNewRule = true))
+            }
+
+            is ReadBookIntent.EditHighlightRule -> _uiState.update {
+                it.copy(highlightRuleConfig = it.highlightRuleConfig.copy(editingRule = intent.rule))
+            }
+
+            is ReadBookIntent.ToggleHighlightRule -> {
+                val rules = _uiState.value.highlightRuleConfig.rules.map {
+                    if (it.id == intent.rule.id) it.copy(enabled = intent.enabled) else it
+                }
+                saveHighlightRules(rules)
+            }
+
+            is ReadBookIntent.SaveHighlightRule -> {
+                val currentRules = _uiState.value.highlightRuleConfig.rules
+                val updatedRules = if (currentRules.any { it.id == intent.rule.id }) {
+                    currentRules.map { if (it.id == intent.rule.id) intent.rule else it }
+                } else {
+                    currentRules + intent.rule
+                }
+                saveHighlightRules(updatedRules)
+            }
+
+            is ReadBookIntent.DismissHighlightRuleEdit -> _uiState.update {
+                it.copy(
+                    highlightRuleConfig = it.highlightRuleConfig.copy(
+                        editingRule = null,
+                        showNewRule = false,
+                    ),
+                )
+            }
+
+            is ReadBookIntent.RequestDeleteHighlightRule -> _uiState.update {
+                it.copy(highlightRuleConfig = it.highlightRuleConfig.copy(deleteRule = intent.rule))
+            }
+
+            is ReadBookIntent.ConfirmDeleteHighlightRule -> deletePendingHighlightRule()
+            is ReadBookIntent.DismissDeleteHighlightRule -> _uiState.update {
+                it.copy(highlightRuleConfig = it.highlightRuleConfig.copy(deleteRule = null))
             }
             is ReadBookIntent.SaveMenuCustomIcon -> saveMenuCustomIcon(intent.id, intent.uri)
             is ReadBookIntent.SaveTitleBarCustomIcon -> saveTitleBarCustomIcon(intent.id, intent.uri)
@@ -842,28 +898,16 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.TextActionBookmark -> {
-                val book = ReadBook.book
-                val page = ReadBook.curTextChapter?.getPage(ReadBook.durPageIndex)
-                if (book != null && page != null) {
-                    val bookmark = book.createBookMark().apply {
-                        chapterIndex = ReadBook.durChapterIndex
-                        chapterPos = ReadBook.durChapterPos
-                        chapterName = page.title
-                        bookText = page.text.replace(Regex("[袮꧁]"), "").trim()
-                    }
-                    _uiState.update {
-                        it.copy(
-                            menuState = ReadBookMenuState(
-                                visible = true,
-                                routeStack = kotlinx.collections.immutable.persistentListOf(
-                                    ReadBookMenuRoute.Main,
-                                    ReadBookMenuRoute.Bookmark(bookmark),
-                                ),
+                _uiState.update {
+                    it.copy(
+                        menuState = ReadBookMenuState(
+                            visible = true,
+                            routeStack = kotlinx.collections.immutable.persistentListOf(
+                                ReadBookMenuRoute.Main,
+                                ReadBookMenuRoute.Bookmark(intent.bookmark),
                             ),
-                        )
-                    }
-                } else {
-                    context.toastOnUi(R.string.create_bookmark_error)
+                        ),
+                    )
                 }
             }
 
@@ -2685,12 +2729,6 @@ class ReadBookViewModel(
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
 
-            // --- Highlight rules ---
-            is ConfigUpdate.HighlightRules -> {
-                HighlightRuleStore.save(update.rules)
-                TextChapterLayout.invalidateRegexCache()
-            }
-
             // --- Auto read ---
             is ConfigUpdate.AutoReadSpeed -> {
                 ReadBookConfig.autoReadSpeed = update.value
@@ -2707,6 +2745,62 @@ class ReadBookViewModel(
         } else {
             _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         }
+    }
+
+    private fun loadHighlightRules() {
+        val configName = ReadBookConfig.durConfig.name
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    rules = highlightRuleRepository.load(configName).toImmutableList(),
+                    editingRule = null,
+                    showNewRule = false,
+                    deleteRule = null,
+                ),
+            )
+        }
+    }
+
+    private fun saveHighlightRules(rules: List<HighlightRule>) {
+        val configName = ReadBookConfig.durConfig.name
+        val sanitizedRules = rules.map(highlightRuleRepository::sanitizeRule)
+        highlightRuleRepository.save(configName, sanitizedRules)
+        TextChapterLayout.invalidateRegexCache()
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    rules = highlightRuleRepository.load(configName).toImmutableList(),
+                    editingRule = null,
+                    showNewRule = false,
+                    deleteRule = null,
+                ),
+            )
+        }
+        _effects.tryEmit(
+            ReadBookEffect.UpdateReadViewConfig(
+                setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+            )
+        )
+    }
+
+    private fun deletePendingHighlightRule() {
+        val rule = _uiState.value.highlightRuleConfig.deleteRule ?: return
+        val configName = ReadBookConfig.durConfig.name
+        highlightRuleRepository.delete(rule)
+        TextChapterLayout.invalidateRegexCache()
+        _uiState.update {
+            it.copy(
+                highlightRuleConfig = it.highlightRuleConfig.copy(
+                    rules = highlightRuleRepository.load(configName).toImmutableList(),
+                    deleteRule = null,
+                ),
+            )
+        }
+        _effects.tryEmit(
+            ReadBookEffect.UpdateReadViewConfig(
+                setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
+            )
+        )
     }
 
     private fun saveMenuCustomIcon(id: String, uri: Uri) {
@@ -2923,18 +3017,6 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
                     ))
-                }
-
-                ReadBookColorPickerIds.HIGHLIGHT_RULE_COLOR -> {
-                    val pos = ReadBookColorPickerIds.pendingHighlightRulePosition
-                    val rules = HighlightRuleStore.load()
-                    if (pos in rules.indices) {
-                        HighlightRuleStore.update(rules[pos].copy(textColor = color))
-                        TextChapterLayout.invalidateRegexCache()
-                        _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                            setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
-                        ))
-                    }
                 }
 
                 ReadBookColorPickerIds.MENU_BG_COLOR -> {

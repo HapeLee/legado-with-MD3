@@ -5,7 +5,6 @@ import io.legado.app.constant.AppLog
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadStyleResolver
-import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.compress.ZipUtils
@@ -20,7 +19,9 @@ import splitties.init.appCtx
 import java.io.File
 import java.io.InputStream
 
-class ReadStyleRepository {
+class ReadStyleRepository(
+    private val highlightRuleRepository: HighlightRuleRepository,
+) {
 
     val configFilePath: String =
         FileUtils.getPath(appCtx.filesDir, ReadBookConfig.configFileName)
@@ -199,7 +200,15 @@ class ReadStyleRepository {
         config.curTextShadowColor()
         if (config.highlightRules.isNotEmpty()) {
             val targetConfigName = config.name.ifBlank { null }
-            HighlightRuleStore.saveForConfig(config.highlightRules, targetConfigName)
+            val highlightRules = config.highlightRules.map { rule ->
+                if (targetConfigName.isNullOrBlank()) {
+                    rule.copy(configName = null)
+                } else {
+                    rule.copyWithNewId().copy(configName = listOf(targetConfigName).toJsonArray())
+                }
+            }
+            config.highlightRules = ArrayList(highlightRules)
+            highlightRuleRepository.saveForConfig(highlightRules, targetConfigName)
         }
         return config
     }

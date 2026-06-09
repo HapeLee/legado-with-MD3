@@ -9,6 +9,8 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.Bookmark
+import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
@@ -153,10 +155,19 @@ data class ReadBookUiState(
     val styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
+    val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
 }
+
+@Stable
+data class HighlightRuleConfigUiState(
+    val rules: ImmutableList<HighlightRule> = persistentListOf(),
+    val editingRule: HighlightRule? = null,
+    val showNewRule: Boolean = false,
+    val deleteRule: HighlightRule? = null,
+)
 
 @Stable
 data class ReadMenuConfig(
@@ -381,6 +392,16 @@ sealed interface ReadBookIntent {
     // Typed config mutation — single entry point for all ReadBookConfig changes
     data class UpdateConfig(val update: ConfigUpdate) : ReadBookIntent
 
+    // Highlight rules
+    data object AddHighlightRule : ReadBookIntent
+    data class EditHighlightRule(val rule: HighlightRule) : ReadBookIntent
+    data class ToggleHighlightRule(val rule: HighlightRule, val enabled: Boolean) : ReadBookIntent
+    data class SaveHighlightRule(val rule: HighlightRule) : ReadBookIntent
+    data object DismissHighlightRuleEdit : ReadBookIntent
+    data class RequestDeleteHighlightRule(val rule: HighlightRule) : ReadBookIntent
+    data object ConfirmDeleteHighlightRule : ReadBookIntent
+    data object DismissDeleteHighlightRule : ReadBookIntent
+
     // Icon picker — file IO handled by ViewModel
     data class SaveMenuCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
     data class SaveTitleBarCustomIcon(val id: String, val uri: Uri) : ReadBookIntent
@@ -398,7 +419,7 @@ sealed interface ReadBookIntent {
     // Default font picker (needs Activity for AlertDialog)
     // Text action menu (moved from Activity)
     data class TextActionAloud(val text: String) : ReadBookIntent
-    data class TextActionBookmark(val text: String) : ReadBookIntent
+    data class TextActionBookmark(val bookmark: Bookmark) : ReadBookIntent
     data class TextActionReplace(val text: String) : ReadBookIntent
     data class TextActionSearchContent(val text: String) : ReadBookIntent
     data class TextActionDict(val text: String) : ReadBookIntent
@@ -1030,11 +1051,6 @@ sealed interface ConfigUpdate {
     }
     data class ShowReadTitleAddition(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
-    }
-
-    // --- Highlight rules ---
-    data class HighlightRules(val rules: List<io.legado.app.data.entities.HighlightRule>) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent)
     }
 
     // --- Auto read ---

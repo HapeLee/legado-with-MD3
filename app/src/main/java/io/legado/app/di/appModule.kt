@@ -22,13 +22,15 @@ import io.legado.app.data.repository.DictionaryRepositoryImpl
 import io.legado.app.data.repository.DirectLinkUploadRepository
 import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.data.repository.ExploreRepositoryImpl
+import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.data.repository.HomepageModulesRepository
 import io.legado.app.data.repository.LlmTranslateRepositoryImpl
 import io.legado.app.data.repository.LocalBookRepository
-import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadAloudSettingsRepository
+import io.legado.app.data.repository.ReadBookStyleConfigRepository
 import io.legado.app.data.repository.ReadRecordRepository
 import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.data.repository.ReadStyleRepository
 import io.legado.app.data.repository.RemoteBookRepository
 import io.legado.app.data.repository.RssRepository
 import io.legado.app.data.repository.SearchContentRepository
@@ -155,6 +157,8 @@ val appModule = module {
     singleOf(::SettingsRepository)
     singleOf(::ReadSettingsRepository)
     singleOf(::ReadAloudSettingsRepository)
+    singleOf(::HighlightRuleRepository)
+    singleOf(::ReadStyleRepository)
     singleOf(::ReadBookStyleConfigRepository)
     singleOf(::LocalPreferencesRepository)
     singleOf(::ExploreBooksUseCase)
@@ -267,7 +271,8 @@ val appModule = module {
             readSettingsRepository = get(),
             readBookStyleConfigRepository = get(),
             readAloudSettingsRepository = get(),
-            localPreferencesRepository = get()
+            localPreferencesRepository = get(),
+            highlightRuleRepository = get()
         )
     }
     viewModelOf(::ChangeCoverViewModel)

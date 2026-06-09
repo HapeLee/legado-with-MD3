@@ -6,16 +6,15 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.annotation.Keep
+import androidx.compose.runtime.State
 import androidx.core.graphics.toColorInt
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.constant.PreferKey
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.ReadMenuBlurStyle
-import androidx.compose.runtime.State
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.data.repository.ReadStyleRepository
-import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.ui.config.PrefDelegate
@@ -24,6 +23,7 @@ import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getMeanColor
 import io.legado.app.utils.hexString
+import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 import java.io.InputStream
 import kotlin.properties.ReadWriteProperty
@@ -35,7 +35,8 @@ import kotlin.reflect.KProperty
 @Suppress("ConstPropertyName")
 @Keep
 object ReadBookConfig {
-    private val readStyleRepository = ReadStyleRepository()
+    private val readStyleRepository: ReadStyleRepository
+        get() = GlobalContext.get().get()
 
     // region prefDelegate helpers
 
@@ -773,7 +774,7 @@ object ReadBookConfig {
     // endregion
 
     fun getExportConfig(): Config {
-        val exportConfig = durConfig.copy(highlightRules = ArrayList(HighlightRuleStore.load()))
+        val exportConfig = durConfig.copy(highlightRules = arrayListOf())
         if (shareLayout) {
             exportConfig.textFont = shareConfig.textFont
             exportConfig.titleFont = shareConfig.titleFont

@@ -41,8 +41,8 @@ import io.legado.app.data.entities.Bookmark
 import io.legado.app.data.entities.Cache
 import io.legado.app.data.entities.Cookie
 import io.legado.app.data.entities.DictRule
-import io.legado.app.data.entities.HomepageCustomSet
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.entities.HomepageCustomSet
 import io.legado.app.data.entities.HomepageModule
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.data.entities.KeyboardAssist
@@ -75,7 +75,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 92,
+    version = 91,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -134,8 +134,7 @@ val appDb by lazy {
         AutoMigration(from = 87, to = 88),
         AutoMigration(from = 88, to = 89),
         AutoMigration(from = 89, to = 90),
-        AutoMigration(from = 90, to = 91),
-        AutoMigration(from = 91, to = 92)
+        AutoMigration(from = 90, to = 91)
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

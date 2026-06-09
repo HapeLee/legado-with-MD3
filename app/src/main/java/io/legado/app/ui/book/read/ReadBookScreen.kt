@@ -10,7 +10,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
@@ -20,22 +19,23 @@ import io.legado.app.ui.book.read.sheet.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.FontSelectSheet
+import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
+import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
 import io.legado.app.ui.book.read.sheet.PageAnimConfigSheet
 import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
-import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
-import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
+import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -169,6 +169,7 @@ fun ReadBookScreen(
     )
     HighlightRuleConfigSheet(
         show = state.activeSheet is ReadBookSheet.HighlightRuleConfig,
+        state = state.highlightRuleConfig,
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )

@@ -22,13 +22,13 @@ import io.legado.app.constant.PageAnim
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
+import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.data.entities.HighlightRule
-import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
 import io.legado.app.model.ReadBook
@@ -60,6 +60,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import org.koin.core.context.GlobalContext
 import java.util.LinkedList
 import kotlin.math.roundToInt
 
@@ -75,20 +76,36 @@ class TextChapterLayout(
         @Volatile
         private var cachedHighlightRules: List<CompiledHighlightRule>? = null
 
+        @Volatile
+        private var cachedHighlightRulesConfigName: String? = null
+
         fun invalidateRegexCache() {
             cachedHighlightRules = null
+            cachedHighlightRulesConfigName = null
         }
     }
 
     private val compiledHighlightRules: List<CompiledHighlightRule>
-        get() = cachedHighlightRules ?: HighlightRuleStore.loadEnabled().mapNotNull { rule ->
-            runCatching {
-                CompiledHighlightRule(
-                    rule = rule,
-                    regex = Regex(rule.pattern)
-                )
-            }.getOrNull()
-        }.also { cachedHighlightRules = it }
+        get() {
+            val configName = ReadBookConfig.durConfig.name
+            cachedHighlightRules?.takeIf {
+                cachedHighlightRulesConfigName == configName
+            }?.let { return it }
+            return highlightRuleRepository.loadEnabled(configName).mapNotNull { rule ->
+                runCatching {
+                    CompiledHighlightRule(
+                        rule = rule,
+                        regex = Regex(rule.pattern)
+                    )
+                }.getOrNull()
+            }.also {
+                cachedHighlightRulesConfigName = configName
+                cachedHighlightRules = it
+            }
+        }
+
+    private val highlightRuleRepository: HighlightRuleRepository
+        get() = GlobalContext.get().get()
 
     @Volatile
     private var listener: LayoutProgressListener? = textChapter

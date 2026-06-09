@@ -11,9 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.MaterialTheme
@@ -39,13 +40,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.configNames
+import io.legado.app.data.repository.toJsonArray
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.ui.book.read.config.HighlightRuleStore
-import io.legado.app.ui.book.read.config.HighlightRuleStore.configNames
-import io.legado.app.ui.book.read.config.HighlightRuleStore.toJsonArray
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.SectionTitle
+import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -147,7 +148,7 @@ fun HighlightRuleEditSheet(
                     }
                 }
                 patternError = null
-                val sanitized = HighlightRuleStore.sanitizeRule(
+                onSave(
                     HighlightRule(
                         id = initial.id,
                         name = name,
@@ -170,7 +171,6 @@ fun HighlightRuleEditSheet(
                         fontPath = if (hasFont) fontPath.ifBlank { null } else null,
                     )
                 )
-                onSave(sanitized)
             }) {
                 androidx.compose.material3.Icon(
                     Icons.Default.Done,
@@ -372,33 +372,51 @@ fun HighlightRuleEditSheet(
             // === Section 3: Config Binding ===
             if (allConfigNames.isNotEmpty()) {
                 SectionTitle("应用排版")
-                AppText(
-                    text = if (configNames.isEmpty()) "全局（所有排版生效）"
-                    else "已选: ${configNames.joinToString("、")}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-                androidx.compose.foundation.layout.FlowRow(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                LazyRow(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Global toggle
-                    FilterChip(
-                        selected = configNames.isEmpty(),
-                        onClick = { configNames = emptySet() },
-                        label = { AppText("全局") },
-                    )
-                    allConfigNames.forEach { cn ->
-                        FilterChip(
-                            selected = cn in configNames,
+                    item {
+                        val selected = configNames.isEmpty()
+                        val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
+                        else LegadoTheme.colorScheme.surfaceContainerLow
+                        val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
+                        else LegadoTheme.colorScheme.onSurfaceVariant
+                        NormalCard(
+                            onClick = { configNames = emptySet() },
+                            containerColor = bg,
+                            cornerRadius = 8.dp,
+                        ) {
+                            AppText(
+                                "全局",
+                                style = LegadoTheme.typography.labelMedium,
+                                color = fg,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+                    itemsIndexed(allConfigNames) { _, cn ->
+                        val selected = cn in configNames
+                        val bg = if (selected) LegadoTheme.colorScheme.secondaryContainer
+                        else LegadoTheme.colorScheme.surfaceContainerLow
+                        val fg = if (selected) LegadoTheme.colorScheme.onSecondaryContainer
+                        else LegadoTheme.colorScheme.onSurfaceVariant
+                        NormalCard(
                             onClick = {
-                                configNames = if (cn in configNames) configNames - cn
+                                configNames = if (selected) configNames - cn
                                 else configNames + cn
                             },
-                            label = { AppText(cn) },
-                        )
+                            containerColor = bg,
+                            cornerRadius = 8.dp,
+                        ) {
+                            AppText(
+                                cn,
+                                style = LegadoTheme.typography.labelMedium,
+                                color = fg,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
                     }
                 }
             }

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 91,
-    "identityHash": "ec7132bb4a28ea41ce9314f820eb6d7b",
+    "identityHash": "3b66f251365b78f6007d87da5bd12b3f",
     "entities": [
       {
         "tableName": "books",
@@ -2293,7 +2293,7 @@
       },
       {
         "tableName": "highlightRules",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `pattern` TEXT NOT NULL, `sampleText` TEXT NOT NULL, `targetScope` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `position` INTEGER NOT NULL, `textColor` INTEGER, `bgColor` INTEGER, `underlineMode` INTEGER NOT NULL, `underlineColor` INTEGER, `underlineWidth` REAL NOT NULL, `underlineOffset` REAL NOT NULL, `underlineSvgPath` TEXT, `bgImage` TEXT, `bgImageFit` INTEGER NOT NULL, `bgImageScale` REAL NOT NULL, `configName` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `pattern` TEXT NOT NULL, `sampleText` TEXT NOT NULL, `targetScope` INTEGER NOT NULL, `enabled` INTEGER NOT NULL, `position` INTEGER NOT NULL, `textColor` INTEGER, `bgColor` INTEGER, `underlineMode` INTEGER NOT NULL, `underlineColor` INTEGER, `underlineWidth` REAL NOT NULL, `underlineOffset` REAL NOT NULL, `underlineSvgPath` TEXT, `bgImage` TEXT, `bgImageFit` INTEGER NOT NULL, `bgImageScale` REAL NOT NULL, `configName` TEXT, `fontPath` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -2396,6 +2396,11 @@
             "fieldPath": "configName",
             "columnName": "configName",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fontPath",
+            "columnName": "fontPath",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -2414,7 +2419,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ec7132bb4a28ea41ce9314f820eb6d7b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '3b66f251365b78f6007d87da5bd12b3f')"
     ]
   }
 }
