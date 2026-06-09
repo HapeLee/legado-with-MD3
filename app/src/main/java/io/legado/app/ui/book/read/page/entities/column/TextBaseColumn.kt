@@ -17,6 +17,7 @@ interface TextBaseColumn : BaseColumn {
     val bgImage: String
     val bgImageFit: Int
     val bgImageScale: Float
+    val fontPath: String
     var selected: Boolean
     var isSearchResult: Boolean
 }

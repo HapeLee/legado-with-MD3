@@ -4,11 +4,15 @@ import android.graphics.Canvas
 import android.graphics.Typeface
 import android.os.Build
 import androidx.annotation.Keep
+import androidx.core.net.toUri
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextLine.Companion.emptyTextLine
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.utils.isContentScheme
+import splitties.init.appCtx
+import java.io.File
 
 @Keep
 data class TextColumn(
@@ -25,6 +29,7 @@ data class TextColumn(
     override val bgImage: String = "",
     override val bgImageFit: Int = 0,
     override val bgImageScale: Float = 1f,
+    override val fontPath: String = "",
 ) : TextBaseColumn {
 
     override var textLine: TextLine = emptyTextLine
@@ -105,7 +110,29 @@ data class TextColumn(
     }
 
     private fun getCustomTypeface(): Typeface? {
-        // TODO: HighlightRule 不再存储 fontPath，需要重新设计自定义字体方案
-        return null
+        if (fontPath.isEmpty()) return null
+        return typefaceCache.getOrPut(fontPath) {
+            loadTypeface(fontPath)
+        }
+    }
+
+    companion object {
+        private val typefaceCache = HashMap<String, Typeface?>()
+
+        private fun loadTypeface(fontPath: String): Typeface? {
+            return runCatching {
+                when {
+                    fontPath.isContentScheme() -> {
+                        appCtx.contentResolver
+                            .openFileDescriptor(fontPath.toUri(), "r")!!
+                            .use { Typeface.Builder(it.fileDescriptor).build() }
+                    }
+                    fontPath.isNotEmpty() -> {
+                        Typeface.Builder(File(fontPath)).build()
+                    }
+                    else -> null
+                }
+            }.getOrNull()
+        }
     }
 }

@@ -1240,7 +1240,8 @@ class TextChapterLayout(
                     underlineSvgPath = style?.underlineSvgPath ?: "",
                     bgImage = style?.bgImage ?: "",
                     bgImageFit = style?.bgImageFit ?: 0,
-                    bgImageScale = style?.bgImageScale ?: 1f
+                    bgImageScale = style?.bgImageScale ?: 1f,
+                    fontPath = style?.fontPath ?: ""
                 )
             }
         }
@@ -1374,7 +1375,8 @@ class TextChapterLayout(
                 underlineSvgPath = rule.underlineSvgPath.orEmpty(),
                 bgImage = rule.bgImage.orEmpty(),
                 bgImageFit = rule.bgImageFit,
-                bgImageScale = rule.bgImageScale
+                bgImageScale = rule.bgImageScale,
+                fontPath = rule.fontPath.orEmpty()
             )
             compiled.regex.findAll(text).forEach { match ->
                 for (i in match.range) {

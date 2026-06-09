@@ -14,7 +14,8 @@ data class CharStyle(
     val bgImage: String = "",
     val bgImageFit: Int = 0,
     val bgImageScale: Float = 1f,
+    val fontPath: String = "",
 ) {
     val hasStyle: Boolean
-        get() = textColor != null || bgColor != null || underlineMode != 0 || bgImage.isNotEmpty()
+        get() = textColor != null || bgColor != null || underlineMode != 0 || bgImage.isNotEmpty() || fontPath.isNotEmpty()
 }

@@ -32,6 +32,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.config.HighlightRuleStore
+import io.legado.app.ui.book.read.config.HighlightRuleStore.configNames
 import io.legado.app.ui.widget.components.TinySwitch
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -166,9 +167,10 @@ private fun HighlightRuleItem(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
+    val configLabel = rule.configName?.configNames()?.joinToString("、") ?: "全局"
     TinySettingItem(
         title = rule.name.ifBlank { rule.displayPattern() },
-        description = rule.styleSummary(),
+        description = "${rule.styleSummary()} · $configLabel",
         onClick = onEditClick,
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {

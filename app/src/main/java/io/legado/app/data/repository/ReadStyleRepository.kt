@@ -5,6 +5,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.help.DefaultData
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadStyleResolver
+import io.legado.app.ui.book.read.config.HighlightRuleStore
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.compress.ZipUtils
@@ -118,7 +119,7 @@ class ReadStyleRepository {
         val exportDir = appCtx.externalCache.getFile("readConfigExport")
         exportDir.createFolderReplace()
         val exportConfig = config.copy(
-            regexColorRules = ArrayList(config.regexColorRules.map { it.copy() })
+            highlightRules = ArrayList(config.highlightRules.map { it.copy() })
         )
         val exportFiles = arrayListOf<File>()
 
@@ -196,6 +197,10 @@ class ReadStyleRepository {
         config.curTextColor()
         config.curTextAccentColor()
         config.curTextShadowColor()
+        if (config.highlightRules.isNotEmpty()) {
+            val targetConfigName = config.name.ifBlank { null }
+            HighlightRuleStore.saveForConfig(config.highlightRules, targetConfigName)
+        }
         return config
     }
 

@@ -24,6 +24,8 @@ data class HighlightRule(
     var bgImage: String? = null,
     var bgImageFit: Int = 0,
     var bgImageScale: Float = 1f,
+    var configName: String? = null,
+    var fontPath: String? = null,
 ) {
 
     fun styleSummary(): String {
@@ -55,6 +57,9 @@ data class HighlightRule(
                     else -> "背景图(平铺)"
                 }
             )
+        }
+        if (!fontPath.isNullOrBlank()) {
+            parts.add("自定义字体")
         }
         if (parts.isEmpty()) {
             parts.add("无样式")

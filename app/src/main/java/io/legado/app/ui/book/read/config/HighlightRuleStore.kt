@@ -7,9 +7,7 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefBoolean
-import io.legado.app.utils.putPrefString
 import splitties.init.appCtx
 import java.io.File
 
@@ -27,21 +25,51 @@ object HighlightRuleStore {
     private val dao get() = appDb.highlightRuleDao
 
     fun load(): List<HighlightRule> {
-        migrateFromPrefsIfNeeded()
-        return dao.getAll()
+        val configName = ReadBookConfig.durConfig.name
+        return dao.getAll().filter { it.matchesConfig(configName) }
     }
 
     fun loadEnabled(): List<HighlightRule> {
-        migrateFromPrefsIfNeeded()
-        return dao.getEnabled()
+        val configName = ReadBookConfig.durConfig.name
+        return dao.getEnabled().filter { it.matchesConfig(configName) }
     }
 
+    /**
+     * 保存当前排版的规则。
+     * 仅替换当前排版绑定的规则，不影响其他排版的规则。
+     */
     fun save(rules: List<HighlightRule>) {
+        val configName = ReadBookConfig.durConfig.name
+        saveForConfig(rules, configName.ifBlank { null })
+    }
+
+    fun saveForConfig(rules: List<HighlightRule>, configName: String?) {
         val sanitized = rules.mapIndexed { index, rule ->
             sanitizeRule(rule).copy(position = index)
         }
-        dao.replaceAll(sanitized)
-        cleanupUnusedBgImages(sanitized)
+        if (configName.isNullOrBlank()) {
+            // 全局规则：只替换 configName 为 null 的规则
+            dao.replaceGlobal(sanitized)
+        } else {
+            // 按排版保存：只处理绑定到当前排版的规则，不动全局规则
+            val allRules = dao.getAll()
+            // 旧的绑定到当前排版的规则（不含全局规则）
+            val oldBound = allRules.filter {
+                !it.configName.isNullOrBlank() && it.matchesConfig(configName)
+            }
+            val newIds = sanitized.map { it.id }.toSet()
+            // 被移除的旧规则：从 configName 列表中去掉当前排版
+            // 未绑定任何排版时保留规则（configName="[]"），不删除
+            for (old in oldBound) {
+                if (old.id !in newIds) {
+                    val remaining = old.configName.orEmpty().configNames().filter { it != configName }
+                    dao.update(old.copy(configName = remaining.toJsonArray()))
+                }
+            }
+            // 插入所有规则（全局规则也一起，否则会被 replaceGlobal 删掉）
+            dao.insertAll(sanitized)
+        }
+        cleanupUnusedBgImages()
     }
 
     fun update(rule: HighlightRule) {
@@ -54,7 +82,12 @@ object HighlightRuleStore {
 
     fun reset(): List<HighlightRule> {
         val defaults = createDefaultRules()
-        dao.replaceAll(defaults)
+        val configName = ReadBookConfig.durConfig.name
+        if (configName.isBlank()) {
+            dao.replaceGlobal(defaults)
+        } else {
+            saveForConfig(defaults, configName)
+        }
         return defaults
     }
 
@@ -73,68 +106,12 @@ object HighlightRuleStore {
             val restoredBgImage = restoreRuleBgImage(backupRootPath, safeRule.bgImage)
             safeRule.copy(bgImage = restoredBgImage)
         }
-        save(rules)
+        // 备份恢复是全量替换
+        dao.replaceAll(rules)
+        cleanupUnusedBgImages()
         appCtx.putPrefBoolean(PreferKey.highlightRuleDialog, backupData.dialogEnabled)
         appCtx.putPrefBoolean(PreferKey.highlightRuleBookTitle, backupData.bookTitleEnabled)
         appCtx.putPrefBoolean(PreferKey.highlightRuleBracketNote, backupData.bracketNoteEnabled)
-    }
-
-    /**
-     * 从旧版 SharedPreferences 迁移数据（一次性）
-     */
-    private fun migrateFromPrefsIfNeeded() {
-        if (dao.count() > 0) return
-        // 尝试从 SharedPreferences 读取旧数据
-        val stored = appCtx.getPrefString(PreferKey.highlightRuleItems)
-        if (!stored.isNullOrBlank()) {
-            val oldRules = GSON.fromJsonArray<LegacyHighlightRule>(stored).getOrNull()
-            if (!oldRules.isNullOrEmpty()) {
-                val migrated = oldRules.mapIndexed { index, old ->
-                    sanitizeRule(
-                        HighlightRule(
-                            id = old.id,
-                            name = old.name,
-                            pattern = old.pattern,
-                            sampleText = old.sampleText,
-                            targetScope = old.targetScope,
-                            enabled = old.enabled,
-                            position = index,
-                            textColor = old.textColor,
-                            underlineMode = old.underlineMode,
-                            underlineColor = old.underlineColor,
-                            underlineWidth = old.underlineWidth,
-                            underlineOffset = old.underlineOffset,
-                            underlineSvgPath = old.underlineSvgPath,
-                            bgImage = old.bgImage,
-                            bgImageFit = old.bgImageFit,
-                            bgImageScale = old.bgImageScale,
-                        )
-                    ).copy(position = index)
-                }
-                dao.insertAll(migrated)
-                // 清除旧 SharedPreferences 数据
-                appCtx.putPrefString(PreferKey.highlightRuleItems, null)
-                return
-            }
-        }
-        // 尝试从旧版 RegexColorRule 迁移
-        migrateFromRegexColorRules()
-    }
-
-    private fun migrateFromRegexColorRules() {
-        val oldRules = ReadBookConfig.regexColorRules
-        if (oldRules.isEmpty()) return
-        val migrated = oldRules.mapIndexed { index, old ->
-            HighlightRule(
-                name = old.name,
-                pattern = old.pattern,
-                position = index,
-                textColor = old.color,
-            )
-        }
-        dao.insertAll(migrated)
-        oldRules.clear()
-        ReadBookConfig.save()
     }
 
     fun sanitizeRule(rule: HighlightRule): HighlightRule {
@@ -162,6 +139,8 @@ object HighlightRuleStore {
             bgImage = runCatching { rule.bgImage }.getOrNull()?.takeIf { it.isNotBlank() },
             bgImageFit = runCatching { rule.bgImageFit }.getOrDefault(0).coerceIn(0, 2),
             bgImageScale = runCatching { rule.bgImageScale }.getOrDefault(1f).coerceIn(0.1f, 5f),
+            configName = runCatching { rule.configName }.getOrNull()?.takeIf { it.isNotBlank() },
+            fontPath = runCatching { rule.fontPath }.getOrNull()?.takeIf { it.isNotBlank() },
         )
     }
 
@@ -304,8 +283,9 @@ object HighlightRuleStore {
         )
     }
 
-    private fun cleanupUnusedBgImages(rules: List<HighlightRule>) {
-        val usedPaths = rules.mapNotNull { it.bgImage }
+    private fun cleanupUnusedBgImages() {
+        val allRules = dao.getAll()
+        val usedPaths = allRules.mapNotNull { it.bgImage }
             .filter { it.isNotBlank() && !it.startsWith("assets://") }
             .toSet()
         val dir = File(appCtx.filesDir, "bg_images")
@@ -333,24 +313,34 @@ object HighlightRuleStore {
         return targetFile.absolutePath
     }
 
+    // region configName helpers
+
     /**
-     * 旧版 SharedPreferences 数据结构（用于迁移）
+     * 判断规则是否适用于指定排版。
+     * configName 为 null 表示全局规则（适用于所有排版）。
+     * configName 为 JSON 数组字符串，如 '["日间","夜间"]'。
      */
-    private data class LegacyHighlightRule(
-        val id: String = "",
-        val name: String = "",
-        val pattern: String = "",
-        val sampleText: String = "",
-        val targetScope: Int = 0,
-        val enabled: Boolean = true,
-        val textColor: Int? = null,
-        val underlineMode: Int = 0,
-        val underlineColor: Int? = null,
-        val underlineWidth: Float = 1f,
-        val underlineOffset: Float = 2f,
-        val underlineSvgPath: String? = null,
-        val bgImage: String? = null,
-        val bgImageFit: Int = 0,
-        val bgImageScale: Float = 1f,
-    )
+    private fun HighlightRule.matchesConfig(configName: String): Boolean {
+        val cn = this.configName
+        if (cn.isNullOrBlank()) return true // 全局规则
+        return cn.configNames().contains(configName)
+    }
+
+    /**
+     * 解析 configName JSON 数组为列表。
+     */
+    fun String.configNames(): List<String> {
+        return runCatching {
+            GSON.fromJsonArray<String>(this).getOrNull() ?: emptyList()
+        }.getOrElse { emptyList() }
+    }
+
+    /**
+     * 将排版名列表转为 JSON 数组字符串。
+     */
+    fun List<String>.toJsonArray(): String {
+        return GSON.toJson(this)
+    }
+
+    // endregion
 }

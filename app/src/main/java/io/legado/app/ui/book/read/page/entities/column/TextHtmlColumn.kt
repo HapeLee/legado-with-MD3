@@ -30,6 +30,7 @@ data class TextHtmlColumn(
     override val bgImage: String = "",
     override val bgImageFit: Int = 0,
     override val bgImageScale: Float = 1f,
+    override val fontPath: String = "",
 ) : TextBaseColumn {
 
     override val textColor: Int? get() = mTextColor

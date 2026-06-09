@@ -30,12 +30,21 @@ interface HighlightRuleDao {
     @Query("DELETE FROM highlightRules")
     fun deleteAll()
 
+    @Query("DELETE FROM highlightRules WHERE configName IS NULL")
+    fun deleteGlobal()
+
     @Query("SELECT COUNT(*) FROM highlightRules")
     fun count(): Int
 
     @Transaction
     fun replaceAll(rules: List<HighlightRule>) {
         deleteAll()
+        insertAll(rules)
+    }
+
+    @Transaction
+    fun replaceGlobal(rules: List<HighlightRule>) {
+        deleteGlobal()
         insertAll(rules)
     }
 }
