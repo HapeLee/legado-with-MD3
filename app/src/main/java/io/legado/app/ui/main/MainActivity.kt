@@ -191,11 +191,11 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             else -> false
         }
 
-        val startRoute = remember {
-            if (OtherConfig.defaultToRead) MainRouteReadBook()
-            else MainNavigator.resolveStartRoute(intent)
+        val startRoutes = remember {
+            if (OtherConfig.defaultToRead) arrayOf(MainRouteHome, MainRouteReadBook())
+            else arrayOf(MainNavigator.resolveStartRoute(intent))
         }
-        val backStack = rememberNavBackStack(startRoute)
+        val backStack = rememberNavBackStack(*startRoutes)
 
         LaunchedEffect(backStack) {
             routeEvents.collect { route ->
