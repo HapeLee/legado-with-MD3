@@ -13,4 +13,6 @@ object LocalPreferencesKeys {
     val SHOW_THEME_REFACTOR_TIP = booleanPreferencesKey("show_theme_refactor_tip")
     val SEARCH_LAYOUT_MODE = intPreferencesKey("search_layout_mode")
     val MATCH_MODE = intPreferencesKey("match_mode")
+    val EXPLORE_LAYOUT_GRID_PORTRAIT = intPreferencesKey("explore_layout_grid_portrait")
+    val EXPLORE_LAYOUT_GRID_LANDSCAPE = intPreferencesKey("explore_layout_grid_landscape")
 }
