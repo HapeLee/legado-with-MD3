@@ -260,6 +260,7 @@ sealed interface ReadBookIntent {
     data object ToggleTranslation : ReadBookIntent
 
     // Change source
+    data class ChangeSourceBook(val book: Book) : ReadBookIntent
     data class ChangeSource(val book: Book, val toc: List<BookChapter>) : ReadBookIntent
     data class AddSourceAsNewBook(val book: Book, val toc: List<BookChapter>) : ReadBookIntent
 

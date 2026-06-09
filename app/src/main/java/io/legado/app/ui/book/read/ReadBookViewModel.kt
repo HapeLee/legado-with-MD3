@@ -259,6 +259,7 @@ class ReadBookViewModel(
             is ReadBookIntent.RefreshContentAfter -> refreshContentAfter()
             is ReadBookIntent.ChangeReplaceRule -> changeReplaceRule(intent.enabled)
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
+            is ReadBookIntent.ChangeSourceBook -> changeTo(intent.book)
             is ReadBookIntent.ChangeSource -> changeTo(intent.book, intent.toc)
             is ReadBookIntent.AddSourceAsNewBook -> addToBookshelf(intent.book, intent.toc)
             is ReadBookIntent.OpenChapterResult -> openChapter(intent.index, intent.chapterPos)
@@ -1810,20 +1811,46 @@ class ReadBookViewModel(
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
             ReadBook.upMsg(context.getString(R.string.loading))
-            ReadBook.book?.migrateTo(book, toc)
-            book.removeType(BookType.updateError)
-            ReadBook.book?.delete()
-            appDb.bookDao.insert(book)
-            appDb.bookChapterDao.insert(*toc.toTypedArray())
-            ReadBook.resetData(book)
-            ReadBook.upMsg(null)
-            ReadBook.loadContent(resetPageOffset = true)
+            applyChangeSource(book, toc)
         }.onError {
             AppLog.put("换源失败\n$it", it, true)
             ReadBook.upMsg(null)
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
+    }
+
+    fun changeTo(book: Book) {
+        changeSourceCoroutine?.cancel()
+        changeSourceCoroutine = execute {
+            ReadBook.upMsg(context.getString(R.string.loading))
+            val source = appDb.bookSourceDao.getBookSource(book.origin)
+                ?: throw NoStackTraceException("书源不存在")
+            if (book.tocUrl.isEmpty()) {
+                WebBook.getBookInfoAwait(source, book)
+            }
+            val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
+            applyChangeSource(book, toc)
+        }.onError {
+            AppLog.put("换源失败\n$it", it, true)
+            ReadBook.upMsg(null)
+        }.onFinally {
+            postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
+        }
+    }
+
+    private suspend fun applyChangeSource(book: Book, toc: List<BookChapter>) {
+        if (toc.isEmpty()) {
+            throw NoStackTraceException("换源目录为空")
+        }
+        ReadBook.book?.migrateTo(book, toc)
+        book.removeType(BookType.updateError)
+        ReadBook.book?.delete()
+        appDb.bookDao.insert(book)
+        appDb.bookChapterDao.insert(*toc.toTypedArray())
+        ReadBook.resetData(book)
+        ReadBook.upMsg(null)
+        ReadBook.loadContent(resetPageOffset = true)
     }
 
     private fun autoChangeSource(name: String, author: String) {

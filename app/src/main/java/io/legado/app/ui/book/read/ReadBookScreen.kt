@@ -10,7 +10,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.ui.book.info.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
@@ -36,6 +35,7 @@ import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.collectLatest
 
@@ -397,10 +397,16 @@ fun ReadBookScreen(
                 ChangeSourceSheet(
                     show = true,
                     oldBook = book,
+                    fromReadBookActivity = true,
+                    allowAddAsNew = false,
+                    dismissOnReplaceStart = true,
                     onDismissRequest = { onIntent(ReadBookIntent.DismissSheet) },
                     onReplace = { _, newBook, toc, _ ->
                         onIntent(ReadBookIntent.DismissSheet)
                         onIntent(ReadBookIntent.ChangeSource(newBook, toc))
+                    },
+                    onReplaceBook = { newBook ->
+                        onIntent(ReadBookIntent.ChangeSourceBook(newBook))
                     },
                     onAddAsNew = { newBook, toc ->
                         onIntent(ReadBookIntent.DismissSheet)

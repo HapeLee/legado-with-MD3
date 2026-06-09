@@ -11,6 +11,7 @@ import io.legado.app.data.repository.SearchRepository
 import io.legado.app.domain.usecase.ChangeSourceSearchEvent
 import io.legado.app.domain.usecase.ChangeSourceSearchUseCase
 import io.legado.app.domain.usecase.GetChapterContentUseCase
+import io.legado.app.help.book.isWebFile
 import io.legado.app.help.book.primaryStr
 import io.legado.app.ui.book.search.SearchScope
 import kotlinx.coroutines.Job
@@ -57,8 +58,8 @@ class ChangeBookSourceComposeViewModel(
     private val _searchDataFlow = MutableStateFlow<List<SearchBook>>(emptyList())
     val searchDataFlow: StateFlow<List<SearchBook>> = _searchDataFlow.asStateFlow()
 
-    val totalSourceCount: Int
-        get() = searchResults.size
+    var totalSourceCount: Int = 0
+        private set
 
     fun getBookFromMap(key: String): Book? = bookMap[key]?.toBook()
 
@@ -71,6 +72,7 @@ class ChangeBookSourceComposeViewModel(
     // Internal state
     private var searchJob: Job? = null
     private var oldBook: Book? = null
+    private var fromReadBookActivity: Boolean = false
     private var screenKey: String = ""
     private val searchResults = mutableListOf<SearchBook>()
     private val bookMap = mutableMapOf<String, SearchBook>()
@@ -84,6 +86,7 @@ class ChangeBookSourceComposeViewModel(
 
     fun initData(name: String, author: String, book: Book, fromReadBookActivity: Boolean) {
         this.oldBook = book
+        this.fromReadBookActivity = fromReadBookActivity
         if (searchJob?.isActive != true) {
             startSearch()
         }
@@ -95,6 +98,8 @@ class ChangeBookSourceComposeViewModel(
         searchResults.clear()
         bookMap.clear()
         tocMap.clear()
+        totalSourceCount = 0
+        _changeSourceProgress.value = 0 to ""
         _searchDataFlow.value = emptyList()
 
         searchJob = viewModelScope.launch {
@@ -103,7 +108,7 @@ class ChangeBookSourceComposeViewModel(
                 author = book.author,
                 scope = SearchScope(ChangeSourceConfig.searchScope),
                 oldBook = book,
-                fromReadBookActivity = false,
+                fromReadBookActivity = fromReadBookActivity,
             ).collect { event ->
                 when (event) {
                     is ChangeSourceSearchEvent.Started -> {
@@ -111,6 +116,7 @@ class ChangeBookSourceComposeViewModel(
                     }
 
                     is ChangeSourceSearchEvent.Progress -> {
+                        totalSourceCount = event.totalSources
                         _changeSourceProgress.value = event.processedSources to event.sourceName
                     }
 
@@ -195,6 +201,12 @@ class ChangeBookSourceComposeViewModel(
                         onSuccess(cachedToc, source)
                         return@launch
                     }
+                }
+                if (book.isWebFile) {
+                    val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                        ?: throw io.legado.app.exception.NoStackTraceException("书源不存在")
+                    onSuccess(emptyList(), source)
+                    return@launch
                 }
                 val (toc, source) = getChapterContentUseCase.getToc(book)
                 tocMap[book.primaryStr()] = toc
