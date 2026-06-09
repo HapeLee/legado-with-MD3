@@ -1103,6 +1103,8 @@
     <string name="open_fun">open function</string>
     <string name="use_browser_open">Is it opened in an external browser?</string>
     <string name="cannot_open_url">This URL cannot be opened directly</string>
+    <string name="open_by_browser">Switched to browser opening</string>
+    <string name="open_by_webview">Switched to WebView opening</string>
     <string name="see">see</string>
     <string name="open">open</string>
     <string name="del_login_header">del login header</string>

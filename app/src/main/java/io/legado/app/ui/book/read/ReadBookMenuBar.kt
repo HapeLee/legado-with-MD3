@@ -849,7 +849,20 @@ private fun MenuTitleBar(
             ) {
                 AppText(
                     text = state.chapterName,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .then(
+                            if (!state.isLocalBook) {
+                                Modifier.combinedClickable(
+                                    onClick = { onIntent(ReadBookIntent.OpenChapterUrl) },
+                                    onLongClick = {
+                                        onIntent(ReadBookIntent.ToggleReadUrlInBrowser)
+                                    },
+                                )
+                            } else {
+                                Modifier
+                            }
+                        ),
                     style = labelStyle,
                     color = titleTextColor,
                     maxLines = 1,

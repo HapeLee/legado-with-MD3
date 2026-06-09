@@ -17,6 +17,8 @@ import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.constant.Status
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.data.entities.Bookmark
@@ -39,9 +41,7 @@ import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.constant.AppPattern
 import io.legado.app.help.config.AppConfig
-import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.openUrl
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
@@ -93,6 +93,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
@@ -118,7 +119,8 @@ class ReadBookViewModel(
     val translateChapterUseCase: io.legado.app.domain.usecase.TranslateChapterUseCase,
     private val readSettingsRepository: ReadSettingsRepository,
     private val readBookStyleConfigRepository: ReadBookStyleConfigRepository,
-    private val readAloudSettingsRepository: ReadAloudSettingsRepository
+    private val readAloudSettingsRepository: ReadAloudSettingsRepository,
+    private val localPreferencesRepository: LocalPreferencesRepository
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -342,10 +344,7 @@ class ReadBookViewModel(
                 }
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
-            is ReadBookIntent.SetReadUrlInBrowser -> {
-                AppConfig.readUrlInBrowser = intent.useBrowser
-                openChapterUrl()
-            }
+            is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
             is ReadBookIntent.LoadContentEdit -> loadContentEdit()
             is ReadBookIntent.SaveContentEdit -> saveContentEdit(intent.content, intent.saveToSource)
             is ReadBookIntent.ResetContentEdit -> resetContentEdit()
@@ -2967,47 +2966,46 @@ class ReadBookViewModel(
     }
 
     private fun openChapterUrl() {
+        if (ReadBook.isLocalBook) return
         val book = ReadBook.book ?: return
-        if (book.isLocal) return
         val chapter = ReadBook.curTextChapter?.chapter
             ?: appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
             ?: return
-        val rawUrl = chapter.getAbsoluteURL()
-        if (rawUrl.isBlank()) return
-        val url = resolveChapterUrl(rawUrl)
-        if (url.isBlank()) {
-            context.toastOnUi(R.string.cannot_open_url)
-            return
-        }
-        if (AppConfig.readUrlInBrowser) {
-            context.openUrl(url.substringBefore(",{"))
-        } else {
-            _effects.tryEmit(
-                ReadBookEffect.OpenWebView(
-                    title = chapter.title,
-                    url = url,
-                    sourceOrigin = ReadBook.bookSource?.bookSourceUrl,
-                    sourceName = ReadBook.bookSource?.bookSourceName,
-                    sourceType = ReadBook.bookSource?.getSourceType(),
+        val url = chapter.getAbsoluteURL()
+        if (url.isBlank()) return
+        viewModelScope.launch {
+            val useBrowser = localPreferencesRepository
+                .getPreference(LocalPreferencesKeys.READ_URL_IN_BROWSER, false)
+                .first()
+            if (useBrowser) {
+                context.openUrl(url.substringBefore(",{"))
+            } else {
+                val bookSource = ReadBook.bookSource
+                _effects.tryEmit(
+                    ReadBookEffect.OpenWebView(
+                        title = chapter.title,
+                        url = url,
+                        sourceOrigin = bookSource?.bookSourceUrl,
+                        sourceName = bookSource?.bookSourceName,
+                        sourceType = bookSource?.getSourceType(),
+                    )
                 )
-            )
+            }
         }
     }
 
-    /**
-     * 解析章节URL，处理data:;base64,...格式
-     * 从base64编码的JSON中提取真实URL
-     */
-    private fun resolveChapterUrl(url: String): String {
-        if (!url.startsWith("data:", ignoreCase = true)) return url
-        val match = AppPattern.dataUriRegex.matchEntire(url) ?: return url
-        return try {
-            val decoded = EncoderUtils.base64Decode(match.groupValues[1])
-            val json = GSON.fromJsonObject<Map<String, Any>>(decoded).getOrNull()
-            val realUrl = json?.get("url")?.toString() ?: ""
-            realUrl.ifBlank { url }
-        } catch (_: Exception) {
-            url
+    private fun toggleReadUrlInBrowser() {
+        viewModelScope.launch {
+            val current = localPreferencesRepository
+                .getPreference(LocalPreferencesKeys.READ_URL_IN_BROWSER, false)
+                .first()
+            val newValue = !current
+            localPreferencesRepository.updatePreference(
+                LocalPreferencesKeys.READ_URL_IN_BROWSER, newValue
+            )
+            context.toastOnUi(
+                if (newValue) R.string.open_by_browser else R.string.open_by_webview
+            )
         }
     }
 

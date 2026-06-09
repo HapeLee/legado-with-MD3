@@ -1074,6 +1074,8 @@
     <string name="open_fun">打开方式</string>
     <string name="use_browser_open">是否使用外部浏览器打开？</string>
     <string name="cannot_open_url">该URL无法直接打开</string>
+    <string name="open_by_browser">已切换为浏览器打开</string>
+    <string name="open_by_webview">已切换为WebView打开</string>
     <string name="see">查看</string>
     <string name="open">打开</string>
     <string name="del_login_header">删除登录头</string>

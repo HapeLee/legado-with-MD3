@@ -310,7 +310,7 @@ sealed interface ReadBookIntent {
     data object OpenBookInfo : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
     data object OpenChapterUrl : ReadBookIntent
-    data class SetReadUrlInBrowser(val useBrowser: Boolean) : ReadBookIntent
+    data object ToggleReadUrlInBrowser : ReadBookIntent
 
     // Content edit
     data object LoadContentEdit : ReadBookIntent
@@ -523,6 +523,7 @@ sealed interface ReadBookEffect {
         val sourceOrigin: String?,
         val sourceName: String?,
         val sourceType: Int?,
+        val html: String? = null,
     ) : ReadBookEffect
 
     // Menu actions that need Activity
@@ -631,7 +632,6 @@ sealed interface ReadBookDialog {
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
-    data object ConfirmReadUrlInBrowser : ReadBookDialog
 }
 
 /**

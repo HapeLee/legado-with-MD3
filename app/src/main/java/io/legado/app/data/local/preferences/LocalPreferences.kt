@@ -15,4 +15,5 @@ object LocalPreferencesKeys {
     val MATCH_MODE = intPreferencesKey("match_mode")
     val EXPLORE_LAYOUT_GRID_PORTRAIT = intPreferencesKey("explore_layout_grid_portrait")
     val EXPLORE_LAYOUT_GRID_LANDSCAPE = intPreferencesKey("explore_layout_grid_landscape")
+    val READ_URL_IN_BROWSER = booleanPreferencesKey("read_url_in_browser")
 }
