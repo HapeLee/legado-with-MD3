@@ -46,9 +46,9 @@ import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.yield
 
 
 data class ReadBookViewRefs(
@@ -233,130 +233,130 @@ fun ReadBookRouteScreen(
     // ── Effect collection: route handles launcher effects, rest goes to bridge ──
 
     LaunchedEffect(viewModel) {
-        coroutineScope {
-            val collector = launch {
-                viewModel.effects.collect { effect ->
-                try {
-                    when (effect) {
-                        // Launcher-dependent effects — handled directly by route
-                        is ReadBookEffect.OpenChapterList -> {
-                            tocLauncher.launch(effect.bookUrl)
-                        }
-                        is ReadBookEffect.OpenSourceEdit -> {
-                            sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
-                        }
-                        is ReadBookEffect.OpenBookInfo -> {
-                            bookInfoLauncher.launch {
-                                putExtra("name", effect.name)
-                                putExtra("author", effect.author)
-                                putExtra("bookUrl", effect.bookUrl)
+        val effectsSubscribed = CompletableDeferred<Unit>()
+        launch {
+            viewModel.effects
+                .onSubscription { effectsSubscribed.complete(Unit) }
+                .collect { effect ->
+                    try {
+                        when (effect) {
+                            // Launcher-dependent effects — handled directly by route
+                            is ReadBookEffect.OpenChapterList -> {
+                                tocLauncher.launch(effect.bookUrl)
                             }
-                        }
-                        is ReadBookEffect.ShowLogin -> {
-                            context.startActivity(
-                                Intent(context, SourceLoginActivity::class.java).apply {
-                                    putExtra("type", "bookSource")
-                                    putExtra("key", effect.sourceUrl)
+                            is ReadBookEffect.OpenSourceEdit -> {
+                                sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
+                            }
+                            is ReadBookEffect.OpenBookInfo -> {
+                                bookInfoLauncher.launch {
+                                    putExtra("name", effect.name)
+                                    putExtra("author", effect.author)
+                                    putExtra("bookUrl", effect.bookUrl)
                                 }
-                            )
-                        }
-                        is ReadBookEffect.OpenWebView -> {
-                            context.startActivity(
-                                Intent(context, WebViewActivity::class.java).apply {
-                                    putExtra("title", effect.title)
-                                    putExtra("url", effect.url)
-                                    putExtra("sourceOrigin", effect.sourceOrigin)
-                                    putExtra("sourceName", effect.sourceName)
-                                    effect.sourceType?.let { putExtra("sourceType", it) }
-                                }
-                            )
-                        }
-                        is ReadBookEffect.OpenSearchActivity -> {
-                            val currentState = viewModel.uiState.value
-                            val lambda: (Intent.() -> Unit)? = { intent ->
-                                intent.putExtra("bookUrl", effect.bookUrl)
-                                intent.putExtra("searchWord", effect.word)
-                                intent.putExtra("searchResultIndex", currentState.searchResultIndex)
-                                currentState.searchResultList.firstOrNull()?.let {
-                                    if (it.query == currentState.searchContentQuery) {
-                                        IntentData.put("searchResultList", currentState.searchResultList)
+                            }
+                            is ReadBookEffect.ShowLogin -> {
+                                context.startActivity(
+                                    Intent(context, SourceLoginActivity::class.java).apply {
+                                        putExtra("type", "bookSource")
+                                        putExtra("key", effect.sourceUrl)
+                                    }
+                                )
+                            }
+                            is ReadBookEffect.OpenWebView -> {
+                                context.startActivity(
+                                    Intent(context, WebViewActivity::class.java).apply {
+                                        putExtra("title", effect.title)
+                                        putExtra("url", effect.url)
+                                        putExtra("sourceOrigin", effect.sourceOrigin)
+                                        putExtra("sourceName", effect.sourceName)
+                                        effect.sourceType?.let { putExtra("sourceType", it) }
+                                    }
+                                )
+                            }
+                            is ReadBookEffect.OpenSearchActivity -> {
+                                val currentState = viewModel.uiState.value
+                                val lambda: (Intent.() -> Unit)? = { intent ->
+                                    intent.putExtra("bookUrl", effect.bookUrl)
+                                    intent.putExtra("searchWord", effect.word)
+                                    intent.putExtra("searchResultIndex", currentState.searchResultIndex)
+                                    currentState.searchResultList.firstOrNull()?.let {
+                                        if (it.query == currentState.searchContentQuery) {
+                                            IntentData.put("searchResultList", currentState.searchResultList)
+                                        }
                                     }
                                 }
+                                searchContentLauncher.launch(lambda)
                             }
-                            searchContentLauncher.launch(lambda)
-                        }
-                        is ReadBookEffect.MenuSettingReplace -> {
-                            replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
-                        }
-                        is ReadBookEffect.TextActionReplace -> {
-                            val scopes = arrayListOf<String>()
-                            effect.bookName?.let { scopes.add(it) }
-                            effect.bookSourceUrl?.let { scopes.add(it) }
-                            val text = effect.text.lineSequence().map { it.trim() }.joinToString("\n")
-                            val editRoute = ReplaceEditRoute(
-                                id = -1, pattern = text,
-                                scope = scopes.joinToString(";"),
-                                isScopeTitle = false, isScopeContent = true,
-                            )
-                            replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
-                        }
-                        is ReadBookEffect.OpenReplaceEditor -> {
-                            val editRoute = ReplaceEditRoute(id = effect.id, pattern = effect.pattern)
-                            replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
-                        }
-                        is ReadBookEffect.MenuTocRegex -> {
-                            val intent = Intent(context, TxtTocRuleActivity::class.java)
-                            intent.putExtra("tocRegex", effect.tocRegex)
-                            txtTocRuleLauncher.launch(intent)
-                        }
-                        is ReadBookEffect.OpenFontFolderPicker -> {
-                            fontFolderPicker.launch(null)
-                        }
-                        is ReadBookEffect.OpenBooksDirPicker -> {
-                            booksDirPicker.launch(null)
-                        }
-                        is ReadBookEffect.OpenReadStyleImagePicker -> {
-                            readStyleImagePicker.launch(arrayOf("image/*"))
-                        }
-                        is ReadBookEffect.OpenReadStyleImagePickerForMode -> {
-                            pendingReadStyleImageIsNight = effect.isNight
-                            readStyleImagePickerForMode.launch(arrayOf("image/*"))
-                        }
-                        is ReadBookEffect.OpenReadStyleImport -> {
-                            readStyleImportPicker.launch(
-                                arrayOf("application/zip", "application/octet-stream", "*/*")
-                            )
-                        }
-                        is ReadBookEffect.OpenReadStyleExport -> {
-                            readStyleExportPicker.launch("readConfig.zip")
-                        }
-                        is ReadBookEffect.OpenMenuCustomIconPicker -> {
-                            pendingMenuCustomIconId = effect.id
-                            menuCustomIconPicker.launch("image/*")
-                        }
-                        is ReadBookEffect.OpenTitleBarCustomIconPicker -> {
-                            pendingTitleBarCustomIconId = effect.id
-                            titleBarCustomIconPicker.launch("image/*")
-                        }
-                        is ReadBookEffect.OpenSystemTtsSettings -> {
-                            IntentHelp.openTTSSetting()
-                        }
-                        is ReadBookEffect.TtsCacheCleared -> {
-                            context.toastOnUi(effect.message)
-                        }
+                            is ReadBookEffect.MenuSettingReplace -> {
+                                replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
+                            }
+                            is ReadBookEffect.TextActionReplace -> {
+                                val scopes = arrayListOf<String>()
+                                effect.bookName?.let { scopes.add(it) }
+                                effect.bookSourceUrl?.let { scopes.add(it) }
+                                val text = effect.text.lineSequence().map { it.trim() }.joinToString("\n")
+                                val editRoute = ReplaceEditRoute(
+                                    id = -1, pattern = text,
+                                    scope = scopes.joinToString(";"),
+                                    isScopeTitle = false, isScopeContent = true,
+                                )
+                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
+                            }
+                            is ReadBookEffect.OpenReplaceEditor -> {
+                                val editRoute = ReplaceEditRoute(id = effect.id, pattern = effect.pattern)
+                                replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
+                            }
+                            is ReadBookEffect.MenuTocRegex -> {
+                                val intent = Intent(context, TxtTocRuleActivity::class.java)
+                                intent.putExtra("tocRegex", effect.tocRegex)
+                                txtTocRuleLauncher.launch(intent)
+                            }
+                            is ReadBookEffect.OpenFontFolderPicker -> {
+                                fontFolderPicker.launch(null)
+                            }
+                            is ReadBookEffect.OpenBooksDirPicker -> {
+                                booksDirPicker.launch(null)
+                            }
+                            is ReadBookEffect.OpenReadStyleImagePicker -> {
+                                readStyleImagePicker.launch(arrayOf("image/*"))
+                            }
+                            is ReadBookEffect.OpenReadStyleImagePickerForMode -> {
+                                pendingReadStyleImageIsNight = effect.isNight
+                                readStyleImagePickerForMode.launch(arrayOf("image/*"))
+                            }
+                            is ReadBookEffect.OpenReadStyleImport -> {
+                                readStyleImportPicker.launch(
+                                    arrayOf("application/zip", "application/octet-stream", "*/*")
+                                )
+                            }
+                            is ReadBookEffect.OpenReadStyleExport -> {
+                                readStyleExportPicker.launch("readConfig.zip")
+                            }
+                            is ReadBookEffect.OpenMenuCustomIconPicker -> {
+                                pendingMenuCustomIconId = effect.id
+                                menuCustomIconPicker.launch("image/*")
+                            }
+                            is ReadBookEffect.OpenTitleBarCustomIconPicker -> {
+                                pendingTitleBarCustomIconId = effect.id
+                                titleBarCustomIconPicker.launch("image/*")
+                            }
+                            is ReadBookEffect.OpenSystemTtsSettings -> {
+                                IntentHelp.openTTSSetting()
+                            }
+                            is ReadBookEffect.TtsCacheCleared -> {
+                                context.toastOnUi(effect.message)
+                            }
 
-                        // All other effects — delegate to bridge (View/Window/Activity operations)
-                        else -> controller.handleEffect(effect)
+                            // All other effects — delegate to bridge (View/Window/Activity operations)
+                            else -> controller.handleEffect(effect)
+                        }
+                    } catch (e: Exception) {
+                        AppLog.put("ReadBook effect处理异常: ${effect::class.simpleName}", e)
                     }
-                } catch (e: Exception) {
-                    AppLog.put("ReadBook effect处理异常: ${effect::class.simpleName}", e)
                 }
-                }
-            }
-            yield()
-            onEffectsReady()
-            collector.join()
         }
+        effectsSubscribed.await()
+        onEffectsReady()
     }
 
     // ── System UI sync ────────────────────────────────────────────────
