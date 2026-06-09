@@ -191,6 +191,7 @@ data class ReadMenuConfig(
 data class ReadBookTtsEngineItem(
     val title: String,
     val value: String?,
+    val loginUrl: String? = null,
 )
 
 @Immutable
@@ -308,6 +309,8 @@ sealed interface ReadBookIntent {
     data class OpenSourceEditByUrl(val sourceUrl: String) : ReadBookIntent
     data object OpenBookInfo : ReadBookIntent
     data object OpenChapterList : ReadBookIntent
+    data object OpenChapterUrl : ReadBookIntent
+    data class SetReadUrlInBrowser(val useBrowser: Boolean) : ReadBookIntent
 
     // Content edit
     data object LoadContentEdit : ReadBookIntent
@@ -422,6 +425,7 @@ sealed interface ReadBookIntent {
     data class DeleteHttpTts(val engineId: Long) : ReadBookIntent
     data class SaveHttpTts(val httpTTS: HttpTTS) : ReadBookIntent
     data class ApplySpeakEnginePerBook(val value: String?) : ReadBookIntent
+    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookIntent
     data class ImportHttpTtsJson(val json: String) : ReadBookIntent
     data object ExportAllHttpTts : ReadBookIntent
     data class SetReadAloudIgnoreAudioFocus(val value: Boolean) : ReadBookIntent
@@ -558,6 +562,7 @@ sealed interface ReadBookEffect {
     data class OpenMenuCustomIconPicker(val id: String) : ReadBookEffect
     data class OpenTitleBarCustomIconPicker(val id: String) : ReadBookEffect
     data object OpenSystemTtsSettings : ReadBookEffect
+    data class OpenHttpTtsLogin(val engineId: Long) : ReadBookEffect
 
     // Day/night toggle
     data object ToggleDayNight : ReadBookEffect
@@ -626,6 +631,7 @@ sealed interface ReadBookDialog {
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
+    data object ConfirmReadUrlInBrowser : ReadBookDialog
 }
 
 /**

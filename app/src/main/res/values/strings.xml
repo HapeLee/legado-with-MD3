@@ -670,6 +670,7 @@
     <string name="brightness_auto">Auto-Brightness %s</string>
     <string name="read_aloud_by_page">Speak by pages</string>
     <string name="speak_engine">Speak Engine</string>
+    <string name="speak_engine_apply_scope">Choose where to apply the selected speak engine</string>
     <string name="bg_image">Background Images</string>
     <string name="bg_color">Background color</string>
     <string name="use_bg_image">Use Background Image</string>
@@ -1101,6 +1102,7 @@
     <string name="full_screen">full screen</string>
     <string name="open_fun">open function</string>
     <string name="use_browser_open">Is it opened in an external browser?</string>
+    <string name="cannot_open_url">This URL cannot be opened directly</string>
     <string name="see">see</string>
     <string name="open">open</string>
     <string name="del_login_header">del login header</string>

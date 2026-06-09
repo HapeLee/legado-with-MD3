@@ -75,6 +75,7 @@ fun TinySettingItem(
     expandContent: (@Composable ColumnScope.() -> Unit)? = null,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val isExpandable = expandContent != null && onExpandChange != null
     val alpha = if (enabled) 1f else 0.5f
@@ -88,6 +89,7 @@ fun TinySettingItem(
                 }
             }
         } else null,
+        onLongClick = if (enabled) onLongClick else null,
         modifier = modifier
             .padding(bottom = 4.dp)
             .heightIn(min = 56.dp)
@@ -329,6 +331,7 @@ fun TinyClickableSettingItem(
     color: Color? = LegadoTheme.colorScheme.surfaceContainerLow,
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
 ) {
     TinySettingItem(
         title = title,
@@ -345,6 +348,7 @@ fun TinyClickableSettingItem(
             )
         },
         onClick = onClick,
+        onLongClick = onLongClick,
     )
 }
 

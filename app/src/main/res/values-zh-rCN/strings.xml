@@ -649,6 +649,7 @@
     <string name="brightness_auto">自动亮度 %s</string>
     <string name="read_aloud_by_page">按页朗读</string>
     <string name="speak_engine">朗读引擎</string>
+    <string name="speak_engine_apply_scope">选择朗读引擎的应用范围</string>
     <string name="bg_image">背景图片</string>
     <string name="bg_color">背景颜色</string>
     <string name="use_bg_image">使用背景图片</string>
@@ -1072,6 +1073,7 @@
     <string name="full_screen">全屏</string>
     <string name="open_fun">打开方式</string>
     <string name="use_browser_open">是否使用外部浏览器打开？</string>
+    <string name="cannot_open_url">该URL无法直接打开</string>
     <string name="see">查看</string>
     <string name="open">打开</string>
     <string name="del_login_header">删除登录头</string>

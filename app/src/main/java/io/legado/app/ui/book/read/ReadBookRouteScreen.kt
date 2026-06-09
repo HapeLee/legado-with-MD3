@@ -262,6 +262,14 @@ fun ReadBookRouteScreen(
                                     }
                                 )
                             }
+                            is ReadBookEffect.OpenHttpTtsLogin -> {
+                                context.startActivity(
+                                    Intent(context, SourceLoginActivity::class.java).apply {
+                                        putExtra("type", "httpTts")
+                                        putExtra("key", effect.engineId.toString())
+                                    }
+                                )
+                            }
                             is ReadBookEffect.OpenWebView -> {
                                 context.startActivity(
                                     Intent(context, WebViewActivity::class.java).apply {

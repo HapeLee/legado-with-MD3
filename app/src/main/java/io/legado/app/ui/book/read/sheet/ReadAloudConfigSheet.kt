@@ -43,6 +43,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookTtsEngineItem
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -164,6 +165,24 @@ fun SpeakEngineConfigSheet(
     val clipboardManager = LocalClipboardManager.current
     val items = state.ttsEngineItems
     val selectedValue = state.selectedTtsEngine
+    var pendingEngineValue by remember { mutableStateOf<String?>(null) }
+
+    AppAlertDialog(
+        show = pendingEngineValue != null,
+        onDismissRequest = { pendingEngineValue = null },
+        title = stringResource(R.string.speak_engine),
+        text = stringResource(R.string.speak_engine_apply_scope),
+        confirmText = stringResource(R.string.general),
+        onConfirm = {
+            onIntent(ReadBookIntent.ApplySpeakEngine(pendingEngineValue))
+            pendingEngineValue = null
+        },
+        dismissText = stringResource(R.string.book),
+        onDismiss = {
+            onIntent(ReadBookIntent.ApplySpeakEnginePerBook(pendingEngineValue))
+            pendingEngineValue = null
+        },
+    )
 
     AppModalBottomSheet(
         show = show,
@@ -177,7 +196,6 @@ fun SpeakEngineConfigSheet(
                     onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
                     icon = Icons.Default.Add
                 )
-                //TODO: 导入
                 SmallTonalButton(
                     onClick = {
                         clipboardManager.getText()?.text?.let { text ->
@@ -194,20 +212,6 @@ fun SpeakEngineConfigSheet(
                 )
             }
         },
-        endAction = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                SmallTonalButton(
-                    onClick = { onIntent(ReadBookIntent.ApplySpeakEnginePerBook(selectedValue)) },
-                    text = stringResource(R.string.book)
-                )
-                SmallTonalButton(
-                    onClick = { onIntent(ReadBookIntent.ApplySpeakEngine(selectedValue)) },
-                    text = stringResource(R.string.general)
-                )
-            }
-        }
     ) {
         LazyColumn(
             modifier = Modifier
@@ -225,7 +229,10 @@ fun SpeakEngineConfigSheet(
                     } else {
                         null
                     },
-                    onClick = { onIntent(ReadBookIntent.ApplySpeakEngine(item.value)) },
+                    onClick = { pendingEngineValue = item.value },
+                    onLongClick = if (isHttpTts && !item.loginUrl.isNullOrBlank()) {
+                        { onIntent(ReadBookIntent.OpenHttpTtsLogin(item.value!!.toLong())) }
+                    } else null,
                     trailingContent = if (isHttpTts) {
                         {
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -243,7 +250,6 @@ fun SpeakEngineConfigSheet(
                 )
             }
         }
-
     }
 }
 

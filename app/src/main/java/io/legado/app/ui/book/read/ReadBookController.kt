@@ -771,6 +771,7 @@ class ReadBookController(
             is ReadBookEffect.OpenMenuCustomIconPicker,
             is ReadBookEffect.OpenTitleBarCustomIconPicker,
             is ReadBookEffect.OpenSystemTtsSettings,
+            is ReadBookEffect.OpenHttpTtsLogin,
             is ReadBookEffect.TtsCacheCleared,
             is ReadBookEffect.ExportJson,
             // DB query + bookmark effects — handled by ViewModel, ignored here

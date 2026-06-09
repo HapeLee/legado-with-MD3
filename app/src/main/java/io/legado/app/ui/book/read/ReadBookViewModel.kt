@@ -39,7 +39,10 @@ import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
+import io.legado.app.constant.AppPattern
 import io.legado.app.help.config.AppConfig
+import io.legado.app.utils.EncoderUtils
+import io.legado.app.utils.openUrl
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
@@ -338,6 +341,11 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
                 }
             }
+            is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
+            is ReadBookIntent.SetReadUrlInBrowser -> {
+                AppConfig.readUrlInBrowser = intent.useBrowser
+                openChapterUrl()
+            }
             is ReadBookIntent.LoadContentEdit -> loadContentEdit()
             is ReadBookIntent.SaveContentEdit -> saveContentEdit(intent.content, intent.saveToSource)
             is ReadBookIntent.ResetContentEdit -> resetContentEdit()
@@ -562,6 +570,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ApplySpeakEngine -> {
+                ReadBook.book?.setTtsEngine(null)
                 AppConfig.ttsEngine = intent.value
                 _uiState.update {
                     it.copy(
@@ -651,6 +660,10 @@ class ReadBookViewModel(
                         activeSheet = ReadBookSheet.ReadAloudConfig,
                     )
                 }
+            }
+
+            is ReadBookIntent.OpenHttpTtsLogin -> {
+                _effects.tryEmit(ReadBookEffect.OpenHttpTtsLogin(intent.engineId))
             }
 
             is ReadBookIntent.ImportHttpTtsJson -> {
@@ -976,7 +989,13 @@ class ReadBookViewModel(
             buildList {
                 add(ReadBookTtsEngineItem(context.getString(R.string.system_tts), null))
                 appDb.httpTTSDao.all.forEach { httpTts ->
-                    add(ReadBookTtsEngineItem(httpTts.name, httpTts.id.toString()))
+                    add(
+                        ReadBookTtsEngineItem(
+                            title = httpTts.name,
+                            value = httpTts.id.toString(),
+                            loginUrl = httpTts.loginUrl,
+                        )
+                    )
                 }
             }
         }.onSuccess { items ->
@@ -2944,6 +2963,51 @@ class ReadBookViewModel(
                 it.enabled = false
                 appDb.bookSourceDao.update(it)
             }
+        }
+    }
+
+    private fun openChapterUrl() {
+        val book = ReadBook.book ?: return
+        if (book.isLocal) return
+        val chapter = ReadBook.curTextChapter?.chapter
+            ?: appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
+            ?: return
+        val rawUrl = chapter.getAbsoluteURL()
+        if (rawUrl.isBlank()) return
+        val url = resolveChapterUrl(rawUrl)
+        if (url.isBlank()) {
+            context.toastOnUi(R.string.cannot_open_url)
+            return
+        }
+        if (AppConfig.readUrlInBrowser) {
+            context.openUrl(url.substringBefore(",{"))
+        } else {
+            _effects.tryEmit(
+                ReadBookEffect.OpenWebView(
+                    title = chapter.title,
+                    url = url,
+                    sourceOrigin = ReadBook.bookSource?.bookSourceUrl,
+                    sourceName = ReadBook.bookSource?.bookSourceName,
+                    sourceType = ReadBook.bookSource?.getSourceType(),
+                )
+            )
+        }
+    }
+
+    /**
+     * 解析章节URL，处理data:;base64,...格式
+     * 从base64编码的JSON中提取真实URL
+     */
+    private fun resolveChapterUrl(url: String): String {
+        if (!url.startsWith("data:", ignoreCase = true)) return url
+        val match = AppPattern.dataUriRegex.matchEntire(url) ?: return url
+        return try {
+            val decoded = EncoderUtils.base64Decode(match.groupValues[1])
+            val json = GSON.fromJsonObject<Map<String, Any>>(decoded).getOrNull()
+            val realUrl = json?.get("url")?.toString() ?: ""
+            realUrl.ifBlank { url }
+        } catch (_: Exception) {
+            url
         }
     }
 
