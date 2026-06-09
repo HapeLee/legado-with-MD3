@@ -3,6 +3,7 @@ package io.legado.app.help
 import android.content.SharedPreferences
 import android.net.Uri
 import io.legado.app.constant.PreferKey
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
@@ -25,7 +26,6 @@ import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.isJson
 import io.legado.app.utils.normalizeFileName
 import kotlinx.coroutines.CoroutineDispatcher
@@ -287,11 +287,11 @@ class WebDavManager(
 
     private fun readConfig(): WebDavConfig {
         return WebDavConfig(
-            url = appCtx.getPrefString(PreferKey.webDavUrl, "") ?: "",
-            account = appCtx.getPrefString(PreferKey.webDavAccount, "") ?: "",
-            password = appCtx.getPrefString(PreferKey.webDavPassword, "") ?: "",
-            dir = appCtx.getPrefString(PreferKey.webDavDir, "legado") ?: "legado",
-            deviceName = appCtx.getPrefString(PreferKey.webDavDeviceName, "") ?: ""
+            url = BackupConfig.webDavUrl,
+            account = BackupConfig.webDavAccount,
+            password = BackupConfig.webDavPassword,
+            dir = BackupConfig.webDavDir,
+            deviceName = BackupConfig.webDavDeviceName
         )
     }
 

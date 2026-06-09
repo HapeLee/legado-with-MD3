@@ -7,18 +7,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import androidx.core.content.edit
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
-import androidx.preference.PreferenceManager
 import io.legado.app.R
 import io.legado.app.base.BaseFragment
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.PreferKey
 import io.legado.app.databinding.FragmentWebdavAuthBinding
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.dialogs.alert
@@ -71,8 +69,6 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
 
-        val prefs = PreferenceManager.getDefaultSharedPreferences(requireContext())
-
         val urls = listOf(
             "https://dav.jianguoyun.com/dav/",
             "https://webdav.aliyundrive.com/",
@@ -87,8 +83,8 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
         binding.editUrl.setAdapter(adapter)
 
-        binding.editAccount.setText(prefs.getString(PreferKey.webDavAccount, ""))
-        binding.editPassword.setText(prefs.getString(PreferKey.webDavPassword, ""))
+        binding.editAccount.setText(BackupConfig.webDavAccount)
+        binding.editPassword.setText(BackupConfig.webDavPassword)
         binding.editPassword.inputType =
             InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
 
@@ -133,11 +129,9 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     fun saveWebDavConfig(config: WebDavConfig, onSaved: (() -> Unit)? = null) {
-        PreferenceManager.getDefaultSharedPreferences(requireContext()).edit {
-            putString(PreferKey.webDavUrl, config.url)
-            putString(PreferKey.webDavAccount, config.account)
-            putString(PreferKey.webDavPassword, config.password)
-        }
+        BackupConfig.webDavUrl = config.url
+        BackupConfig.webDavAccount = config.account
+        BackupConfig.webDavPassword = config.password
 
         onSaved?.invoke()
     }

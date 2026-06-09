@@ -3,7 +3,6 @@ package io.legado.app.help
 import android.net.Uri
 import io.legado.app.R
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
@@ -25,7 +24,7 @@ import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getPrefString
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.utils.isJson
 import io.legado.app.utils.normalizeFileName
 import io.legado.app.utils.toastOnUi
@@ -62,8 +61,8 @@ object AppWebDav {
 
     private val rootWebDavUrl: String
         get() {
-            val configUrl = appCtx.getPrefString(PreferKey.webDavUrl)?.trim()
-            var url = if (configUrl.isNullOrEmpty()) defaultWebDavUrl else configUrl
+            val configUrl = BackupConfig.webDavUrl.trim()
+            var url = if (configUrl.isEmpty()) defaultWebDavUrl else configUrl
             if (!url.endsWith("/")) url = "${url}/"
             AppConfig.webDavDir?.trim()?.let {
                 if (it.isNotEmpty()) {
@@ -77,8 +76,8 @@ object AppWebDav {
         kotlin.runCatching {
             authorization = null
             defaultBookWebDav = null
-            val account = appCtx.getPrefString(PreferKey.webDavAccount)
-            val password = appCtx.getPrefString(PreferKey.webDavPassword)
+            val account = BackupConfig.webDavAccount
+            val password = BackupConfig.webDavPassword
             if (!account.isNullOrEmpty() && !password.isNullOrEmpty()) {
                 val mAuthorization = Authorization(account, password)
                 checkAuthorization(mAuthorization)
@@ -162,8 +161,8 @@ object AppWebDav {
 
     suspend fun testWebDav(): Boolean {
         return kotlin.runCatching {
-            val account = appCtx.getPrefString(PreferKey.webDavAccount)
-            val password = appCtx.getPrefString(PreferKey.webDavPassword)
+            val account = BackupConfig.webDavAccount
+            val password = BackupConfig.webDavPassword
             if (account.isNullOrEmpty() || password.isNullOrEmpty()) {
                 appCtx.toastOnUi("账号或密码为空")
                 return false
