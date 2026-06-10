@@ -124,6 +124,7 @@
 		<item>@string/screen_landscape</item>
 		<item>@string/screen_sensor</item>
 		<item>@string/screen_portrait_reversed</item>
+		<item>@string/screen_landscape_reversed</item>
 	</string-array>
 
     <string-array name="click_image_way_title">

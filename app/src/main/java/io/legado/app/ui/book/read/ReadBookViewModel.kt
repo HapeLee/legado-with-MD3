@@ -35,6 +35,7 @@ import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.DefaultData
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -581,7 +582,15 @@ class ReadBookViewModel(
             is ReadBookIntent.SaveMenuButtonConfig -> saveMenuButtonConfig(intent.items)
             is ReadBookIntent.SaveTitleBarButtonConfig -> saveTitleBarButtonConfig(intent.items)
 
-            is ReadBookIntent.KeepLightChanged -> _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
+            is ReadBookIntent.KeepLightChanged -> {
+                ReadConfig.keepLight = intent.value
+                _readPreferences.update { it.copy(keepLight = intent.value) }
+                _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
+            }
+            is ReadBookIntent.SetOrientation -> {
+                ReadConfig.screenOrientation = intent.value
+                _effects.tryEmit(ReadBookEffect.SetOrientation)
+            }
             is ReadBookIntent.TextSelectAbleChanged -> _effects.tryEmit(
                 ReadBookEffect.UpTextSelectAble(
                     intent.enabled

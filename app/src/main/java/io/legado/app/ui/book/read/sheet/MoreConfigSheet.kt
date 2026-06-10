@@ -56,9 +56,11 @@ fun MoreConfigSheet(
             ScreenSettings(
                 preferences = preferences,
                 onScreenOrientationChange = {
+                    onIntent(ReadBookIntent.SetOrientation(it))
                     scope.launch { readSettingsRepository.setScreenOrientation(it) }
                 },
                 onKeepLightChange = {
+                    onIntent(ReadBookIntent.KeepLightChanged(it))
                     scope.launch { readSettingsRepository.setKeepLight(it) }
                 },
                 onHideStatusBarChange = {

@@ -425,7 +425,8 @@ sealed interface ReadBookIntent {
     data class TextActionDict(val text: String) : ReadBookIntent
 
     // Screen / selection config
-    data object KeepLightChanged : ReadBookIntent
+    data class KeepLightChanged(val value: String) : ReadBookIntent
+    data class SetOrientation(val value: String) : ReadBookIntent
     data class TextSelectAbleChanged(val enabled: Boolean) : ReadBookIntent
 
     // Media / TTS
