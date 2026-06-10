@@ -7,10 +7,7 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.GSON
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.putPrefString
-import splitties.init.appCtx
 
 data class TagColorPair(
     val textColor: Int = 0,
@@ -88,12 +85,9 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, "")
     }
 
-    var appFontPath: String?
-        get() = appCtx.getPrefString(PreferKey.appFontPath)
-        set(value) {
-            appCtx.putPrefString(PreferKey.appFontPath, value)
-            postEvent(EventBus.RECREATE, "")
-        }
+    var appFontPath by prefDelegate<String?>(PreferKey.appFontPath, null) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
     var cPrimary by prefDelegate(PreferKey.cPrimary, 0)
 
