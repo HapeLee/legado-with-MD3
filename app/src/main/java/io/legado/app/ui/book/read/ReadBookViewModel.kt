@@ -1668,7 +1668,7 @@ class ReadBookViewModel(
     fun initReadBookConfig(intent: Intent) {
         val bookUrl = intent.getStringExtra("bookUrl")
         val book = when {
-            bookUrl.isNullOrEmpty() -> appDb.bookDao.mostRecentlyReadBook
+            bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
             else -> appDb.bookDao.getBook(bookUrl)
         } ?: return
         ReadBook.upReadBookConfig(book)
@@ -1680,7 +1680,7 @@ class ReadBookViewModel(
             ReadBook.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
             val bookUrl = intent.getStringExtra("bookUrl")
             val book = when {
-                bookUrl.isNullOrEmpty() -> appDb.bookDao.mostRecentlyReadBook
+                bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
                 else -> appDb.bookDao.getBook(bookUrl)
             } ?: ReadBook.book
             when {
