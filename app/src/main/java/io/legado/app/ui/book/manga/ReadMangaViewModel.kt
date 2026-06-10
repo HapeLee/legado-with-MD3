@@ -65,7 +65,7 @@ class ReadMangaViewModel(
             ReadManga.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
             val bookUrl = intent.getStringExtra("bookUrl")
             val book = when {
-                bookUrl.isNullOrEmpty() -> appDb.bookDao.lastReadBook
+                bookUrl.isNullOrEmpty() -> appDb.bookDao.mostRecentlyReadBook
                 else -> appDb.bookDao.getBook(bookUrl)
             } ?: ReadManga.book
             when {
