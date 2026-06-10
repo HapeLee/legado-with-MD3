@@ -771,6 +771,8 @@ class ReadBookController(
             is ReadBookEffect.OpenMenuCustomIconPicker,
             is ReadBookEffect.OpenTitleBarCustomIconPicker,
             is ReadBookEffect.OpenSystemTtsSettings,
+            is ReadBookEffect.OpenHttpTtsImportPicker,
+            is ReadBookEffect.OpenHttpTtsExportPicker,
             is ReadBookEffect.OpenHttpTtsLogin,
             is ReadBookEffect.TtsCacheCleared,
             is ReadBookEffect.ExportJson,

@@ -8,30 +8,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -40,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.ui.book.read.ReadBookTtsEngineItem
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -162,7 +152,6 @@ fun SpeakEngineConfigSheet(
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    val clipboardManager = LocalClipboardManager.current
     val items = state.ttsEngineItems
     val selectedValue = state.selectedTtsEngine
     var pendingEngineValue by remember { mutableStateOf<String?>(null) }
@@ -189,27 +178,41 @@ fun SpeakEngineConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.speak_engine),
         startAction = {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
+            SmallTonalButton(
+                onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
+                icon = Icons.Default.Add
+            )
+        },
+        endAction = {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
                 SmallTonalButton(
-                    onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
-                    icon = Icons.Default.Add
+                    onClick = { expanded = true },
+                    icon = Icons.Default.MoreVert
                 )
-                SmallTonalButton(
-                    onClick = {
-                        clipboardManager.getText()?.text?.let { text ->
-                            if (text.isNotBlank()) {
-                                onIntent(ReadBookIntent.ImportHttpTtsJson(text))
-                            }
-                        }
-                    },
-                    icon = Icons.Default.Description
-                )
-                SmallTonalButton(
-                    onClick = { onIntent(ReadBookIntent.ExportAllHttpTts) },
-                    icon = Icons.Default.FileDownload
-                )
+                RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.import_tts),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ImportHttpTtsFile)
+                        },
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.export),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ExportAllHttpTts)
+                        },
+                    )
+                    RoundDropdownMenuItem(
+                        text = stringResource(R.string.clear_cache),
+                        onClick = {
+                            expanded = false
+                            onIntent(ReadBookIntent.ClearTtsCache)
+                        },
+                    )
+                }
             }
         },
     ) {
@@ -220,7 +223,7 @@ fun SpeakEngineConfigSheet(
                 .padding(bottom = 8.dp),
         ) {
             items(items) { item ->
-                val isHttpTts = item.value != null
+                val httpTtsId = item.value?.toLongOrNull()
                 val isSelected = item.value == selectedValue
                 TinyClickableSettingItem(
                     title = item.title,
@@ -230,18 +233,18 @@ fun SpeakEngineConfigSheet(
                         null
                     },
                     onClick = { pendingEngineValue = item.value },
-                    onLongClick = if (isHttpTts && !item.loginUrl.isNullOrBlank()) {
-                        { onIntent(ReadBookIntent.OpenHttpTtsLogin(item.value!!.toLong())) }
+                    onLongClick = if (httpTtsId != null && !item.loginUrl.isNullOrBlank()) {
+                        { onIntent(ReadBookIntent.OpenHttpTtsLogin(httpTtsId)) }
                     } else null,
-                    trailingContent = if (isHttpTts) {
+                    trailingContent = if (httpTtsId != null) {
                         {
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 SmallTonalButton(
-                                    onClick = { onIntent(ReadBookIntent.EditHttpTts(item.value!!.toLong())) },
+                                    onClick = { onIntent(ReadBookIntent.EditHttpTts(httpTtsId)) },
                                     icon = Icons.Default.Edit,
                                 )
                                 SmallTonalButton(
-                                    onClick = { onIntent(ReadBookIntent.DeleteHttpTts(item.value!!.toLong())) },
+                                    onClick = { onIntent(ReadBookIntent.DeleteHttpTts(httpTtsId)) },
                                     icon = Icons.Default.Delete,
                                 )
                             }

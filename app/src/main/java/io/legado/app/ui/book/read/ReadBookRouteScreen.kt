@@ -29,9 +29,6 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentData
 import io.legado.app.help.IntentHelp
-import io.legado.app.model.ReadBook
-import io.legado.app.utils.toastOnUi
-import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
@@ -41,11 +38,13 @@ import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
+import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
 
@@ -223,6 +222,18 @@ fun ReadBookRouteScreen(
         }
     }
 
+    val importHttpTtsPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ImportHttpTtsFileSelected(it)) }
+    }
+
+    val exportHttpTtsPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri?.let { viewModel.onIntent(ReadBookIntent.ExportHttpTtsToFile(it)) }
+    }
+
     val bookInfoLauncher = rememberLauncherForActivityResult(
         StartActivityContract(BookInfoActivity::class.java)
     ) { result ->
@@ -352,6 +363,18 @@ fun ReadBookRouteScreen(
                             }
                             is ReadBookEffect.TtsCacheCleared -> {
                                 context.toastOnUi(effect.message)
+                            }
+                            is ReadBookEffect.OpenHttpTtsImportPicker -> {
+                                importHttpTtsPicker.launch(
+                                    arrayOf(
+                                        "application/json",
+                                        "text/plain"
+                                    )
+                                )
+                            }
+
+                            is ReadBookEffect.OpenHttpTtsExportPicker -> {
+                                exportHttpTtsPicker.launch("httpTTS.json")
                             }
 
                             // All other effects — delegate to bridge (View/Window/Activity operations)

@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.speech.tts.TextToSpeech
 import androidx.lifecycle.viewModelScope
 import io.legado.app.BuildConfig
 import io.legado.app.R
@@ -132,6 +133,13 @@ class ReadBookViewModel(
 
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
+
+    private val sysEngines: List<TextToSpeech.EngineInfo> by lazy {
+        val tts = TextToSpeech(context, null)
+        val engines = tts.engines
+        tts.shutdown()
+        engines
+    }
 
     private val _readPreferences = MutableStateFlow(ReadPreferences())
     val readPreferences = _readPreferences.asStateFlow()
@@ -737,10 +745,39 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ExportAllHttpTts -> {
+                _effects.tryEmit(ReadBookEffect.OpenHttpTtsExportPicker)
+            }
+
+            is ReadBookIntent.ExportHttpTtsToFile -> {
                 execute {
-                    GSON.toJson(appDb.httpTTSDao.all)
-                }.onSuccess { json ->
-                    _effects.tryEmit(ReadBookEffect.ExportJson(json))
+                    val json = GSON.toJson(appDb.httpTTSDao.all)
+                    context.contentResolver.openOutputStream(intent.uri)?.use { os ->
+                        os.write(json.toByteArray())
+                    }
+                }.onSuccess {
+                    _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.export_success)))
+                }
+            }
+
+            is ReadBookIntent.ImportHttpTtsFile -> {
+                _effects.tryEmit(ReadBookEffect.OpenHttpTtsImportPicker)
+            }
+
+            is ReadBookIntent.ImportHttpTtsFileSelected -> {
+                execute {
+                    val text = context.contentResolver.openInputStream(intent.uri)
+                        ?.use { it.reader().readText() }
+                    if (!text.isNullOrBlank()) {
+                        HttpTTS.fromJsonArray(text).getOrDefault(arrayListOf())
+                    } else arrayListOf()
+                }.onSuccess { list ->
+                    if (list.isNotEmpty()) {
+                        execute {
+                            appDb.httpTTSDao.insert(*list.toTypedArray())
+                        }.onSuccess {
+                            loadTtsEngineItems()
+                        }
+                    }
                 }
             }
 
@@ -1032,6 +1069,14 @@ class ReadBookViewModel(
         execute {
             buildList {
                 add(ReadBookTtsEngineItem(context.getString(R.string.system_tts), null))
+                sysEngines.forEach { engine ->
+                    add(
+                        ReadBookTtsEngineItem(
+                            title = engine.label,
+                            value = GSON.toJson(SelectItem(engine.label, engine.name)),
+                        )
+                    )
+                }
                 appDb.httpTTSDao.all.forEach { httpTts ->
                     add(
                         ReadBookTtsEngineItem(
