@@ -132,11 +132,7 @@ object ThemeConfig {
 
     var enableCustomTagColors by prefDelegate(PreferKey.enableCustomTagColors, false)
 
-    var customTagColorsJson: String?
-        get() = appCtx.getPrefString(PreferKey.customTagColors)
-        set(value) {
-            appCtx.putPrefString(PreferKey.customTagColors, value)
-        }
+    var customTagColorsJson by prefDelegate<String?>(PreferKey.customTagColors, null)
 
     fun getCustomTagColors(): List<TagColorPair> {
         return try {
