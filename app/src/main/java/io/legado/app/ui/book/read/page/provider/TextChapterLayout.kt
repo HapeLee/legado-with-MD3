@@ -924,6 +924,10 @@ class TextChapterLayout(
         val charStyles = applyHighlightRules(text, isTitle)
         val widthsArray = allocateFloatArray(text.length)
         textPaint.getTextWidthsCompat(text, widthsArray)
+        // 用高亮规则字体重新测量字符宽度，确保排版和绘制使用同一套字体
+        if (charStyles != null) {
+            remeasureWithHighlightFonts(text, charStyles, textPaint, widthsArray)
+        }
         val layout = if (useZhLayout) {
             val (words, widths) = measureTextSplit(text, widthsArray)
             val indentSize = if (isFirstLine) paragraphIndent.length else 0
@@ -1357,6 +1361,35 @@ class TextChapterLayout(
     private fun isZeroWidthChar(char: Char): Boolean {
         val code = char.code
         return code == 8203 || code == 8204 || code == 8205 || code == 8288
+    }
+
+    /**
+     * 对有自定义字体的高亮字符重新测量宽度，确保排版和绘制使用同一套字体度量。
+     */
+    private fun remeasureWithHighlightFonts(
+        text: String,
+        charStyles: Array<CharStyle?>,
+        textPaint: TextPaint,
+        widthsArray: FloatArray
+    ) {
+        val originalTypeface = textPaint.typeface
+        var i = 0
+        while (i < text.length) {
+            val fontPath = charStyles[i]?.fontPath.orEmpty()
+            if (fontPath.isEmpty()) { i++; continue }
+            // 找连续使用同一字体的区间
+            val segStart = i
+            i++
+            while (i < text.length && charStyles[i]?.fontPath.orEmpty() == fontPath) i++
+            val segEnd = i
+            val typeface = TextColumn.getTypeface(fontPath) ?: continue
+            textPaint.typeface = typeface
+            val segment = text.substring(segStart, segEnd)
+            val segWidths = FloatArray(segEnd - segStart)
+            textPaint.getTextWidthsCompat(segment, segWidths)
+            segWidths.copyInto(widthsArray, segStart)
+        }
+        textPaint.typeface = originalTypeface
     }
 
     /**

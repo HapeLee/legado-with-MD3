@@ -110,14 +110,18 @@ data class TextColumn(
     }
 
     private fun getCustomTypeface(): Typeface? {
-        if (fontPath.isEmpty()) return null
-        return typefaceCache.getOrPut(fontPath) {
-            loadTypeface(fontPath)
-        }
+        return getTypeface(fontPath)
     }
 
     companion object {
         private val typefaceCache = HashMap<String, Typeface?>()
+
+        internal fun getTypeface(fontPath: String): Typeface? {
+            if (fontPath.isEmpty()) return null
+            return typefaceCache.getOrPut(fontPath) {
+                loadTypeface(fontPath)
+            }
+        }
 
         private fun loadTypeface(fontPath: String): Typeface? {
             return runCatching {

@@ -82,7 +82,7 @@ data class TextLine(
     fun addColumn(column: BaseColumn) {
         if (column !is TextColumn) {
             onlyTextColumn = false
-        } else if (column.textColor != null || column.bgColor != null || column.underlineMode != 0 || column.bgImage.isNotEmpty()) {
+        } else if (column.textColor != null || column.bgColor != null || column.underlineMode != 0 || column.bgImage.isNotEmpty() || column.fontPath.isNotEmpty()) {
             onlyTextColumn = false
         }
         column.textLine = this
