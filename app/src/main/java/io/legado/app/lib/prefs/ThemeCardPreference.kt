@@ -83,8 +83,8 @@ class ThemeCardPreference(context: Context, attrs: AttributeSet) : Preference(co
             holder.card.setOnClickListener {
                 if (value != currentValue) {
                     if (value == "13") {
-                        val hasLightBg = !appCtx.getPrefString(PreferKey.bgImage).isNullOrEmpty()
-                        val hasDarkBg = !appCtx.getPrefString(PreferKey.bgImageN).isNullOrEmpty()
+                        val hasLightBg = !ThemeConfig.bgImageLight.isNullOrEmpty()
+                        val hasDarkBg = !ThemeConfig.bgImageDark.isNullOrEmpty()
                         if (!hasLightBg || !hasDarkBg) {
                             context.toastOnUi(R.string.transparent_theme_alarm)
                             return@setOnClickListener

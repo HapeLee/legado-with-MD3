@@ -60,13 +60,13 @@ object ThemeConfigStore {
     fun getBgImage(context: Context, metrics: DisplayMetrics): Bitmap? {
         val bgCfg = when (getTheme()) {
             Theme.Light -> Pair(
-                context.getPrefString(PreferKey.bgImage),
-                context.getPrefInt(PreferKey.bgImageBlurring, 0)
+                ThemeConfig.bgImageLight,
+                ThemeConfig.bgImageBlurring
             )
 
             Theme.Dark -> Pair(
-                context.getPrefString(PreferKey.bgImageN),
-                context.getPrefInt(PreferKey.bgImageNBlurring, 0)
+                ThemeConfig.bgImageDark,
+                ThemeConfig.bgImageNBlurring
             )
 
             else -> null
@@ -146,13 +146,13 @@ object ThemeConfigStore {
      * 清理无用背景图片
      */
     fun clearBg() {
-        val bgImagePath = appCtx.getPrefString(PreferKey.bgImage)
+        val bgImagePath = ThemeConfig.bgImageLight
         appCtx.externalFiles.getFile(PreferKey.bgImage).listFiles()?.forEach {
             if (it.absolutePath != bgImagePath) {
                 it.delete()
             }
         }
-        val bgImageNPath = appCtx.getPrefString(PreferKey.bgImageN)
+        val bgImageNPath = ThemeConfig.bgImageDark
         appCtx.externalFiles.getFile(PreferKey.bgImageN).listFiles()?.forEach {
             if (it.absolutePath != bgImageNPath) {
                 it.delete()
@@ -184,9 +184,9 @@ object ThemeConfigStore {
         val bBackground =
             context.getPrefInt(PreferKey.cBBackground, context.getCompatColor(R.color.md_grey_200))
         val bgImgPath =
-            context.getPrefString(PreferKey.bgImage)
+            ThemeConfig.bgImageLight
         val bgImgBlur =
-            context.getPrefInt(PreferKey.bgImageBlurring, 0)
+            ThemeConfig.bgImageBlurring
 
         return Config(
             themeName = name,
@@ -216,9 +216,9 @@ object ThemeConfigStore {
         val bBackground =
             context.getPrefInt(PreferKey.cNBBackground, context.getCompatColor(R.color.md_grey_850))
         val bgImgPath =
-            context.getPrefString(PreferKey.bgImageN)
+            ThemeConfig.bgImageDark
         val bgImgBlur =
-            context.getPrefInt(PreferKey.bgImageNBlurring, 0)
+            ThemeConfig.bgImageNBlurring
         return Config(
             themeName = name,
             isNightTheme = true,

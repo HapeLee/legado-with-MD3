@@ -853,10 +853,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     val hasLightBg: Boolean
-        get() = !appCtx.getPrefString(PreferKey.bgImage).isNullOrEmpty()
+        get() = !ThemeConfig.bgImageLight.isNullOrEmpty()
 
     val hasDarkBg: Boolean
-        get() = !appCtx.getPrefString(PreferKey.bgImageN).isNullOrEmpty()
+        get() = !ThemeConfig.bgImageDark.isNullOrEmpty()
 
     val hasImageBg: Boolean
         get() = hasLightBg && hasDarkBg

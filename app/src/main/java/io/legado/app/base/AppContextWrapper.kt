@@ -7,7 +7,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
 import io.legado.app.constant.PreferKey
-import io.legado.app.utils.getPrefInt
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.sysConfiguration
 import java.util.*
@@ -42,7 +42,7 @@ object AppContextWrapper {
 
 
     fun getFontScale(context: Context): Float {
-        var fontScale = context.getPrefInt(PreferKey.fontScale) / 10f
+        var fontScale = ThemeConfig.fontScale / 10f
         if (fontScale !in 0.8f..1.6f) {
             fontScale = sysConfiguration.fontScale
         }
