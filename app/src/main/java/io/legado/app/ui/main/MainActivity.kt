@@ -192,8 +192,12 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         }
 
         val startRoutes = remember {
-            if (OtherConfig.defaultToRead) arrayOf(MainRouteHome, MainRouteReadBook())
-            else arrayOf(MainNavigator.resolveStartRoute(intent))
+            val resolved = MainNavigator.resolveStartRoute(intent)
+            if (OtherConfig.defaultToRead && resolved == MainRouteHome) {
+                arrayOf(MainRouteHome, MainRouteReadBook())
+            } else {
+                arrayOf(resolved)
+            }
         }
         val backStack = rememberNavBackStack(*startRoutes)
 
