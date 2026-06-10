@@ -54,6 +54,7 @@ import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.navigationBarGravity
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
+import io.legado.app.utils.sysBattery
 import io.legado.app.utils.sysScreenOffTime
 import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
@@ -164,6 +165,7 @@ class ReadBookController(
             }
         }
         newRefs.readView.upTime()
+        newRefs.readView.upBattery(activity.sysBattery)
     }
 
     fun onRouteInitialized() {
@@ -177,6 +179,7 @@ class ReadBookController(
         setOrientation()
         upSystemUiVisibility()
         refs?.readView?.upTime()
+        refs?.readView?.upBattery(activity.sysBattery)
         screenOffTimerStart()
     }
 
@@ -1060,6 +1063,7 @@ class ReadBookController(
             "2" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             "3" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
             "4" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
+            "5" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
         }
     }
 }
