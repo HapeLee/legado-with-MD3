@@ -48,7 +48,10 @@ object MainNavigator {
             is MainRouteCache,
             MainRouteBookCacheManage,
             is MainRouteReadBook -> {
-                if (currentRoute == MainRouteHome) {
+                if (
+                    currentRoute == MainRouteHome ||
+                    currentRoute is MainRouteBookInfo
+                ) {
                     backStack.add(route)
                 } else {
                     backStack.clear()

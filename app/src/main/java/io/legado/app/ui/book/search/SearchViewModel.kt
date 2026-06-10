@@ -317,8 +317,13 @@ class SearchViewModel(
         }
         syncScopeState()
 
-        // Always reset search state so the screen starts clean,
-        // regardless of whether the ViewModel was retained by navigation.
+        // When the ViewModel already holds a non-empty committed query,
+        // it means a search session is in progress or completed.
+        // This happens when returning from BookInfo — the LaunchedEffect
+        // re-fires but we must not wipe the existing results.
+        val hasActiveSearch = _uiState.value.committedQuery.isNotEmpty()
+        if (hasActiveSearch) return
+
         clearSearchResults()
 
         val initKey = key?.trim().orEmpty()
