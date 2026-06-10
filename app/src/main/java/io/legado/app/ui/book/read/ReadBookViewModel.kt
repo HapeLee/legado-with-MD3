@@ -2531,10 +2531,26 @@ class ReadBookViewModel(
             }
             is ConfigUpdate.FloatingBottomBar -> {
                 ReadBookConfig.readMenuFloatingBottomBar = update.value
+                val needsBlurFallback = !update.value &&
+                        ReadBookConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
+                if (needsBlurFallback) {
+                    ReadBookConfig.readMenuBottomBarBlurMode = ReadMenuBlurMode.Haze
+                }
                 viewModelScope.launch {
                     readSettingsRepository.setReadMenuFloatingBottomBar(update.value)
+                    if (needsBlurFallback) {
+                        readSettingsRepository.setReadMenuBottomBarBlurMode(ReadMenuBlurMode.Haze)
+                    }
                 }
-                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuFloatingBottomBar = update.value)) }
+                _uiState.update {
+                    it.copy(
+                        menuConfig = it.menuConfig.copy(
+                            readMenuFloatingBottomBar = update.value,
+                            readMenuBottomBarBlurMode = if (needsBlurFallback) ReadMenuBlurMode.Haze
+                            else it.menuConfig.readMenuBottomBarBlurMode,
+                        )
+                    )
+                }
             }
             is ConfigUpdate.MenuTopBarBlurMode -> {
                 val mode = update.value.coerceIn(0, 2).let {

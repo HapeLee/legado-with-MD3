@@ -525,15 +525,6 @@ private fun BottomBarTab(
             title = stringResource(R.string.read_menu_floating_bottom_bar),
             checked = floatingBottomBar,
             onCheckedChange = {
-                if (!it && preferences.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass) {
-                    onIntent(
-                        ReadBookIntent.UpdateConfig(
-                            ConfigUpdate.MenuBottomBarBlurMode(
-                                ReadMenuBlurMode.Haze
-                            )
-                        )
-                    )
-                }
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.FloatingBottomBar(it)))
             },
         )
