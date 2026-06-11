@@ -1,8 +1,5 @@
 package io.legado.app.ui.book.searchContent
 
-import android.app.Activity
-import android.content.Intent
-import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -81,8 +78,6 @@ fun SearchContentScreen(
     onBack: () -> Unit,
     viewModel: SearchContentViewModel = koinViewModel()
 ) {
-    val activity = LocalActivity.current
-
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val replaceEnabled by viewModel.replaceEnabled.collectAsState()
@@ -259,13 +254,8 @@ fun SearchContentScreen(
                                     result = result,
                                     isCurrentChapter = result.chapterIndex == durChapterIndex,
                                     onClick = {
-                                        viewModel.onSearchResultClick(result) { key ->
-                                            val intent = Intent().apply {
-                                                putExtra("key", key)
-                                                putExtra("index", index)
-                                            }
-                                            activity?.setResult(Activity.RESULT_OK, intent)
-                                            activity?.finish()
+                                        if (viewModel.onSearchResultClick(result)) {
+                                            onBack()
                                         }
                                     }
                                 )

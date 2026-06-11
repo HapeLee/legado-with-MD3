@@ -147,6 +147,17 @@
 		<item>@string/adjust_chapter_index</item>
 	</string-array>
 
+	<string-array name="brightness_bar_mode_title">
+		<item>@string/brightness_bar_off</item>
+		<item>@string/brightness_bar_horizontal</item>
+		<item>@string/brightness_bar_vertical</item>
+	</string-array>
+
+	<string-array name="brightness_bar_position_title">
+		<item>@string/brightness_bar_left</item>
+		<item>@string/brightness_bar_right</item>
+	</string-array>
+
 	<string-array name="icon_names" tools:ignore="Typos">
 		<item>iconMain</item>
 		<item>iconWhite</item>

@@ -17,6 +17,7 @@ import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.lib.webdav.WebDavFile
 import io.legado.app.model.remote.RemoteBookWebDav
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
@@ -24,7 +25,6 @@ import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.utils.isJson
 import io.legado.app.utils.normalizeFileName
 import io.legado.app.utils.toastOnUi
@@ -33,7 +33,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 import java.io.File
-import kotlin.coroutines.coroutineContext
 
 /**
  * webDav初始化会访问网络,不要放到主线程
@@ -359,10 +358,10 @@ object AppWebDav {
         appDb.bookDao.all.forEach { book ->
             val progressFileName = getProgressFileName(book.name, book.author)
             val webDavFile = map[progressFileName]
-            webDavFile ?: return
+            webDavFile ?: return@forEach
             if (webDavFile.lastModify <= book.syncTime) {
                 //本地同步时间大于上传时间不用同步
-                return
+                return@forEach
             }
             getBookProgress(book)?.let { bookProgress ->
                 if (bookProgress.durChapterIndex > book.durChapterIndex

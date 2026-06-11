@@ -27,7 +27,6 @@ import io.legado.app.data.repository.HighlightRuleRepository
 import io.legado.app.help.book.BookContent
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.getBookSource
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.ImageProvider
@@ -45,6 +44,7 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider.reviewChar
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceChar
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceCharC
 import io.legado.app.ui.book.read.page.provider.ChapterProvider.srcReplaceCharD
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.dpToPx
@@ -141,7 +141,7 @@ class TextChapterLayout(
     private val useZhLayout = ReadBookConfig.useZhLayout
     private val isMiddleTitle = ReadBookConfig.isMiddleTitle
     private val textFullJustify = ReadBookConfig.textFullJustify
-    private val adaptSpecialStyle = AppConfig.adaptSpecialStyle
+    private val adaptSpecialStyle = ReadConfig.adaptSpecialStyle
     private val pageAnim = book.getPageAnim()
     private val titleSegType = ReadBookConfig.titleSegType
     private val titleSegDistance = ReadBookConfig.titleSegDistance
@@ -490,7 +490,7 @@ class TextChapterLayout(
                 text = sb.toString()
                 if (text.isNotBlank()) {
                     wordCount += text.replace(noWordCountRegex,"").length
-                    val textToType = if (AppConfig.enableReview) text + reviewChar else text
+                    val textToType = if (ReadConfig.enableReview) text + reviewChar else text
                     setTypeText(
                         book,
                         textToType,

@@ -35,7 +35,6 @@ import io.legado.app.domain.usecase.GetReadingProgressUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.DefaultData
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isEpub
@@ -45,7 +44,6 @@ import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
@@ -66,6 +64,7 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
@@ -78,7 +77,6 @@ import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.toStringArray
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
@@ -155,7 +153,7 @@ class ReadBookViewModel(
     }
 
     init {
-        AppConfig.detectClickArea()
+        ReadConfig.detectClickArea()
         ReadBook.register(this)
         refreshButtonConfigs()
         collectReadPreferences()
@@ -253,7 +251,7 @@ class ReadBookViewModel(
 
             is ReadBookIntent.NavigateToSearchResult -> {
                 _uiState.update { it.copy(searchResultIndex = intent.index) }
-                _effects.tryEmit(ReadBookEffect.NavigateToSearchResult(intent.result))
+                navigateToSearchResult(intent.result)
             }
 
             is ReadBookIntent.ToggleReadAloud -> {
@@ -296,8 +294,28 @@ class ReadBookViewModel(
             is ReadBookIntent.CancelSelect -> _effects.tryEmit(ReadBookEffect.CancelSelect)
             is ReadBookIntent.UpSystemUiVisibility -> _effects.tryEmit(ReadBookEffect.UpSystemUiVisibility)
             is ReadBookIntent.UpContent -> ReadBook.loadOrUpContent()
-            is ReadBookIntent.SetBrightness -> _effects.tryEmit(ReadBookEffect.SetBrightness(intent.value))
-            is ReadBookIntent.ToggleBrightnessAuto -> _effects.tryEmit(ReadBookEffect.ToggleBrightnessAuto)
+            is ReadBookIntent.SetBrightness -> {
+                ReadBookConfig.readBrightness = intent.value
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readBrightness = intent.value)) }
+                viewModelScope.launch {
+                    readSettingsRepository.setReadBrightness(intent.value)
+                }
+                _effects.tryEmit(ReadBookEffect.SetBrightness(intent.value))
+            }
+
+            is ReadBookIntent.ToggleBrightnessAuto -> {
+                ReadBookConfig.brightnessAuto = intent.auto
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(brightnessAuto = intent.auto)) }
+                viewModelScope.launch {
+                    readSettingsRepository.setBrightnessAuto(intent.auto)
+                }
+                _effects.tryEmit(
+                    ReadBookEffect.ToggleBrightnessAuto(
+                        intent.auto,
+                        _uiState.value.menuConfig.readBrightness
+                    )
+                )
+            }
             is ReadBookIntent.SeekToChapter -> {
                 ReadBook.saveCurrentBookProgress()
                 openChapter(intent.index)
@@ -627,7 +645,7 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenPreDownloadNumPicker -> {
                 _uiState.update {
                     it.copy(
-                        preDownloadNum = AppConfig.preDownloadNum,
+                        preDownloadNum = ReadConfig.preDownloadNum,
                         activeSheet = ReadBookSheet.PreDownloadConfig,
                     )
                 }
@@ -636,7 +654,7 @@ class ReadBookViewModel(
             is ReadBookIntent.OpenCacheCleanTimePicker -> {
                 _uiState.update {
                     it.copy(
-                        audioCacheCleanTime = AppConfig.audioCacheCleanTimeOrgin,
+                        audioCacheCleanTime = ReadConfig.audioCacheCleanTimeOrgin,
                         activeSheet = ReadBookSheet.AudioCacheCleanConfig,
                     )
                 }
@@ -644,7 +662,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ApplySpeakEngine -> {
                 ReadBook.book?.setTtsEngine(null)
-                AppConfig.ttsEngine = intent.value
+                ReadConfig.ttsEngine = intent.value
+                ReadAloud.upReadAloudClass()
                 _uiState.update {
                     it.copy(
                         selectedTtsEngine = ReadAloud.ttsEngine,
@@ -655,7 +674,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ApplyPreDownloadNum -> {
-                AppConfig.preDownloadNum = intent.value
+                ReadConfig.preDownloadNum = intent.value
                 _uiState.update {
                     it.copy(
                         preDownloadNum = intent.value,
@@ -665,7 +684,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ApplyAudioCacheCleanTime -> {
-                context.putPrefInt(PreferKey.audioCacheCleanTime, intent.value)
+                ReadConfig.audioCacheCleanTimeOrgin = intent.value
                 _uiState.update {
                     it.copy(
                         audioCacheCleanTime = intent.value,
@@ -704,7 +723,7 @@ class ReadBookViewModel(
                 }.onSuccess {
                     loadTtsEngineItems()
                     if (ReadAloud.ttsEngine == intent.engineId.toString()) {
-                        AppConfig.ttsEngine = null
+                        ReadConfig.ttsEngine = null
                         ReadAloud.upReadAloudClass()
                     }
                 }
@@ -726,6 +745,7 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ApplySpeakEnginePerBook -> {
                 ReadBook.book?.setTtsEngine(intent.value)
+                ReadAloud.upReadAloudClass()
                 _uiState.update {
                     it.copy(
                         selectedTtsEngine = ReadAloud.ttsEngine,
@@ -841,7 +861,7 @@ class ReadBookViewModel(
 
             is ReadBookIntent.SelectFont -> selectFont(intent.path)
             is ReadBookIntent.SelectSystemTypeface -> {
-                AppConfig.systemTypefaces = intent.index
+                ReadConfig.systemTypefaces = intent.index
                 ReadBookConfig.textFont = ""
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                     setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
@@ -937,7 +957,7 @@ class ReadBookViewModel(
             is ReadBookIntent.ToggleDayNight -> toggleDayNight()
             // Text action menu
             is ReadBookIntent.TextActionAloud -> {
-                when (AppConfig.contentSelectSpeakMod) {
+                when (ReadConfig.contentSelectSpeakMod) {
                     1 -> _effects.tryEmit(ReadBookEffect.TextActionAloudSelect)
                     else -> _effects.tryEmit(ReadBookEffect.TextActionSpeak(intent.text))
                 }
@@ -1052,7 +1072,7 @@ class ReadBookViewModel(
         _effects.tryEmit(ReadBookEffect.UnregisterNetworkListener)
 
         if (!BuildConfig.DEBUG) {
-            if (AppConfig.syncBookProgressPlus) {
+            if (ReadConfig.syncBookProgressPlus) {
                 ReadBook.syncProgress()
             } else {
                 ReadBook.uploadProgress()
@@ -1123,7 +1143,7 @@ class ReadBookViewModel(
      * Called from the network changed listener (registered by route).
      */
     fun onNetworkChanged() {
-        if (AppConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
+        if (ReadConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
             ReadBook.syncProgress(newProgressAction = { progress ->
                 sureNewProgress(progress)
             })
@@ -1149,7 +1169,7 @@ class ReadBookViewModel(
 
     private fun handleChangeSource() {
         viewModelScope.launch {
-            if (AppConfig.defaultSourceChangeAll) {
+            if (ReadConfig.defaultSourceChangeAll) {
                 _uiState.update { it.copy(activeSheet = ReadBookSheet.ChangeBookSource) }
             } else {
                 val book = ReadBook.book ?: return@launch
@@ -1393,10 +1413,10 @@ class ReadBookViewModel(
             readSettingsRepository.preferences.collect { preferences ->
                 val old = previous
                 previous = preferences
-                AppConfig.syncReadPreferences(preferences)
+                ReadConfig.syncReadPreferences(preferences)
                 _readPreferences.value = preferences
                 if (!preferences.hasMenuClickArea()) {
-                    AppConfig.detectClickArea()
+                    ReadConfig.detectClickArea()
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
                 }
                 if (old != null && old.keepLight != preferences.keepLight) {
@@ -1423,11 +1443,7 @@ class ReadBookViewModel(
                         readAloudStreamAudio = prefs.streamReadAloudAudio,
                         readAloudTtsFollowSys = prefs.ttsFollowSys,
                         readAloudTtsSpeechRate = prefs.ttsSpeechRate,
-                        readAloudTtsTimer = if (BaseReadAloudService.timeMinute > 0) {
-                            BaseReadAloudService.timeMinute
-                        } else {
-                            prefs.ttsTimer
-                        },
+                        readAloudTtsTimer = prefs.ttsTimer,
                     )
                 }
             }
@@ -1445,11 +1461,12 @@ class ReadBookViewModel(
     }
 
     private fun setReadAloudTtsTimer(value: Int) {
+        val timer = value.coerceIn(0, 180)
         viewModelScope.launch {
-            readAloudSettingsRepository.setTtsTimer(value)
+            readAloudSettingsRepository.setTtsTimer(timer)
         }
-        ReadAloud.setTimer(context, value)
-        _uiState.update { it.copy(readAloudTtsTimer = value) }
+        ReadAloud.setTimer(context, timer)
+        _uiState.update { it.copy(readAloudTtsTimer = timer) }
     }
 
     private fun setReadAloudTtsSpeechRate(value: Int) {
@@ -1557,6 +1574,10 @@ class ReadBookViewModel(
                 readMenuCustomIcons = ReadBookConfig.readMenuCustomIcons.toImmutableMap(),
                 titleBarButtons = current.menuConfig.titleBarButtons,
                 bottomBarButtons = current.menuConfig.bottomBarButtons,
+                showBrightnessView = ReadBookConfig.showBrightnessView,
+                brightnessVwPos = ReadBookConfig.brightnessVwPos,
+                readBrightness = ReadBookConfig.readBrightness,
+                brightnessAuto = ReadBookConfig.brightnessAuto,
             ),
         )
     }
@@ -1659,14 +1680,14 @@ class ReadBookViewModel(
     }
 
     private fun calculateSeekProgress(): Int {
-        return when (AppConfig.progressBarBehavior) {
+        return when (ReadConfig.progressBarBehavior) {
             "page" -> ReadBook.durPageIndex
             else -> ReadBook.durChapterIndex
         }
     }
 
     private fun calculateSeekMax(): Int {
-        return when (AppConfig.progressBarBehavior) {
+        return when (ReadConfig.progressBarBehavior) {
             "page" -> (ReadBook.curTextChapter?.pages?.size ?: 1) - 1
             else -> ReadBook.chapterSize - 1
         }
@@ -1761,7 +1782,7 @@ class ReadBookViewModel(
         if (ReadBook.chapterChanged) {
             ReadBook.chapterChanged = false
         } else if (!(isSameBook && BaseReadAloudService.isRun) && ReadBook.inBookshelf) {
-            if (AppConfig.syncBookProgressPlus) {
+            if (ReadConfig.syncBookProgressPlus) {
                 ReadBook.syncProgress({ progress -> sureNewProgress(progress) })
             } else {
                 syncBookProgress(book)
@@ -1857,7 +1878,7 @@ class ReadBookViewModel(
         book: Book,
         alertSync: ((progress: BookProgress) -> Unit)? = null
     ) {
-        if (!AppConfig.syncBookProgress) return
+        if (!ReadConfig.syncBookProgress) return
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
@@ -1952,7 +1973,7 @@ class ReadBookViewModel(
     }
 
     private fun autoChangeSource(name: String, author: String) {
-        if (!AppConfig.autoChangeSource) return
+        if (!ReadConfig.autoChangeSource) return
         execute {
             val sources = appDb.bookSourceDao.allTextEnabledPart
             flow {
@@ -2164,11 +2185,11 @@ class ReadBookViewModel(
 
     fun searchResultPositions(
         textChapter: TextChapter,
-        searchResult: SearchResult
+        searchResult: SearchResult,
+        query: String = _uiState.value.searchContentQuery,
     ): Array<Int> {
         val pages = textChapter.pages
         val content = textChapter.getContent()
-        val query = _uiState.value.searchContentQuery
         val queryLength = query.length
 
         var count = 0
@@ -2178,6 +2199,7 @@ class ReadBookViewModel(
             count += 1
         }
         val contentPosition = index
+        if (contentPosition < 0) return arrayOf(0, 0, 0, 0, 0)
         var pageIndex = 0
         var length = pages[pageIndex].text.length
         while (length < contentPosition && pageIndex + 1 < pages.size) {
@@ -2191,7 +2213,7 @@ class ReadBookViewModel(
         var curLine = curTextLines[lineIndex]
         length = length - currentPage.text.length + curLine.text.length
         if (curLine.isParagraphEnd) length++
-        while (length <= contentPosition && lineIndex + 1 < curTextLines.size) {
+        while (length < contentPosition && lineIndex + 1 < curTextLines.size) {
             lineIndex += 1
             curLine = curTextLines[lineIndex]
             length += curLine.text.length
@@ -2215,6 +2237,55 @@ class ReadBookViewModel(
             charIndex2 = charIndex + queryLength - curLineLength - 1
         }
         return arrayOf(pageIndex, lineIndex, charIndex, addLine, charIndex2)
+    }
+
+    /**
+     * Compute the search result position and emit [ReadBookEffect.NavigateToSearchResult]
+     * so the Controller can navigate and highlight.
+     */
+    private fun navigateToSearchResult(result: SearchResult) {
+        val query = _uiState.value.searchContentQuery
+        if (query.isEmpty()) return
+        val chapterIndex = result.chapterIndex
+        val textChapter = ReadBook.curTextChapter
+        if (textChapter != null && textChapter.chapter.index == chapterIndex) {
+            val pos = searchResultPositions(textChapter, result, query)
+            val lineIndex = pos[1]
+            val charIndex = pos[2]
+            val addLine = pos[3]
+            val charIndex2 = pos[4]
+            val queryLength = query.length
+            val endLineIndex = lineIndex + addLine.coerceAtLeast(0)
+            val endCharIndex = if (addLine == 0) {
+                charIndex + queryLength
+            } else {
+                charIndex2 + 1
+            }
+            _effects.tryEmit(
+                ReadBookEffect.NavigateToSearchResult(
+                    result = result,
+                    chapterIndex = chapterIndex,
+                    pageIndex = pos[0],
+                    lineIndex = lineIndex,
+                    startCharIndex = charIndex,
+                    endLineIndex = endLineIndex,
+                    endCharIndex = endCharIndex,
+                )
+            )
+        } else {
+            // Chapter not loaded — emit with -1 so the Controller knows to open the chapter first
+            _effects.tryEmit(
+                ReadBookEffect.NavigateToSearchResult(
+                    result = result,
+                    chapterIndex = chapterIndex,
+                    pageIndex = -1,
+                    lineIndex = 0,
+                    startCharIndex = 0,
+                    endLineIndex = 0,
+                    endCharIndex = 0,
+                )
+            )
+        }
     }
 
     fun reverseRemoveSameTitle() {
@@ -2423,7 +2494,7 @@ class ReadBookViewModel(
             }
             is ConfigUpdate.ReadBarStyle -> {
                 val value = update.value.coerceIn(0, 2)
-                AppConfig.updateReadBarStyleCache(value)
+                ReadConfig.readBarStyle = value
                 viewModelScope.launch {
                     readSettingsRepository.setReadBarStyle(value)
                 }
@@ -2760,10 +2831,40 @@ class ReadBookViewModel(
                 }
             }
             is ConfigUpdate.ShowBrightnessView -> {
+                ReadBookConfig.showBrightnessView = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setShowBrightnessView(update.value)
                 }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(showBrightnessView = update.value))
+                }
                 postEvent(PreferKey.showBrightnessView, "")
+            }
+
+            is ConfigUpdate.BrightnessVwPos -> {
+                ReadBookConfig.brightnessVwPos = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setBrightnessVwPos(update.value)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(brightnessVwPos = update.value))
+                }
+            }
+
+            is ConfigUpdate.BrightnessAuto -> {
+                ReadBookConfig.brightnessAuto = update.value
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(brightnessAuto = update.value))
+                }
+                viewModelScope.launch {
+                    readSettingsRepository.setBrightnessAuto(update.value)
+                }
+                _effects.tryEmit(
+                    ReadBookEffect.ToggleBrightnessAuto(
+                        update.value,
+                        _uiState.value.menuConfig.readBrightness
+                    )
+                )
             }
             is ConfigUpdate.UseUnderlineGlobal -> {
                 ReadConfig.useUnderline = update.value
@@ -3051,7 +3152,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
                     ))
-                    if (AppConfig.readBarStyleFollowPage) {
+                    if (ReadConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }
@@ -3061,7 +3162,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent, ConfigUpdateAction.InvalidateTextPage, ConfigUpdateAction.SubmitRenderTask)
                     ))
-                    if (AppConfig.readBarStyleFollowPage) {
+                    if (ReadConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }
@@ -3071,7 +3172,7 @@ class ReadBookViewModel(
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
                         setOf(ConfigUpdateAction.UpdateBackground)
                     ))
-                    if (AppConfig.readBarStyleFollowPage) {
+                    if (ReadConfig.readBarStyleFollowPage) {
                         postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                     }
                 }

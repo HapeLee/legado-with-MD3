@@ -113,7 +113,8 @@
       "Bash(dir /s /b \"%USERPROFILE%\\\\.gradle\\\\caches\\\\*kyant*\")",
       "Bash(Select-String -Pattern \"\\(BUILD|error:|FAILED\\)\")",
       "PowerShell(grep *)",
-      "Bash(powershell -Command \"./gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 30\")"
+      "Bash(powershell -Command \"./gradlew.bat :app:compileAppDebugKotlin 2>&1 | Select-Object -Last 30\")",
+      "Bash(git revert *)"
     ]
   }
 }

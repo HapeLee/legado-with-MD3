@@ -60,6 +60,10 @@ object MainNavigator {
                 }
             }
 
+            is MainRouteSearchContent -> {
+                backStack.add(route)
+            }
+
             is MainRouteSearch -> {
                 if (
                     currentRoute == MainRouteHome ||

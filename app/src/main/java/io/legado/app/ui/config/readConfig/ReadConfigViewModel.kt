@@ -92,6 +92,10 @@ class ReadConfigViewModel(
                     readSettingsRepository.setShowBrightnessView(intent.value)
                 }
 
+                is ReadConfigIntent.BrightnessVwPosChanged -> {
+                    readSettingsRepository.setBrightnessVwPos(intent.value)
+                }
+
                 is ReadConfigIntent.UseUnderlineChanged -> {
                     readSettingsRepository.setUseUnderline(intent.value)
                 }
@@ -209,6 +213,8 @@ class ReadConfigViewModel(
             adaptSpecialStyle = adaptSpecialStyle,
             useZhLayout = useZhLayout,
             showBrightnessView = showBrightnessView,
+            brightnessVwPos = brightnessVwPos,
+            brightnessAuto = brightnessAuto,
             useUnderline = useUnderline,
             readSliderMode = readSliderMode,
             doubleHorizontalPage = doubleHorizontalPage,

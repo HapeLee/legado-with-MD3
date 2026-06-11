@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -23,61 +22,8 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
-import io.legado.app.ui.widget.components.SectionTitle
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import kotlinx.coroutines.launch
-
-@Composable
-fun ReadStyleSheet(
-    onDismissRequest: () -> Unit,
-    onOpenPaddingConfig: () -> Unit,
-    onOpenMoreConfig: () -> Unit,
-    onOpenBgTextConfig: (Int) -> Unit,
-    onOpenShadowSet: () -> Unit,
-    onOpenUnderlineConfig: () -> Unit,
-    onOpenHighlightRule: () -> Unit,
-    onOpenFontSelect: () -> Unit,
-    onToggleDayNight: () -> Unit,
-    readMenuCustomIcons: Map<String, String> = emptyMap(),
-    bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
-    onIntent: (ReadBookIntent) -> Unit,
-    styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
-) {
-    var showTextTitle by remember { mutableStateOf(false) }
-
-    AppModalBottomSheet(
-        show = true,
-        onDismissRequest = {
-            onIntent(ReadBookIntent.SaveReadStyleConfig)
-            onDismissRequest()
-        },
-        title = stringResource(R.string.read_config),
-    ) {
-        ReadStyleContent(
-            onOpenPaddingConfig = onOpenPaddingConfig,
-            onOpenMoreConfig = onOpenMoreConfig,
-            onOpenBgTextConfig = onOpenBgTextConfig,
-            onOpenTextTitle = { showTextTitle = true },
-            onOpenFontSelect = onOpenFontSelect,
-            onToggleDayNight = onToggleDayNight,
-            readMenuCustomIcons = readMenuCustomIcons,
-            bottomBarButtons = bottomBarButtons,
-            onIntent = onIntent,
-            styleConfig = styleConfig,
-        )
-
-        TextTitlePage(
-            show = showTextTitle,
-            onDismissRequest = { showTextTitle = false },
-            onOpenShadowSet = onOpenShadowSet,
-            onOpenUnderlineConfig = onOpenUnderlineConfig,
-            onOpenHighlightRule = onOpenHighlightRule,
-            onOpenFontSelect = onOpenFontSelect,
-            onIntent = onIntent,
-        )
-    }
-}
 
 @Composable
 fun ReadStyleContent(
@@ -87,6 +33,7 @@ fun ReadStyleContent(
     onOpenTextTitle: () -> Unit,
     onOpenFontSelect: () -> Unit,
     onToggleDayNight: () -> Unit,
+    onPageChanged: (Int) -> Unit = {},
     readMenuCustomIcons: Map<String, String> = emptyMap(),
     bottomBarButtons: List<ReadBookButtonConfigItem> = emptyList(),
     modifier: Modifier = Modifier,
@@ -100,6 +47,7 @@ fun ReadStyleContent(
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             currentPage = page
+            onPageChanged(page)
         }
     }
 

@@ -13,7 +13,6 @@ import android.widget.FrameLayout
 import io.legado.app.R
 import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.BookProgress
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
@@ -37,6 +36,7 @@ import io.legado.app.ui.book.read.page.entities.column.TextBaseColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.activity
 import io.legado.app.utils.invisible
 import io.legado.app.utils.longToastOnUi
@@ -272,7 +272,7 @@ class ReadView(
     }
 
     fun cancelSelect(clearSearchResult: Boolean = false) {
-        if (isTextSelected) {
+        if (isTextSelected || clearSearchResult) {
             curPage.cancelSelect(clearSearchResult)
             isTextSelected = false
         }
@@ -398,39 +398,39 @@ class ReadView(
         when {
             isTextSelected -> Unit
             mcRect.contains(startX, startY) -> if (!isAbortAnim) {
-                click(AppConfig.clickActionMC)
+                click(ReadConfig.clickActionMC)
             }
 
             bcRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBC)
+                click(ReadConfig.clickActionBC)
             }
 
             blRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBL)
+                click(ReadConfig.clickActionBL)
             }
 
             brRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionBR)
+                click(ReadConfig.clickActionBR)
             }
 
             mlRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionML)
+                click(ReadConfig.clickActionML)
             }
 
             mrRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionMR)
+                click(ReadConfig.clickActionMR)
             }
 
             tlRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTL)
+                click(ReadConfig.clickActionTL)
             }
 
             tcRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTC)
+                click(ReadConfig.clickActionTC)
             }
 
             trRect.contains(startX, startY) -> {
-                click(AppConfig.clickActionTR)
+                click(ReadConfig.clickActionTR)
             }
         }
     }
@@ -552,7 +552,7 @@ class ReadView(
                 pageDelegate = NoAnimPageDelegate(this)
             }
         }
-        (pageDelegate as? ScrollPageDelegate)?.noAnim = AppConfig.noAnimScrollPage
+        (pageDelegate as? ScrollPageDelegate)?.noAnim = ReadConfig.noAnimScrollPage
         if (upRecorder) {
             (pageDelegate as? HorizontalPageDelegate)?.upRecorder()
             autoPager.upRecorder()
@@ -603,7 +603,7 @@ class ReadView(
      * 更新滑动距离
      */
     fun upPageSlopSquare() {
-        val pageTouchSlop = AppConfig.pageTouchSlop
+        val pageTouchSlop = ReadConfig.pageTouchSlop
         this.pageSlopSquare = if (pageTouchSlop == 0) slopSquare else pageTouchSlop
         pageSlopSquare2 = this.pageSlopSquare * this.pageSlopSquare
     }
@@ -697,7 +697,7 @@ class ReadView(
     }
 
     fun invalidateTextPage() {
-        if (!AppConfig.optimizeRender) {
+        if (!ReadConfig.optimizeRender) {
             return
         }
         pageFactory.run {
@@ -722,7 +722,7 @@ class ReadView(
     }
 
     fun submitRenderTask() {
-        if (!AppConfig.optimizeRender) {
+        if (!ReadConfig.optimizeRender) {
             return
         }
         curPage.submitRenderTask()

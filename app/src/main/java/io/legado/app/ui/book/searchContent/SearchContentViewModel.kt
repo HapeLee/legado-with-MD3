@@ -1,16 +1,12 @@
 package io.legado.app.ui.book.searchContent
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.SearchContentHistory
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.data.repository.SearchContentRepository
-import io.legado.app.help.IntentData
-import io.legado.app.utils.postEvent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,14 +38,12 @@ sealed interface SearchContentState {
 
 
 class SearchContentViewModel(
-    savedStateHandle: SavedStateHandle,
+    val bookUrl: String,
+    initialSearchWord: String?,
+    private val searchResultIndex: Int,
     private val bookRepository: BookRepository,
     private val searchContentRepository: SearchContentRepository
 ) : ViewModel() {
-
-    val bookUrl: String = savedStateHandle.get<String>("bookUrl") ?: ""
-    private val initialSearchWord: String? = savedStateHandle.get<String>("searchWord")
-    private val searchResultIndex: Int = savedStateHandle.get<Int>("searchResultIndex") ?: 0
 
     private val _searchQuery = MutableStateFlow(initialSearchWord ?: "")
     val searchQuery = _searchQuery.asStateFlow()
@@ -189,12 +183,18 @@ class SearchContentViewModel(
         hasAutoScrolled = true
     }
 
-    fun onSearchResultClick(searchResult: SearchResult, onSuccess: (key: Long) -> Unit) {
+    fun onSearchResultClick(searchResult: SearchResult): Boolean {
         stopSearch()
-        postEvent(EventBus.SEARCH_RESULT, uiState.value.searchResults)
-        val key = System.currentTimeMillis()
-        IntentData.put("searchResult$key", searchResult)
-        IntentData.put("searchResultList$key", uiState.value.searchResults)
-        onSuccess(key)
+        val results = uiState.value.searchResults
+        val index = results.indexOf(searchResult)
+        if (index < 0) return false
+        SearchContentResult.emitResult(
+            SearchContentResult.Result(
+                searchResults = results,
+                index = index,
+                query = searchResult.query
+            )
+        )
+        return true
     }
 }

@@ -8,10 +8,10 @@ import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.HttpTTS
-import io.legado.app.help.config.AppConfig
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.service.HttpReadAloudService
 import io.legado.app.service.TTSReadAloudService
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.StringUtils
 import io.legado.app.utils.postEvent
@@ -21,7 +21,7 @@ import splitties.init.appCtx
 
 object ReadAloud {
     private var aloudClass: Class<*> = getReadAloudClass()
-    val ttsEngine get() = ReadBook.book?.getTtsEngine() ?: AppConfig.ttsEngine
+    val ttsEngine get() = ReadBook.book?.getTtsEngine() ?: ReadConfig.ttsEngine
     var httpTTS: HttpTTS? = null
 
     private fun getReadAloudClass(): Class<*> {

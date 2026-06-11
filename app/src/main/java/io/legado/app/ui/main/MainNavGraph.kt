@@ -41,17 +41,19 @@ import io.legado.app.ui.book.readRecord.ReadRecordScreen
 import io.legado.app.ui.book.search.SearchIntent
 import io.legado.app.ui.book.search.SearchScreen
 import io.legado.app.ui.book.search.SearchViewModel
+import io.legado.app.ui.book.searchContent.SearchContentScreen
+import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.config.ConfigNavScreen
 import io.legado.app.ui.config.backupConfig.BackupConfigScreen
 import io.legado.app.ui.config.coverConfig.CoverConfigScreen
 import io.legado.app.ui.config.customTheme.CustomThemeScreen
 import io.legado.app.ui.config.downloadCacheConfig.DownloadCacheConfigScreen
+import io.legado.app.ui.config.labConfig.LabConfigScreen
 import io.legado.app.ui.config.otherConfig.OtherConfigScreen
 import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
-import io.legado.app.ui.config.labConfig.LabConfigScreen
 import io.legado.app.ui.config.translation.TranslationConfigScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
@@ -69,6 +71,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
@@ -294,6 +297,15 @@ fun MainActivity.mainEntryProvider(
             host = controller,
             controller = controller,
             onEffectsReady = { effectsReady.complete(Unit) },
+            onOpenSearch = { word, bookUrl ->
+                onNavigateToRoute(
+                    MainRouteSearchContent(
+                        bookUrl = bookUrl,
+                        searchWord = word,
+                        searchResultIndex = readBookViewModel.uiState.value.searchResultIndex
+                    )
+                )
+            },
         )
 
         DisposableEffect(controller, lifecycleOwner, route.readAloud) {
@@ -338,6 +350,16 @@ fun MainActivity.mainEntryProvider(
                 resumeReader()
             }
         }
+    }
+
+    entry<MainRouteSearchContent> { route ->
+        val viewModel = koinViewModel<SearchContentViewModel>(
+            parameters = { parametersOf(route) }
+        )
+        SearchContentScreen(
+            viewModel = viewModel,
+            onBack = { onNavigateBack() },
+        )
     }
 
     entry<MainRouteSearch> { route ->

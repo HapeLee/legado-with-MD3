@@ -18,8 +18,6 @@ import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.update
-import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.globalExecutor
 import io.legado.app.model.webBook.WebBook
@@ -28,6 +26,8 @@ import io.legado.app.ui.book.manga.entities.MangaChapter
 import io.legado.app.ui.book.manga.entities.MangaContent
 import io.legado.app.ui.book.manga.entities.MangaPage
 import io.legado.app.ui.book.manga.entities.ReaderLoading
+import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.utils.mapIndexed
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -45,7 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.getValue
 import kotlin.math.min
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -472,7 +471,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     private fun preDownload() {
         if (book?.isLocal == true) return
         executor.execute {
-            if (AppConfig.preDownloadNum < 2) {
+            if (ReadConfig.preDownloadNum < 2) {
                 return@execute
             }
             preDownloadTask?.cancel()
@@ -480,7 +479,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 //预下载
                 launch {
                     val maxChapterIndex =
-                        min(durChapterIndex + AppConfig.preDownloadNum, chapterSize)
+                        min(durChapterIndex + ReadConfig.preDownloadNum, chapterSize)
                     for (i in durChapterIndex.plus(2)..maxChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
@@ -488,7 +487,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                     }
                 }
                 launch {
-                    val minChapterIndex = durChapterIndex - min(5, AppConfig.preDownloadNum)
+                    val minChapterIndex = durChapterIndex - min(5, ReadConfig.preDownloadNum)
                     for (i in durChapterIndex.minus(2) downTo minChapterIndex) {
                         if (downloadedChapters.contains(i)) continue
                         if ((downloadFailChapters[i] ?: 0) >= 3) continue
@@ -594,7 +593,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         uploadSuccessAction: (() -> Unit)? = null,
         syncSuccessAction: (() -> Unit)? = null,
     ) {
-        if (!AppConfig.syncBookProgress) return
+        if (!ReadConfig.syncBookProgress) return
         val book = book ?: return
         Coroutine.async {
             AppWebDav.getBookProgress(book)
@@ -607,7 +606,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
             ) {
                 // 服务器没有进度或者进度比服务器快，上传现有进度
                 Coroutine.async {
-                    AppWebDav.uploadBookProgress(BookProgress(book), uploadSuccessAction)
+                    AppWebDav.uploadBookProgress(book, onSuccess = uploadSuccessAction)
                     book.update()
                 }
             } else if (progress.durChapterIndex > book.durChapterIndex ||

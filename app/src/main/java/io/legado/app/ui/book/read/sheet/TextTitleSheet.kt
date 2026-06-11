@@ -41,7 +41,6 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -54,51 +53,6 @@ import kotlinx.coroutines.launch
 private const val COLOR_TEXT = 1
 private const val COLOR_ACCENT = 2
 private const val COLOR_TITLE = 4
-
-// ========== Text & Title Sheet ==========
-
-@Composable
-internal fun TextTitlePage(
-    show: Boolean,
-    onDismissRequest: () -> Unit,
-    onOpenShadowSet: () -> Unit,
-    onOpenUnderlineConfig: () -> Unit,
-    onOpenHighlightRule: () -> Unit,
-    onOpenFontSelect: () -> Unit,
-    onIntent: (ReadBookIntent) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val tabTitles = listOf(
-        stringResource(R.string.read_config_text_effects),
-        stringResource(R.string.read_config_layout_spacing),
-        stringResource(R.string.read_config_title_settings),
-    )
-    val pagerState = rememberPagerState(pageCount = { 3 })
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { selectedTab = it }
-    }
-
-    AppModalBottomSheet(
-        show = show,
-        onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.read_config_text_effects),
-    ) {
-        ReadStyleTextTitleContent(
-            tabTitles = tabTitles,
-            selectedTab = selectedTab,
-            onSelectedTabChange = { selectedTab = it },
-            pagerState = pagerState,
-            onOpenShadowSet = onOpenShadowSet,
-            onOpenUnderlineConfig = onOpenUnderlineConfig,
-            onOpenHighlightRule = onOpenHighlightRule,
-            onOpenFontSelect = onOpenFontSelect,
-            animateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
-            onIntent = onIntent,
-        )
-    }
-}
 
 @Composable
 fun ReadStyleTextTitleContent(

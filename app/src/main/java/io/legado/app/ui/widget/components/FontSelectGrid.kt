@@ -143,14 +143,14 @@ private fun FontItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(LegadoTheme.colorScheme.surfaceVariant)
+            .background(LegadoTheme.colorScheme.surface)
             .clickable(onClick = onClick)
             .padding(12.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.height(48.dp)
         ) {
-            val context = LocalContext.current
             AndroidView(
                 factory = { ctx ->
                     android.widget.TextView(ctx).apply {
@@ -178,7 +178,7 @@ private fun FontItem(
                 Icon(
                     Icons.Default.Check,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = LegadoTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp),
                 )
             }

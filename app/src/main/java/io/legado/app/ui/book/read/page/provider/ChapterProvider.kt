@@ -15,12 +15,12 @@ import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookContent
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ReadBookConfig.dottedBase
 import io.legado.app.help.config.ReadBookConfig.dottedRatio
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.isContentScheme
@@ -190,7 +190,7 @@ object ChapterProvider {
             displayTitle.splitNotBlank("\n").forEach { text ->
                 setTypeText(
                     book, absStartX, durY,
-                    if (AppConfig.enableReview) text + reviewChar else text,
+                    if (ReadConfig.enableReview) text + reviewChar else text,
                     textPages,
                     stringBuilder,
                     titlePaint,
@@ -279,7 +279,7 @@ object ChapterProvider {
                     if (text.isNotBlank()) {
                         setTypeText(
                             book, absStartX, durY,
-                            if (AppConfig.enableReview) text + reviewChar else text,
+                            if (ReadConfig.enableReview) text + reviewChar else text,
                             textPages,
                             stringBuilder,
                             contentPaint,
@@ -918,7 +918,7 @@ object ChapterProvider {
                 }
 
                 else -> {
-                    when (AppConfig.systemTypefaces) {
+                    when (ReadConfig.systemTypefaces) {
                         1 -> Typeface.SERIF
                         2 -> Typeface.MONOSPACE
                         else -> Typeface.SANS_SERIF
@@ -1013,7 +1013,7 @@ object ChapterProvider {
             tPaint.setFontVariationSettings("'wght' ${ReadBookConfig.titleBold}")
         tPaint.textSize = with(ReadBookConfig) { textSize + titleSize }.toFloat().spToPx()
         tPaint.isAntiAlias = true
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && AppConfig.optimizeRender) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && ReadConfig.optimizeRender) {
             tPaint.isLinearText = true
         }
         if (ReadBookConfig.textItalic) {
@@ -1036,7 +1036,7 @@ object ChapterProvider {
             cPaint.setFontVariationSettings("'wght' ${ReadBookConfig.textBold}")
         cPaint.textSize = ReadBookConfig.textSize.toFloat().spToPx()
         cPaint.isAntiAlias = true
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && AppConfig.optimizeRender) {
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q && ReadConfig.optimizeRender) {
             cPaint.isLinearText = true
         }
         if (ReadBookConfig.textItalic) {
@@ -1086,7 +1086,7 @@ object ChapterProvider {
      * 更新绘制尺寸
      */
     fun upLayout() {
-        when (AppConfig.doublePageHorizontal) {
+        when (ReadConfig.doubleHorizontalPage) {
             "0" -> doublePage = false
             "1" -> doublePage = true
             "2" -> {

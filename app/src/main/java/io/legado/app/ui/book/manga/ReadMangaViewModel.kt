@@ -23,9 +23,7 @@ import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.isLocalModified
 import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.model.ReadBook
 import io.legado.app.model.ReadManga
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.model.webBook.WebBook
@@ -48,6 +46,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
+import io.legado.app.ui.config.readConfig.ReadConfig as GlobalReadConfig
 
 class ReadMangaViewModel(
     application: Application,
@@ -112,7 +111,7 @@ class ReadMangaViewModel(
             // 有章节跳转不同步阅读进度
             ReadManga.chapterChanged = false
         } else if (!isSameBook) {
-            if (AppConfig.syncBookProgressPlus) {
+            if (GlobalReadConfig.syncBookProgressPlus) {
                 ReadManga.syncProgress(
                     { progress -> ReadManga.mCallback?.sureNewProgress(progress) })
             } else {
@@ -195,7 +194,7 @@ class ReadMangaViewModel(
      * 自动换源
      */
     private fun autoChangeSource(name: String, author: String) {
-        if (!AppConfig.autoChangeSource) return
+        if (!GlobalReadConfig.autoChangeSource) return
         execute {
             val sources = appDb.bookSourceDao.allTextEnabledPart
             flow {
@@ -246,7 +245,7 @@ class ReadMangaViewModel(
         book: Book,
         alertSync: ((progress: BookProgress) -> Unit)? = null
     ) {
-        if (!AppConfig.syncBookProgress) return
+        if (!GlobalReadConfig.syncBookProgress) return
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {

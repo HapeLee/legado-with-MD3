@@ -98,6 +98,13 @@ data class MainRouteExploreShow(
 ) : MainRoute
 
 @Serializable
+data class MainRouteSearchContent(
+    val bookUrl: String,
+    val searchWord: String? = null,
+    val searchResultIndex: Int = 0,
+) : MainRoute
+
+@Serializable
 data object MainRouteAbout : MainRoute
 
 object MainRouteConst {
@@ -118,6 +125,7 @@ object MainRouteConst {
     const val ROUTE_BOOK_CACHE_MANAGE = "book/cache/manage"
     const val ROUTE_READ_BOOK = "book/read"
     const val ROUTE_SEARCH = "search"
+    const val ROUTE_SEARCH_CONTENT = "book/searchContent"
     const val ROUTE_BOOK_INFO = "book/info"
     const val ROUTE_EXPLORE_SHOW = "explore/show"
     const val ROUTE_RSS_SORT = "rss/sort"

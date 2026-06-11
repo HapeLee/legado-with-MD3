@@ -234,11 +234,6 @@
             android:name=".ui.book.toc.TocActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTop" />
-        <!-- 正文搜索 -->
-        <activity
-            android:name=".ui.book.searchContent.SearchContentActivity"
-            android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTop" />
         <!-- 订阅源调试 -->
         <activity
             android:name=".ui.rss.source.debug.RssSourceDebugActivity"

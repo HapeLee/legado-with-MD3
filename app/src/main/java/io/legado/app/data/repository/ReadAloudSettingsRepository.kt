@@ -80,7 +80,9 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setTtsTimer(value: Int) {
-        ReadConfig.ttsTimer = value.coerceIn(0, 180)
+        val timer = value.coerceIn(0, 180)
+        ReadConfig.ttsTimer = timer
+        settingsRepository.putInt(PreferKey.ttsTimer, timer)
     }
 
     suspend fun setTtsFollowSys(value: Boolean) {

@@ -340,6 +340,31 @@ private fun GlobalMenuTab(
 
         Spacer(Modifier.height(8.dp))
 
+        SectionTitle(stringResource(R.string.show_brightness_view))
+
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.show_brightness_view),
+            selectedValue = preferences.showBrightnessView,
+            displayEntries = stringArrayResource(R.array.brightness_bar_mode_title),
+            entryValues = stringArrayResource(R.array.brightness_bar_mode_value),
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowBrightnessView(it)))
+            },
+        )
+        if (preferences.showBrightnessView == "2") {
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.brightness_bar_position),
+                selectedValue = preferences.brightnessVwPos,
+                displayEntries = stringArrayResource(R.array.brightness_bar_position_title),
+                entryValues = stringArrayResource(R.array.brightness_bar_position_value),
+                onValueChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BrightnessVwPos(it)))
+                },
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
         var borderEnabled by remember {
             mutableStateOf(preferences.readMenuBorderWidth > 0)
         }

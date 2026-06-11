@@ -16,13 +16,13 @@ import io.legado.app.R
 import io.legado.app.constant.AppConst.timeFormat
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.databinding.ViewBookPageBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.BatteryView
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
@@ -169,7 +169,7 @@ class PageView(
     }
 
     fun upPaddingDisplayCutouts() {
-        if (AppConfig.paddingDisplayCutouts) {
+        if (ReadConfig.paddingDisplayCutouts) {
             binding.vwRoot.setOnApplyWindowInsetsListenerCompat { _, windowInsets ->
                 val insets = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
                 binding.vwRoot.setPadding(

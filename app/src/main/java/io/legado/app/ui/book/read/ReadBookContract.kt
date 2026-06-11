@@ -196,6 +196,10 @@ data class ReadMenuConfig(
     val readMenuCustomIcons: ImmutableMap<String, String> = persistentMapOf(),
     val titleBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
     val bottomBarButtons: ImmutableList<ReadBookButtonConfigItem> = persistentListOf(),
+    val showBrightnessView: String = "1",
+    val brightnessVwPos: String = "1",
+    val readBrightness: Int = 100,
+    val brightnessAuto: Boolean = false,
 )
 
 @Immutable
@@ -300,7 +304,7 @@ sealed interface ReadBookIntent {
 
     // Brightness
     data class SetBrightness(val value: Int) : ReadBookIntent
-    data object ToggleBrightnessAuto : ReadBookIntent
+    data class ToggleBrightnessAuto(val auto: Boolean) : ReadBookIntent
 
     // Seek bar jump
     data class SeekToChapter(val index: Int) : ReadBookIntent
@@ -526,7 +530,7 @@ sealed interface ReadBookEffect {
     data object CancelSelect : ReadBookEffect
     data object UpSystemUiVisibility : ReadBookEffect
     data class SetBrightness(val value: Int) : ReadBookEffect
-    data object ToggleBrightnessAuto : ReadBookEffect
+    data class ToggleBrightnessAuto(val auto: Boolean, val value: Int) : ReadBookEffect
 
     // Read aloud / auto page
     data object ToggleReadAloud : ReadBookEffect
@@ -535,7 +539,15 @@ sealed interface ReadBookEffect {
 
     // Search
     data class OpenSearchActivity(val word: String?, val bookUrl: String) : ReadBookEffect
-    data class NavigateToSearchResult(val result: SearchResult) : ReadBookEffect
+    data class NavigateToSearchResult(
+        val result: SearchResult,
+        val chapterIndex: Int,
+        val pageIndex: Int,
+        val lineIndex: Int,
+        val startCharIndex: Int,
+        val endLineIndex: Int,
+        val endCharIndex: Int,
+    ) : ReadBookEffect
     data object ExitSearch : ReadBookEffect
 
     // Source actions
@@ -1040,7 +1052,15 @@ sealed interface ConfigUpdate {
     data class UseZhLayout(val value: Boolean) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.ReloadContent)
     }
-    data class ShowBrightnessView(val value: Boolean) : ConfigUpdate {
+    data class ShowBrightnessView(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class BrightnessVwPos(val value: String) : ConfigUpdate {
+        override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    data class BrightnessAuto(val value: Boolean) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class UseUnderlineGlobal(val value: Boolean) : ConfigUpdate {

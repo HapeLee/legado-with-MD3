@@ -34,8 +34,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
-import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.exoplayer.InputStreamDataSource
 import io.legado.app.help.http.okHttpClient
@@ -43,6 +41,7 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.ui.book.read.page.entities.TextChapter
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.printOnDebug
@@ -98,7 +97,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private val loadErrorHandlingPolicy by lazy {
         CustomLoadErrorHandlingPolicy()
     }
-    private var speechRate: Int = AppConfig.speechRatePlay + 5
+    private var speechRate: Int = ReadConfig.speechRatePlay + 5
     private var downloadTask: Coroutine<*>? = null
     private var playIndexJob: Job? = null
     private var downloadErrorNo: Int = 0
@@ -210,7 +209,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = AppConfig.audioPreDownloadNum
+        val limit = ReadConfig.audioPreDownloadNum
         
         try {
             for (i in 1..limit) {
@@ -300,7 +299,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     ) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = AppConfig.audioPreDownloadNum
+        val limit = ReadConfig.audioPreDownloadNum
         
         try {
             for (i in 1..limit) {
@@ -491,7 +490,7 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 如果时间设置为0，则不再保护当前章节，退出即全删。
      */
     private fun removeCacheFile() {
-        val keepTime = AppConfig.audioCacheCleanTime
+        val keepTime = ReadConfig.audioCacheCleanTime
         // 只有当时间大于0时，才需要保护当前章节。如果为0，说明用户想彻底不留缓存。
         val protectCurrentChapter = keepTime > 0
         val titleMd5 = if (protectCurrentChapter) MD5Utils.md5Encode16(this.textChapter?.chapter?.title ?: "") else ""
@@ -572,7 +571,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun upSpeechRate(reset: Boolean) {
         downloadTask?.cancel()
         exoPlayer.stop()
-        speechRate = AppConfig.speechRatePlay + 5
+        speechRate = ReadConfig.speechRatePlay + 5
         if (ReadConfig.streamReadAloudAudio) {
             downloadAndPlayAudiosStream()
         } else {

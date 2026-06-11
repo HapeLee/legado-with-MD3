@@ -9,7 +9,6 @@ import android.view.View
 import io.legado.app.R
 import io.legado.app.data.entities.Bookmark
 import io.legado.app.help.book.isOnLineTxt
-import io.legado.app.help.config.AppConfig
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.association.OpenUrlConfirmActivity
 import io.legado.app.ui.book.read.page.delegate.PageDelegate
@@ -25,6 +24,7 @@ import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.ui.book.read.page.entities.column.TextHtmlColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.activity
 import io.legado.app.utils.dpToPx
@@ -40,7 +40,7 @@ import kotlin.math.min
  * 阅读内容视图
  */
 class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, attrs) {
-    var selectAble = AppConfig.textSelectAble
+    var selectAble = ReadConfig.selectText
     val selectedPaint by lazy {
         Paint().apply {
             color = context.getCompatColor(R.color.btn_bg_press_2)
@@ -73,7 +73,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     //绘制图片的paint
     val imagePaint by lazy {
         Paint().apply {
-            isAntiAlias = AppConfig.useAntiAlias
+            isAntiAlias = ReadConfig.useAntiAlias
         }
     }
 
@@ -266,7 +266,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
                     handled = true
                 }
 
-                is ImageColumn -> when (AppConfig.clickImgWay) {
+                is ImageColumn -> when (ReadConfig.clickImgWay) {
                     "1" -> { //预览图片
                         activity?.showDialogFragment(PhotoDialog(column.src, isBook = true))
                         handled = true

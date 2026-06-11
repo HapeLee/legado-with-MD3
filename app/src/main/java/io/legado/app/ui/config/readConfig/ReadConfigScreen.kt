@@ -18,13 +18,13 @@ import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
-import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.DropdownListSettingItem
 import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.SwitchSettingItem
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
+import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
 import org.koin.androidx.compose.koinViewModel
 
@@ -173,13 +173,27 @@ fun ReadConfigScreen(
                     }
                 )
 
-                SwitchSettingItem(
+                    DropdownListSettingItem(
                     title = stringResource(R.string.show_brightness_view),
-                    checked = state.showBrightnessView,
-                    onCheckedChange = {
+                        selectedValue = state.showBrightnessView,
+                        displayEntries = stringArrayResource(R.array.brightness_bar_mode_title),
+                        entryValues = stringArrayResource(R.array.brightness_bar_mode_value),
+                        onValueChange = {
                         viewModel.onIntent(ReadConfigIntent.ShowBrightnessViewChanged(it))
                     }
                 )
+
+                    if (state.showBrightnessView == "2") {
+                        DropdownListSettingItem(
+                            title = stringResource(R.string.brightness_bar_position),
+                            selectedValue = state.brightnessVwPos,
+                            displayEntries = stringArrayResource(R.array.brightness_bar_position_title),
+                            entryValues = stringArrayResource(R.array.brightness_bar_position_value),
+                            onValueChange = {
+                                viewModel.onIntent(ReadConfigIntent.BrightnessVwPosChanged(it))
+                            }
+                        )
+                    }
 
                 SwitchSettingItem(
                     title = stringResource(R.string.use_underline),

@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.graphics.toColorInt
 import com.google.android.material.color.MaterialColors
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.externalFiles
@@ -28,14 +29,14 @@ object ReadStyleResolver {
 
     fun currentMode(): ReadStyleMode {
         return when {
-            AppConfig.isEInkMode -> ReadStyleMode.EInk
-            AppConfig.isNightTheme -> ReadStyleMode.Night
+            ReadConfig.isEInkMode -> ReadStyleMode.EInk
+            ReadConfig.isNightTheme -> ReadStyleMode.Night
             else -> ReadStyleMode.Day
         }
     }
 
     fun isNightTheme(): Boolean {
-        return AppConfig.isNightTheme
+        return ReadConfig.isNightTheme
     }
 
     fun setCurrentBackground(

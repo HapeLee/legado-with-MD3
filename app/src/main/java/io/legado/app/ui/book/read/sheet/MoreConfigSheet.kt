@@ -87,9 +87,6 @@ fun MoreConfigSheet(
                 onUseZhLayoutChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseZhLayout(it)))
                 },
-                onShowBrightnessViewChange = {
-                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowBrightnessView(it)))
-                },
                 onUseUnderlineChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UseUnderlineGlobal(it)))
                 },
@@ -170,7 +167,6 @@ private fun ScreenSettings(
     onTextBottomJustifyChange: (Boolean) -> Unit,
     onAdaptSpecialStyleChange: (Boolean) -> Unit,
     onUseZhLayoutChange: (Boolean) -> Unit,
-    onShowBrightnessViewChange: (Boolean) -> Unit,
     onUseUnderlineChange: (Boolean) -> Unit,
 ) {
     val screenDirectionEntries = stringArrayResource(R.array.screen_direction_title)
@@ -231,11 +227,6 @@ private fun ScreenSettings(
         title = stringResource(R.string.use_zh_layout),
         checked = preferences.useZhLayout,
         onCheckedChange = onUseZhLayoutChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.show_brightness_view),
-        checked = preferences.showBrightnessView,
-        onCheckedChange = onShowBrightnessViewChange,
     )
     TinySwitchSettingItem(
         title = stringResource(R.string.use_underline),

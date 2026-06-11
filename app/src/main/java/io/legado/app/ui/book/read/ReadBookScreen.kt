@@ -23,7 +23,6 @@ import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
-import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
@@ -38,6 +37,7 @@ import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
+import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.changeSource.ChangeSourceSheet
 import io.legado.app.ui.widget.components.log.AppLogSheet
@@ -135,6 +135,10 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.OpenReplaceEditor(id, pattern))
         },
         onReplaceRuleChanged = { onIntent(ReadBookIntent.ReplaceRuleChanged) },
+        onNavigateToTextEffects = {
+            onIntent(ReadBookIntent.DismissSheet)
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.TextTitle))
+        },
     )
     UnderlineConfigSheet(
         show = state.activeSheet is ReadBookSheet.UnderlineConfig,

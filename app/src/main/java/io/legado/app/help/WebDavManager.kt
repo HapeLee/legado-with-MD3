@@ -3,7 +3,6 @@ package io.legado.app.help
 import android.content.SharedPreferences
 import android.net.Uri
 import io.legado.app.constant.PreferKey
-import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookProgress
@@ -18,6 +17,7 @@ import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
 import io.legado.app.lib.webdav.WebDavFile
 import io.legado.app.model.remote.RemoteBookWebDav
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.GSON
@@ -253,9 +253,9 @@ class WebDavManager(
         }
         appDb.bookDao.all.forEach { book ->
             val progressFileName = getProgressFileName(book.name, book.author)
-            val webDavFile = map[progressFileName] ?: return
+            val webDavFile = map[progressFileName] ?: return@forEach
             if (webDavFile.lastModify <= book.syncTime) {
-                return
+                return@forEach
             }
             getBookProgress(book)?.let { bookProgress ->
                 if (bookProgress.durChapterIndex > book.durChapterIndex

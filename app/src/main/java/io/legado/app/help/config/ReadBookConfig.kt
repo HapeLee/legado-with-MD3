@@ -19,6 +19,7 @@ import io.legado.app.help.DefaultData
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.ui.config.PrefDelegate
 import io.legado.app.ui.config.prefDelegate
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getMeanColor
@@ -208,6 +209,10 @@ object ReadBookConfig {
     var readMenuBorderColorNight by prefDelegate(PreferKey.readMenuBorderColorNight, 0)
     var showTitleBarIcons by prefDelegate(PreferKey.showTitleBarIcons, true)
     var readSliderMode by prefDelegate(PreferKey.readSliderMode, "0")
+    var showBrightnessView by prefDelegate(PreferKey.showBrightnessView, "1")
+    var brightnessVwPos by prefDelegate(PreferKey.brightnessVwPos, "1")
+    var readBrightness by prefDelegate(PreferKey.brightness, 100)
+    var brightnessAuto by prefDelegate(PreferKey.brightnessAuto, false)
 
     var styleSelect: Int
         get() = if (isComic) comicStyleSelect else readStyleSelect
@@ -301,7 +306,7 @@ object ReadBookConfig {
     val resolvedMenuBgColor: Int
         get() {
             val isNight = ReadStyleResolver.isNightTheme()
-            return when (AppConfig.readBarStyle) {
+            return when (ReadConfig.readBarStyle) {
                 1 -> { // 跟随阅读背景
                     val background = ReadStyleResolver.currentBackground(durConfig)
                     if (background.type == 0) {

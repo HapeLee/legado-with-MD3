@@ -932,6 +932,13 @@
     <string name="wrong_format">Wrong format</string>
     <string name="error">Error</string>
     <string name="show_brightness_view">Show Brightness Widget</string>
+    <string name="brightness_bar_off">Off</string>
+    <string name="brightness_bar_horizontal">Horizontal</string>
+    <string name="brightness_bar_vertical">Vertical</string>
+    <string name="brightness_bar_position">Brightness Bar Position</string>
+    <string name="brightness_bar_left">Left</string>
+    <string name="brightness_bar_right">Right</string>
+    <string name="brightness_follow_system">Follow System</string>
     <string name="language">Language</string>
     <string name="import_rss_source">Import rss source</string>
     <string name="donate_summary">Your donation makes this app better</string>

@@ -132,6 +132,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         ReadConfig.defaultSourceChangeAll = preferences.defaultSourceChangeAll
         ReadConfig.sliderVibrator = preferences.sliderVibrator
         ReadConfig.selectVibrator = preferences.selectVibrator
+        ReadConfig.brightnessVwPos = preferences.brightnessVwPos
+        ReadConfig.readBrightness = preferences.readBrightness
     }
 
     fun updateReadBarStyleCache(value: Int) {

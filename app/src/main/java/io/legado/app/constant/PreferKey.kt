@@ -163,6 +163,7 @@ object PreferKey {
     const val clearWebViewData = "clearWebViewData"
     const val onlyLatestBackup = "onlyLatestBackup"
     const val brightnessVwPos = "brightnessVwPos"
+    const val brightnessAuto = "brightnessAuto"
     const val shrinkDatabase = "shrinkDatabase"
     const val batchChangeSourceDelay = "batchChangeSourceDelay"
     const val openBookInfoByClickTitle = "openBookInfoByClickTitle"

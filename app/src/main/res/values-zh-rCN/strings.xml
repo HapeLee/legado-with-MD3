@@ -907,6 +907,13 @@
     <string name="wrong_format">格式不对</string>
     <string name="error">错误</string>
     <string name="show_brightness_view">显示亮度调节控件</string>
+    <string name="brightness_bar_off">关闭</string>
+    <string name="brightness_bar_horizontal">横排</string>
+    <string name="brightness_bar_vertical">竖排</string>
+    <string name="brightness_bar_position">亮度条位置</string>
+    <string name="brightness_bar_left">左侧</string>
+    <string name="brightness_bar_right">右侧</string>
+    <string name="brightness_follow_system">跟随系统</string>
     <string name="language">语言</string>
     <string name="import_rss_source">导入订阅源</string>
     <string name="donate_summary">您的支持是我更新的动力</string>

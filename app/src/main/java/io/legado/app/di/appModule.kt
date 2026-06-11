@@ -118,6 +118,7 @@ import io.legado.app.ui.config.readConfig.ReadConfigViewModel
 import io.legado.app.ui.config.themeConfig.ThemeConfigViewModel
 import io.legado.app.ui.dict.DictViewModel
 import io.legado.app.ui.dict.rule.DictRuleViewModel
+import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
@@ -307,6 +308,14 @@ val appModule = module {
         )
     }
 
-    viewModelOf(::SearchContentViewModel)
+    viewModel { (route: MainRouteSearchContent) ->
+        SearchContentViewModel(
+            bookUrl = route.bookUrl,
+            initialSearchWord = route.searchWord,
+            searchResultIndex = route.searchResultIndex,
+            bookRepository = get(),
+            searchContentRepository = get()
+        )
+    }
 }
 

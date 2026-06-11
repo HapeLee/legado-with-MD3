@@ -9,6 +9,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.HapticFeedbackConstantsCompat
@@ -23,7 +24,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.TTS
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.storage.Backup
 import io.legado.app.lib.dialogs.SelectItem
@@ -40,8 +40,10 @@ import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
+import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.login.SourceLoginJsExtensions
 import io.legado.app.ui.widget.PopupAction
 import io.legado.app.utils.ColorUtils
@@ -60,6 +62,7 @@ import io.legado.app.utils.throttle
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 
 /**
@@ -341,7 +344,7 @@ class ReadBookController(
         r.textMenuPosition.x = x
         r.textMenuPosition.y = top
 
-        if (AppConfig.selectVibrator) {
+        if (ReadConfig.selectVibrator) {
             r.root.performHapticFeedback(HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE)
         }
     }
@@ -351,7 +354,7 @@ class ReadBookController(
         r.cursorRight.x = x
         r.cursorRight.y = y
         r.cursorRight.visible(true)
-        if (AppConfig.selectVibrator) {
+        if (ReadConfig.selectVibrator) {
             r.root.performHapticFeedback(HapticFeedbackConstantsCompat.TEXT_HANDLE_MOVE)
         }
     }
@@ -616,7 +619,7 @@ class ReadBookController(
             is ReadBookEffect.LongToast -> activity.longToastOnUi(effect.message)
             is ReadBookEffect.SetBrightness -> {
                 val lp = activity.window.attributes
-                lp.screenBrightness = effect.value / 255f
+                lp.screenBrightness = effect.value / 100f
                 activity.window.attributes = lp
             }
 
@@ -682,7 +685,14 @@ class ReadBookController(
                 screenOffTimerStart()
             }
 
-            is ReadBookEffect.ToggleBrightnessAuto -> { /* TODO */
+            is ReadBookEffect.ToggleBrightnessAuto -> {
+                val lp = activity.window.attributes
+                if (effect.auto) {
+                    lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                } else {
+                    lp.screenBrightness = effect.value / 100f
+                }
+                activity.window.attributes = lp
             }
 
             // ── Phase 4: Activity-dependent effects ──
@@ -695,15 +705,48 @@ class ReadBookController(
 
             is ReadBookEffect.TextActionSpeak -> speak(effect.text)
             is ReadBookEffect.NavigateToSearchResult -> {
-                // Navigate handled by ReadView — no external callback needed
+                if (effect.pageIndex < 0) {
+                    // Chapter not loaded — open it, then mark in the success callback
+                    ReadBook.openChapter(effect.chapterIndex) {
+                        val tc = ReadBook.curTextChapter ?: return@openChapter
+                        val query = effect.result.query
+                        val pos = viewModel.searchResultPositions(tc, effect.result, query)
+                        val lineIndex = pos[1]
+                        val charIndex = pos[2]
+                        val addLine = pos[3]
+                        val charIndex2 = pos[4]
+                        val queryLength = query.length
+                        val endLineIndex = lineIndex + addLine.coerceAtLeast(0)
+                        val endCharIndex = if (addLine == 0) {
+                            charIndex + queryLength
+                        } else {
+                            charIndex2 + 1
+                        }
+                        activity.lifecycleScope.launch(Main) {
+                            navigatePageByPos(tc, pos[0])
+                            markSearchResultOnPage(
+                                intArrayOf(
+                                    pos[0], lineIndex, charIndex, endLineIndex, endCharIndex
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    // Same chapter — navigate to page, then mark
+                    val tc = ReadBook.curTextChapter ?: return
+                    navigatePageByPos(tc, effect.pageIndex)
+                    markSearchResultOnPage(
+                        intArrayOf(
+                            effect.pageIndex, effect.lineIndex,
+                            effect.startCharIndex, effect.endLineIndex, effect.endCharIndex
+                        )
+                    )
+                }
             }
 
             is ReadBookEffect.ExitSearch -> {
-                if (viewModel.uiState.value.isShowingSearchResult) {
-                    viewModel.onIntent(ReadBookIntent.SetShowingSearchResult(false))
-                    ReadBook.clearSearchResult()
-                    refs?.readView?.cancelSelect(true)
-                }
+                ReadBook.clearSearchResult()
+                refs?.readView?.cancelSelect(clearSearchResult = true)
             }
 
             is ReadBookEffect.SyncBookProgress -> {
@@ -935,17 +978,17 @@ class ReadBookController(
     }
 
     override fun mouseWheelPage(direction: PageDirection) {
-        if (menuLayoutIsVisible || !AppConfig.mouseWheelPage) {
+        if (menuLayoutIsVisible || !ReadConfig.mouseWheelPage) {
             return
         }
         keyPageDebounce(direction, mouseWheel = true, longPress = false)
     }
 
     private fun volumeKeyPage(direction: PageDirection, longPress: Boolean): Boolean {
-        if (!AppConfig.volumeKeyPage) {
+        if (!ReadConfig.volumeKeyPage) {
             return false
         }
-        if (!AppConfig.volumeKeyPageOnPlay && BaseReadAloudService.isPlay()) {
+        if (!ReadConfig.volumeKeyPageOnPlay && BaseReadAloudService.isPlay()) {
             return false
         }
         handleKeyPage(direction, longPress)
@@ -953,7 +996,7 @@ class ReadBookController(
     }
 
     override fun handleKeyPage(direction: PageDirection, longPress: Boolean) {
-        if (AppConfig.keyPageOnLongPress || direction == PageDirection.NONE) {
+        if (ReadConfig.keyPageOnLongPress || direction == PageDirection.NONE) {
             keyPage(direction)
         } else {
             keyPageDebounce(direction, longPress = longPress)
@@ -1057,13 +1100,47 @@ class ReadBookController(
     }
 
     fun setOrientation() {
-        when (AppConfig.screenOrientation) {
+        when (ReadConfig.screenOrientation) {
             "0" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             "1" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             "2" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             "3" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
             "4" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT
             "5" -> activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+        }
+    }
+
+    // ── Search result navigation helpers ─────────────────────────────
+
+    /**
+     * Navigate to the page at [pageIndex] within the current chapter.
+     */
+    private fun navigatePageByPos(textChapter: TextChapter, pageIndex: Int) {
+        val pagePos = textChapter.getReadLength(pageIndex)
+        if (ReadBook.durChapterPos != pagePos) {
+            ReadBook.durChapterPos = pagePos
+            ReadBook.callBack?.upContent()
+            ReadBook.callBack?.cancelSelect()
+        }
+    }
+
+    /**
+     * Mark search result columns on the current page for highlighting.
+     * @param pos array of [pageIndex, lineIndex, startCharIndex, endLineIndex, endCharIndex]
+     */
+    private fun markSearchResultOnPage(pos: IntArray) {
+        val readView = refs?.readView ?: return
+        val lineIndex = pos[1]
+        val startCharIndex = pos[2]
+        val endLineIndex = pos[3]
+        val endCharIndex = pos[4]
+        readView.cancelSelect(clearSearchResult = true)
+        isSelectingSearchResult = true
+        try {
+            readView.curPage.selectStartMoveIndex(0, lineIndex, startCharIndex)
+            readView.curPage.selectEndMoveIndex(0, endLineIndex, endCharIndex)
+        } finally {
+            isSelectingSearchResult = false
         }
     }
 }

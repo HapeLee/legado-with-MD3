@@ -29,7 +29,10 @@ data class ReadPreferences(
     val textBottomJustify: Boolean = true,
     val adaptSpecialStyle: Boolean = true,
     val useZhLayout: Boolean = false,
-    val showBrightnessView: Boolean = true,
+    val showBrightnessView: String = "1",
+    val brightnessVwPos: String = "1",
+    val readBrightness: Int = 100,
+    val brightnessAuto: Boolean = false,
     val useUnderline: Boolean = false,
     val readSliderMode: String = "0",
     val doubleHorizontalPage: String = "0",
@@ -157,8 +160,17 @@ class ReadSettingsRepository(
     suspend fun setUseZhLayout(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.useZhLayout, value)
 
-    suspend fun setShowBrightnessView(value: Boolean) =
-        settingsRepository.putBoolean(PreferKey.showBrightnessView, value)
+    suspend fun setShowBrightnessView(value: String) =
+        settingsRepository.putString(PreferKey.showBrightnessView, value)
+
+    suspend fun setBrightnessVwPos(value: String) =
+        settingsRepository.putString(PreferKey.brightnessVwPos, value)
+
+    suspend fun setReadBrightness(value: Int) =
+        settingsRepository.putInt(PreferKey.brightness, value)
+
+    suspend fun setBrightnessAuto(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.brightnessAuto, value)
 
     suspend fun setUseUnderline(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.useUnderline, value)
@@ -370,7 +382,10 @@ class ReadSettingsRepository(
             textBottomJustify = this[Keys.TextBottomJustify] ?: true,
             adaptSpecialStyle = this[Keys.AdaptSpecialStyle] ?: true,
             useZhLayout = this[Keys.UseZhLayout] ?: false,
-            showBrightnessView = this[Keys.ShowBrightnessView] ?: true,
+            showBrightnessView = this[Keys.ShowBrightnessView] ?: "1",
+            brightnessVwPos = this[Keys.BrightnessVwPos] ?: "1",
+            readBrightness = this[Keys.ReadBrightness] ?: 100,
+            brightnessAuto = this[Keys.BrightnessAuto] ?: false,
             useUnderline = this[Keys.UseUnderline] ?: false,
             readSliderMode = this[Keys.ReadSliderMode] ?: "0",
             doubleHorizontalPage = this[Keys.DoubleHorizontalPage] ?: "0",
@@ -461,7 +476,10 @@ class ReadSettingsRepository(
         val TextBottomJustify = booleanPreferencesKey(PreferKey.textBottomJustify)
         val AdaptSpecialStyle = booleanPreferencesKey(PreferKey.adaptSpecialStyle)
         val UseZhLayout = booleanPreferencesKey(PreferKey.useZhLayout)
-        val ShowBrightnessView = booleanPreferencesKey(PreferKey.showBrightnessView)
+        val ShowBrightnessView = stringPreferencesKey(PreferKey.showBrightnessView)
+        val BrightnessVwPos = stringPreferencesKey(PreferKey.brightnessVwPos)
+        val ReadBrightness = intPreferencesKey(PreferKey.brightness)
+        val BrightnessAuto = booleanPreferencesKey(PreferKey.brightnessAuto)
         val UseUnderline = booleanPreferencesKey(PreferKey.useUnderline)
         val ReadSliderMode = stringPreferencesKey(PreferKey.readSliderMode)
         val DoubleHorizontalPage = stringPreferencesKey(PreferKey.doublePageHorizontal)

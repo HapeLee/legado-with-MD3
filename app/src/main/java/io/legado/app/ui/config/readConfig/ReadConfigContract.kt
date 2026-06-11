@@ -14,7 +14,9 @@ data class ReadConfigUiState(
     val textBottomJustify: Boolean = true,
     val adaptSpecialStyle: Boolean = true,
     val useZhLayout: Boolean = false,
-    val showBrightnessView: Boolean = true,
+    val showBrightnessView: String = "1",
+    val brightnessVwPos: String = "1",
+    val brightnessAuto: Boolean = false,
     val useUnderline: Boolean = false,
     val readSliderMode: String = "0",
     val doubleHorizontalPage: String = "0",
@@ -53,7 +55,8 @@ sealed interface ReadConfigIntent {
     data class TextBottomJustifyChanged(val value: Boolean) : ReadConfigIntent
     data class AdaptSpecialStyleChanged(val value: Boolean) : ReadConfigIntent
     data class UseZhLayoutChanged(val value: Boolean) : ReadConfigIntent
-    data class ShowBrightnessViewChanged(val value: Boolean) : ReadConfigIntent
+    data class ShowBrightnessViewChanged(val value: String) : ReadConfigIntent
+    data class BrightnessVwPosChanged(val value: String) : ReadConfigIntent
     data class UseUnderlineChanged(val value: Boolean) : ReadConfigIntent
     data class ReadSliderModeChanged(val value: String) : ReadConfigIntent
     data class DoubleHorizontalPageChanged(val value: String) : ReadConfigIntent

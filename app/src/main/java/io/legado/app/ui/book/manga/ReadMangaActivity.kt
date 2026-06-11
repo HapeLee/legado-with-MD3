@@ -38,12 +38,9 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.databinding.ActivityMangaBinding
 import io.legado.app.databinding.ViewLoadMoreBinding
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppFreezeMonitor.handler
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
-import io.legado.app.help.config.AppConfig
-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.getSourceType
 import io.legado.app.help.storage.Backup
@@ -78,6 +75,8 @@ import io.legado.app.ui.book.read.observeEyeProtectionEvents
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.browser.WebViewActivity
+import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.widget.number.NumberPickerDialog
 import io.legado.app.ui.widget.recycler.LoadMoreView
@@ -220,7 +219,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
             binding.llRetry.isGone = true
             ReadManga.loadOrUpContent()
         }
-        binding.flLoading.isVisible = !AppConfig.isEInkMode
+        binding.flLoading.isVisible = !ReadConfig.isEInkMode
         binding.eyeProtectionOverlay.refresh()
         mAdapter.addFooterView {
             ViewLoadMoreBinding.bind(loadMoreView)
@@ -458,7 +457,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         networkChangedListener.register()
         networkChangedListener.onNetworkChanged = {
             // 当网络是可用状态且无需初始化时同步进度（初始化中已有同步进度逻辑）
-            if (AppConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
+            if (ReadConfig.syncBookProgressPlus && NetworkUtils.isAvailable() && !justInitData) {
                 ReadManga.syncProgress({ progress -> sureNewProgress(progress) })
             }
         }
@@ -480,7 +479,7 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         if (ReadManga.inBookshelf) {
             ReadManga.saveRead()
             if (!BuildConfig.DEBUG) {
-                if (AppConfig.syncBookProgressPlus) {
+                if (ReadConfig.syncBookProgressPlus) {
                     ReadManga.syncProgress()
                 } else {
                     ReadManga.uploadProgress()

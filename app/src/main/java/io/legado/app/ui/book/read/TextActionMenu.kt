@@ -14,13 +14,15 @@ import android.widget.PopupWindow
 import androidx.appcompat.view.SupportMenuInflater
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.view.menu.MenuItemImpl
+import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import io.legado.app.R
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
+import io.legado.app.constant.AppLog
 import io.legado.app.databinding.ItemTextBinding
 import io.legado.app.databinding.PopupActionMenuBinding
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.utils.gone
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.printOnDebug
@@ -28,8 +30,6 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.share
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.visible
-import androidx.core.net.toUri
-import io.legado.app.constant.AppLog
 
 @SuppressLint("RestrictedApi")
 class TextActionMenu(
@@ -185,11 +185,11 @@ class TextActionMenu(
                 callBack.onMenuActionFinally()
             }
             holder.itemView.setOnLongClickListener {
-                if (AppConfig.contentSelectSpeakMod == 0) {
-                    AppConfig.contentSelectSpeakMod = 1
+                if (ReadConfig.contentSelectSpeakMod == 0) {
+                    ReadConfig.contentSelectSpeakMod = 1
                     context.toastOnUi("切换为从选择的地方开始一直朗读")
                 } else {
-                    AppConfig.contentSelectSpeakMod = 0
+                    ReadConfig.contentSelectSpeakMod = 0
                     context.toastOnUi("切换为朗读选择内容")
                 }
                 true
