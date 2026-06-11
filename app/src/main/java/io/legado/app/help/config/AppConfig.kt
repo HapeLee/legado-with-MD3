@@ -478,9 +478,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         }
 
     var ttsEngine: String?
-        get() = appCtx.getPrefString(PreferKey.ttsEngine)
+        get() = io.legado.app.ui.config.readConfig.ReadConfig.ttsEngine
         set(value) {
-            appCtx.putPrefString(PreferKey.ttsEngine, value)
+            io.legado.app.ui.config.readConfig.ReadConfig.ttsEngine = value
         }
 
     var webPort: Int
