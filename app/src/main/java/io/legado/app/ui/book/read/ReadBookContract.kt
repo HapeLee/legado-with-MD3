@@ -772,6 +772,9 @@ sealed interface ConfigUpdate {
     data class TipFooterRight(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.UpdateContent)
     }
+    data class HeaderFont(val path: String) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.UpdateStyle)
+    }
     data class HeaderFontSize(val value: Int) : ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.UpdateStyle)
     }
@@ -1062,5 +1065,10 @@ sealed interface ConfigUpdate {
     // --- Auto read ---
     data class AutoReadSpeed(val value: Int) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
+    }
+
+    // --- Chinese converter ---
+    data class ChineseConverterType(val value: Int) : ConfigUpdate {
+        override val actions = setOf(ConfigUpdateAction.ReloadContent)
     }
 }

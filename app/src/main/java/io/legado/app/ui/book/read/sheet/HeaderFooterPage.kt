@@ -49,7 +49,6 @@ private const val COLOR_DIVIDER = 9
 
 @Composable
 internal fun HeaderFooterPage(
-    onOpenFontSelect: () -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -86,6 +85,7 @@ internal fun HeaderFooterPage(
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerId by remember { mutableIntStateOf(0) }
     var colorPickerInitial by remember { mutableIntStateOf(0) }
+    var showFontSelect by remember { mutableStateOf(false) }
 
     val tipNames = remember { ReadBookConfig.tipNames }
     val tipValues = remember { ReadBookConfig.tipValues }
@@ -348,7 +348,7 @@ internal fun HeaderFooterPage(
                             title = stringResource(R.string.header_font),
                             description = stringResource(R.string.select_font),
                             imageVector = Icons.Default.TextFields,
-                            onClick = onOpenFontSelect,
+                            onClick = { showFontSelect = true },
                         )
                         TinySliderSettingItem(
                             title = stringResource(R.string.header_font_size),
@@ -388,6 +388,25 @@ internal fun HeaderFooterPage(
                 }
                 showColorPicker = false
             },
+        )
+    }
+
+    // Font selector for header/footer
+    if (showFontSelect) {
+        FontSelectSheet(
+            show = true,
+            onDismissRequest = { showFontSelect = false },
+            onSelectFont = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont(it)))
+                onIntent(ReadBookIntent.SaveReadStyleConfig)
+                showFontSelect = false
+            },
+            onSelectSystemTypeface = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont("")))
+                onIntent(ReadBookIntent.SaveReadStyleConfig)
+                showFontSelect = false
+            },
+            onOpenFolderPicker = { /* handled by FontSelectSheet internally */ },
         )
     }
 }

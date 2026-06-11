@@ -2349,6 +2349,7 @@ class ReadBookViewModel(
             is ConfigUpdate.TipFooterLeft -> ReadBookConfig.tipFooterLeft = update.value
             is ConfigUpdate.TipFooterMiddle -> ReadBookConfig.tipFooterMiddle = update.value
             is ConfigUpdate.TipFooterRight -> ReadBookConfig.tipFooterRight = update.value
+            is ConfigUpdate.HeaderFont -> ReadBookConfig.headerFont = update.path
             is ConfigUpdate.HeaderFontSize -> ReadBookConfig.headerFontSize = update.value
             is ConfigUpdate.TipHeaderColor -> ReadBookConfig.tipHeaderColor = update.color
             is ConfigUpdate.TipFooterColor -> ReadBookConfig.tipFooterColor = update.color
@@ -2722,27 +2723,32 @@ class ReadBookViewModel(
 
             // --- Display toggles ---
             is ConfigUpdate.PaddingDisplayCutouts -> {
+                ReadConfig.paddingDisplayCutouts = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setPaddingDisplayCutouts(update.value)
                 }
             }
             is ConfigUpdate.TitleBarMode -> {
+                ReadConfig.titleBarMode = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setTitleBarMode(update.value)
                 }
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
             is ConfigUpdate.TextFullJustify -> {
+                ReadBookConfig.textFullJustify = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setTextFullJustify(update.value)
                 }
             }
             is ConfigUpdate.TextBottomJustify -> {
+                ReadBookConfig.textBottomJustify = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setTextBottomJustify(update.value)
                 }
             }
             is ConfigUpdate.AdaptSpecialStyle -> {
+                ReadConfig.adaptSpecialStyle = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setAdaptSpecialStyle(update.value)
                 }
@@ -2760,6 +2766,7 @@ class ReadBookViewModel(
                 postEvent(PreferKey.showBrightnessView, "")
             }
             is ConfigUpdate.UseUnderlineGlobal -> {
+                ReadConfig.useUnderline = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setUseUnderline(update.value)
                 }
@@ -2782,12 +2789,14 @@ class ReadBookViewModel(
                 ReadBook.loadContent(false)
             }
             is ConfigUpdate.ProgressBarBehavior -> {
+                ReadConfig.progressBarBehavior = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setProgressBarBehavior(update.value)
                 }
                 _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
             }
             is ConfigUpdate.NoAnimScrollPage -> {
+                ReadConfig.noAnimScrollPage = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setNoAnimScrollPage(update.value)
                 }
@@ -2805,6 +2814,14 @@ class ReadBookViewModel(
                 ReadBookConfig.autoReadSpeed = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setAutoReadSpeed(update.value)
+                }
+            }
+
+            // --- Chinese converter ---
+            is ConfigUpdate.ChineseConverterType -> {
+                ReadConfig.chineseConverterType = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setChineseConverterType(update.value)
                 }
             }
         }

@@ -136,7 +136,6 @@ fun ReadStyleContent(
                     onIntent = onIntent,
                 )
                 2 -> HeaderFooterPage(
-                    onOpenFontSelect = onOpenFontSelect,
                     onIntent = onIntent,
                 )
             }
