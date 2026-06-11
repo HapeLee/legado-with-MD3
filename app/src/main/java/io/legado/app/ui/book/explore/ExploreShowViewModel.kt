@@ -13,7 +13,6 @@ import io.legado.app.domain.usecase.SaveSearchBooksUseCase
 import android.content.res.Configuration
 import io.legado.app.data.local.preferences.LocalPreferencesKeys
 import io.legado.app.data.local.preferences.LocalPreferencesRepository
-import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,7 +60,7 @@ class ExploreShowViewModel(
     private val _kindState = MutableStateFlow(ExploreShowKindState())
     private val _displayState = MutableStateFlow(
         ExploreShowDisplayState(
-            layoutState = AppConfig.exploreLayoutState,
+            layoutState = 0,
             gridCount = if (appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 7 else 3,
         )
     )
@@ -91,6 +90,7 @@ class ExploreShowViewModel(
     init {
         observeBookshelf()
         combineUiState()
+        loadLayoutMode()
         loadGridCount()
     }
 
@@ -215,8 +215,17 @@ class ExploreShowViewModel(
     private fun toggleLayout() {
         _displayState.update {
             val layoutState = if (it.layoutState == 0) 1 else 0
-            AppConfig.exploreLayoutState = layoutState
+            viewModelScope.launch {
+                localPreferencesRepository.updatePreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, layoutState)
+            }
             it.copy(layoutState = layoutState)
+        }
+    }
+
+    private fun loadLayoutMode() {
+        viewModelScope.launch {
+            val mode = localPreferencesRepository.getPreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, 0).first()
+            _displayState.update { it.copy(layoutState = mode) }
         }
     }
 
