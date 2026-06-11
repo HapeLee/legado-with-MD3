@@ -2774,6 +2774,7 @@ class ReadBookViewModel(
                 }
             }
             is ConfigUpdate.DoubleHorizontalPage -> {
+                ReadConfig.doubleHorizontalPage = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setDoubleHorizontalPage(update.value)
                 }

@@ -1365,6 +1365,7 @@ class TextChapterLayout(
 
     /**
      * 对有自定义字体的高亮字符重新测量宽度，确保排版和绘制使用同一套字体度量。
+     * 不使用 getTextWidthsCompat 避免对子串错误添加 letterSpacing。
      */
     private fun remeasureWithHighlightFonts(
         text: String,
@@ -1373,23 +1374,26 @@ class TextChapterLayout(
         widthsArray: FloatArray
     ) {
         val originalTypeface = textPaint.typeface
-        var i = 0
-        while (i < text.length) {
-            val fontPath = charStyles[i]?.fontPath.orEmpty()
-            if (fontPath.isEmpty()) { i++; continue }
-            // 找连续使用同一字体的区间
-            val segStart = i
-            i++
-            while (i < text.length && charStyles[i]?.fontPath.orEmpty() == fontPath) i++
-            val segEnd = i
-            val typeface = TextColumn.getTypeface(fontPath) ?: continue
-            textPaint.typeface = typeface
-            val segment = text.substring(segStart, segEnd)
-            val segWidths = FloatArray(segEnd - segStart)
-            textPaint.getTextWidthsCompat(segment, segWidths)
-            segWidths.copyInto(widthsArray, segStart)
+        try {
+            var i = 0
+            while (i < text.length) {
+                val fontPath = charStyles[i]?.fontPath.orEmpty()
+                if (fontPath.isEmpty()) { i++; continue }
+                // 找连续使用同一字体的区间
+                val segStart = i
+                i++
+                while (i < text.length && charStyles[i]?.fontPath.orEmpty() == fontPath) i++
+                val segEnd = i
+                val typeface = TextColumn.getTypeface(fontPath) ?: continue
+                textPaint.typeface = typeface
+                val segLen = segEnd - segStart
+                val segWidths = FloatArray(segLen)
+                textPaint.getTextWidths(text, segStart, segEnd, segWidths)
+                segWidths.copyInto(widthsArray, segStart)
+            }
+        } finally {
+            textPaint.typeface = originalTypeface
         }
-        textPaint.typeface = originalTypeface
     }
 
     /**
