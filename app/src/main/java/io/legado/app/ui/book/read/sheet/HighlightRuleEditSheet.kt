@@ -38,13 +38,19 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringArrayResource
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.HighlightRule
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.data.repository.configNames
 import io.legado.app.data.repository.toJsonArray
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
@@ -463,65 +469,65 @@ fun HighlightRuleEditSheet(
     }
 
     // Color pickers
-    if (showTextColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = textColor,
-            onDismissRequest = { showTextColorPicker = false },
-            onColorSelected = { color ->
-                textColor = color
-                showTextColorPicker = false
-            },
-        )
-    }
-    if (showBgColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = bgColor,
-            onDismissRequest = { showBgColorPicker = false },
-            onColorSelected = { color ->
-                bgColor = color
-                showBgColorPicker = false
-            },
-        )
-    }
-    if (showUnderlineColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = underlineColor,
-            onDismissRequest = { showUnderlineColorPicker = false },
-            onColorSelected = { color ->
-                underlineColor = color
-                showUnderlineColorPicker = false
-            },
-        )
-    }
+    ColorPickerSheet(
+        show = showTextColorPicker,
+        initialColor = textColor,
+        onDismissRequest = { showTextColorPicker = false },
+        onColorSelected = { color ->
+            textColor = color
+            showTextColorPicker = false
+        },
+    )
+    ColorPickerSheet(
+        show = showBgColorPicker,
+        initialColor = bgColor,
+        onDismissRequest = { showBgColorPicker = false },
+        onColorSelected = { color ->
+            bgColor = color
+            showBgColorPicker = false
+        },
+    )
+    ColorPickerSheet(
+        show = showUnderlineColorPicker,
+        initialColor = underlineColor,
+        onDismissRequest = { showUnderlineColorPicker = false },
+        onColorSelected = { color ->
+            underlineColor = color
+            showUnderlineColorPicker = false
+        },
+    )
 
     // Font selector
-    if (showFontSelect) {
-        val readSettingsRepository: io.legado.app.data.repository.ReadSettingsRepository =
-            org.koin.compose.koinInject()
-        val scope = rememberCoroutineScope()
-        val fontFolderLauncher = rememberLauncherForActivityResult(
-            ActivityResultContracts.OpenDocumentTree()
-        ) { uri ->
-            uri?.let {
-                context.contentResolver.takePersistableUriPermission(
-                    it, Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                scope.launch {
-                    readSettingsRepository.setFontFolder(it.toString())
-                }
+    val readSettingsRepository: ReadSettingsRepository = org.koin.compose.koinInject()
+    val fontSelectScope = rememberCoroutineScope()
+    val fontSelectPreferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val fontFolderUri = fontSelectPreferences.fontFolder.takeIf { it.isNotEmpty() }?.toUri()
+    val systemTypefaces = stringArrayResource(R.array.system_typefaces)
+    val fontFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it, Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+            fontSelectScope.launch {
+                readSettingsRepository.setFontFolder(it.toString())
             }
         }
-        FontSelectSheet(
-            show = true,
-            onDismissRequest = { showFontSelect = false },
-            onSelectFont = { fontPath = it; showFontSelect = false },
-            onSelectSystemTypeface = { fontPath = ""; showFontSelect = false },
-            onOpenFolderPicker = { fontFolderLauncher.launch(null) },
-        )
     }
+    FontSelectSheet(
+        show = showFontSelect,
+        title = stringResource(R.string.select_font),
+        fontFolderUri = fontFolderUri,
+        selectedFontPath = fontPath,
+        onDismissRequest = { showFontSelect = false },
+        onSelectFont = { fontPath = it.uri.toString(); showFontSelect = false },
+        onSelectSystemTypeface = { fontPath = ""; showFontSelect = false },
+        onOpenFolderPicker = { fontFolderLauncher.launch(null) },
+        systemTypefaces = systemTypefaces,
+    )
 }
 
 @Composable

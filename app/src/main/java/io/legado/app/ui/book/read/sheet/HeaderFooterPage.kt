@@ -28,11 +28,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringArrayResource
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import org.koin.compose.koinInject
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -367,48 +374,55 @@ internal fun HeaderFooterPage(
     }
 
     // Color picker
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = colorPickerInitial,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                when (colorPickerId) {
-                    COLOR_HEADER -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(color)))
-                    }
-
-                    COLOR_FOOTER -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(color)))
-                    }
-
-                    COLOR_DIVIDER -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipDividerColor(color)))
-                    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = colorPickerInitial,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            when (colorPickerId) {
+                COLOR_HEADER -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipHeaderColor(color)))
                 }
-                showColorPicker = false
-            },
-        )
-    }
+
+                COLOR_FOOTER -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipFooterColor(color)))
+                }
+
+                COLOR_DIVIDER -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TipDividerColor(color)))
+                }
+            }
+            showColorPicker = false
+        },
+    )
 
     // Font selector for header/footer
-    if (showFontSelect) {
-        FontSelectSheet(
-            show = true,
-            onDismissRequest = { showFontSelect = false },
-            onSelectFont = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont(it)))
-                onIntent(ReadBookIntent.SaveReadStyleConfig)
-                showFontSelect = false
-            },
-            onSelectSystemTypeface = {
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont("")))
-                onIntent(ReadBookIntent.SaveReadStyleConfig)
-                showFontSelect = false
-            },
-            onOpenFolderPicker = { /* handled by FontSelectSheet internally */ },
-        )
-    }
+    val readSettingsRepository: ReadSettingsRepository = koinInject()
+    val preferences by readSettingsRepository.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val fontFolderUri = preferences.fontFolder.takeIf { it.isNotEmpty() }?.toUri()
+    val systemTypefaces = stringArrayResource(R.array.system_typefaces)
+
+    FontSelectSheet(
+        show = showFontSelect,
+        title = stringResource(R.string.select_font),
+        fontFolderUri = fontFolderUri,
+        selectedFontPath = ReadBookConfig.headerFont,
+        onDismissRequest = { showFontSelect = false },
+        onSelectFont = {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont(it.uri.toString())))
+            onIntent(ReadBookIntent.SaveReadStyleConfig)
+            showFontSelect = false
+        },
+        onSelectSystemTypeface = {
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.HeaderFont("")))
+            onIntent(ReadBookIntent.SaveReadStyleConfig)
+            showFontSelect = false
+        },
+        onOpenFolderPicker = { /* handled by FontSelectSheet internally */ },
+        systemTypefaces = systemTypefaces,
+    )
 }
 
 @Composable

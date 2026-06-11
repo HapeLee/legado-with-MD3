@@ -13,6 +13,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.utils.FileDoc
@@ -22,7 +25,7 @@ fun FontSelectSheet(
     show: Boolean = true,
     title: String,
     fontFolderUri: Uri?,
-    selectedFontName: String?,
+    selectedFontPath: String?,
     onDismissRequest: () -> Unit,
     onSelectFont: (FileDoc) -> Unit,
     onOpenFolderPicker: () -> Unit,
@@ -33,6 +36,14 @@ fun FontSelectSheet(
     systemTypefaces: Array<String>? = null,
     emptyText: String? = null,
 ) {
+    val context = LocalContext.current
+    val selectedFontName = remember(selectedFontPath) {
+        selectedFontPath?.let {
+            runCatching {
+                DocumentFile.fromSingleUri(context, it.toUri())?.name
+            }.getOrNull()
+        }
+    }
     var showTypefaceMenu by remember { mutableStateOf(false) }
 
     AppModalBottomSheet(

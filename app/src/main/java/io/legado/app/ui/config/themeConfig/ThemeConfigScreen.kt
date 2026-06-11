@@ -72,7 +72,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
+
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.base.AppContextWrapper
@@ -868,19 +868,11 @@ fun ThemeConfigScreen(
         }
     )
 
-    val curName = remember(ThemeConfig.appFontPath) {
-        ThemeConfig.appFontPath?.let { uri ->
-            runCatching {
-                DocumentFile.fromSingleUri(context, uri.toUri())?.name
-            }.getOrNull()
-        }
-    }
-
     FontSelectSheet(
         show = showFontSheet,
         title = stringResource(R.string.font_setting),
         fontFolderUri = fontFolderUri,
-        selectedFontName = curName,
+        selectedFontPath = ThemeConfig.appFontPath,
         onDismissRequest = { showFontSheet = false },
         onSelectFont = { doc ->
             ThemeConfig.appFontPath = doc.uri.toString()

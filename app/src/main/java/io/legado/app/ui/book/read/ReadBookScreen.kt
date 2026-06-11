@@ -7,9 +7,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
+import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.data.repository.ReadSettingsRepository
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.sheet.BgTextConfigSheet
 import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
@@ -18,7 +23,7 @@ import io.legado.app.ui.book.read.sheet.ContentEditSheet
 import io.legado.app.ui.book.read.sheet.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
-import io.legado.app.ui.book.read.sheet.FontSelectSheet
+import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
 import io.legado.app.ui.book.read.sheet.HttpTtsEditSheet
 import io.legado.app.ui.book.read.sheet.MoreConfigSheet
@@ -59,70 +64,60 @@ fun ReadBookScreen(
     }
 
     // Dialogs driven by activeDialog state
-    when (val dialog = state.activeDialog) {
-        is ReadBookDialog.ConfirmRestoreProgress -> {
-            AppAlertDialog(
-                show = true,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                title = stringResource(R.string.restore_progress),
-                text = stringResource(R.string.found_cloud_progress),
-                confirmText = stringResource(R.string.ok),
-                onConfirm = {
-                    onIntent(ReadBookIntent.SureNewProgress(dialog.progress))
-                    onIntent(ReadBookIntent.DismissDialog)
-                },
-                dismissText = stringResource(R.string.cancel),
-                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
-            )
-        }
+    val restoreDialog = state.activeDialog as? ReadBookDialog.ConfirmRestoreProgress
+    val syncDialog = state.activeDialog as? ReadBookDialog.SureSyncProgress
+    val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
+    val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
 
-        is ReadBookDialog.SureSyncProgress -> {
-            AppAlertDialog(
-                show = true,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                title = stringResource(R.string.sync_progress),
-                text = stringResource(R.string.progress_exceeds_cloud),
-                confirmText = stringResource(R.string.ok),
-                onConfirm = {
-                    onIntent(ReadBookIntent.SureSyncProgress(dialog.progress))
-                    onIntent(ReadBookIntent.DismissDialog)
-                },
-                dismissText = stringResource(R.string.cancel),
-                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
-            )
-        }
-
-        is ReadBookDialog.ConfirmSkipToChapter -> {
-            AppAlertDialog(
-                show = true,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                title = stringResource(R.string.chapter_list),
-                text = stringResource(R.string.confirm_skip_to_chapter),
-                confirmText = stringResource(R.string.ok),
-                onConfirm = { onIntent(ReadBookIntent.DismissDialog) },
-                dismissText = stringResource(R.string.cancel),
-                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
-            )
-        }
-
-        is ReadBookDialog.ConfirmChapterPay -> {
-            AppAlertDialog(
-                show = true,
-                onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
-                title = stringResource(R.string.chapter_pay),
-                text = dialog.chapterTitle,
-                confirmText = stringResource(R.string.ok),
-                onConfirm = {
-                    onIntent(ReadBookIntent.DismissDialog)
-                    onIntent(ReadBookIntent.ConfirmPayAction)
-                },
-                dismissText = stringResource(R.string.cancel),
-                onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
-            )
-        }
-
-        null -> {}
-    }
+    AppAlertDialog(
+        show = restoreDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.restore_progress),
+        text = stringResource(R.string.found_cloud_progress),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            restoreDialog?.let { onIntent(ReadBookIntent.SureNewProgress(it.progress)) }
+            onIntent(ReadBookIntent.DismissDialog)
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = syncDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.sync_progress),
+        text = stringResource(R.string.progress_exceeds_cloud),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            syncDialog?.let { onIntent(ReadBookIntent.SureSyncProgress(it.progress)) }
+            onIntent(ReadBookIntent.DismissDialog)
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = skipDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.chapter_list),
+        text = stringResource(R.string.confirm_skip_to_chapter),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(ReadBookIntent.DismissDialog) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = payDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = stringResource(R.string.chapter_pay),
+        text = payDialog?.chapterTitle ?: "",
+        confirmText = stringResource(R.string.ok),
+        onConfirm = {
+            onIntent(ReadBookIntent.DismissDialog)
+            onIntent(ReadBookIntent.ConfirmPayAction)
+        },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
 
     // AppModalBottomSheet-based sheets — always composed, controlled by show flag
     // for proper enter/exit animations
@@ -146,12 +141,23 @@ fun ReadBookScreen(
         onDismissRequest = dismissSheet,
         onIntent = onIntent,
     )
+    val fontSelectReadSettings: ReadSettingsRepository = org.koin.compose.koinInject()
+    val fontSelectPreferences by fontSelectReadSettings.preferences.collectAsStateWithLifecycle(
+        initialValue = ReadPreferences()
+    )
+    val fontSelectFolderUri = fontSelectPreferences.fontFolder
+        .takeIf { it.isNotEmpty() }?.toUri()
+    val fontSelectSystemTypefaces = stringArrayResource(R.array.system_typefaces)
     FontSelectSheet(
         show = state.activeSheet is ReadBookSheet.FontSelect,
+        title = stringResource(R.string.select_font),
+        fontFolderUri = fontSelectFolderUri,
+        selectedFontPath = ReadBookConfig.textFont,
         onDismissRequest = dismissSheet,
-        onSelectFont = { onIntent(ReadBookIntent.SelectFont(it)) },
+        onSelectFont = { onIntent(ReadBookIntent.SelectFont(it.uri.toString())) },
         onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectSystemTypeface(it)) },
         onOpenFolderPicker = { onIntent(ReadBookIntent.OpenFontFolderPicker) },
+        systemTypefaces = fontSelectSystemTypefaces,
     )
     ToolButtonConfigSheet(
         show = state.activeSheet is ReadBookSheet.ToolButtonConfig,
@@ -392,12 +398,17 @@ fun ReadBookScreen(
         }
 
         is ReadBookSheet.ChangeBookSource -> {
-            val sheet = state.activeSheet
-            val book = state.book
-            if (book != null) {
+            val changeSourceSheet = state.activeSheet as? ReadBookSheet.ChangeBookSource
+            val changeSourceBook = state.book
+            if (changeSourceSheet != null && changeSourceBook == null) {
+                LaunchedEffect(changeSourceSheet) {
+                    onIntent(ReadBookIntent.DismissSheet)
+                }
+            }
+            if (changeSourceBook != null) {
                 ChangeSourceSheet(
-                    show = true,
-                    oldBook = book,
+                    show = changeSourceSheet != null,
+                    oldBook = changeSourceBook,
                     fromReadBookActivity = true,
                     allowAddAsNew = false,
                     dismissOnReplaceStart = true,
@@ -414,10 +425,6 @@ fun ReadBookScreen(
                         onIntent(ReadBookIntent.AddSourceAsNewBook(newBook, toc))
                     },
                 )
-            } else {
-                LaunchedEffect(sheet) {
-                    onIntent(ReadBookIntent.DismissSheet)
-                }
             }
         }
 
