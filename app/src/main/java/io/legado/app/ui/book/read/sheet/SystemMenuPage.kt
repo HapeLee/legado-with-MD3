@@ -150,26 +150,24 @@ internal fun SystemMenuPage(
     }
 
     // Floating sheets
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = colorPickerInitial,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                when (colorPickerId) {
-                    COLOR_BG -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColor(color)))
-                    COLOR_MENU_ACCENT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColor(color)))
-                    COLOR_MENU_CONTAINER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColor(color)))
-                    COLOR_BG_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColorNight(color)))
-                    COLOR_MENU_ACCENT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColorNight(color)))
-                    COLOR_MENU_CONTAINER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColorNight(color)))
-                    COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
-                    COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
-                }
-                showColorPicker = false
-            },
-        )
-    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = colorPickerInitial,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            when (colorPickerId) {
+                COLOR_BG -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColor(color)))
+                COLOR_MENU_ACCENT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColor(color)))
+                COLOR_MENU_CONTAINER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColor(color)))
+                COLOR_BG_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBgColorNight(color)))
+                COLOR_MENU_ACCENT_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuAccentColorNight(color)))
+                COLOR_MENU_CONTAINER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColorNight(color)))
+                COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
+                COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
+            }
+            showColorPicker = false
+        },
+    )
 
     BottomBarIconSheet(
         show = showIconSheet,

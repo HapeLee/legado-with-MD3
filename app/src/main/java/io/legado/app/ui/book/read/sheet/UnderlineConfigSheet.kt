@@ -146,16 +146,14 @@ fun UnderlineConfigSheet(
     }
 
     // Color picker
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = underlineColor,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                underlineColor = color
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineColor(color)))
-                showColorPicker = false
-            },
-        )
-    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = underlineColor,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            underlineColor = color
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.UnderlineColor(color)))
+            showColorPicker = false
+        },
+    )
 }

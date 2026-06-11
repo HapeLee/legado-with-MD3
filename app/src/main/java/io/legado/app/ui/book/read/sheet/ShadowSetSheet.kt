@@ -83,16 +83,14 @@ fun ShadowSetSheet(
         }
     }
 
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = shadowColor,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                shadowColor = color
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShadowColor(color)))
-                showColorPicker = false
-            },
-        )
-    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = shadowColor,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            shadowColor = color
+            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShadowColor(color)))
+            showColorPicker = false
+        },
+    )
 }

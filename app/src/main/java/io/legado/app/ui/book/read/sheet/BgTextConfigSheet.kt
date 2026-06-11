@@ -215,10 +215,10 @@ fun BgTextConfigSheet(
         }
     }
 
-    if (showColorPicker) {
+    run {
         val initialColor = if (colorPickerIsNight) nightBgColor else dayBgColor
         ColorPickerSheet(
-            show = true,
+            show = showColorPicker,
             initialColor = if (initialColor != 0) initialColor else if (colorPickerIsNight) 0xFF000000.toInt() else 0xFFEEEEEE.toInt(),
             onDismissRequest = { showColorPicker = false },
             onColorSelected = { color ->

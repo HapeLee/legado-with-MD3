@@ -381,25 +381,23 @@ internal fun TextEffectsPage(
     }
 
     // Color picker
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = colorPickerInitial,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                when (colorPickerId) {
-                    COLOR_TEXT -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextColor(color)))
-                    }
-
-                    COLOR_ACCENT -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextAccentColor(color)))
-                    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = colorPickerInitial,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            when (colorPickerId) {
+                COLOR_TEXT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextColor(color)))
                 }
-                showColorPicker = false
-            },
-        )
-    }
+
+                COLOR_ACCENT -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TextAccentColor(color)))
+                }
+            }
+            showColorPicker = false
+        },
+    )
 }
 
 // ========== Title Settings (sub-page) ==========
@@ -527,19 +525,17 @@ internal fun TitleSettingsPage(
     }
 
     // Color picker
-    if (showColorPicker) {
-        ColorPickerSheet(
-            show = true,
-            initialColor = colorPickerInitial,
-            onDismissRequest = { showColorPicker = false },
-            onColorSelected = { color ->
-                when (colorPickerId) {
-                    COLOR_TITLE -> {
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(color)))
-                    }
+    ColorPickerSheet(
+        show = showColorPicker,
+        initialColor = colorPickerInitial,
+        onDismissRequest = { showColorPicker = false },
+        onColorSelected = { color ->
+            when (colorPickerId) {
+                COLOR_TITLE -> {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleColor(color)))
                 }
-                showColorPicker = false
-            },
-        )
-    }
+            }
+            showColorPicker = false
+        },
+    )
 }

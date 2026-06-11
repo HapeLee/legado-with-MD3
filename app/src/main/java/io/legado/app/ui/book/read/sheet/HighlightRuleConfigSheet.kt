@@ -74,29 +74,24 @@ fun HighlightRuleConfigSheet(
     // Edit existing rule
     val editingRuleValue = state.editingRule
 
-    if (show && editingRuleValue != null) {
-        HighlightRuleEditSheet(
-            show = true,
-            rule = editingRuleValue,
-            onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
-            onSave = { updated ->
-                onIntent(ReadBookIntent.SaveHighlightRule(updated))
-            },
-        )
-    }
-
+    HighlightRuleEditSheet(
+        show = show && editingRuleValue != null,
+        rule = editingRuleValue,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
+        onSave = { updated ->
+            onIntent(ReadBookIntent.SaveHighlightRule(updated))
+        },
+    )
 
     // Add new rule
-    if (show && state.showNewRule) {
-        HighlightRuleEditSheet(
-            show = true,
-            rule = null,
-            onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
-            onSave = { newRule ->
-                onIntent(ReadBookIntent.SaveHighlightRule(newRule))
-            },
-        )
-    }
+    HighlightRuleEditSheet(
+        show = show && state.showNewRule,
+        rule = null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissHighlightRuleEdit) },
+        onSave = { newRule ->
+            onIntent(ReadBookIntent.SaveHighlightRule(newRule))
+        },
+    )
 
     // Delete confirmation
     val deletingRule = state.deleteRule
