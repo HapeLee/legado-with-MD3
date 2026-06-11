@@ -30,24 +30,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
-import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
+import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
-import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import kotlinx.coroutines.launch
 
 // Color picker IDs
@@ -304,6 +304,19 @@ internal fun TextEffectsPage(
             imageVector = Icons.Default.TextFields,
             onClick = onOpenFontSelect,
         )
+
+        val chineseConvertEntries = stringArrayResource(R.array.chinese_mode)
+        val chineseConvertValues = remember { arrayOf("0", "1", "2") }
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.chinese_converter),
+            selectedValue = ReadConfig.chineseConverterType.toString(),
+            displayEntries = chineseConvertEntries,
+            entryValues = chineseConvertValues,
+            onValueChange = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ChineseConverterType(it.toInt())))
+            },
+        )
+
         Spacer(Modifier.height(8.dp))
 
         // Colors

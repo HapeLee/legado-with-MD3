@@ -1543,7 +1543,7 @@ private fun MenuBottomBar(
                 pageButtons.chunked(itemsPerRow).forEach { rowButtons ->
                     Row(
                         horizontalArrangement = when {
-                            rowButtons.size > 3 -> Arrangement.SpaceBetween
+                            rowButtons.size > 1 -> Arrangement.SpaceBetween
                             else -> Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally)
                         },
                         modifier = Modifier

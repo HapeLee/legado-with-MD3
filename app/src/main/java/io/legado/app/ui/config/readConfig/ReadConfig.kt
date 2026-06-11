@@ -246,4 +246,9 @@ object ReadConfig {
         PreferKey.ttsEngine,
         null
     )
+
+    var chineseConverterType by prefDelegate(
+        PreferKey.chineseConverterType,
+        0
+    )
 }
