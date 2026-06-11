@@ -274,6 +274,7 @@ fun MainActivity.mainEntryProvider(
         }
         val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
         val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
+        val collectorReady = remember(readBookViewModel) { booleanArrayOf(false) }
         fun resumeReader() {
             if (readerResumeState[0]) return
             readerResumeState[0] = true
@@ -307,7 +308,9 @@ fun MainActivity.mainEntryProvider(
 
             val lifecycleObserver = LifecycleEventObserver { _, event ->
                 when (event) {
-                    Lifecycle.Event.ON_RESUME -> resumeReader()
+                    Lifecycle.Event.ON_RESUME -> {
+                        if (collectorReady[0]) resumeReader()
+                    }
                     Lifecycle.Event.ON_PAUSE -> pauseReader()
                     else -> Unit
                 }
@@ -327,6 +330,7 @@ fun MainActivity.mainEntryProvider(
 
         LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
             effectsReady.await()
+            collectorReady[0] = true
             readBookViewModel.initReadBookConfig(readIntent)
             readBookViewModel.initData(readIntent)
             controller.onRouteInitialized()
