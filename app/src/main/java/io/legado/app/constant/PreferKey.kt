@@ -249,7 +249,6 @@ object PreferKey {
     const val mangaClickActionBR = "mangaClickActionBottomRight"
     const val mangaLongClick = "mangaLongClick"
     const val mangaBackground = "mangaBackground"
-    const val permissionChecked = "permissionChecked"
     const val notificationsPost = "notificationsPost"
     const val ignoreBatteryPermission = "ignoreBatteryPermission"
     const val paddingDisplayCutouts = "paddingDisplayCutouts"

@@ -3,11 +3,16 @@ package io.legado.app.help.config
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.utils.getBoolean
 import io.legado.app.utils.putBoolean
 import io.legado.app.utils.putLong
 import io.legado.app.utils.putString
 import io.legado.app.utils.remove
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.koin.java.KoinJavaComponent.get
 import splitties.init.appCtx
 
 @Suppress("ConstPropertyName")
@@ -16,29 +21,46 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
 
     private const val versionCodeKey = "appVersionCode"
 
+    private val localPreferencesRepository: LocalPreferencesRepository
+        by lazy { get(LocalPreferencesRepository::class.java) }
+
     /**
      * 本地密码,用来对需要备份的敏感信息加密,如 webdav 配置等
      */
     var password: String?
-        get() = getString("password", null)
+        get() = runBlocking {
+            localPreferencesRepository.getPreference(LocalPreferencesKeys.PASSWORD, "").first()
+                .ifEmpty { null }
+        }
         set(value) {
-            if (value != null) {
-                putString("password", value)
-            } else {
-                remove("password")
+            runBlocking {
+                localPreferencesRepository.updatePreference(
+                    LocalPreferencesKeys.PASSWORD, value ?: ""
+                )
             }
         }
 
     var lastBackup: Long
-        get() = getLong("lastBackup", 0)
+        get() = runBlocking {
+            localPreferencesRepository.getPreference(LocalPreferencesKeys.LAST_BACKUP, 0L).first()
+        }
         set(value) {
-            putLong("lastBackup", value)
+            runBlocking {
+                localPreferencesRepository.updatePreference(LocalPreferencesKeys.LAST_BACKUP, value)
+            }
         }
 
     var privacyPolicyOk: Boolean
-        get() = getBoolean("privacyPolicyOk")
+        get() = runBlocking {
+            localPreferencesRepository.getPreference(LocalPreferencesKeys.PRIVACY_POLICY_OK, false)
+                .first()
+        }
         set(value) {
-            putBoolean("privacyPolicyOk", value)
+            runBlocking {
+                localPreferencesRepository.updatePreference(
+                    LocalPreferencesKeys.PRIVACY_POLICY_OK, value
+                )
+            }
         }
 
     var navExtended: Boolean

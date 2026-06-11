@@ -7,8 +7,9 @@ import androidx.annotation.CallSuper
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
+import io.legado.app.data.local.preferences.LocalPreferencesKeys
+import io.legado.app.data.local.preferences.LocalPreferencesRepository
 import io.legado.app.help.LifecycleHelp
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
@@ -16,7 +17,10 @@ import io.legado.app.utils.LogUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
+import org.koin.java.KoinJavaComponent.get
 import kotlin.coroutines.CoroutineContext
 
 abstract class BaseService : LifecycleService() {
@@ -40,8 +44,18 @@ abstract class BaseService : LifecycleService() {
         startForegroundNotification()
         isForeground = true
         LifecycleHelp.onServiceCreate(this)
-        if (!AppConfig.permissionChecked) {
-            AppConfig.permissionChecked = true
+        val localPreferencesRepository: LocalPreferencesRepository = get(LocalPreferencesRepository::class.java)
+        val checked: Boolean = runBlocking {
+            localPreferencesRepository.getPreference(
+                LocalPreferencesKeys.PERMISSION_CHECKED, false
+            ).first()
+        }
+        if (!checked) {
+            runBlocking {
+                localPreferencesRepository.updatePreference(
+                    LocalPreferencesKeys.PERMISSION_CHECKED, true
+                )
+            }
             checkPermission()
         }
     }

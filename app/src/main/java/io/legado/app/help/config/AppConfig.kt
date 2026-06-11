@@ -99,6 +99,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         ReadConfig.optimizeRender = preferences.optimizeRender
         ReadConfig.adaptSpecialStyle = preferences.adaptSpecialStyle
         ReadConfig.useUnderline = preferences.useUnderline
+        ReadConfig.chineseConverterType = preferences.chineseConverterType
         clickActionTL = preferences.clickActionTL
         clickActionTC = preferences.clickActionTC
         clickActionTR = preferences.clickActionTR
@@ -244,12 +245,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             }
         }
 
-    var permissionChecked: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.permissionChecked, false)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.permissionChecked, value)
-        }
-
     val textSelectAble: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.textSelectAble, true)
 
@@ -391,11 +386,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val speechRatePlay: Int get() = if (ttsFlowSys) defaultSpeechRate else ttsSpeechRate
 
-    var chineseConverterType: Int
-        get() = appCtx.getPrefInt(PreferKey.chineseConverterType)
-        set(value) {
-            appCtx.putPrefInt(PreferKey.chineseConverterType, value)
-        }
+    val chineseConverterType: Int
+        get() = ReadConfig.chineseConverterType
 
     var systemTypefaces: Int
         get() = appCtx.getPrefInt(PreferKey.systemTypefaces)

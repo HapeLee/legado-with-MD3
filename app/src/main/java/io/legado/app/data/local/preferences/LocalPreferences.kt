@@ -5,6 +5,8 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 
 val Context.localDataStore: DataStore<Preferences> by preferencesDataStore(name = "local_ui_status")
@@ -17,4 +19,8 @@ object LocalPreferencesKeys {
     val EXPLORE_LAYOUT_GRID_PORTRAIT = intPreferencesKey("explore_layout_grid_portrait")
     val EXPLORE_LAYOUT_GRID_LANDSCAPE = intPreferencesKey("explore_layout_grid_landscape")
     val READ_URL_IN_BROWSER = booleanPreferencesKey("read_url_in_browser")
+    val LAST_BACKUP = longPreferencesKey("last_backup")
+    val PASSWORD = stringPreferencesKey("password")
+    val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
+    val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
 }
