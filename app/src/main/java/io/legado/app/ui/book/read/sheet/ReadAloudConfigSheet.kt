@@ -154,22 +154,22 @@ fun SpeakEngineConfigSheet(
 ) {
     val items = state.ttsEngineItems
     val selectedValue = state.selectedTtsEngine
-    var pendingEngineValue by remember { mutableStateOf<String?>(null) }
+    var pendingEngineSelection by remember { mutableStateOf<PendingSpeakEngineSelection?>(null) }
 
     AppAlertDialog(
-        show = pendingEngineValue != null,
-        onDismissRequest = { pendingEngineValue = null },
+        show = pendingEngineSelection != null,
+        onDismissRequest = { pendingEngineSelection = null },
         title = stringResource(R.string.speak_engine),
         text = stringResource(R.string.speak_engine_apply_scope),
         confirmText = stringResource(R.string.general),
         onConfirm = {
-            onIntent(ReadBookIntent.ApplySpeakEngine(pendingEngineValue))
-            pendingEngineValue = null
+            onIntent(ReadBookIntent.ApplySpeakEngine(pendingEngineSelection?.value))
+            pendingEngineSelection = null
         },
         dismissText = stringResource(R.string.book),
         onDismiss = {
-            onIntent(ReadBookIntent.ApplySpeakEnginePerBook(pendingEngineValue))
-            pendingEngineValue = null
+            onIntent(ReadBookIntent.ApplySpeakEnginePerBook(pendingEngineSelection?.value))
+            pendingEngineSelection = null
         },
     )
 
@@ -232,7 +232,7 @@ fun SpeakEngineConfigSheet(
                     } else {
                         null
                     },
-                    onClick = { pendingEngineValue = item.value },
+                    onClick = { pendingEngineSelection = PendingSpeakEngineSelection(item.value) },
                     onLongClick = if (httpTtsId != null && !item.loginUrl.isNullOrBlank()) {
                         { onIntent(ReadBookIntent.OpenHttpTtsLogin(httpTtsId)) }
                     } else null,
@@ -255,6 +255,8 @@ fun SpeakEngineConfigSheet(
         }
     }
 }
+
+private data class PendingSpeakEngineSelection(val value: String?)
 
 @Composable
 fun HttpTtsEditSheet(

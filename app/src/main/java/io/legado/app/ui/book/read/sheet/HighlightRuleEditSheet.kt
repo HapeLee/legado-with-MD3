@@ -32,13 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.res.stringArrayResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -73,53 +73,67 @@ fun HighlightRuleEditSheet(
     onSave: (HighlightRule) -> Unit,
 ) {
     val isNew = rule == null
-    val initial = rule ?: HighlightRule()
+    val initial = remember(show, rule) { rule ?: HighlightRule() }
     val context = LocalContext.current
 
     // Rule info state
-    var pattern by remember { mutableStateOf(initial.pattern) }
-    var name by remember { mutableStateOf(initial.name) }
-    var targetScope by remember { mutableIntStateOf(initial.targetScope) }
-    var enabled by remember { mutableStateOf(initial.enabled) }
-    var sampleText by remember {
+    var pattern by remember(show, rule) { mutableStateOf(initial.pattern) }
+    var name by remember(show, rule) { mutableStateOf(initial.name) }
+    var targetScope by remember(show, rule) { mutableIntStateOf(initial.targetScope) }
+    var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
+    var sampleText by remember(show, rule) {
         mutableStateOf(initial.sampleText.ifBlank { "她轻声说：今晚就出发。" })
     }
 
     // Style state
-    var textColor by remember { mutableIntStateOf(initial.textColor ?: 0xFF63C37D.toInt()) }
-    var hasTextColor by remember { mutableStateOf(initial.textColor != null) }
-    var bgColor by remember { mutableIntStateOf(initial.bgColor ?: 0x20FFEB3B) }
-    var hasBgColor by remember { mutableStateOf(initial.bgColor != null) }
-    var hasUnderline by remember { mutableStateOf(initial.underlineMode > 0) }
-    var underlineMode by remember { mutableIntStateOf(if (initial.underlineMode > 0) initial.underlineMode else 1) }
-    var underlineColor by remember { mutableIntStateOf(initial.underlineColor ?: 0xFF63C37D.toInt()) }
-    var hasUnderlineColor by remember { mutableStateOf(initial.underlineColor != null) }
-    var underlineWidth by remember { mutableFloatStateOf(initial.underlineWidth) }
-    var underlineOffset by remember { mutableFloatStateOf(initial.underlineOffset) }
-    var underlineSvgPath by remember { mutableStateOf(initial.underlineSvgPath.orEmpty()) }
-    var bgImage by remember { mutableStateOf(initial.bgImage.orEmpty()) }
-    var bgImageFit by remember { mutableIntStateOf(initial.bgImageFit) }
-    var bgImageScale by remember { mutableFloatStateOf(initial.bgImageScale) }
-    var hasBgImage by remember { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
+    var textColor by remember(show, rule) {
+        mutableIntStateOf(
+            initial.textColor ?: 0xFF63C37D.toInt()
+        )
+    }
+    var hasTextColor by remember(show, rule) { mutableStateOf(initial.textColor != null) }
+    var bgColor by remember(show, rule) { mutableIntStateOf(initial.bgColor ?: 0x20FFEB3B) }
+    var hasBgColor by remember(show, rule) { mutableStateOf(initial.bgColor != null) }
+    var hasUnderline by remember(show, rule) { mutableStateOf(initial.underlineMode > 0) }
+    var underlineMode by remember(
+        show,
+        rule
+    ) { mutableIntStateOf(if (initial.underlineMode > 0) initial.underlineMode else 1) }
+    var underlineColor by remember(show, rule) {
+        mutableIntStateOf(
+            initial.underlineColor ?: 0xFF63C37D.toInt()
+        )
+    }
+    var hasUnderlineColor by remember(show, rule) { mutableStateOf(initial.underlineColor != null) }
+    var underlineWidth by remember(show, rule) { mutableFloatStateOf(initial.underlineWidth) }
+    var underlineOffset by remember(show, rule) { mutableFloatStateOf(initial.underlineOffset) }
+    var underlineSvgPath by remember(
+        show,
+        rule
+    ) { mutableStateOf(initial.underlineSvgPath.orEmpty()) }
+    var bgImage by remember(show, rule) { mutableStateOf(initial.bgImage.orEmpty()) }
+    var bgImageFit by remember(show, rule) { mutableIntStateOf(initial.bgImageFit) }
+    var bgImageScale by remember(show, rule) { mutableFloatStateOf(initial.bgImageScale) }
+    var hasBgImage by remember(show, rule) { mutableStateOf(initial.bgImage?.isNotBlank() == true) }
 
     // Config binding state — empty set = global (applies to all configs)
     val allConfigNames = remember { ReadBookConfig.configList.map { it.name }.filter { it.isNotBlank() } }
-    var configNames by remember {
+    var configNames by remember(show, rule) {
         mutableStateOf(initial.configName.orEmpty().configNames().toSet())
     }
 
     // Font state
-    var hasFont by remember { mutableStateOf(initial.fontPath?.isNotBlank() == true) }
-    var fontPath by remember { mutableStateOf(initial.fontPath.orEmpty()) }
+    var hasFont by remember(show, rule) { mutableStateOf(initial.fontPath?.isNotBlank() == true) }
+    var fontPath by remember(show, rule) { mutableStateOf(initial.fontPath.orEmpty()) }
 
     // Color picker state
-    var showTextColorPicker by remember { mutableStateOf(false) }
-    var showBgColorPicker by remember { mutableStateOf(false) }
-    var showUnderlineColorPicker by remember { mutableStateOf(false) }
-    var showFontSelect by remember { mutableStateOf(false) }
+    var showTextColorPicker by remember(show, rule) { mutableStateOf(false) }
+    var showBgColorPicker by remember(show, rule) { mutableStateOf(false) }
+    var showUnderlineColorPicker by remember(show, rule) { mutableStateOf(false) }
+    var showFontSelect by remember(show, rule) { mutableStateOf(false) }
 
     // Validation
-    var patternError by remember { mutableStateOf<String?>(null) }
+    var patternError by remember(show, rule) { mutableStateOf<String?>(null) }
 
     // SAF image picker
     val imagePicker = rememberLauncherForActivityResult(
