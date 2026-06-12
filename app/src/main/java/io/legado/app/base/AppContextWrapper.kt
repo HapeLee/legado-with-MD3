@@ -6,11 +6,10 @@ import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.os.LocaleList
-import io.legado.app.constant.PreferKey
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.utils.getPrefString
 import io.legado.app.utils.sysConfiguration
-import java.util.*
+import java.util.Locale
 
 
 @Suppress("unused")
@@ -18,7 +17,7 @@ object AppContextWrapper {
 
     fun wrap(context: Context): Context {
         val newConfig = Configuration(context.resources.configuration)
-        val targetLocale = getSetLocale(context)
+        val targetLocale = getSetLocale()
         newConfig.setLocale(targetLocale)
         newConfig.setLocales(LocaleList(targetLocale))
         newConfig.fontScale = getFontScale(context)
@@ -27,7 +26,7 @@ object AppContextWrapper {
 
     fun applyLocaleAndFont(activity: Activity) {
         val config = activity.resources.configuration
-        val locale = getSetLocale(activity)
+        val locale = getSetLocale()
         val fontScale = getFontScale(activity)
 
         val newConfig = Configuration(config)
@@ -83,8 +82,8 @@ object AppContextWrapper {
     /**
      * 当前设置语言
      */
-    private fun getSetLocale(context: Context): Locale {
-        return when (context.getPrefString(PreferKey.language)) {
+    private fun getSetLocale(): Locale {
+        return when (OtherConfig.language) {
             "zh" -> Locale.SIMPLIFIED_CHINESE
             "tw" -> Locale.TRADITIONAL_CHINESE
             "en" -> Locale.ENGLISH
@@ -99,7 +98,7 @@ object AppContextWrapper {
         val locale = getAppLocale(context)
         val language = locale.language
         val country = locale.country
-        val pfLocale = getSetLocale(context)
+        val pfLocale = getSetLocale()
         val pfLanguage = pfLocale.language
         val pfCountry = pfLocale.country
         return language == pfLanguage && country == pfCountry
