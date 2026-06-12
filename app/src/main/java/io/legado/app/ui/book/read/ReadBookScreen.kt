@@ -66,6 +66,7 @@ fun ReadBookScreen(
     // Dialogs driven by activeDialog state
     val restoreDialog = state.activeDialog as? ReadBookDialog.ConfirmRestoreProgress
     val syncDialog = state.activeDialog as? ReadBookDialog.SureSyncProgress
+    val restoreLastProgressDialog = state.activeDialog as? ReadBookDialog.RestoreLastBookProgress
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
 
@@ -94,6 +95,16 @@ fun ReadBookScreen(
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = restoreLastProgressDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.KeepCurrentBookProgress) },
+        title = stringResource(R.string.draw),
+        text = stringResource(R.string.restore_last_book_process),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(ReadBookIntent.RestoreLastBookProgress) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.KeepCurrentBookProgress) },
     )
     AppAlertDialog(
         show = skipDialog != null,

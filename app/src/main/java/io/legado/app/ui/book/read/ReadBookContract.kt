@@ -259,6 +259,8 @@ sealed interface ReadBookIntent {
     data class SetSearchResultIndex(val index: Int) : ReadBookIntent
     data class SetShowingSearchResult(val value: Boolean) : ReadBookIntent
     data class NavigateToSearchResult(val result: SearchResult, val index: Int) : ReadBookIntent
+    data object RestoreLastBookProgress : ReadBookIntent
+    data object KeepCurrentBookProgress : ReadBookIntent
 
     // Read aloud
     data object ToggleReadAloud : ReadBookIntent
@@ -670,6 +672,7 @@ sealed interface ReadBookSheet {
 sealed interface ReadBookDialog {
     data class ConfirmRestoreProgress(val progress: BookProgress) : ReadBookDialog
     data class SureSyncProgress(val progress: BookProgress) : ReadBookDialog
+    data object RestoreLastBookProgress : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
 }
@@ -1070,7 +1073,10 @@ sealed interface ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()
     }
     data class DoubleHorizontalPage(val value: String) : ConfigUpdate {
-        override val actions = emptySet<ConfigUpdateAction>()
+        override val actions = setOf(
+            ConfigUpdateAction.UpdateLayout,
+            ConfigUpdateAction.ReloadContent,
+        )
     }
     data class ProgressBarBehavior(val value: String) : ConfigUpdate {
         override val actions = emptySet<ConfigUpdateAction>()

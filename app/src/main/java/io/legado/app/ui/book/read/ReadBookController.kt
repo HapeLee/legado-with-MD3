@@ -682,7 +682,7 @@ class ReadBookController(
             }
 
             is ReadBookEffect.UpScreenTimeOut -> {
-                screenOffTimerStart()
+                upScreenTimeOut()
             }
 
             is ReadBookEffect.ToggleBrightnessAuto -> {

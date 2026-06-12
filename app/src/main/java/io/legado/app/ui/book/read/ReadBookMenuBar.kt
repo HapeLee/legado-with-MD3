@@ -904,7 +904,7 @@ private fun MenuTitleBar(
         ) {
             // Back button
             MenuTitleGlassButton(
-                onClick = { onIntent(ReadBookIntent.ReadMenuBack) },
+                onClick = { onIntent(ReadBookIntent.CloseReadBook) },
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
                 state = state,
@@ -1156,15 +1156,15 @@ private fun ReadMenuGlassButtonSurface(
 ) {
     val shape = CircleShape
     val tint = when {
-        selected -> LegadoTheme.colorScheme.onPrimaryContainer
+        selected -> LegadoTheme.colorScheme.primary
         else -> LegadoTheme.colorScheme.onSurfaceVariant
     }
     val containerColor = when {
-        selected -> LegadoTheme.colorScheme.primaryContainer
+        selected -> LegadoTheme.colorScheme.secondaryContainer
         else -> LegadoTheme.colorScheme.surfaceContainerLow
     }
     val border = if (selected) {
-        BorderStroke(1.5.dp, LegadoTheme.colorScheme.primary)
+        BorderStroke(1.5.dp, LegadoTheme.colorScheme.secondary)
     } else {
         null
     }
@@ -1973,6 +1973,7 @@ private fun ReadMenuLiquidSlider(
     val accentColor = LegadoTheme.colorScheme.secondary
     val trackColor = LegadoTheme.colorScheme.surfaceContainerLow
     val thumbColor = Color.White.copy(alpha = 0.9f).compositeOver(LegadoTheme.colorScheme.surfaceContainerLow)
+    val enabledAlpha = if (enabled) 1f else 0.38f
 
     val trackBackdrop = rememberLayerBackdrop()
 
@@ -2051,7 +2052,7 @@ private fun ReadMenuLiquidSlider(
                         },
                         innerShadow = null,
                         onDrawSurface = {
-                            drawRect(trackColor)
+                            drawRect(trackColor.copy(alpha = enabledAlpha))
                         },
                     )
                     .pointerInput(enabled, animationScope, isLtr, trackWidth) {
@@ -2072,7 +2073,7 @@ private fun ReadMenuLiquidSlider(
             Box(
                 Modifier
                     .clip(ContinuousCapsule)
-                    .background(accentColor)
+                    .background(accentColor.copy(alpha = enabledAlpha))
                     .height(6f.dp)
                     .layout { measurable, constraints ->
                         val placeable = measurable.measure(constraints)
@@ -2087,12 +2088,13 @@ private fun ReadMenuLiquidSlider(
         Box(
             Modifier
                 .graphicsLayer {
+                    alpha = enabledAlpha
                     translationX =
                         (-size.width / 2f + trackWidth * progress)
                             .coerceIn(-size.width / 4f, trackWidth - size.width * 3f / 4f) *
                                 if (isLtr) 1f else -1f
                 }
-                .then(dampedDragAnimation.modifier)
+                .then(if (enabled) dampedDragAnimation.modifier else Modifier)
                 .drawBackdrop(
                     backdrop = rememberCombinedBackdrop(
                         backdrop,
@@ -2724,6 +2726,7 @@ private fun BrightnessBar(
     }
 
     fun commitSliderValue(value: Float) {
+        if (brightnessAuto) return
         val target = value.roundToInt().coerceIn(0, 100)
         sliderDragging = false
         sliderValue = target.toFloat()
@@ -2751,6 +2754,7 @@ private fun BrightnessBar(
             AppVerticalSlider(
                 value = sliderValue.coerceIn(0f, 100f),
                 onValueChange = { value ->
+                    if (brightnessAuto) return@AppVerticalSlider
                     sliderDragging = true
                     sliderValue = value.coerceIn(0f, 100f)
                 },
@@ -2793,6 +2797,7 @@ private fun BrightnessBar(
             ReadMenuSlider(
                 value = sliderValue.coerceIn(0f, 100f),
                 onValueChange = { value ->
+                    if (brightnessAuto) return@ReadMenuSlider
                     sliderDragging = true
                     sliderValue = value.coerceIn(0f, 100f)
                 },

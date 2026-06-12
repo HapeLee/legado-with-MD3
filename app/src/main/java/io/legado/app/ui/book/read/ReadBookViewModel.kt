@@ -60,7 +60,6 @@ import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.ui.book.read.page.entities.TextPage
-import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.ui.config.otherConfig.OtherConfig
@@ -236,6 +235,8 @@ class ReadBookViewModel(
                         searchResultList = intent.results.toImmutableList(),
                         searchResultIndex = intent.index,
                         isShowingSearchResult = true,
+                        searchMenuVisible = true,
+                        menuState = ReadBookMenuState(),
                         searchContentQuery = intent.query ?: it.searchContentQuery,
                     )
                 }
@@ -250,8 +251,19 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.NavigateToSearchResult -> {
+                ReadBook.saveCurrentBookProgress()
                 _uiState.update { it.copy(searchResultIndex = intent.index) }
                 navigateToSearchResult(intent.result)
+            }
+
+            is ReadBookIntent.RestoreLastBookProgress -> {
+                _uiState.update { it.copy(activeDialog = null) }
+                ReadBook.restoreLastBookProgress()
+            }
+
+            is ReadBookIntent.KeepCurrentBookProgress -> {
+                ReadBook.lastBookProgress = null
+                _uiState.update { it.copy(activeDialog = null) }
             }
 
             is ReadBookIntent.ToggleReadAloud -> {
@@ -2886,8 +2898,6 @@ class ReadBookViewModel(
                 viewModelScope.launch {
                     readSettingsRepository.setDoubleHorizontalPage(update.value)
                 }
-                ChapterProvider.upLayout()
-                ReadBook.loadContent(false)
             }
             is ConfigUpdate.ProgressBarBehavior -> {
                 ReadConfig.progressBarBehavior = update.value
@@ -3375,7 +3385,12 @@ class ReadBookViewModel(
         _uiState.update {
             it.copy(
                 isShowingSearchResult = false,
-                searchMenuVisible = false
+                searchMenuVisible = false,
+                activeDialog = if (ReadBook.lastBookProgress != null) {
+                    ReadBookDialog.RestoreLastBookProgress
+                } else {
+                    it.activeDialog
+                }
             )
         }
         _effects.tryEmit(ReadBookEffect.ExitSearch)
