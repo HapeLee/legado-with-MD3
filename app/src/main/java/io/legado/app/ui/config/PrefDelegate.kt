@@ -3,6 +3,7 @@ package io.legado.app.ui.config
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -57,6 +58,9 @@ fun <T> prefDelegate(
     return object : PrefDelegate<T>, DefaultLifecycleObserver {
         private var _value: MutableState<T>
         override val state: State<T> get() = _value
+
+        @Volatile
+        private var currentValue: T = defaultValue
         private val scope = CoroutineScope(Dispatchers.IO)
         private var dsObserverJob: Job? = null
 
@@ -64,6 +68,8 @@ fun <T> prefDelegate(
             // 同步从 DataStore 读取初始值，确保构造完成后即为最新值
             val initialValue = runBlocking(Dispatchers.IO) { readFromDs() } ?: defaultValue
             _value = mutableStateOf(initialValue)
+            currentValue = initialValue
+
             // 观察 DataStore 变化，用于跨实例同步
             dsObserverJob = scope.launch {
                 appCtx.dataStore.data
@@ -91,8 +97,8 @@ fun <T> prefDelegate(
                     }
                     .distinctUntilChanged()
                     .collect { dsValue ->
-                        if (dsValue != null && _value.value != dsValue) {
-                            _value.value = dsValue
+                        if (dsValue != null && currentValue != dsValue) {
+                            updateValue(dsValue)
                             onValueChange?.invoke(dsValue)
                         }
                     }
@@ -112,12 +118,12 @@ fun <T> prefDelegate(
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            return _value.value
+            return currentValue
         }
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-            if (_value.value != value) {
-                _value.value = value
+            if (currentValue != value) {
+                updateValue(value)
                 // 同步写入 SP（向后兼容：AppConfig/MainViewModel 等仍直接读 SP）
                 when (value) {
                     is String? -> if (sync) appCtx.putPrefStringSync(key, value) else appCtx.putPrefString(key, value)
@@ -203,6 +209,13 @@ fun <T> prefDelegate(
                 }
             }
             return spValue
+        }
+
+        private fun updateValue(value: T) {
+            currentValue = value
+            Snapshot.withMutableSnapshot {
+                _value.value = value
+            }
         }
     }
 }
