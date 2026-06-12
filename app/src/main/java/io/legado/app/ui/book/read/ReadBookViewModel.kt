@@ -231,9 +231,11 @@ class ReadBookViewModel(
             is ReadBookIntent.HideSearchMenu -> _uiState.update { it.copy(searchMenuVisible = false) }
             is ReadBookIntent.SetSearchResults -> {
                 _uiState.update {
+                    val results = intent.results.toImmutableList()
+                    val index = intent.index.coerceSearchResultIndex(results.size)
                     it.copy(
-                        searchResultList = intent.results.toImmutableList(),
-                        searchResultIndex = intent.index,
+                        searchResultList = results,
+                        searchResultIndex = index,
                         isShowingSearchResult = true,
                         searchMenuVisible = true,
                         menuState = ReadBookMenuState(),
@@ -243,7 +245,13 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.SetSearchResultIndex -> {
-                _uiState.update { it.copy(searchResultIndex = intent.index) }
+                _uiState.update {
+                    it.copy(
+                        searchResultIndex = intent.index.coerceSearchResultIndex(
+                            it.searchResultList.size
+                        )
+                    )
+                }
             }
 
             is ReadBookIntent.SetShowingSearchResult -> {
@@ -252,7 +260,13 @@ class ReadBookViewModel(
 
             is ReadBookIntent.NavigateToSearchResult -> {
                 ReadBook.saveCurrentBookProgress()
-                _uiState.update { it.copy(searchResultIndex = intent.index) }
+                _uiState.update {
+                    it.copy(
+                        searchResultIndex = intent.index.coerceSearchResultIndex(
+                            it.searchResultList.size
+                        )
+                    )
+                }
                 navigateToSearchResult(intent.result)
             }
 
@@ -3466,3 +3480,7 @@ private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
 private const val TOOL_BUTTON_KEY = "tool_buttons"
 private const val DEFAULT_ENABLED_BUTTON_COUNT = 5
+
+private fun Int.coerceSearchResultIndex(resultSize: Int): Int {
+    return if (resultSize <= 0) 0 else coerceIn(0, resultSize - 1)
+}

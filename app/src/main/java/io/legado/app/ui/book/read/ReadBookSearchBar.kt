@@ -29,8 +29,8 @@ fun ReadBookSearchBar(
     val searchVisible = state.isShowingSearchResult &&
             !(state.menuVisible && state.menuState.currentRoute != ReadBookMenuRoute.Main)
     val hasResults = state.searchResultList.isNotEmpty()
-    val currentIndex = state.searchResultIndex
     val totalResults = state.searchResultList.size
+    val currentIndex = state.searchResultIndex.coerceIn(0, (totalResults - 1).coerceAtLeast(0))
 
     Box(Modifier.fillMaxSize()) {
         // Left FAB - previous result
@@ -45,9 +45,11 @@ fun ReadBookSearchBar(
             AppFloatingActionButton(
                 onClick = {
                     val prevIndex = currentIndex - 1
+                    val result = state.searchResultList.getOrNull(prevIndex)
+                        ?: return@AppFloatingActionButton
                     onIntent(
                         ReadBookIntent.NavigateToSearchResult(
-                            state.searchResultList[prevIndex], prevIndex
+                            result, prevIndex
                         )
                     )
                 },
@@ -75,9 +77,11 @@ fun ReadBookSearchBar(
             AppFloatingActionButton(
                 onClick = {
                     val nextIndex = currentIndex + 1
+                    val result = state.searchResultList.getOrNull(nextIndex)
+                        ?: return@AppFloatingActionButton
                     onIntent(
                         ReadBookIntent.NavigateToSearchResult(
-                            state.searchResultList[nextIndex], nextIndex
+                            result, nextIndex
                         )
                     )
                 },
