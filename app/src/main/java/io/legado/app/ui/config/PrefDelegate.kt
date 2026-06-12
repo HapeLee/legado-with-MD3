@@ -118,7 +118,7 @@ fun <T> prefDelegate(
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-            return currentValue
+            return _value.value
         }
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
