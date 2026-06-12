@@ -713,15 +713,8 @@ class ReadBookController(
                         val pos = viewModel.searchResultPositions(tc, effect.result, query)
                         val lineIndex = pos[1]
                         val charIndex = pos[2]
-                        val addLine = pos[3]
-                        val charIndex2 = pos[4]
-                        val queryLength = query.length
-                        val endLineIndex = lineIndex + addLine.coerceAtLeast(0)
-                        val endCharIndex = if (addLine == 0) {
-                            charIndex + queryLength
-                        } else {
-                            charIndex2 + 1
-                        }
+                        val endLineIndex = pos[3]
+                        val endCharIndex = pos[4]
                         activity.lifecycleScope.launch(Main) {
                             navigatePageByPos(tc, pos[0])
                             markSearchResultOnPage(

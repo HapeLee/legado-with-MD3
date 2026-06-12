@@ -86,10 +86,10 @@ class SearchContentRepository {
             book, chapter, chapterContent, useReplace = replaceEnabled
         ).toString()
 
-        val positions = searchPosition(mContent, query, regexReplace)
+        val matches = searchPosition(mContent, query, regexReplace)
 
-        positions.forEachIndexed { index, position ->
-            val construct = getResultAndQueryIndex(mContent, position, query)
+        matches.forEachIndexed { index, match ->
+            val construct = getResultAndQueryIndex(mContent, match.position, match.length)
             val result = SearchResult(
                 resultCountWithinChapter = index,
                 resultText = construct.second,
@@ -97,7 +97,8 @@ class SearchContentRepository {
                 query = query,
                 chapterIndex = chapter.index,
                 queryIndexInResult = construct.first,
-                queryIndexInChapter = position,
+                queryIndexInChapter = match.position,
+                matchLength = match.length,
                 isRegex = regexReplace
             )
             searchResultsWithinChapter.add(result)
@@ -105,34 +106,34 @@ class SearchContentRepository {
         return searchResultsWithinChapter
     }
 
-    private fun searchPosition(content: String, pattern: String, regexReplace: Boolean): List<Int> {
-        val position: MutableList<Int> = mutableListOf()
+    private fun searchPosition(content: String, pattern: String, regexReplace: Boolean): List<SearchMatch> {
+        val positions: MutableList<SearchMatch> = mutableListOf()
         if (regexReplace) { // 正则表达式搜索
             try {
                 Regex(pattern).findAll(content).forEach { match ->
-                    position.add(match.range.first)
+                    positions.add(SearchMatch(match.range.first, match.value.length))
                 }
             } catch (e: Exception) {
-                return position
+                return positions
             }
         } else {
             var index = content.indexOf(pattern)
             while (index >= 0) {
-                position.add(index)
+                positions.add(SearchMatch(index, pattern.length))
                 index = content.indexOf(pattern, index + pattern.length)
             }
         }
-        return position
+        return positions
     }
 
     private fun getResultAndQueryIndex(
         content: String,
         queryIndexInContent: Int,
-        query: String
+        matchLength: Int
     ): Pair<Int, String> {
         val length = 12
         var po1 = queryIndexInContent - length
-        var po2 = queryIndexInContent + query.length + length
+        var po2 = queryIndexInContent + matchLength + length
         if (po1 < 0) {
             po1 = 0
         }
@@ -143,5 +144,10 @@ class SearchContentRepository {
         val newText = content.substring(po1, po2)
         return queryIndexInResult to newText
     }
+
+    private data class SearchMatch(
+        val position: Int,
+        val length: Int,
+    )
 
 }
