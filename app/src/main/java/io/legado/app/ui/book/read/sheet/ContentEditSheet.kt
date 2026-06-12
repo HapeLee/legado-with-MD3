@@ -7,12 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -23,7 +17,13 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.checkBox.AppCheckbox
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.sendToClip
 
 @Composable
@@ -56,22 +56,29 @@ fun ContentEditSheet(
                 .padding(bottom = 16.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                TextButton(onClick = {
-                    onIntent(ReadBookIntent.SaveContentEdit(state.contentEditText, state.contentEditSaveToSource))
-                    onDismissRequest()
-                }) {
-                    Text(stringResource(R.string.action_save))
-                }
-                TextButton(onClick = {
+                SmallTonalButton(
+                    onClick = {
+                        onIntent(
+                            ReadBookIntent.SaveContentEdit(
+                                state.contentEditText,
+                                state.contentEditSaveToSource
+                            )
+                        )
+                        onDismissRequest()
+                    },
+                    text = stringResource(R.string.action_save)
+                )
+                SmallTonalButton(
+                    onClick = {
                     onIntent(ReadBookIntent.ResetContentEdit)
-                }) {
-                    Text(stringResource(R.string.reset))
-                }
-                TextButton(onClick = {
+                    },
+                    text = stringResource(R.string.reset)
+                )
+                SmallTonalButton(
+                    onClick = {
                     context.sendToClip("${state.contentEditTitle}\n${state.contentEditText}")
-                }) {
-                    Text(stringResource(R.string.copy_all))
-                }
+                    }, text = stringResource(R.string.copy_all)
+                )
             }
 
             Spacer(Modifier.height(8.dp))
@@ -83,30 +90,29 @@ fun ContentEditSheet(
                         .height(200.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    AppCircularProgressIndicator()
                 }
             } else {
-                OutlinedTextField(
+                AppTextField(
                     value = state.contentEditText,
                     onValueChange = { onIntent(ReadBookIntent.SetContentEditText(it)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)
                         .height(400.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium,
                 )
             }
 
             if (state.contentEditIsLocalTxt) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
+                    AppCheckbox(
                         checked = state.contentEditSaveToSource,
                         onCheckedChange = { onIntent(ReadBookIntent.SetContentEditSaveToSource(it)) },
                     )
-                    Text(
+                    AppText(
                         text = stringResource(R.string.save_to_source),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = LegadoTheme.typography.bodyMedium,
                     )
                 }
             }
