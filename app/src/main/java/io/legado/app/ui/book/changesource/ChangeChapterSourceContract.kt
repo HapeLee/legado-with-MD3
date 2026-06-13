@@ -24,6 +24,7 @@ data class ChangeChapterSourceUiState(
     val selectedSourceName: String = "",
     val tocItems: ImmutableList<BookChapter> = persistentListOf(),
     val isLoadingToc: Boolean = false,
+    val currentTocIndex: Int = -1,
     // Scope filter
     val scopeState: ScopeUiState = ScopeUiState(
         isAll = true,

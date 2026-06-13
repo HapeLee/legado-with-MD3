@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.PauseCircleOutline
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -175,16 +178,23 @@ private fun TocContent(
             AppCircularProgressIndicator()
         }
     } else {
+        val listState = rememberLazyListState()
+        LaunchedEffect(state.currentTocIndex, state.tocItems) {
+            if (state.currentTocIndex >= 0) {
+                listState.scrollToItem(state.currentTocIndex)
+            }
+        }
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            items(state.tocItems) { chapter ->
+            itemsIndexed(state.tocItems) { index, chapter ->
                 SelectionItemCard(
                     title = chapter.title,
                     containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                     selectedContainerColor = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.32f),
-                    isSelected = false,
+                    isSelected = index == state.currentTocIndex,
                     onToggleSelection = {
                         onIntent(ChangeChapterSourceIntent.SelectChapter(chapter))
                     },

@@ -42,7 +42,17 @@ class GetChapterContentUseCase(
     /**
      * Find the chapter index in a new TOC matching the current chapter.
      */
-    fun getDurChapterIndex(chapterIndex: Int, chapterTitle: String, toc: List<BookChapter>): Int {
-        return io.legado.app.help.book.BookHelp.getDurChapter(chapterIndex, chapterTitle, toc)
+    fun getDurChapterIndex(
+        chapterIndex: Int,
+        chapterTitle: String,
+        toc: List<BookChapter>,
+        totalChapterNum: Int = 0,
+    ): Int {
+        return io.legado.app.help.book.BookHelp.getDurChapter(
+            chapterIndex,
+            chapterTitle,
+            toc,
+            totalChapterNum,
+        )
     }
 }

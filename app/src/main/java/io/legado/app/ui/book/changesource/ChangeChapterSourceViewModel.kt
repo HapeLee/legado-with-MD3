@@ -78,6 +78,7 @@ class ChangeChapterSourceViewModel(
                 showToc = false,
                 tocItems = persistentListOf(),
                 isLoadingToc = false,
+                currentTocIndex = -1,
                 selectedSourceName = "",
             )
         }
@@ -113,7 +114,8 @@ class ChangeChapterSourceViewModel(
                     it.copy(
                         showToc = false,
                         tocItems = persistentListOf(),
-                        isLoadingToc = false
+                        isLoadingToc = false,
+                        currentTocIndex = -1,
                     )
                 }
             }
@@ -313,23 +315,32 @@ class ChangeChapterSourceViewModel(
             it.copy(
                 showToc = true,
                 selectedSourceName = searchBook.originName,
-                isLoadingToc = true
+                isLoadingToc = true,
+                currentTocIndex = -1,
             )
         }
         viewModelScope.launch {
             try {
                 val (toc, _) = getChapterContentUseCase.getToc(book)
+                val currentTocIndex = getChapterContentUseCase.getDurChapterIndex(
+                    chapterIndex = chapterIndex,
+                    chapterTitle = chapterTitle,
+                    toc = toc,
+                    totalChapterNum = oldBook?.totalChapterNum ?: 0,
+                ).takeIf { it in toc.indices } ?: -1
                 _uiState.update {
                     it.copy(
                         tocItems = toc.toImmutableList(),
-                        isLoadingToc = false
+                        isLoadingToc = false,
+                        currentTocIndex = currentTocIndex,
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
                         showToc = false,
-                        isLoadingToc = false
+                        isLoadingToc = false,
+                        currentTocIndex = -1,
                     )
                 }
                 _effects.tryEmit(ChangeChapterSourceEffect.ShowToast("获取目录失败"))
