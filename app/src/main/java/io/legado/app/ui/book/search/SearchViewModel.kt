@@ -17,7 +17,6 @@ import io.legado.app.domain.usecase.ExploreBooksUseCase
 import io.legado.app.domain.usecase.ResolveBookShelfStateUseCase
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SearchRunEvent
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.persistentSetOf
@@ -69,10 +68,10 @@ class SearchViewModel(
 
     private val _uiState = MutableStateFlow(
         SearchUiState(
-            scopeDisplay = SearchScope(AppConfig.searchScope).display,
-            scopeDisplayNames = SearchScope(AppConfig.searchScope).displayNames.toImmutableList(),
-            isAllScope = SearchScope(AppConfig.searchScope).isAll(),
-            isSourceScope = SearchScope(AppConfig.searchScope).isSource(),
+            scopeDisplay = SearchScope("").display,
+            scopeDisplayNames = SearchScope("").displayNames.toImmutableList(),
+            isAllScope = SearchScope("").isAll(),
+            isSourceScope = SearchScope("").isSource(),
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -82,7 +81,9 @@ class SearchViewModel(
 
     private val queryFlow = MutableStateFlow("")
     private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
-    private val searchScope = SearchScope(AppConfig.searchScope)
+    private var persistedSearchScopeRaw = ""
+    private var hasTemporaryScope = false
+    private val searchScope = SearchScope("")
     private val searchControl = BookSearchControl()
     private val searchResultBooks = LinkedHashMap<SearchResultKey, SearchBook>()
 
@@ -93,6 +94,7 @@ class SearchViewModel(
 
     init {
         syncScopeState()
+        observeSearchScope()
         observeEnabledGroups()
         observeEnabledSources()
         observeBookshelf()
@@ -205,6 +207,7 @@ class SearchViewModel(
             SearchIntent.SelectAllScope -> {
                 val oldScope = searchScope.toString()
                 searchScope.update("")
+                persistSearchScope()
                 syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
@@ -213,6 +216,7 @@ class SearchViewModel(
             is SearchIntent.RemoveScopeItem -> {
                 val oldScope = searchScope.toString()
                 searchScope.remove(intent.scopeName)
+                persistSearchScope()
                 syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
@@ -313,10 +317,15 @@ class SearchViewModel(
     }
 
     private fun initialize(key: String?, scopeRaw: String?) {
-        scopeRaw?.let {
-            searchScope.update(it, postValue = false)
+        if (scopeRaw != null) {
+            hasTemporaryScope = true
+            searchScope.update(scopeRaw, postValue = false)
+            syncScopeState()
+        } else if (hasTemporaryScope) {
+            hasTemporaryScope = false
+            searchScope.update(persistedSearchScopeRaw, postValue = false)
+            syncScopeState()
         }
-        syncScopeState()
 
         // When the ViewModel already holds a non-empty committed query,
         // it means a search session is in progress or completed.
@@ -613,6 +622,7 @@ class SearchViewModel(
             selected.add(groupName)
         }
         searchScope.update(selected.toList())
+        persistSearchScope()
         syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
@@ -638,6 +648,7 @@ class SearchViewModel(
             }
             searchScope.updateSources(selectedSources)
         }
+        persistSearchScope()
         syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
@@ -653,6 +664,7 @@ class SearchViewModel(
             }
         } else {
             searchScope.update("")
+            persistSearchScope()
             syncScopeState()
         }
 
@@ -682,6 +694,32 @@ class SearchViewModel(
         }
         if (restartSearch && scopeChanged) {
             restartCommittedSearchIfNeeded()
+        }
+    }
+
+    private fun observeSearchScope() {
+        viewModelScope.launch {
+            localPreferencesRepository
+                .getPreference(LocalPreferencesKeys.SEARCH_SCOPE, "")
+                .distinctUntilChanged()
+                .collect { scopeRaw ->
+                    persistedSearchScopeRaw = scopeRaw
+                    if (!hasTemporaryScope && scopeRaw != searchScope.toString()) {
+                        searchScope.update(scopeRaw, postValue = false)
+                        syncScopeState()
+                    }
+                }
+        }
+    }
+
+    private fun persistSearchScope() {
+        hasTemporaryScope = false
+        persistedSearchScopeRaw = searchScope.toString()
+        viewModelScope.launch {
+            localPreferencesRepository.updatePreference(
+                LocalPreferencesKeys.SEARCH_SCOPE,
+                searchScope.toString()
+            )
         }
     }
 

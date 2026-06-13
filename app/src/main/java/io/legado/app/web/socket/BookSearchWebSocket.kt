@@ -15,7 +15,6 @@ import io.legado.app.domain.usecase.BookSearchControl
 import io.legado.app.domain.usecase.BookSearchRequest
 import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.SearchRunEvent
-import io.legado.app.help.config.AppConfig
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
@@ -82,7 +81,11 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
                         BookSearchRequest(
                             keyword = key,
                             page = 1,
-                            scope = BookSearchScope(AppConfig.searchScope),
+                            scope = BookSearchScope(
+                                localPreferencesRepository
+                                    .getPreference(LocalPreferencesKeys.SEARCH_SCOPE, "")
+                                    .first()
+                            ),
                             matchMode = MatchMode.of(
                                 localPreferencesRepository
                                     .getPreference(

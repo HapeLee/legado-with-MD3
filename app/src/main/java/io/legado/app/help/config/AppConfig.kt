@@ -634,18 +634,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val paddingDisplayCutouts
         get() = ReadConfig.paddingDisplayCutouts
 
-    var searchScope: String
-        get() = appCtx.getPrefString("searchScope") ?: ""
-        set(value) {
-            appCtx.putPrefString("searchScope", value)
-        }
-
-    var searchGroup: String
-        get() = appCtx.getPrefString("searchGroup") ?: ""
-        set(value) {
-            appCtx.putPrefString("searchGroup", value)
-        }
-
     var pageTouchSlop: Int
         get() = ReadConfig.pageTouchSlop
         set(value) {
