@@ -85,7 +85,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             ReadConfig.optimizeRender = value
         }
     val recordLog get() = OtherConfig.recordLog
-    var webServiceAutoStart = appCtx.getPrefBoolean(PreferKey.webServiceAutoStart, false)
+    var webServiceAutoStart = OtherConfig.webServiceAutoStart
 
     // -- lyc 版本特性 --
     val adaptSpecialStyle get() = ReadConfig.adaptSpecialStyle
