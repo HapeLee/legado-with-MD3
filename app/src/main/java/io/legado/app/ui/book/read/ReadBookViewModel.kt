@@ -3169,11 +3169,7 @@ class ReadBookViewModel(
     }
 
     private fun toggleDayNight() {
-        val nextMode = when (ThemeConfig.themeMode) {
-            "0" -> "1"  // follow system → light
-            "1" -> "2"  // light → dark
-            else -> "0" // dark → follow system
-        }
+        val nextMode = if (ReadConfig.isNightTheme) "1" else "2"
         ThemeConfig.themeMode = nextMode
         _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(

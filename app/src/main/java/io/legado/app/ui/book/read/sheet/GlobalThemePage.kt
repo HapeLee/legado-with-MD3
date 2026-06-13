@@ -21,7 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.GridView
@@ -51,7 +50,6 @@ import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
-import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.fadingEdge
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -155,14 +153,10 @@ fun GlobalThemePage(
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                val themeMode = ThemeConfig.themeMode
+                val isNightTheme = LegadoTheme.isDark
                 SmallTonalButton(
                     onClick = onToggleDayNight,
-                    icon = when (themeMode) {
-                        "1" -> Icons.Default.LightMode
-                        "2" -> Icons.Default.DarkMode
-                        else -> Icons.Default.BrightnessAuto
-                    },
+                    icon = if (isNightTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
                     contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
                     containerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
                     selectedContainerColor = LegadoTheme.colorScheme.surfaceContainerHigh,
