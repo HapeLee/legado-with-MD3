@@ -1729,28 +1729,45 @@ private fun MenuBottomBar(
     val sliderMax = seekMax.toFloat().coerceAtLeast(1f)
     var sliderValue by remember { mutableFloatStateOf(state.seekProgress.coerceIn(0, seekMax).toFloat()) }
     var sliderDragging by remember { mutableStateOf(false) }
+    var previewPageIndex by remember { mutableIntStateOf(state.seekProgress.coerceIn(0, seekMax)) }
     val toolButtonsBottomPadding = if (buttonGlassEnabled) 6.dp else 0.dp
     val contentBottomPadding = if (bottomPadding > toolButtonsBottomPadding) {
         bottomPadding - toolButtonsBottomPadding
     } else {
         0.dp
     }
+    val progressBarBehavior = ReadConfig.progressBarBehavior
 
     fun commitSliderValue(value: Float) {
         val target = value.roundToInt().coerceIn(0, seekMax)
         sliderDragging = false
         sliderValue = target.toFloat()
-        val behavior = ReadConfig.progressBarBehavior
-        if (behavior == "page") {
+        previewPageIndex = target
+        if (progressBarBehavior == "page") {
             onIntent(ReadBookIntent.SkipToPage(target))
         } else {
             onIntent(ReadBookIntent.SeekToChapter(target))
         }
     }
 
-    LaunchedEffect(state.seekProgress, seekMax) {
-        if (!sliderDragging) {
-            sliderValue = state.seekProgress.coerceIn(0, seekMax).toFloat()
+    fun updateSliderValue(value: Float) {
+        val coercedValue = value.coerceIn(0f, sliderMax)
+        sliderDragging = true
+        sliderValue = coercedValue
+        if (progressBarBehavior == "page") {
+            val target = coercedValue.roundToInt().coerceIn(0, seekMax)
+            if (target != previewPageIndex) {
+                previewPageIndex = target
+                onIntent(ReadBookIntent.SkipToPage(target))
+            }
+        }
+    }
+
+    LaunchedEffect(state.seekProgress, seekMax, progressBarBehavior) {
+        val progress = state.seekProgress.coerceIn(0, seekMax)
+        previewPageIndex = progress
+        if (progressBarBehavior == "page" || !sliderDragging) {
+            sliderValue = progress.toFloat()
         }
     }
 
@@ -1810,10 +1827,7 @@ private fun MenuBottomBar(
 
                 ReadMenuSlider(
                     value = sliderValue.coerceIn(0f, sliderMax),
-                    onValueChange = { value ->
-                        sliderDragging = true
-                        sliderValue = value.coerceIn(0f, sliderMax)
-                    },
+                    onValueChange = ::updateSliderValue,
                     onValueChangeFinished = {
                         commitSliderValue(sliderValue)
                     },
@@ -2721,18 +2735,27 @@ private fun BrightnessBar(
     var sliderValue by remember { mutableFloatStateOf(brightness.toFloat()) }
     var sliderDragging by remember { mutableStateOf(false) }
 
-    LaunchedEffect(brightness) {
-        if (!sliderDragging) {
+    LaunchedEffect(brightness, brightnessAuto) {
+        if (brightnessAuto) {
+            sliderDragging = false
+            sliderValue = brightness.toFloat()
+        } else if (!sliderDragging) {
             sliderValue = brightness.toFloat()
         }
     }
 
     fun commitSliderValue(value: Float) {
-        if (brightnessAuto) return
         val target = value.roundToInt().coerceIn(0, 100)
         sliderDragging = false
         sliderValue = target.toFloat()
+        if (brightnessAuto) return
         onBrightnessChange(target)
+    }
+
+    fun toggleAuto() {
+        sliderDragging = false
+        sliderValue = brightness.toFloat()
+        onToggleAuto()
     }
 
     if (vertical) {
@@ -2744,7 +2767,7 @@ private fun BrightnessBar(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             ReadMenuGlassIconButton(
-                onClick = onToggleAuto,
+                onClick = ::toggleAuto,
                 icon = Icons.Filled.BrightnessAuto,
                 colors = colors,
                 backdrop = backdrop,
@@ -2787,7 +2810,7 @@ private fun BrightnessBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ReadMenuGlassIconButton(
-                onClick = onToggleAuto,
+                onClick = ::toggleAuto,
                 icon = Icons.Filled.BrightnessAuto,
                 colors = colors,
                 backdrop = backdrop,
