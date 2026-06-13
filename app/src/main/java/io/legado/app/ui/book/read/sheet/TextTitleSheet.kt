@@ -360,14 +360,14 @@ internal fun TextEffectsPage(
 internal fun TitleSettingsPage(
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    var titleMode by remember { mutableIntStateOf(ReadBookConfig.titleMode) }
-    var titleBold by remember { mutableIntStateOf(ReadBookConfig.titleBold) }
-    var titleSegScaling by remember { mutableFloatStateOf(ReadBookConfig.titleSegScaling) }
-    var titleLineSpacingExtra by remember { mutableIntStateOf(ReadBookConfig.titleLineSpacingExtra) }
-    var titleLineSpacingSub by remember { mutableIntStateOf(ReadBookConfig.titleLineSpacingSub) }
-    var titleSize by remember { mutableIntStateOf(ReadBookConfig.titleSize) }
-    var titleTopSpacing by remember { mutableIntStateOf(ReadBookConfig.titleTopSpacing) }
-    var titleBottomSpacing by remember { mutableIntStateOf(ReadBookConfig.titleBottomSpacing) }
+    var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
+    var titleBold by remember(ReadBookConfig.titleBold) { mutableIntStateOf(ReadBookConfig.titleBold) }
+    var titleSegScaling by remember(ReadBookConfig.titleSegScaling) { mutableFloatStateOf(ReadBookConfig.titleSegScaling) }
+    var titleLineSpacingExtra by remember(ReadBookConfig.titleLineSpacingExtra) { mutableIntStateOf(ReadBookConfig.titleLineSpacingExtra) }
+    var titleLineSpacingSub by remember(ReadBookConfig.titleLineSpacingSub) { mutableIntStateOf(ReadBookConfig.titleLineSpacingSub) }
+    var titleSize by remember(ReadBookConfig.titleSize) { mutableIntStateOf(ReadBookConfig.titleSize) }
+    var titleTopSpacing by remember(ReadBookConfig.titleTopSpacing) { mutableIntStateOf(ReadBookConfig.titleTopSpacing) }
+    var titleBottomSpacing by remember(ReadBookConfig.titleBottomSpacing) { mutableIntStateOf(ReadBookConfig.titleBottomSpacing) }
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerId by remember { mutableIntStateOf(0) }
