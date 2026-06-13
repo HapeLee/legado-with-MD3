@@ -28,9 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.model.BookShelfState
 import io.legado.app.ui.theme.LegadoTheme
@@ -53,6 +55,7 @@ fun SearchBookListItem(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    sourceCount: Int? = null,
 ) {
     Row(
         modifier = modifier
@@ -106,12 +109,25 @@ fun SearchBookListItem(
                 .weight(1f)
                 .align(Alignment.CenterVertically)
         ) {
-            AppText(
-                text = book.name,
-                style = LegadoTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AppText(
+                    text = book.name,
+                    modifier = Modifier.weight(1f),
+                    style = LegadoTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                sourceCount?.let { count ->
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextCard(
+                        text = stringResource(R.string.search_book_source_count, count),
+                        cornerRadius = 4.dp,
+                        horizontalPadding = 4.dp,
+                        verticalPadding = 2.dp
+                    )
+                }
+            }
 
             Row {
                 AppText(

@@ -84,10 +84,11 @@ class SearchViewModel(
     private val bookshelfKeys = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val searchScope = SearchScope(AppConfig.searchScope)
     private val searchControl = BookSearchControl()
-    private val searchResultBooks = LinkedHashMap<String, SearchBook>()
+    private val searchResultBooks = LinkedHashMap<SearchResultKey, SearchBook>()
 
     private var searchJob: Job? = null
     private var currentSearchPage = 1
+    private var resultCountBeforeCurrentPage = 0
     private var wasSearching = false
 
     init {
@@ -483,6 +484,7 @@ class SearchViewModel(
     private fun startSearch(keyword: String, page: Int) {
         searchJob?.cancel()
         searchControl.resume()
+        resultCountBeforeCurrentPage = searchResultBooks.size
         wasSearching = true
         searchJob = viewModelScope.launch {
             try {
@@ -517,10 +519,8 @@ class SearchViewModel(
             }
 
             is SearchRunEvent.Progress -> {
-                event.removedBookUrls.forEach { searchResultBooks.remove(it) }
-                event.upsertBooks.forEach { book ->
-                    searchResultBooks[book.bookUrl] = book
-                }
+                removeSearchResults(event.removedBookUrls)
+                mergeSearchResults(event.upsertBooks)
                 _uiState.update {
                     it.copy(
                         results = buildSearchResultItems(
@@ -542,9 +542,16 @@ class SearchViewModel(
                     } else {
                         null
                     }
+                    val hasNewPageResults = searchResultBooks.size > resultCountBeforeCurrentPage
+                    val exactSearchShouldStopAfterFirstPage =
+                        state.matchMode == MatchMode.EXACT &&
+                            currentSearchPage == 1 &&
+                            searchResultBooks.size <= EXACT_SEARCH_SINGLE_PAGE_RESULT_THRESHOLD
                     state.copy(
                         isSearching = false,
-                        hasMore = event.hasMore,
+                        hasMore = event.hasMore &&
+                            hasNewPageResults &&
+                            !exactSearchShouldStopAfterFirstPage,
                         emptyScopeAction = emptyAction,
                     )
                 }
@@ -697,7 +704,9 @@ class SearchViewModel(
     private fun buildSearchResultItems(
         shelf: Set<BookShelfKey>,
     ): List<SearchResultItemUi> {
-        return searchResultBooks.values.toList().toSearchResultItems(shelf)
+        return searchResultBooks.values
+            .sortedWithSearchPriority(_uiState.value.committedQuery, _uiState.value.matchMode)
+            .toSearchResultItems(shelf)
     }
 
     private fun List<SearchResultItemUi>.withShelfState(
@@ -748,5 +757,58 @@ class SearchViewModel(
 
     private fun emitEffect(effect: SearchEffect) {
         _effects.tryEmit(effect)
+    }
+
+    private fun mergeSearchResults(books: List<SearchBook>) {
+        books.forEach { book ->
+            val key = SearchResultKey(book.name, book.author)
+            val currentBook = searchResultBooks[key]
+            if (currentBook == null) {
+                searchResultBooks[key] = book
+            } else {
+                book.origins.forEach { origin -> currentBook.addOrigin(origin) }
+            }
+        }
+    }
+
+    private fun removeSearchResults(bookUrls: List<String>) {
+        if (bookUrls.isEmpty()) return
+        val removedUrls = bookUrls.toHashSet()
+        searchResultBooks.entries.removeAll { (_, book) -> book.bookUrl in removedUrls }
+    }
+
+    private fun Collection<SearchBook>.sortedWithSearchPriority(
+        keyword: String,
+        matchMode: MatchMode,
+    ): List<SearchBook> {
+        val equalBooks = arrayListOf<SearchBook>()
+        val tagsBooks = arrayListOf<SearchBook>()
+        val containsBooks = arrayListOf<SearchBook>()
+        val otherBooks = arrayListOf<SearchBook>()
+        forEach { book ->
+            when {
+                book.name.equals(keyword, ignoreCase = true) ||
+                    book.author.equals(keyword, ignoreCase = true) -> equalBooks.add(book)
+                book.kind?.contains(keyword, ignoreCase = true) == true -> tagsBooks.add(book)
+                book.name.contains(keyword, ignoreCase = true) ||
+                    book.author.contains(keyword, ignoreCase = true) -> containsBooks.add(book)
+                matchMode == MatchMode.DEFAULT -> otherBooks.add(book)
+            }
+        }
+        return buildList(size) {
+            addAll(equalBooks.sortedByDescending { it.origins.size })
+            addAll(tagsBooks.sortedByDescending { it.origins.size })
+            addAll(containsBooks.sortedByDescending { it.origins.size })
+            addAll(otherBooks)
+        }
+    }
+
+    private data class SearchResultKey(
+        val name: String,
+        val author: String,
+    )
+
+    private companion object {
+        const val EXACT_SEARCH_SINGLE_PAGE_RESULT_THRESHOLD = 3
     }
 }

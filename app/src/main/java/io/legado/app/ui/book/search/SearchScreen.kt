@@ -509,7 +509,8 @@ fun SearchScreen(
                                                 },
                                                 sharedTransitionScope = sharedTransitionScope,
                                                 animatedVisibilityScope = animatedVisibilityScope,
-                                                sharedCoverKey = sharedCoverKey
+                                                sharedCoverKey = sharedCoverKey,
+                                                sourceCount = item.book.origins.size,
                                             )
                                         }
 
