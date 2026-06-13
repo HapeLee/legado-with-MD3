@@ -80,6 +80,7 @@
     <string name="version">版本</string>
     <string name="local">本機</string>
     <string name="search">搜尋</string>
+    <string name="search_placeholder">搜尋…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">來源：%s</string>
     <string name="read_dur_progress">最近：%s</string>

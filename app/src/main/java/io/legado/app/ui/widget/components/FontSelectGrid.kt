@@ -84,7 +84,7 @@ fun FontSelectGrid(
         SearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
-            placeholder = stringResource(R.string.search_content),
+            placeholder = stringResource(R.string.search_placeholder),
             autoFocus = false,
         )
 

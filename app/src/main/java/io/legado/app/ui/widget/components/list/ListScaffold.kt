@@ -51,7 +51,7 @@ fun <T> ListScaffold(
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit = {},
     searchTrailingIcon: @Composable (() -> Unit)? = null,
-    searchPlaceholder: String = "搜索...",
+    searchPlaceholder: String? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: @Composable (ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,

@@ -124,6 +124,7 @@
     <string name="version">Version</string>
     <string name="local">Local</string>
     <string name="search">Search</string>
+    <string name="search_placeholder">Search…</string>
     <string name="input_search_key">Input search keyword</string>
     <string name="origin_format">Origin: %s</string>
     <string name="read_dur_progress">Origin: %s</string>

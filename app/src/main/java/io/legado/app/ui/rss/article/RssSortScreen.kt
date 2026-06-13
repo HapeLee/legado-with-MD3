@@ -383,7 +383,7 @@ private fun RssSearchSheet(
             query = query,
             onQueryChange = onQueryChange,
             onSearch = onSearch,
-            placeholder = stringResource(R.string.search_content),
+            placeholder = stringResource(R.string.search_placeholder),
             modifier = Modifier.fillMaxWidth()
         )
     }

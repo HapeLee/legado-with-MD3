@@ -40,7 +40,7 @@ fun <T> DynamicTopAppBar(
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: (String) -> Unit = {},
-    searchPlaceholder: String,
+    searchPlaceholder: String?,
     searchLeadingIcon: ImageVector = Icons.Default.Search,
     searchTrailingIcon: @Composable (() -> Unit)? = null,
     searchDropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,

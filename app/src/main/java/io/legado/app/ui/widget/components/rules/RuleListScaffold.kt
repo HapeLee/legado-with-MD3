@@ -44,7 +44,7 @@ fun <T> RuleListScaffold(
     onBackClick: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    searchPlaceholder: String = "搜索...",
+    searchPlaceholder: String? = null,
     topBarActions: @Composable RowScope.() -> Unit = {},
     bottomContent: @Composable (ColumnScope.(GlassTopAppBarScrollBehavior) -> Unit)? = null,
     dropDownMenuContent: (@Composable ColumnScope.(dismiss: () -> Unit) -> Unit)? = null,
