@@ -55,32 +55,7 @@ fun ReadStyleContent(
     var currentPage by remember { mutableIntStateOf(0) }
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
-    val density = LocalDensity.current
-    val animatedHeight by remember(pagerState, density) {
-        derivedStateOf {
-            val pageCount = pagerState.pageCount
-            val position = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-                .coerceIn(0f, (pageCount - 1).coerceAtLeast(0).toFloat())
-            val floorPage = position.toInt().coerceIn(0, pageCount - 1)
-            val ceilPage = (floorPage + 1).coerceIn(0, pageCount - 1)
-
-            val floorHeight = pageHeights[floorPage] ?: 0
-            val ceilHeight = pageHeights[ceilPage] ?: floorHeight
-
-            val fraction = position - floorPage
-
-            val startHeight = if (floorHeight > 0) floorHeight else (pageHeights.values.firstOrNull() ?: 0)
-            val endHeight = if (ceilHeight > 0) ceilHeight else startHeight
-
-            val interpolated = startHeight + (endHeight - startHeight) * fraction
-
-            if (interpolated > 0) {
-                with(density) { interpolated.toDp() }
-            } else {
-                Dp.Unspecified
-            }
-        }
-    }
+    val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
@@ -169,5 +144,38 @@ internal fun Modifier.pagerHeight(height: Dp) = this.layout { measurable, constr
     val layoutHeight = if (height != Dp.Unspecified) height.roundToPx() else placeable.height
     layout(placeable.width, layoutHeight) {
         placeable.placeRelative(0, 0)
+    }
+}
+
+@Composable
+internal fun rememberPagerAnimatedHeight(
+    pagerState: androidx.compose.foundation.pager.PagerState,
+    pageHeights: Map<Int, Int>
+): androidx.compose.runtime.State<Dp> {
+    val density = LocalDensity.current
+    return remember(pagerState, density) {
+        derivedStateOf {
+            val pageCount = pagerState.pageCount
+            val position = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                .coerceIn(0f, (pageCount - 1).coerceAtLeast(0).toFloat())
+            val floorPage = position.toInt().coerceIn(0, pageCount - 1)
+            val ceilPage = (floorPage + 1).coerceIn(0, pageCount - 1)
+
+            val floorHeight = pageHeights[floorPage] ?: 0
+            val ceilHeight = pageHeights[ceilPage] ?: floorHeight
+
+            val fraction = position - floorPage
+
+            val startHeight = if (floorHeight > 0) floorHeight else (pageHeights.values.firstOrNull() ?: 0)
+            val endHeight = if (ceilHeight > 0) ceilHeight else startHeight
+
+            val interpolated = startHeight + (endHeight - startHeight) * fraction
+
+            if (interpolated > 0) {
+                with(density) { interpolated.toDp() }
+            } else {
+                Dp.Unspecified
+            }
+        }
     }
 }
