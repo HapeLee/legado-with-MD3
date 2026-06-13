@@ -232,9 +232,12 @@ data class TextLine(
      * 绘制下划线
      */
     private fun drawUnderline(canvas: Canvas, dottedLine: Boolean) {
-        val paint = ChapterProvider.contentPaint
+        val paint = PaintPool.obtain()
+        paint.set(ChapterProvider.contentPaint)
+        paint.clearShadowLayer()
         paint.color = ReadBookConfig.durConfig.curUnderlineColor()
         paint.strokeWidth = ReadBookConfig.underlineHeight.toFloat()
+        paint.style = Paint.Style.STROKE
         paint.pathEffect = if (dottedLine && !ReadConfig.isEInkMode)
             ChapterProvider.dashEffect
         else
@@ -252,6 +255,7 @@ data class TextLine(
             lineEnd
         }
         canvas.drawLine(startX, lineY, endX, lineY, paint)
+        PaintPool.recycle(paint)
     }
 
     /**
@@ -412,6 +416,7 @@ data class TextLine(
     ) {
         val paint = PaintPool.obtain()
         paint.set(ChapterProvider.contentPaint)
+        paint.clearShadowLayer()
         paint.color = underlineColor
         paint.strokeWidth = underlineWidth.dpToPx()
         paint.style = Paint.Style.STROKE
