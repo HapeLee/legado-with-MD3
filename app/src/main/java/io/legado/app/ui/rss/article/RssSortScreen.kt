@@ -54,6 +54,7 @@ import io.legado.app.ui.theme.adaptiveHorizontalPaddingTab
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.EmptyMessage
+import io.legado.app.ui.widget.components.SearchBar
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.button.series.SmallToggleButton
@@ -85,12 +86,15 @@ fun RssSortScreen(
     title: String,
     sortList: List<Pair<String, String>>,
     preferredSortUrl: String?,
+    searchKey: String?,
+    hasSearch: Boolean,
     hasLogin: Boolean,
     redirectPolicy: RedirectPolicy,
     showReadRecordSheet: Boolean,
     readRecords: List<RssReadRecord>,
     sourceVariableSheet: RssSourceVariableSheetState?,
     onBackClick: () -> Unit,
+    onSearch: (String) -> Unit,
     onLogin: () -> Unit,
     onRefreshSort: () -> Unit,
     onSetSourceVariable: () -> Unit,
@@ -120,13 +124,23 @@ fun RssSortScreen(
     val tabTitles = sortList.map { it.first }
 
     var showMainMenu by remember { mutableStateOf(false) }
+    var showSearchSheet by remember { mutableStateOf(false) }
+    var searchQuery by remember(searchKey) { mutableStateOf(searchKey.orEmpty()) }
     var showRedirectMenu by remember { mutableStateOf(false) }
     var showGroupMenu by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showMainMenu || showRedirectMenu || showGroupMenu) {
+    BackHandler(enabled = showMainMenu || showSearchSheet || showRedirectMenu || showGroupMenu) {
         showMainMenu = false
+        showSearchSheet = false
         showRedirectMenu = false
         showGroupMenu = false
+    }
+
+    fun submitSearch(query: String) {
+        val normalized = query.trim()
+        if (normalized.isEmpty()) return
+        showSearchSheet = false
+        onSearch(normalized)
     }
 
     LaunchedEffect(sortList.size) {
@@ -147,6 +161,13 @@ fun RssSortScreen(
                     TopBarNavigationButton(onClick = onBackClick, imageVector = AppIcons.Back)
                 },
                 actions = {
+                    if (hasSearch) {
+                        TopBarActionButton(
+                            onClick = { showSearchSheet = true },
+                            imageVector = AppIcons.Search,
+                            contentDescription = stringResource(R.string.search)
+                        )
+                    }
                     TopBarActionButton(
                         onClick = { showMainMenu = true },
                         imageVector = AppIcons.MoreVert,
@@ -328,6 +349,44 @@ fun RssSortScreen(
         onDismissRequest = onDismissSourceVariable,
         onSave = onSaveSourceVariable
     )
+
+    RssSearchSheet(
+        show = showSearchSheet,
+        query = searchQuery,
+        onQueryChange = { searchQuery = it },
+        onSearch = ::submitSearch,
+        onDismissRequest = { showSearchSheet = false }
+    )
+}
+
+@Composable
+private fun RssSearchSheet(
+    show: Boolean,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = stringResource(R.string.search),
+        endAction = {
+            SmallPlainButton(
+                onClick = { onSearch(query) },
+                icon = AppIcons.Search,
+                contentDescription = stringResource(R.string.search)
+            )
+        }
+    ) {
+        SearchBar(
+            query = query,
+            onQueryChange = onQueryChange,
+            onSearch = onSearch,
+            placeholder = stringResource(R.string.search_content),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

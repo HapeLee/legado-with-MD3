@@ -9,6 +9,9 @@ import io.legado.app.data.entities.RssReadRecord
 import io.legado.app.data.entities.RssSource
 import io.legado.app.help.source.removeSortCache
 import io.legado.app.help.source.sortUrls
+import io.legado.app.utils.GSONStrict
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
@@ -32,8 +35,30 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    suspend fun loadSorts(): List<Pair<String, String>> {
+    suspend fun loadSorts(sortUrl: String? = null, searchKey: String? = null): List<Pair<String, String>> {
+        if (searchKey != null) {
+            return rssSource?.searchUrl?.takeIf { it.isNotBlank() }?.let {
+                listOf("搜索" to it)
+            }.orEmpty()
+        }
+        sortUrl?.takeIf { it.isNotBlank() }?.let { url ->
+            return parseSortUrl(url)
+        }
         return rssSource?.sortUrls().orEmpty()
+    }
+
+    private fun parseSortUrl(sortUrl: String): List<Pair<String, String>> {
+        return try {
+            if (sortUrl.isJsonObject()) {
+                GSONStrict.fromJsonObject<Map<String, String>>(sortUrl)
+                    .getOrThrow()
+                    .map { it.key to it.value }
+            } else {
+                listOf("" to sortUrl)
+            }
+        } catch (_: Exception) {
+            listOf("" to sortUrl)
+        }
     }
 
     fun currentArticleStyle(): Int = rssSource?.articleStyle ?: 0

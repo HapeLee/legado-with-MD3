@@ -29,17 +29,23 @@ import androidx.compose.ui.res.stringResource
 fun RssSortRouteScreen(
     sourceUrl: String?,
     initialSortUrl: String?,
+    initialSearchKey: String?,
     onBackClick: () -> Unit,
+    onSearch: (String) -> Unit,
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     viewModel: RssSortViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var sortList by remember(sourceUrl) { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-    var articleStyle by remember(sourceUrl) { mutableIntStateOf(0) }
-    var redirectPolicy by remember(sourceUrl) { mutableStateOf(RedirectPolicy.ALLOW_ALL) }
-    var screenTitle by remember(sourceUrl) { mutableStateOf("") }
+    var sortList by remember(sourceUrl, initialSortUrl, initialSearchKey) {
+        mutableStateOf<List<Pair<String, String>>>(emptyList())
+    }
+    var articleStyle by remember(sourceUrl, initialSortUrl, initialSearchKey) { mutableIntStateOf(0) }
+    var redirectPolicy by remember(sourceUrl, initialSortUrl, initialSearchKey) {
+        mutableStateOf(RedirectPolicy.ALLOW_ALL)
+    }
+    var screenTitle by remember(sourceUrl, initialSortUrl, initialSearchKey) { mutableStateOf("") }
     val setSourceVariableText = stringResource(R.string.set_source_variable)
     val errorText = stringResource(R.string.error)
 
@@ -51,9 +57,9 @@ fun RssSortRouteScreen(
         withContext(Dispatchers.IO) {
             viewModel.initDataSource(sourceUrl)
         }
-        sortList = viewModel.loadSorts()
+        sortList = viewModel.loadSorts(initialSortUrl, initialSearchKey)
         articleStyle = viewModel.currentArticleStyle()
-        screenTitle = viewModel.rssSource?.sourceName.orEmpty()
+        screenTitle = initialSearchKey ?: viewModel.rssSource?.sourceName.orEmpty()
         redirectPolicy = RedirectPolicy.fromString(viewModel.rssSource?.redirectPolicy)
     }
 
@@ -65,7 +71,7 @@ fun RssSortRouteScreen(
         }
     }
 
-    LaunchedEffect(sourceUrl) {
+    LaunchedEffect(sourceUrl, initialSortUrl, initialSearchKey) {
         reloadSourceState()
     }
 
@@ -73,12 +79,15 @@ fun RssSortRouteScreen(
         title = screenTitle.ifBlank { stringResource(R.string.rss) },
         sortList = sortList,
         preferredSortUrl = initialSortUrl,
+        searchKey = initialSearchKey,
+        hasSearch = !viewModel.rssSource?.searchUrl.isNullOrBlank(),
         hasLogin = !viewModel.rssSource?.loginUrl.isNullOrBlank(),
         redirectPolicy = redirectPolicy,
         showReadRecordSheet = showReadRecordSheet,
         readRecords = readRecords,
         sourceVariableSheet = sourceVariableSheet,
         onBackClick = onBackClick,
+        onSearch = onSearch,
         onLogin = {
             context.startActivity<SourceLoginActivity> {
                 putExtra("type", "rssSource")
@@ -88,7 +97,7 @@ fun RssSortRouteScreen(
         onRefreshSort = {
             scope.launch {
                 viewModel.clearSortCache()
-                sortList = viewModel.loadSorts()
+                sortList = viewModel.loadSorts(initialSortUrl, initialSearchKey)
             }
         },
         onSetSourceVariable = {
@@ -157,7 +166,7 @@ fun RssSortRouteScreen(
         },
         pagerContent = { _, sort, paddingValues ->
             val pageViewModel: RssArticlesViewModel = koinViewModel(
-                key = "rss_${viewModel.url}_${sort.first}_${sort.second}"
+                key = "rss_${viewModel.url}_${sort.first}_${sort.second}_${initialSearchKey.orEmpty()}"
             )
             RssArticlesPage(
                 sortName = sort.first,
@@ -166,6 +175,7 @@ fun RssSortRouteScreen(
                 rssUrl = viewModel.url,
                 rssSource = viewModel.rssSource,
                 viewModel = pageViewModel,
+                searchKey = initialSearchKey,
                 paddingValues = paddingValues,
                 onRead = { article ->
                     viewModel.read(article)

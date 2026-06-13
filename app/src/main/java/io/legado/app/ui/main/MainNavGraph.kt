@@ -404,7 +404,16 @@ fun MainActivity.mainEntryProvider(
         RssSortRouteScreen(
             sourceUrl = route.sourceUrl,
             initialSortUrl = route.sortUrl,
+            initialSearchKey = route.key,
             onBackClick = { onNavigateBack() },
+            onSearch = { key ->
+                onNavigateToRoute(
+                    MainRouteRssSort(
+                        sourceUrl = route.sourceUrl,
+                        key = key
+                    )
+                )
+            },
             onOpenRead = { title, origin, link, openUrl ->
                 if (link?.contains("@js:") == true) {
                     onNavigateToRoute(
