@@ -2,7 +2,6 @@ package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -65,10 +64,8 @@ import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.utils.getCompatColor
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import kotlin.time.Duration.Companion.milliseconds
 
 // Color picker IDs
 private const val COLOR_HEADER = 7
@@ -124,25 +121,15 @@ internal fun HeaderFooterPage(
     val headerScrollState = rememberScrollState()
     val footerScrollState = rememberScrollState()
 
-    LaunchedEffect(expandHeaderPadding) {
+    LaunchedEffect(expandHeaderPadding, headerScrollState.maxValue) {
         if (expandHeaderPadding) {
-            //等动画结束后再滚动到底部，否则maxValue值不是最新
-            delay(300.milliseconds)
-            headerScrollState.animateScrollTo(
-                headerScrollState.maxValue,
-                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
-            )
+            headerScrollState.scrollTo(headerScrollState.maxValue)
         }
     }
 
-    LaunchedEffect(expandFooterPadding) {
+    LaunchedEffect(expandFooterPadding, footerScrollState.maxValue) {
         if (expandFooterPadding) {
-            //等动画结束后再滚动到底部，否则maxValue值不是最新
-            delay(300.milliseconds)
-            footerScrollState.animateScrollTo(
-                footerScrollState.maxValue,
-                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
-            )
+            footerScrollState.scrollTo(footerScrollState.maxValue)
         }
     }
 
@@ -313,7 +300,13 @@ internal fun HeaderFooterPage(
                         Spacer(Modifier.height(8.dp))
                         TinyClickableSettingItem(
                             title = stringResource(R.string.padding),
-                            description = "上: ${headerPaddingTop.toInt()}  下: ${headerPaddingBottom.toInt()}  左: ${headerPaddingLeft.toInt()}  右: ${headerPaddingRight.toInt()}",
+                            description = stringResource(
+                                R.string.padding_format,
+                                headerPaddingTop.toInt(),
+                                headerPaddingBottom.toInt(),
+                                headerPaddingLeft.toInt(),
+                                headerPaddingRight.toInt(),
+                            ),
                             trailingContent = {
                                 Icon(
                                     imageVector = if (expandHeaderPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
@@ -437,7 +430,13 @@ internal fun HeaderFooterPage(
                         Spacer(Modifier.height(8.dp))
                         TinyClickableSettingItem(
                             title = stringResource(R.string.padding),
-                            description = "上: ${footerPaddingTop.toInt()}  下: ${footerPaddingBottom.toInt()}  左: ${footerPaddingLeft.toInt()}  右: ${footerPaddingRight.toInt()}",
+                            description = stringResource(
+                                R.string.padding_format,
+                                footerPaddingTop.toInt(),
+                                footerPaddingBottom.toInt(),
+                                footerPaddingLeft.toInt(),
+                                footerPaddingRight.toInt(),
+                            ),
                             trailingContent = {
                                 Icon(
                                     imageVector = if (expandFooterPadding) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
