@@ -16,6 +16,7 @@ import io.legado.app.constant.IntentAction
 import io.legado.app.constant.NotificationId
 import io.legado.app.constant.PreferKey
 import io.legado.app.receiver.NetworkChangedListener
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.eventBus.FlowEventBus
 import io.legado.app.utils.getPrefBoolean
@@ -118,7 +119,7 @@ class WebService : BaseService() {
         when (intent?.action) {
             IntentAction.stop -> {
                 // ——————【修改开始】通知栏点击停止时，也记录关闭状态——————
-                appCtx.putPrefBoolean("web_service_auto", false)
+                OtherConfig.webServiceAutoStart = false
                 stopSelf()
                 // ——————【修改结束】——————
             }
