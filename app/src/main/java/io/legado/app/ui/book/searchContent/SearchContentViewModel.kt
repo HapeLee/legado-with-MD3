@@ -81,7 +81,12 @@ class SearchContentViewModel(
     private fun initBook() {
         viewModelScope.launch {
             val book = bookRepository.getBook(bookUrl)
-            val cachedResults = searchContentRepository.getCache(bookUrl, _searchQuery.value)
+            val cachedResults = searchContentRepository.getCache(
+                bookUrl,
+                _searchQuery.value,
+                _replaceEnabled.value,
+                _regexReplace.value
+            )
 
             _uiState.update {
                 it.copy(

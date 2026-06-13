@@ -116,6 +116,7 @@ class ReadBookController(
     }
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
+    private var pendingSearchResultMark: IntArray? = null
     // justInitData moved to ViewModel (set on InitData intent)
 
     val isAutoPage: Boolean get() = refs?.readView?.isAutoPage == true
@@ -599,6 +600,10 @@ class ReadBookController(
 
             is ReadBookEffect.UpContent -> {
                 refs?.readView?.upContent(effect.relativePosition, effect.resetPageOffset)
+                effect.success?.invoke()
+                refs?.readView?.post {
+                    consumePendingSearchResultMark()
+                }
                 if (effect.relativePosition == 0) onUnhandledEffect(ReadBookEffect.UpSeekBar)
             }
 
@@ -611,7 +616,10 @@ class ReadBookController(
                 ReadBook.loadContent(false)
             }
 
-            is ReadBookEffect.CancelSelect -> refs?.readView?.cancelSelect()
+            is ReadBookEffect.CancelSelect -> {
+                pendingSearchResultMark = null
+                refs?.readView?.cancelSelect()
+            }
             is ReadBookEffect.MenuImageStyleChanged -> refs?.readView?.upPageAnim()
 
             // ── Simple Activity-API effects ──
@@ -707,37 +715,35 @@ class ReadBookController(
             is ReadBookEffect.NavigateToSearchResult -> {
                 if (effect.pageIndex < 0) {
                     // Chapter not loaded — open it, then mark in the success callback
-                    ReadBook.openChapter(effect.chapterIndex) {
+                    ReadBook.openChapter(
+                        effect.chapterIndex,
+                        effect.result.queryIndexInChapter
+                    ) {
                         val tc = ReadBook.curTextChapter ?: return@openChapter
                         val query = effect.result.query
                         val pos = viewModel.searchResultPositions(tc, effect.result, query)
-                        val lineIndex = pos[1]
-                        val charIndex = pos[2]
-                        val endLineIndex = pos[3]
-                        val endCharIndex = pos[4]
+                        if (pos[0] < 0) return@openChapter
                         activity.lifecycleScope.launch(Main) {
-                            navigatePageByPos(tc, pos[0])
-                            markSearchResultOnPage(
-                                intArrayOf(
-                                    pos[0], lineIndex, charIndex, endLineIndex, endCharIndex
-                                )
+                            markSearchResultAfterNavigation(
+                                intArrayOf(pos[0], pos[1], pos[2], pos[3], pos[4], pos[5])
                             )
                         }
                     }
                 } else {
                     // Same chapter — navigate to page, then mark
                     val tc = ReadBook.curTextChapter ?: return
-                    navigatePageByPos(tc, effect.pageIndex)
-                    markSearchResultOnPage(
+                    markSearchResultAfterNavigation(
                         intArrayOf(
                             effect.pageIndex, effect.lineIndex,
-                            effect.startCharIndex, effect.endLineIndex, effect.endCharIndex
+                            effect.startCharIndex, effect.endRelativePage,
+                            effect.endLineIndex, effect.endCharIndex
                         )
                     )
                 }
             }
 
             is ReadBookEffect.ExitSearch -> {
+                pendingSearchResultMark = null
                 ReadBook.clearSearchResult()
                 refs?.readView?.cancelSelect(clearSearchResult = true)
             }
@@ -1105,33 +1111,46 @@ class ReadBookController(
 
     // ── Search result navigation helpers ─────────────────────────────
 
-    /**
-     * Navigate to the page at [pageIndex] within the current chapter.
-     */
-    private fun navigatePageByPos(textChapter: TextChapter, pageIndex: Int) {
-        val pagePos = textChapter.getReadLength(pageIndex)
-        if (ReadBook.durChapterPos != pagePos) {
-            ReadBook.durChapterPos = pagePos
-            ReadBook.callBack?.upContent()
-            ReadBook.callBack?.cancelSelect()
+    private fun markSearchResultAfterNavigation(pos: IntArray) {
+        if (pos[0] < 0) return
+        val readView = refs?.readView ?: return
+        pendingSearchResultMark = pos
+        ReadBook.skipToPage(pos[0]) {
+            readView.post {
+                consumePendingSearchResultMark()
+            }
         }
+    }
+
+    private fun consumePendingSearchResultMark(): Boolean {
+        val pos = pendingSearchResultMark ?: return false
+        val readView = refs?.readView ?: return false
+        if (ReadBook.durPageIndex != pos[0] || readView.curPage.textPage.index != pos[0]) {
+            return false
+        }
+        pendingSearchResultMark = null
+        markSearchResultOnPage(pos)
+        return true
     }
 
     /**
      * Mark search result columns on the current page for highlighting.
-     * @param pos array of [pageIndex, lineIndex, startCharIndex, endLineIndex, endCharIndex]
+     * @param pos array of [pageIndex, lineIndex, startCharIndex, endRelativePage, endLineIndex, endCharIndex]
      */
     private fun markSearchResultOnPage(pos: IntArray) {
         val readView = refs?.readView ?: return
         val lineIndex = pos[1]
         val startCharIndex = pos[2]
-        val endLineIndex = pos[3]
-        val endCharIndex = pos[4]
+        val endRelativePage = pos[3]
+        val endLineIndex = pos[4]
+        val endCharIndex = pos[5]
+        ReadBook.clearSearchResult()
         readView.cancelSelect(clearSearchResult = true)
         isSelectingSearchResult = true
         try {
             readView.curPage.selectStartMoveIndex(0, lineIndex, startCharIndex)
-            readView.curPage.selectEndMoveIndex(0, endLineIndex, endCharIndex)
+            readView.curPage.selectEndMoveIndex(endRelativePage, endLineIndex, endCharIndex)
+            readView.isTextSelected = true
         } finally {
             isSelectingSearchResult = false
         }

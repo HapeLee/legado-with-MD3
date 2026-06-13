@@ -19,7 +19,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -99,6 +102,7 @@ fun ReadBookRouteScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
     val menuBackdrop = rememberLayerBackdrop()
     val menuHazeState = remember { HazeState() }
@@ -375,18 +379,20 @@ fun ReadBookRouteScreen(
 
     // ── Search result collection (from Navigation3 search route) ──────
 
-    LaunchedEffect(viewModel) {
-        SearchContentResult.results.collect { result ->
-            effectsReady.await()
-            viewModel.onIntent(
-                ReadBookIntent.SetSearchResults(result.searchResults, result.index, result.query)
-            )
-            result.searchResults.getOrNull(result.index)?.let { searchResult ->
+    LaunchedEffect(viewModel, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            SearchContentResult.results.collect { result ->
+                effectsReady.await()
                 viewModel.onIntent(
-                    ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
+                    ReadBookIntent.SetSearchResults(result.searchResults, result.index, result.query)
                 )
+                result.searchResults.getOrNull(result.index)?.let { searchResult ->
+                    viewModel.onIntent(
+                        ReadBookIntent.NavigateToSearchResult(searchResult, result.index)
+                    )
+                }
+                SearchContentResult.resetReplayCache()
             }
-            SearchContentResult.resetReplayCache()
         }
     }
 

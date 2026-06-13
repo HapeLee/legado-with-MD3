@@ -44,14 +44,7 @@ fun ReadBookSearchBar(
         ) {
             AppFloatingActionButton(
                 onClick = {
-                    val prevIndex = currentIndex - 1
-                    val result = state.searchResultList.getOrNull(prevIndex)
-                        ?: return@AppFloatingActionButton
-                    onIntent(
-                        ReadBookIntent.NavigateToSearchResult(
-                            result, prevIndex
-                        )
-                    )
+                    onIntent(ReadBookIntent.NavigateSearchResultByOffset(-1))
                 },
                 tooltipText = "上一个结果",
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
@@ -76,14 +69,7 @@ fun ReadBookSearchBar(
         ) {
             AppFloatingActionButton(
                 onClick = {
-                    val nextIndex = currentIndex + 1
-                    val result = state.searchResultList.getOrNull(nextIndex)
-                        ?: return@AppFloatingActionButton
-                    onIntent(
-                        ReadBookIntent.NavigateToSearchResult(
-                            result, nextIndex
-                        )
-                    )
+                    onIntent(ReadBookIntent.NavigateSearchResultByOffset(1))
                 },
                 tooltipText = "下一个结果",
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,

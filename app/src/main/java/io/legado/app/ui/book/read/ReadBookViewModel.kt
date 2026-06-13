@@ -258,6 +258,10 @@ class ReadBookViewModel(
                 _uiState.update { it.copy(isShowingSearchResult = intent.value) }
             }
 
+            is ReadBookIntent.NavigateSearchResultByOffset -> {
+                navigateSearchResultByOffset(intent.offset)
+            }
+
             is ReadBookIntent.NavigateToSearchResult -> {
                 ReadBook.saveCurrentBookProgress()
                 _uiState.update {
@@ -1265,9 +1269,8 @@ class ReadBookViewModel(
     ) {
         _uiState.update { syncFromReadBook(it) }
         _effects.tryEmit(
-            ReadBookEffect.UpContent(relativePosition, resetPageOffset)
+            ReadBookEffect.UpContent(relativePosition, resetPageOffset, success)
         )
-        success?.invoke()
     }
 
     override suspend fun upContentAwait(
@@ -1278,9 +1281,8 @@ class ReadBookViewModel(
         withContext(Main.immediate) {
             _uiState.update { syncFromReadBook(it) }
             _effects.tryEmit(
-                ReadBookEffect.UpContent(relativePosition, resetPageOffset)
+                ReadBookEffect.UpContent(relativePosition, resetPageOffset, success)
             )
-            success?.invoke()
         }
     }
 
@@ -2216,101 +2218,85 @@ class ReadBookViewModel(
     ): Array<Int> {
         val pages = textChapter.pages
         val content = textChapter.getContent()
-        if (pages.isEmpty()) return arrayOf(0, 0, 0, 0, 0)
+        if (pages.isEmpty()) return arrayOf(-1, 0, 0, 0, 0, 0)
 
-        val contentPosition = searchResult.queryIndexInChapter
-            .takeIf { it in content.indices && searchResultMatchesAt(content, it, searchResult, query) }
-            ?: findSearchResultPosition(content, searchResult, query)
-        if (contentPosition < 0) return arrayOf(0, 0, 0, 0, 0)
+        val match = findSearchResultMatch(content, searchResult, query)
+            ?: return arrayOf(-1, 0, 0, 0, 0, 0)
+        val contentPosition = match.first
+        val queryLength = match.second
+        if (contentPosition < 0 || queryLength <= 0) {
+            return arrayOf(-1, 0, 0, 0, 0, 0)
+        }
 
-        val pageIndex = textChapter.getPageIndexByCharIndex(contentPosition)
-            .coerceIn(0, pages.lastIndex)
+        var pageIndex = 0
+        var length = pages[pageIndex].text.length
+        while (length < contentPosition && pageIndex + 1 < pages.size) {
+            pageIndex += 1
+            length += pages[pageIndex].text.length
+        }
+        if (length < contentPosition) return arrayOf(-1, 0, 0, 0, 0, 0)
+
         val currentPage = pages[pageIndex]
-        val matchLength = searchResult.matchLength.takeIf { it > 0 } ?: query.length
-        val endPosition = (contentPosition + matchLength).coerceAtMost(content.length)
-        val start = linePositionFor(currentPage, contentPosition, preferPreviousAtBoundary = false)
-        val end = linePositionFor(currentPage, endPosition, preferPreviousAtBoundary = true)
-        return arrayOf(pageIndex, start.lineIndex, start.charIndex, end.lineIndex, end.charIndex)
+        val lines = currentPage.lines
+        if (lines.isEmpty()) return arrayOf(-1, 0, 0, 0, 0, 0)
+
+        var lineIndex = 0
+        var currentLine = lines[lineIndex]
+        length = length - currentPage.text.length + currentLine.text.length
+        if (currentLine.isParagraphEnd) length++
+        while (length <= contentPosition && lineIndex + 1 < lines.size) {
+            lineIndex += 1
+            currentLine = lines[lineIndex]
+            length += currentLine.text.length
+            if (currentLine.isParagraphEnd) length++
+        }
+
+        var currentLineLength = currentLine.text.length
+        if (currentLine.isParagraphEnd) currentLineLength++
+        length -= currentLineLength
+
+        val charIndex = contentPosition - length
+        var addLine = 0
+        var charIndex2 = 0
+        if ((charIndex + queryLength) > currentLineLength) {
+            addLine = 1
+            charIndex2 = charIndex + queryLength - currentLineLength - 1
+        }
+        if ((lineIndex + addLine + 1) > currentPage.lines.size) {
+            addLine = -1
+            charIndex2 = charIndex + queryLength - currentLineLength - 1
+        }
+        return when (addLine) {
+            0 -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex, charIndex + queryLength - 1)
+            1 -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex + 1, charIndex2)
+            -1 -> arrayOf(pageIndex, lineIndex, charIndex, 1, 0, charIndex2)
+            else -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex, charIndex)
+        }
     }
 
-    private fun findSearchResultPosition(
+    private fun findSearchResultMatch(
         content: String,
         searchResult: SearchResult,
         query: String,
-    ): Int {
-        if (query.isEmpty()) return -1
+    ): Pair<Int, Int>? {
+        if (query.isEmpty()) return null
         if (searchResult.isRegex) {
             return runCatching {
                 Regex(query).findAll(content)
                     .drop(searchResult.resultCountWithinChapter)
                     .firstOrNull()
-                    ?.range
-                    ?.first
-            }.getOrNull() ?: -1
+                    ?.let { it.range.first to it.value.length }
+            }.getOrNull()
         }
 
         var count = 0
-        var index = content.indexOf(query, ignoreCase = true)
+        var index = content.indexOf(query)
         while (count != searchResult.resultCountWithinChapter && index >= 0) {
-            index = content.indexOf(query, index + query.length, ignoreCase = true)
+            index = content.indexOf(query, index + query.length)
             count += 1
         }
-        return index
+        return index.takeIf { it >= 0 }?.let { it to query.length }
     }
-
-    private fun searchResultMatchesAt(
-        content: String,
-        position: Int,
-        searchResult: SearchResult,
-        query: String,
-    ): Boolean {
-        if (query.isEmpty()) return false
-        if (searchResult.isRegex) {
-            return runCatching {
-                Regex(query).find(content, position)?.range?.first == position
-            }.getOrDefault(false)
-        }
-        return position + query.length <= content.length &&
-                content.regionMatches(position, query, 0, query.length, ignoreCase = true)
-    }
-
-    private fun linePositionFor(
-        page: TextPage,
-        chapterPosition: Int,
-        preferPreviousAtBoundary: Boolean,
-    ): SearchLinePosition {
-        if (page.lines.isEmpty()) return SearchLinePosition(0, 0)
-        var fallbackIndex = 0
-        page.lines.forEachIndexed { index, line ->
-            val lineEnd = line.chapterPosition + line.text.length +
-                    if (line.isParagraphEnd) 1 else 0
-            if (chapterPosition < line.chapterPosition) {
-                return@forEachIndexed
-            }
-            if (preferPreviousAtBoundary && chapterPosition == line.chapterPosition && index > 0) {
-                val previousLine = page.lines[index - 1]
-                return SearchLinePosition(index - 1, previousLine.text.length)
-            }
-            if (chapterPosition <= lineEnd) {
-                return SearchLinePosition(
-                    lineIndex = index,
-                    charIndex = (chapterPosition - line.chapterPosition).coerceIn(0, line.text.length),
-                )
-            }
-            fallbackIndex = index
-        }
-        val lineIndex = fallbackIndex
-        val line = page.lines[lineIndex]
-        return SearchLinePosition(
-            lineIndex = lineIndex,
-            charIndex = (chapterPosition - line.chapterPosition).coerceIn(0, line.text.length),
-        )
-    }
-
-    private data class SearchLinePosition(
-        val lineIndex: Int,
-        val charIndex: Int,
-    )
 
     /**
      * Compute the search result position and emit [ReadBookEffect.NavigateToSearchResult]
@@ -2325,8 +2311,9 @@ class ReadBookViewModel(
             val pos = searchResultPositions(textChapter, result, query)
             val lineIndex = pos[1]
             val charIndex = pos[2]
-            val endLineIndex = pos[3]
-            val endCharIndex = pos[4]
+            val endRelativePage = pos[3]
+            val endLineIndex = pos[4]
+            val endCharIndex = pos[5]
             _effects.tryEmit(
                 ReadBookEffect.NavigateToSearchResult(
                     result = result,
@@ -2334,6 +2321,7 @@ class ReadBookViewModel(
                     pageIndex = pos[0],
                     lineIndex = lineIndex,
                     startCharIndex = charIndex,
+                    endRelativePage = endRelativePage,
                     endLineIndex = endLineIndex,
                     endCharIndex = endCharIndex,
                 )
@@ -2347,6 +2335,7 @@ class ReadBookViewModel(
                     pageIndex = -1,
                     lineIndex = 0,
                     startCharIndex = 0,
+                    endRelativePage = 0,
                     endLineIndex = 0,
                     endCharIndex = 0,
                 )
@@ -3448,6 +3437,18 @@ class ReadBookViewModel(
             )
         }
         _effects.tryEmit(ReadBookEffect.ExitSearch)
+    }
+
+    private fun navigateSearchResultByOffset(offset: Int) {
+        val state = _uiState.value
+        val currentIndex = state.searchResultIndex.coerceSearchResultIndex(
+            state.searchResultList.size
+        )
+        val targetIndex = currentIndex + offset
+        val result = state.searchResultList.getOrNull(targetIndex) ?: return
+        ReadBook.saveCurrentBookProgress()
+        _uiState.update { it.copy(searchResultIndex = targetIndex) }
+        navigateToSearchResult(result)
     }
 
     override fun onCleared() {

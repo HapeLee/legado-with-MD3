@@ -7,6 +7,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.searchContent.SearchResult
 import io.legado.app.utils.ChineseUtils
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +22,13 @@ class SearchContentRepository {
     private var lastSearchResults: List<SearchResult>? = null
     private var lastQueryKey: String? = null
 
-    fun getCache(bookUrl: String, query: String): List<SearchResult>? {
-        val key = "$bookUrl-$query"
+    fun getCache(
+        bookUrl: String,
+        query: String,
+        replaceEnabled: Boolean,
+        regexReplace: Boolean
+    ): List<SearchResult>? {
+        val key = searchKey(bookUrl, query, replaceEnabled, regexReplace)
         return if (lastQueryKey == key) lastSearchResults else null
     }
 
@@ -61,9 +67,18 @@ class SearchContentRepository {
             }
         }
         lastSearchResults = allResults
-        lastQueryKey = "${book.bookUrl}-$query"
+        lastQueryKey = searchKey(book.bookUrl, query, replaceEnabled, regexReplace)
         emit(ArrayList(allResults))
     }.flowOn(Dispatchers.Default)
+
+    private fun searchKey(
+        bookUrl: String,
+        query: String,
+        replaceEnabled: Boolean,
+        regexReplace: Boolean
+    ): String {
+        return "$bookUrl-$query-$replaceEnabled-$regexReplace-${ReadBookConfig.titleMode}"
+    }
 
     private suspend fun searchChapter(
         query: String,
@@ -82,9 +97,25 @@ class SearchContentRepository {
             else -> chapter.title
         }
 
-        val mContent = contentProcessor.getContent(
-            book, chapter, chapterContent, useReplace = replaceEnabled
-        ).toString()
+        val bodyContent = contentProcessor.getContent(
+            book,
+            chapter,
+            chapterContent,
+            includeTitle = false,
+            useReplace = replaceEnabled
+        )
+        val includeTitle = ReadBookConfig.titleMode != 2 ||
+                chapter.isVolume ||
+                bodyContent.textList.isEmpty()
+        val mContent = if (includeTitle) {
+            val title = chapter.getDisplayTitle(
+                contentProcessor.getTitleReplaceRules(),
+                useReplace = replaceEnabled && book.getUseReplaceRule()
+            )
+            listOf(title).plus(bodyContent.textList).joinToString("\n")
+        } else {
+            bodyContent.toString()
+        }
 
         val matches = searchPosition(mContent, query, regexReplace)
 

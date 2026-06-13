@@ -258,6 +258,7 @@ sealed interface ReadBookIntent {
     data class SetSearchResults(val results: List<SearchResult>, val index: Int, val query: String? = null) : ReadBookIntent
     data class SetSearchResultIndex(val index: Int) : ReadBookIntent
     data class SetShowingSearchResult(val value: Boolean) : ReadBookIntent
+    data class NavigateSearchResultByOffset(val offset: Int) : ReadBookIntent
     data class NavigateToSearchResult(val result: SearchResult, val index: Int) : ReadBookIntent
     data object RestoreLastBookProgress : ReadBookIntent
     data object KeepCurrentBookProgress : ReadBookIntent
@@ -515,7 +516,11 @@ sealed interface ReadBookEffect {
 
     // ReadView operations (require Activity/View reference)
     data class UpdateReadViewConfig(val actions: Set<ConfigUpdateAction>) : ReadBookEffect
-    data class UpContent(val relativePosition: Int, val resetPageOffset: Boolean) : ReadBookEffect
+    data class UpContent(
+        val relativePosition: Int,
+        val resetPageOffset: Boolean,
+        val success: (() -> Unit)? = null,
+    ) : ReadBookEffect
     data class UpPageAnim(val upRecorder: Boolean) : ReadBookEffect
     data object UpTime : ReadBookEffect
     data class UpBattery(val level: Int) : ReadBookEffect
@@ -547,6 +552,7 @@ sealed interface ReadBookEffect {
         val pageIndex: Int,
         val lineIndex: Int,
         val startCharIndex: Int,
+        val endRelativePage: Int,
         val endLineIndex: Int,
         val endCharIndex: Int,
     ) : ReadBookEffect
