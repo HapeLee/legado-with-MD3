@@ -263,6 +263,11 @@
             android:enableOnBackInvokedCallback="true"
             android:configChanges="orientation|screenSize"
             android:hardwareAccelerated="true" />
+        <activity
+            android:name=".ui.dict.DictActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:configChanges="orientation|screenSize"
+            android:hardwareAccelerated="true" />
         <!-- 文件管理 -->
         <activity
             android:name=".ui.file.FileManageActivity"

@@ -10,14 +10,13 @@ import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.widget.FrameLayout
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
-import io.legado.app.ui.dict.DictDialog
+import io.legado.app.ui.dict.DictActivity
 import io.legado.app.utils.toastOnUi
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -83,7 +82,7 @@ class VisibleWebView(
                         postDelayed({
                             getSelectedText { selectedText ->
                                 if (selectedText.isNotBlank()) {
-                                    showDictDialog(selectedText)
+                                    showDictSheet(selectedText)
                                 } else {
                                     context.toastOnUi("未获取到选中文本，请重试")
                                 }
@@ -124,12 +123,8 @@ class VisibleWebView(
         }
     }
 
-    private fun showDictDialog(selectedText: String) {
-        val activity = context as? AppCompatActivity ?: return
-        val dialog = DictDialog(selectedText)
-        activity.supportFragmentManager.beginTransaction()
-            .add(dialog, "DictDialog")
-            .commitAllowingStateLoss()
+    private fun showDictSheet(selectedText: String) {
+        context.startActivity(DictActivity.startIntent(context, selectedText))
     }
 
     companion object {

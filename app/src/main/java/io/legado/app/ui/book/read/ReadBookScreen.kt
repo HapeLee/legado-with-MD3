@@ -20,7 +20,7 @@ import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
-import io.legado.app.ui.book.read.sheet.DictSheet
+import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
 import io.legado.app.ui.book.read.sheet.HighlightRuleConfigSheet
