@@ -10,7 +10,7 @@ class DictRuleActivity : BaseComposeActivity() {
     @Composable
     override fun Content() {
         AppTheme {
-            DictRuleScreen(onBackClick = { finish() })
+            DictRuleRouteScreen(onBackClick = { finish() })
         }
     }
 
