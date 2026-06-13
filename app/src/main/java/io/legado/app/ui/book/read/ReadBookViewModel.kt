@@ -633,10 +633,16 @@ class ReadBookViewModel(
             is ReadBookIntent.KeepLightChanged -> {
                 ReadConfig.keepLight = intent.value
                 _readPreferences.update { it.copy(keepLight = intent.value) }
+                viewModelScope.launch {
+                    readSettingsRepository.setKeepLight(intent.value)
+                }
                 _effects.tryEmit(ReadBookEffect.UpScreenTimeOut)
             }
             is ReadBookIntent.SetOrientation -> {
                 ReadConfig.screenOrientation = intent.value
+                viewModelScope.launch {
+                    readSettingsRepository.setScreenOrientation(intent.value)
+                }
                 _effects.tryEmit(ReadBookEffect.SetOrientation)
             }
             is ReadBookIntent.TextSelectAbleChanged -> _effects.tryEmit(
@@ -1457,6 +1463,12 @@ class ReadBookViewModel(
         }
     }
 
+    private suspend fun syncReadPreferencesSnapshot() {
+        val preferences = readSettingsRepository.preferences.first()
+        ReadConfig.syncReadPreferences(preferences)
+        _readPreferences.value = preferences
+    }
+
     private fun collectReadAloudPreferences() {
         viewModelScope.launch {
             readAloudSettingsRepository.preferences.collect { prefs ->
@@ -1734,6 +1746,7 @@ class ReadBookViewModel(
 
     fun initData(intent: Intent, success: (() -> Unit)? = null) {
         execute {
+            syncReadPreferencesSnapshot()
             ReadBook.inBookshelf = intent.getBooleanExtra("inBookshelf", true)
             ReadBook.chapterChanged = intent.getBooleanExtra("chapterChanged", false)
             val bookUrl = intent.getStringExtra("bookUrl")
@@ -2861,6 +2874,13 @@ class ReadBookViewModel(
                 }
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
+            is ConfigUpdate.ReadBodyToLh -> {
+                ReadConfig.readBodyToLh = update.value
+                ReadBookConfig.readBodyToLh = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadBodyToLh(update.value)
+                }
+            }
             is ConfigUpdate.TextFullJustify -> {
                 ReadBookConfig.textFullJustify = update.value
                 viewModelScope.launch {
@@ -2949,6 +2969,55 @@ class ReadBookViewModel(
                 }
                 _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
             }
+            is ConfigUpdate.MouseWheelPage -> {
+                ReadConfig.mouseWheelPage = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setMouseWheelPage(update.value)
+                }
+            }
+            is ConfigUpdate.VolumeKeyPage -> {
+                ReadConfig.volumeKeyPage = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setVolumeKeyPage(update.value)
+                }
+            }
+            is ConfigUpdate.VolumeKeyPageOnPlay -> {
+                ReadConfig.volumeKeyPageOnPlay = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setVolumeKeyPageOnPlay(update.value)
+                }
+            }
+            is ConfigUpdate.KeyPageOnLongPress -> {
+                ReadConfig.keyPageOnLongPress = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setKeyPageOnLongPress(update.value)
+                }
+            }
+            is ConfigUpdate.SliderVibrator -> {
+                ReadConfig.sliderVibrator = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setSliderVibrator(update.value)
+                }
+            }
+            is ConfigUpdate.SelectVibrator -> {
+                ReadConfig.selectVibrator = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setSelectVibrator(update.value)
+                }
+            }
+            is ConfigUpdate.AutoChangeSource -> {
+                ReadConfig.autoChangeSource = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setAutoChangeSource(update.value)
+                }
+            }
+            is ConfigUpdate.SelectText -> {
+                ReadConfig.selectText = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setSelectText(update.value)
+                }
+                _effects.tryEmit(ReadBookEffect.UpTextSelectAble(update.value))
+            }
             is ConfigUpdate.NoAnimScrollPage -> {
                 ReadConfig.noAnimScrollPage = update.value
                 viewModelScope.launch {
@@ -2956,7 +3025,32 @@ class ReadBookViewModel(
                 }
                 _effects.tryEmit(ReadBookEffect.UpPageAnim(upRecorder = false))
             }
+            is ConfigUpdate.OptimizeRender -> {
+                ReadConfig.optimizeRender = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setOptimizeRender(update.value)
+                }
+            }
+            is ConfigUpdate.ClickImgWay -> {
+                ReadConfig.clickImgWay = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setClickImgWay(update.value)
+                }
+            }
+            is ConfigUpdate.DisableReturnKey -> {
+                ReadConfig.disableReturnKey = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setDisableReturnKey(update.value)
+                }
+            }
+            is ConfigUpdate.ExpandTextMenu -> {
+                ReadConfig.expandTextMenu = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setExpandTextMenu(update.value)
+                }
+            }
             is ConfigUpdate.ShowReadTitleAddition -> {
+                ReadConfig.showReadTitleAddition = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setShowReadTitleAddition(update.value)
                 }

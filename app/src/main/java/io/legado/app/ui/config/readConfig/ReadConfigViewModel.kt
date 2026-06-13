@@ -28,10 +28,12 @@ class ReadConfigViewModel(
         viewModelScope.launch {
             when (intent) {
                 is ReadConfigIntent.ScreenOrientationChanged -> {
+                    ReadConfig.screenOrientation = intent.value
                     readSettingsRepository.setScreenOrientation(intent.value)
                 }
 
                 is ReadConfigIntent.KeepLightChanged -> {
+                    ReadConfig.keepLight = intent.value
                     readSettingsRepository.setKeepLight(intent.value)
                 }
 
@@ -48,19 +50,24 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.PaddingDisplayCutoutsChanged -> {
+                    ReadConfig.paddingDisplayCutouts = intent.value
                     readSettingsRepository.setPaddingDisplayCutouts(intent.value)
                 }
 
                 is ReadConfigIntent.TitleBarModeChanged -> {
+                    ReadConfig.titleBarMode = intent.value
                     readSettingsRepository.setTitleBarMode(intent.value)
                 }
 
                 is ReadConfigIntent.MenuAlphaChanged -> {
+                    ReadConfig.menuAlpha = intent.value
                     readSettingsRepository.setMenuAlpha(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
                 is ReadConfigIntent.ReadBodyToLhChanged -> {
+                    ReadConfig.readBodyToLh = intent.value
+                    ReadBookConfig.readBodyToLh = intent.value
                     readSettingsRepository.setReadBodyToLh(intent.value)
                 }
 
@@ -79,6 +86,7 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.AdaptSpecialStyleChanged -> {
+                    ReadConfig.adaptSpecialStyle = intent.value
                     readSettingsRepository.setAdaptSpecialStyle(intent.value)
                 }
 
@@ -97,37 +105,45 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.UseUnderlineChanged -> {
+                    ReadConfig.useUnderline = intent.value
                     readSettingsRepository.setUseUnderline(intent.value)
                 }
 
                 is ReadConfigIntent.ReadSliderModeChanged -> {
+                    ReadConfig.readSliderMode = intent.value
                     readSettingsRepository.setReadSliderMode(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
                 is ReadConfigIntent.DoubleHorizontalPageChanged -> {
+                    ReadConfig.doubleHorizontalPage = intent.value
                     readSettingsRepository.setDoubleHorizontalPage(intent.value)
                     upLayout()
                 }
 
                 is ReadConfigIntent.ProgressBarBehaviorChanged -> {
+                    ReadConfig.progressBarBehavior = intent.value
                     readSettingsRepository.setProgressBarBehavior(intent.value)
                     postEvent(EventBus.UP_SEEK_BAR, true)
                 }
 
                 is ReadConfigIntent.MouseWheelPageChanged -> {
+                    ReadConfig.mouseWheelPage = intent.value
                     readSettingsRepository.setMouseWheelPage(intent.value)
                 }
 
                 is ReadConfigIntent.VolumeKeyPageChanged -> {
+                    ReadConfig.volumeKeyPage = intent.value
                     readSettingsRepository.setVolumeKeyPage(intent.value)
                 }
 
                 is ReadConfigIntent.VolumeKeyPageOnPlayChanged -> {
+                    ReadConfig.volumeKeyPageOnPlay = intent.value
                     readSettingsRepository.setVolumeKeyPageOnPlay(intent.value)
                 }
 
                 is ReadConfigIntent.KeyPageOnLongPressChanged -> {
+                    ReadConfig.keyPageOnLongPress = intent.value
                     readSettingsRepository.setKeyPageOnLongPress(intent.value)
                 }
 
@@ -137,18 +153,22 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.SliderVibratorChanged -> {
+                    ReadConfig.sliderVibrator = intent.value
                     readSettingsRepository.setSliderVibrator(intent.value)
                 }
 
                 is ReadConfigIntent.SelectVibratorChanged -> {
+                    ReadConfig.selectVibrator = intent.value
                     readSettingsRepository.setSelectVibrator(intent.value)
                 }
 
                 is ReadConfigIntent.AutoChangeSourceChanged -> {
+                    ReadConfig.autoChangeSource = intent.value
                     readSettingsRepository.setAutoChangeSource(intent.value)
                 }
 
                 is ReadConfigIntent.SelectTextChanged -> {
+                    ReadConfig.selectText = intent.value
                     readSettingsRepository.setSelectText(intent.value)
                 }
 
@@ -158,23 +178,28 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.ClickImgWayChanged -> {
+                    ReadConfig.clickImgWay = intent.value
                     readSettingsRepository.setClickImgWay(intent.value)
                 }
 
                 is ReadConfigIntent.OptimizeRenderChanged -> {
+                    ReadConfig.optimizeRender = intent.value
                     readSettingsRepository.setOptimizeRender(intent.value)
                     upStyle()
                 }
 
                 is ReadConfigIntent.DisableReturnKeyChanged -> {
+                    ReadConfig.disableReturnKey = intent.value
                     readSettingsRepository.setDisableReturnKey(intent.value)
                 }
 
                 is ReadConfigIntent.ExpandTextMenuChanged -> {
+                    ReadConfig.expandTextMenu = intent.value
                     readSettingsRepository.setExpandTextMenu(intent.value)
                 }
 
                 is ReadConfigIntent.ShowReadTitleAdditionChanged -> {
+                    ReadConfig.showReadTitleAddition = intent.value
                     readSettingsRepository.setShowReadTitleAddition(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
