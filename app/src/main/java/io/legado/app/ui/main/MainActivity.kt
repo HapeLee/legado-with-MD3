@@ -66,6 +66,8 @@ import kotlin.coroutines.suspendCoroutine
 open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     companion object {
+        private var isFirstLaunch = true
+
         @Volatile
         var hasActiveReadBookRoute: Boolean = false
 
@@ -142,7 +144,6 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
     internal var activeReadBookInputHandler: ReadBookInputHandler? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -193,9 +194,11 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         val startRoutes = remember {
             val resolved = MainNavigator.resolveStartRoute(intent)
-            if (OtherConfig.defaultToRead && resolved == MainRouteHome) {
+            if (isFirstLaunch && OtherConfig.defaultToRead && resolved == MainRouteHome) {
+                isFirstLaunch = false
                 arrayOf(MainRouteHome, MainRouteReadBook())
             } else {
+                isFirstLaunch = false
                 arrayOf(resolved)
             }
         }
@@ -419,6 +422,9 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (!isChangingConfigurations) {
+            isFirstLaunch = true
+        }
         Coroutine.async {
             BookHelp.clearInvalidCache()
         }
