@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -22,13 +23,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.TextFields
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -43,21 +43,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.data.repository.ReadPreferences
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -70,6 +68,7 @@ import io.legado.app.utils.getCompatColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import kotlin.time.Duration.Companion.milliseconds
 
 // Color picker IDs
 private const val COLOR_HEADER = 7
@@ -127,19 +126,23 @@ internal fun HeaderFooterPage(
 
     LaunchedEffect(expandHeaderPadding) {
         if (expandHeaderPadding) {
-            snapshotFlow { headerScrollState.maxValue }
-                .collect { maxVal ->
-                    headerScrollState.scrollTo(maxVal)
-                }
+            //等动画结束后再滚动到底部，否则maxValue值不是最新
+            delay(300.milliseconds)
+            headerScrollState.animateScrollTo(
+                headerScrollState.maxValue,
+                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+            )
         }
     }
 
     LaunchedEffect(expandFooterPadding) {
         if (expandFooterPadding) {
-            snapshotFlow { footerScrollState.maxValue }
-                .collect { maxVal ->
-                    footerScrollState.scrollTo(maxVal)
-                }
+            //等动画结束后再滚动到底部，否则maxValue值不是最新
+            delay(300.milliseconds)
+            footerScrollState.animateScrollTo(
+                footerScrollState.maxValue,
+                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+            )
         }
     }
 
@@ -319,7 +322,9 @@ internal fun HeaderFooterPage(
                                     modifier = Modifier.size(20.dp),
                                 )
                             },
-                            onClick = { expandHeaderPadding = !expandHeaderPadding },
+                            onClick = {
+                                expandHeaderPadding = !expandHeaderPadding
+                            },
                         )
                         AnimatedVisibility(
                             visible = expandHeaderPadding,
@@ -441,7 +446,9 @@ internal fun HeaderFooterPage(
                                     modifier = Modifier.size(20.dp),
                                 )
                             },
-                            onClick = { expandFooterPadding = !expandFooterPadding },
+                            onClick = {
+                                expandFooterPadding = !expandFooterPadding
+                            },
                         )
                         AnimatedVisibility(
                             visible = expandFooterPadding,
