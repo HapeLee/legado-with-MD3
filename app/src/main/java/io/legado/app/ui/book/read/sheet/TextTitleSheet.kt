@@ -360,8 +360,14 @@ internal fun TextEffectsPage(
 internal fun TitleSettingsPage(
     onIntent: (ReadBookIntent) -> Unit,
 ) {
-    var titleMode by remember { mutableIntStateOf(ReadBookConfig.titleMode) }
-    var titleBold by remember { mutableIntStateOf(ReadBookConfig.titleBold) }
+    var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
+    var titleBold by remember(ReadBookConfig.titleBold) { mutableIntStateOf(ReadBookConfig.titleBold) }
+    var titleSegScaling by remember(ReadBookConfig.titleSegScaling) { mutableFloatStateOf(ReadBookConfig.titleSegScaling) }
+    var titleLineSpacingExtra by remember(ReadBookConfig.titleLineSpacingExtra) { mutableIntStateOf(ReadBookConfig.titleLineSpacingExtra) }
+    var titleLineSpacingSub by remember(ReadBookConfig.titleLineSpacingSub) { mutableIntStateOf(ReadBookConfig.titleLineSpacingSub) }
+    var titleSize by remember(ReadBookConfig.titleSize) { mutableIntStateOf(ReadBookConfig.titleSize) }
+    var titleTopSpacing by remember(ReadBookConfig.titleTopSpacing) { mutableIntStateOf(ReadBookConfig.titleTopSpacing) }
+    var titleBottomSpacing by remember(ReadBookConfig.titleBottomSpacing) { mutableIntStateOf(ReadBookConfig.titleBottomSpacing) }
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerId by remember { mutableIntStateOf(0) }
@@ -429,50 +435,56 @@ internal fun TitleSettingsPage(
         // Title spacing sliders
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_scale),
-            value = ReadBookConfig.titleSegScaling * 10,
+            value = titleSegScaling * 10,
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegScaling(value / 10f)))
+                titleSegScaling = value / 10f
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegScaling(titleSegScaling)))
             },
         )
         TinySliderSettingItem(
             title = stringResource(R.string.heading_spacing),
-            value = ReadBookConfig.titleLineSpacingExtra.toFloat(),
+            value = titleLineSpacingExtra.toFloat(),
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingExtra(value.toInt())))
+                titleLineSpacingExtra = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingExtra(titleLineSpacingExtra)))
             },
         )
         TinySliderSettingItem(
             title = stringResource(R.string.subtitle_margin),
-            value = ReadBookConfig.titleLineSpacingSub.toFloat(),
+            value = titleLineSpacingSub.toFloat(),
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(value.toInt())))
+                titleLineSpacingSub = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleLineSpacingSub(titleLineSpacingSub)))
             },
         )
         TinySliderSettingItem(
             title = stringResource(R.string.title_font_size),
-            value = ReadBookConfig.titleSize.toFloat(),
+            value = titleSize.toFloat(),
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSize(value.toInt())))
+                titleSize = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSize(titleSize)))
             },
         )
         TinySliderSettingItem(
             title = stringResource(R.string.title_margin_top),
-            value = ReadBookConfig.titleTopSpacing.toFloat(),
+            value = titleTopSpacing.toFloat(),
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleTopSpacing(value.toInt())))
+                titleTopSpacing = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleTopSpacing(titleTopSpacing)))
             },
         )
         TinySliderSettingItem(
             title = stringResource(R.string.title_margin_bottom),
-            value = ReadBookConfig.titleBottomSpacing.toFloat(),
+            value = titleBottomSpacing.toFloat(),
             valueRange = 0f..100f,
             onValueChange = { value ->
-                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBottomSpacing(value.toInt())))
+                titleBottomSpacing = value.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleBottomSpacing(titleBottomSpacing)))
             },
         )
 
