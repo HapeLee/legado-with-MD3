@@ -613,6 +613,7 @@ private fun ReadBookMenuSurface(
                             title = stringResource(R.string.read_config),
                             maxHeight = maxHeight,
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            animateSize = false,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleContent(
@@ -762,6 +763,7 @@ private fun ReadBookMenuRoutePage(
     maxHeight: Dp,
     scrollContent: Boolean = false,
     bottomPadding: Dp = 0.dp,
+    animateSize: Boolean = true,
     onBack: () -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -769,7 +771,7 @@ private fun ReadBookMenuRoutePage(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(max = maxHeight)
-            .animateContentSize()
+            .let { if (animateSize) it.animateContentSize() else it }
             .padding(top = 16.dp, bottom = 16.dp + bottomPadding),
     ) {
         Row(

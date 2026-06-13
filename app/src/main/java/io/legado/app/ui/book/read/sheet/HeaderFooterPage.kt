@@ -1,5 +1,8 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,20 +18,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
@@ -39,7 +48,6 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.widget.components.FontSelectSheet
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
-import org.koin.compose.koinInject
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -48,6 +56,7 @@ import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.ui.widget.components.tabRow.CardTabRow
 import io.legado.app.utils.getCompatColor
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 // Color picker IDs
 private const val COLOR_HEADER = 7
@@ -69,6 +78,9 @@ internal fun HeaderFooterPage(
     )
     val pagerState = rememberPagerState(pageCount = { 3 })
     var selectedTab by remember { mutableIntStateOf(0) }
+
+    val pageHeights = remember { mutableStateMapOf<Int, Int>() }
+    val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
 
     // Header state
     var headerMode by remember { mutableIntStateOf(ReadBookConfig.headerMode) }
@@ -138,15 +150,31 @@ internal fun HeaderFooterPage(
             selectedTabIndex = selectedTab,
             onTabSelected = { index ->
                 selectedTab = index
-                scope.launch { pagerState.animateScrollToPage(index) }
+                scope.launch {
+                    pagerState.animateScrollToPage(
+                        page = index,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                    )
+                }
             },
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
         )
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clipToBounds()
+                .pagerHeight(animatedHeight),
         ) { page ->
-            when (page) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { size ->
+                        pageHeights[page] = size.height
+                    }
+            ) {
+                when (page) {
                 0 -> {
                     // Header tab
                     Column(
@@ -372,6 +400,7 @@ internal fun HeaderFooterPage(
             }
         }
     }
+}
 
     // Color picker
     ColorPickerSheet(
