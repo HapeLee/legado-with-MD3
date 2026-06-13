@@ -40,6 +40,7 @@ sealed interface ReadBookMenuRoute {
     data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
+    data object HeaderFooterConfig : ReadBookMenuRoute
     data class Bookmark(val bookmark: io.legado.app.data.entities.Bookmark) : ReadBookMenuRoute
 }
 

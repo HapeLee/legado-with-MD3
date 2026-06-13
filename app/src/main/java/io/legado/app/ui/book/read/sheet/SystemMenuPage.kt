@@ -128,7 +128,7 @@ internal fun SystemMenuPage(
                 scope.launch {
                     pagerState.animateScrollToPage(
                         page = index,
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
                     )
                 }
             },
