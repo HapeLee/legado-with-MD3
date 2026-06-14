@@ -1,5 +1,8 @@
 package io.legado.app.ui.book.read.sheet
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,12 +28,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -80,14 +87,21 @@ fun ReadStyleTextTitleContent(
     ReadStyleTextTitleContent(
         tabTitles = tabTitles,
         selectedTab = selectedTab,
-        onSelectedTabChange = { selectedTab = it },
         pagerState = pagerState,
         onOpenShadowSet = onOpenShadowSet,
         onOpenUnderlineConfig = onOpenUnderlineConfig,
         onOpenHighlightRule = onOpenHighlightRule,
         onOpenFontSelect = onOpenFontSelect,
         onOpenTitleFontSelect = onOpenTitleFontSelect,
-        animateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
+        animateToPage = { page ->
+            selectedTab = page
+            scope.launch {
+                pagerState.animateScrollToPage(
+                    page = page,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                )
+            }
+        },
         modifier = modifier,
         onIntent = onIntent,
     )
@@ -97,7 +111,6 @@ fun ReadStyleTextTitleContent(
 internal fun ReadStyleTextTitleContent(
     tabTitles: List<String>,
     selectedTab: Int,
-    onSelectedTabChange: (Int) -> Unit,
     pagerState: PagerState,
     onOpenShadowSet: () -> Unit,
     onOpenUnderlineConfig: () -> Unit,
@@ -108,6 +121,9 @@ internal fun ReadStyleTextTitleContent(
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
+    val pageHeights = remember { mutableStateMapOf<Int, Int>() }
+    val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -116,27 +132,35 @@ internal fun ReadStyleTextTitleContent(
             tabTitles = tabTitles,
             selectedTabIndex = selectedTab,
             onTabSelected = { index ->
-                onSelectedTabChange(index)
                 animateToPage(index)
             },
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
         )
         HorizontalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clipToBounds()
+                .pagerHeight(animatedHeight),
         ) { page ->
+            val pageModifier = Modifier.onSizeChanged { size ->
+                pageHeights[page] = size.height
+            }
             when (page) {
                 0 -> TextEffectsPage(
                     onOpenShadowSet = onOpenShadowSet,
                     onOpenUnderlineConfig = onOpenUnderlineConfig,
                     onOpenHighlightRule = onOpenHighlightRule,
                     onOpenFontSelect = onOpenFontSelect,
+                    modifier = pageModifier,
                     onIntent = onIntent,
                 )
 
-                1 -> LayoutSpacingPage(onIntent = onIntent)
+                1 -> LayoutSpacingPage(modifier = pageModifier, onIntent = onIntent)
                 2 -> TitleSettingsPage(
                     onOpenTitleFontSelect = onOpenTitleFontSelect,
+                    modifier = pageModifier,
                     onIntent = onIntent,
                 )
             }
@@ -148,6 +172,7 @@ internal fun ReadStyleTextTitleContent(
 
 @Composable
 internal fun LayoutSpacingPage(
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var letterSpacing by remember { mutableFloatStateOf(ReadBookConfig.letterSpacing) }
@@ -158,7 +183,9 @@ internal fun LayoutSpacingPage(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         Text(
             text = stringResource(R.string.read_config_body_spacing),
@@ -217,6 +244,7 @@ internal fun TextEffectsPage(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var textItalic by remember { mutableStateOf(ReadBookConfig.textItalic) }
@@ -229,7 +257,9 @@ internal fun TextEffectsPage(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         Text(
             text = stringResource(R.string.text_typeface),
@@ -365,6 +395,7 @@ internal fun TextEffectsPage(
 @Composable
 internal fun TitleSettingsPage(
     onOpenTitleFontSelect: () -> Unit,
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
@@ -392,7 +423,9 @@ internal fun TitleSettingsPage(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         TinyDropdownSettingItem(
             title = stringResource(R.string.body_title),

@@ -140,7 +140,11 @@ fun ReadStyleContent(
 
 internal fun Modifier.pagerHeight(height: Dp) = this.layout { measurable, constraints ->
     val placeable = measurable.measure(constraints)
-    val layoutHeight = if (height != Dp.Unspecified) height.roundToPx() else placeable.height
+    val layoutHeight = if (height != Dp.Unspecified) {
+        height.roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+    } else {
+        placeable.height
+    }
     layout(placeable.width, layoutHeight) {
         placeable.placeRelative(0, 0)
     }
