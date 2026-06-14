@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -65,6 +66,33 @@ class ChangeChapterSourceViewModel(
         viewModelScope.launch {
             searchRepository.enabledSources.collect { sources ->
                 _uiState.update { it.copy(enabledSources = sources.toImmutableList()) }
+            }
+        }
+        viewModelScope.launch {
+            snapshotFlow {
+                ConfigSnapshot(
+                    ChangeSourceConfig.searchScope,
+                    ChangeSourceConfig.checkAuthor,
+                    ChangeSourceConfig.loadInfo,
+                    ChangeSourceConfig.loadToc,
+                    ChangeSourceConfig.loadWordCount
+                )
+            }.collect { snapshot ->
+                searchScope.update(snapshot.scope)
+                _uiState.update {
+                    it.copy(
+                        scopeState = ScopeUiState(
+                            isAll = searchScope.isAll(),
+                            isSource = searchScope.isSource(),
+                            displayNames = searchScope.displayNames,
+                            sourceUrls = searchScope.sourceUrls
+                        ),
+                        checkAuthor = snapshot.checkAuthor,
+                        loadInfo = snapshot.loadInfo,
+                        loadToc = snapshot.loadToc,
+                        loadWordCount = snapshot.loadWordCount
+                    )
+                }
             }
         }
     }
@@ -400,3 +428,11 @@ class ChangeChapterSourceViewModel(
         ObservableSourceConfig.setBookScore(searchBook, if (currentScore > 0) 0 else 1)
     }
 }
+
+private data class ConfigSnapshot(
+    val scope: String,
+    val checkAuthor: Boolean,
+    val loadInfo: Boolean,
+    val loadToc: Boolean,
+    val loadWordCount: Boolean
+)

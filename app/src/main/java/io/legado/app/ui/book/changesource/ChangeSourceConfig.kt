@@ -9,9 +9,7 @@ import io.legado.app.ui.config.prefDelegate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
 
 object ChangeSourceConfig {
@@ -113,21 +111,6 @@ object ChangeSourceConfig {
     )
 
     init {
-        runBlocking(Dispatchers.IO) {
-            Snapshot.withMutableSnapshot {
-                _searchScope.value =
-                    repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_SEARCH_SCOPE, "").first()
-                _checkAuthor.value =
-                    repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_CHECK_AUTHOR, false).first()
-                _loadInfo.value =
-                    repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_LOAD_INFO, false).first()
-                _loadToc.value =
-                    repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_LOAD_TOC, false).first()
-                _loadWordCount.value =
-                    repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_LOAD_WORD_COUNT, false).first()
-            }
-        }
-
         scope.launch {
             repo.getPreference(LocalPreferencesKeys.CHANGE_SOURCE_SEARCH_SCOPE, "")
                 .collect { Snapshot.withMutableSnapshot { _searchScope.value = it } }

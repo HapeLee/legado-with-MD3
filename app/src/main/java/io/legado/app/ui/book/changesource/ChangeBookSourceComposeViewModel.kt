@@ -17,7 +17,9 @@ import io.legado.app.ui.book.search.SearchScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ChangeBookSourceComposeViewModel(
@@ -81,6 +83,19 @@ class ChangeBookSourceComposeViewModel(
     init {
         viewModelScope.launch {
             searchRepository.enabledGroups.collect { /* handled by sheet */ }
+        }
+        viewModelScope.launch {
+            snapshotFlow { ChangeSourceConfig.searchScope }.collect { scopeStr ->
+                searchScope.update(scopeStr)
+                _scopeUiState.update {
+                    it.copy(
+                        isAll = searchScope.isAll(),
+                        isSource = searchScope.isSource(),
+                        displayNames = searchScope.displayNames,
+                        sourceUrls = searchScope.sourceUrls
+                    )
+                }
+            }
         }
     }
 
