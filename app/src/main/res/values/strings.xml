@@ -373,6 +373,7 @@
     <string name="padding_bottom">Bottom</string>
     <string name="padding_left">Left</string>
     <string name="padding_right">Right</string>
+    <string name="padding_format">Top: %1$d  Bottom: %2$d  Left: %3$d  Right: %4$d</string>
     <string name="check_book_source">Check book sources</string>
     <string name="check_select_source">Check the selected source</string>
     <string name="progress_show">%1$s      Progress %2$d/%3$d</string>
