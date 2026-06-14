@@ -1604,6 +1604,7 @@ class ReadBookViewModel(
                 readMenuTopBarBlurMode = ReadBookConfig.readMenuTopBarBlurMode,
                 readMenuBottomBarBlurMode = ReadBookConfig.readMenuBottomBarBlurMode,
                 readMenuTopBarLiquidGlassButtons = ReadBookConfig.readMenuTopBarLiquidGlassButtons,
+                readMenuTopBarTitleCapsule = ReadBookConfig.readMenuTopBarTitleCapsule,
                 readMenuBottomBarLiquidGlassButtons = ReadBookConfig.readMenuBottomBarLiquidGlassButtons,
                 readMenuTopBarBlurStyle = ReadBookConfig.readMenuTopBarBlurStyle,
                 readMenuBottomBarBlurStyle = ReadBookConfig.readMenuBottomBarBlurStyle,
@@ -2760,6 +2761,16 @@ class ReadBookViewModel(
                 }
                 _uiState.update {
                     it.copy(menuConfig = it.menuConfig.copy(readMenuTopBarLiquidGlassButtons = update.value))
+                }
+            }
+
+            is ConfigUpdate.MenuTopBarTitleCapsule -> {
+                ReadBookConfig.readMenuTopBarTitleCapsule = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuTopBarTitleCapsule(update.value)
+                }
+                _uiState.update {
+                    it.copy(menuConfig = it.menuConfig.copy(readMenuTopBarTitleCapsule = update.value))
                 }
             }
 

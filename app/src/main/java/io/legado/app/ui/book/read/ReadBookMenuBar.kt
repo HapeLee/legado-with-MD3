@@ -195,8 +195,7 @@ fun ReadBookMenuBar(
         }
     }
     val hideTopBar = dialogLikeRoute ||
-            currentRoute == ReadBookMenuRoute.ReadStyle && readStylePage >= 1 ||
-            currentRoute == ReadBookMenuRoute.TextTitle
+            currentRoute == ReadBookMenuRoute.ReadStyle && readStylePage >= 1
     val menuColors = readMenuColors()
 
     Box(Modifier.fillMaxSize()) {
@@ -902,6 +901,8 @@ private fun MenuTitleBar(
                 )
             )
     ) {
+        val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
+
         // Title row: back + title + actions + overflow
         Row(
             modifier = Modifier
@@ -919,7 +920,16 @@ private fun MenuTitleBar(
                 backdrop = backdrop,
             )
 
-            if (titleBarMode != "1" && titleBarMode != "3") {
+            if (useTitleCapsule) {
+                // Title capsule layout: title + chapter in a glass pill
+                TitleCapsuleGlassLayout(
+                    state = state,
+                    colors = colors,
+                    onIntent = onIntent,
+                    backdrop = backdrop,
+                    titleTextColor = titleTextColor,
+                )
+            } else if (titleBarMode != "1" && titleBarMode != "3") {
                 AppText(
                     text = state.bookName,
                     modifier = Modifier
@@ -941,46 +951,55 @@ private fun MenuTitleBar(
                 Spacer(Modifier.weight(1f))
             }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Source action button (non-local books only)
-                if (!state.isLocalBook) {
-                    SourceActionButton(
-                        state = state,
-                        colors = colors,
-                        onIntent = onIntent,
-                        backdrop = backdrop,
-                    )
-                    RefreshActionButton(
-                        state = state,
-                        colors = colors,
-                        onIntent = onIntent,
-                        backdrop = backdrop,
-                    )
-                }
+            if (readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig)) {
+                MenuTitleBarMergedGlassButton(
+                    state = state,
+                    colors = colors,
+                    onIntent = onIntent,
+                    backdrop = backdrop,
+                )
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Source action button (non-local books only)
+                    if (!state.isLocalBook) {
+                        SourceActionButton(
+                            state = state,
+                            colors = colors,
+                            onIntent = onIntent,
+                            backdrop = backdrop,
+                        )
+                        RefreshActionButton(
+                            state = state,
+                            colors = colors,
+                            onIntent = onIntent,
+                            backdrop = backdrop,
+                        )
+                    }
 
-                Box {
-                    MenuTitleGlassButton(
-                        onClick = { expanded = true },
-                        icon = Icons.Default.MoreVert,
-                        state = state,
-                        colors = colors,
-                        backdrop = backdrop,
-                    )
-                    OverflowDropdownMenu(
-                        state = state,
-                        onIntent = onIntent,
-                        expanded = expanded,
-                        onDismiss = { expanded = false },
-                    )
+                    Box {
+                        MenuTitleGlassButton(
+                            onClick = { expanded = true },
+                            icon = Icons.Default.MoreVert,
+                            state = state,
+                            colors = colors,
+                            backdrop = backdrop,
+                        )
+                        OverflowDropdownMenu(
+                            state = state,
+                            onIntent = onIntent,
+                            expanded = expanded,
+                            onDismiss = { expanded = false },
+                        )
+                    }
                 }
             }
         }
 
-        // Book name on its own line (mode "1")
-        if (titleBarMode == "1") {
+        // Book name on its own line (mode "1") — hidden when capsule is active
+        if (titleBarMode == "1" && !useTitleCapsule) {
             AppText(
                 text = state.bookName,
                 modifier = Modifier
@@ -1000,8 +1019,8 @@ private fun MenuTitleBar(
             )
         }
 
-        // Chapter name + source action (modes "0" and "1")
-        if (titleBarMode == "0" || titleBarMode == "1") {
+        // Chapter name + source action (modes "0" and "1") — hidden when capsule is active
+        if ((titleBarMode == "0" || titleBarMode == "1") && !useTitleCapsule) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1216,6 +1235,228 @@ private fun ReadMenuGlassButtonSurface(
         ) {
             content(tint)
         }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RowScope.TitleCapsuleGlassLayout(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+    titleTextColor: Color,
+) {
+    val pillShape = RoundedCornerShape(50)
+
+    Row(
+        modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 8.dp)
+            .height(40.dp)
+            .readMenuLiquidGlass(
+                backdrop = backdrop,
+                colors = colors,
+                shape = pillShape,
+                useTopBarStyle = true,
+                useLens = false,
+                blurRadius = 32.dp,
+                menuConfig = state.menuConfig,
+            )
+            .then(
+                if (!state.isLocalBook) {
+                    Modifier.combinedClickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        onClick = { onIntent(ReadBookIntent.OpenBookInfo) },
+                        onLongClick = { onIntent(ReadBookIntent.OpenChapterUrl) },
+                    )
+                } else {
+                    Modifier.clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) { onIntent(ReadBookIntent.OpenBookInfo) }
+                }
+            )
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            AppText(
+                text = state.bookName,
+                style = LegadoTheme.typography.labelMediumEmphasized,
+                color = titleTextColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (state.chapterName.isNotBlank()) {
+                AppText(
+                    text = state.chapterName,
+                    style = LegadoTheme.typography.labelSmall,
+                    color = titleTextColor.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MenuTitleBarMergedGlassButton(
+    state: ReadBookUiState,
+    colors: ReadMenuColors,
+    onIntent: (ReadBookIntent) -> Unit,
+    backdrop: Backdrop?,
+) {
+    var sourceExpanded by remember { mutableStateOf(false) }
+    var refreshExpanded by remember { mutableStateOf(false) }
+    var overflowExpanded by remember { mutableStateOf(false) }
+
+    val pillShape = RoundedCornerShape(50)
+    val tint = LegadoTheme.colorScheme.onSurfaceVariant
+
+    Box {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .height(40.dp)
+                    .readMenuLiquidGlass(
+                        backdrop = backdrop,
+                        colors = colors,
+                        shape = pillShape,
+                        useTopBarStyle = true,
+                        useLens = true,
+                        blurRadius = 32.dp,
+                        interactive = true,
+                        menuConfig = state.menuConfig,
+                    )
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+            // SwapHoriz - change source
+            if (!state.isLocalBook) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .combinedClickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            role = Role.Button,
+                            onClick = { onIntent(ReadBookIntent.MenuChangeSource) },
+                            onLongClick = { sourceExpanded = true },
+                        ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SwapHoriz,
+                        contentDescription = stringResource(R.string.change_origin),
+                        tint = tint,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(20.dp)
+                        .background(tint.copy(alpha = 0.15f))
+                )
+
+                // Refresh
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .combinedClickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            role = Role.Button,
+                            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+                            onLongClick = { refreshExpanded = true },
+                        ),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.menu_refresh_after),
+                        tint = tint,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(20.dp)
+                        .background(tint.copy(alpha = 0.15f))
+                )
+            }
+
+            // MoreVert - overflow menu
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                        role = Role.Button,
+                        onClick = { overflowExpanded = true },
+                    ),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = null,
+                    tint = tint,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        }
+
+        // Dropdown menus
+        if (!state.isLocalBook) {
+            RoundDropdownMenu(
+                expanded = sourceExpanded,
+                onDismissRequest = { sourceExpanded = false },
+            ) { dismiss ->
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.change_origin),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChangeSource) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.chapter_change_source),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuChapterChangeSource) },
+                )
+            }
+
+            RoundDropdownMenu(
+                expanded = refreshExpanded,
+                onDismissRequest = { refreshExpanded = false },
+            ) { dismiss ->
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.menu_refresh_dur),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshDur) },
+                )
+                RoundDropdownMenuItem(
+                    text = stringResource(R.string.menu_refresh_after),
+                    onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAfter) },
+                )
+            }
+        }
+
+        OverflowDropdownMenu(
+            state = state,
+            onIntent = onIntent,
+            expanded = overflowExpanded,
+            onDismiss = { overflowExpanded = false },
+        )
     }
 }
 
@@ -2403,6 +2644,15 @@ private fun readMenuTopBarButtonLiquidGlassEnabled(
 ): Boolean {
     return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
             menuConfig.readMenuTopBarLiquidGlassButtons &&
+            readMenuLiquidGlassAvailable(backdrop)
+}
+
+private fun readMenuTopBarTitleCapsuleEnabled(
+    backdrop: Backdrop?,
+    menuConfig: ReadMenuConfig,
+): Boolean {
+    return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
+            menuConfig.readMenuTopBarTitleCapsule &&
             readMenuLiquidGlassAvailable(backdrop)
 }
 

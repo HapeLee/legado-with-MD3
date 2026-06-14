@@ -88,6 +88,7 @@ data class ReadPreferences(
     val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuTopBarLiquidGlassButtons: Boolean = false,
+    val readMenuTopBarTitleCapsule: Boolean = false,
     val readMenuBottomBarLiquidGlassButtons: Boolean = false,
     val readMenuTopBarBlurStyle: Int = ReadMenuBlurStyle.Progressive,
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
@@ -315,6 +316,9 @@ class ReadSettingsRepository(
 
     suspend fun setReadMenuTopBarLiquidGlassButtons(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.readMenuTopBarLiquidGlassButtons, value)
+
+    suspend fun setReadMenuTopBarTitleCapsule(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.readMenuTopBarTitleCapsule, value)
 
     suspend fun setReadMenuBottomBarLiquidGlassButtons(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.readMenuBottomBarLiquidGlassButtons, value)

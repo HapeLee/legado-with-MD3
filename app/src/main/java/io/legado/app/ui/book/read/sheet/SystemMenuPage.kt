@@ -746,6 +746,21 @@ private fun TopBarTab(
                 },
             )
         }
+        AnimatedVisibility(visible = topBarBlurEnabled) {
+            TinySwitchSettingItem(
+                title = stringResource(R.string.read_menu_top_bar_title_capsule),
+                checked = preferences.readMenuTopBarTitleCapsule,
+                onCheckedChange = {
+                    onIntent(
+                        ReadBookIntent.UpdateConfig(
+                            ConfigUpdate.MenuTopBarTitleCapsule(
+                                it
+                            )
+                        )
+                    )
+                },
+            )
+        }
     }
 }
 

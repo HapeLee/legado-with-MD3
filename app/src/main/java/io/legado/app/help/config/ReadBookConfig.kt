@@ -204,6 +204,7 @@ object ReadBookConfig {
     var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, true)
     var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, false)
     var readMenuTopBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuTopBarLiquidGlassButtons, false)
+    var readMenuTopBarTitleCapsule by prefDelegate(PreferKey.readMenuTopBarTitleCapsule, false)
     var readMenuBottomBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuBottomBarLiquidGlassButtons, false)
     var readMenuBorderColor by prefDelegate(PreferKey.readMenuBorderColor, 0)
     var readMenuBorderColorNight by prefDelegate(PreferKey.readMenuBorderColorNight, 0)

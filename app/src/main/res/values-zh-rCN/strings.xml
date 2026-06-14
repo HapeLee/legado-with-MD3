@@ -1908,6 +1908,7 @@
     <string name="read_menu_border_color">颜色</string>
     <string name="read_menu_blur_style_solid">实心模糊</string>
     <string name="read_menu_bar_liquid_glass_buttons">液态玻璃按钮</string>
+    <string name="read_menu_top_bar_title_capsule">标题胶囊布局</string>
     <string name="read_menu_bar_blur">模糊效果</string>
     <string name="read_menu_bar_liquid_glass">液态玻璃背景</string>
 

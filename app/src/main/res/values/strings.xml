@@ -1903,6 +1903,7 @@
     <string name="read_menu_blur_mode_none">None</string>
     <string name="read_menu_bar_liquid_glass_summary">Use liquid glass for the floating bottom bar. Requires Android 13+</string>
     <string name="read_menu_bar_liquid_glass_buttons">Liquid glass bottom buttons</string>
+    <string name="read_menu_top_bar_title_capsule">Title capsule layout</string>
     <string name="read_menu_bottom_bar_liquid_glass_buttons_summary">Apply liquid glass to bottom bar buttons and the slider thumb. Requires Android 13+</string>
     <string name="read_menu_bar_blur_style">Blur style</string>
     <string name="read_menu_blur_style_solid">Solid blur</string>
