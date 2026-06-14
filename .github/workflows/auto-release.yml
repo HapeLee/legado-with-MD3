@@ -320,6 +320,8 @@ jobs:
             if [[ "$IS_RELEASE" != "true" ]]; then
                 echo "**此版本为测试版，会存在不稳定问题。**"
                 echo "**noR8 变体关闭了代码混淆与压缩，若有崩溃问题请使用它并收集和发送 Log，以便开发者定位问题代码。**"
+                echo "### [发布页](https://t.me/materado)"
+                echo "### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)"
                 echo ""
             fi
             echo "### 更新内容"
