@@ -20,6 +20,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -148,6 +149,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     private val viewModel by viewModel<MainViewModel>()
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
+    private var shouldApplyDefaultToRead = true
     private var restoredReadBookRoute: MainRouteReadBook? = null
     private var latestBackStack: List<NavKey> = emptyList()
     internal var activeReadBookInputHandler: ReadBookInputHandler? = null
@@ -155,6 +157,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
+        shouldApplyDefaultToRead = savedInstanceState == null
         restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
         super.onCreate(savedInstanceState)
 
@@ -210,7 +213,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 !hasExplicitStartRoute && restoredReadBookRoute != null -> {
                     arrayOf(MainRouteHome, restoredReadBookRoute!!)
                 }
-                OtherConfig.defaultToRead && resolved == MainRouteHome -> {
+                shouldApplyDefaultToRead && OtherConfig.defaultToRead && resolved == MainRouteHome -> {
                     arrayOf(MainRouteHome, MainRouteReadBook())
                 }
                 else -> {
@@ -220,6 +223,10 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         }
         latestBackStack = startRoutes.toList()
         val backStack = rememberNavBackStack(*startRoutes)
+
+        SideEffect {
+            shouldApplyDefaultToRead = false
+        }
 
         LaunchedEffect(backStack) {
             routeEvents.collect { route ->
