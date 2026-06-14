@@ -21,6 +21,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.NavKey
@@ -66,6 +67,12 @@ import kotlin.coroutines.suspendCoroutine
 open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     companion object {
+        private const val KEY_RESTORE_READ_ROUTE = "restoreReadRoute"
+        private const val KEY_RESTORE_READ_BOOK_URL = "restoreReadBookUrl"
+        private const val KEY_RESTORE_READ_ALOUD = "restoreReadAloud"
+        private const val KEY_RESTORE_READ_IN_BOOKSHELF = "restoreReadInBookshelf"
+        private const val KEY_RESTORE_READ_CHAPTER_CHANGED = "restoreReadChapterChanged"
+
         @Volatile
         var hasActiveReadBookRoute: Boolean = false
 
@@ -141,10 +148,14 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     private val viewModel by viewModel<MainViewModel>()
     private val routeEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
     private var bookInfoVariableSetter: ((String, String?) -> Unit)? = null
+    private var restoredReadBookRoute: MainRouteReadBook? = null
+    private var latestBackStack: List<NavKey> = emptyList()
     internal var activeReadBookInputHandler: ReadBookInputHandler? = null
+    internal var activeReadBookRoute: MainRouteReadBook? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
+        restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
         super.onCreate(savedInstanceState)
 
         if (checkStartupRoute()) return
@@ -193,18 +204,31 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         val startRoutes = remember {
             val resolved = MainNavigator.resolveStartRoute(intent)
-            if (OtherConfig.defaultToRead && resolved == MainRouteHome) {
-                arrayOf(MainRouteHome, MainRouteReadBook())
-            } else {
-                arrayOf(resolved)
+            val hasExplicitStartRoute = intent?.hasExtra(MainIntent.EXTRA_START_ROUTE) == true
+            when {
+                !hasExplicitStartRoute && restoredReadBookRoute != null -> {
+                    arrayOf(MainRouteHome, restoredReadBookRoute!!)
+                }
+                OtherConfig.defaultToRead && resolved == MainRouteHome -> {
+                    arrayOf(MainRouteHome, MainRouteReadBook())
+                }
+                else -> {
+                    arrayOf(resolved)
+                }
             }
         }
+        latestBackStack = startRoutes.toList()
         val backStack = rememberNavBackStack(*startRoutes)
 
         LaunchedEffect(backStack) {
             routeEvents.collect { route ->
                 MainNavigator.navigateToRoute(backStack, route)
             }
+        }
+
+        LaunchedEffect(backStack) {
+            snapshotFlow { backStack.toList() }
+                .collect { latestBackStack = it }
         }
 
         SharedTransitionLayout {
@@ -369,6 +393,25 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         if (AppConfig.autoRefreshBook) {
             outState.putBoolean("isAutoRefreshedBook", true)
         }
+        val readRoute = latestBackStack.lastOrNull() as? MainRouteReadBook
+            ?: activeReadBookRoute
+        if (readRoute != null) {
+            outState.putBoolean(KEY_RESTORE_READ_ROUTE, true)
+            outState.putString(KEY_RESTORE_READ_BOOK_URL, readRoute.bookUrl)
+            outState.putBoolean(KEY_RESTORE_READ_ALOUD, readRoute.readAloud)
+            outState.putBoolean(KEY_RESTORE_READ_IN_BOOKSHELF, readRoute.inBookshelf)
+            outState.putBoolean(KEY_RESTORE_READ_CHAPTER_CHANGED, readRoute.chapterChanged)
+        }
+    }
+
+    private fun Bundle.restoreReadBookRoute(): MainRouteReadBook? {
+        if (!getBoolean(KEY_RESTORE_READ_ROUTE, false)) return null
+        return MainRouteReadBook(
+            bookUrl = getString(KEY_RESTORE_READ_BOOK_URL),
+            readAloud = getBoolean(KEY_RESTORE_READ_ALOUD, false),
+            inBookshelf = getBoolean(KEY_RESTORE_READ_IN_BOOKSHELF, true),
+            chapterChanged = getBoolean(KEY_RESTORE_READ_CHAPTER_CHANGED, false),
+        )
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {

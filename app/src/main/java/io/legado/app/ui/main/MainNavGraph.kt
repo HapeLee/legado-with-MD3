@@ -310,6 +310,7 @@ fun MainActivity.mainEntryProvider(
 
         DisposableEffect(controller, lifecycleOwner, route.readAloud) {
             activeReadBookInputHandler = controller
+            activeReadBookRoute = route
             MainActivity.hasActiveReadBookRoute = true
             controller.onClose = { onNavigateBack() }
             controller.onStartContentLoadFinish = {
@@ -334,6 +335,9 @@ fun MainActivity.mainEntryProvider(
                 lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
                 if (activeReadBookInputHandler === controller) {
                     activeReadBookInputHandler = null
+                }
+                if (activeReadBookRoute == route) {
+                    activeReadBookRoute = null
                 }
                 MainActivity.hasActiveReadBookRoute = false
                 controller.clearTts()
