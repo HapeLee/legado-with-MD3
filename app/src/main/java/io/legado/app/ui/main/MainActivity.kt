@@ -20,6 +20,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
@@ -193,15 +194,17 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         }
 
         val startRoutes = remember {
-            val routes = resolveInitialStartRoutes(
+            resolveInitialStartRoutes(
                 resolved = MainNavigator.resolveStartRoute(intent),
                 defaultToRead = OtherConfig.defaultToRead,
                 isFreshCreate = shouldApplyDefaultToRead,
-            )
-            shouldApplyDefaultToRead = false
-            routes.toTypedArray()
+            ).toTypedArray()
         }
         val backStack = rememberNavBackStack(*startRoutes)
+
+        SideEffect {
+            shouldApplyDefaultToRead = false
+        }
 
         LaunchedEffect(backStack) {
             routeEvents.collect { route ->
