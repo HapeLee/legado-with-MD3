@@ -133,13 +133,11 @@ class ChangeChapterSourceViewModel(
             is ChangeChapterSourceIntent.SetLoadInfo -> {
                 ChangeSourceConfig.loadInfo = intent.enabled
                 _uiState.update { it.copy(loadInfo = intent.enabled) }
-                refreshResults()
             }
 
             is ChangeChapterSourceIntent.SetLoadToc -> {
                 ChangeSourceConfig.loadToc = intent.enabled
                 _uiState.update { it.copy(loadToc = intent.enabled) }
-                refreshResults()
             }
 
             is ChangeChapterSourceIntent.SetLoadWordCount -> {

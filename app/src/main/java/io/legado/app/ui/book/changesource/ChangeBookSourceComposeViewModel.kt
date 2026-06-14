@@ -227,13 +227,11 @@ class ChangeBookSourceComposeViewModel(
     fun onLoadInfoChange(enabled: Boolean) {
         if (ChangeSourceConfig.loadInfo == enabled) return
         ChangeSourceConfig.loadInfo = enabled
-        refresh()
     }
 
     fun onLoadTocChange(enabled: Boolean) {
         if (ChangeSourceConfig.loadToc == enabled) return
         ChangeSourceConfig.loadToc = enabled
-        refresh()
     }
 
     fun onLoadWordCountChange(enabled: Boolean) {

@@ -323,13 +323,11 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             R.id.menu_load_info -> {
                 ChangeSourceConfig.loadInfo = !item.isChecked
                 item.isChecked = !item.isChecked
-                viewModel.refresh()
             }
 
             R.id.menu_load_toc -> {
                 ChangeSourceConfig.loadToc = !item.isChecked
                 item.isChecked = !item.isChecked
-                viewModel.refresh()
             }
 
             R.id.menu_load_word_count -> {
