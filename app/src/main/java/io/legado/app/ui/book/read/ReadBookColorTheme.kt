@@ -87,7 +87,7 @@ private fun rememberReadBackgroundTheme(
         seedColor = sourceColor,
         backgroundColor = surfaceColor,
         containerColor = null,
-        fallbackDark = isAppDark,
+        deriveDarkFromColor = false,
         paletteStyle = paletteStyle,
     )
 }
