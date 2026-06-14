@@ -195,6 +195,7 @@ class SearchContentViewModel(
         if (index < 0) return false
         SearchContentResult.emitResult(
             SearchContentResult.Result(
+                bookUrl = bookUrl,
                 searchResults = results,
                 index = index,
                 query = searchResult.query

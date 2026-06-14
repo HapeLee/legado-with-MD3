@@ -11,6 +11,7 @@ import android.text.style.UnderlineSpan
 import io.legado.app.help.config.AppConfig
 
 data class SearchResult(
+    val bookUrl: String = "",
     val resultCount: Int = 0,
     val resultCountWithinChapter: Int = 0,
     val resultText: String = "",

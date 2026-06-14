@@ -122,6 +122,7 @@ class SearchContentRepository {
         matches.forEachIndexed { index, match ->
             val construct = getResultAndQueryIndex(mContent, match.position, match.length)
             val result = SearchResult(
+                bookUrl = book.bookUrl,
                 resultCountWithinChapter = index,
                 resultText = construct.second,
                 chapterTitle = chapter.title,

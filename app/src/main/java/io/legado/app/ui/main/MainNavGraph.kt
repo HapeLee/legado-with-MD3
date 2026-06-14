@@ -354,6 +354,7 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSearchContent> { route ->
         val viewModel = koinViewModel<SearchContentViewModel>(
+            key = route.bookUrl,
             parameters = { parametersOf(route) }
         )
         SearchContentScreen(

@@ -717,7 +717,7 @@ class ReadBookController(
                     // Chapter not loaded — open it, then mark in the success callback
                     ReadBook.openChapter(
                         effect.chapterIndex,
-                        effect.result.queryIndexInChapter
+                        0
                     ) {
                         val tc = ReadBook.curTextChapter ?: return@openChapter
                         val query = effect.result.query
