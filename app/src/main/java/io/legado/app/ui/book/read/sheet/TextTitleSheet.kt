@@ -80,7 +80,7 @@ fun ReadStyleTextTitleContent(
     var selectedTab by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.currentPage }.collect { selectedTab = it }
+        snapshotFlow { pagerState.settledPage }.collect { selectedTab = it }
     }
 
     ReadStyleTextTitleContent(
@@ -92,6 +92,7 @@ fun ReadStyleTextTitleContent(
         onOpenHighlightRule = onOpenHighlightRule,
         onOpenFontSelect = onOpenFontSelect,
         animateToPage = { page ->
+            selectedTab = page
             scope.launch {
                 pagerState.animateScrollToPage(
                     page = page,
@@ -140,25 +141,21 @@ internal fun ReadStyleTextTitleContent(
                 .clipToBounds()
                 .pagerHeight(animatedHeight),
         ) { page ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .onSizeChanged { size ->
-                        pageHeights[page] = size.height
-                    }
-            ) {
-                when (page) {
-                    0 -> TextEffectsPage(
-                        onOpenShadowSet = onOpenShadowSet,
-                        onOpenUnderlineConfig = onOpenUnderlineConfig,
-                        onOpenHighlightRule = onOpenHighlightRule,
-                        onOpenFontSelect = onOpenFontSelect,
-                        onIntent = onIntent,
-                    )
+            val pageModifier = Modifier.onSizeChanged { size ->
+                pageHeights[page] = size.height
+            }
+            when (page) {
+                0 -> TextEffectsPage(
+                    onOpenShadowSet = onOpenShadowSet,
+                    onOpenUnderlineConfig = onOpenUnderlineConfig,
+                    onOpenHighlightRule = onOpenHighlightRule,
+                    onOpenFontSelect = onOpenFontSelect,
+                    modifier = pageModifier,
+                    onIntent = onIntent,
+                )
 
-                    1 -> LayoutSpacingPage(onIntent = onIntent)
-                    2 -> TitleSettingsPage(onIntent = onIntent)
-                }
+                1 -> LayoutSpacingPage(modifier = pageModifier, onIntent = onIntent)
+                2 -> TitleSettingsPage(modifier = pageModifier, onIntent = onIntent)
             }
         }
     }
@@ -168,6 +165,7 @@ internal fun ReadStyleTextTitleContent(
 
 @Composable
 internal fun LayoutSpacingPage(
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var letterSpacing by remember { mutableFloatStateOf(ReadBookConfig.letterSpacing) }
@@ -179,7 +177,8 @@ internal fun LayoutSpacingPage(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         Text(
             text = stringResource(R.string.read_config_body_spacing),
@@ -238,6 +237,7 @@ internal fun TextEffectsPage(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var textItalic by remember { mutableStateOf(ReadBookConfig.textItalic) }
@@ -251,7 +251,8 @@ internal fun TextEffectsPage(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         Text(
             text = stringResource(R.string.text_typeface),
@@ -386,6 +387,7 @@ internal fun TextEffectsPage(
 
 @Composable
 internal fun TitleSettingsPage(
+    modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
@@ -411,7 +413,8 @@ internal fun TitleSettingsPage(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .then(modifier),
     ) {
         TinyDropdownSettingItem(
             title = stringResource(R.string.body_title),
