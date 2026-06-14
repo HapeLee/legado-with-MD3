@@ -7,7 +7,9 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import coil.size.Size
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.Slider as MiuixSlider
@@ -46,7 +48,7 @@ fun AppSlider(
             thumb = {
                 SliderDefaults.Thumb(
                     interactionSource = interactionSource,
-                    modifier = Modifier.height(32.dp)
+                    thumbSize = DpSize(4.dp,32.dp)
                 )
             }
         )
