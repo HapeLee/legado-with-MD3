@@ -29,7 +29,6 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.databinding.DialogBookChangeSourceBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.search.SearchScope
@@ -133,13 +132,13 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
         binding.toolBar.menu.applyTint(requireContext())
         binding.toolBar.setOnMenuItemClickListener(this)
         binding.toolBar.menu.findItem(R.id.menu_check_author)
-            ?.isChecked = AppConfig.changeSourceCheckAuthor
+            ?.isChecked = ChangeSourceConfig.checkAuthor
         binding.toolBar.menu.findItem(R.id.menu_load_info)
-            ?.isChecked = AppConfig.changeSourceLoadInfo
+            ?.isChecked = ChangeSourceConfig.loadInfo
         binding.toolBar.menu.findItem(R.id.menu_load_toc)
-            ?.isChecked = AppConfig.changeSourceLoadToc
+            ?.isChecked = ChangeSourceConfig.loadToc
         binding.toolBar.menu.findItem(R.id.menu_load_word_count)
-            ?.isChecked = AppConfig.changeSourceLoadWordCount
+            ?.isChecked = ChangeSourceConfig.loadWordCount
     }
 
     private fun initRecyclerView() {
@@ -316,23 +315,25 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
             R.id.menu_check_author -> {
-                AppConfig.changeSourceCheckAuthor = !item.isChecked
+                ChangeSourceConfig.checkAuthor = !item.isChecked
                 item.isChecked = !item.isChecked
                 viewModel.refresh()
             }
 
             R.id.menu_load_info -> {
-                AppConfig.changeSourceLoadInfo = !item.isChecked
+                ChangeSourceConfig.loadInfo = !item.isChecked
                 item.isChecked = !item.isChecked
+                viewModel.refresh()
             }
 
             R.id.menu_load_toc -> {
-                AppConfig.changeSourceLoadToc = !item.isChecked
+                ChangeSourceConfig.loadToc = !item.isChecked
                 item.isChecked = !item.isChecked
+                viewModel.refresh()
             }
 
             R.id.menu_load_word_count -> {
-                AppConfig.changeSourceLoadWordCount = !item.isChecked
+                ChangeSourceConfig.loadWordCount = !item.isChecked
                 item.isChecked = !item.isChecked
                 viewModel.onLoadWordCountChecked(item.isChecked)
             }
