@@ -211,6 +211,7 @@ class SearchViewModel(
                 syncScopeState(restartSearch = true, oldScope = oldScope)
             }
 
+            is SearchIntent.ApplyScopeSelection -> applyScopeSelection(intent)
             is SearchIntent.ToggleScopeGroup -> toggleScopeGroup(intent.groupName)
             is SearchIntent.ToggleScopeSource -> toggleScopeSource(intent.source)
             is SearchIntent.RemoveScopeItem -> {
@@ -221,6 +222,7 @@ class SearchViewModel(
             }
 
             is SearchIntent.SetMatchMode -> {
+                _uiState.update { it.copy(matchMode = intent.mode) }
                 viewModelScope.launch {
                     localPreferencesRepository.updatePreference(
                         LocalPreferencesKeys.MATCH_MODE, intent.mode.value
@@ -427,7 +429,6 @@ class SearchViewModel(
             it.copy(
                 query = query,
                 showSuggestions = showSuggestions,
-                isManualStop = false,
                 emptyScopeAction = null,
             )
         }
@@ -657,6 +658,7 @@ class SearchViewModel(
         _uiState.update { it.copy(emptyScopeAction = null) }
 
         if (action.wasMatchMode == MatchMode.EXACT) {
+            _uiState.update { it.copy(matchMode = MatchMode.DEFAULT) }
             viewModelScope.launch {
                 localPreferencesRepository.updatePreference(
                     LocalPreferencesKeys.MATCH_MODE, MatchMode.DEFAULT.value
@@ -672,10 +674,27 @@ class SearchViewModel(
     }
 
     private fun restartCommittedSearchIfNeeded() {
-        val committed = _uiState.value.committedQuery
-        if (committed.isNotBlank()) {
+        val state = _uiState.value
+        val committed = state.committedQuery
+        if (
+            committed.isNotBlank() &&
+            state.query.trim() == committed &&
+            !state.showSuggestions &&
+            !state.isManualStop
+        ) {
             submitSearch(committed)
         }
+    }
+
+    private fun applyScopeSelection(intent: SearchIntent.ApplyScopeSelection) {
+        val oldScope = searchScope.toString()
+        when {
+            intent.isSourceScope -> searchScope.updateSources(intent.sources)
+            intent.groupNames.isNotEmpty() -> searchScope.update(intent.groupNames)
+            else -> searchScope.update("")
+        }
+        persistSearchScope()
+        syncScopeState(restartSearch = true, oldScope = oldScope)
     }
 
     private fun syncScopeState(

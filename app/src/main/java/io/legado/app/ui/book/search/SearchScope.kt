@@ -70,7 +70,7 @@ data class SearchScope(private var scope: String) {
             if (scope.isEmpty()) {
                 return appCtx.getString(R.string.all_source)
             }
-            return scope
+            return parsedScope().groupNames.joinToString(",")
         }
 
     /**
