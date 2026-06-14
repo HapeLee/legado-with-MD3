@@ -669,6 +669,7 @@ private fun ReadBookMenuSurface(
                             title = stringResource(R.string.read_config_text_effects),
                             maxHeight = maxHeight,
                             bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            animateSize = false,
                             onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
                         ) {
                             ReadStyleTextTitleContent(
@@ -684,7 +685,6 @@ private fun ReadBookMenuSurface(
                                 onOpenFontSelect = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
                                 },
-                                modifier = Modifier.padding(horizontal = 16.dp),
                                 onIntent = onIntent,
                             )
                         }
