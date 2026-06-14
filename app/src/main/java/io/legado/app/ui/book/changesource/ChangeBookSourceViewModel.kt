@@ -19,7 +19,6 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.primaryStr
 import io.legado.app.help.book.releaseHtmlData
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.source.SourceHelp
@@ -137,7 +136,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
     }.map {
         kotlin.runCatching {
-            val comparator = if (AppConfig.changeSourceLoadWordCount) {
+            val comparator = if (ChangeSourceConfig.loadWordCount) {
                 wordCountComparator
             } else {
                 defaultComparator
@@ -269,10 +268,10 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     private suspend fun search(source: BookSource) {
-        val checkAuthor = AppConfig.changeSourceCheckAuthor
-        val loadInfo = AppConfig.changeSourceLoadInfo
-        val loadToc = AppConfig.changeSourceLoadToc
-        val loadWordCount = AppConfig.changeSourceLoadWordCount
+        val checkAuthor = ChangeSourceConfig.checkAuthor
+        val loadInfo = ChangeSourceConfig.loadInfo
+        val loadToc = ChangeSourceConfig.loadToc
+        val loadWordCount = ChangeSourceConfig.loadWordCount
         val resultBooks = WebBook.searchBookAwait(
             source, name,
             filter = { fName, fAuthor, _ ->
@@ -295,7 +294,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         if (book.tocUrl.isEmpty()) {
             WebBook.getBookInfoAwait(source, book)
         }
-        if (AppConfig.changeSourceLoadToc || AppConfig.changeSourceLoadWordCount) {
+        if (ChangeSourceConfig.loadToc || ChangeSourceConfig.loadWordCount) {
             loadBookToc(source, book)
         } else {
             //从详情页里获取最新章节
@@ -315,7 +314,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
         bookMap[book.primaryStr()] = book
         book.releaseHtmlData()
-        if (AppConfig.changeSourceLoadWordCount) {
+        if (ChangeSourceConfig.loadWordCount) {
             loadBookWordCount(source, book, chapters)
         } else {
             val searchBook = book.toSearchBook()
@@ -418,13 +417,13 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             else -> searchScope.displayNames.firstOrNull() ?: ""
         }
         return if (screenKey.isEmpty()) {
-            if (AppConfig.changeSourceCheckAuthor) {
+            if (ChangeSourceConfig.checkAuthor) {
                 appDb.searchBookDao.changeSourceByGroup(name, author, group)
             } else {
                 appDb.searchBookDao.changeSourceByGroup(name, "", group)
             }
         } else {
-            if (AppConfig.changeSourceCheckAuthor) {
+            if (ChangeSourceConfig.checkAuthor) {
                 appDb.searchBookDao.changeSourceSearch(name, author, screenKey, group)
             } else {
                 appDb.searchBookDao.changeSourceSearch(name, "", screenKey, group)

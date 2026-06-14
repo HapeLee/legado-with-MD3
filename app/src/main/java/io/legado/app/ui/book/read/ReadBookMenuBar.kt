@@ -139,6 +139,7 @@ import io.legado.app.help.config.ReadStyleResolver
 import io.legado.app.ui.animation.DampedDragAnimation
 import io.legado.app.ui.animation.InteractiveHighlight
 import io.legado.app.ui.book.read.sheet.AutoReadContent
+import io.legado.app.ui.book.read.sheet.HeaderFooterPage
 import io.legado.app.ui.book.read.sheet.PaddingConfigContent
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import io.legado.app.ui.book.read.sheet.ReadMenuButtonInfo
@@ -186,7 +187,7 @@ fun ReadBookMenuBar(
     } else {
         ReadBookMenuContent.Route(currentRoute)
     }
-    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.PaddingConfig
+    val dialogLikeRoute = currentRoute == ReadBookMenuRoute.PaddingConfig || currentRoute == ReadBookMenuRoute.HeaderFooterConfig
     var readStylePage by remember { mutableIntStateOf(0) }
     LaunchedEffect(currentRoute) {
         if (currentRoute != ReadBookMenuRoute.ReadStyle) {
@@ -392,25 +393,13 @@ private fun ReadBookMenuSurface(
         is ReadBookMenuContent.Route -> contentTarget.route
     }
     val expanded = route != ReadBookMenuRoute.Main
-    val dialogLikeRoute = route == ReadBookMenuRoute.PaddingConfig
+    val dialogLikeRoute = route == ReadBookMenuRoute.PaddingConfig || route == ReadBookMenuRoute.HeaderFooterConfig
     val density = LocalDensity.current
     val windowSize = LocalWindowInfo.current.containerSize
     var surfaceHeightPx by remember { mutableIntStateOf(0) }
     val morphProgress by animateFloatAsState(
         targetValue = if (dialogLikeRoute) 1f else 0f,
         label = "ReadBookMenuMorph",
-    )
-    val headerFooterLift by animateDpAsState(
-        targetValue = if (route == ReadBookMenuRoute.ReadStyle && readStylePage == 2) {
-            72.dp
-        } else {
-            0.dp
-        },
-        animationSpec = tween(
-            durationMillis = 280,
-            easing = LinearOutSlowInEasing,
-        ),
-        label = "ReadBookMenuHeaderFooterLift",
     )
     val maxHeight = with(density) {
         windowSize.height.toDp() * 0.64f
@@ -518,8 +507,7 @@ private fun ReadBookMenuSurface(
             .onSizeChanged { surfaceHeightPx = it.height }
             .offset {
                 val dialogLiftPx = ((windowSize.height - surfaceHeightPx) / 2f) * morphProgress
-                val liftPx = dialogLiftPx + headerFooterLift.toPx()
-                IntOffset(x = 0, y = -liftPx.roundToInt())
+                IntOffset(x = 0, y = -dialogLiftPx.roundToInt())
             }
             .then(
                 if (useLiquidGlass) {
@@ -620,6 +608,9 @@ private fun ReadBookMenuSurface(
                                 onOpenPaddingConfig = {
                                     onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.PaddingConfig))
                                 },
+                                onOpenHeaderFooterConfig = {
+                                    onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.HeaderFooterConfig))
+                                },
                                 onOpenMoreConfig = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.MoreConfig))
                                 },
@@ -655,6 +646,20 @@ private fun ReadBookMenuSurface(
                             PaddingConfigContent(
                                 onIntent = onIntent,
                                 modifier = Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    }
+
+                    ReadBookMenuRoute.HeaderFooterConfig -> {
+                        ReadBookMenuRoutePage(
+                            title = stringResource(R.string.header_footer),
+                            maxHeight = maxHeight,
+                            scrollContent = false,
+                            bottomPadding = if (extendSurfaceToNavigationBar) navBarHeight else 0.dp,
+                            onBack = { onIntent(ReadBookIntent.ReadMenuBack) },
+                        ) {
+                            HeaderFooterPage(
+                                onIntent = onIntent,
                             )
                         }
                     }

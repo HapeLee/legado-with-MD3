@@ -1,8 +1,8 @@
 package io.legado.app.domain.model
 
-import com.google.gson.GsonBuilder
-import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.splitNotBlank
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 data class BookSearchScope(val raw: String) {
 
@@ -39,11 +39,13 @@ data class BookSearchScope(val raw: String) {
             get() = groups.isEmpty() && sources.isEmpty()
     }
 
+    @Serializable
     data class ScopeSourceItem(
         val name: String,
         val url: String,
     )
 
+    @Serializable
     private data class SerializedSearchScope(
         val type: String = "",
         val groups: List<String> = emptyList(),
@@ -57,7 +59,9 @@ data class BookSearchScope(val raw: String) {
             return if (selected.isEmpty()) {
                 ""
             } else {
-                scopeGson.toJson(SerializedSearchScope(type = TYPE_GROUP, groups = selected))
+                scopeJson.encodeToString(
+                    SerializedSearchScope(type = TYPE_GROUP, groups = selected)
+                )
             }
         }
 
@@ -66,7 +70,9 @@ data class BookSearchScope(val raw: String) {
             return if (selected.isEmpty()) {
                 ""
             } else {
-                scopeGson.toJson(SerializedSearchScope(type = TYPE_SOURCE, sources = selected))
+                scopeJson.encodeToString(
+                    SerializedSearchScope(type = TYPE_SOURCE, sources = selected)
+                )
             }
         }
 
@@ -84,7 +90,9 @@ data class BookSearchScope(val raw: String) {
             val json = raw.trim()
             if (!json.startsWith("{") || !json.endsWith("}")) return null
 
-            return scopeGson.fromJsonObject<SerializedSearchScope>(json).getOrNull()?.let { scope ->
+            return runCatching {
+                scopeJson.decodeFromString<SerializedSearchScope>(json)
+            }.getOrNull()?.let { scope ->
                 when (scope.type) {
                     TYPE_SOURCE -> ParsedSearchScope(
                         sources = scope.sources.filter { it.url.isNotBlank() }
@@ -124,7 +132,10 @@ data class BookSearchScope(val raw: String) {
 
         private const val TYPE_GROUP = "group"
         private const val TYPE_SOURCE = "source"
-        private val scopeGson = GsonBuilder().disableHtmlEscaping().create()
+        private val scopeJson = Json {
+            encodeDefaults = false
+            ignoreUnknownKeys = true
+        }
     }
 
 }

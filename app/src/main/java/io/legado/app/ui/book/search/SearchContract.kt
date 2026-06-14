@@ -88,6 +88,11 @@ sealed interface SearchIntent {
     data class ToggleSourceType(val type: Int) : SearchIntent
     data object ClearAllSourceTypes : SearchIntent
     data object SelectAllScope : SearchIntent
+    data class ApplyScopeSelection(
+        val groupNames: List<String>,
+        val sources: List<BookSourcePart>,
+        val isSourceScope: Boolean,
+    ) : SearchIntent
     data class ToggleScopeGroup(val groupName: String) : SearchIntent
     data class ToggleScopeSource(val source: BookSourcePart) : SearchIntent
     data class RemoveScopeItem(val scopeName: String) : SearchIntent

@@ -25,6 +25,7 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
+import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -46,9 +47,20 @@ fun ScopeSelectSheet(
     isSourceScope: Boolean = false,
     title: String = stringResource(R.string.search_select_group),
     onConfirm: (() -> Unit)? = null,
+    onApplyScope: ((ScopeSelection) -> Unit)? = null,
 ) {
     var scopeSheetTab by rememberSaveable(show) { mutableIntStateOf(if (isSourceScope) 1 else 0) }
     var filterText by rememberSaveable(show) { mutableStateOf("") }
+    var draftIsAll by remember(show, isAll) { mutableStateOf(isAll) }
+    var draftIsSourceScope by remember(show, isSourceScope) { mutableStateOf(isSourceScope) }
+    var draftGroups by remember(show, selectedGroups) { mutableStateOf(selectedGroups.toSet()) }
+    var draftSourceUrls by remember(show, selectedSources) { mutableStateOf(selectedSources.toSet()) }
+
+    val useDraftSelection = onApplyScope != null
+    val currentIsAll = if (useDraftSelection) draftIsAll else isAll
+    val currentIsSourceScope = if (useDraftSelection) draftIsSourceScope else isSourceScope
+    val currentGroups = if (useDraftSelection) draftGroups else selectedGroups
+    val currentSourceUrls = if (useDraftSelection) draftSourceUrls else selectedSources
 
     val filteredGroups = remember(groups, filterText) {
         if (filterText.isBlank()) groups else groups.filter { it.contains(filterText, ignoreCase = true) }
@@ -87,11 +99,18 @@ fun ScopeSelectSheet(
 
             SelectionItemCard(
                 title = stringResource(R.string.all_source),
-                isSelected = isAll,
+                isSelected = currentIsAll,
                 containerColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.6f),
                 inSelectionMode = true,
                 onToggleSelection = {
-                    onSelectAll()
+                    if (useDraftSelection) {
+                        draftIsAll = true
+                        draftIsSourceScope = false
+                        draftGroups = emptySet()
+                        draftSourceUrls = emptySet()
+                    } else {
+                        onSelectAll()
+                    }
                 }
             )
 
@@ -113,14 +132,27 @@ fun ScopeSelectSheet(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(filteredGroups, key = { it }) { groupName ->
-                        val selected = !isSourceScope && selectedGroups.contains(groupName)
+                        val selected = !currentIsSourceScope && currentGroups.contains(groupName)
                         SelectionItemCard(
                             title = groupName,
                             isSelected = selected,
                             containerColor = LegadoTheme.colorScheme.surface.copy(alpha = 0.6f),
                             inSelectionMode = true,
                             onToggleSelection = {
-                                onToggleGroup(groupName)
+                                if (useDraftSelection) {
+                                    val next = currentGroups.toMutableSet()
+                                    if (!currentIsSourceScope && next.contains(groupName)) {
+                                        next.remove(groupName)
+                                    } else {
+                                        next.add(groupName)
+                                    }
+                                    draftGroups = next
+                                    draftSourceUrls = emptySet()
+                                    draftIsSourceScope = false
+                                    draftIsAll = next.isEmpty()
+                                } else {
+                                    onToggleGroup(groupName)
+                                }
                             }
                         )
                     }
@@ -142,7 +174,7 @@ fun ScopeSelectSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(filteredSources, key = { it.bookSourceUrl }) { source ->
-                            val selected = selectedSources.contains(source.bookSourceUrl)
+                            val selected = currentSourceUrls.contains(source.bookSourceUrl)
                             SelectionItemCard(
                                 title = source.bookSourceName,
                                 subtitle = source.bookSourceGroup?.takeIf { group -> group.isNotBlank() },
@@ -150,7 +182,20 @@ fun ScopeSelectSheet(
                                 isSelected = selected,
                                 inSelectionMode = true,
                                 onToggleSelection = {
-                                    onToggleSource(source)
+                                    if (useDraftSelection) {
+                                        val next = currentSourceUrls.toMutableSet()
+                                        if (next.contains(source.bookSourceUrl)) {
+                                            next.remove(source.bookSourceUrl)
+                                        } else {
+                                            next.add(source.bookSourceUrl)
+                                        }
+                                        draftSourceUrls = next
+                                        draftGroups = emptySet()
+                                        draftIsSourceScope = next.isNotEmpty()
+                                        draftIsAll = next.isEmpty()
+                                    } else {
+                                        onToggleSource(source)
+                                    }
                                 }
                             )
                         }
@@ -158,7 +203,36 @@ fun ScopeSelectSheet(
                 }
             }
 
+            if (onApplyScope != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                ConfirmDismissButtonsRow(
+                    onDismiss = onDismissRequest,
+                    onConfirm = {
+                        onApplyScope(
+                            ScopeSelection(
+                                groupNames = if (!draftIsSourceScope) draftGroups.toList() else emptyList(),
+                                sources = if (draftIsSourceScope) {
+                                    sources.filter { draftSourceUrls.contains(it.bookSourceUrl) }
+                                } else {
+                                    emptyList()
+                                },
+                                isSourceScope = draftIsSourceScope,
+                            )
+                        )
+                        onDismissRequest()
+                    },
+                    dismissText = stringResource(R.string.cancel),
+                    confirmText = stringResource(R.string.confirm),
+                )
+            }
+
             Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
+
+data class ScopeSelection(
+    val groupNames: List<String>,
+    val sources: List<BookSourcePart>,
+    val isSourceScope: Boolean,
+)

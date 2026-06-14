@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.searchContent
 
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 object SearchContentResult {
 
     data class Result(
+        val bookUrl: String,
         val searchResults: List<SearchResult>,
         val index: Int,
         val query: String,
@@ -25,6 +27,7 @@ object SearchContentResult {
         _results.tryEmit(result)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun resetReplayCache() {
         _results.resetReplayCache()
     }

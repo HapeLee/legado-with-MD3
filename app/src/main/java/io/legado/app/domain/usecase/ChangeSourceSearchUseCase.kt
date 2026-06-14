@@ -9,7 +9,7 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.primaryStr
 import io.legado.app.help.book.releaseHtmlData
-import io.legado.app.help.config.AppConfig
+import io.legado.app.ui.book.changesource.ChangeSourceConfig
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.ui.book.changesource.ObservableSourceConfig
@@ -135,10 +135,10 @@ class ChangeSourceSearchUseCase(
         fromReadBookActivity: Boolean,
         contentProcessor: ContentProcessor,
     ): List<SearchBook> {
-        val checkAuthor = AppConfig.changeSourceCheckAuthor
-        val loadInfo = AppConfig.changeSourceLoadInfo
-        val loadToc = AppConfig.changeSourceLoadToc
-        val loadWordCount = AppConfig.changeSourceLoadWordCount
+        val checkAuthor = ChangeSourceConfig.checkAuthor
+        val loadInfo = ChangeSourceConfig.loadInfo
+        val loadToc = ChangeSourceConfig.loadToc
+        val loadWordCount = ChangeSourceConfig.loadWordCount
 
         val resultBooks = WebBook.searchBookAwait(
             source, name,

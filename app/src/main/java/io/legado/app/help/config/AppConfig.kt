@@ -465,12 +465,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.parallelExportBook, value)
         }
 
-    var changeSourceCheckAuthor: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.changeSourceCheckAuthor)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.changeSourceCheckAuthor, value)
-        }
-
     var ttsEngine: String?
         get() = io.legado.app.ui.config.readConfig.ReadConfig.ttsEngine
         set(value) {
@@ -503,24 +497,6 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val autoChangeSource: Boolean
         get() = ReadConfig.autoChangeSource
-
-    var changeSourceLoadInfo: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.changeSourceLoadInfo)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.changeSourceLoadInfo, value)
-        }
-
-    var changeSourceLoadToc: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.changeSourceLoadToc)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.changeSourceLoadToc, value)
-        }
-
-    var changeSourceLoadWordCount: Boolean
-        get() = appCtx.getPrefBoolean(PreferKey.changeSourceLoadWordCount)
-        set(value) {
-            appCtx.putPrefBoolean(PreferKey.changeSourceLoadWordCount, value)
-        }
 
     var openBookInfoByClickTitle: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.openBookInfoByClickTitle, true)

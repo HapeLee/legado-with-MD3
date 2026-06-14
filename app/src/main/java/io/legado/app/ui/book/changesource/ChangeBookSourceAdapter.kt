@@ -11,7 +11,6 @@ import io.legado.app.base.adapter.DiffRecyclerAdapter
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.databinding.ItemChangeSourceBinding
-import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.utils.gone
 import io.legado.app.utils.invisible
@@ -91,13 +90,13 @@ class ChangeBookSourceAdapter(
                 binding.ivGood.setImageResource(R.drawable.ic_praise)
             }
 
-            if (AppConfig.changeSourceLoadWordCount && !item.chapterWordCountText.isNullOrBlank()) {
+            if (ChangeSourceConfig.loadWordCount && !item.chapterWordCountText.isNullOrBlank()) {
                 tvCurrentChapterWordCount.visible()
             } else {
                 tvCurrentChapterWordCount.gone()
             }
 
-            if (AppConfig.changeSourceLoadWordCount && item.respondTime >= 0) {
+            if (ChangeSourceConfig.loadWordCount && item.respondTime >= 0) {
                 tvRespondTime.visible()
             } else {
                 tvRespondTime.gone()

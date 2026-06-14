@@ -112,6 +112,7 @@ fun SearchScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var queryInput by rememberSaveable { mutableStateOf(state.query) }
     var ignoreNextDebouncedQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    var keepResultsPinnedToTop by rememberSaveable { mutableStateOf(true) }
     val showSuggestionPanel = state.showSuggestions
     val latestQuery by rememberUpdatedState(state.query)
     val scrollBehavior = if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
@@ -240,6 +241,37 @@ fun SearchScreen(
         if (idx > 0 || off > 0) {
             listState.scrollToItem(idx, off)
             viewModel.onIntent(SearchIntent.SaveScrollState(0, 0))
+        }
+    }
+
+    LaunchedEffect(state.committedQuery) {
+        keepResultsPinnedToTop = true
+    }
+
+    LaunchedEffect(isSourceGroupedMode, listState, groupedListState) {
+        snapshotFlow {
+            val activeState = if (isSourceGroupedMode) groupedListState else listState
+            Triple(
+                activeState.firstVisibleItemIndex,
+                activeState.firstVisibleItemScrollOffset,
+                activeState.isScrollInProgress
+            )
+        }.collect { (index, offset, isScrollInProgress) ->
+            if (index == 0 && offset == 0) {
+                keepResultsPinnedToTop = true
+            } else if (isScrollInProgress) {
+                keepResultsPinnedToTop = false
+            }
+        }
+    }
+
+    val firstResultKey = state.results.firstOrNull()?.let {
+        "${it.book.origin}:${it.book.bookUrl}"
+    }
+    LaunchedEffect(firstResultKey, state.results.size, state.isSearching) {
+        if (state.isSearching && keepResultsPinnedToTop && state.results.isNotEmpty()) {
+            listState.scrollToItem(0)
+            groupedListState.scrollToItem(0)
         }
     }
 
@@ -611,6 +643,15 @@ fun SearchScreen(
         onToggleSource = { viewModel.onIntent(SearchIntent.ToggleScopeSource(it)) },
         isSourceScope = state.isSourceScope,
         onConfirm = { viewModel.onIntent(SearchIntent.OpenSourceManage) },
+        onApplyScope = { selection ->
+            viewModel.onIntent(
+                SearchIntent.ApplyScopeSelection(
+                    groupNames = selection.groupNames,
+                    sources = selection.sources,
+                    isSourceScope = selection.isSourceScope,
+                )
+            )
+        },
     )
 
     AppModalBottomSheet(

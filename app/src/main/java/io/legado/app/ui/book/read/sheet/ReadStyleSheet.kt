@@ -38,6 +38,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ReadStyleContent(
     onOpenPaddingConfig: () -> Unit,
+    onOpenHeaderFooterConfig: () -> Unit,
     onOpenMoreConfig: () -> Unit,
     onOpenBgTextConfig: (Int) -> Unit,
     onOpenTextTitle: () -> Unit,
@@ -51,7 +52,7 @@ fun ReadStyleContent(
     styleConfig: ReadBookStyleConfig = ReadBookStyleConfig(),
 ) {
     val scope = rememberCoroutineScope()
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 2 })
     var currentPage by remember { mutableIntStateOf(0) }
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
@@ -105,10 +106,6 @@ fun ReadStyleContent(
                         bottomBarButtons = bottomBarButtons,
                         onIntent = onIntent,
                     )
-
-                    2 -> HeaderFooterPage(
-                        onIntent = onIntent,
-                    )
                 }
             }
         }
@@ -123,15 +120,17 @@ fun ReadStyleContent(
             tabTitles = tabTitles,
             selectedTabIndex = currentPage,
             onTabSelected = { index ->
-                if (index < 3) {
-                    scope.launch {
-                        pagerState.animateScrollToPage(
-                            page = index,
-                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                        )
+                when (index) {
+                    0, 1 -> {
+                        scope.launch {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                            )
+                        }
                     }
-                } else {
-                    onOpenMoreConfig()
+                    2 -> onOpenHeaderFooterConfig()
+                    3 -> onOpenMoreConfig()
                 }
             },
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),

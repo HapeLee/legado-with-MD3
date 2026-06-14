@@ -310,6 +310,7 @@ fun MainActivity.mainEntryProvider(
 
         DisposableEffect(controller, lifecycleOwner, route.readAloud) {
             activeReadBookInputHandler = controller
+            activeReadBookRoute = route
             MainActivity.hasActiveReadBookRoute = true
             controller.onClose = { onNavigateBack() }
             controller.onStartContentLoadFinish = {
@@ -335,6 +336,9 @@ fun MainActivity.mainEntryProvider(
                 if (activeReadBookInputHandler === controller) {
                     activeReadBookInputHandler = null
                 }
+                if (activeReadBookRoute == route) {
+                    activeReadBookRoute = null
+                }
                 MainActivity.hasActiveReadBookRoute = false
                 controller.clearTts()
             }
@@ -354,6 +358,7 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSearchContent> { route ->
         val viewModel = koinViewModel<SearchContentViewModel>(
+            key = route.bookUrl,
             parameters = { parametersOf(route) }
         )
         SearchContentScreen(

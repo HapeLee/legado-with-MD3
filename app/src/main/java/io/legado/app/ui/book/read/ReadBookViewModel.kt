@@ -2241,50 +2241,21 @@ class ReadBookViewModel(
             return arrayOf(-1, 0, 0, 0, 0, 0)
         }
 
-        var pageIndex = 0
-        var length = pages[pageIndex].text.length
-        while (length < contentPosition && pageIndex + 1 < pages.size) {
-            pageIndex += 1
-            length += pages[pageIndex].text.length
-        }
-        if (length < contentPosition) return arrayOf(-1, 0, 0, 0, 0, 0)
-
-        val currentPage = pages[pageIndex]
-        val lines = currentPage.lines
-        if (lines.isEmpty()) return arrayOf(-1, 0, 0, 0, 0, 0)
-
-        var lineIndex = 0
-        var currentLine = lines[lineIndex]
-        length = length - currentPage.text.length + currentLine.text.length
-        if (currentLine.isParagraphEnd) length++
-        while (length <= contentPosition && lineIndex + 1 < lines.size) {
-            lineIndex += 1
-            currentLine = lines[lineIndex]
-            length += currentLine.text.length
-            if (currentLine.isParagraphEnd) length++
-        }
-
-        var currentLineLength = currentLine.text.length
-        if (currentLine.isParagraphEnd) currentLineLength++
-        length -= currentLineLength
-
-        val charIndex = contentPosition - length
-        var addLine = 0
-        var charIndex2 = 0
-        if ((charIndex + queryLength) > currentLineLength) {
-            addLine = 1
-            charIndex2 = charIndex + queryLength - currentLineLength - 1
-        }
-        if ((lineIndex + addLine + 1) > currentPage.lines.size) {
-            addLine = -1
-            charIndex2 = charIndex + queryLength - currentLineLength - 1
-        }
-        return when (addLine) {
-            0 -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex, charIndex + queryLength - 1)
-            1 -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex + 1, charIndex2)
-            -1 -> arrayOf(pageIndex, lineIndex, charIndex, 1, 0, charIndex2)
-            else -> arrayOf(pageIndex, lineIndex, charIndex, 0, lineIndex, charIndex)
-        }
+        val start = findSearchTextPoint(pages, contentPosition, preferPreviousLine = false)
+            ?: return arrayOf(-1, 0, 0, 0, 0, 0)
+        val end = findSearchTextPoint(
+            pages,
+            contentPosition + queryLength - 1,
+            preferPreviousLine = true
+        ) ?: start
+        return arrayOf(
+            start.pageIndex,
+            start.lineIndex,
+            start.charIndex,
+            end.pageIndex - start.pageIndex,
+            end.lineIndex,
+            end.charIndex
+        )
     }
 
     private fun findSearchResultMatch(
@@ -2293,6 +2264,26 @@ class ReadBookViewModel(
         query: String,
     ): Pair<Int, Int>? {
         if (query.isEmpty()) return null
+        val directLength = if (searchResult.matchLength > 0) searchResult.matchLength else query.length
+        val directIndex = searchResult.queryIndexInChapter
+        if (directIndex >= 0 && directIndex + directLength <= content.length) {
+            val directMatch = if (searchResult.isRegex) {
+                runCatching {
+                    Regex(query).matches(content.substring(directIndex, directIndex + directLength))
+                }.getOrDefault(false)
+            } else {
+                content.regionMatches(
+                    directIndex,
+                    query,
+                    0,
+                    query.length,
+                    ignoreCase = false
+                )
+            }
+            if (directMatch) {
+                return directIndex to directLength
+            }
+        }
         if (searchResult.isRegex) {
             return runCatching {
                 Regex(query).findAll(content)
@@ -2309,6 +2300,43 @@ class ReadBookViewModel(
             count += 1
         }
         return index.takeIf { it >= 0 }?.let { it to query.length }
+    }
+
+    private fun findSearchTextPoint(
+        pages: List<TextPage>,
+        contentPosition: Int,
+        preferPreviousLine: Boolean,
+    ): SearchTextPoint? {
+        var fallback: SearchTextPoint? = null
+        pages.forEachIndexed { pageIndex, page ->
+            page.lines.forEachIndexed { lineIndex, line ->
+                if (line.columns.isEmpty()) return@forEachIndexed
+                val lineStart = line.chapterPosition
+                val lineEndExclusive = lineStart + line.charSize
+                if (contentPosition in lineStart until lineEndExclusive) {
+                    return SearchTextPoint(
+                        pageIndex = pageIndex,
+                        lineIndex = lineIndex,
+                        charIndex = (contentPosition - lineStart).coerceIn(0, line.columns.lastIndex)
+                    )
+                }
+                if (preferPreviousLine && line.isParagraphEnd && contentPosition == lineEndExclusive) {
+                    return SearchTextPoint(
+                        pageIndex = pageIndex,
+                        lineIndex = lineIndex,
+                        charIndex = line.columns.lastIndex
+                    )
+                }
+                if (contentPosition >= lineEndExclusive) {
+                    fallback = SearchTextPoint(
+                        pageIndex = pageIndex,
+                        lineIndex = lineIndex,
+                        charIndex = line.columns.lastIndex
+                    )
+                }
+            }
+        }
+        return fallback
     }
 
     /**
@@ -3571,6 +3599,12 @@ private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
 private const val TOOL_BUTTON_KEY = "tool_buttons"
 private const val DEFAULT_ENABLED_BUTTON_COUNT = 5
+
+private data class SearchTextPoint(
+    val pageIndex: Int,
+    val lineIndex: Int,
+    val charIndex: Int,
+)
 
 private fun Int.coerceSearchResultIndex(resultSize: Int): Int {
     return if (resultSize <= 0) 0 else coerceIn(0, resultSize - 1)

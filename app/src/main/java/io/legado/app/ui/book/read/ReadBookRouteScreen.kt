@@ -31,6 +31,7 @@ import io.legado.app.R
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
+import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
@@ -383,6 +384,10 @@ fun ReadBookRouteScreen(
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             SearchContentResult.results.collect { result ->
                 effectsReady.await()
+                if (result.bookUrl != ReadBook.book?.bookUrl) {
+                    SearchContentResult.resetReplayCache()
+                    return@collect
+                }
                 viewModel.onIntent(
                     ReadBookIntent.SetSearchResults(result.searchResults, result.index, result.query)
                 )
