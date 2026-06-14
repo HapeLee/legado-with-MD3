@@ -25,7 +25,6 @@ import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SearchBar
-import io.legado.app.ui.widget.components.button.ConfirmDismissButtonsRow
 import io.legado.app.ui.widget.components.button.series.MediumPlainButton
 import io.legado.app.ui.widget.components.card.SelectionItemCard
 import io.legado.app.ui.widget.components.icon.AppIcons
@@ -61,6 +60,19 @@ fun ScopeSelectSheet(
     val currentIsSourceScope = if (useDraftSelection) draftIsSourceScope else isSourceScope
     val currentGroups = if (useDraftSelection) draftGroups else selectedGroups
     val currentSourceUrls = if (useDraftSelection) draftSourceUrls else selectedSources
+    val applyDraftSelection = {
+        onApplyScope?.invoke(
+            ScopeSelection(
+                groupNames = if (!draftIsSourceScope) draftGroups.toList() else emptyList(),
+                sources = if (draftIsSourceScope) {
+                    sources.filter { draftSourceUrls.contains(it.bookSourceUrl) }
+                } else {
+                    emptyList()
+                },
+                isSourceScope = draftIsSourceScope,
+            )
+        )
+    }
 
     val filteredGroups = remember(groups, filterText) {
         if (filterText.isBlank()) groups else groups.filter { it.contains(filterText, ignoreCase = true) }
@@ -77,14 +89,25 @@ fun ScopeSelectSheet(
         show = show,
         onDismissRequest = onDismissRequest,
         title = title,
-        endAction = onConfirm?.let {
+        startAction = onConfirm?.let {
             {
                 MediumPlainButton(
                     onClick = it,
                     icon = AppIcons.Settings
                 )
             }
-        }
+        },
+        endAction = onApplyScope?.let {
+            {
+                MediumPlainButton(
+                    onClick = {
+                        applyDraftSelection()
+                        onDismissRequest()
+                    },
+                    text = stringResource(R.string.confirm),
+                )
+            }
+        },
     ) {
         Column {
 
@@ -201,29 +224,6 @@ fun ScopeSelectSheet(
                         }
                     }
                 }
-            }
-
-            if (onApplyScope != null) {
-                Spacer(modifier = Modifier.height(16.dp))
-                ConfirmDismissButtonsRow(
-                    onDismiss = onDismissRequest,
-                    onConfirm = {
-                        onApplyScope(
-                            ScopeSelection(
-                                groupNames = if (!draftIsSourceScope) draftGroups.toList() else emptyList(),
-                                sources = if (draftIsSourceScope) {
-                                    sources.filter { draftSourceUrls.contains(it.bookSourceUrl) }
-                                } else {
-                                    emptyList()
-                                },
-                                isSourceScope = draftIsSourceScope,
-                            )
-                        )
-                        onDismissRequest()
-                    },
-                    dismissText = stringResource(R.string.cancel),
-                    confirmText = stringResource(R.string.confirm),
-                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))

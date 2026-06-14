@@ -127,7 +127,9 @@ object MainIntent {
         return createLauncherIntent(context).apply {
             putExtra(EXTRA_START_ROUTE, MainRouteConst.ROUTE_SEARCH)
             putExtra(EXTRA_SEARCH_KEY, key)
-            putExtra(EXTRA_SEARCH_SCOPE, scopeRaw)
+            scopeRaw?.takeIf { it.isNotBlank() }?.let {
+                putExtra(EXTRA_SEARCH_SCOPE, it)
+            }
         }
     }
 

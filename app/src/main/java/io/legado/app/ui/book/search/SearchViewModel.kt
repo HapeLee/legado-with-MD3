@@ -25,6 +25,7 @@ import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,6 +37,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,6 +87,7 @@ class SearchViewModel(
     private var persistedSearchScopeRaw = ""
     private var hasTemporaryScope = false
     private val searchScope = SearchScope("")
+    private val preferenceWriteScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val searchControl = BookSearchControl()
     private val searchResultBooks = LinkedHashMap<SearchResultKey, SearchBook>()
 
@@ -319,9 +323,10 @@ class SearchViewModel(
     }
 
     private fun initialize(key: String?, scopeRaw: String?) {
-        if (scopeRaw != null) {
+        val temporaryScope = scopeRaw?.takeIf { it.isNotBlank() }
+        if (temporaryScope != null) {
             hasTemporaryScope = true
-            searchScope.update(scopeRaw, postValue = false)
+            searchScope.update(temporaryScope, postValue = false)
             syncScopeState()
         } else if (hasTemporaryScope) {
             hasTemporaryScope = false
@@ -734,10 +739,11 @@ class SearchViewModel(
     private fun persistSearchScope() {
         hasTemporaryScope = false
         persistedSearchScopeRaw = searchScope.toString()
-        viewModelScope.launch {
+        val scopeRaw = persistedSearchScopeRaw
+        preferenceWriteScope.launch {
             localPreferencesRepository.updatePreference(
                 LocalPreferencesKeys.SEARCH_SCOPE,
-                searchScope.toString()
+                scopeRaw
             )
         }
     }
