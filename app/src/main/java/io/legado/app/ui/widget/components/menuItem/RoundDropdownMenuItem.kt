@@ -35,7 +35,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.ThemeResolver
-import io.legado.app.ui.theme.rememberOpaqueColorScheme
 import io.legado.app.ui.widget.components.icon.AppIcon
 import top.yukonga.miuix.kmp.basic.DropdownDefaults
 import top.yukonga.miuix.kmp.icon.MiuixIcons
@@ -121,9 +120,9 @@ fun RoundDropdownMenuItem(
             }
         }
     } else {
-        val colorScheme = rememberOpaqueColorScheme()
-        val selectedContentColor = colorScheme.primary
-        val defaultContentColor = colorScheme.onSurface
+        val legadoColorScheme = LegadoTheme.colorScheme
+        val selectedContentColor = legadoColorScheme.primary
+        val defaultContentColor = legadoColorScheme.onSurface
         val contentColor = if (enabled) {
             when {
                 hasCustomContentColor -> color
@@ -137,7 +136,7 @@ fun RoundDropdownMenuItem(
                 else -> defaultContentColor.copy(alpha = 0.38f)
             }
         }
-        val containerColor = colorScheme.surface
+        val containerColor = legadoColorScheme.surface
 
         Surface(
             onClick = onClick,

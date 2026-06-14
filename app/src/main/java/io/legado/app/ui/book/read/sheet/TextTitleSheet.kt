@@ -60,6 +60,7 @@ fun ReadStyleTextTitleContent(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
+    onOpenTitleFontSelect: () -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
@@ -85,6 +86,7 @@ fun ReadStyleTextTitleContent(
         onOpenUnderlineConfig = onOpenUnderlineConfig,
         onOpenHighlightRule = onOpenHighlightRule,
         onOpenFontSelect = onOpenFontSelect,
+        onOpenTitleFontSelect = onOpenTitleFontSelect,
         animateToPage = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
         modifier = modifier,
         onIntent = onIntent,
@@ -101,6 +103,7 @@ internal fun ReadStyleTextTitleContent(
     onOpenUnderlineConfig: () -> Unit,
     onOpenHighlightRule: () -> Unit,
     onOpenFontSelect: () -> Unit,
+    onOpenTitleFontSelect: () -> Unit,
     animateToPage: (Int) -> Unit,
     modifier: Modifier = Modifier,
     onIntent: (ReadBookIntent) -> Unit,
@@ -132,7 +135,10 @@ internal fun ReadStyleTextTitleContent(
                 )
 
                 1 -> LayoutSpacingPage(onIntent = onIntent)
-                2 -> TitleSettingsPage(onIntent = onIntent)
+                2 -> TitleSettingsPage(
+                    onOpenTitleFontSelect = onOpenTitleFontSelect,
+                    onIntent = onIntent,
+                )
             }
         }
     }
@@ -358,10 +364,14 @@ internal fun TextEffectsPage(
 
 @Composable
 internal fun TitleSettingsPage(
+    onOpenTitleFontSelect: () -> Unit,
     onIntent: (ReadBookIntent) -> Unit,
 ) {
     var titleMode by remember(ReadBookConfig.titleMode) { mutableIntStateOf(ReadBookConfig.titleMode) }
     var titleBold by remember(ReadBookConfig.titleBold) { mutableIntStateOf(ReadBookConfig.titleBold) }
+    var titleSegType by remember(ReadBookConfig.titleSegType) { mutableIntStateOf(ReadBookConfig.titleSegType) }
+    var titleSegDistance by remember(ReadBookConfig.titleSegDistance) { mutableIntStateOf(ReadBookConfig.titleSegDistance) }
+    var titleSegFlag by remember(ReadBookConfig.titleSegFlag) { mutableStateOf(ReadBookConfig.titleSegFlag) }
     var titleSegScaling by remember(ReadBookConfig.titleSegScaling) { mutableFloatStateOf(ReadBookConfig.titleSegScaling) }
     var titleLineSpacingExtra by remember(ReadBookConfig.titleLineSpacingExtra) { mutableIntStateOf(ReadBookConfig.titleLineSpacingExtra) }
     var titleLineSpacingSub by remember(ReadBookConfig.titleLineSpacingSub) { mutableIntStateOf(ReadBookConfig.titleLineSpacingSub) }
@@ -429,6 +439,85 @@ internal fun TitleSettingsPage(
                 showColorPicker = true
             },
         )
+
+        Spacer(Modifier.height(8.dp))
+
+        // Title font
+        TinyClickableSettingItem(
+            title = stringResource(R.string.read_config_title_settings),
+            imageVector = Icons.Default.TextFields,
+            onClick = onOpenTitleFontSelect,
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        // Title segmentation
+        TinyDropdownSettingItem(
+            title = stringResource(R.string.split_title_mode),
+            selectedValue = titleSegType.toString(),
+            displayEntries = arrayOf(
+                stringResource(R.string.close),
+                stringResource(R.string.split_title_by_position),
+                stringResource(R.string.split_title_by_flag),
+                stringResource(R.string.split_title_by_regex),
+            ),
+            entryValues = arrayOf("0", "1", "2", "3"),
+            onValueChange = {
+                titleSegType = it.toInt()
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegType(titleSegType)))
+            },
+        )
+        if (titleSegType == 1) {
+            TinySliderSettingItem(
+                title = stringResource(R.string.split_title_position),
+                value = titleSegDistance.toFloat(),
+                valueRange = 1f..20f,
+                steps = 18,
+                onValueChange = { value ->
+                    titleSegDistance = value.toInt()
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegDistance(titleSegDistance)))
+                },
+            )
+        }
+        if (titleSegType == 2 || titleSegType == 3) {
+            var showFlagDialog by remember { mutableStateOf(false) }
+
+            TinyClickableSettingItem(
+                title = stringResource(R.string.rule_segment),
+                description = titleSegFlag.ifBlank { stringResource(R.string.split_title_mode) },
+                onClick = { showFlagDialog = true },
+            )
+
+            if (showFlagDialog) {
+                var flagText by remember { mutableStateOf(titleSegFlag) }
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showFlagDialog = false },
+                    title = { Text(stringResource(R.string.rule_segment)) },
+                    text = {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = flagText,
+                            onValueChange = { flagText = it },
+                            singleLine = false,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = {
+                            titleSegFlag = flagText
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegFlag(titleSegFlag)))
+                            showFlagDialog = false
+                        }) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showFlagDialog = false }) {
+                            Text(stringResource(android.R.string.cancel))
+                        }
+                    },
+                )
+            }
+        }
 
         Spacer(Modifier.height(8.dp))
 

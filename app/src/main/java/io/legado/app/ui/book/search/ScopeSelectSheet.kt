@@ -104,7 +104,7 @@ fun ScopeSelectSheet(
                         applyDraftSelection()
                         onDismissRequest()
                     },
-                    text = stringResource(R.string.confirm),
+                    icon = AppIcons.Check,
                 )
             }
         },

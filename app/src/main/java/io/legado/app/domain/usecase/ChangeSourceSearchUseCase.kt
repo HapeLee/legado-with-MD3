@@ -25,12 +25,13 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 sealed interface ChangeSourceSearchEvent {
-    data object Started : ChangeSourceSearchEvent
+    data class Started(val totalSources: Int) : ChangeSourceSearchEvent
     data class Progress(
         val processedSources: Int,
         val totalSources: Int,
@@ -69,23 +70,20 @@ class ChangeSourceSearchUseCase(
         if (bookSourceParts.isEmpty()) {
             throw io.legado.app.exception.NoStackTraceException("启用书源为空")
         }
-        val sources = bookSourceParts.mapNotNull { it.getBookSource() }
-        if (sources.isEmpty()) {
-            throw io.legado.app.exception.NoStackTraceException("启用书源为空")
-        }
 
         tocMap.clear()
         bookMap.clear()
         tocMapChapterCount.set(0)
 
-        emit(ChangeSourceSearchEvent.Started)
+        val totalSources = bookSourceParts.size
+        emit(ChangeSourceSearchEvent.Started(totalSources))
 
         var processedSources = 0
         var resultCount = 0
-        val totalSources = sources.size
         val concurrency = threadCount.coerceAtLeast(1)
 
-        sources.asFlow()
+        bookSourceParts.asFlow()
+            .mapNotNull { it.getBookSource() }
             .flatMapMerge(concurrency) { source ->
                 flow {
                     val books = try {
@@ -231,7 +229,7 @@ class ChangeSourceSearchUseCase(
                 contentProcessor
             )
         }
-        return null
+        return book.toSearchBook()
     }
 
     private suspend fun loadBookWordCount(

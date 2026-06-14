@@ -1748,6 +1748,10 @@
     <string name="rule_segment">Rule</string>
     <string name="split_title">Split title</string>
     <string name="split_title_mode">Split mode</string>
+    <string name="split_title_by_position">By position</string>
+    <string name="split_title_by_flag">By flag</string>
+    <string name="split_title_by_regex">By regex</string>
+    <string name="split_title_position">Split position</string>
     <string name="subtitle_margin">Subtitle margin</string>
     <string name="subtitle_scale">Subtitle scale</string>
     <string name="tool_bar_style">Tool bar style</string>
@@ -1912,6 +1916,7 @@
     <string name="read_menu_blur_radius">Blur radius</string>
     <string name="read_menu_blur_radius_summary">Higher radius may reduce performance</string>
     <string name="read_menu_blur_alpha">Menu opacity</string>
+    <string name="read_menu_blur_color">Blur tint color</string>
     <string name="read_menu_border">Border</string>
     <string name="read_menu_border_width">Width</string>
     <string name="read_menu_border_color">Color</string>

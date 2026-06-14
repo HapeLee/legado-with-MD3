@@ -438,8 +438,8 @@ fun ChangeSourceSheet(
         selectedSources = scopeState.sourceUrls,
         onToggleSource = { viewModel.toggleScopeSource(it) },
         isSourceScope = scopeState.isSource,
-        onConfirm = {
-            viewModel.startSearch()
+        onApplyScope = { selection ->
+            viewModel.applyScopeSelection(selection)
             showFilterSheet = false
         }
     )

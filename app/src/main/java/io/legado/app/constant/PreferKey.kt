@@ -308,6 +308,8 @@ object PreferKey {
     const val readMenuBottomBarBlurStyle = "readMenuBottomBarBlurStyle"
     const val readMenuBlurRadius = "readMenuBlurRadius"
     const val readMenuBlurAlpha = "readMenuBlurAlpha"
+    const val readMenuBlurColor = "readMenuBlurColor"
+    const val readMenuPaletteStyle = "readMenuPaletteStyle"
     const val readMenuLensRadius = "readMenuLensRadius"
     const val readMenuBorderWidth = "readMenuBorderWidth"
     const val readMenuBorderColor = "readMenuBorderColor"

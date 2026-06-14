@@ -1711,6 +1711,10 @@
 	<string name="tool_bar_style">工具栏样式</string>
 	<string name="split_title">标题分段</string>
 	<string name="split_title_mode">分段模式</string>
+	<string name="split_title_by_position">按位置分段</string>
+	<string name="split_title_by_flag">按标记分段</string>
+	<string name="split_title_by_regex">正则分段</string>
+	<string name="split_title_position">分段位置</string>
 	<string name="subtitle_scale">次行缩放</string>
 	<string name="subtitle_margin">次行距离</string>
 	<string name="heading_spacing">标题段距</string>
@@ -1903,6 +1907,7 @@
     <string name="read_menu_blur_radius">模糊半径</string>
     <string name="read_menu_blur_radius_summary">模糊半径越大，系统运行越卡顿</string>
     <string name="read_menu_blur_alpha">菜单不透明度</string>
+    <string name="read_menu_blur_color">模糊着色</string>
     <string name="read_menu_border">边框</string>
     <string name="read_menu_border_width">宽度</string>
     <string name="read_menu_border_color">颜色</string>

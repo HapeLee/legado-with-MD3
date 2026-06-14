@@ -70,8 +70,11 @@ class ChangeBookSourceComposeViewModel(
     val loadWordCount: Boolean get() = ChangeSourceConfig.loadWordCount
 
     // Internal state
+    private val chapterNumRegex = "^\\[(\\d+)]".toRegex()
     private var searchJob: Job? = null
     private var oldBook: Book? = null
+    private var bookName: String = ""
+    private var bookAuthor: String = ""
     private var fromReadBookActivity: Boolean = false
     private var screenKey: String = ""
     private val searchResults = mutableListOf<SearchBook>()
@@ -86,15 +89,42 @@ class ChangeBookSourceComposeViewModel(
 
     fun initData(name: String, author: String, book: Book, fromReadBookActivity: Boolean) {
         this.oldBook = book
+        this.bookName = name
+        this.bookAuthor = author
         this.fromReadBookActivity = fromReadBookActivity
         if (searchJob?.isActive != true) {
-            startSearch()
+            viewModelScope.launch {
+                val dbBooks = getDbSearchBooks()
+                if (dbBooks.isNotEmpty()) {
+                    searchResults.clear()
+                    searchResults.addAll(dbBooks)
+                    searchResults.forEach { bookMap[it.primaryStr()] = it }
+                    filterResults()
+                } else {
+                    startSearch()
+                }
+            }
+        }
+    }
+
+    private fun getDbSearchBooks(): List<SearchBook> {
+        val scopeRaw = ChangeSourceConfig.searchScope
+        return if (screenKey.isEmpty()) {
+            io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
+                bookName, bookAuthor, scopeRaw
+            )
+        } else {
+            io.legado.app.data.appDb.searchBookDao.changeSourceSearch(
+                bookName, bookAuthor, screenKey, scopeRaw
+            )
         }
     }
 
     fun startSearch() {
         val book = oldBook ?: return
         stopSearch()
+        // 清除 DB 中的旧记录
+        io.legado.app.data.appDb.searchBookDao.clear(bookName, bookAuthor)
         searchResults.clear()
         bookMap.clear()
         tocMap.clear()
@@ -113,6 +143,7 @@ class ChangeBookSourceComposeViewModel(
                 when (event) {
                     is ChangeSourceSearchEvent.Started -> {
                         _isSearching.value = true
+                        totalSourceCount = event.totalSources
                     }
 
                     is ChangeSourceSearchEvent.Progress -> {
@@ -123,6 +154,8 @@ class ChangeBookSourceComposeViewModel(
                     is ChangeSourceSearchEvent.Result -> {
                         searchResults.add(event.searchBook)
                         bookMap[event.searchBook.primaryStr()] = event.searchBook
+                        // 持久化到 DB
+                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
                         filterResults()
                     }
 
@@ -179,12 +212,24 @@ class ChangeBookSourceComposeViewModel(
                 it.name.contains(screenKey) || it.originName.contains(screenKey)
             }
         }
-        val sorted = filtered.sortedWith(
+        val comparator = if (ChangeSourceConfig.loadWordCount) {
+            compareByDescending<SearchBook> { ObservableSourceConfig.getBookScore(it) }
+                .thenByDescending { io.legado.app.help.config.SourceConfig.getSourceScore(it.origin) }
+                .thenByDescending { it.chapterWordCount > 1000 }
+                .thenByDescending { getChapterNum(it.chapterWordCountText) }
+                .thenByDescending { it.chapterWordCount }
+                .thenBy { it.originOrder }
+        } else {
             compareByDescending<SearchBook> { ObservableSourceConfig.getBookScore(it) }
                 .thenByDescending { io.legado.app.help.config.SourceConfig.getSourceScore(it.origin) }
                 .thenBy { it.originOrder }
-        )
-        _searchDataFlow.value = sorted
+        }
+        _searchDataFlow.value = filtered.sortedWith(comparator)
+    }
+
+    private fun getChapterNum(text: String?): Int {
+        if (text.isNullOrBlank()) return 0
+        return chapterNumRegex.find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     }
 
     fun getToc(
@@ -247,7 +292,14 @@ class ChangeBookSourceComposeViewModel(
     fun refresh() {
         searchResults.clear()
         bookMap.clear()
-        startSearch()
+        val dbBooks = getDbSearchBooks()
+        if (dbBooks.isNotEmpty()) {
+            searchResults.addAll(dbBooks)
+            searchResults.forEach { bookMap[it.primaryStr()] = it }
+            filterResults()
+        } else {
+            startSearch()
+        }
     }
 
     // Source actions
@@ -336,6 +388,23 @@ class ChangeBookSourceComposeViewModel(
                 selectedUrls.contains(it.bookSourceUrl)
             }
             searchScope.updateSources(selectedSources)
+        }
+        saveScope()
+    }
+
+    fun applyScopeSelection(selection: io.legado.app.ui.book.search.ScopeSelection) {
+        if (selection.isSourceScope) {
+            if (selection.sources.isEmpty()) {
+                searchScope.update("")
+            } else {
+                searchScope.updateSources(selection.sources)
+            }
+        } else {
+            if (selection.groupNames.isEmpty()) {
+                searchScope.update("")
+            } else {
+                searchScope.update(selection.groupNames)
+            }
         }
         saveScope()
     }

@@ -896,6 +896,14 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.SelectFont -> selectFont(intent.path)
+            is ReadBookIntent.SelectTitleFont -> selectTitleFont(intent.path)
+            is ReadBookIntent.SelectTitleSystemTypeface -> {
+                ReadConfig.systemTypefaces = intent.index
+                ReadBookConfig.titleFont = ""
+                _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                ))
+            }
             is ReadBookIntent.SelectSystemTypeface -> {
                 ReadConfig.systemTypefaces = intent.index
                 ReadBookConfig.textFont = ""
@@ -1448,6 +1456,7 @@ class ReadBookViewModel(
                 val old = previous
                 previous = preferences
                 ReadConfig.syncReadPreferences(preferences)
+                ReadBookConfig.readMenuPaletteStyle = preferences.readMenuPaletteStyle
                 _readPreferences.value = preferences
                 if (!preferences.hasMenuClickArea()) {
                     ReadConfig.detectClickArea()
@@ -1599,6 +1608,8 @@ class ReadBookViewModel(
                 readMenuBorderColor = ReadBookConfig.readMenuBorderColor,
                 readMenuBorderColorNight = ReadBookConfig.readMenuBorderColorNight,
                 readMenuBlurAlpha = ReadBookConfig.readMenuBlurAlpha,
+                readMenuBlurColor = ReadBookConfig.readMenuBlurColor,
+                readMenuPaletteStyle = ReadBookConfig.readMenuPaletteStyle,
                 readMenuBlurRadius = ReadBookConfig.readMenuBlurRadius,
                 readMenuLensRadius = ReadBookConfig.readMenuLensRadius,
                 readMenuTopBarBlurMode = ReadBookConfig.readMenuTopBarBlurMode,
@@ -2507,6 +2518,10 @@ class ReadBookViewModel(
             is ConfigUpdate.TitleTopSpacing -> ReadBookConfig.titleTopSpacing = update.value
             is ConfigUpdate.TitleBottomSpacing -> ReadBookConfig.titleBottomSpacing = update.value
             is ConfigUpdate.TitleColor -> ReadBookConfig.titleColor = update.color
+            is ConfigUpdate.TitleFont -> ReadBookConfig.titleFont = update.path
+            is ConfigUpdate.TitleSegType -> ReadBookConfig.titleSegType = update.value
+            is ConfigUpdate.TitleSegDistance -> ReadBookConfig.titleSegDistance = update.value
+            is ConfigUpdate.TitleSegFlag -> ReadBookConfig.titleSegFlag = update.value
 
             // --- Header / footer tips ---
             is ConfigUpdate.HeaderMode -> ReadBookConfig.headerMode = update.value
@@ -2828,6 +2843,20 @@ class ReadBookViewModel(
                     readSettingsRepository.setReadMenuBlurAlpha(update.value)
                 }
                 _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBlurAlpha = update.value)) }
+            }
+            is ConfigUpdate.MenuBlurColor -> {
+                ReadBookConfig.readMenuBlurColor = update.color
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuBlurColor(update.color)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuBlurColor = update.color)) }
+            }
+            is ConfigUpdate.MenuPaletteStyle -> {
+                ReadBookConfig.readMenuPaletteStyle = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setReadMenuPaletteStyle(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(readMenuPaletteStyle = update.value)) }
             }
             is ConfigUpdate.MenuLensRadius -> {
                 ReadBookConfig.readMenuLensRadius = update.value
@@ -3202,6 +3231,13 @@ class ReadBookViewModel(
 
     private fun selectFont(path: String) {
         ReadBookConfig.textFont = path
+        _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
+            setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateStyle)
+        ))
+    }
+
+    private fun selectTitleFont(path: String) {
+        ReadBookConfig.titleFont = path
         _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
             setOf(ConfigUpdateAction.UpdateChapterStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateStyle)
         ))

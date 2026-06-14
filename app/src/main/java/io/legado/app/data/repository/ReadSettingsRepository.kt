@@ -94,6 +94,8 @@ data class ReadPreferences(
     val readMenuBottomBarBlurStyle: Int = ReadMenuBlurStyle.Solid,
     val readMenuBlurRadius: Int = 24,
     val readMenuBlurAlpha: Int = 60,
+    val readMenuBlurColor: Int = 0,
+    val readMenuPaletteStyle: String = "",
     val readMenuLensRadius: Float = 24f,
     val readMenuBorderWidth: Int = 0,
     val readMenuBorderColor: Int = 0,
@@ -335,6 +337,12 @@ class ReadSettingsRepository(
     suspend fun setReadMenuBlurAlpha(value: Int) =
         settingsRepository.putInt(PreferKey.readMenuBlurAlpha, value.coerceIn(0, 100))
 
+    suspend fun setReadMenuBlurColor(value: Int) =
+        settingsRepository.putInt(PreferKey.readMenuBlurColor, value)
+
+    suspend fun setReadMenuPaletteStyle(value: String) =
+        settingsRepository.putString(PreferKey.readMenuPaletteStyle, value)
+
     suspend fun setReadMenuLensRadius(value: Float) =
         settingsRepository.putFloat(PreferKey.readMenuLensRadius, value.coerceIn(0f, 48f))
 
@@ -446,6 +454,7 @@ class ReadSettingsRepository(
             readMenuBottomBarBlurMode = this[Keys.ReadMenuBottomBarBlurMode]
                 ?: ReadMenuBlurMode.None,
             readMenuTopBarLiquidGlassButtons = this[Keys.ReadMenuTopBarLiquidGlassButtons] ?: false,
+            readMenuTopBarTitleCapsule = this[Keys.ReadMenuTopBarTitleCapsule] ?: false,
             readMenuBottomBarLiquidGlassButtons = this[Keys.ReadMenuBottomBarLiquidGlassButtons]
                 ?: false,
             readMenuTopBarBlurStyle = this[Keys.ReadMenuTopBarBlurStyle]
@@ -454,6 +463,8 @@ class ReadSettingsRepository(
                 ?: ReadMenuBlurStyle.Solid,
             readMenuBlurRadius = this[Keys.ReadMenuBlurRadius] ?: 24,
             readMenuBlurAlpha = this[Keys.ReadMenuBlurAlpha] ?: 60,
+            readMenuBlurColor = this[Keys.ReadMenuBlurColor] ?: 0,
+            readMenuPaletteStyle = this[Keys.ReadMenuPaletteStyle] ?: "",
             readMenuLensRadius = this[Keys.ReadMenuLensRadius] ?: 24f,
             readMenuBorderWidth = this[Keys.ReadMenuBorderWidth] ?: 0,
             readMenuBorderColor = this[Keys.ReadMenuBorderColor] ?: 0,
@@ -540,12 +551,16 @@ class ReadSettingsRepository(
         val ReadMenuBottomBarBlurMode = intPreferencesKey(PreferKey.readMenuBottomBarBlurMode)
         val ReadMenuTopBarLiquidGlassButtons =
             booleanPreferencesKey(PreferKey.readMenuTopBarLiquidGlassButtons)
+        val ReadMenuTopBarTitleCapsule =
+            booleanPreferencesKey(PreferKey.readMenuTopBarTitleCapsule)
         val ReadMenuBottomBarLiquidGlassButtons =
             booleanPreferencesKey(PreferKey.readMenuBottomBarLiquidGlassButtons)
         val ReadMenuTopBarBlurStyle = intPreferencesKey(PreferKey.readMenuTopBarBlurStyle)
         val ReadMenuBottomBarBlurStyle = intPreferencesKey(PreferKey.readMenuBottomBarBlurStyle)
         val ReadMenuBlurRadius = intPreferencesKey(PreferKey.readMenuBlurRadius)
         val ReadMenuBlurAlpha = intPreferencesKey(PreferKey.readMenuBlurAlpha)
+        val ReadMenuBlurColor = intPreferencesKey(PreferKey.readMenuBlurColor)
+        val ReadMenuPaletteStyle = stringPreferencesKey(PreferKey.readMenuPaletteStyle)
         val ReadMenuLensRadius = floatPreferencesKey(PreferKey.readMenuLensRadius)
         val ReadMenuBorderWidth = intPreferencesKey(PreferKey.readMenuBorderWidth)
         val ReadMenuBorderColor = intPreferencesKey(PreferKey.readMenuBorderColor)

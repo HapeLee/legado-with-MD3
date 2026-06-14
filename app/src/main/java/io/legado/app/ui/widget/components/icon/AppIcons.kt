@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -110,6 +111,10 @@ object AppIcons {
     val MoreCircle: ImageVector
         @Composable
         get() = if (isMiuix) MiuixIcons.MoreCircle else Icons.Default.MoreHoriz
+
+    val Check: ImageVector
+        @Composable
+        get() = Icons.Default.Check
 
 
     @Composable

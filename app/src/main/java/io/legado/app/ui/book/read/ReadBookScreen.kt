@@ -174,6 +174,17 @@ fun ReadBookScreen(
         onOpenFolderPicker = { onIntent(ReadBookIntent.OpenFontFolderPicker) },
         systemTypefaces = fontSelectSystemTypefaces,
     )
+    FontSelectSheet(
+        show = state.activeSheet is ReadBookSheet.TitleFontSelect,
+        title = stringResource(R.string.read_config_title_settings),
+        fontFolderUri = fontSelectFolderUri,
+        selectedFontPath = ReadBookConfig.titleFont,
+        onDismissRequest = dismissSheet,
+        onSelectFont = { onIntent(ReadBookIntent.SelectTitleFont(it.uri.toString())) },
+        onSelectSystemTypeface = { onIntent(ReadBookIntent.SelectTitleSystemTypeface(it)) },
+        onOpenFolderPicker = { onIntent(ReadBookIntent.OpenFontFolderPicker) },
+        systemTypefaces = fontSelectSystemTypefaces,
+    )
     ToolButtonConfigSheet(
         show = state.activeSheet is ReadBookSheet.ToolButtonConfig,
         items = state.menuConfig.bottomBarButtons,

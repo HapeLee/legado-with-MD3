@@ -92,6 +92,7 @@ fun ColorScheme.toLegadoColorScheme(): LegadoColorScheme {
 fun ProvideColorSchemeOverride(
     colorScheme: ColorScheme,
     seedColor: Color = colorScheme.primary,
+    overrideIsDark: Boolean? = null,
     content: @Composable () -> Unit,
 ) {
     val themeAnimationSpec = tween<Color>(
@@ -106,10 +107,12 @@ fun ProvideColorSchemeOverride(
         label = "theme_seed_animation"
     ).value
     val legadoColorScheme = remember(animatedColorScheme) { animatedColorScheme.toLegadoColorScheme() }
-    val overrideThemeMode = remember(baseThemeMode, animatedColorScheme, animatedSeedColor) {
+    val resolvedIsDark = overrideIsDark ?: baseThemeMode.isDark
+    val overrideThemeMode = remember(baseThemeMode, animatedColorScheme, animatedSeedColor, resolvedIsDark) {
         baseThemeMode.copy(
             colorScheme = animatedColorScheme,
             seedColor = animatedSeedColor,
+            isDark = resolvedIsDark,
         )
     }
     val materialTypography = MaterialTheme.typography

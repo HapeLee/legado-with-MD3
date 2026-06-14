@@ -26,7 +26,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -40,13 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,9 +67,11 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookButtonConfigItem
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookSheet
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClearColorModeSettingItem
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorModeSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyDropdownSettingItem
@@ -82,6 +91,7 @@ private const val COLOR_MENU_ACCENT_NIGHT = 9
 private const val COLOR_MENU_CONTAINER_NIGHT = 10
 private const val COLOR_BORDER = 11
 private const val COLOR_BORDER_NIGHT = 12
+private const val COLOR_BLUR_TINT = 13
 
 @Composable
 internal fun SystemMenuPage(
@@ -196,6 +206,7 @@ internal fun SystemMenuPage(
                 COLOR_MENU_CONTAINER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuContainerColorNight(color)))
                 COLOR_BORDER -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColor(color)))
                 COLOR_BORDER_NIGHT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BorderColorNight(color)))
+                COLOR_BLUR_TINT -> onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(color)))
             }
             showColorPicker = false
         },
@@ -263,6 +274,23 @@ private fun GlobalMenuTab(
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ReadBarStyle(bottomMode)))
             },
         )
+
+        val showPaletteStyle = bottomMode == 1 || (bottomMode == 2 && colorMode == 0)
+        AnimatedVisibility(visible = showPaletteStyle) {
+            val paletteEntries = stringArrayResource(R.array.paletteStyle)
+            val paletteValues = stringArrayResource(R.array.paletteStyle_value)
+            val allEntries = arrayOf(stringResource(R.string.flow_sys)) + paletteEntries
+            val allValues = arrayOf("") + paletteValues
+            TinyDropdownSettingItem(
+                title = stringResource(R.string.palette_style),
+                selectedValue = preferences.readMenuPaletteStyle,
+                displayEntries = allEntries,
+                entryValues = allValues,
+                onValueChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuPaletteStyle(it)))
+                },
+            )
+        }
 
         AnimatedVisibility(visible = bottomMode == 2) {
             Column {
@@ -459,6 +487,18 @@ private fun GlobalMenuTab(
             steps = 99,
             onValueChange = {
                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurAlpha(it.toInt())))
+            },
+        )
+        TinyClickableSettingItem(
+            title = stringResource(R.string.read_menu_blur_color),
+            onClick = {
+                onShowColorPicker(COLOR_BLUR_TINT, preferences.readMenuBlurColor)
+            },
+            onLongClick = {
+                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.MenuBlurColor(0)))
+            },
+            trailingContent = {
+                TinyColorSwatch(color = preferences.readMenuBlurColor)
             },
         )
     }
@@ -794,3 +834,33 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("replace_badge", Icons.Default.AutoAwesome, context.getString(R.string.replace_purify_badge)),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
 )
+
+// ========== Color Swatch ==========
+
+@Composable
+private fun TinyColorSwatch(
+    color: Int,
+) {
+    val swatchColor = if (color != 0) Color(color) else LegadoTheme.colorScheme.onSurfaceVariant
+    val borderColor = LegadoTheme.colorScheme.outline
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(swatchColor)
+            .then(
+                if (color == 0) Modifier.border(1.5.dp, borderColor, CircleShape)
+                else Modifier
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (color == 0) {
+            AppText(
+                text = "A",
+                style = LegadoTheme.typography.labelSmall,
+                color = LegadoTheme.colorScheme.surfaceContainerLow,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}

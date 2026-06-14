@@ -65,6 +65,7 @@ fun RoundDropdownMenu(
         }
     } else {
         val colorScheme = rememberOpaqueColorScheme()
+        val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
 
         DropdownMenu(
             expanded = expanded,
@@ -72,7 +73,7 @@ fun RoundDropdownMenu(
             modifier = modifier,
             shape = shape,
             shadowElevation = shadowElevation,
-            containerColor = colorScheme.surfaceContainerLow
+            containerColor = popupContainerColor
         ) {
             MaterialExpressiveTheme(
                 colorScheme = colorScheme,
@@ -129,6 +130,7 @@ fun RoundDropdownMenuLazy(
         }
     } else {
         val colorScheme = rememberOpaqueColorScheme()
+        val popupContainerColor = LegadoTheme.colorScheme.surfaceContainerLow
 
         DropdownMenu(
             expanded = expanded,
@@ -136,7 +138,7 @@ fun RoundDropdownMenuLazy(
             modifier = modifier,
             shape = shape,
             shadowElevation = shadowElevation,
-            containerColor = colorScheme.surfaceContainerLow
+            containerColor = popupContainerColor
         ) {
             MaterialExpressiveTheme(
                 colorScheme = colorScheme,

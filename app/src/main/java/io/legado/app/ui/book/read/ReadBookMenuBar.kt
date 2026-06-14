@@ -195,7 +195,7 @@ fun ReadBookMenuBar(
         }
     }
     val hideTopBar = dialogLikeRoute ||
-            currentRoute == ReadBookMenuRoute.ReadStyle && readStylePage >= 1
+            currentRoute == ReadBookMenuRoute.TextTitle
     val menuColors = readMenuColors()
 
     Box(Modifier.fillMaxSize()) {
@@ -683,6 +683,9 @@ private fun ReadBookMenuSurface(
                                 onOpenFontSelect = {
                                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.FontSelect))
                                 },
+                                onOpenTitleFontSelect = {
+                                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.TitleFontSelect))
+                                },
                                 modifier = Modifier.padding(horizontal = 16.dp),
                                 onIntent = onIntent,
                             )
@@ -902,55 +905,61 @@ private fun MenuTitleBar(
             )
     ) {
         val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
+                && progressiveBlurActive
+        val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
 
-        // Title row: back + title + actions + overflow
+        // Title row: left group (back + capsule/title) + right group (actions)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Back button
-            MenuTitleGlassButton(
-                onClick = { onIntent(ReadBookIntent.CloseReadBook) },
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
-                state = state,
-                colors = colors,
-                backdrop = backdrop,
-            )
-
-            if (useTitleCapsule) {
-                // Title capsule layout: title + chapter in a glass pill
-                TitleCapsuleGlassLayout(
+            // Left group: back + capsule/title — fills remaining space
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MenuTitleGlassButton(
+                    onClick = { onIntent(ReadBookIntent.CloseReadBook) },
+                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
                     state = state,
                     colors = colors,
-                    onIntent = onIntent,
                     backdrop = backdrop,
-                    titleTextColor = titleTextColor,
                 )
-            } else if (titleBarMode != "1" && titleBarMode != "3") {
-                AppText(
-                    text = state.bookName,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    style = LegadoTheme.typography.titleMedium.copy(
-                        shadow = androidx.compose.ui.graphics.Shadow(
-                            color = Color.Black.copy(alpha = 0.12f),
-                            offset = Offset.Zero,
-                            blurRadius = 12f
-                        )
-                    ),
-                    color = titleTextColor,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            } else {
-                Spacer(Modifier.weight(1f))
+
+                if (useTitleCapsule) {
+                    TitleCapsuleGlassLayout(
+                        state = state,
+                        colors = colors,
+                        onIntent = onIntent,
+                        backdrop = backdrop,
+                        titleTextColor = capsuleIconColor,
+                    )
+                } else if (titleBarMode != "1" && titleBarMode != "3") {
+                    AppText(
+                        text = state.bookName,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onIntent(ReadBookIntent.OpenBookInfo) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = LegadoTheme.typography.titleMedium.copy(
+                            shadow = androidx.compose.ui.graphics.Shadow(
+                                color = Color.Black.copy(alpha = 0.12f),
+                                offset = Offset.Zero,
+                                blurRadius = 12f
+                            )
+                        ),
+                        color = titleTextColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
+            // Right group: actions
             if (readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig)) {
                 MenuTitleBarMergedGlassButton(
                     state = state,
@@ -963,7 +972,6 @@ private fun MenuTitleBar(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Source action button (non-local books only)
                     if (!state.isLocalBook) {
                         SourceActionButton(
                             state = state,
@@ -1252,7 +1260,7 @@ private fun RowScope.TitleCapsuleGlassLayout(
     Row(
         modifier = Modifier
             .weight(1f)
-            .padding(horizontal = 8.dp)
+            .padding(start = 12.dp)
             .height(40.dp)
             .readMenuLiquidGlass(
                 backdrop = backdrop,
@@ -1320,24 +1328,20 @@ private fun MenuTitleBarMergedGlassButton(
     val tint = LegadoTheme.colorScheme.onSurfaceVariant
 
     Box {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(48.dp),
-        ) {
-            Row(
-                modifier = Modifier
-                    .height(40.dp)
-                    .readMenuLiquidGlass(
-                        backdrop = backdrop,
-                        colors = colors,
-                        shape = pillShape,
-                        useTopBarStyle = true,
-                        useLens = true,
-                        blurRadius = 32.dp,
-                        interactive = true,
-                        menuConfig = state.menuConfig,
-                    )
-                    .padding(horizontal = 4.dp),
+        Row(
+            modifier = Modifier
+                .height(40.dp)
+                .readMenuLiquidGlass(
+                    backdrop = backdrop,
+                    colors = colors,
+                    shape = pillShape,
+                    useTopBarStyle = true,
+                    useLens = true,
+                    blurRadius = 32.dp,
+                    interactive = true,
+                    menuConfig = state.menuConfig,
+                )
+                .padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
             // SwapHoriz - change source
@@ -1417,7 +1421,6 @@ private fun MenuTitleBarMergedGlassButton(
                     modifier = Modifier.size(20.dp),
                 )
             }
-        }
         }
 
         // Dropdown menus
@@ -2827,8 +2830,9 @@ private fun Modifier.readMenuHazeEffect(
     progressiveBottomToTop: Boolean = false,
 ): Modifier {
     val surfaceAlpha = menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
+    val blurTintColor = menuConfig.readMenuBlurColor.takeIf { it != 0 }?.let { Color(it) }
     val hazeContainerColor = if (progressive) {
-        Color.Black.copy(alpha = surfaceAlpha)
+        (blurTintColor ?: Color.Black).copy(alpha = surfaceAlpha)
     } else {
         colors.background.copy(alpha = surfaceAlpha)
     }
