@@ -184,6 +184,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (!intent.hasExplicitStartRoute()) return
         routeEvents.tryEmit(MainNavigator.resolveStartRoute(intent))
     }
 
@@ -204,7 +205,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         val startRoutes = remember {
             val resolved = MainNavigator.resolveStartRoute(intent)
-            val hasExplicitStartRoute = intent?.hasExtra(MainIntent.EXTRA_START_ROUTE) == true
+            val hasExplicitStartRoute = intent?.hasExplicitStartRoute() == true
             when {
                 !hasExplicitStartRoute && restoredReadBookRoute != null -> {
                     arrayOf(MainRouteHome, restoredReadBookRoute!!)
@@ -412,6 +413,10 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             inBookshelf = getBoolean(KEY_RESTORE_READ_IN_BOOKSHELF, true),
             chapterChanged = getBoolean(KEY_RESTORE_READ_CHAPTER_CHANGED, false),
         )
+    }
+
+    private fun Intent.hasExplicitStartRoute(): Boolean {
+        return hasExtra(MainIntent.EXTRA_START_ROUTE)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
