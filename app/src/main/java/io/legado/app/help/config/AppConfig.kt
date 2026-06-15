@@ -125,15 +125,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         ReadConfig.pageTouchSlop = preferences.pageTouchSlop
         ReadConfig.showReadTitleAddition = preferences.showReadTitleAddition
         ReadConfig.titleBarMode = preferences.titleBarMode
-        ReadConfig.menuAlpha = preferences.menuAlpha
-        ReadConfig.readSliderMode = preferences.readSliderMode
+        ReadBookConfig.readMenuBlurAlpha = preferences.readMenuBlurAlpha
+        ReadBookConfig.readSliderMode = preferences.readSliderMode
         readBarStyleFollowPageValue = preferences.readBarStyleFollowPage
         readBarStyleValue = preferences.readBarStyle
         ReadConfig.defaultSourceChangeAll = preferences.defaultSourceChangeAll
         ReadConfig.sliderVibrator = preferences.sliderVibrator
         ReadConfig.selectVibrator = preferences.selectVibrator
-        ReadConfig.brightnessVwPos = preferences.brightnessVwPos
-        ReadConfig.readBrightness = preferences.readBrightness
+        ReadBookConfig.brightnessVwPos = preferences.brightnessVwPos
+        ReadBookConfig.readBrightness = preferences.readBrightness
     }
 
     fun updateReadBarStyleCache(value: Int) {
@@ -836,16 +836,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             ThemeConfig.enableBlur = value
         }
+
+    @Deprecated("Use ReadBookConfig.readMenuBlurAlpha instead", ReplaceWith("ReadBookConfig.readMenuBlurAlpha"))
     var menuAlpha: Int
-        get() = ReadConfig.menuAlpha
+        get() = ReadBookConfig.readMenuBlurAlpha
         set(value) {
-            ReadConfig.menuAlpha = value
+            ReadBookConfig.readMenuBlurAlpha = value
         }
 
     var readSliderMode
-        get() = ReadConfig.readSliderMode
+        get() = ReadBookConfig.readSliderMode
         set(value) {
-            ReadConfig.readSliderMode = value
+            ReadBookConfig.readSliderMode = value
         }
 
     var bookshelfRefreshingLimit: Int

@@ -60,13 +60,12 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
-                    ReadConfig.menuAlpha = intent.value
-                    readSettingsRepository.setMenuAlpha(intent.value)
+                    ReadBookConfig.readMenuBlurAlpha = intent.value
+                    readSettingsRepository.setReadMenuBlurAlpha(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
                 is ReadConfigIntent.ReadBodyToLhChanged -> {
-                    ReadConfig.readBodyToLh = intent.value
                     ReadBookConfig.readBodyToLh = intent.value
                     readSettingsRepository.setReadBodyToLh(intent.value)
                 }
@@ -110,7 +109,7 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.ReadSliderModeChanged -> {
-                    ReadConfig.readSliderMode = intent.value
+                    ReadBookConfig.readSliderMode = intent.value
                     readSettingsRepository.setReadSliderMode(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }

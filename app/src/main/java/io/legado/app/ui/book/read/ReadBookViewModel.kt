@@ -2944,7 +2944,6 @@ class ReadBookViewModel(
                 postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
             }
             is ConfigUpdate.ReadBodyToLh -> {
-                ReadConfig.readBodyToLh = update.value
                 ReadBookConfig.readBodyToLh = update.value
                 viewModelScope.launch {
                     readSettingsRepository.setReadBodyToLh(update.value)

@@ -1,470 +1,295 @@
 package io.legado.app.ui.config.readConfig
 
-import io.legado.app.BuildConfig
-import io.legado.app.constant.PreferKey
 import io.legado.app.data.repository.ReadPreferences
-import io.legado.app.ui.config.prefDelegate
-import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.utils.isNightMode
-import io.legado.app.utils.sysConfiguration
 
+/**
+ * 阅读配置门面
+ *
+ * 代理到子配置对象，保持向后兼容。
+ * 子配置按职责拆分为：
+ * - [ReadRenderConfig]  渲染/布局
+ * - [ReadMenuConfig]    菜单/标题栏/进度条/点击区域
+ * - [ReadInteractionConfig] 按键/触控交互
+ * - [ReadTtsConfig]     TTS/朗读/音频
+ * - [ReadDataConfig]    数据同步/缓存/屏幕
+ *
+ * 注意：textFullJustify、textBottomJustify、useZhLayout、readBodyToLh、
+ * hideStatusBar、hideNavigationBar、showBrightnessView、brightnessVwPos、
+ * readBrightness、brightnessAuto、readSliderMode、readMenuBlurAlpha
+ * 已在 [ReadBookConfig] 中定义，此处不重复。
+ */
 object ReadConfig {
 
-    val isEInkMode: Boolean
-        get() = ThemeConfig.appTheme == "4"
+    // ── 渲染 ──
 
-    var isNightTheme: Boolean
-        get() = when (ThemeConfig.themeMode) {
-            "1" -> false
-            "2" -> true
-            else -> sysConfiguration.isNightMode
-        }
-        set(value) {
-            val newMode = if (value) "2" else "1"
-            if (ThemeConfig.themeMode != newMode) {
-                ThemeConfig.themeMode = newMode
-            }
-        }
+    val isEInkMode get() = ReadRenderConfig.isEInkMode
+    var isNightTheme
+        get() = ReadRenderConfig.isNightTheme
+        set(value) { ReadRenderConfig.isNightTheme = value }
+    val enableReview get() = ReadRenderConfig.enableReview
+    var useAntiAlias
+        get() = ReadRenderConfig.useAntiAlias
+        set(value) { ReadRenderConfig.useAntiAlias = value }
+    var systemTypefaces
+        get() = ReadRenderConfig.systemTypefaces
+        set(value) { ReadRenderConfig.systemTypefaces = value }
+    var doubleHorizontalPage
+        get() = ReadRenderConfig.doubleHorizontalPage
+        set(value) { ReadRenderConfig.doubleHorizontalPage = value }
+    var adaptSpecialStyle
+        get() = ReadRenderConfig.adaptSpecialStyle
+        set(value) { ReadRenderConfig.adaptSpecialStyle = value }
+    var useUnderline
+        get() = ReadRenderConfig.useUnderline
+        set(value) { ReadRenderConfig.useUnderline = value }
+    var optimizeRender
+        get() = ReadRenderConfig.optimizeRender
+        set(value) { ReadRenderConfig.optimizeRender = value }
+    var noAnimScrollPage
+        get() = ReadRenderConfig.noAnimScrollPage
+        set(value) { ReadRenderConfig.noAnimScrollPage = value }
+    var paddingDisplayCutouts
+        get() = ReadRenderConfig.paddingDisplayCutouts
+        set(value) { ReadRenderConfig.paddingDisplayCutouts = value }
+    var pageTouchSlop
+        get() = ReadRenderConfig.pageTouchSlop
+        set(value) { ReadRenderConfig.pageTouchSlop = value }
+    var selectText
+        get() = ReadRenderConfig.selectText
+        set(value) { ReadRenderConfig.selectText = value }
+    var clickImgWay
+        get() = ReadRenderConfig.clickImgWay
+        set(value) { ReadRenderConfig.clickImgWay = value }
+    var chineseConverterType
+        get() = ReadRenderConfig.chineseConverterType
+        set(value) { ReadRenderConfig.chineseConverterType = value }
 
-    var useAntiAlias by prefDelegate(
-        PreferKey.antiAlias,
-        false
-    )
+    // ── 菜单 ──
 
-    val enableReview: Boolean
-        get() = BuildConfig.DEBUG && enableReviewPref
+    var titleBarMode
+        get() = ReadMenuConfig.titleBarMode
+        set(value) { ReadMenuConfig.titleBarMode = value }
+    var menuAlpha
+        get() = ReadMenuConfig.menuAlpha
+        set(value) { ReadMenuConfig.menuAlpha = value }
+    var readBarStyleFollowPage
+        get() = ReadMenuConfig.readBarStyleFollowPage
+        set(value) { ReadMenuConfig.readBarStyleFollowPage = value }
+    var readBarStyle
+        get() = ReadMenuConfig.readBarStyle
+        set(value) { ReadMenuConfig.readBarStyle = value }
+    var progressBarBehavior
+        get() = ReadMenuConfig.progressBarBehavior
+        set(value) { ReadMenuConfig.progressBarBehavior = value }
+    var expandTextMenu
+        get() = ReadMenuConfig.expandTextMenu
+        set(value) { ReadMenuConfig.expandTextMenu = value }
+    var showReadTitleAddition
+        get() = ReadMenuConfig.showReadTitleAddition
+        set(value) { ReadMenuConfig.showReadTitleAddition = value }
+    var clickActionTL
+        get() = ReadMenuConfig.clickActionTL
+        set(value) { ReadMenuConfig.clickActionTL = value }
+    var clickActionTC
+        get() = ReadMenuConfig.clickActionTC
+        set(value) { ReadMenuConfig.clickActionTC = value }
+    var clickActionTR
+        get() = ReadMenuConfig.clickActionTR
+        set(value) { ReadMenuConfig.clickActionTR = value }
+    var clickActionML
+        get() = ReadMenuConfig.clickActionML
+        set(value) { ReadMenuConfig.clickActionML = value }
+    var clickActionMC
+        get() = ReadMenuConfig.clickActionMC
+        set(value) { ReadMenuConfig.clickActionMC = value }
+    var clickActionMR
+        get() = ReadMenuConfig.clickActionMR
+        set(value) { ReadMenuConfig.clickActionMR = value }
+    var clickActionBL
+        get() = ReadMenuConfig.clickActionBL
+        set(value) { ReadMenuConfig.clickActionBL = value }
+    var clickActionBC
+        get() = ReadMenuConfig.clickActionBC
+        set(value) { ReadMenuConfig.clickActionBC = value }
+    var clickActionBR
+        get() = ReadMenuConfig.clickActionBR
+        set(value) { ReadMenuConfig.clickActionBR = value }
+    fun hasMenuClickArea() = ReadMenuConfig.hasMenuClickArea()
+    fun detectClickArea() = ReadMenuConfig.detectClickArea()
 
-    private var enableReviewPref by prefDelegate(
-        PreferKey.enableReview,
-        false
-    )
+    // ── 交互 ──
 
-    var systemTypefaces by prefDelegate(
-        PreferKey.systemTypefaces,
-        0
-    )
+    var mouseWheelPage
+        get() = ReadInteractionConfig.mouseWheelPage
+        set(value) { ReadInteractionConfig.mouseWheelPage = value }
+    var volumeKeyPage
+        get() = ReadInteractionConfig.volumeKeyPage
+        set(value) { ReadInteractionConfig.volumeKeyPage = value }
+    var volumeKeyPageOnPlay
+        get() = ReadInteractionConfig.volumeKeyPageOnPlay
+        set(value) { ReadInteractionConfig.volumeKeyPageOnPlay = value }
+    var keyPageOnLongPress
+        get() = ReadInteractionConfig.keyPageOnLongPress
+        set(value) { ReadInteractionConfig.keyPageOnLongPress = value }
+    var sliderVibrator
+        get() = ReadInteractionConfig.sliderVibrator
+        set(value) { ReadInteractionConfig.sliderVibrator = value }
+    var selectVibrator
+        get() = ReadInteractionConfig.selectVibrator
+        set(value) { ReadInteractionConfig.selectVibrator = value }
+    var disableReturnKey
+        get() = ReadInteractionConfig.disableReturnKey
+        set(value) { ReadInteractionConfig.disableReturnKey = value }
+    var prevKeys
+        get() = ReadInteractionConfig.prevKeys
+        set(value) { ReadInteractionConfig.prevKeys = value }
+    var nextKeys
+        get() = ReadInteractionConfig.nextKeys
+        set(value) { ReadInteractionConfig.nextKeys = value }
 
-    var readUrlInBrowser by prefDelegate(
-        PreferKey.readUrlOpenInBrowser,
-        false
-    )
+    // ── TTS ──
 
-    var contentSelectSpeakMod by prefDelegate(
-        PreferKey.contentSelectSpeakMod,
-        0
-    )
+    val speechRatePlay get() = ReadTtsConfig.speechRatePlay
+    var ttsEngine
+        get() = ReadTtsConfig.ttsEngine
+        set(value) { ReadTtsConfig.ttsEngine = value }
+    var ttsFollowSys
+        get() = ReadTtsConfig.ttsFollowSys
+        set(value) { ReadTtsConfig.ttsFollowSys = value }
+    var ttsSpeechRate
+        get() = ReadTtsConfig.ttsSpeechRate
+        set(value) { ReadTtsConfig.ttsSpeechRate = value }
+    var ttsTimer
+        get() = ReadTtsConfig.ttsTimer
+        set(value) { ReadTtsConfig.ttsTimer = value }
+    var ignoreAudioFocus
+        get() = ReadTtsConfig.ignoreAudioFocus
+        set(value) { ReadTtsConfig.ignoreAudioFocus = value }
+    var pauseReadAloudWhilePhoneCalls
+        get() = ReadTtsConfig.pauseReadAloudWhilePhoneCalls
+        set(value) { ReadTtsConfig.pauseReadAloudWhilePhoneCalls = value }
+    var readAloudWakeLock
+        get() = ReadTtsConfig.readAloudWakeLock
+        set(value) { ReadTtsConfig.readAloudWakeLock = value }
+    var mediaButtonPerNext
+        get() = ReadTtsConfig.mediaButtonPerNext
+        set(value) { ReadTtsConfig.mediaButtonPerNext = value }
+    var readAloudByPage
+        get() = ReadTtsConfig.readAloudByPage
+        set(value) { ReadTtsConfig.readAloudByPage = value }
+    var systemMediaControlCompatibilityChange
+        get() = ReadTtsConfig.systemMediaControlCompatibilityChange
+        set(value) { ReadTtsConfig.systemMediaControlCompatibilityChange = value }
+    var streamReadAloudAudio
+        get() = ReadTtsConfig.streamReadAloudAudio
+        set(value) { ReadTtsConfig.streamReadAloudAudio = value }
+    var contentSelectSpeakMod
+        get() = ReadTtsConfig.contentSelectSpeakMod
+        set(value) { ReadTtsConfig.contentSelectSpeakMod = value }
+    var audioPreDownloadNum
+        get() = ReadTtsConfig.audioPreDownloadNum
+        set(value) { ReadTtsConfig.audioPreDownloadNum = value }
+    var audioCacheCleanTimeOrgin
+        get() = ReadTtsConfig.audioCacheCleanTimeOrgin
+        set(value) { ReadTtsConfig.audioCacheCleanTimeOrgin = value }
+    val audioCacheCleanTime get() = ReadTtsConfig.audioCacheCleanTime
 
-    var syncBookProgress by prefDelegate(
-        PreferKey.syncBookProgress,
-        true
-    )
+    // ── 数据/屏幕 ──
 
-    var syncBookProgressPlus by prefDelegate(
-        PreferKey.syncBookProgressPlus,
-        false
-    )
+    var syncBookProgress
+        get() = ReadDataConfig.syncBookProgress
+        set(value) { ReadDataConfig.syncBookProgress = value }
+    var syncBookProgressPlus
+        get() = ReadDataConfig.syncBookProgressPlus
+        set(value) { ReadDataConfig.syncBookProgressPlus = value }
+    var autoChangeSource
+        get() = ReadDataConfig.autoChangeSource
+        set(value) { ReadDataConfig.autoChangeSource = value }
+    var defaultSourceChangeAll
+        get() = ReadDataConfig.defaultSourceChangeAll
+        set(value) { ReadDataConfig.defaultSourceChangeAll = value }
+    var readUrlInBrowser
+        get() = ReadDataConfig.readUrlInBrowser
+        set(value) { ReadDataConfig.readUrlInBrowser = value }
+    var tocUiUseReplace
+        get() = ReadDataConfig.tocUiUseReplace
+        set(value) { ReadDataConfig.tocUiUseReplace = value }
+    var tocCountWords
+        get() = ReadDataConfig.tocCountWords
+        set(value) { ReadDataConfig.tocCountWords = value }
+    var preDownloadNum
+        get() = ReadDataConfig.preDownloadNum
+        set(value) { ReadDataConfig.preDownloadNum = value }
+    var imageRetainNum
+        get() = ReadDataConfig.imageRetainNum
+        set(value) { ReadDataConfig.imageRetainNum = value }
+    var keepLight
+        get() = ReadDataConfig.keepLight
+        set(value) { ReadDataConfig.keepLight = value }
+    var screenOrientation
+        get() = ReadDataConfig.screenOrientation
+        set(value) { ReadDataConfig.screenOrientation = value }
 
-    var preDownloadNum by prefDelegate(
-        PreferKey.preDownloadNum,
-        10
-    )
+    // ── 同步 ──
 
-    var imageRetainNum by prefDelegate(
-        PreferKey.imageRetainNum,
-        0
-    )
-
-    var audioCacheCleanTimeOrgin by prefDelegate(
-        PreferKey.audioCacheCleanTime,
-        10
-    )
-
-    val audioCacheCleanTime: Long
-        get() = audioCacheCleanTimeOrgin * 60 * 1000L
-
-    var audioPreDownloadNum by prefDelegate(
-        PreferKey.audioPreDownloadNum,
-        10
-    )
-
-    private const val defaultSpeechRate = 5
-
-    val speechRatePlay: Int
-        get() = if (ttsFollowSys) defaultSpeechRate else ttsSpeechRate
-
+    /**
+     * 从 [ReadPreferences] 批量同步到各子配置。
+     *
+     * 注意：textFullJustify、textBottomJustify、useZhLayout、readBodyToLh、
+     * hideStatusBar、hideNavigationBar、showBrightnessView、brightnessVwPos、
+     * readBrightness、brightnessAuto、readSliderMode、readMenuBlurAlpha
+     * 由 [ReadBookConfig] 的 prefDelegate 自动同步，此处不处理。
+     */
     fun syncReadPreferences(preferences: ReadPreferences) {
-        optimizeRender = preferences.optimizeRender
-        adaptSpecialStyle = preferences.adaptSpecialStyle
-        useUnderline = preferences.useUnderline
-        keepLight = preferences.keepLight
-        brightnessVwPos = preferences.brightnessVwPos
-        readBrightness = preferences.readBrightness
-        brightnessAuto = preferences.brightnessAuto
-        chineseConverterType = preferences.chineseConverterType
-        clickActionTL = preferences.clickActionTL
-        clickActionTC = preferences.clickActionTC
-        clickActionTR = preferences.clickActionTR
-        clickActionML = preferences.clickActionML
-        clickActionMC = preferences.clickActionMC
-        clickActionMR = preferences.clickActionMR
-        clickActionBL = preferences.clickActionBL
-        clickActionBC = preferences.clickActionBC
-        clickActionBR = preferences.clickActionBR
-        screenOrientation = preferences.screenOrientation
-        readBodyToLh = preferences.readBodyToLh
-        noAnimScrollPage = preferences.noAnimScrollPage
-        tocUiUseReplace = preferences.tocUiUseReplace
-        tocCountWords = preferences.tocCountWords
-        autoChangeSource = preferences.autoChangeSource
-        clickImgWay = preferences.clickImgWay
-        doubleHorizontalPage = preferences.doubleHorizontalPage
-        progressBarBehavior = preferences.progressBarBehavior
-        keyPageOnLongPress = preferences.keyPageOnLongPress
-        volumeKeyPage = preferences.volumeKeyPage
-        volumeKeyPageOnPlay = preferences.volumeKeyPageOnPlay
-        mouseWheelPage = preferences.mouseWheelPage
-        paddingDisplayCutouts = preferences.paddingDisplayCutouts
-        pageTouchSlop = preferences.pageTouchSlop
-        selectText = preferences.selectText
-        disableReturnKey = preferences.disableReturnKey
-        expandTextMenu = preferences.expandTextMenu
-        showReadTitleAddition = preferences.showReadTitleAddition
-        titleBarMode = preferences.titleBarMode
-        menuAlpha = preferences.menuAlpha
-        readSliderMode = preferences.readSliderMode
-        readBarStyleFollowPage = preferences.readBarStyleFollowPage
-        readBarStyle = preferences.readBarStyle
-        defaultSourceChangeAll = preferences.defaultSourceChangeAll
-        sliderVibrator = preferences.sliderVibrator
-        selectVibrator = preferences.selectVibrator
-    }
-
-    var tocUiUseReplace by prefDelegate(
-        PreferKey.tocUiUseReplace,
-        false
-    )
-
-    var tocCountWords by prefDelegate(
-        PreferKey.tocCountWords,
-        true
-    )
-
-    var screenOrientation by prefDelegate(
-        PreferKey.screenOrientation,
-        "0"
-    )
-
-    var keepLight by prefDelegate(
-        PreferKey.keepLight,
-        "0"
-    )
-
-    var hideStatusBar by prefDelegate(
-        PreferKey.hideStatusBar,
-        false
-    )
-
-    var hideNavigationBar by prefDelegate(
-        PreferKey.hideNavigationBar,
-        false
-    )
-
-    var paddingDisplayCutouts by prefDelegate(
-        PreferKey.paddingDisplayCutouts,
-        false
-    )
-
-    var titleBarMode by prefDelegate(
-        PreferKey.titleBarMode,
-        "1"
-    )
-
-    var menuAlpha by prefDelegate(
-        PreferKey.menuAlpha,
-        100
-    )
-
-    var readBodyToLh by prefDelegate(
-        PreferKey.readBodyToLh,
-        true
-    )
-
-    var defaultSourceChangeAll by prefDelegate(
-        PreferKey.defaultSourceChangeAll,
-        true
-    )
-
-    var textFullJustify by prefDelegate(
-        PreferKey.textFullJustify,
-        true
-    )
-
-    var textBottomJustify by prefDelegate(
-        PreferKey.textBottomJustify,
-        true
-    )
-
-    var adaptSpecialStyle by prefDelegate(
-        PreferKey.adaptSpecialStyle,
-        true
-    )
-
-    var useZhLayout by prefDelegate(
-        PreferKey.useZhLayout,
-        false
-    )
-
-    var showBrightnessView by prefDelegate(
-        PreferKey.showBrightnessView,
-        "1"
-    )
-
-    var brightnessVwPos by prefDelegate(
-        PreferKey.brightnessVwPos,
-        "1"
-    )
-
-    var readBrightness by prefDelegate(
-        PreferKey.brightness,
-        100
-    )
-
-    var brightnessAuto by prefDelegate(
-        PreferKey.brightnessAuto,
-        false
-    )
-
-    var useUnderline by prefDelegate(
-        PreferKey.useUnderline,
-        false
-    )
-
-    var readSliderMode by prefDelegate(
-        PreferKey.readSliderMode,
-        "0"
-    )
-
-    var doubleHorizontalPage by prefDelegate(
-        PreferKey.doublePageHorizontal,
-        "0"
-    )
-
-    var progressBarBehavior by prefDelegate(
-        PreferKey.progressBarBehavior,
-        "page"
-    )
-
-    var mouseWheelPage by prefDelegate(
-        PreferKey.mouseWheelPage,
-        true
-    )
-
-    var volumeKeyPage by prefDelegate(
-        PreferKey.volumeKeyPage,
-        true
-    )
-
-    var volumeKeyPageOnPlay by prefDelegate(
-        PreferKey.volumeKeyPageOnPlay,
-        true
-    )
-
-    var keyPageOnLongPress by prefDelegate(
-        PreferKey.keyPageOnLongPress,
-        false
-    )
-
-    var pageTouchSlop by prefDelegate(
-        PreferKey.pageTouchSlop,
-        0
-    )
-
-    var sliderVibrator by prefDelegate(
-        PreferKey.sliderVibrator,
-        false
-    )
-
-    var selectVibrator by prefDelegate(
-        PreferKey.selectVibrator,
-        false
-    )
-
-    var autoChangeSource by prefDelegate(
-        PreferKey.autoChangeSource,
-        true
-    )
-
-    var selectText by prefDelegate(
-        PreferKey.selectText,
-        true
-    )
-
-    var noAnimScrollPage by prefDelegate(
-        PreferKey.noAnimScrollPage,
-        false
-    )
-
-    var clickImgWay by prefDelegate(
-        PreferKey.clickImgWay,
-        "2"
-    )
-
-    var optimizeRender by prefDelegate(
-        PreferKey.optimizeRender,
-        false
-    )
-
-    var disableReturnKey by prefDelegate(
-        PreferKey.disableReturnKey,
-        false
-    )
-
-    var expandTextMenu by prefDelegate(
-        PreferKey.expandTextMenu,
-        false
-    )
-
-    var showReadTitleAddition by prefDelegate(
-        PreferKey.showReadTitleAddition,
-        true
-    )
-
-    var clickActionTL by prefDelegate(
-        PreferKey.clickActionTL,
-        2
-    )
-
-    var clickActionTC by prefDelegate(
-        PreferKey.clickActionTC,
-        2
-    )
-
-    var clickActionTR by prefDelegate(
-        PreferKey.clickActionTR,
-        1
-    )
-
-    var clickActionML by prefDelegate(
-        PreferKey.clickActionML,
-        2
-    )
-
-    var clickActionMC by prefDelegate(
-        PreferKey.clickActionMC,
-        0
-    )
-
-    var clickActionMR by prefDelegate(
-        PreferKey.clickActionMR,
-        1
-    )
-
-    var clickActionBL by prefDelegate(
-        PreferKey.clickActionBL,
-        2
-    )
-
-    var clickActionBC by prefDelegate(
-        PreferKey.clickActionBC,
-        1
-    )
-
-    var clickActionBR by prefDelegate(
-        PreferKey.clickActionBR,
-        1
-    )
-
-    fun hasMenuClickArea(): Boolean {
-        return clickActionTL * clickActionTC * clickActionTR *
-                clickActionML * clickActionMC * clickActionMR *
-                clickActionBL * clickActionBC * clickActionBR == 0
-    }
-
-    fun detectClickArea() {
-        if (!hasMenuClickArea()) {
-            clickActionMC = 0
+        // 渲染
+        ReadRenderConfig.apply {
+            optimizeRender = preferences.optimizeRender
+            adaptSpecialStyle = preferences.adaptSpecialStyle
+            useUnderline = preferences.useUnderline
+            chineseConverterType = preferences.chineseConverterType
+            doubleHorizontalPage = preferences.doubleHorizontalPage
+            noAnimScrollPage = preferences.noAnimScrollPage
+            paddingDisplayCutouts = preferences.paddingDisplayCutouts
+            pageTouchSlop = preferences.pageTouchSlop
+            selectText = preferences.selectText
+            clickImgWay = preferences.clickImgWay
+        }
+        // 菜单
+        ReadMenuConfig.apply {
+            titleBarMode = preferences.titleBarMode
+            readBarStyleFollowPage = preferences.readBarStyleFollowPage
+            readBarStyle = preferences.readBarStyle
+            progressBarBehavior = preferences.progressBarBehavior
+            expandTextMenu = preferences.expandTextMenu
+            showReadTitleAddition = preferences.showReadTitleAddition
+            clickActionTL = preferences.clickActionTL
+            clickActionTC = preferences.clickActionTC
+            clickActionTR = preferences.clickActionTR
+            clickActionML = preferences.clickActionML
+            clickActionMC = preferences.clickActionMC
+            clickActionMR = preferences.clickActionMR
+            clickActionBL = preferences.clickActionBL
+            clickActionBC = preferences.clickActionBC
+            clickActionBR = preferences.clickActionBR
+        }
+        // 交互
+        ReadInteractionConfig.apply {
+            mouseWheelPage = preferences.mouseWheelPage
+            volumeKeyPage = preferences.volumeKeyPage
+            volumeKeyPageOnPlay = preferences.volumeKeyPageOnPlay
+            keyPageOnLongPress = preferences.keyPageOnLongPress
+            sliderVibrator = preferences.sliderVibrator
+            selectVibrator = preferences.selectVibrator
+            disableReturnKey = preferences.disableReturnKey
+        }
+        // 数据/屏幕
+        ReadDataConfig.apply {
+            keepLight = preferences.keepLight
+            screenOrientation = preferences.screenOrientation
+            autoChangeSource = preferences.autoChangeSource
+            defaultSourceChangeAll = preferences.defaultSourceChangeAll
+            tocUiUseReplace = preferences.tocUiUseReplace
+            tocCountWords = preferences.tocCountWords
         }
     }
-
-    var readBarStyleFollowPage by prefDelegate(
-        PreferKey.readBarStyleFollowPage,
-        false
-    )
-
-    var readBarStyle by prefDelegate(
-        PreferKey.readBarStyle,
-        0
-    )
-
-    var prevKeys by prefDelegate(
-        PreferKey.prevKeys,
-        ""
-    )
-
-    var nextKeys by prefDelegate(
-        PreferKey.nextKeys,
-        ""
-    )
-
-    // --- Read Aloud ---
-
-    var ignoreAudioFocus by prefDelegate(
-        PreferKey.ignoreAudioFocus,
-        false
-    )
-
-    var pauseReadAloudWhilePhoneCalls by prefDelegate(
-        PreferKey.pauseReadAloudWhilePhoneCalls,
-        false
-    )
-
-    var readAloudWakeLock by prefDelegate(
-        PreferKey.readAloudWakeLock,
-        false
-    )
-
-    var mediaButtonPerNext by prefDelegate(
-        "mediaButtonPerNext",
-        false
-    )
-
-    var readAloudByPage by prefDelegate(
-        PreferKey.readAloudByPage,
-        false
-    )
-
-    var systemMediaControlCompatibilityChange by prefDelegate(
-        PreferKey.systemMediaControlCompatibilityChange,
-        true
-    )
-
-    var streamReadAloudAudio by prefDelegate(
-        PreferKey.streamReadAloudAudio,
-        false
-    )
-
-    var ttsTimer by prefDelegate(
-        PreferKey.ttsTimer,
-        0
-    )
-
-    var ttsFollowSys by prefDelegate(
-        PreferKey.ttsFollowSys,
-        true
-    )
-
-    var ttsSpeechRate by prefDelegate(
-        PreferKey.ttsSpeechRate,
-        5
-    )
-
-    var ttsEngine by prefDelegate<String?>(
-        PreferKey.ttsEngine,
-        null
-    )
-
-    var chineseConverterType by prefDelegate(
-        PreferKey.chineseConverterType,
-        0
-    )
 }
