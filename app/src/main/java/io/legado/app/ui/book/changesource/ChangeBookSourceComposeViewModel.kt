@@ -108,14 +108,22 @@ class ChangeBookSourceComposeViewModel(
     }
 
     private fun getDbSearchBooks(): List<SearchBook> {
-        val scopeRaw = ChangeSourceConfig.searchScope
+        val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+        val group = when {
+            searchScope.isAll() || searchScope.isSource() -> ""
+            else -> {
+                val names = searchScope.displayNames
+                if (names.size == 1) names.first() else ""
+            }
+        }
+        val bookAuthor = if (checkAuthor) bookAuthor else ""
         return if (screenKey.isEmpty()) {
             io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
-                bookName, bookAuthor, scopeRaw
+                bookName, bookAuthor, group
             )
         } else {
             io.legado.app.data.appDb.searchBookDao.changeSourceSearch(
-                bookName, bookAuthor, screenKey, scopeRaw
+                bookName, bookAuthor, screenKey, group
             )
         }
     }
@@ -128,7 +136,7 @@ class ChangeBookSourceComposeViewModel(
         searchResults.clear()
         bookMap.clear()
         tocMap.clear()
-        totalSourceCount = 0
+        totalSourceCount = searchScope.getBookSourceParts().size
         _changeSourceProgress.value = 0 to ""
         _searchDataFlow.value = emptyList()
 

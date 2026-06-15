@@ -151,21 +151,16 @@ class ChangeSourceSearchUseCase(
             when {
                 loadInfo || loadToc || loadWordCount -> {
                     val book = searchBook.toBook()
-                    try {
-                        val wordCountSearchBook = loadBookInfo(
-                            source,
-                            book,
-                            loadToc,
-                            loadWordCount,
-                            oldBook,
-                            fromReadBookActivity,
-                            contentProcessor
-                        )
-                        processedBooks.add(wordCountSearchBook ?: book.toSearchBook())
-                    } catch (e: Throwable) {
-                        if (e is CancellationException) throw e
-                        processedBooks.add(searchBook)
-                    }
+                    val wordCountSearchBook = loadBookInfo(
+                        source,
+                        book,
+                        loadToc,
+                        loadWordCount,
+                        oldBook,
+                        fromReadBookActivity,
+                        contentProcessor
+                    )
+                    processedBooks.add(wordCountSearchBook ?: book.toSearchBook())
                 }
 
                 else -> {

@@ -156,7 +156,7 @@ fun ChangeChapterSourceSheet(
         selectedSources = state.scopeState.sourceUrls,
         onToggleSource = { onIntent(ChangeChapterSourceIntent.ToggleScopeSource(it)) },
         isSourceScope = state.scopeState.isSource,
-        onConfirm = {
+        onApplyScope = { selection ->
             onIntent(ChangeChapterSourceIntent.ApplyScope)
             showFilterSheet = false
         }

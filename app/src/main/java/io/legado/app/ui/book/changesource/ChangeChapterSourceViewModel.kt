@@ -33,6 +33,7 @@ class ChangeChapterSourceViewModel(
     val effects = _effects.asSharedFlow()
 
     // Internal state
+    private val chapterNumRegex = "^\\[(\\d+)]".toRegex()
     private var searchJob: Job? = null
     private var oldBook: Book? = null
     private var chapterIndex: Int = 0
@@ -82,7 +83,42 @@ class ChangeChapterSourceViewModel(
                 selectedSourceName = "",
             )
         }
-        startSearch()
+        if (searchJob?.isActive != true) {
+            viewModelScope.launch {
+                val dbBooks = getDbSearchBooks()
+                if (dbBooks.isNotEmpty()) {
+                    searchResults.clear()
+                    searchResults.addAll(dbBooks)
+                    searchResults.forEach { bookMap[it.primaryStr()] = it }
+                    filterResults()
+                } else {
+                    startSearch()
+                }
+            }
+        }
+    }
+
+    private fun getDbSearchBooks(): List<SearchBook> {
+        val name = oldBook?.name ?: return emptyList()
+        val author = oldBook?.author ?: return emptyList()
+        val searchScope = SearchScope(ChangeSourceConfig.searchScope)
+        val group = when {
+            searchScope.isAll() || searchScope.isSource() -> ""
+            else -> {
+                val names = searchScope.displayNames
+                if (names.size == 1) names.first() else ""
+            }
+        }
+        val bookAuthor = if (ChangeSourceConfig.checkAuthor) author else ""
+        return if (screenKey.isEmpty()) {
+            io.legado.app.data.appDb.searchBookDao.changeSourceByGroup(
+                name, bookAuthor, group
+            )
+        } else {
+            io.legado.app.data.appDb.searchBookDao.changeSourceSearch(
+                name, bookAuthor, screenKey, group
+            )
+        }
     }
 
     fun onIntent(intent: ChangeChapterSourceIntent) {
@@ -182,7 +218,7 @@ class ChangeChapterSourceViewModel(
 
             is ChangeChapterSourceIntent.SelectAllScope -> {
                 searchScope.update("")
-                saveScope()
+                updateScopeState()
             }
 
             is ChangeChapterSourceIntent.ToggleScopeGroup -> {
@@ -196,7 +232,7 @@ class ChangeChapterSourceViewModel(
                     selected.add(intent.groupName)
                 }
                 searchScope.update(selected.toList())
-                saveScope()
+                updateScopeState()
             }
 
             is ChangeChapterSourceIntent.ToggleScopeSource -> {
@@ -219,11 +255,12 @@ class ChangeChapterSourceViewModel(
                         }
                     searchScope.updateSources(selectedSources)
                 }
-                saveScope()
+                updateScopeState()
             }
 
             is ChangeChapterSourceIntent.ApplyScope -> {
-                startSearch()
+                ChangeSourceConfig.searchScope = searchScope.toString()
+                refreshResults()
             }
         }
     }
@@ -233,6 +270,13 @@ class ChangeChapterSourceViewModel(
         stopSearch()
         searchResults.clear()
         bookMap.clear()
+        val scope = SearchScope(ChangeSourceConfig.searchScope)
+        _uiState.update {
+            it.copy(
+                totalSourceCount = scope.getBookSourceParts().size,
+                searchProgress = 0 to "",
+            )
+        }
         filterResults()
 
         searchJob = viewModelScope.launch {
@@ -284,7 +328,14 @@ class ChangeChapterSourceViewModel(
     private fun refreshResults() {
         searchResults.clear()
         bookMap.clear()
-        startSearch()
+        val dbBooks = getDbSearchBooks()
+        if (dbBooks.isNotEmpty()) {
+            searchResults.addAll(dbBooks)
+            searchResults.forEach { bookMap[it.primaryStr()] = it }
+            filterResults()
+        } else {
+            startSearch()
+        }
     }
 
     private fun filterResults() {
@@ -295,18 +346,29 @@ class ChangeChapterSourceViewModel(
                 it.name.contains(screenKey) || it.originName.contains(screenKey)
             }
         }
-        // Sort by score
-        val sorted = filtered.sortedWith(
+        val comparator = if (_uiState.value.loadWordCount) {
+            compareByDescending<SearchBook> { ObservableSourceConfig.getBookScore(it) }
+                .thenByDescending { io.legado.app.help.config.SourceConfig.getSourceScore(it.origin) }
+                .thenByDescending { it.chapterWordCount > 1000 }
+                .thenByDescending { getChapterNum(it.chapterWordCountText) }
+                .thenByDescending { it.chapterWordCount }
+                .thenBy { it.originOrder }
+        } else {
             compareByDescending<SearchBook> { ObservableSourceConfig.getBookScore(it) }
                 .thenByDescending { io.legado.app.help.config.SourceConfig.getSourceScore(it.origin) }
                 .thenBy { it.originOrder }
-        )
+        }
         _uiState.update {
             it.copy(
-                searchResults = sorted.toImmutableList(),
+                searchResults = filtered.sortedWith(comparator).toImmutableList(),
                 bookMap = bookMap.toMap()
             )
         }
+    }
+
+    private fun getChapterNum(text: String?): Int {
+        if (text.isNullOrBlank()) return 0
+        return chapterNumRegex.find(text)?.groupValues?.get(1)?.toIntOrNull() ?: 0
     }
 
     private fun selectSource(searchBook: SearchBook) {
@@ -376,8 +438,7 @@ class ChangeChapterSourceViewModel(
         }
     }
 
-    private fun saveScope() {
-        ChangeSourceConfig.searchScope = searchScope.toString()
+    private fun updateScopeState() {
         _uiState.update {
             it.copy(
                 scopeState = ScopeUiState(
@@ -388,7 +449,6 @@ class ChangeChapterSourceViewModel(
                 )
             )
         }
-        refreshResults()
     }
 
     fun bookScoreFlow(searchBook: SearchBook) = ObservableSourceConfig.bookScoreFlow(searchBook)
