@@ -60,8 +60,8 @@ class ReadConfigViewModel(
                 }
 
                 is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
-                    ReadConfig.readMenuBlurAlpha = intent.value
-                    readSettingsRepository.setReadMenuBlurAlpha(intent.value)
+                    ReadConfig.menuAlpha = intent.value
+                    readSettingsRepository.setMenuAlpha(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
