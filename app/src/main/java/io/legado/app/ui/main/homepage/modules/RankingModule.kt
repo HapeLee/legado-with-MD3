@@ -143,7 +143,7 @@ private fun RankingItem(
                 with(sharedTransitionScope) {
                     if (this != null) {
                         Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState("preview:${book.bookUrl}"),
+                            sharedContentState = rememberSharedContentState("preview:$sharedCoverKey"),
                             animatedVisibilityScope = animatedVisibilityScope
                                 ?: return@with Modifier,
                         )
