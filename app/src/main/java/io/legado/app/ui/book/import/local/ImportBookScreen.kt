@@ -99,7 +99,7 @@ private fun ImportBookContent(
     onItemClick: (ImportBook) -> Unit
 ) {
     ListScaffold(
-        title = stringResource(R.string.local_book),
+        title = state.pathNames.lastOrNull() ?: stringResource(R.string.local_book),
         state = state,
         onBackClick = onBackClick,
         onSearchToggle = onSearchToggle,
