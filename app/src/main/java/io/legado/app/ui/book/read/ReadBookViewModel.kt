@@ -1542,6 +1542,7 @@ class ReadBookViewModel(
 
     private fun buildStyleConfig(): ReadBookStyleConfig {
         val config = ReadBookConfig
+        val actualConfig = config.config
         val dur = config.durConfig
         return ReadBookStyleConfig(
             styleSelect = config.styleSelect,
@@ -1560,8 +1561,8 @@ class ReadBookViewModel(
             textColor = dur.getTextColor(),
             textColorNight = dur.getTextColorNight(),
             textColorEInk = dur.getTextColorEInk(),
-            pageAnim = dur.getPageAnim(),
-            pageAnimEInk = dur.getPageAnimEInk(),
+            pageAnim = actualConfig.getPageAnim(),
+            pageAnimEInk = actualConfig.getPageAnimEInk(),
             shareLayout = config.shareLayout,
             configCount = config.configList.size,
         )

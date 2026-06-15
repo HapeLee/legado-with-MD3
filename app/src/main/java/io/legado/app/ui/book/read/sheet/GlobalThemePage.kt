@@ -28,9 +28,15 @@ import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.SpaceBar
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Icon
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -174,36 +180,54 @@ fun GlobalThemePage(
                     .fillMaxWidth()
                     .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
             ) {
-                NormalCard(
-                    onClick = {
-                        val newShareLayout = !shareLayout
-                        onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(newShareLayout)))
-                        onShareLayoutChange(newShareLayout)
-                    },
-                    modifier = Modifier
-                        .width(40.dp)
-                        .height(56.dp),
-                    cornerRadius = 8.dp,
-                    containerColor = if (shareLayout) {
-                        LegadoTheme.colorScheme.secondaryContainer
-                    } else {
-                        LegadoTheme.colorScheme.surfaceContainerLow
-                    },
-                    border = BorderStroke(
-                        1.dp,
-                        LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                TooltipBox(
+                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
+                        TooltipAnchorPosition.Above
                     ),
-                    contentColor = if (shareLayout) LegadoTheme.colorScheme.onSecondaryContainer else null
+                    tooltip = {
+                        PlainTooltip(
+                            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+                            contentColor = LegadoTheme.colorScheme.onSurface,
+                        ) {
+                            AppText(
+                                text = stringResource(R.string.share_layout),
+                                style = LegadoTheme.typography.bodyMedium,
+                            )
+                        }
+                    },
+                    state = rememberTooltipState(),
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    NormalCard(
+                        onClick = {
+                            val newShareLayout = !shareLayout
+                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShareLayout(newShareLayout)))
+                            onShareLayoutChange(newShareLayout)
+                        },
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(56.dp),
+                        cornerRadius = 8.dp,
+                        containerColor = if (shareLayout) {
+                            LegadoTheme.colorScheme.secondaryContainer
+                        } else {
+                            LegadoTheme.colorScheme.surfaceContainerLow
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                        ),
+                        contentColor = if (shareLayout) LegadoTheme.colorScheme.onSecondaryContainer else null
                     ) {
-                        Icon(
-                            Icons.Default.GridView,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.GridView,
+                                contentDescription = stringResource(R.string.share_layout),
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
                 val styleListState = rememberLazyListState()
