@@ -149,9 +149,15 @@ object ReadConfig {
         true
     )
 
-    var screenOrientation: String = "0"
+    var screenOrientation by prefDelegate(
+        PreferKey.screenOrientation,
+        "0"
+    )
 
-    var keepLight: String = "0"
+    var keepLight by prefDelegate(
+        PreferKey.keepLight,
+        "0"
+    )
 
     var hideStatusBar by prefDelegate(
         PreferKey.hideStatusBar,
@@ -163,13 +169,25 @@ object ReadConfig {
         false
     )
 
-    var paddingDisplayCutouts: Boolean = false
+    var paddingDisplayCutouts by prefDelegate(
+        PreferKey.paddingDisplayCutouts,
+        false
+    )
 
-    var titleBarMode: String = "1"
+    var titleBarMode by prefDelegate(
+        PreferKey.titleBarMode,
+        "1"
+    )
 
-    var menuAlpha: Int = 100
+    var menuAlpha by prefDelegate(
+        PreferKey.menuAlpha,
+        100
+    )
 
-    var readBodyToLh: Boolean = true
+    var readBodyToLh by prefDelegate(
+        PreferKey.readBodyToLh,
+        true
+    )
 
     var defaultSourceChangeAll by prefDelegate(
         PreferKey.defaultSourceChangeAll,
@@ -186,7 +204,10 @@ object ReadConfig {
         true
     )
 
-    var adaptSpecialStyle: Boolean = true
+    var adaptSpecialStyle by prefDelegate(
+        PreferKey.adaptSpecialStyle,
+        true
+    )
 
     var useZhLayout by prefDelegate(
         PreferKey.useZhLayout,
@@ -213,46 +234,100 @@ object ReadConfig {
         false
     )
 
-    var useUnderline: Boolean = false
+    var useUnderline by prefDelegate(
+        PreferKey.useUnderline,
+        false
+    )
 
-    var readSliderMode: String = "0"
+    var readSliderMode by prefDelegate(
+        PreferKey.readSliderMode,
+        "0"
+    )
 
-    var doubleHorizontalPage: String = "0"
+    var doubleHorizontalPage by prefDelegate(
+        PreferKey.doublePageHorizontal,
+        "0"
+    )
 
-    var progressBarBehavior: String = "page"
+    var progressBarBehavior by prefDelegate(
+        PreferKey.progressBarBehavior,
+        "page"
+    )
 
-    var mouseWheelPage: Boolean = true
+    var mouseWheelPage by prefDelegate(
+        PreferKey.mouseWheelPage,
+        true
+    )
 
-    var volumeKeyPage: Boolean = true
+    var volumeKeyPage by prefDelegate(
+        PreferKey.volumeKeyPage,
+        true
+    )
 
-    var volumeKeyPageOnPlay: Boolean = true
+    var volumeKeyPageOnPlay by prefDelegate(
+        PreferKey.volumeKeyPageOnPlay,
+        true
+    )
 
-    var keyPageOnLongPress: Boolean = false
+    var keyPageOnLongPress by prefDelegate(
+        PreferKey.keyPageOnLongPress,
+        false
+    )
 
     var pageTouchSlop by prefDelegate(
         PreferKey.pageTouchSlop,
         0
     )
 
-    var sliderVibrator: Boolean = false
+    var sliderVibrator by prefDelegate(
+        PreferKey.sliderVibrator,
+        false
+    )
 
-    var selectVibrator: Boolean = false
+    var selectVibrator by prefDelegate(
+        PreferKey.selectVibrator,
+        false
+    )
 
-    var autoChangeSource: Boolean = true
+    var autoChangeSource by prefDelegate(
+        PreferKey.autoChangeSource,
+        true
+    )
 
-    var selectText: Boolean = true
+    var selectText by prefDelegate(
+        PreferKey.selectText,
+        true
+    )
 
-    var noAnimScrollPage: Boolean = false
+    var noAnimScrollPage by prefDelegate(
+        PreferKey.noAnimScrollPage,
+        false
+    )
 
-    var clickImgWay: String = "2"
+    var clickImgWay by prefDelegate(
+        PreferKey.clickImgWay,
+        "2"
+    )
 
-    var optimizeRender: Boolean = false
+    var optimizeRender by prefDelegate(
+        PreferKey.optimizeRender,
+        false
+    )
 
-    var disableReturnKey: Boolean = false
+    var disableReturnKey by prefDelegate(
+        PreferKey.disableReturnKey,
+        false
+    )
 
-    var expandTextMenu: Boolean = false
+    var expandTextMenu by prefDelegate(
+        PreferKey.expandTextMenu,
+        false
+    )
 
-    var showReadTitleAddition: Boolean = true
+    var showReadTitleAddition by prefDelegate(
+        PreferKey.showReadTitleAddition,
+        true
+    )
 
     var clickActionTL by prefDelegate(
         PreferKey.clickActionTL,
