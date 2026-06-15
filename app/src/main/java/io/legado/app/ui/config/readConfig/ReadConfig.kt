@@ -130,7 +130,7 @@ object ReadConfig {
         expandTextMenu = preferences.expandTextMenu
         showReadTitleAddition = preferences.showReadTitleAddition
         titleBarMode = preferences.titleBarMode
-        menuAlpha = preferences.menuAlpha
+        readMenuBlurAlpha = preferences.readMenuBlurAlpha
         readSliderMode = preferences.readSliderMode
         readBarStyleFollowPage = preferences.readBarStyleFollowPage
         readBarStyle = preferences.readBarStyle

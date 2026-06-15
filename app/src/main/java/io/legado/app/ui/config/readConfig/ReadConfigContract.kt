@@ -7,7 +7,7 @@ data class ReadConfigUiState(
     val hideNavigationBar: Boolean = false,
     val paddingDisplayCutouts: Boolean = false,
     val titleBarMode: String = "1",
-    val menuAlpha: Int = 100,
+    val readMenuBlurAlpha: Int = 60,
     val readBodyToLh: Boolean = true,
     val defaultSourceChangeAll: Boolean = true,
     val textFullJustify: Boolean = true,
@@ -48,7 +48,7 @@ sealed interface ReadConfigIntent {
     data class HideNavigationBarChanged(val value: Boolean) : ReadConfigIntent
     data class PaddingDisplayCutoutsChanged(val value: Boolean) : ReadConfigIntent
     data class TitleBarModeChanged(val value: String) : ReadConfigIntent
-    data class MenuAlphaChanged(val value: Int) : ReadConfigIntent
+    data class ReadMenuBlurAlphaChanged(val value: Int) : ReadConfigIntent
     data class ReadBodyToLhChanged(val value: Boolean) : ReadConfigIntent
     data class DefaultSourceChangeAllChanged(val value: Boolean) : ReadConfigIntent
     data class TextFullJustifyChanged(val value: Boolean) : ReadConfigIntent

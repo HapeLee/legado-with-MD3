@@ -125,7 +125,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         ReadConfig.pageTouchSlop = preferences.pageTouchSlop
         ReadConfig.showReadTitleAddition = preferences.showReadTitleAddition
         ReadConfig.titleBarMode = preferences.titleBarMode
-        ReadConfig.menuAlpha = preferences.menuAlpha
+        ReadConfig.readMenuBlurAlpha = preferences.readMenuBlurAlpha
         ReadConfig.readSliderMode = preferences.readSliderMode
         readBarStyleFollowPageValue = preferences.readBarStyleFollowPage
         readBarStyleValue = preferences.readBarStyle
@@ -837,9 +837,9 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             ThemeConfig.enableBlur = value
         }
     var menuAlpha: Int
-        get() = ReadConfig.menuAlpha
+        get() = ReadConfig.readMenuBlurAlpha
         set(value) {
-            ReadConfig.menuAlpha = value
+            ReadConfig.readMenuBlurAlpha = value
         }
 
     var readSliderMode

@@ -115,12 +115,12 @@ fun ReadConfigScreen(
 
                 SliderSettingItem(
                     title = stringResource(R.string.menu_alpha),
-                    description = stringResource(R.string.menu_alpha_sum, state.menuAlpha),
-                    value = state.menuAlpha.toFloat(),
-                    defaultValue = 100f,
+                    description = stringResource(R.string.menu_alpha_sum, state.readMenuBlurAlpha),
+                    value = state.readMenuBlurAlpha.toFloat(),
+                    defaultValue = 60f,
                     valueRange = 0f..100f,
                     onValueChange = {
-                        viewModel.onIntent(ReadConfigIntent.MenuAlphaChanged(it.toInt()))
+                        viewModel.onIntent(ReadConfigIntent.ReadMenuBlurAlphaChanged(it.toInt()))
                     }
                 )
 
