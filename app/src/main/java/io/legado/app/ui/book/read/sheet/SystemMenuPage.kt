@@ -108,6 +108,7 @@ internal fun SystemMenuPage(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 3 })
     var selectedTab by remember { mutableIntStateOf(0) }
+    var clickScrollCount by remember { mutableIntStateOf(0) }
 
     val pageHeights = remember { mutableStateMapOf<Int, Int>() }
     val animatedHeight by rememberPagerAnimatedHeight(pagerState, pageHeights)
@@ -119,7 +120,11 @@ internal fun SystemMenuPage(
     var showIconSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { selectedTab = it }
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            if (clickScrollCount == 0) {
+                selectedTab = page
+            }
+        }
     }
 
     Column(
@@ -135,11 +140,16 @@ internal fun SystemMenuPage(
             selectedTabIndex = selectedTab,
             onTabSelected = { index ->
                 selectedTab = index
+                clickScrollCount++
                 scope.launch {
-                    pagerState.animateScrollToPage(
-                        page = index,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-                    )
+                    try {
+                        pagerState.animateScrollToPage(
+                            page = index,
+                            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                        )
+                    } finally {
+                        clickScrollCount = (clickScrollCount - 1).coerceAtLeast(0)
+                    }
                 }
             },
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
