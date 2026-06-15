@@ -836,6 +836,8 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         set(value) {
             ThemeConfig.enableBlur = value
         }
+
+    @Deprecated("Use ReadConfig.readMenuBlurAlpha instead", ReplaceWith("ReadConfig.readMenuBlurAlpha"))
     var menuAlpha: Int
         get() = ReadConfig.readMenuBlurAlpha
         set(value) {
