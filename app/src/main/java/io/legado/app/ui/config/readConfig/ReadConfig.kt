@@ -130,7 +130,7 @@ object ReadConfig {
         expandTextMenu = preferences.expandTextMenu
         showReadTitleAddition = preferences.showReadTitleAddition
         titleBarMode = preferences.titleBarMode
-        menuAlpha = preferences.menuAlpha
+        readMenuBlurAlpha = preferences.readMenuBlurAlpha
         readSliderMode = preferences.readSliderMode
         readBarStyleFollowPage = preferences.readBarStyleFollowPage
         readBarStyle = preferences.readBarStyle
@@ -167,7 +167,7 @@ object ReadConfig {
 
     var titleBarMode: String = "1"
 
-    var menuAlpha: Int = 100
+    var readMenuBlurAlpha: Int = 60
 
     var readBodyToLh: Boolean = true
 

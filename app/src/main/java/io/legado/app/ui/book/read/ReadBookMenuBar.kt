@@ -882,7 +882,7 @@ private fun MenuTitleBar(
                             progressive = topBarProgressiveBlur,
                         )
                 } else {
-                    Modifier.background(colors.background)
+                    Modifier.background(colors.background.copy(alpha = topBarAlpha))
                 }
             )
             .then(
@@ -1828,11 +1828,6 @@ private fun SearchBottomMenuContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (surfaceEffectEnabled) Color.Transparent else colors.background.copy(
-                    alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-                )
-            )
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
             )
@@ -2023,11 +2018,6 @@ private fun MenuBottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (surfaceEffectEnabled) Color.Transparent else colors.background.copy(
-                    alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-                )
-            )
             .windowInsetsPadding(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
             )

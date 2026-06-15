@@ -59,9 +59,9 @@ class ReadConfigViewModel(
                     readSettingsRepository.setTitleBarMode(intent.value)
                 }
 
-                is ReadConfigIntent.MenuAlphaChanged -> {
-                    ReadConfig.menuAlpha = intent.value
-                    readSettingsRepository.setMenuAlpha(intent.value)
+                is ReadConfigIntent.ReadMenuBlurAlphaChanged -> {
+                    ReadConfig.readMenuBlurAlpha = intent.value
+                    readSettingsRepository.setReadMenuBlurAlpha(intent.value)
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
@@ -230,7 +230,7 @@ class ReadConfigViewModel(
             hideNavigationBar = hideNavigationBar,
             paddingDisplayCutouts = paddingDisplayCutouts,
             titleBarMode = titleBarMode,
-            menuAlpha = menuAlpha,
+            readMenuBlurAlpha = readMenuBlurAlpha,
             readBodyToLh = readBodyToLh,
             defaultSourceChangeAll = defaultSourceChangeAll,
             textFullJustify = textFullJustify,
