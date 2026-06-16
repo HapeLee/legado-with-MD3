@@ -1799,6 +1799,15 @@ class ReadBookViewModel(
             ReadBook.resetData(book)
         }
         _uiState.update { it.copy(isInitFinish = true) }
+        // 旋转后 ChapterProvider 的 doublePage/visibleWidth 已在 onSizeChanged 中更新，
+        // 但 ReloadContent 因 isInitFinish=false 被跳过。此处确保内容用新布局重新加载。
+        if (isSameBook) {
+            _effects.tryEmit(
+                ReadBookEffect.UpdateReadViewConfig(
+                    setOf(ConfigUpdateAction.UpdateLayout, ConfigUpdateAction.ReloadContent)
+                )
+            )
+        }
         if (!book.isLocal && book.tocUrl.isEmpty() && !loadBookInfo(book)) {
             return
         }
