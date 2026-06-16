@@ -2,6 +2,8 @@ package io.legado.app.ui.book.read.page
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Typeface
 import android.graphics.drawable.LayerDrawable
 import android.view.LayoutInflater
@@ -27,6 +29,7 @@ import io.legado.app.ui.widget.BatteryView
 import io.legado.app.utils.activity
 import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.applyStatusBarPadding
+import io.legado.app.utils.canvasrecorder.CanvasRecorder
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.isContentScheme
@@ -35,6 +38,7 @@ import io.legado.app.utils.statusBarHeight
 import splitties.views.backgroundColor
 import java.io.File
 import java.util.Date
+import io.legado.app.utils.screenshot as viewScreenshot
 
 /**
  * 页面视图
@@ -466,6 +470,30 @@ class PageView(
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }
+    }
+
+    fun layoutSync() {
+        measure(
+            MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+        )
+        layout(left, top, right, bottom)
+    }
+
+    fun screenshot(canvasRecorder: CanvasRecorder) {
+        if (!isMainView && !isScroll) {
+            setProgress(textPage)
+            layoutSync()
+        }
+        viewScreenshot(canvasRecorder)
+    }
+
+    fun screenshot(bitmap: Bitmap? = null, canvas: Canvas? = null): Bitmap? {
+        if (!isMainView && !isScroll) {
+            setProgress(textPage)
+            layoutSync()
+        }
+        return viewScreenshot(bitmap, canvas)
     }
 
     fun setAutoPager(autoPager: AutoPager?) {
