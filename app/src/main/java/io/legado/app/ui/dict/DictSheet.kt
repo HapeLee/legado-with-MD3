@@ -1,5 +1,7 @@
 package io.legado.app.ui.dict
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -98,7 +100,9 @@ private fun DictContent(
         null -> null
     }
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.verticalScroll(rememberScrollState()),
+    ) {
         if (state.rules.size > 1) {
             AppTabRow(
                 tabTitles = tabTitles,
