@@ -8,6 +8,7 @@ import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookContent
 import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextChapterLayout
+import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.utils.fastBinarySearchBy
 import kotlinx.coroutines.CoroutineScope
 import kotlin.math.abs
@@ -29,6 +30,17 @@ data class TextChapter(
     //起效的替换规则
     val effectiveReplaceRules: List<ReplaceRule>?
 ) : LayoutProgressListener {
+
+    @Volatile
+    var visibleWidth: Int = 0
+        private set
+    @Volatile
+    var visibleHeight: Int = 0
+        private set
+
+    fun isLayoutSizeMatch(): Boolean {
+        return visibleWidth == ChapterProvider.visibleWidth && visibleHeight == ChapterProvider.visibleHeight
+    }
 
     private val textPages = arrayListOf<TextPage>()
     val pages: List<TextPage> get() = textPages
@@ -269,13 +281,16 @@ data class TextChapter(
         if (layout != null) {
             throw IllegalStateException("已经排版过了")
         }
-        layout = TextChapterLayout(
+        val textLayout = TextChapterLayout(
             scope,
             this,
             textPages,
             book,
             bookContent,
         )
+        layout = textLayout
+        visibleWidth = textLayout.visibleWidth
+        visibleHeight = textLayout.visibleHeight
     }
 
     fun setProgressListener(l: LayoutProgressListener?) {

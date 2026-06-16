@@ -643,12 +643,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * chapterOnDur: 0为当前页,1为下一页,-1为上一页
      */
     fun textChapter(chapterOnDur: Int = 0): TextChapter? {
-        return when (chapterOnDur) {
+        val chapter = when (chapterOnDur) {
             0 -> curTextChapter
             1 -> nextTextChapter
             -1 -> prevTextChapter
             else -> null
         }
+        if (chapter != null && !chapter.isLayoutSizeMatch()) {
+            return null
+        }
+        return chapter
     }
 
     /**
@@ -668,17 +672,25 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun loadOrUpContent(success: (() -> Unit)? = null) {
-        if (curTextChapter == null) {
+        val curChapter = curTextChapter
+        if (curChapter == null || !curChapter.isLayoutSizeMatch()) {
+            curTextChapter = null
+            nextTextChapter = null
+            prevTextChapter = null
             loadContent(durChapterIndex) {
                 success?.invoke()
             }
         } else {
             callBack?.upContent()
         }
-        if (nextTextChapter == null) {
+        val nextChapter = nextTextChapter
+        if (nextChapter == null || !nextChapter.isLayoutSizeMatch()) {
+            nextTextChapter = null
             loadContent(durChapterIndex + 1)
         }
-        if (prevTextChapter == null) {
+        val prevChapter = prevTextChapter
+        if (prevChapter == null || !prevChapter.isLayoutSizeMatch()) {
+            prevTextChapter = null
             loadContent(durChapterIndex - 1)
         }
     }

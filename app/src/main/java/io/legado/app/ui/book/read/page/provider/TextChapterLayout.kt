@@ -128,8 +128,8 @@ class TextChapterLayout(
     private val lineSpacingExtra = ChapterProvider.lineSpacingExtra
     private val paragraphSpacing = ChapterProvider.paragraphSpacing
 
-    private val visibleHeight = ChapterProvider.visibleHeight
-    private val visibleWidth = ChapterProvider.visibleWidth
+    internal val visibleHeight = ChapterProvider.visibleHeight
+    internal val visibleWidth = ChapterProvider.visibleWidth
 
     private val viewWidth = ChapterProvider.viewWidth
     private val doublePage = ChapterProvider.doublePage
