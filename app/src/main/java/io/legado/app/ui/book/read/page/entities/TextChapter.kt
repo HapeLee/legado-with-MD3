@@ -31,8 +31,10 @@ data class TextChapter(
     val effectiveReplaceRules: List<ReplaceRule>?
 ) : LayoutProgressListener {
 
+    @Volatile
     var visibleWidth: Int = 0
         private set
+    @Volatile
     var visibleHeight: Int = 0
         private set
 
