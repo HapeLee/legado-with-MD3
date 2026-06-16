@@ -126,8 +126,7 @@ jobs:
     strategy:
       matrix:
         product: [ app ]
-        # 如果是正式版，只构建 release；如果是测试版，构建 release 和 noR8
-        type: ${{ (needs.prepare.outputs.is_release == 'true') && fromJSON('["release"]') || fromJSON('["release", "noR8"]') }}
+        type: [ release ]
       fail-fast: false
     runs-on: ubuntu-latest
     env:
@@ -267,7 +266,15 @@ jobs:
           merge-multiple: true
           if-no-artifact-found: error
 
-      # 2. 重命名逻辑
+      # 2. 下载 mapping 文件
+      - name: 下载 Mapping Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'legado.app.release.mapping*'
+          path: artifacts
+          merge-multiple: true
+
+      # 3. 重命名逻辑
       - name: 整理并重命名 APK 文件
         id: organize_apks
         run: |
@@ -282,10 +289,6 @@ jobs:
           shopt -s nullglob
           for f in *.apk; do
             out="legado-${VERSIONL}"
-            if [[ "$f" == *noR8* || "$f" == *nor8* ]]; then
-              out="${out}-noR8"
-            fi
-
             if [[ "$f" == *arm64-v8a* ]]; then
               out="${out}-arm64-v8a"
             elif [[ "$f" == *armeabi-v7a* ]]; then
@@ -319,7 +322,6 @@ jobs:
             echo "release_body<<EOF"
             if [[ "$IS_RELEASE" != "true" ]]; then
                 echo "**此版本为测试版，会存在不稳定问题。**"
-                echo "**noR8 变体关闭了代码混淆与压缩，若有崩溃问题请使用它并收集和发送 Log，以便开发者定位问题代码。**"
                 echo "### [发布页](https://t.me/materado)"
                 echo "### [反馈群组](https://t.me/+Yn1_v5PZqddmMjQ1)"
                 echo ""
@@ -354,6 +356,7 @@ jobs:
           prerelease: ${{ needs.prepare.outputs.is_release != 'true' }}
           files: |
             artifacts/legado-${{ needs.prepare.outputs.versionL }}*.apk
+            artifacts/mapping.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
