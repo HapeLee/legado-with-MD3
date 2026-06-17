@@ -131,12 +131,14 @@ class ChangeBookSourceComposeViewModel(
     fun startSearch() {
         val book = oldBook ?: return
         stopSearch()
-        // 清除 DB 中的旧记录
-        io.legado.app.data.appDb.searchBookDao.clear(bookName, bookAuthor)
+        if (searchResults.isNotEmpty()) {
+            io.legado.app.data.appDb.searchBookDao.delete(*searchResults.toTypedArray())
+        }
         searchResults.clear()
         bookMap.clear()
         tocMap.clear()
-        totalSourceCount = searchScope.getBookSourceParts().size
+        val scope = SearchScope(ChangeSourceConfig.searchScope)
+        totalSourceCount = scope.getBookSourceParts().size
         _changeSourceProgress.value = 0 to ""
         _searchDataFlow.value = emptyList()
 
@@ -144,7 +146,7 @@ class ChangeBookSourceComposeViewModel(
             changeSourceSearchUseCase.search(
                 name = book.name,
                 author = book.author,
-                scope = SearchScope(ChangeSourceConfig.searchScope),
+                scope = scope,
                 oldBook = book,
                 fromReadBookActivity = fromReadBookActivity,
             ).collect { event ->
