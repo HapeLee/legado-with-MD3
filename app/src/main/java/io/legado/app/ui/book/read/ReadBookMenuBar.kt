@@ -71,7 +71,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -415,10 +414,8 @@ private fun ReadBookMenuSurface(
     val orientation = LocalConfiguration.current.orientation
     val currentNavBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     var lastValidNavBarHeightValue by rememberSaveable(orientation) { mutableFloatStateOf(currentNavBarHeight.value) }
-    SideEffect {
-        if (currentNavBarHeight.value > 0f) {
-            lastValidNavBarHeightValue = currentNavBarHeight.value
-        }
+    if (currentNavBarHeight.value > 0f && lastValidNavBarHeightValue != currentNavBarHeight.value) {
+        lastValidNavBarHeightValue = currentNavBarHeight.value
     }
     val navBarHeight = if (currentNavBarHeight.value > 0f) currentNavBarHeight else lastValidNavBarHeightValue.dp
     val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
