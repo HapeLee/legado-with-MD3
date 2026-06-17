@@ -56,6 +56,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.FontSelectSheet
+import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
@@ -498,14 +499,7 @@ internal fun HeaderFooterPage(
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
                     ) {
-                        Text(
-                            text = stringResource(R.string.read_config_divider_line),
-                            style = MaterialTheme.typography.titleSmallEmphasized,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            textAlign = TextAlign.Center,
-                        )
+                        SectionTitle(stringResource(R.string.read_config_divider_line))
                         TinyColorSettingItem(
                             title = stringResource(R.string.tip_divider_color),
                             colorValue = when (ReadBookConfig.tipDividerColor) {
@@ -524,16 +518,7 @@ internal fun HeaderFooterPage(
                             },
                         )
 
-                        Spacer(Modifier.height(8.dp))
-
-                        Text(
-                            text = stringResource(R.string.text_typeface),
-                            style = MaterialTheme.typography.titleSmallEmphasized,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            textAlign = TextAlign.Center,
-                        )
+                        SectionTitle(stringResource(R.string.text_typeface))
                         TinyClickableSettingItem(
                             title = stringResource(R.string.header_font),
                             description = stringResource(R.string.select_font),
