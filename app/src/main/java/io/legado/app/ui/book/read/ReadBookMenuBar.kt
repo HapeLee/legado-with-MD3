@@ -101,6 +101,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -411,8 +412,9 @@ private fun ReadBookMenuSurface(
         560.dp
     }
     val isFloating = state.menuConfig.readMenuFloatingBottomBar
+    val orientation = LocalConfiguration.current.orientation
     val currentNavBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
-    var lastValidNavBarHeightValue by rememberSaveable { mutableFloatStateOf(currentNavBarHeight.value) }
+    var lastValidNavBarHeightValue by rememberSaveable(orientation) { mutableFloatStateOf(currentNavBarHeight.value) }
     SideEffect {
         if (currentNavBarHeight.value > 0f) {
             lastValidNavBarHeightValue = currentNavBarHeight.value
