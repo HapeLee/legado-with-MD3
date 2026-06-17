@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -203,7 +202,7 @@ private fun TitleBarIconItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = name,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                    tint = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
                     modifier = Modifier.size(24.dp),
                 )
             }
@@ -211,8 +210,8 @@ private fun TitleBarIconItem(
 
         Text(
             text = name,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+            style = LegadoTheme.typography.bodyLarge,
+            color = LegadoTheme.colorScheme.onSurface.copy(alpha = alpha),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
@@ -255,9 +254,9 @@ private fun TitleBarIconItem(
                 },
                 contentDescription = null,
                 tint = if (item.enabled) {
-                    MaterialTheme.colorScheme.onSurface
+                    LegadoTheme.colorScheme.onSurface
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    LegadoTheme.colorScheme.onSurfaceVariant
                 },
                 modifier = Modifier.size(20.dp),
             )

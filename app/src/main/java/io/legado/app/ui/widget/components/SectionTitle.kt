@@ -8,12 +8,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
 
 @Composable
 fun SectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.labelMediumEmphasized,
+        style = LegadoTheme.typography.labelMediumEmphasized,
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),

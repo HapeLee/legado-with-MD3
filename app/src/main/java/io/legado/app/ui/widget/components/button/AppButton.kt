@@ -5,6 +5,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.basic.Button as MiuixButton
@@ -25,7 +26,7 @@ fun PrimaryButton(
             enabled = enabled,
             colors = MiuixButtonDefaults.buttonColorsPrimary()
         ) {
-            MiuixText(text = text)
+            MiuixText(text = text, style = LegadoTheme.typography.labelLarge)
         }
     } else {
         Button(
@@ -33,7 +34,7 @@ fun PrimaryButton(
             modifier = modifier,
             enabled = enabled,
         ) {
-            Text(text = text)
+            Text(text = text, style = LegadoTheme.typography.labelLarge)
         }
     }
 }
@@ -52,7 +53,7 @@ fun SecondaryButton(
             enabled = enabled,
             colors = MiuixButtonDefaults.buttonColors()
         ) {
-            MiuixText(text = text)
+            MiuixText(text = text,style = LegadoTheme.typography.labelLarge)
         }
     } else {
         OutlinedButton(
@@ -60,7 +61,7 @@ fun SecondaryButton(
             modifier = modifier,
             enabled = enabled,
         ) {
-            Text(text = text)
+            Text(text = text, style = LegadoTheme.typography.labelLarge)
         }
     }
 }
