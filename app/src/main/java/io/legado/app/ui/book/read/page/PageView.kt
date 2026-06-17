@@ -473,6 +473,8 @@ class PageView(
     }
 
     fun layoutSync() {
+        if (width <= 0 || height <= 0) return
+        if (!isLayoutRequested) return
         measure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
