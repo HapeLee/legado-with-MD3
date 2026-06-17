@@ -79,6 +79,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -411,7 +412,12 @@ private fun ReadBookMenuSurface(
         560.dp
     }
     val isFloating = state.menuConfig.readMenuFloatingBottomBar
-    val navBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val currentNavBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    var maxNavBarHeightValue by rememberSaveable { mutableFloatStateOf(0f) }
+    if (currentNavBarHeight.value > maxNavBarHeightValue) {
+        maxNavBarHeightValue = currentNavBarHeight.value
+    }
+    val navBarHeight = if (currentNavBarHeight.value > 0f) currentNavBarHeight else maxNavBarHeightValue.dp
     val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
     val floatingBottomMargin = if (isFloating) 16.dp + navBarHeight else 0.dp
     val mainHorizontalMargin =
