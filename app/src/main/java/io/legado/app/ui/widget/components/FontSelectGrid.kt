@@ -31,11 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.R
 import io.legado.app.help.loadFontFiles
 import io.legado.app.ui.theme.LegadoTheme
@@ -139,11 +140,25 @@ private fun FontItem(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val fontFamily = remember(item.uri) {
+        runCatching {
+            val uri = item.uri
+            val typeface: Typeface? = if (uri.scheme == "content") {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use {
+                    Typeface.Builder(it.fileDescriptor).build()
+                }
+            } else {
+                uri.path?.let { Typeface.createFromFile(it) }
+            }
+            typeface?.let { FontFamily(it) }
+        }.getOrNull()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(LegadoTheme.colorScheme.surface)
+            .background(LegadoTheme.colorScheme.surface, RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(12.dp),
     ) {
@@ -151,27 +166,13 @@ private fun FontItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.height(48.dp)
         ) {
-            AndroidView(
-                factory = { ctx ->
-                    android.widget.TextView(ctx).apply {
-                        text = item.name
-                        textSize = 14f
-                        gravity = android.view.Gravity.CENTER
-                        maxLines = 2
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                        runCatching {
-                            val uri = item.uri
-                            val typeface: Typeface? = if (uri.scheme == "content") {
-                                ctx.contentResolver.openFileDescriptor(uri, "r")?.use {
-                                    Typeface.Builder(it.fileDescriptor).build()
-                                }
-                            } else {
-                                uri.path?.let { Typeface.createFromFile(it) }
-                            }
-                            this.typeface = typeface
-                        }
-                    }
-                },
+            Text(
+                text = item.name,
+                style = LegadoTheme.typography.bodyMedium.copy(fontFamily = fontFamily),
+                color = LegadoTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
             if (isSelected) {
