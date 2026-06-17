@@ -1582,6 +1582,7 @@ private fun FloatingIconRow(
                 ),
                 selected = iconDef.isActive,
                 modifier = Modifier.padding(horizontal = 4.dp),
+                onLongClick = iconDef.onLongClick,
             ) {
                 if (isCustom) {
                     AsyncImage(
@@ -2446,6 +2447,7 @@ private fun ToolButtonItem(
                 menuConfig = state.menuConfig,
                 glassEnabled = true,
                 selected = button.isActive,
+                onLongClick = button.onLongClick,
             ) { tint ->
                 ToolButtonContent(
                     button = button,
@@ -2470,6 +2472,7 @@ private fun ToolButtonItem(
                         indication = LocalIndication.current,
                         interactionSource = remember { MutableInteractionSource() },
                         role = Role.Button,
+                        onLongClick = button.onLongClick,
                         onClick = button.onClick,
                     ),
             ) {
@@ -2553,6 +2556,7 @@ private data class ToolButtonDef(
     val customIconPath: String?,
     val isActive: Boolean = false,
     val onClick: () -> Unit,
+    val onLongClick: (() -> Unit)? = null,
 )
 
 private fun loadToolButtons(
@@ -2561,8 +2565,12 @@ private fun loadToolButtons(
     onIntent: (ReadBookIntent) -> Unit,
 ): List<ToolButtonDef> {
     val customIcons = state.menuConfig.readMenuCustomIcons
-    fun ReadMenuButtonInfo.toButton(isActive: Boolean = false, onClick: () -> Unit): ToolButtonDef {
-        return ToolButtonDef(id, icon, label, customIcons[id], isActive, onClick)
+    fun ReadMenuButtonInfo.toButton(
+        isActive: Boolean = false,
+        onLongClick: (() -> Unit)? = null,
+        onClick: () -> Unit,
+    ): ToolButtonDef {
+        return ToolButtonDef(id, icon, label, customIcons[id], isActive, onClick, onLongClick)
     }
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
     val allButtons = listOf(
@@ -2572,7 +2580,10 @@ private fun loadToolButtons(
         infoMap.getValue("catalog").toButton {
             onIntent(ReadBookIntent.OpenChapterList)
         },
-        infoMap.getValue("read_aloud").toButton(isActive = state.isReadAloudRunning) {
+        infoMap.getValue("read_aloud").toButton(
+            isActive = state.isReadAloudRunning,
+            onLongClick = { onIntent(ReadBookIntent.ShowReadAloudConfig) },
+        ) {
             if (state.isReadAloudRunning) {
                 onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
             } else {
@@ -2906,6 +2917,7 @@ private data class TitleBarIconDef(
     val label: String,
     val isActive: Boolean = false,
     val onClick: () -> Unit,
+    val onLongClick: (() -> Unit)? = null,
 )
 
 private fun loadFloatingIcons(
@@ -2961,6 +2973,11 @@ private fun loadFloatingIcons(
                 label = info.label,
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},
+                onLongClick = if (id == "read_aloud") {
+                    { onIntent(ReadBookIntent.ShowReadAloudConfig) }
+                } else {
+                    null
+                },
             )
         }
         .toList()

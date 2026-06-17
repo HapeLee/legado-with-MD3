@@ -1079,7 +1079,7 @@ object ChapterProvider {
         viewWidth = width
         viewHeight = height
         upLayout()
-        postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+        postEvent(EventBus.UP_CONFIG, arrayListOf(5))
     }
 
     /**

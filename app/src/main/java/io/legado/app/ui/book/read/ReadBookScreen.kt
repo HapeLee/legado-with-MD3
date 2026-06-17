@@ -59,7 +59,7 @@ fun ReadBookScreen(
             state.isShowingSearchResult -> onIntent(ReadBookIntent.ExitSearch)
             state.menuVisible -> onIntent(ReadBookIntent.ReadMenuBack)
             state.isAutoPage -> onIntent(ReadBookIntent.StopAutoPage)
-            else -> onBack()
+            else -> onIntent(ReadBookIntent.CloseReadBook)
         }
     }
 
@@ -69,6 +69,7 @@ fun ReadBookScreen(
     val restoreLastProgressDialog = state.activeDialog as? ReadBookDialog.RestoreLastBookProgress
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
+    val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
 
     AppAlertDialog(
         show = restoreDialog != null,
@@ -128,6 +129,19 @@ fun ReadBookScreen(
         },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+    )
+    AppAlertDialog(
+        show = addToBookshelfDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
+        title = stringResource(R.string.add_to_bookshelf),
+        text = stringResource(
+            R.string.check_add_bookshelf,
+            addToBookshelfDialog?.bookName.orEmpty()
+        ),
+        confirmText = stringResource(R.string.ok),
+        onConfirm = { onIntent(ReadBookIntent.ConfirmAddCurrentBookToBookshelf) },
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
     )
 
     // AppModalBottomSheet-based sheets — always composed, controlled by show flag

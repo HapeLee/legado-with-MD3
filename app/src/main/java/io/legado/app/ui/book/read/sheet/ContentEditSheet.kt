@@ -7,12 +7,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndSelectAll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -34,10 +39,29 @@ fun ContentEditSheet(
     onDismissRequest: () -> Unit,
 ) {
     val context = LocalContext.current
+    val editorState = remember { TextFieldState() }
 
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
         onIntent(ReadBookIntent.LoadContentEdit)
+    }
+
+    LaunchedEffect(state.contentEditText, state.contentEditCursorOffset) {
+        if (editorState.text.toString() != state.contentEditText) {
+            editorState.setTextAndSelectAll(state.contentEditText)
+            editorState.edit {
+                selection = TextRange(state.contentEditCursorOffset.coerceIn(0, length))
+            }
+        }
+    }
+
+    LaunchedEffect(editorState) {
+        snapshotFlow { editorState.text.toString() }
+            .collect { text ->
+                if (text != state.contentEditText) {
+                    onIntent(ReadBookIntent.SetContentEditText(text))
+                }
+            }
     }
 
     AppModalBottomSheet(
@@ -60,7 +84,7 @@ fun ContentEditSheet(
                     onClick = {
                         onIntent(
                             ReadBookIntent.SaveContentEdit(
-                                state.contentEditText,
+                                editorState.text.toString(),
                                 state.contentEditSaveToSource
                             )
                         )
@@ -76,7 +100,7 @@ fun ContentEditSheet(
                 )
                 SmallTonalButton(
                     onClick = {
-                    context.sendToClip("${state.contentEditTitle}\n${state.contentEditText}")
+                    context.sendToClip("${state.contentEditTitle}\n${editorState.text}")
                     }, text = stringResource(R.string.copy_all)
                 )
             }
@@ -94,8 +118,7 @@ fun ContentEditSheet(
                 }
             } else {
                 AppTextField(
-                    value = state.contentEditText,
-                    onValueChange = { onIntent(ReadBookIntent.SetContentEditText(it)) },
+                    state = editorState,
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)

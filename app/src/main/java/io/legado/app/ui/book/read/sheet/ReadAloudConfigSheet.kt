@@ -35,6 +35,8 @@ import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
+import io.legado.app.ui.widget.components.filePicker.FilePickerSheet
+import io.legado.app.ui.widget.components.importComponents.SourceInputDialog
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -155,6 +157,8 @@ fun SpeakEngineConfigSheet(
     val items = state.ttsEngineItems
     val selectedValue = state.selectedTtsEngine
     var pendingEngineSelection by remember { mutableStateOf<PendingSpeakEngineSelection?>(null) }
+    var showImportSheet by remember { mutableStateOf(false) }
+    var showUrlInput by remember { mutableStateOf(false) }
 
     AppAlertDialog(
         show = pendingEngineSelection != null,
@@ -171,6 +175,29 @@ fun SpeakEngineConfigSheet(
             onIntent(ReadBookIntent.ApplySpeakEnginePerBook(pendingEngineSelection?.value))
             pendingEngineSelection = null
         },
+    )
+    SourceInputDialog(
+        show = showUrlInput,
+        title = stringResource(R.string.import_on_line),
+        onDismissRequest = { showUrlInput = false },
+        onConfirm = {
+            showUrlInput = false
+            onIntent(ReadBookIntent.ImportHttpTtsSource(it))
+        },
+    )
+    FilePickerSheet(
+        show = showImportSheet,
+        onDismissRequest = { showImportSheet = false },
+        title = stringResource(R.string.import_tts),
+        onSelectSysFile = {
+            showImportSheet = false
+            onIntent(ReadBookIntent.ImportHttpTtsFile)
+        },
+        onManualInput = {
+            showImportSheet = false
+            showUrlInput = true
+        },
+        allowExtensions = arrayOf("json", "txt"),
     )
 
     AppModalBottomSheet(
@@ -195,7 +222,7 @@ fun SpeakEngineConfigSheet(
                         text = stringResource(R.string.import_tts),
                         onClick = {
                             expanded = false
-                            onIntent(ReadBookIntent.ImportHttpTtsFile)
+                            showImportSheet = true
                         },
                     )
                     RoundDropdownMenuItem(

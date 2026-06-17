@@ -26,7 +26,6 @@ import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -61,12 +60,12 @@ fun <T> prefDelegate(
 
         @Volatile
         private var currentValue: T = defaultValue
-        private val scope = CoroutineScope(Dispatchers.IO)
+        private val scope = CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
         private var dsObserverJob: Job? = null
 
         init {
             // 同步从 DataStore 读取初始值，确保构造完成后即为最新值
-            val initialValue = runBlocking(Dispatchers.IO) { readFromDs() } ?: defaultValue
+            val initialValue = runBlocking { readFromDs() } ?: defaultValue
             _value = mutableStateOf(initialValue)
             currentValue = initialValue
 
@@ -134,7 +133,7 @@ fun <T> prefDelegate(
                 }
                 // 同步写入 DataStore，确保持久化后再返回
                 runCatching {
-                    runBlocking(Dispatchers.IO) {
+                    runBlocking {
                         when (value) {
                             is String? -> DsSync.putString(key, value)
                             is Int -> DsSync.putInt(key, value)

@@ -117,6 +117,10 @@ class ReadBookController(
     private val popupAction by lazy { PopupAction(activity) }
     private var screenTimeOut: Long = 0
     private var pendingSearchResultMark: IntArray? = null
+    private val originalRequestedOrientation = activity.requestedOrientation
+    private val originalScreenBrightness = activity.window.attributes.screenBrightness
+    private val originalKeepScreenOn =
+        (activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) != 0
     // justInitData moved to ViewModel (set on InitData intent)
 
     val isAutoPage: Boolean get() = refs?.readView?.isAutoPage == true
@@ -136,6 +140,7 @@ class ReadBookController(
         refs?.readView?.onDestroy()
         networkChangedListener.unRegister()
         unregisterTimeBatteryReceiver()
+        restoreActivityWindowState()
     }
 
     // Phase 5: Key handling / page turn
@@ -173,6 +178,7 @@ class ReadBookController(
     }
 
     fun onRouteInitialized() {
+        applyReadBrightness()
         upScreenTimeOut()
     }
 
@@ -1037,6 +1043,25 @@ class ReadBookController(
         val keepLightPrefer = viewModel.readPreferences.value.keepLight.toIntOrNull() ?: 0
         screenTimeOut = keepLightPrefer * 1000L
         screenOffTimerStartInternal()
+    }
+
+    private fun applyReadBrightness() {
+        val lp = activity.window.attributes
+        lp.screenBrightness = if (ReadBookConfig.brightnessAuto) {
+            WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+        } else {
+            ReadBookConfig.readBrightness / 100f
+        }
+        activity.window.attributes = lp
+    }
+
+    private fun restoreActivityWindowState() {
+        activity.requestedOrientation = originalRequestedOrientation
+        val lp = activity.window.attributes
+        lp.screenBrightness = originalScreenBrightness
+        activity.window.attributes = lp
+        keepScreenOn(originalKeepScreenOn)
+        handler.removeCallbacks(screenOffRunnable)
     }
 
     private fun screenOffTimerStartInternal() {

@@ -107,8 +107,8 @@ fun ReadAloudContent(
                 modifier = Modifier.weight(1f),
             )
             MediumTonalButton(
-                onClick = { onIntent(ReadBookIntent.SetReadAloudTtsTimer(timerMinute)) },
-                text = stringResource(R.string.timer_m, timerMinute),
+                onClick = { onIntent(ReadBookIntent.SaveReadAloudTtsTimer(timerMinute)) },
+                text = stringResource(R.string.action_save),
                 modifier = Modifier.weight(1f),
             )
             MediumTonalButton(

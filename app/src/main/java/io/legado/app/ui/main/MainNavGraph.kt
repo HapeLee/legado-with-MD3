@@ -262,7 +262,7 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteReadBook> { route ->
         val readBookViewModel = koinViewModel<ReadBookViewModel>(
-            key = route.bookUrl ?: "last-read"
+            key = "ReadBook:${route.bookUrl ?: "last-read"}"
         )
         val controller = remember(readBookViewModel) {
             ReadBookController(this@mainEntryProvider, readBookViewModel)
@@ -361,7 +361,7 @@ fun MainActivity.mainEntryProvider(
 
     entry<MainRouteSearchContent> { route ->
         val viewModel = koinViewModel<SearchContentViewModel>(
-            key = route.bookUrl,
+            key = "SearchContent:${route.bookUrl}",
             parameters = { parametersOf(route) }
         )
         SearchContentScreen(
@@ -549,7 +549,7 @@ fun MainActivity.mainEntryProvider(
             } else null
         }
     ) { route ->
-        val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = route.bookUrl)
+        val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = "BookInfo:${route.bookUrl}")
         BookInfoRouteScreen(
             bookUrl = route.bookUrl,
             name = route.name,

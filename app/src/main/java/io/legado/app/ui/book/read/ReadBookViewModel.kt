@@ -9,6 +9,7 @@ import android.speech.tts.TextToSpeech
 import androidx.lifecycle.viewModelScope
 import io.legado.app.BuildConfig
 import io.legado.app.R
+import io.legado.app.constant.AppConst
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
@@ -46,6 +47,10 @@ import io.legado.app.help.book.removeType
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.http.decompressed
+import io.legado.app.help.http.newCallResponseBody
+import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.http.text
 import io.legado.app.help.source.getSourceType
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.model.ImageProvider
@@ -72,6 +77,8 @@ import io.legado.app.utils.StringUtils
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.hexString
 import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.isJsonObject
 import io.legado.app.utils.isTrue
 import io.legado.app.utils.mapParallelSafe
 import io.legado.app.utils.openUrl
@@ -132,6 +139,15 @@ class ReadBookViewModel(
     private val _effects = MutableSharedFlow<ReadBookEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
+    private suspend fun emitEffectWhenSubscribed(effect: ReadBookEffect) {
+        _effects.subscriptionCount.first { it > 0 }
+        _effects.emit(effect)
+    }
+
+    private fun closeReadMenu() {
+        _uiState.update { it.copy(menuState = ReadBookMenuState()) }
+    }
+
     private val sysEngines: List<TextToSpeech.EngineInfo> by lazy {
         val tts = TextToSpeech(context, null)
         val engines = tts.engines
@@ -172,7 +188,7 @@ class ReadBookViewModel(
             is ReadBookIntent.NextPage -> ReadBook.moveToNextPage()
             is ReadBookIntent.PrevPage -> ReadBook.moveToPrevPage()
             is ReadBookIntent.NextChapter -> ReadBook.moveToNextChapter(upContent = true)
-            is ReadBookIntent.PrevChapter -> ReadBook.moveToPrevChapter(upContent = true)
+            is ReadBookIntent.PrevChapter -> ReadBook.moveToPrevChapter(upContent = true, toLast = false)
             is ReadBookIntent.OpenChapter -> openChapter(intent.index, intent.pos)
             is ReadBookIntent.SkipToPage -> ReadBook.skipToPage(intent.pageIndex)
             is ReadBookIntent.ToggleMenu -> _uiState.update {
@@ -220,6 +236,7 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.OpenSearch -> {
+                closeReadMenu()
                 _uiState.update { it.copy(searchContentQuery = intent.word ?: "") }
                 ReadBook.book?.bookUrl?.let { bookUrl ->
                     _effects.tryEmit(ReadBookEffect.OpenSearchActivity(intent.word, bookUrl))
@@ -368,6 +385,7 @@ class ReadBookViewModel(
                         activeSheet = null,
                         contentEditText = "",
                         contentEditTitle = "",
+                        contentEditCursorOffset = 0,
                         contentEditLoading = false,
                         contentEditSaveToSource = false,
                     )
@@ -407,11 +425,13 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.OpenBookInfo -> {
                 ReadBook.book?.let { book ->
+                    closeReadMenu()
                     _effects.tryEmit(ReadBookEffect.OpenBookInfo(book.name, book.author, book.bookUrl))
                 }
             }
             is ReadBookIntent.OpenChapterList -> {
                 ReadBook.book?.bookUrl?.let { bookUrl ->
+                    closeReadMenu()
                     _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
                 }
             }
@@ -487,8 +507,12 @@ class ReadBookViewModel(
                 _uiState.update { it.copy(activeSheet = ReadBookSheet.ChangeBookSource) }
             }
             is ReadBookIntent.MenuChapterChangeSource -> handleChapterChangeSource()
-            is ReadBookIntent.MenuSettingReplace -> _effects.tryEmit(ReadBookEffect.MenuSettingReplace)
+            is ReadBookIntent.MenuSettingReplace -> {
+                closeReadMenu()
+                _effects.tryEmit(ReadBookEffect.MenuSettingReplace)
+            }
             is ReadBookIntent.MenuTocRegex -> {
+                closeReadMenu()
                 _effects.tryEmit(ReadBookEffect.MenuTocRegex(ReadBook.book?.tocUrl))
             }
             is ReadBookIntent.TocRegexResult -> {
@@ -661,8 +685,16 @@ class ReadBookViewModel(
 
             is ReadBookIntent.TtsProgress -> _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(intent.chapterStart))
             is ReadBookIntent.ReadAloudAction -> {
-                openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                _uiState.update {
+                    it.copy(
+                        speakEngineName = computeSpeakEngineName(),
+                        activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+                loadTtsEngineItems()
             }
+            is ReadBookIntent.ConfirmAddCurrentBookToBookshelf -> addCurrentBookToBookshelfAndFinish()
+            is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()
 
             is ReadBookIntent.ShowReadAloudConfig -> {
                 _uiState.update {
@@ -796,17 +828,11 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ImportHttpTtsJson -> {
-                execute {
-                    HttpTTS.fromJsonArray(intent.json).getOrDefault(arrayListOf())
-                }.onSuccess { list ->
-                    if (list.isNotEmpty()) {
-                        execute {
-                            appDb.httpTTSDao.insert(*list.toTypedArray())
-                        }.onSuccess {
-                            loadTtsEngineItems()
-                        }
-                    }
-                }
+                importHttpTtsSource(intent.json)
+            }
+
+            is ReadBookIntent.ImportHttpTtsSource -> {
+                importHttpTtsSource(intent.text)
             }
 
             is ReadBookIntent.ExportAllHttpTts -> {
@@ -829,20 +855,12 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ImportHttpTtsFileSelected -> {
-                execute {
+                execute<String?> {
                     val text = context.contentResolver.openInputStream(intent.uri)
                         ?.use { it.reader().readText() }
-                    if (!text.isNullOrBlank()) {
-                        HttpTTS.fromJsonArray(text).getOrDefault(arrayListOf())
-                    } else arrayListOf()
-                }.onSuccess { list ->
-                    if (list.isNotEmpty()) {
-                        execute {
-                            appDb.httpTTSDao.insert(*list.toTypedArray())
-                        }.onSuccess {
-                            loadTtsEngineItems()
-                        }
-                    }
+                    text
+                }.onSuccess { text ->
+                    if (!text.isNullOrBlank()) importHttpTtsSource(text)
                 }
             }
 
@@ -870,7 +888,7 @@ class ReadBookViewModel(
                 if (intent.value) postEvent(EventBus.MEDIA_BUTTON, false)
             }
             is ReadBookIntent.ReadAloudPrevParagraph -> ReadAloud.prevParagraph(context)
-            is ReadBookIntent.ReadAloudTogglePause -> toggleReadAloudPause()
+            is ReadBookIntent.ReadAloudTogglePause -> _effects.tryEmit(ReadBookEffect.ToggleReadAloud)
             is ReadBookIntent.ReadAloudStop -> {
                 ReadAloud.stop(context)
                 _uiState.update { it.copy(isReadAloudRunning = false, isReadAloudPaused = false) }
@@ -882,6 +900,10 @@ class ReadBookViewModel(
             )
             is ReadBookIntent.ReadAloudNextChapter -> ReadBook.moveToNextChapter(true)
             is ReadBookIntent.SetReadAloudTtsTimer -> setReadAloudTtsTimer(intent.value)
+            is ReadBookIntent.SaveReadAloudTtsTimer -> {
+                viewModelScope.launch { readAloudSettingsRepository.saveTtsTimer(intent.value) }
+                _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.save_success)))
+            }
             is ReadBookIntent.SetReadAloudTtsFollowSys -> {
                 viewModelScope.launch { readAloudSettingsRepository.setTtsFollowSys(intent.value) }
                 _uiState.update { it.copy(readAloudTtsFollowSys = intent.value) }
@@ -1066,7 +1088,7 @@ class ReadBookViewModel(
             is ReadBookIntent.OnResume -> handleOnResume()
             is ReadBookIntent.OnPause -> handleOnPause()
             is ReadBookIntent.OnDispose -> handleOnDispose()
-            is ReadBookIntent.CloseReadBook -> _effects.tryEmit(ReadBookEffect.Finish)
+            is ReadBookIntent.CloseReadBook -> closeReadBook()
             is ReadBookIntent.OpenBooksDirPicker -> requestBooksDirPicker(reloadChapterList = false)
             is ReadBookIntent.BooksDirSelected -> onBooksDirSelected(intent.uri)
         }
@@ -1127,9 +1149,12 @@ class ReadBookViewModel(
     }
 
     private fun handleOnDispose() {
-        // TTS and view cleanup — bridge handles via clearTts()
         backupJob?.cancel()
         ReadBook.cancelPreDownloadTask()
+        if (BaseReadAloudService.isRun) {
+            ReadAloud.stop(context)
+            _uiState.update { it.copy(isReadAloudRunning = false, isReadAloudPaused = false) }
+        }
     }
 
     private fun showSpeakEngineConfig() {
@@ -1168,6 +1193,42 @@ class ReadBookViewModel(
                 )
             }
             onSuccess?.invoke()
+        }
+    }
+
+    private fun importHttpTtsSource(text: String) {
+        execute {
+            importHttpTtsSourceAwait(text.trim()).also { list ->
+                if (list.isNotEmpty()) {
+                    appDb.httpTTSDao.insert(*list.toTypedArray())
+                }
+            }
+        }.onSuccess { list ->
+            if (list.isNotEmpty()) {
+                loadTtsEngineItems()
+                _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.success)))
+            }
+        }.onError {
+            AppLog.put("导入朗读引擎失败\n${it.localizedMessage}", it, true)
+        }
+    }
+
+    private suspend fun importHttpTtsSourceAwait(text: String): List<HttpTTS> {
+        return when {
+            text.isJsonObject() -> listOf(HttpTTS.fromJson(text).getOrThrow())
+            text.isJsonArray() -> HttpTTS.fromJsonArray(text).getOrThrow()
+            text.isAbsUrl() -> {
+                val body = okHttpClient.newCallResponseBody {
+                    if (text.endsWith("#requestWithoutUA")) {
+                        url(text.substringBeforeLast("#requestWithoutUA"))
+                        header(AppConst.UA_NAME, "null")
+                    } else {
+                        url(text)
+                    }
+                }.decompressed().text()
+                importHttpTtsSourceAwait(body)
+            }
+            else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
         }
     }
 
@@ -1399,7 +1460,7 @@ class ReadBookViewModel(
                     }
                 }.toSet()
                 if (actions.isNotEmpty()) {
-                    _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(actions))
+                    emitEffectWhenSubscribed(ReadBookEffect.UpdateReadViewConfig(actions))
                 }
             }
         }
@@ -2092,6 +2153,48 @@ class ReadBookViewModel(
         }
     }
 
+    private fun closeReadBook() {
+        val book = ReadBook.book
+        if (!ReadBook.inBookshelf && book != null && OtherConfig.showAddToShelfAlert) {
+            _uiState.update {
+                it.copy(activeDialog = ReadBookDialog.ConfirmAddToBookshelf(book.name))
+            }
+        } else if (!ReadBook.inBookshelf) {
+            removeCurrentNotShelfBookAndFinish()
+        } else {
+            _effects.tryEmit(ReadBookEffect.Finish)
+        }
+    }
+
+    private fun addCurrentBookToBookshelfAndFinish() {
+        val book = ReadBook.book ?: return removeCurrentNotShelfBookAndFinish()
+        execute {
+            val toc = appDb.bookChapterDao.getChapterList(book.bookUrl)
+            book.removeType(BookType.notShelf)
+            if (book.order == 0) {
+                book.order = appDb.bookDao.minOrder - 1
+            }
+            appDb.bookDao.insert(book)
+            if (toc.isNotEmpty()) {
+                appDb.bookChapterDao.insert(*toc.toTypedArray())
+            }
+            ReadBook.inBookshelf = true
+        }.onSuccess {
+            _uiState.update { it.copy(activeDialog = null) }
+            _effects.tryEmit(ReadBookEffect.Finish)
+        }.onError {
+            AppLog.put("添加书籍到书架失败", it)
+            context.toastOnUi("添加书籍失败")
+        }
+    }
+
+    private fun removeCurrentNotShelfBookAndFinish() {
+        _uiState.update { it.copy(activeDialog = null) }
+        removeFromBookshelf {
+            _effects.tryEmit(ReadBookEffect.Finish)
+        }
+    }
+
     fun upBookSource(success: (() -> Unit)? = null) {
         execute {
             ReadBook.book?.let { book ->
@@ -2179,6 +2282,7 @@ class ReadBookViewModel(
                 it.copy(
                     contentEditText = text,
                     contentEditTitle = title,
+                    contentEditCursorOffset = ReadBook.durChapterPos.coerceIn(0, text.length),
                     contentEditIsLocalTxt = book.isLocalTxt,
                 )
             }
@@ -2219,7 +2323,13 @@ class ReadBookViewModel(
             } else {
                 ""
             }
-            _uiState.update { it.copy(contentEditText = text, contentEditLoading = false) }
+            _uiState.update {
+                it.copy(
+                    contentEditText = text,
+                    contentEditCursorOffset = ReadBook.durChapterPos.coerceIn(0, text.length),
+                    contentEditLoading = false,
+                )
+            }
             ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
         }.onError {
             _uiState.update { it.copy(contentEditLoading = false) }

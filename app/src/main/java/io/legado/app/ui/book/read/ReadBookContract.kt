@@ -133,6 +133,7 @@ data class ReadBookUiState(
     val contentEditLoading: Boolean = false,
     val contentEditText: String = "",
     val contentEditTitle: String = "",
+    val contentEditCursorOffset: Int = 0,
     val contentEditIsLocalTxt: Boolean = false,
     val contentEditSaveToSource: Boolean = false,
     val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
@@ -446,6 +447,8 @@ sealed interface ReadBookIntent {
 
     // Dialog callback bridge
     data object ReadAloudAction : ReadBookIntent
+    data object ConfirmAddCurrentBookToBookshelf : ReadBookIntent
+    data object ExitWithoutAddingCurrentBookToBookshelf : ReadBookIntent
 
     // Read aloud config (needs Activity for DialogFragment)
     data object ShowReadAloudConfig : ReadBookIntent
@@ -461,6 +464,7 @@ sealed interface ReadBookIntent {
     data class ApplySpeakEnginePerBook(val value: String?) : ReadBookIntent
     data class OpenHttpTtsLogin(val engineId: Long) : ReadBookIntent
     data class ImportHttpTtsJson(val json: String) : ReadBookIntent
+    data class ImportHttpTtsSource(val text: String) : ReadBookIntent
     data object ImportHttpTtsFile : ReadBookIntent
     data class ImportHttpTtsFileSelected(val uri: Uri) : ReadBookIntent
     data object ExportAllHttpTts : ReadBookIntent
@@ -479,6 +483,7 @@ sealed interface ReadBookIntent {
     data object ReadAloudPrevChapter : ReadBookIntent
     data object ReadAloudNextChapter : ReadBookIntent
     data class SetReadAloudTtsTimer(val value: Int) : ReadBookIntent
+    data class SaveReadAloudTtsTimer(val value: Int) : ReadBookIntent
     data class SetReadAloudTtsFollowSys(val value: Boolean) : ReadBookIntent
     data class SetReadAloudTtsSpeechRate(val value: Int) : ReadBookIntent
     data object OpenSystemTtsSettings : ReadBookIntent
@@ -688,6 +693,7 @@ sealed interface ReadBookDialog {
     data object RestoreLastBookProgress : ReadBookDialog
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
+    data class ConfirmAddToBookshelf(val bookName: String) : ReadBookDialog
 }
 
 /**
