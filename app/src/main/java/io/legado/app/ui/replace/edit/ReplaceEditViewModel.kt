@@ -199,8 +199,9 @@ class ReplaceEditViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val state = _uiState.value
 
-            val rule = ReplaceRule().apply {
-                id = if (state.id <= 0) System.currentTimeMillis() else state.id
+            val existingRule = if (state.id > 0) replaceRuleDao.findById(state.id) else null
+            val rule = (existingRule ?: ReplaceRule()).apply {
+                id = existingRule?.id ?: if (state.id <= 0) System.currentTimeMillis() else state.id
                 name = state.name
                 group = if (state.group == "默认" || state.group.isBlank()) null else state.group
                 pattern = state.pattern
@@ -213,11 +214,7 @@ class ReplaceEditViewModel(
                 timeoutMillisecond = state.timeout.toLongOrNull() ?: 3000L
             }
 
-            if (state.id <= 0) {
-                rule.order = replaceRuleDao.maxOrder + 1
-            }
-
-            if (rule.order == Int.MIN_VALUE) {
+            if (existingRule == null && rule.order == Int.MIN_VALUE) {
                 rule.order = replaceRuleDao.maxOrder + 1
             }
 
