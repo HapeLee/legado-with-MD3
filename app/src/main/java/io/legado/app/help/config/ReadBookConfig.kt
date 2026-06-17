@@ -1141,21 +1141,25 @@ object ReadBookConfig {
             }
         }
 
+        private fun String.toColorIntSafe(fallback: Int): Int {
+            return runCatching { toColorInt() }.getOrDefault(fallback)
+        }
+
         private fun ensureColorInts() {
             if (initColorInt) {
                 return
             }
-            textColorIntEInk = textColorEInk.toColorInt()
-            textColorIntNight = textColorNight.toColorInt()
-            textColorInt = textColor.toColorInt()
-            shadowColorNightInt = shadowColorN.toColorInt()
-            shadowColorInt = shadowColor.toColorInt()
-            menuBgColorInt = menuBgColor.toColorInt()
-            menuBgColorNightInt = menuBgColorNight.toColorInt()
-            menuAcColorInt = menuAcColor.toColorInt()
-            menuAcColorNightInt = menuAcColorNight.toColorInt()
-            underlineColorInt = underlineColor.toColorInt()
-            underlineColorNightInt = underlineColorNight.toColorInt()
+            textColorIntEInk = textColorEInk.toColorIntSafe(0xFF000000.toInt())
+            textColorIntNight = textColorNight.toColorIntSafe(0xFFADADAD.toInt())
+            textColorInt = textColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            shadowColorNightInt = shadowColorN.toColorIntSafe(0xFF3E3D3B.toInt())
+            shadowColorInt = shadowColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            menuBgColorInt = menuBgColor.toColorIntSafe(-1)
+            menuBgColorNightInt = menuBgColorNight.toColorIntSafe(-1)
+            menuAcColorInt = menuAcColor.toColorIntSafe(-1)
+            menuAcColorNightInt = menuAcColorNight.toColorIntSafe(-1)
+            underlineColorInt = underlineColor.toColorIntSafe(0xFF3E3D3B.toInt())
+            underlineColorNightInt = underlineColorNight.toColorIntSafe(0xFFADADAD.toInt())
             initColorInt = true
         }
 
@@ -1163,9 +1167,9 @@ object ReadBookConfig {
             if (initAccentColorInt) {
                 return
             }
-            textAccentColorIntEInk = textAccentColorEInk.toColorInt()
-            textAccentColorIntNight = textAccentColorNight.toColorInt()
-            textAccentColorInt = textAccentColor.toColorInt()
+            textAccentColorIntEInk = textAccentColorEInk.toColorIntSafe(0xFF000000.toInt())
+            textAccentColorIntNight = textAccentColorNight.toColorIntSafe(0xFFFE4D55.toInt())
+            textAccentColorInt = textAccentColor.toColorIntSafe(0xFF834E00.toInt())
             initAccentColorInt = true
         }
 
