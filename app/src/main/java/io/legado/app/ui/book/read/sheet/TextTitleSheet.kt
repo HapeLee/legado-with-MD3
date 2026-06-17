@@ -47,6 +47,8 @@ import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyColorSettingItem
@@ -524,6 +526,7 @@ internal fun TitleSettingsPage(
         }
         if (titleSegType == 2 || titleSegType == 3) {
             var showFlagDialog by remember { mutableStateOf(false) }
+            var flagText by remember { mutableStateOf(titleSegFlag) }
 
             TinyClickableSettingItem(
                 title = stringResource(R.string.rule_segment),
@@ -531,35 +534,27 @@ internal fun TitleSettingsPage(
                 onClick = { showFlagDialog = true },
             )
 
-            if (showFlagDialog) {
-                var flagText by remember { mutableStateOf(titleSegFlag) }
-                androidx.compose.material3.AlertDialog(
-                    onDismissRequest = { showFlagDialog = false },
-                    title = { Text(stringResource(R.string.rule_segment)) },
-                    text = {
-                        androidx.compose.material3.OutlinedTextField(
-                            value = flagText,
-                            onValueChange = { flagText = it },
-                            singleLine = false,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    },
-                    confirmButton = {
-                        androidx.compose.material3.TextButton(onClick = {
-                            titleSegFlag = flagText
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegFlag(titleSegFlag)))
-                            showFlagDialog = false
-                        }) {
-                            Text(stringResource(android.R.string.ok))
-                        }
-                    },
-                    dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { showFlagDialog = false }) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-                    },
-                )
-            }
+            AppAlertDialog(
+                show = showFlagDialog,
+                onDismissRequest = { showFlagDialog = false },
+                title = stringResource(R.string.rule_segment),
+                content = {
+                    AppTextField(
+                        value = flagText,
+                        onValueChange = { flagText = it },
+                        singleLine = false,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                },
+                confirmText = stringResource(android.R.string.ok),
+                onConfirm = {
+                    titleSegFlag = flagText
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.TitleSegFlag(titleSegFlag)))
+                    showFlagDialog = false
+                },
+                dismissText = stringResource(android.R.string.cancel),
+                onDismiss = { showFlagDialog = false },
+            )
         }
 
         Spacer(Modifier.height(8.dp))
