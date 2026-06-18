@@ -59,7 +59,7 @@ fun ReadBookScreen(
             state.isShowingSearchResult -> onIntent(ReadBookIntent.ExitSearch)
             state.menuVisible -> onIntent(ReadBookIntent.ReadMenuBack)
             state.isAutoPage -> onIntent(ReadBookIntent.StopAutoPage)
-            else -> onIntent(ReadBookIntent.CloseReadBook)
+            else -> onIntent(ReadBookIntent.CloseReadBook())
         }
     }
 

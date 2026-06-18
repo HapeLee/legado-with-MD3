@@ -658,8 +658,7 @@ class ReadView(
     /**
      * 从选择位置开始朗读
      */
-    suspend fun aloudStartSelect() {
-        val selectStartPos = curPage.selectStartPos
+    suspend fun aloudStartSelect(selectStartPos: TextPos) {
         var pagePos = selectStartPos.relativePagePos
         val line = selectStartPos.lineIndex
         val column = selectStartPos.columnIndex
