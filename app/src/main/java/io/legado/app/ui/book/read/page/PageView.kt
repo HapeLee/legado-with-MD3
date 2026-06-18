@@ -470,6 +470,7 @@ class PageView(
             tvPageAndTotal?.setTextIfNotEqual("${index.plus(1)}/$pageSize  $readProgress")
             tvPage?.setTextIfNotEqual("${index.plus(1)}/$pageSize")
         }
+        this@PageView.layoutSync()
     }
 
     fun layoutSync() {
@@ -485,7 +486,6 @@ class PageView(
     fun screenshot(canvasRecorder: CanvasRecorder) {
         if (!isMainView && !isScroll) {
             setProgress(textPage)
-            layoutSync()
         }
         viewScreenshot(canvasRecorder)
     }
@@ -493,7 +493,6 @@ class PageView(
     fun screenshot(bitmap: Bitmap? = null, canvas: Canvas? = null): Bitmap? {
         if (!isMainView && !isScroll) {
             setProgress(textPage)
-            layoutSync()
         }
         return viewScreenshot(bitmap, canvas)
     }
