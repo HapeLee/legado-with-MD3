@@ -1,6 +1,9 @@
 name: Build APK for User
 
 on:
+  push:
+    branches:
+      - 'trae/solo-agent-Fk46su'
   workflow_dispatch:
     inputs:
       branch:
@@ -19,10 +22,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Determine branch
+        id: branch
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ steps.branch.outputs.branch }}
           fetch-depth: 0
 
       - name: Set up JDK 21
@@ -92,14 +104,14 @@ jobs:
           path: legado-debug-apks-*.zip
 
       - name: Create Release and Upload
-        if: ${{ github.event.inputs.release_tag != '' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.release_tag }}
           name: Legado Debug Build ${{ github.event.inputs.release_tag }}
           body: |
             自动构建的 Debug 版本
-            - 分支: ${{ github.event.inputs.branch }}
+            - 分支: ${{ steps.branch.outputs.branch }}
             - 构建号: ${{ github.run_number }}
           prerelease: true
           files: |
