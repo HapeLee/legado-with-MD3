@@ -351,6 +351,22 @@ class BookInfoViewModel(
         }
     }
 
+    fun refreshShelfState() {
+        val bookUrl = currentBook?.bookUrl ?: return
+        execute {
+            appDb.bookDao.getBook(bookUrl)
+        }.onSuccess { dbBook ->
+            val nextInBookshelf = dbBook != null && !dbBook.isNotShelf
+            if (nextInBookshelf) {
+                currentBook = dbBook
+            }
+            if (inBookshelf != nextInBookshelf || nextInBookshelf) {
+                inBookshelf = nextInBookshelf
+                syncUiState()
+            }
+        }
+    }
+
     fun toggleCanUpdate() {
         currentBook?.let { book ->
             book.canUpdate = !book.canUpdate

@@ -12,7 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.legado.app.R
 import io.legado.app.help.book.isAudio
 import io.legado.app.help.book.isImage
@@ -58,6 +61,7 @@ fun BookInfoRouteScreen(
 ) {
     val context = LocalContext.current
     val activity = context as AppCompatActivity
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val tocActivityResult = rememberLauncherForActivityResult(TocActivityResult()) {
         viewModel.onTocResult(it)
@@ -101,6 +105,18 @@ fun BookInfoRouteScreen(
         onRegisterVariableSetter(viewModel::setVariable)
         onDispose {
             onRegisterVariableSetter(null)
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshShelfState()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
