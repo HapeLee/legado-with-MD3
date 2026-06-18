@@ -1,7 +1,7 @@
 package io.legado.app.help.ai
 
 import android.content.Context
-import io.legado.app.utils.toast
+import io.legado.app.utils.toastOnUi
 
 /**
  * AI Providers + Config Store (简化实现)
@@ -67,75 +67,10 @@ val TEXT_TOOLS: List<TextTool> = listOf(
     TextTool("compress", "压缩", "保留核心意思的同时缩短。", "你是一位文本压缩编辑。")
 )
 
-object AiConfigStore {
-    var streamEnabled: Boolean = true
-
-    private val defaults: Map<AiProvider, AiProviderConfig> = mapOf(
-        AiProvider.OPENAI to AiProviderConfig(
-            provider = AiProvider.OPENAI,
-            endpoint = "https://api.openai.com/v1",
-            apiKey = ""
-        ),
-        AiProvider.ANTHROPIC to AiProviderConfig(
-            provider = AiProvider.ANTHROPIC,
-            endpoint = "https://api.anthropic.com/v1",
-            apiKey = "",
-            chatModel = "claude-3-5-sonnet-20241022"
-        ),
-        AiProvider.GEMINI to AiProviderConfig(
-            provider = AiProvider.GEMINI,
-            endpoint = "https://generativelanguage.googleapis.com/v1beta",
-            apiKey = "",
-            chatModel = "gemini-2.0-flash"
-        ),
-        AiProvider.LOCAL to AiProviderConfig(
-            provider = AiProvider.LOCAL,
-            endpoint = "http://127.0.0.1:8080",
-            apiKey = "",
-            chatModel = "local-llm"
-        ),
-        AiProvider.OPENAI_COMPATIBLE to AiProviderConfig(
-            provider = AiProvider.OPENAI_COMPATIBLE,
-            endpoint = "https://api.deepseek.com/v1",
-            apiKey = "",
-            chatModel = "deepseek-chat"
-        )
-    )
-
-    private var currentProvider: AiProvider = AiProvider.OPENAI
-    private val overrides = mutableMapOf<AiProvider, AiProviderConfig>()
-
-    fun setProvider(provider: AiProvider) {
-        currentProvider = provider
-    }
-
-    fun currentProvider(): AiProvider = currentProvider
-
-    fun defaultFor(provider: AiProvider): AiProviderConfig {
-        return defaults[provider] ?: defaults[AiProvider.OPENAI]!!
-    }
-
-    fun save(config: AiProviderConfig) {
-        overrides[config.provider] = config
-    }
-
-    fun load(provider: AiProvider): AiProviderConfig {
-        return overrides[provider] ?: defaultFor(provider)
-    }
-
-    fun loadProviderConfigs(): Map<AiProvider, AiProviderConfig> {
-        return AiProvider.values().associateWith { load(it) }
-    }
-
-    fun currentConfig(): AiProviderConfig {
-        return load(currentProvider)
-    }
-}
-
 object AiToastHelper {
     private var ctx: Context? = null
     fun attach(c: Context) { ctx = c.applicationContext }
     fun toast(msg: String) {
-        ctx?.toast(msg)
+        ctx?.toastOnUi(msg)
     }
 }

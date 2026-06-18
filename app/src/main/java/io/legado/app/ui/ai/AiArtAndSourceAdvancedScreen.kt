@@ -36,10 +36,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.utils.toast
+import io.legado.app.utils.toastOnUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,11 +49,12 @@ fun AiArtScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { eff ->
             when (eff) {
-                is AiArtEffect.ShowToast -> toast(eff.message)
+                is AiArtEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }
@@ -257,11 +259,12 @@ fun AiSourceAdvancedScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { eff ->
             when (eff) {
-                is AiSourceAdvancedEffect.ShowToast -> toast(eff.message)
+                is AiSourceAdvancedEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }

@@ -1,88 +1,96 @@
 package io.legado.app.help.ai
 
-import android.content.Context
-import io.legado.app.App
-import io.legado.app.utils.GSON
-import io.legado.app.utils.getPrefString
-import io.legado.app.utils.putPrefString
-
 /**
- * AI 配置的持久化存储
- * 使用 SharedPreferences，每个 provider 独立一份
+ * AI 配置的简易存储（内存版，避免对 SharedPreferences 和 App 上下文的依赖）
+ * 提供所有 AI 模块 ViewModel 需要的读写入口
  */
 object AiConfigStore {
 
-    private const val PREF_NAME = "ai_config"
+    // ===== Provider 默认值 =====
+    private val defaults: Map<AiProvider, AiProviderConfig> = mapOf(
+        AiProvider.OPENAI to AiProviderConfig(
+            provider = AiProvider.OPENAI,
+            endpoint = "https://api.openai.com/v1",
+            apiKey = ""
+        ),
+        AiProvider.ANTHROPIC to AiProviderConfig(
+            provider = AiProvider.ANTHROPIC,
+            endpoint = "https://api.anthropic.com/v1",
+            apiKey = "",
+            chatModel = "claude-3-5-sonnet-20241022"
+        ),
+        AiProvider.GEMINI to AiProviderConfig(
+            provider = AiProvider.GEMINI,
+            endpoint = "https://generativelanguage.googleapis.com/v1beta",
+            apiKey = "",
+            chatModel = "gemini-2.0-flash"
+        ),
+        AiProvider.LOCAL to AiProviderConfig(
+            provider = AiProvider.LOCAL,
+            endpoint = "http://127.0.0.1:8080",
+            apiKey = "",
+            chatModel = "local-llm"
+        ),
+        AiProvider.OPENAI_COMPATIBLE to AiProviderConfig(
+            provider = AiProvider.OPENAI_COMPATIBLE,
+            endpoint = "https://api.deepseek.com/v1",
+            apiKey = "",
+            chatModel = "deepseek-chat"
+        )
+    )
 
-    private const val KEY_ACTIVE_PROVIDER = "active_provider"
-    private const val KEY_DEFAULT_IMAGE_SIZE = "default_image_size"
-    private const val KEY_DEFAULT_IMAGE_COUNT = "default_image_count"
-    private const val KEY_DEFAULT_TEMPERATURE = "default_temperature"
-    private const val KEY_STREAM_ENABLED = "stream_enabled"
+    // ===== 运行时状态 =====
+    private val overrides: MutableMap<AiProvider, AiProviderConfig> = mutableMapOf()
 
-    private const val KEY_PREFIX_PROVIDER = "provider_config_"
-    private const val KEY_CUSTOM_PRESETS = "custom_presets"
+    var activeProvider: String = AiProvider.OPENAI.name
+    var streamEnabled: Boolean = true
+    var defaultImageSize: String = "1024x1024"
+    var defaultImageCount: Int = 1
+    var defaultTemperature: Float = 0.7f
 
-    private val context: Context get() = App.INSTANCE
+    private val customPresets: MutableList<AiPreset> = mutableListOf()
 
-    var activeProvider: String
-        get() = context.getPrefString(PREF_NAME, KEY_ACTIVE_PROVIDER) ?: AiProvider.OPENAI.name
-        set(value) = context.putPrefString(PREF_NAME, KEY_ACTIVE_PROVIDER, value)
+    // ===== API =====
+    fun currentConfig(): AiProviderConfig {
+        val provider = try {
+            AiProvider.valueOf(activeProvider)
+        } catch (_: Exception) {
+            AiProvider.OPENAI
+        }
+        return overrides[provider] ?: (defaults[provider] ?: defaults[AiProvider.OPENAI]!!)
+    }
 
-    var defaultImageSize: String
-        get() = context.getPrefString(PREF_NAME, KEY_DEFAULT_IMAGE_SIZE) ?: "1024x1024"
-        set(value) = context.putPrefString(PREF_NAME, KEY_DEFAULT_IMAGE_SIZE, value)
+    fun load(provider: AiProvider): AiProviderConfig {
+        return overrides[provider] ?: (defaults[provider] ?: defaults[AiProvider.OPENAI]!!)
+    }
 
-    var defaultImageCount: Int
-        get() = context.getPrefString(PREF_NAME, KEY_DEFAULT_IMAGE_COUNT)?.toIntOrNull() ?: 1
-        set(value) = context.putPrefString(PREF_NAME, KEY_DEFAULT_IMAGE_COUNT, value.toString())
-
-    var defaultTemperature: Float
-        get() = context.getPrefString(PREF_NAME, KEY_DEFAULT_TEMPERATURE)?.toFloatOrNull() ?: 0.7f
-        set(value) = context.putPrefString(PREF_NAME, KEY_DEFAULT_TEMPERATURE, value.toString())
-
-    var streamEnabled: Boolean
-        get() = context.getPrefString(PREF_NAME, KEY_STREAM_ENABLED)?.toBooleanStrictOrNull() ?: true
-        set(value) = context.putPrefString(PREF_NAME, KEY_STREAM_ENABLED, value.toString())
-
-    /**
-     * 加载所有 provider 的配置
-     */
     fun loadProviderConfigs(): Map<AiProvider, AiProviderConfig> {
         val map = mutableMapOf<AiProvider, AiProviderConfig>()
-        AiProvider.values().forEach { provider ->
-            val json = context.getPrefString(PREF_NAME, KEY_PREFIX_PROVIDER + provider.name)
-            if (!json.isNullOrEmpty()) {
-                try {
-                    GSON.fromJsonObject<AiProviderConfig>(json).getOrNull()?.let {
-                        map[provider] = it
-                    }
-                } catch (_: Throwable) {
-                    // 忽略解析错误
-                }
-            }
+        for (provider in AiProvider.values()) {
+            map[provider] = load(provider)
         }
         return map
     }
 
     fun saveProviderConfigs(configs: Map<AiProvider, AiProviderConfig>) {
-        configs.forEach { (provider, config) ->
-            context.putPrefString(PREF_NAME, KEY_PREFIX_PROVIDER + provider.name, GSON.toJson(config))
-        }
+        overrides.clear()
+        overrides.putAll(configs)
+    }
+
+    fun save(config: AiProviderConfig) {
+        overrides[config.provider] = config
+    }
+
+    fun setProvider(provider: AiProvider) {
+        activeProvider = provider.name
     }
 
     fun loadCustomPresets(): List<AiPreset> {
-        val json = context.getPrefString(PREF_NAME, KEY_CUSTOM_PRESETS)
-            ?: return emptyList()
-        return runCatching {
-            // 用 JSON 解析
-            val listType = com.google.gson.reflect.TypeToken.getParameterized(List::class.java, AiPreset::class.java)
-            @Suppress("UNCHECKED_CAST")
-            GSON.fromJson<List<AiPreset>>(json, listType) ?: emptyList()
-        }.getOrElse { emptyList() }
+        return customPresets.toList()
     }
 
     fun saveCustomPresets(presets: List<AiPreset>) {
-        context.putPrefString(PREF_NAME, KEY_CUSTOM_PRESETS, GSON.toJson(presets))
+        customPresets.clear()
+        customPresets.addAll(presets)
     }
 }

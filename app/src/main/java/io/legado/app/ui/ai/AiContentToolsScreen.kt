@@ -33,9 +33,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.utils.toast
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,11 +46,12 @@ fun AiContentToolsScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { eff ->
             when (eff) {
-                is AiContentToolsEffect.ShowToast -> toast(eff.message)
+                is AiContentToolsEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }

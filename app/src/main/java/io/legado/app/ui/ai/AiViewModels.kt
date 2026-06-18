@@ -143,26 +143,20 @@ class AiChatViewModel(app: Application) : AndroidViewModel(app) {
                     var accumulated = ""
                     flow.collect { chunk ->
                         if (chunk.done) {
-                            // 更新最后一条消息
                             val msgs = _uiState.value.messages.toMutableList()
                             if (msgs.isNotEmpty() && msgs.last().role == "assistant") {
                                 msgs[msgs.size - 1] = msgs.last().copy(content = accumulated)
                             }
                             _uiState.value = _uiState.value.copy(messages = msgs, isLoading = false)
                         } else {
-                            chunk.delta?.let { d ->
+                            val d = chunk.text
+                            if (d.isNotEmpty()) {
                                 accumulated += d
                                 val msgs = _uiState.value.messages.toMutableList()
                                 if (msgs.isNotEmpty() && msgs.last().role == "assistant") {
                                     msgs[msgs.size - 1] = msgs.last().copy(content = accumulated)
                                     _uiState.value = _uiState.value.copy(messages = msgs)
                                 }
-                            }
-                            chunk.error?.let { err ->
-                                _uiState.value = _uiState.value.copy(
-                                    error = err,
-                                    isLoading = false
-                                )
                             }
                         }
                     }
@@ -841,19 +835,21 @@ class AiContentToolsViewModel(app: Application) : AndroidViewModel(app) {
     private val _effects = MutableSharedFlow<AiContentToolsEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    fun onIntent(intent: AiContentToolsIntent) = when (intent) {
-        is AiContentToolsIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-        is AiContentToolsIntent.UpdateBookName -> _uiState.update { it.copy(sourceBookName = intent.value) }
-        is AiContentToolsIntent.UpdateChapter -> _uiState.update { it.copy(sourceChapter = intent.value) }
-        is AiContentToolsIntent.UpdateInput -> _uiState.update { it.copy(input = intent.value) }
-        is AiContentToolsIntent.UpdateTargetLanguage -> _uiState.update { it.copy(targetLanguage = intent.value) }
-        is AiContentToolsIntent.UpdateSummaryLevel -> _uiState.update { it.copy(summaryLevel = intent.value) }
-        is AiContentToolsIntent.UpdateRewriteStyle -> _uiState.update { it.copy(rewriteStyle = intent.value) }
-        is AiContentToolsIntent.UpdateTtsVoice -> _uiState.update { it.copy(ttsVoice = intent.value) }
-        is AiContentToolsIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-        is AiContentToolsIntent.Execute -> execute()
-        is AiContentToolsIntent.CopyOutput -> copyOutput()
-        is AiContentToolsIntent.PlayTts -> { /* 由上层 / 系统 TTS 处理 */ }
+    fun onIntent(intent: AiContentToolsIntent) {
+        when (intent) {
+            is AiContentToolsIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+            is AiContentToolsIntent.UpdateBookName -> _uiState.update { it.copy(sourceBookName = intent.value) }
+            is AiContentToolsIntent.UpdateChapter -> _uiState.update { it.copy(sourceChapter = intent.value) }
+            is AiContentToolsIntent.UpdateInput -> _uiState.update { it.copy(input = intent.value) }
+            is AiContentToolsIntent.UpdateTargetLanguage -> _uiState.update { it.copy(targetLanguage = intent.value) }
+            is AiContentToolsIntent.UpdateSummaryLevel -> _uiState.update { it.copy(summaryLevel = intent.value) }
+            is AiContentToolsIntent.UpdateRewriteStyle -> _uiState.update { it.copy(rewriteStyle = intent.value) }
+            is AiContentToolsIntent.UpdateTtsVoice -> _uiState.update { it.copy(ttsVoice = intent.value) }
+            is AiContentToolsIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiContentToolsIntent.Execute -> execute()
+            is AiContentToolsIntent.CopyOutput -> copyOutput()
+            is AiContentToolsIntent.PlayTts -> { /* 由上层 / 系统 TTS 处理 */ }
+        }
     }
 
     private fun execute() {
@@ -910,21 +906,23 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
     private val _effects = MutableSharedFlow<AiArtEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    fun onIntent(intent: AiArtIntent) = when (intent) {
-        is AiArtIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-        is AiArtIntent.UpdateBookName -> _uiState.update { it.copy(bookName = intent.value) }
-        is AiArtIntent.UpdateAuthor -> _uiState.update { it.copy(author = intent.value) }
-        is AiArtIntent.UpdateIntro -> _uiState.update { it.copy(intro = intent.value) }
-        is AiArtIntent.UpdateCharacterName -> _uiState.update { it.copy(characterName = intent.value) }
-        is AiArtIntent.UpdateCharacterDesc -> _uiState.update { it.copy(characterDesc = intent.value) }
-        is AiArtIntent.UpdateSceneDesc -> _uiState.update { it.copy(sceneDesc = intent.value) }
-        is AiArtIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-        is AiArtIntent.UpdateSize -> _uiState.update { it.copy(size = intent.value) }
-        is AiArtIntent.UpdateStyleHint -> _uiState.update { it.copy(styleHint = intent.value) }
-        is AiArtIntent.GenerateImage -> generateImage()
-        is AiArtIntent.GenerateCharacterCard -> generateCharacterCard()
-        is AiArtIntent.SaveImage -> _effects.tryEmit(AiArtEffect.ShowToast("已保存到相册"))
-        is AiArtIntent.SetAsCover -> _effects.tryEmit(AiArtEffect.ShowToast("已设置为封面"))
+    fun onIntent(intent: AiArtIntent) {
+        when (intent) {
+            is AiArtIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+            is AiArtIntent.UpdateBookName -> _uiState.update { it.copy(bookName = intent.value) }
+            is AiArtIntent.UpdateAuthor -> _uiState.update { it.copy(author = intent.value) }
+            is AiArtIntent.UpdateIntro -> _uiState.update { it.copy(intro = intent.value) }
+            is AiArtIntent.UpdateCharacterName -> _uiState.update { it.copy(characterName = intent.value) }
+            is AiArtIntent.UpdateCharacterDesc -> _uiState.update { it.copy(characterDesc = intent.value) }
+            is AiArtIntent.UpdateSceneDesc -> _uiState.update { it.copy(sceneDesc = intent.value) }
+            is AiArtIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiArtIntent.UpdateSize -> _uiState.update { it.copy(size = intent.value) }
+            is AiArtIntent.UpdateStyleHint -> _uiState.update { it.copy(styleHint = intent.value) }
+            is AiArtIntent.GenerateImage -> generateImage()
+            is AiArtIntent.GenerateCharacterCard -> generateCharacterCard()
+            is AiArtIntent.SaveImage -> _effects.tryEmit(AiArtEffect.ShowToast("已保存到相册"))
+            is AiArtIntent.SetAsCover -> _effects.tryEmit(AiArtEffect.ShowToast("已设置为封面"))
+        }
     }
 
     private fun generateImage() {
@@ -991,16 +989,18 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
     private val _effects = MutableSharedFlow<AiSourceAdvancedEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    fun onIntent(intent: AiSourceAdvancedIntent) = when (intent) {
-        is AiSourceAdvancedIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-        is AiSourceAdvancedIntent.UpdateQueryBookName -> _uiState.update { it.copy(queryBookName = intent.value) }
-        is AiSourceAdvancedIntent.UpdateQueryAuthor -> _uiState.update { it.copy(queryAuthor = intent.value) }
-        is AiSourceAdvancedIntent.UpdateSelectedSource -> _uiState.update { it.copy(selectedSourceToValidate = intent.value) }
-        is AiSourceAdvancedIntent.UpdateSourceUrlToFix -> _uiState.update { it.copy(sourceUrlToFix = intent.value) }
-        is AiSourceAdvancedIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-        is AiSourceAdvancedIntent.SearchSources -> searchSources()
-        is AiSourceAdvancedIntent.EvaluateQuality -> evaluateQuality()
-        is AiSourceAdvancedIntent.AutoFix -> autoFix()
+    fun onIntent(intent: AiSourceAdvancedIntent) {
+        when (intent) {
+            is AiSourceAdvancedIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+            is AiSourceAdvancedIntent.UpdateQueryBookName -> _uiState.update { it.copy(queryBookName = intent.value) }
+            is AiSourceAdvancedIntent.UpdateQueryAuthor -> _uiState.update { it.copy(queryAuthor = intent.value) }
+            is AiSourceAdvancedIntent.UpdateSelectedSource -> _uiState.update { it.copy(selectedSourceToValidate = intent.value) }
+            is AiSourceAdvancedIntent.UpdateSourceUrlToFix -> _uiState.update { it.copy(sourceUrlToFix = intent.value) }
+            is AiSourceAdvancedIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiSourceAdvancedIntent.SearchSources -> searchSources()
+            is AiSourceAdvancedIntent.EvaluateQuality -> evaluateQuality()
+            is AiSourceAdvancedIntent.AutoFix -> autoFix()
+        }
     }
 
     private fun searchSources() {
@@ -1093,13 +1093,15 @@ class AiRecommendViewModel(app: Application) : AndroidViewModel(app) {
     private val _effects = MutableSharedFlow<AiRecommendEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    fun onIntent(intent: AiRecommendIntent) = when (intent) {
-        is AiRecommendIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-        is AiRecommendIntent.UpdateQuery -> _uiState.update { it.copy(query = intent.value) }
-        is AiRecommendIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-        is AiRecommendIntent.Generate -> generate(typeText = "灵感书单")
-        is AiRecommendIntent.CoachReport -> generate(typeText = "阅读教练")
-        is AiRecommendIntent.VibeReport -> generate(typeText = "阅读氛围")
+    fun onIntent(intent: AiRecommendIntent) {
+        when (intent) {
+            is AiRecommendIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+            is AiRecommendIntent.UpdateQuery -> _uiState.update { it.copy(query = intent.value) }
+            is AiRecommendIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiRecommendIntent.Generate -> generate(typeText = "灵感书单")
+            is AiRecommendIntent.CoachReport -> generate(typeText = "阅读教练")
+            is AiRecommendIntent.VibeReport -> generate(typeText = "阅读氛围")
+        }
     }
 
     private fun generate(typeText: String) {
@@ -1144,18 +1146,20 @@ class AiArchiveViewModel(app: Application) : AndroidViewModel(app) {
     private val _effects = MutableSharedFlow<AiArchiveEffect>(extraBufferCapacity = 16)
     val effects = _effects.asSharedFlow()
 
-    fun onIntent(intent: AiArchiveIntent) = when (intent) {
-        is AiArchiveIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-        is AiArchiveIntent.UpdateInputDesc -> _uiState.update { it.copy(inputDesc = intent.value) }
-        is AiArchiveIntent.UpdateSampleText -> _uiState.update { it.copy(sampleText = intent.value) }
-        is AiArchiveIntent.UpdateFilePathPattern -> _uiState.update { it.copy(filePathPattern = intent.value) }
-        is AiArchiveIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-        is AiArchiveIntent.GenerateReplaceRule -> generate("replace")
-        is AiArchiveIntent.GenerateArchivePlan -> generate("archive")
-        is AiArchiveIntent.GenerateRenamePlan -> generate("rename")
-        is AiArchiveIntent.CopyOutput -> {
-            if (_uiState.value.output.isNotBlank()) {
-                _effects.tryEmit(AiArchiveEffect.ShowToast("已复制"))
+    fun onIntent(intent: AiArchiveIntent) {
+        when (intent) {
+            is AiArchiveIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+            is AiArchiveIntent.UpdateInputDesc -> _uiState.update { it.copy(inputDesc = intent.value) }
+            is AiArchiveIntent.UpdateSampleText -> _uiState.update { it.copy(sampleText = intent.value) }
+            is AiArchiveIntent.UpdateFilePathPattern -> _uiState.update { it.copy(filePathPattern = intent.value) }
+            is AiArchiveIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiArchiveIntent.GenerateReplaceRule -> generate("replace")
+            is AiArchiveIntent.GenerateArchivePlan -> generate("archive")
+            is AiArchiveIntent.GenerateRenamePlan -> generate("rename")
+            is AiArchiveIntent.CopyOutput -> {
+                if (_uiState.value.output.isNotBlank()) {
+                    _effects.tryEmit(AiArchiveEffect.ShowToast("已复制"))
+                }
             }
         }
     }

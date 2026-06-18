@@ -53,7 +53,16 @@ jobs:
 
       - name: Remove Aliyun mirrors (unreliable in CI)
         run: |
-          sed -i '/maven.aliyun.com/d' settings.gradle
+          sed -i.bak '/maven\.aliyun\.com/d' settings.gradle
+          echo "settings.gradle after removing aliyun mirrors:"
+          head -45 settings.gradle
+
+      - name: Configure Gradle to use CI JDK (disable auto-download toolchains)
+        run: |
+          echo "org.gradle.java.installations.auto-download=false" >> gradle.properties
+          echo "org.gradle.java.installations.auto-detect=true" >> gradle.properties
+          JAVA_HOME_VAL=$(java -XshowSettings:properties -version 2>&1 | grep "java.home" | head -1 | awk '{print $3}')
+          echo "Detected java.home: $JAVA_HOME_VAL"
 
       - name: Build Debug APK
         run: |

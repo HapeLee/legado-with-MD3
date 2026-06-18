@@ -30,9 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.legado.app.utils.toast
+import io.legado.app.utils.toastOnUi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,11 +42,12 @@ fun AiRecommendScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { eff ->
             when (eff) {
-                is AiRecommendEffect.ShowToast -> toast(eff.message)
+                is AiRecommendEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }
@@ -149,11 +151,12 @@ fun AiArchiveScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.effects.collect { eff ->
             when (eff) {
-                is AiArchiveEffect.ShowToast -> toast(eff.message)
+                is AiArchiveEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }
