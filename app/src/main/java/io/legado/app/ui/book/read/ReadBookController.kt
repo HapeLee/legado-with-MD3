@@ -600,6 +600,7 @@ class ReadBookController(
                         ConfigUpdateAction.InvalidateTextPage -> r.readView.invalidateTextPage()
                         ConfigUpdateAction.UpdateLayout -> ChapterProvider.upLayout()
                         ConfigUpdateAction.SubmitRenderTask -> r.readView.submitRenderTask()
+                        ConfigUpdateAction.UpdatePageAnim -> r.readView.upPageAnim()
                     }
                 }
             }

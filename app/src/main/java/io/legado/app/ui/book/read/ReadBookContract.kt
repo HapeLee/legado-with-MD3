@@ -713,6 +713,7 @@ sealed interface ConfigUpdateAction {
     data object InvalidateTextPage : ConfigUpdateAction
     data object UpdateLayout : ConfigUpdateAction
     data object SubmitRenderTask : ConfigUpdateAction
+    data object UpdatePageAnim : ConfigUpdateAction
 }
 
 /**
@@ -836,13 +837,28 @@ sealed interface ConfigUpdate {
 
     // --- Layout / style ---
     data class StyleSelect(val index: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent, ConfigUpdateAction.UpdateSystemUi)
+        override val actions = setOf(
+            ConfigUpdateAction.UpdateBackground,
+            ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.ReloadContent,
+            ConfigUpdateAction.UpdateSystemUi,
+            ConfigUpdateAction.UpdatePageAnim
+        )
     }
     data class ShareLayout(val value: Boolean) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+        override val actions = setOf(
+            ConfigUpdateAction.UpdateBackground,
+            ConfigUpdateAction.UpdateStyle,
+            ConfigUpdateAction.ReloadContent,
+            ConfigUpdateAction.UpdatePageAnim
+        )
     }
     data class PageAnim(val value: Int) : ConfigUpdate {
-        override val actions = setOf(ConfigUpdateAction.UpdateBackground)
+        override val actions = setOf(
+            ConfigUpdateAction.UpdateBackground,
+            ConfigUpdateAction.UpdatePageAnim,
+            ConfigUpdateAction.ReloadContent
+        )
     }
 
     // --- Menu colors ---
