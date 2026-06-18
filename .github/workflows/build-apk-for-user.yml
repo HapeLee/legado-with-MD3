@@ -6,7 +6,7 @@ on:
       branch:
         description: '要构建的分支'
         required: true
-        default: 'trae/solo-agent-vhkVM3'
+        default: 'trae/solo-agent-Fk46su'
       release_tag:
         description: 'Release 标签 (留空则不上传到 Release)'
         required: false
