@@ -7,17 +7,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndSelectAll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -40,6 +45,8 @@ fun ContentEditSheet(
 ) {
     val context = LocalContext.current
     val editorState = remember { TextFieldState() }
+    val editorScrollState = rememberScrollState()
+    var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
 
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
@@ -53,6 +60,16 @@ fun ContentEditSheet(
                 selection = TextRange(state.contentEditCursorOffset.coerceIn(0, length))
             }
         }
+    }
+
+    LaunchedEffect(show, state.contentEditLoading, state.contentEditCursorOffset, textLayoutResult) {
+        val layoutResult = textLayoutResult
+        if (!show || state.contentEditLoading || layoutResult == null) {
+            return@LaunchedEffect
+        }
+        val offset = state.contentEditCursorOffset.coerceIn(0, editorState.text.length)
+        val cursorTop = layoutResult.getCursorRect(offset).top.toInt()
+        editorScrollState.scrollTo((cursorTop - 120).coerceIn(0, editorScrollState.maxValue))
     }
 
     LaunchedEffect(editorState) {
@@ -119,6 +136,10 @@ fun ContentEditSheet(
             } else {
                 AppTextField(
                     state = editorState,
+                    scrollState = editorScrollState,
+                    onTextLayout = { getResult ->
+                        textLayoutResult = getResult()
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f, fill = false)
