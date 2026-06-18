@@ -73,7 +73,6 @@ fun AppAlertDialog(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 onDismiss()
-                                onDismissRequest()
                             }
                         )
                     }
@@ -131,7 +130,6 @@ fun AppAlertDialog(
                         SecondaryButton(
                             onClick = {
                                 onDismiss()
-                                onDismissRequest()
                             },
                             text = dismissText
                         )
