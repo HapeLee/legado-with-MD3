@@ -152,8 +152,8 @@ fun TocScreen(
 
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
 
-    val useReplace = viewModel.useReplace
-    val showWordCount = viewModel.showWordCount
+    val useReplace = state.useReplace
+    val showWordCount = state.showWordCount
     val bookmarkManagementTitle = stringResource(R.string.bookmark_management)
     val locateCurrentReadingText = stringResource(R.string.locate_current_reading)
     val moveToTopText = stringResource(R.string.move_to_top)
@@ -686,7 +686,7 @@ fun ChapterListContent(
                             .animateItem()
                             .fillMaxWidth(),
                         item = uiItem,
-                        showWordCount = viewModel.showWordCount,
+                        showWordCount = state.showWordCount,
                         onClick = {
                             if (state.selectedIds.isNotEmpty())
                                 viewModel.toggleSelection(uiItem.id)

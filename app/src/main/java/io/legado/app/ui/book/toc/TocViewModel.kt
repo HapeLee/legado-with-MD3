@@ -80,7 +80,9 @@ data class TocActionState(
     override val searchKey: String = "",
     override val isSearch: Boolean = false,
     override val isLoading: Boolean = false,
-    val downloadSummary: String = ""
+    val downloadSummary: String = "",
+    val useReplace: Boolean = false,
+    val showWordCount: Boolean = true,
 ) : ListUiState<TocItemUi>
 
 data class TocDomainItem(
@@ -347,7 +349,9 @@ class TocViewModel(
             searchKey = _searchKey.value,
             isSearch = isSearch,
             isLoading = isUploading,
-            downloadSummary = downloadSummary.value
+            downloadSummary = downloadSummary.value,
+            useReplace = tocPreferences.value.useReplace,
+            showWordCount = tocPreferences.value.showWordCount,
         )
     }
 
