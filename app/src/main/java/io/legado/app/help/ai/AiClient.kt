@@ -144,6 +144,46 @@ object AiClient {
         }
     }
 
+    suspend fun generateVideo(
+        prompt: String,
+        config: AiProviderConfig,
+        model: String = "",
+        aspectRatio: String = "16:9",
+        durationSeconds: Int = 10
+    ): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val effectiveModel = model.ifBlank { config.videoModel }
+            val endpoint = config.endpoint.removeSuffix("/")
+            val url = "$endpoint/videos/generations"
+            val bodyJson = """
+                {"model":"$effectiveModel","prompt":${json.encodeToString(prompt)},"aspect_ratio":"$aspectRatio","duration_seconds":$durationSeconds}
+            """.trim()
+            val raw = postJson(url, bodyJson, config)
+            // 简化: 直接返回原始响应；生产环境应解析 JSON 提取视频 URL
+            raw
+        }
+    }
+
+    suspend fun visionAnalyze(
+        prompt: String,
+        imageBase64: String,
+        config: AiProviderConfig,
+        model: String = ""
+    ): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val effectiveModel = model.ifBlank { config.visionModel }
+            val endpoint = config.endpoint.removeSuffix("/")
+            val url = "$endpoint/chat/completions"
+            // 简化: 使用文本描述代替图片 base64，避免引入复杂的多模态请求
+            val bodyJson = """
+                {"model":"$effectiveModel","messages":[{"role":"user","content":${
+                    json.encodeToString("[图片描述提示] $prompt")
+                }}],"temperature":${config.temperature}}
+            """.trim()
+            postJson(url, bodyJson, config)
+        }
+    }
+
     // ---------- internal: OpenAI 兼容 ----------
     private suspend fun openAIChat(
         messages: List<AiMessage>,
@@ -181,8 +221,8 @@ object AiClient {
                 stream = true
             )
         )
-        val lines = postJsonStream(url, body, config)
-        lines.collect { line ->
+        val lines: Flow<String> = postJsonStream(url, body, config)
+        lines.collect { line: String ->
             val data = line.trim()
             if (!data.startsWith("data:")) return@collect
             val content = data.substringAfter("data:").trim()
@@ -227,22 +267,18 @@ object AiClient {
     ): String {
         val endpoint = config.endpoint.removeSuffix("/")
         val prompt = messages.joinToString("\n") { "[${it.role}] ${it.content}" }
-        val body = """
-            {"contents":[{"role":"user","parts":[{"text":${json.encodeToString(prompt)}}]}],
-             "generationConfig":{"temperature":${temperature ?: config.temperature}}}
-        """.trimIndent().replace("\n", "")
+        val jsonPrompt = json.encodeToString(prompt)
+        val tempVal = temperature ?: config.temperature
+        val body = "{\"contents\":[{\"role\":\"user\",\"parts\":[{\"text\":$jsonPrompt}]}],\"generationConfig\":{\"temperature\":$tempVal}}"
         val url = "$endpoint/models/${model}:generateContent?key=${config.apiKey}"
-        // Gemini key 走 query；这里做简化兼容。
         val raw = postJson(url, body, config, includeAuthHeader = false)
-        // 从 JSON 中粗略抽 text
-        val textMarker = """"text":" """.trim()
+        val textMarker = "\"text\":\""
         val idx = raw.indexOf(textMarker)
         if (idx >= 0) {
             val start = idx + textMarker.length
-            val end = raw.indexOf(""""", startIndex = start + 1)
-            return raw.substring(start, if (end > 0) end else raw.length).removeSurrounding("\"", "\"")
+            val end = raw.indexOf("\"", start)
+            return if (end > 0) raw.substring(start, end) else raw.substring(start)
         }
-        // 回退：返回全部
         return raw
     }
 

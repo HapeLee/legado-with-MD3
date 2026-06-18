@@ -837,15 +837,15 @@ class AiContentToolsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onIntent(intent: AiContentToolsIntent) {
         when (intent) {
-            is AiContentToolsIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-            is AiContentToolsIntent.UpdateBookName -> _uiState.update { it.copy(sourceBookName = intent.value) }
-            is AiContentToolsIntent.UpdateChapter -> _uiState.update { it.copy(sourceChapter = intent.value) }
-            is AiContentToolsIntent.UpdateInput -> _uiState.update { it.copy(input = intent.value) }
-            is AiContentToolsIntent.UpdateTargetLanguage -> _uiState.update { it.copy(targetLanguage = intent.value) }
-            is AiContentToolsIntent.UpdateSummaryLevel -> _uiState.update { it.copy(summaryLevel = intent.value) }
-            is AiContentToolsIntent.UpdateRewriteStyle -> _uiState.update { it.copy(rewriteStyle = intent.value) }
-            is AiContentToolsIntent.UpdateTtsVoice -> _uiState.update { it.copy(ttsVoice = intent.value) }
-            is AiContentToolsIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiContentToolsIntent.ChangeTab -> _uiState.value = _uiState.value.copy(tab = intent.tab)
+            is AiContentToolsIntent.UpdateBookName -> _uiState.value = _uiState.value.copy(sourceBookName = intent.value)
+            is AiContentToolsIntent.UpdateChapter -> _uiState.value = _uiState.value.copy(sourceChapter = intent.value)
+            is AiContentToolsIntent.UpdateInput -> _uiState.value = _uiState.value.copy(input = intent.value)
+            is AiContentToolsIntent.UpdateTargetLanguage -> _uiState.value = _uiState.value.copy(targetLanguage = intent.value)
+            is AiContentToolsIntent.UpdateSummaryLevel -> _uiState.value = _uiState.value.copy(summaryLevel = intent.value)
+            is AiContentToolsIntent.UpdateRewriteStyle -> _uiState.value = _uiState.value.copy(rewriteStyle = intent.value)
+            is AiContentToolsIntent.UpdateTtsVoice -> _uiState.value = _uiState.value.copy(ttsVoice = intent.value)
+            is AiContentToolsIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiContentToolsIntent.Execute -> execute()
             is AiContentToolsIntent.CopyOutput -> copyOutput()
             is AiContentToolsIntent.PlayTts -> { /* 由上层 / 系统 TTS 处理 */ }
@@ -858,7 +858,7 @@ class AiContentToolsViewModel(app: Application) : AndroidViewModel(app) {
             _effects.tryEmit(AiContentToolsEffect.ShowToast("请先输入要处理的文本"))
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null, output = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, output = "")
         val systemPrompt = when (s.tab) {
             0 -> "你是一个专业翻译员。把下面的文本翻译成${s.targetLanguage}，保持原文语气、专有名词不翻译。"
             1 -> "你是一个摘要助手。用${s.summaryLevel}篇幅给出结构化摘要：核心情节、主要人物、关键信息。"
@@ -878,10 +878,10 @@ class AiContentToolsViewModel(app: Application) : AndroidViewModel(app) {
             )
             result.fold(
                 onSuccess = { text ->
-                    _uiState.update { it.copy(isLoading = false, output = text) }
+                    _uiState.value = _uiState.value.copy(isLoading = false, output = text)
                 },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "执行失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "执行失败")
                     _effects.tryEmit(AiContentToolsEffect.ShowToast("执行失败"))
                 }
             )
@@ -908,16 +908,16 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onIntent(intent: AiArtIntent) {
         when (intent) {
-            is AiArtIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-            is AiArtIntent.UpdateBookName -> _uiState.update { it.copy(bookName = intent.value) }
-            is AiArtIntent.UpdateAuthor -> _uiState.update { it.copy(author = intent.value) }
-            is AiArtIntent.UpdateIntro -> _uiState.update { it.copy(intro = intent.value) }
-            is AiArtIntent.UpdateCharacterName -> _uiState.update { it.copy(characterName = intent.value) }
-            is AiArtIntent.UpdateCharacterDesc -> _uiState.update { it.copy(characterDesc = intent.value) }
-            is AiArtIntent.UpdateSceneDesc -> _uiState.update { it.copy(sceneDesc = intent.value) }
-            is AiArtIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
-            is AiArtIntent.UpdateSize -> _uiState.update { it.copy(size = intent.value) }
-            is AiArtIntent.UpdateStyleHint -> _uiState.update { it.copy(styleHint = intent.value) }
+            is AiArtIntent.ChangeTab -> _uiState.value = _uiState.value.copy(tab = intent.tab)
+            is AiArtIntent.UpdateBookName -> _uiState.value = _uiState.value.copy(bookName = intent.value)
+            is AiArtIntent.UpdateAuthor -> _uiState.value = _uiState.value.copy(author = intent.value)
+            is AiArtIntent.UpdateIntro -> _uiState.value = _uiState.value.copy(intro = intent.value)
+            is AiArtIntent.UpdateCharacterName -> _uiState.value = _uiState.value.copy(characterName = intent.value)
+            is AiArtIntent.UpdateCharacterDesc -> _uiState.value = _uiState.value.copy(characterDesc = intent.value)
+            is AiArtIntent.UpdateSceneDesc -> _uiState.value = _uiState.value.copy(sceneDesc = intent.value)
+            is AiArtIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
+            is AiArtIntent.UpdateSize -> _uiState.value = _uiState.value.copy(size = intent.value)
+            is AiArtIntent.UpdateStyleHint -> _uiState.value = _uiState.value.copy(styleHint = intent.value)
             is AiArtIntent.GenerateImage -> generateImage()
             is AiArtIntent.GenerateCharacterCard -> generateCharacterCard()
             is AiArtIntent.SaveImage -> _effects.tryEmit(AiArtEffect.ShowToast("已保存到相册"))
@@ -937,7 +937,7 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
             _effects.tryEmit(AiArtEffect.ShowToast("请先填写描述"))
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -949,9 +949,9 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
                 quality = "standard"
             )
             result.fold(
-                onSuccess = { imgs -> _uiState.update { it.copy(isLoading = false, images = imgs) } },
+                onSuccess = { imgs -> _uiState.value = _uiState.value.copy(isLoading = false, images = imgs) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "生成失败")
                     _effects.tryEmit(AiArtEffect.ShowToast("生成失败"))
                 }
             )
@@ -961,7 +961,7 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
     private fun generateCharacterCard() {
         val s = _uiState.value
         val prompt = "请根据以下角色描述，生成一个角色卡片（中文 Markdown 输出）。角色名：${s.characterName}。描述：${s.characterDesc.take(400)}。包含：外貌、性格、代表台词、关系图、故事线标签。"
-        _uiState.update { it.copy(isLoading = true, error = null, characterText = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, characterText = "")
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -971,9 +971,9 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
                 model = s.model.ifBlank { cfg.chatModel }
             )
             result.fold(
-                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, characterText = text) } },
+                onSuccess = { text -> _uiState.value = _uiState.value.copy(isLoading = false, characterText = text) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "生成失败")
                     _effects.tryEmit(AiArtEffect.ShowToast("生成失败"))
                 }
             )
@@ -991,12 +991,12 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onIntent(intent: AiSourceAdvancedIntent) {
         when (intent) {
-            is AiSourceAdvancedIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-            is AiSourceAdvancedIntent.UpdateQueryBookName -> _uiState.update { it.copy(queryBookName = intent.value) }
-            is AiSourceAdvancedIntent.UpdateQueryAuthor -> _uiState.update { it.copy(queryAuthor = intent.value) }
-            is AiSourceAdvancedIntent.UpdateSelectedSource -> _uiState.update { it.copy(selectedSourceToValidate = intent.value) }
-            is AiSourceAdvancedIntent.UpdateSourceUrlToFix -> _uiState.update { it.copy(sourceUrlToFix = intent.value) }
-            is AiSourceAdvancedIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiSourceAdvancedIntent.ChangeTab -> _uiState.value = _uiState.value.copy(tab = intent.tab)
+            is AiSourceAdvancedIntent.UpdateQueryBookName -> _uiState.value = _uiState.value.copy(queryBookName = intent.value)
+            is AiSourceAdvancedIntent.UpdateQueryAuthor -> _uiState.value = _uiState.value.copy(queryAuthor = intent.value)
+            is AiSourceAdvancedIntent.UpdateSelectedSource -> _uiState.value = _uiState.value.copy(selectedSourceToValidate = intent.value)
+            is AiSourceAdvancedIntent.UpdateSourceUrlToFix -> _uiState.value = _uiState.value.copy(sourceUrlToFix = intent.value)
+            is AiSourceAdvancedIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiSourceAdvancedIntent.SearchSources -> searchSources()
             is AiSourceAdvancedIntent.EvaluateQuality -> evaluateQuality()
             is AiSourceAdvancedIntent.AutoFix -> autoFix()
@@ -1009,7 +1009,7 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
             _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请填写书名"))
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -1022,10 +1022,10 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
             result.fold(
                 onSuccess = { text ->
                     val lines = text.lines().map { it.trim() }.filter { it.isNotBlank() }
-                    _uiState.update { it.copy(isLoading = false, candidates = lines) }
+                    _uiState.value = _uiState.value.copy(isLoading = false, candidates = lines)
                 },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "查询失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "查询失败")
                     _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("查询失败"))
                 }
             )
@@ -1038,7 +1038,7 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
             _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请选择或粘贴要评估的书源"))
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null, qualityReport = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, qualityReport = "")
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -1049,9 +1049,9 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
                 model = s.model.ifBlank { cfg.chatModel }
             )
             result.fold(
-                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, qualityReport = text) } },
+                onSuccess = { text -> _uiState.value = _uiState.value.copy(isLoading = false, qualityReport = text) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "评估失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "评估失败")
                     _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("评估失败"))
                 }
             )
@@ -1064,7 +1064,7 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
             _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请粘贴要修复的书源 URL 或 JSON"))
             return
         }
-        _uiState.update { it.copy(isLoading = true, error = null, fixReport = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, fixReport = "")
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -1075,9 +1075,9 @@ class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
                 model = s.model.ifBlank { cfg.chatModel }
             )
             result.fold(
-                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, fixReport = text) } },
+                onSuccess = { text -> _uiState.value = _uiState.value.copy(isLoading = false, fixReport = text) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "修复失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "修复失败")
                     _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("修复失败"))
                 }
             )
@@ -1095,9 +1095,9 @@ class AiRecommendViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onIntent(intent: AiRecommendIntent) {
         when (intent) {
-            is AiRecommendIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-            is AiRecommendIntent.UpdateQuery -> _uiState.update { it.copy(query = intent.value) }
-            is AiRecommendIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiRecommendIntent.ChangeTab -> _uiState.value = _uiState.value.copy(tab = intent.tab)
+            is AiRecommendIntent.UpdateQuery -> _uiState.value = _uiState.value.copy(query = intent.value)
+            is AiRecommendIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiRecommendIntent.Generate -> generate(typeText = "灵感书单")
             is AiRecommendIntent.CoachReport -> generate(typeText = "阅读教练")
             is AiRecommendIntent.VibeReport -> generate(typeText = "阅读氛围")
@@ -1106,7 +1106,7 @@ class AiRecommendViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun generate(typeText: String) {
         val s = _uiState.value
-        _uiState.update { it.copy(isLoading = true, error = null, report = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, report = "")
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -1128,9 +1128,9 @@ class AiRecommendViewModel(app: Application) : AndroidViewModel(app) {
                 systemPrompt = sys
             )
             result.fold(
-                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, report = text) } },
+                onSuccess = { text -> _uiState.value = _uiState.value.copy(isLoading = false, report = text) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "生成失败")
                     _effects.tryEmit(AiRecommendEffect.ShowToast("生成失败"))
                 }
             )
@@ -1148,11 +1148,11 @@ class AiArchiveViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onIntent(intent: AiArchiveIntent) {
         when (intent) {
-            is AiArchiveIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
-            is AiArchiveIntent.UpdateInputDesc -> _uiState.update { it.copy(inputDesc = intent.value) }
-            is AiArchiveIntent.UpdateSampleText -> _uiState.update { it.copy(sampleText = intent.value) }
-            is AiArchiveIntent.UpdateFilePathPattern -> _uiState.update { it.copy(filePathPattern = intent.value) }
-            is AiArchiveIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+            is AiArchiveIntent.ChangeTab -> _uiState.value = _uiState.value.copy(tab = intent.tab)
+            is AiArchiveIntent.UpdateInputDesc -> _uiState.value = _uiState.value.copy(inputDesc = intent.value)
+            is AiArchiveIntent.UpdateSampleText -> _uiState.value = _uiState.value.copy(sampleText = intent.value)
+            is AiArchiveIntent.UpdateFilePathPattern -> _uiState.value = _uiState.value.copy(filePathPattern = intent.value)
+            is AiArchiveIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiArchiveIntent.GenerateReplaceRule -> generate("replace")
             is AiArchiveIntent.GenerateArchivePlan -> generate("archive")
             is AiArchiveIntent.GenerateRenamePlan -> generate("rename")
@@ -1166,7 +1166,7 @@ class AiArchiveViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun generate(mode: String) {
         val s = _uiState.value
-        _uiState.update { it.copy(isLoading = true, error = null, output = "") }
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null, output = "")
         viewModelScope.launch {
             val cfg = runCatching { AiConfigStore.currentConfig() }
                 .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
@@ -1185,9 +1185,9 @@ class AiArchiveViewModel(app: Application) : AndroidViewModel(app) {
                 systemPrompt = sys
             )
             result.fold(
-                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, output = text) } },
+                onSuccess = { text -> _uiState.value = _uiState.value.copy(isLoading = false, output = text) },
                 onFailure = { e ->
-                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "生成失败")
                     _effects.tryEmit(AiArchiveEffect.ShowToast("生成失败"))
                 }
             )
