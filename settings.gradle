@@ -14,7 +14,7 @@ pluginManagement {
     }
 }
 plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+    // id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0' // 本地已有 Java 21，无需自动下载
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
