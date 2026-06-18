@@ -341,7 +341,6 @@ fun GlobalThemePage(
                             onClick = {
                                 ReadBook.book?.setPageAnim(-1)
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.PageAnim(index)))
-                                onIntent(ReadBookIntent.PageAnimChanged)
                                 dismiss()
                             },
                         )

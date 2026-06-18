@@ -988,7 +988,12 @@ class ReadBookViewModel(
                         )
                     }
                     _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                        setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                        setOf(
+                            ConfigUpdateAction.UpdateBackground,
+                            ConfigUpdateAction.UpdateStyle,
+                            ConfigUpdateAction.ReloadContent,
+                            ConfigUpdateAction.UpdatePageAnim
+                        )
                     ))
                 }
             }
@@ -1007,7 +1012,8 @@ class ReadBookViewModel(
                             ConfigUpdateAction.UpdateBackgroundAlpha,
                             ConfigUpdateAction.UpdateStyle,
                             ConfigUpdateAction.UpdateSystemUi,
-                            ConfigUpdateAction.ReloadContent
+                            ConfigUpdateAction.ReloadContent,
+                            ConfigUpdateAction.UpdatePageAnim
                         )
                     )
                 )
@@ -3429,7 +3435,12 @@ class ReadBookViewModel(
                 readBookStyleConfigRepository.importCurrentStyle(bytes)
                 _uiState.update { it.copy(styleConfig = buildStyleConfig()) }
                 _effects.tryEmit(ReadBookEffect.UpdateReadViewConfig(
-                    setOf(ConfigUpdateAction.UpdateBackground, ConfigUpdateAction.UpdateStyle, ConfigUpdateAction.ReloadContent)
+                    setOf(
+                        ConfigUpdateAction.UpdateBackground,
+                        ConfigUpdateAction.UpdateStyle,
+                        ConfigUpdateAction.ReloadContent,
+                        ConfigUpdateAction.UpdatePageAnim
+                    )
                 ))
                 context.getString(R.string.success)
             }.onSuccess { message ->
