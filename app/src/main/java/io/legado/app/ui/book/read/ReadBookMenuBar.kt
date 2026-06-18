@@ -717,7 +717,9 @@ private fun ReadBookMenuSurface(
                                     onIntent(ReadBookIntent.HideMenu)
                                     onIntent(ReadBookIntent.OpenChapterList)
                                 },
-                                onGoToBackground = { onIntent(ReadBookIntent.CloseReadBook) },
+                                onGoToBackground = {
+                                    onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+                                },
                                 onShowReadAloudConfig = {
                                     onIntent(ReadBookIntent.ShowReadAloudConfig)
                                 },
@@ -931,7 +933,7 @@ private fun MenuTitleBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MenuTitleGlassButton(
-                    onClick = { onIntent(ReadBookIntent.CloseReadBook) },
+                    onClick = { onIntent(ReadBookIntent.CloseReadBook()) },
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     state = state,
@@ -2591,7 +2593,9 @@ private fun loadToolButtons(
         },
         infoMap.getValue("read_aloud").toButton(
             isActive = state.isReadAloudRunning,
-            onLongClick = { onIntent(ReadBookIntent.ShowReadAloudConfig) },
+            onLongClick = {
+                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+            },
         ) {
             if (state.isReadAloudRunning) {
                 onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
@@ -2983,7 +2987,7 @@ private fun loadFloatingIcons(
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},
                 onLongClick = if (id == "read_aloud") {
-                    { onIntent(ReadBookIntent.ShowReadAloudConfig) }
+                    { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
                 } else {
                     null
                 },
