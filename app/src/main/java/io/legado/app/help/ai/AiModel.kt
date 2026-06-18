@@ -1,319 +1,272 @@
 package io.legado.app.help.ai
 
-/**
- * AI 请求/响应数据模型。兼容 OpenAI 风格 API / Anthropic Claude / Gemini / 其他供应商。
- */
+import android.graphics.Bitmap
 
-// ========== 通用类型 ==========
+/**
+ * AI 提供商枚举
+ */
+enum class AiProvider(val displayName: String) {
+    OPENAI("OpenAI"),
+    ANTHROPIC("Anthropic"),
+    GOOGLE("Google Gemini"),
+    DEEPSEEK("DeepSeek"),
+    QWEN("通义千问"),
+    SILICONFLOW("硅基流动"),
+    XFYUN("科大讯飞"),
+    ZHIPU("智谱AI"),
+    OLLAMA("Ollama"),
+    GROQ("Groq"),
+    OPENROUTER("OpenRouter")
+}
+
+/**
+ * AI 消息
+ */
 data class AiMessage(
-    val role: String,           // system / user / assistant
+    val role: String,
     val content: String
 )
 
-/** 供应商类型 */
-enum class AiProvider(val displayName: String, val supportsChat: Boolean, val supportsImage: Boolean, val supportsVideo: Boolean, val supportsAudio: Boolean, val supportsVision: Boolean) {
-    OPENAI("OpenAI", true, true, false, true, true),
-    ANTHROPIC("Anthropic Claude", true, false, false, false, true),
-    GOOGLE("Google Gemini", true, true, true, true, true),
-    DEEPSEEK("DeepSeek", true, false, false, false, true),
-    QWEN("通义千问", true, true, false, true, true),
-    WENXIN("文心一言", true, true, false, false, false),
-    KIMI("Kimi (月之暗面)", true, false, false, false, true),
-    OLLAMA("Ollama (本地)", true, false, false, false, true),
-    CUSTOM("自定义 (OpenAI 兼容)", true, false, false, false, false);
-}
-
-/** 生成能力分类 */
-enum class AiCapability(val displayName: String) {
-    Chat("对话"),
-    Image("图像生成"),
-    Video("视频生成"),
-    Audio("语音合成"),
-    Vision("视觉分析"),
-    Tools("文本工具箱")
-}
-
-/** 对话历史 */
-data class AiConversation(
-    val id: String,
-    val title: String,
-    val messages: MutableList<AiMessage> = mutableListOf(),
-    val systemPrompt: String? = null,
-    val temperature: Float = 0.7f,
-    val model: String,
-    val provider: AiProvider,
-    val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis()
+/**
+ * 单条流式响应
+ */
+data class ChatStreamChunk(
+    val delta: String?,
+    val error: String?,
+    val done: Boolean = false
 )
 
-/** 预设角色 */
+/**
+ * 生成的图像
+ */
+data class GeneratedImage(
+    val url: String?,
+    val prompt: String,
+    val revisedPrompt: String? = null,
+    val base64: String? = null,
+    val bitmap: Bitmap? = null
+)
+
+/**
+ * AI 预设角色
+ */
 data class AiPreset(
     val id: String,
     val name: String,
-    val description: String,
     val systemPrompt: String,
-    val suggestedFirstMessage: String? = null,
-    val icon: String = "💬",
-    val builtIn: Boolean = false
+    val greeting: String? = null
 )
 
-/** 生成任务状态 */
-enum class GenerationStatus { Idle, Loading, Success, Error }
-
-// ========== 聊天 ==========
-data class ChatCompletionRequest(
-    val model: String,
-    val messages: List<AiMessage>,
-    val temperature: Float = 0.7f,
-    val max_tokens: Int? = null,
-    val stream: Boolean = false
-)
-
-data class ChatCompletionResponse(
-    val choices: List<ChatChoice>? = null,
-    val error: ChatError? = null
-) {
-    data class ChatChoice(val message: AiMessage?)
-    data class ChatError(val message: String?)
-}
-
-data class ChatStreamChunk(val delta: String?, val done: Boolean, val error: String?)
-
-// ========== 图像 ==========
-data class ImageGenerationRequest(
-    val model: String,
-    val prompt: String,
-    val n: Int = 1,
-    val size: String = "1024x1024",
-    val response_format: String = "url",
-    val quality: String? = null,
-    val style: String? = null,
-    val image_base64: String? = null   // 图生图
-)
-
-data class ImageGenerationResponse(
-    val data: List<ImageItem>? = null,
-    val error: ChatCompletionResponse.ChatError? = null
-) {
-    data class ImageItem(val url: String?, val b64_json: String?, val revised_prompt: String? = null)
-}
-
-data class GeneratedImage(
+/**
+ * 文本工具
+ */
+data class TextTool(
     val id: String,
-    val prompt: String,
-    val url: String?,
-    val b64: String?,
-    val revisedPrompt: String?,
-    val model: String,
-    val createdAt: Long
+    val name: String,
+    val systemPrompt: String,
+    val inputHint: String = "在此输入要处理的文本...",
+    val actionName: String = "处理"
 )
 
-// ========== 视频 ==========
-data class VideoGenerationRequest(
-    val model: String,
-    val prompt: String,
-    val aspect_ratio: String? = "16:9",
-    val duration_seconds: Int? = 10,
-    val image_base64: String? = null
-)
-
-data class VideoGenerationResponse(
-    val data: VideoItem? = null,
-    val error: ChatCompletionResponse.ChatError? = null
-) {
-    data class VideoItem(val url: String?)
-}
-
-// ========== 语音 TTS ==========
-data class TtsRequest(
-    val model: String,
-    val input: String,
-    val voice: String = "alloy",
-    val response_format: String = "mp3",
-    val speed: Float = 1.0f
-)
-
-data class TtsResponse(
-    val audioBytes: ByteArray? = null,
-    val audioUrl: String? = null,
-    val error: ChatCompletionResponse.ChatError? = null
-)
-
-// ========== 视觉 Vision ==========
-data class VisionRequest(
-    val model: String,
-    val prompt: String,
-    val imageBase64: String,
-    val detail: String = "auto"
-)
-
-// ========== 供应商配置 ==========
+/**
+ * AI 提供商配置
+ */
 data class AiProviderConfig(
-    val provider: AiProvider,
-    val enabled: Boolean = false,
-    val endpoint: String,
-    val apiKey: String,
-    val chatModel: String = "",
-    val imageModel: String = "",
-    val videoModel: String = "",
-    val ttsModel: String = "",
-    val visionModel: String = "",
+    val provider: AiProvider = AiProvider.OPENAI,
+    val endpoint: String = "https://api.openai.com/v1",
+    val apiKey: String = "",
+    val chatModel: String = "gpt-4o-mini",
+    val imageModel: String = "dall-e-3",
+    val videoModel: String = "sora",
+    val visionModel: String = "gpt-4o",
+    val ttsModel: String = "tts-1",
     val temperature: Float = 0.7f,
-    val timeoutSeconds: Long = 120,
-    val customName: String? = null
-) {
-    val displayName: String get() = customName ?: provider.displayName
-}
-
-/** 默认图片尺寸选项 */
-val IMAGE_SIZE_OPTIONS = listOf("256x256", "512x512", "1024x1024", "1024x1792", "1792x1024")
-
-/** 默认语音选项 */
-val TTS_VOICE_OPTIONS = listOf("alloy", "echo", "fable", "onyx", "nova", "shimmer")
-
-/** 预设角色 */
-val BUILT_IN_PRESETS: List<AiPreset> = listOf(
-    AiPreset(
-        id = "general",
-        name = "通用助手",
-        description = "通用的 AI 对话助手，可以问答、写作、头脑风暴。",
-        systemPrompt = "你是一个乐于助人、专业可靠的 AI 助手。请用清晰、简洁、有结构的方式回答用户的问题。",
-        icon = "🤖",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "writer",
-        name = "创作助手",
-        description = "擅长故事创作、小说构思、文案润色的写作伙伴。",
-        systemPrompt = "你是一位富有创造力的写作助手。你的任务是帮助用户进行文学创作、故事构思、人物设定、情节设计、文案润色。回答时注重语言的美感、故事的张力和角色的鲜活。请用中文回复。",
-        suggestedFirstMessage = "帮我写一个关于时间旅行者的短篇故事开头",
-        icon = "✍️",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "coder",
-        name = "编程专家",
-        description = "代码编写、调试、架构设计、最佳实践建议。",
-        systemPrompt = "你是一位资深的软件工程师和编程导师。擅长解释概念、调试代码、设计架构和编写测试。回答代码问题时：1. 使用代码块格式化 2. 解释关键思路 3. 给出可运行示例 4. 指出潜在问题和改进方向。请用中文回复。",
-        suggestedFirstMessage = "请解释 SOLID 原则，并给出 Kotlin 示例",
-        icon = "💻",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "translator",
-        name = "翻译专家",
-        description = "中英互译、多语言翻译、术语精准。",
-        systemPrompt = "你是一位专业翻译家。翻译时：1. 保留原文的语气和风格 2. 确保术语的准确性 3. 对文学作品注重意境的传递 4. 对技术文档注重精确性。请同时给出原文和翻译对照。",
-        suggestedFirstMessage = "请将下面的段落翻译为英文：",
-        icon = "🌐",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "teacher",
-        name = "学习导师",
-        description = "解释概念、制定学习计划、回答知识问题。",
-        systemPrompt = "你是一位耐心、博学的老师。你的任务是帮助用户学习和理解各种知识。回答时：1. 从基础开始，循序渐进 2. 使用类比和例子帮助理解 3. 鼓励用户思考 4. 推荐进一步学习的资源。请用中文回复。",
-        suggestedFirstMessage = "帮我制定一个 2 个月的机器学习学习计划",
-        icon = "🎓",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "analyst",
-        name = "分析顾问",
-        description = "摘要、总结、分析长文本，提炼要点。",
-        systemPrompt = "你是一位专业的内容分析师。擅长从长文中提取关键信息、做结构化总结、列出要点、识别模式和给出洞察。输出时使用项目符号或编号，结构清晰。请用中文回复。",
-        suggestedFirstMessage = "请帮我分析以下内容的要点：",
-        icon = "📊",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "designer",
-        name = "创意设计师",
-        description = "图像生成、设计灵感、UI 建议、配色方案。",
-        systemPrompt = "你是一位富有创意的视觉设计师。擅长：1. 为图像生成撰写高质量的 prompt 2. 给出 UI/UX 设计建议 3. 配色方案与视觉风格建议 4. 设计灵感和创意方向。回答时注重视觉描述、专业术语和可执行的建议。请用中文回复。",
-        suggestedFirstMessage = "帮我生成一个赛博朋克风格的城市夜景图片",
-        icon = "🎨",
-        builtIn = true
-    ),
-    AiPreset(
-        id = "editor",
-        name = "文本润色",
-        description = "校对、改写、润色、优化文风。",
-        systemPrompt = "你是一位资深的文字编辑。擅长：1. 校对拼写和语法错误 2. 润色语言使其更通顺 3. 根据目标风格改写 4. 压缩或扩写文本 5. 优化结构和逻辑。请给出原文、修改版以及修改说明。",
-        suggestedFirstMessage = "请帮我润色以下段落，使其更专业：",
-        icon = "📝",
-        builtIn = true
-    )
+    val timeoutSeconds: Int = 120
 )
 
-/** 默认供应商配置模板 */
+/**
+ * 每个提供商的默认值
+ */
 fun defaultProviderConfig(provider: AiProvider): AiProviderConfig {
     return when (provider) {
         AiProvider.OPENAI -> AiProviderConfig(
             provider = AiProvider.OPENAI,
             endpoint = "https://api.openai.com/v1",
-            apiKey = "",
             chatModel = "gpt-4o-mini",
             imageModel = "dall-e-3",
-            ttsModel = "tts-1",
-            visionModel = "gpt-4o"
+            visionModel = "gpt-4o",
+            ttsModel = "tts-1"
         )
         AiProvider.ANTHROPIC -> AiProviderConfig(
             provider = AiProvider.ANTHROPIC,
             endpoint = "https://api.anthropic.com/v1",
-            apiKey = "",
-            chatModel = "claude-3-sonnet-20240229",
-            visionModel = "claude-3-opus-20240229"
+            chatModel = "claude-3-5-haiku-latest",
+            imageModel = "claude-3-5-sonnet",
+            visionModel = "claude-3-5-sonnet-latest",
+            ttsModel = ""
         )
         AiProvider.GOOGLE -> AiProviderConfig(
             provider = AiProvider.GOOGLE,
             endpoint = "https://generativelanguage.googleapis.com/v1beta",
-            apiKey = "",
             chatModel = "gemini-2.0-flash",
-            imageModel = "gemini-2.0-flash-image",
-            visionModel = "gemini-2.0-flash"
+            imageModel = "imagen-3.0-generate-002",
+            visionModel = "gemini-2.0-flash",
+            ttsModel = ""
         )
         AiProvider.DEEPSEEK -> AiProviderConfig(
             provider = AiProvider.DEEPSEEK,
             endpoint = "https://api.deepseek.com/v1",
-            apiKey = "",
             chatModel = "deepseek-chat",
-            visionModel = "deepseek-chat"
+            imageModel = "",
+            visionModel = "deepseek-chat",
+            ttsModel = ""
         )
         AiProvider.QWEN -> AiProviderConfig(
             provider = AiProvider.QWEN,
             endpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            apiKey = "",
             chatModel = "qwen-plus",
-            imageModel = "qwen-vl-plus",
-            ttsModel = "cosyvoice-v3",
-            visionModel = "qwen-vl-plus"
+            imageModel = "wanx-v1",
+            visionModel = "qwen-vl-max",
+            ttsModel = ""
         )
-        AiProvider.WENXIN -> AiProviderConfig(
-            provider = AiProvider.WENXIN,
-            endpoint = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1",
-            apiKey = "",
-            chatModel = "ernie-4.0"
+        AiProvider.SILICONFLOW -> AiProviderConfig(
+            provider = AiProvider.SILICONFLOW,
+            endpoint = "https://api.siliconflow.cn/v1",
+            chatModel = "Qwen/Qwen2.5-7B-Instruct",
+            imageModel = "",
+            visionModel = "",
+            ttsModel = ""
         )
-        AiProvider.KIMI -> AiProviderConfig(
-            provider = AiProvider.KIMI,
-            endpoint = "https://api.moonshot.cn/v1",
-            apiKey = "",
-            chatModel = "moonshot-v1-8k",
-            visionModel = "moonshot-v1-8k"
+        AiProvider.XFYUN -> AiProviderConfig(
+            provider = AiProvider.XFYUN,
+            endpoint = "https://spark-api-open.xf-yun.com/v1",
+            chatModel = "generalv3.5",
+            imageModel = "",
+            visionModel = "",
+            ttsModel = ""
+        )
+        AiProvider.ZHIPU -> AiProviderConfig(
+            provider = AiProvider.ZHIPU,
+            endpoint = "https://open.bigmodel.cn/api/paas/v4",
+            chatModel = "glm-4-flash",
+            imageModel = "",
+            visionModel = "glm-4v-flash",
+            ttsModel = ""
         )
         AiProvider.OLLAMA -> AiProviderConfig(
             provider = AiProvider.OLLAMA,
             endpoint = "http://localhost:11434/v1",
-            apiKey = "ollama",
-            chatModel = "llama3",
-            visionModel = "llava"
+            chatModel = "llama3.2",
+            imageModel = "",
+            visionModel = "llava",
+            ttsModel = ""
         )
-        AiProvider.CUSTOM -> AiProviderConfig(
-            provider = AiProvider.CUSTOM,
-            endpoint = "https://api.example.com/v1",
-            apiKey = "",
-            chatModel = "custom-model"
+        AiProvider.GROQ -> AiProviderConfig(
+            provider = AiProvider.GROQ,
+            endpoint = "https://api.groq.com/openai/v1",
+            chatModel = "llama-3.3-70b-versatile",
+            imageModel = "",
+            visionModel = "llama-3.2-90b-vision-preview",
+            ttsModel = ""
+        )
+        AiProvider.OPENROUTER -> AiProviderConfig(
+            provider = AiProvider.OPENROUTER,
+            endpoint = "https://openrouter.ai/api/v1",
+            chatModel = "openai/gpt-4o-mini",
+            imageModel = "",
+            visionModel = "openai/gpt-4o",
+            ttsModel = ""
         )
     }
 }
+
+/**
+ * 内置聊天预设
+ */
+val BUILT_IN_PRESETS: List<AiPreset> = listOf(
+    AiPreset(
+        id = "general",
+        name = "通用助手",
+        systemPrompt = "你是一个乐于助人的 AI 助手，请用中文回答用户问题。"
+    ),
+    AiPreset(
+        id = "creative-writer",
+        name = "创意写作",
+        systemPrompt = "你是一位富有想象力的创意写作助手。请帮助用户构思小说情节、人物设定、场景描写等，用中文回答。"
+    ),
+    AiPreset(
+        id = "translator",
+        name = "翻译助手",
+        systemPrompt = "你是一位专业的翻译助手。请准确、自然地进行中英文互译，保留原有风格与语气。"
+    ),
+    AiPreset(
+        id = "code-helper",
+        name = "编程助手",
+        systemPrompt = "你是一位资深的编程助手，熟悉 Kotlin、Java、Python、JavaScript、Android 开发。请提供简洁可运行的代码与清晰解释。"
+    ),
+    AiPreset(
+        id = "summarizer",
+        name = "摘要助手",
+        systemPrompt = "你是一位文档摘要专家。请用简洁的中文总结用户提供的文本，保留关键信息与逻辑要点。"
+    ),
+    AiPreset(
+        id = "book-recommender",
+        name = "阅读顾问",
+        systemPrompt = "你是一位资深的阅读顾问，熟悉小说、传记、科技、历史等多个领域。请基于用户的阅读偏好给出书籍推荐与分析，用中文回答。"
+    )
+)
+
+/**
+ * 文本工具箱
+ */
+val TEXT_TOOLS: List<TextTool> = listOf(
+    TextTool(
+        id = "translate-en",
+        name = "中译英",
+        systemPrompt = "请将用户提供的中文文本翻译成地道、自然的英文。",
+        inputHint = "输入要翻译的中文文本...",
+        actionName = "翻译"
+    ),
+    TextTool(
+        id = "translate-zh",
+        name = "英译中",
+        systemPrompt = "请将用户提供的英文文本翻译成准确、流畅的中文。",
+        inputHint = "输入要翻译的英文文本...",
+        actionName = "翻译"
+    ),
+    TextTool(
+        id = "polish",
+        name = "润色",
+        systemPrompt = "请对用户提供的中文文本进行润色，保持原意不变，使表达更准确、更优雅、更通顺。",
+        inputHint = "输入要润色的文本...",
+        actionName = "润色"
+    ),
+    TextTool(
+        id = "summarize",
+        name = "摘要",
+        systemPrompt = "请用简洁的中文为用户提供的文本生成一份不超过 200 字的摘要，保留关键信息。",
+        inputHint = "输入要摘要的长文本...",
+        actionName = "摘要"
+    ),
+    TextTool(
+        id = "continue-writing",
+        name = "续写",
+        systemPrompt = "请根据用户提供的文本进行自然、富有创造力的中文续写，保持风格一致，续写不少于 150 字。",
+        inputHint = "输入要续写的内容...",
+        actionName = "续写"
+    ),
+    TextTool(
+        id = "keywords",
+        name = "提取关键词",
+        systemPrompt = "请从用户提供的中文文本中提取 5~10 个最具代表性的关键词，用顿号分隔。",
+        inputHint = "输入要处理的文本...",
+        actionName = "提取"
+    ),
+    TextTool(
+        id = "proofread",
+        name = "校对",
+        systemPrompt = "请检查用户提供的文本中的错别字、标点与语法问题，列出问题并给出修正版本。",
+        inputHint = "输入要校对的文本...",
+        actionName = "校对"
+    )
+)

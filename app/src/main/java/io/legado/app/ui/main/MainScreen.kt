@@ -118,6 +118,7 @@ fun MainScreen(
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToAiConsole: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -426,6 +427,7 @@ fun MainScreen(
                                     when (event) {
                                         PrefClickEvent.OpenBookCacheManage -> onNavigateToBookCacheManage()
                                         PrefClickEvent.OpenReadRecord -> onNavigateToReadRecord()
+                                        PrefClickEvent.OpenAiConsole -> onNavigateToAiConsole()
                                         else -> viewModel.onPrefClickEvent(event)
                                     }
                                 }

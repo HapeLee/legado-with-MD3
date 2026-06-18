@@ -161,6 +161,9 @@ fun MainActivity.mainEntryProvider(
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
             },
+            onNavigateToAiConsole = {
+                onNavigateToRoute(MainRouteAiConsole)
+            },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
@@ -636,6 +639,101 @@ fun MainActivity.mainEntryProvider(
             state = viewModel.uiState.collectAsStateWithLifecycle().value,
             onIntent = viewModel::onIntent,
             onBack = { onNavigateBack() },
+        )
+    }
+
+    // ========== AI 模块入口 ==========
+    entry<MainRouteAiConsole> {
+        io.legado.app.ui.ai.AiConsoleScreen(
+            onBack = { onNavigateBack() },
+            onOpenChat = { onNavigateToRoute(MainRouteAiChat) },
+            onOpenImage = { onNavigateToRoute(MainRouteAiImage) },
+            onOpenVideo = { onNavigateToRoute(MainRouteAiVideo) },
+            onOpenVision = { onNavigateToRoute(MainRouteAiVision) },
+            onOpenTextTools = { onNavigateToRoute(MainRouteAiTextTools) },
+            onOpenSource = { onNavigateToRoute(MainRouteAiSource) },
+            onOpenBookshelf = { onNavigateToRoute(MainRouteAiBookshelf) },
+            onOpenSettings = { onNavigateToRoute(MainRouteAiSettings) }
+        )
+    }
+
+    entry<MainRouteAiChat> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiChatViewModel>()
+        io.legado.app.ui.ai.AiChatScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiImage> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiImageViewModel>()
+        io.legado.app.ui.ai.AiImageScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiVideo> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiVideoViewModel>()
+        io.legado.app.ui.ai.AiVideoScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiVision> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiVisionViewModel>()
+        io.legado.app.ui.ai.AiVisionScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiTextTools> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiTextToolsViewModel>()
+        io.legado.app.ui.ai.AiTextToolsScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiSource> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSourceViewModel>()
+        io.legado.app.ui.ai.AiSourceScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiBookshelf> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiBookshelfViewModel>()
+        io.legado.app.ui.ai.AiBookshelfScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiSettings> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSettingsViewModel>()
+        io.legado.app.ui.ai.AiSettingsScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
         )
     }
 }

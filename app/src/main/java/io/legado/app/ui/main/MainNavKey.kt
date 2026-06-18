@@ -107,6 +107,34 @@ data class MainRouteSearchContent(
 @Serializable
 data object MainRouteAbout : MainRoute
 
+// ========== AI 模块路由 ==========
+@Serializable
+data object MainRouteAiConsole : MainRoute
+
+@Serializable
+data object MainRouteAiChat : MainRoute
+
+@Serializable
+data object MainRouteAiImage : MainRoute
+
+@Serializable
+data object MainRouteAiVideo : MainRoute
+
+@Serializable
+data object MainRouteAiVision : MainRoute
+
+@Serializable
+data object MainRouteAiTextTools : MainRoute
+
+@Serializable
+data object MainRouteAiSource : MainRoute
+
+@Serializable
+data object MainRouteAiBookshelf : MainRoute
+
+@Serializable
+data object MainRouteAiSettings : MainRoute
+
 object MainRouteConst {
     const val ROUTE_MAIN = "main"
     const val ROUTE_SETTINGS = "settings"
@@ -135,4 +163,13 @@ object MainRouteConst {
     const val ROUTE_READ_RECORD = "read_record"
     const val ROUTE_READ_RECORD_OVERVIEW = "read_record_overview"
     const val ROUTE_ABOUT = "about"
+    const val ROUTE_AI_CONSOLE = "ai/console"
+    const val ROUTE_AI_CHAT = "ai/chat"
+    const val ROUTE_AI_IMAGE = "ai/image"
+    const val ROUTE_AI_VIDEO = "ai/video"
+    const val ROUTE_AI_VISION = "ai/vision"
+    const val ROUTE_AI_TEXT_TOOLS = "ai/text_tools"
+    const val ROUTE_AI_SOURCE = "ai/book_source"
+    const val ROUTE_AI_BOOKSHELF = "ai/bookshelf"
+    const val ROUTE_AI_SETTINGS = "ai/settings"
 }

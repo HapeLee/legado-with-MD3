@@ -1,68 +1,43 @@
 package io.legado.app.help.ai
 
-import com.google.gson.Gson
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
-import io.legado.app.help.http.okHttpClient
-import io.legado.app.utils.GSON
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 /**
- * AI API 统一客户端。支持多供应商 (OpenAI / Anthropic / DeepSeek / Qwen / Kimi / Ollama / Custom)。
+ * AI API 统一客户端
+ * - 支持 OpenAI 兼容协议（OpenAI、DeepSeek、Qwen、硅基流动、Ollama、Groq、OpenRouter、智谱、讯飞）
+ * - 支持 Anthropic Claude
+ * - 支持 Google Gemini（文本对话）
  */
 object AiClient {
 
-    private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
+    private val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
 
-    // ========== 核心辅助 ==========
-    private fun buildClient(config: AiProviderConfig) = okHttpClient.newBuilder()
-        .callTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
-        .connectTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
-        .readTimeout(config.timeoutSeconds, TimeUnit.SECONDS)
-        .build()
-
-    private fun ensureTrailingSlash(url: String): String {
-        return if (url.endsWith("/")) url else "$url/"
+    private fun httpClient(timeoutSeconds: Int): OkHttpClient {
+        return OkHttpClient.Builder()
+            .connectTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+            .readTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+            .writeTimeout(timeoutSeconds.toLong(), TimeUnit.SECONDS)
+            .followRedirects(true)
+            .build()
     }
 
-    /**
-     * 根据供应商格式化请求体。大多数是标准 OpenAI 格式。
-     */
-    private fun authHeaders(config: AiProviderConfig, isStreaming: Boolean = false): Map<String, String> {
-        return when (config.provider) {
-            AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-            AiProvider.OLLAMA, AiProvider.CUSTOM, AiProvider.WENXIN -> {
-                mapOf(
-                    "Authorization" to "Bearer ${config.apiKey}",
-                    "Content-Type" to "application/json"
-                )
-            }
-            AiProvider.ANTHROPIC -> mapOf(
-                "x-api-key" to config.apiKey,
-                "anthropic-version" to "2023-06-01",
-                "Content-Type" to "application/json"
-            )
-            AiProvider.GOOGLE -> mapOf(
-                "x-goog-api-key" to config.apiKey,
-                "Content-Type" to "application/json"
-            )
-        }
-    }
-
-    // ========== 聊天 (非流式) ==========
+    // ========== 聊天（非流式） ==========
     suspend fun chat(
         messages: List<AiMessage>,
         config: AiProviderConfig,
@@ -70,90 +45,411 @@ object AiClient {
         temperature: Float = config.temperature,
         systemPrompt: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
-            runCatching {
-            val endpoint = ensureTrailingSlash(config.endpoint)
-            val url = when (config.provider) {
-                AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-                AiProvider.OLLAMA, AiProvider.CUSTOM -> "${endpoint}chat/completions"
-                AiProvider.ANTHROPIC -> "${endpoint}messages"
-                AiProvider.GOOGLE -> "${endpoint}models/$model:generateContent"
-                AiProvider.WENXIN -> "${endpoint}chat/completions"
-            }
-
-            val requestBody = buildChatRequestBody(config, messages, model, temperature, systemPrompt, stream = false)
-            val request = Request.Builder().url(url)
-                .apply { authHeaders(config).forEach { (k, v) -> addHeader(k, v) } }
-                .post(requestBody.toString().toRequestBody(jsonMediaType))
-                .build()
-
-            buildClient(config).newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) {
-                    val err = resp.body?.string() ?: ""
-                    throw Exception("HTTP ${resp.code}: $err")
+        runCatching {
+            val finalMessages = buildList {
+                if (!systemPrompt.isNullOrEmpty()) {
+                    add(AiMessage("system", systemPrompt))
                 }
-                val body = resp.body?.string() ?: throw Exception("Empty response")
-                parseChatResponse(body, config.provider)
+                addAll(messages)
+            }
+            when (config.provider) {
+                AiProvider.ANTHROPIC -> chatAnthropic(finalMessages, config, model, temperature)
+                AiProvider.GOOGLE -> chatGemini(finalMessages, config, model, temperature)
+                else -> chatOpenAiCompatible(finalMessages, config, model, temperature)
             }
         }
     }
 
-    // ========== 聊天 (流式 SSE) ==========
+    private fun chatOpenAiCompatible(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): String {
+        val url = config.endpoint.trimEnd('/') + "/chat/completions"
+        val bodyJson = buildString {
+            append("{")
+            append("\"model\":").append(jsonString(model)).append(",")
+            append("\"temperature\":").append(temperature).append(",")
+            append("\"messages\":[")
+            messages.forEachIndexed { i, m ->
+                if (i > 0) append(",")
+                append("{\"role\":").append(jsonString(m.role)).append(",\"content\":").append(jsonString(m.content)).append("}")
+            }
+            append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .apply {
+                if (config.provider == AiProvider.OLLAMA || config.apiKey.isEmpty()) {
+                    // Ollama 不需要 key
+                } else {
+                    header("Authorization", "Bearer ${config.apiKey}")
+                }
+            }
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                throw Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+            }
+            val text = resp.body?.string().orEmpty()
+            // 提取第一条 message.content
+            val idx1 = text.indexOf("\"content\":")
+            if (idx1 < 0) throw Exception("响应中无 content: $text")
+            val start = text.indexOf("\"", idx1 + 10) + 1
+            var end = start
+            var inEscape = false
+            while (end < text.length) {
+                val c = text[end]
+                if (inEscape) { inEscape = false; end++; continue }
+                if (c == '\\') { inEscape = true; end++; continue }
+                if (c == '"') break
+                end++
+            }
+            val raw = text.substring(start, end)
+            return unescapeJsonString(raw)
+        }
+    }
+
+    private fun chatAnthropic(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): String {
+        val url = config.endpoint.trimEnd('/') + "/messages"
+        val (sysPrompt, userMsgs) = separateSystemPrompt(messages)
+        val messagesJson = userMsgs.joinToString(",") { m ->
+            "{\"role\":${jsonString(if (m.role == "system") "user" else m.role)},\"content\":${jsonString(m.content)}}"
+        }
+        val bodyJson = buildString {
+            append("{")
+            append("\"model\":").append(jsonString(model)).append(",")
+            append("\"max_tokens\":4096,")
+            append("\"temperature\":").append(temperature).append(",")
+            if (sysPrompt != null) {
+                append("\"system\":").append(jsonString(sysPrompt)).append(",")
+            }
+            append("\"messages\":[").append(messagesJson).append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .header("x-api-key", config.apiKey)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+            val text = resp.body?.string().orEmpty()
+            // 查找第一个 "text":"... 形式
+            val idx1 = text.indexOf("\"text\":")
+            if (idx1 < 0) throw Exception("响应中无 text: $text")
+            val start = text.indexOf("\"", idx1 + 8) + 1
+            var end = start
+            var inEscape = false
+            while (end < text.length) {
+                val c = text[end]
+                if (inEscape) { inEscape = false; end++; continue }
+                if (c == '\\') { inEscape = true; end++; continue }
+                if (c == '"') break
+                end++
+            }
+            return unescapeJsonString(text.substring(start, end))
+        }
+    }
+
+    private fun chatGemini(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): String {
+        val url = "${config.endpoint.trimEnd('/')}/models/$model:generateContent?key=${config.apiKey}"
+        val (sysPrompt, userMsgs) = separateSystemPrompt(messages)
+        val contentsJson = userMsgs.joinToString(",") { m ->
+            val role = if (m.role == "assistant") "model" else "user"
+            "{\"role\":${jsonString(role)},\"parts\":[{\"text\":${jsonString(m.content)}}]}"
+        }
+        val bodyJson = buildString {
+            append("{")
+            if (sysPrompt != null) {
+                append("\"systemInstruction\":{\"parts\":[{\"text\":${jsonString(sysPrompt)}}]},")
+            }
+            append("\"generationConfig\":{\"temperature\":").append(temperature).append("},")
+            append("\"contents\":[").append(contentsJson).append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .header("content-type", "application/json")
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+            val text = resp.body?.string().orEmpty()
+            val idx1 = text.indexOf("\"text\":")
+            if (idx1 < 0) throw Exception("响应中无 text: $text")
+            val start = text.indexOf("\"", idx1 + 8) + 1
+            var end = start
+            var inEscape = false
+            while (end < text.length) {
+                val c = text[end]
+                if (inEscape) { inEscape = false; end++; continue }
+                if (c == '\\') { inEscape = true; end++; continue }
+                if (c == '"') break
+                end++
+            }
+            return unescapeJsonString(text.substring(start, end))
+        }
+    }
+
+    private fun separateSystemPrompt(messages: List<AiMessage>): Pair<String?, List<AiMessage>> {
+        val sys = messages.firstOrNull { it.role == "system" }?.content
+        val rest = if (messages.firstOrNull()?.role == "system") messages.drop(1) else messages
+        return sys to rest
+    }
+
+    // ========== 流式聊天 ==========
     fun chatStream(
         messages: List<AiMessage>,
         config: AiProviderConfig,
         model: String = config.chatModel,
         temperature: Float = config.temperature,
         systemPrompt: String? = null
-    ): Flow<ChatStreamChunk> = callbackFlow {
-        val endpoint = ensureTrailingSlash(config.endpoint)
-        val url = when (config.provider) {
-            AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-            AiProvider.OLLAMA, AiProvider.CUSTOM, AiProvider.WENXIN -> "${endpoint}chat/completions"
-            AiProvider.ANTHROPIC -> "${endpoint}messages"
-            AiProvider.GOOGLE -> "${endpoint}models/$model:streamGenerateContent?alt=sse"
+    ): Flow<ChatStreamChunk> = flow {
+        runCatching {
+            val finalMessages = buildList {
+                if (!systemPrompt.isNullOrEmpty()) {
+                    add(AiMessage("system", systemPrompt))
+                }
+                addAll(messages)
+            }
+            when (config.provider) {
+                AiProvider.ANTHROPIC -> streamAnthropic(finalMessages, config, model, temperature)
+                AiProvider.GOOGLE -> streamGemini(finalMessages, config, model, temperature)
+                else -> streamOpenAiCompatible(finalMessages, config, model, temperature)
+            }
+        }.onSuccess { flowInternal ->
+            flowInternal.collect { emit(it) }
+        }.onFailure { err ->
+            emit(ChatStreamChunk(delta = null, error = err.message, done = true))
         }
-        val requestBody = buildChatRequestBody(config, messages, model, temperature, systemPrompt, stream = true)
-        val request = Request.Builder().url(url)
-            .apply { authHeaders(config, isStreaming = true).forEach { (k, v) -> addHeader(k, v) } }
-            .post(requestBody.toString().toRequestBody(jsonMediaType))
-            .build()
+    }.flowOn(Dispatchers.IO)
 
-        val call = buildClient(config).newCall(request)
+    private fun streamOpenAiCompatible(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): Flow<ChatStreamChunk> = callbackFlow {
+        val url = config.endpoint.trimEnd('/') + "/chat/completions"
+        val bodyJson = buildString {
+            append("{")
+            append("\"model\":").append(jsonString(model)).append(",")
+            append("\"temperature\":").append(temperature).append(",")
+            append("\"stream\":true,")
+            append("\"messages\":[")
+            messages.forEachIndexed { i, m ->
+                if (i > 0) append(",")
+                append("{\"role\":").append(jsonString(m.role)).append(",\"content\":").append(jsonString(m.content)).append("}")
+            }
+            append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .apply {
+                if (config.provider != AiProvider.OLLAMA && config.apiKey.isNotEmpty()) {
+                    header("Authorization", "Bearer ${config.apiKey}")
+                }
+            }
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        val call = httpClient(config.timeoutSeconds).newCall(req)
+        val resp: Response = call.execute()
         try {
-            val resp = call.execute()
             if (!resp.isSuccessful) {
-                val err = resp.body?.string() ?: ""
-                trySend(ChatStreamChunk(null, true, "HTTP ${resp.code}: $err))
-                channel.close()
+                val err = "HTTP ${resp.code}: ${resp.body?.string()?.take(500)}"
+                trySend(ChatStreamChunk(null, err, true))
                 return@callbackFlow
             }
             val reader = BufferedReader(InputStreamReader(resp.body?.byteStream()))
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                val l = line ?: continue
-                when {
-                    l.startsWith("data: [DONE]") -> {
-                        trySend(ChatStreamChunk(null, true, null))
-                        break
+                val l = line?.trim() ?: continue
+                if (l.isEmpty()) continue
+                if (!l.startsWith("data:")) continue
+                val payload = l.substring(5).trim()
+                if (payload == "[DONE]") {
+                    trySend(ChatStreamChunk(null, null, true))
+                    break
+                }
+                // 简单解析，查找 "delta":{"role":"xxx","content":"YYY"} 或 "delta":{"content":"YYY"}
+                val cIdx = payload.indexOf("\"content\":")
+                if (cIdx > 0) {
+                    val start = payload.indexOf("\"", cIdx + 10) + 1
+                    var end = start
+                    var inEscape = false
+                    while (end < payload.length) {
+                        val c = payload[end]
+                        if (inEscape) { inEscape = false; end++; continue }
+                        if (c == '\\') { inEscape = true; end++; continue }
+                        if (c == '"') break
+                        end++
                     }
-                    l.startsWith("data:") -> {
-                        val jsonStr = l.substring(5).trim()
-                        if (jsonStr.isNotEmpty()) {
-                            val delta = parseStreamDelta(jsonStr, config.provider)
-                            if (delta != null) trySend(ChatStreamChunk(delta, false, null))
-                        }
-                    }
-                    l == "[DONE]" -> trySend(ChatStreamChunk(null, true, null))
+                    val delta = unescapeJsonString(payload.substring(start, end))
+                    trySend(ChatStreamChunk(delta, null, false))
                 }
             }
-            reader.close()
-        } catch (e: Exception) {
-                trySend(ChatStreamChunk(null, true, e.message))
+        } catch (e: Throwable) {
+            trySend(ChatStreamChunk(null, e.message, true))
         } finally {
-            channel.close()
+            resp.close()
         }
-        awaitClose { call.cancel()
-    }.flowOn(Dispatchers.IO)
+        awaitClose { call.cancel() }
+    }
+
+    private fun streamAnthropic(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): Flow<ChatStreamChunk> = callbackFlow {
+        val url = config.endpoint.trimEnd('/') + "/messages"
+        val (sysPrompt, userMsgs) = separateSystemPrompt(messages)
+        val messagesJson = userMsgs.joinToString(",") { m ->
+            "{\"role\":${jsonString(if (m.role == "system") "user" else m.role)},\"content\":${jsonString(m.content)}}"
+        }
+        val bodyJson = buildString {
+            append("{")
+            append("\"model\":").append(jsonString(model)).append(",")
+            append("\"max_tokens\":4096,")
+            append("\"temperature\":").append(temperature).append(",")
+            append("\"stream\":true,")
+            if (sysPrompt != null) {
+                append("\"system\":").append(jsonString(sysPrompt)).append(",")
+            }
+            append("\"messages\":[").append(messagesJson).append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .header("x-api-key", config.apiKey)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        val call = httpClient(config.timeoutSeconds).newCall(req)
+        val resp = call.execute()
+        try {
+            if (!resp.isSuccessful) {
+                trySend(ChatStreamChunk(null, "HTTP ${resp.code}: ${resp.body?.string()?.take(500)}", true))
+                return@callbackFlow
+            }
+            val reader = BufferedReader(InputStreamReader(resp.body?.byteStream()))
+            var line: String?
+            var eventType = ""
+            while (reader.readLine().also { line = it } != null) {
+                val l = line?.trim() ?: continue
+                if (l.startsWith("event:")) {
+                    eventType = l.substring(6).trim()
+                } else if (l.startsWith("data:")) {
+                    val payload = l.substring(5).trim()
+                    if (eventType == "content_block_delta") {
+                        val cIdx = payload.indexOf("\"text\":")
+                        if (cIdx > 0) {
+                            val start = payload.indexOf("\"", cIdx + 8) + 1
+                            var end = start
+                            var inEscape = false
+                            while (end < payload.length) {
+                                val c = payload[end]
+                                if (inEscape) { inEscape = false; end++; continue }
+                                if (c == '\\') { inEscape = true; end++; continue }
+                                if (c == '"') break
+                                end++
+                            }
+                            trySend(ChatStreamChunk(unescapeJsonString(payload.substring(start, end)), null, false))
+                        }
+                    } else if (eventType == "message_stop") {
+                        trySend(ChatStreamChunk(null, null, true))
+                        break
+                    }
+                }
+            }
+        } catch (e: Throwable) {
+            trySend(ChatStreamChunk(null, e.message, true))
+        } finally {
+            resp.close()
+        }
+        awaitClose { call.cancel() }
+    }
+
+    private fun streamGemini(
+        messages: List<AiMessage>,
+        config: AiProviderConfig,
+        model: String,
+        temperature: Float
+    ): Flow<ChatStreamChunk> = callbackFlow {
+        val url = "${config.endpoint.trimEnd('/')}/models/$model:streamGenerateContent?alt=sse&key=${config.apiKey}"
+        val (sysPrompt, userMsgs) = separateSystemPrompt(messages)
+        val contentsJson = userMsgs.joinToString(",") { m ->
+            val role = if (m.role == "assistant") "model" else "user"
+            "{\"role\":${jsonString(role)},\"parts\":[{\"text\":${jsonString(m.content)}}]}"
+        }
+        val bodyJson = buildString {
+            append("{")
+            if (sysPrompt != null) {
+                append("\"systemInstruction\":{\"parts\":[{\"text\":${jsonString(sysPrompt)}}]},")
+            }
+            append("\"generationConfig\":{\"temperature\":").append(temperature).append("},")
+            append("\"contents\":[").append(contentsJson).append("]")
+            append("}")
+        }
+        val req = Request.Builder()
+            .url(url)
+            .header("content-type", "application/json")
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .build()
+        val call = httpClient(config.timeoutSeconds).newCall(req)
+        val resp = call.execute()
+        try {
+            if (!resp.isSuccessful) {
+                trySend(ChatStreamChunk(null, "HTTP ${resp.code}: ${resp.body?.string()?.take(500)}", true))
+                return@callbackFlow
+            }
+            val reader = BufferedReader(InputStreamReader(resp.body?.byteStream()))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                val l = line?.trim() ?: continue
+                if (!l.startsWith("data:")) continue
+                val payload = l.substring(5).trim()
+                val cIdx = payload.indexOf("\"text\":")
+                if (cIdx > 0) {
+                    val start = payload.indexOf("\"", cIdx + 8) + 1
+                    var end = start
+                    var inEscape = false
+                    while (end < payload.length) {
+                        val c = payload[end]
+                        if (inEscape) { inEscape = false; end++; continue }
+                        if (c == '\\') { inEscape = true; end++; continue }
+                        if (c == '"') break
+                        end++
+                    }
+                    trySend(ChatStreamChunk(unescapeJsonString(payload.substring(start, end)), null, false))
+                }
+            }
+            trySend(ChatStreamChunk(null, null, true))
+        } catch (e: Throwable) {
+            trySend(ChatStreamChunk(null, e.message, true))
+        } finally {
+            resp.close()
+        }
+        awaitClose { call.cancel() }
+    }
 
     // ========== 图像生成 ==========
     suspend fun generateImages(
@@ -162,42 +458,47 @@ object AiClient {
         model: String = config.imageModel,
         size: String = "1024x1024",
         n: Int = 1,
-        quality: String? = null
+        quality: String = "standard"
     ): Result<List<GeneratedImage>> = withContext(Dispatchers.IO) {
         runCatching {
-            val endpoint = ensureTrailingSlash(config.endpoint)
-            val url = "${endpoint}images/generations"
-            val json = JsonObject().apply {
-                addProperty("model", model)
-                addProperty("prompt", prompt)
-                addProperty("n", n)
-                addProperty("size", size)
-                if (quality?.isNotEmpty() == true) addProperty("quality", quality)
+            val url = config.endpoint.trimEnd('/') + "/images/generations"
+            val bodyJson = buildString {
+                append("{")
+                append("\"model\":").append(jsonString(model.ifEmpty { "dall-e-3" })).append(",")
+                append("\"prompt\":").append(jsonString(prompt)).append(",")
+                append("\"size\":").append(jsonString(size)).append(",")
+                append("\"quality\":").append(jsonString(quality)).append(",")
+                append("\"n\":").append(n).append(",")
+                append("\"response_format\":\"b64_json\"")
+                append("}")
             }
-            val request = Request.Builder().url(url)
-                .apply { authHeaders(config).forEach { (k, v) -> addHeader(k, v) } }
-                .post(json.toString().toRequestBody(jsonMediaType))
-                .build()
-
-            buildClient(config).newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) {
-                    val err = resp.body?.string() ?: ""
-                    throw Exception("HTTP ${resp.code}: $err")
+            val req = Request.Builder()
+                .url(url)
+                .apply {
+                    if (config.provider != AiProvider.OLLAMA && config.apiKey.isNotEmpty()) {
+                        header("Authorization", "Bearer ${config.apiKey}")
+                    }
                 }
-                val body = resp.body?.string() ?: throw Exception("Empty response")
-                val respObj = GSON.fromJsonObject<ImageGenerationResponse>(body).getOrThrow()
-                if (respObj.error?.message?.let { throw Exception(it) }
-                respObj.data?.mapIndexed { idx, item ->
-                    GeneratedImage(
-                        id = "${System.currentTimeMillis()}_$idx",
-                        prompt = prompt,
-                        url = item.url,
-                        b64 = item.b64_json,
-                        revisedPrompt = item.revised_prompt,
-                        model = model,
-                        createdAt = System.currentTimeMillis()
-                    )
-                } ?: throw Exception("No images returned")
+                .post(bodyJson.toRequestBody(JSON_MEDIA))
+                .build()
+            httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+                val text = resp.body?.string().orEmpty()
+                // 查找 b64_json 或 url 列表
+                val result = mutableListOf<GeneratedImage>()
+                // 简单提取 "url":"xxx" 和 "b64_json":"xxx"
+                val regex = Regex("\"url\"\\s*:\\s*\"([^\"]+)\"")
+                for (match in regex.findAll(text)) {
+                    result.add(GeneratedImage(url = match.groupValues[1], prompt = prompt))
+                }
+                val b64Regex = Regex("\"b64_json\"\\s*:\\s*\"([^\"]+)\"")
+                for (match in b64Regex.findAll(text)) {
+                    result.add(GeneratedImage(url = null, prompt = prompt, base64 = match.groupValues[1]))
+                }
+                if (result.isEmpty()) {
+                    throw Exception("未在响应中找到图像: ${text.take(500)}")
+                }
+                result
             }
         }
     }
@@ -211,277 +512,164 @@ object AiClient {
         durationSeconds: Int = 10
     ): Result<String> = withContext(Dispatchers.IO) {
         runCatching {
-            val endpoint = ensureTrailingSlash(config.endpoint)
-            // 优先尝试 images/generations 风格端点 (部分供应商有不同的视频 API
-            val candidates = listOfNotNull(
-                "${endpoint}videos/generations",
-                "${endpoint}videos:create",
-                "${endpoint}media/generations/video"
-            )
-            var lastErr: Exception? = null
-            for (url in candidates) {
+            // 尝试多个可能的视频生成 API 路径：
+            // - /videos/generations (OpenAI 风格)
+            // - /videos/generation (通用)
+            // - /v1/videos/generation
+            val candidatePaths = listOf("/videos/generations", "/videos/generation", "/v1/videos/generation")
+            var lastErr: Throwable? = null
+            for (path in candidatePaths) {
                 try {
-                    val json = JsonObject().apply {
-                    addProperty("model", model)
-                    addProperty("prompt", prompt)
-                    addProperty("aspect_ratio", aspectRatio)
-                    addProperty("duration_seconds", durationSeconds)
-                }
-                val request = Request.Builder().url(url)
-                    .apply { authHeaders(config).forEach { (k, v) -> addHeader(k, v) } }
-                    .post(json.toString().toRequestBody(jsonMediaType))
-                    .build()
-                buildClient(config).newCall(request).execute().use { resp ->
-                    if (!resp.isSuccessful) { lastErr = Exception("HTTP ${resp.code}: ${resp.body?.string()}")
-                        return@use
+                    val url = config.endpoint.trimEnd('/') + path
+                    val bodyJson = buildString {
+                        append("{")
+                        append("\"model\":").append(jsonString(model.ifEmpty { "sora" })).append(",")
+                        append("\"prompt\":").append(jsonString(prompt)).append(",")
+                        append("\"aspect_ratio\":").append(jsonString(aspectRatio)).append(",")
+                        append("\"duration\":").append(durationSeconds)
+                        append("}")
                     }
-                    val body = resp.body?.string() ?: return@use
-                    val parsed = GSON.fromJsonObject<VideoGenerationResponse>(body).getOrThrow()
-                    if (parsed.error?.message?.let { throw Exception(it) }
-                    parsed.data?.url ?: throw Exception("No video returned")
+                    val req = Request.Builder()
+                        .url(url)
+                        .header("Authorization", "Bearer ${config.apiKey}")
+                        .post(bodyJson.toRequestBody(JSON_MEDIA))
+                        .build()
+                    httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+                        if (!resp.isSuccessful) {
+                            lastErr = Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+                            return@use
+                        }
+                        val text = resp.body?.string().orEmpty()
+                        // 简单查找 "url":"..."
+                        val match = Regex("\"url\"\\s*:\\s*\"([^\"]+)\"").find(text)
+                        if (match != null) {
+                            return@runCatching match.groupValues[1]
+                        }
+                        // 可能需要轮询：查找 "id"
+                        val idMatch = Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").find(text)
+                        if (idMatch != null) {
+                            return@runCatching "生成请求已提交 ID: ${idMatch.groupValues[1]}, 请稍后使用该 ID 获取视频"
+                        }
+                        lastErr = Exception("未找到 URL: ${text.take(300)}")
+                    }
+                } catch (t: Throwable) {
+                    lastErr = t
                 }
-                lastErr = null
-                break
             }
-            if (lastErr != null) throw lastErr!!
-            ""
+            throw lastErr ?: Exception("视频生成失败")
         }
     }
 
-    // ========== TTS ==========
-    suspend fun textToSpeech(
-        text: String,
-        config: AiProviderConfig,
-        model: String = config.ttsModel,
-        voice: String = "alloy",
-        speed: Float = 1.0f
-    ): Result<ByteArray> = withContext(Dispatchers.IO) {
-        runCatching {
-            val endpoint = ensureTrailingSlash(config.endpoint)
-            val url = "${endpoint}audio/speech"
-            val json = JsonObject().apply {
-                addProperty("model", model)
-                addProperty("input", text)
-                addProperty("voice", voice)
-                addProperty("response_format", "mp3")
-                addProperty("speed", speed.toDouble())
-            }
-            val request = Request.Builder().url(url)
-                .apply { authHeaders(config).forEach { (k, v) -> addHeader(k, v) } }
-                .post(json.toString().toRequestBody(jsonMediaType))
-                .build()
-            buildClient(config).newCall(request).execute().use { resp ->
-                if (!resp.isSuccessful) {
-                    val err = resp.body?.string() ?: ""
-                    throw Exception("HTTP ${resp.code}: $err")
-                }
-                resp.body?.bytes() ?: throw Exception("Empty audio response")
-            }
-        }
-    }
-
-    // ========== 视觉分析 (Vision) ==========
+    // ========== 视觉分析 ==========
     suspend fun visionAnalyze(
         prompt: String,
         imageBase64: String,
         config: AiProviderConfig,
-        model: String = config.visionModel,
-        detail: String = "auto"
+        model: String = config.visionModel
     ): Result<String> = withContext(Dispatchers.IO) {
-            runCatching {
-                val endpoint = ensureTrailingSlash(config.endpoint)
-                val url = "${endpoint}chat/completions"
-                val json = JsonObject().apply {
-                    addProperty("model", model)
-                    val messagesArr = com.google.gson.JsonArray()
-                    val msgObj = JsonObject()
-                    msgObj.addProperty("role", "user")
-                    val contentArr = com.google.gson.JsonArray()
-                    val textObj = JsonObject()
-                    textObj.addProperty("type", "text")
-                    textObj.addProperty("text", prompt)
-                    contentArr.add(textObj)
-                    val imgObj = JsonObject()
-                    imgObj.addProperty("type", "image_url")
-                    val urlObj = JsonObject()
-                    urlObj.addProperty("url", "data:image/jpeg;base64,$imageBase64")
-                    urlObj.addProperty("detail", detail)
-                    imgObj.add("image_url", urlObj)
-                    contentArr.add(imgObj)
-                    msgObj.add("content", contentArr)
-                    messagesArr.add(msgObj)
-                    add("messages", messagesArr)
-                    addProperty("temperature", config.temperature.toDouble())
-                }
-                val request = Request.Builder().url(url)
-                    .apply { authHeaders(config).forEach { (k, v) -> addHeader(k, v) } }
-                    .post(json.toString().toRequestBody(jsonMediaType))
-                    .build()
-                buildClient(config).newCall(request).execute().use { resp ->
-                    if (!resp.isSuccessful) {
-                        val err = resp.body?.string() ?: ""
-                        throw Exception("HTTP ${resp.code}: $err")
+        runCatching {
+            val url = config.endpoint.trimEnd('/') + "/chat/completions"
+            val bodyJson = buildString {
+                append("{")
+                append("\"model\":").append(jsonString(model.ifEmpty { "gpt-4o" })).append(",")
+                append("\"messages\":[{\"role\":\"user\",\"content\":[")
+                append("{\"type\":\"text\",\"text\":").append(jsonString(prompt)).append("},")
+                append("{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/jpeg;base64,").append(imageBase64).append("\"}}")
+                append("]}]}")
+                append("}")
+            }
+            val req = Request.Builder()
+                .url(url)
+                .apply {
+                    if (config.provider != AiProvider.OLLAMA && config.apiKey.isNotEmpty()) {
+                        header("Authorization", "Bearer ${config.apiKey}")
                     }
-                    val body = resp.body?.string() ?: throw Exception("Empty response")
-                    parseChatResponse(body, config.provider)
                 }
+                .post(bodyJson.toRequestBody(JSON_MEDIA))
+                .build()
+            httpClient(config.timeoutSeconds).newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) throw Exception("HTTP ${resp.code}: ${resp.body?.string()?.take(500)}")
+                val text = resp.body?.string().orEmpty()
+                val idx1 = text.indexOf("\"content\":")
+                if (idx1 < 0) throw Exception("响应中无 content: $text")
+                val start = text.indexOf("\"", idx1 + 10) + 1
+                var end = start
+                var inEscape = false
+                while (end < text.length) {
+                    val c = text[end]
+                    if (inEscape) { inEscape = false; end++; continue }
+                    if (c == '\\') { inEscape = true; end++; continue }
+                    if (c == '"') break
+                    end++
+                }
+                return@runCatching unescapeJsonString(text.substring(start, end))
             }
         }
+    }
 
-    // ========== 文本工具箱：单步函数（翻译/摘要/润色 基于 chat API ==========
+    // ========== 文本工具（复用 chat） ==========
     suspend fun textTool(
-        tool: String,
+        toolId: String,
         input: String,
         config: AiProviderConfig,
         model: String = config.chatModel
     ): Result<String> {
-        val prompt = when (tool) {
-            "translate_en" -> listOf(AiMessage("user", "请将以下文本翻译为英文：\n$input"))
-            "translate_zh" -> listOf(AiMessage("user", "请将以下文本翻译为中文：\n$input"))
-            "summarize" -> listOf(AiMessage("user", "请用中文总结以下内容的要点，用项目符号列出：\n$input"))
-            "polish" -> listOf(AiMessage("user", "请润色以下文本，使其更流畅、专业，并给出修改说明：\n$input"))
-            "expand" -> listOf(AiMessage("user", "请扩写以下内容，使其更丰富详细：\n$input"))
-            "rewrite_formal" -> listOf(AiMessage("user", "请将以下文本改写为正式风格：\n$input"))
-            "rewrite_casual" -> listOf(AiMessage("user", "请将以下文本改写为轻松口语风格：\n$input"))
-            "explain_code" -> listOf(AiMessage("user", "请详细解释以下代码的作用、思路和可能的改进：\n$input"))
-            "brainstorm" -> listOf(AiMessage("user", "围绕以下主题进行头脑风暴，给出至少 5 个方向：\n$input"))
-            "translate_ja" -> listOf(AiMessage("user", "请将以下文本翻译为日文：\n$input"))
-            else -> listOf(AiMessage("user", input))
-        }
-        return chat(prompt, config, model = model)
+        val tool = TEXT_TOOLS.firstOrNull { it.id == toolId }
+        return chat(
+            messages = listOf(AiMessage("user", input)),
+            config = config,
+            model = model,
+            systemPrompt = tool?.systemPrompt
+        )
     }
 
-    // ========== 请求体构造 ==========
-    private fun buildChatRequestBody(
-        config: AiProviderConfig,
-        messages: List<AiMessage>,
-        model: String,
-        temperature: Float,
-        systemPrompt: String?,
-        stream: Boolean
-    ): JsonObject {
-        return when (config.provider) {
-            AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-            AiProvider.OLLAMA, AiProvider.CUSTOM, AiProvider.WENXIN -> {
-                JsonObject().apply {
-                    addProperty("model", model)
-                    addProperty("temperature", temperature.toDouble())
-                    addProperty("stream", stream)
-                    val msgs = com.google.gson.JsonArray()
-                    if (!systemPrompt.isNullOrEmpty()) {
-                        val sys = JsonObject()
-                        sys.addProperty("role", "system")
-                        sys.addProperty("content", systemPrompt)
-                        msgs.add(sys)
-                    }
-                    messages.forEach { m ->
-                        val obj = JsonObject()
-                        obj.addProperty("role", m.role)
-                        obj.addProperty("content", m.content)
-                        msgs.add(obj)
-                    }
-                    add("messages", msgs)
-                }
-            }
-            AiProvider.ANTHROPIC -> {
-                JsonObject().apply {
-                    addProperty("model", model)
-                    addProperty("max_tokens", 4096)
-                    addProperty("stream", stream)
-                    addProperty("temperature", temperature.toDouble())
-                    systemPrompt?.let { addProperty("system", it) }
-                    val msgs = com.google.gson.JsonArray()
-                    messages.forEach { m ->
-                        val obj = JsonObject()
-                        obj.addProperty("role", m.role)
-                        obj.addProperty("content", m.content)
-                        msgs.add(obj)
-                    }
-                    add("messages", msgs)
-                }
-            }
-            AiProvider.GOOGLE -> {
-                JsonObject().apply {
-                    val contents = com.google.gson.JsonArray()
-                    messages.forEach { m ->
-                        val c = JsonObject()
-                        // Gemini 使用 parts 数组
-                        val role = when (m.role)
-                        c.addProperty("role", if (role == "user" || role == "assistant") role else "user")
-                        val parts = com.google.gson.JsonArray()
-                        val part = JsonObject()
-                        part.addProperty("text", m.content)
-                        parts.add(part)
-                        c.add("parts", parts)
-                        contents.add(c)
-                    }
-                    add("contents", contents)
-                    if (!systemPrompt.isNullOrEmpty()) {
-                        val sysIns = JsonObject()
-                        val parts = com.google.gson.JsonArray()
-                        val part = JsonObject()
-                        part.addProperty("text", systemPrompt)
-                        parts.add(part)
-                        sysIns.add("parts", parts)
-                        add("systemInstruction", sysIns)
-                    }
-                    val genConfig = JsonObject()
-                    genConfig.addProperty("temperature", temperature.toDouble())
-                    add("generationConfig", genConfig)
-                }
+    // ========== 工具函数 ==========
+    private fun jsonString(value: String): String {
+        val sb = StringBuilder()
+        sb.append('"')
+        for (c in value) {
+            when {
+                c == '\\' -> sb.append("\\\\")
+                c == '"' -> sb.append("\\\"")
+                c == '\n' -> sb.append("\\n")
+                c == '\r' -> sb.append("\\r")
+                c == '\t' -> sb.append("\\t")
+                c.code < 0x20 -> sb.append(String.format("\\u%04x", c.code))
+                else -> sb.append(c)
             }
         }
+        sb.append('"')
+        return sb.toString()
     }
 
-    // ========== 响应解析 ==========
-    private fun parseChatResponse(body: String, provider: AiProvider): String {
-        return when (provider) {
-            AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-            AiProvider.OLLAMA, AiProvider.CUSTOM, AiProvider.WENXIN -> {
-                val resp = GSON.fromJsonObject<ChatCompletionResponse>(body).getOrThrow()
-                resp.error?.message?.let { throw Exception(it) }
-                resp.choices?.firstOrNull()?.message?.content ?: ""
-            }
-            AiProvider.ANTHROPIC -> {
-                val json = JsonParser.parseString(body).asJsonObject
-                val contents = json.getAsJsonArray("content")
-                val err = json.get("error")?.asJsonObject?.get("message")?.asString
-                if (!err.isNullOrEmpty()) throw Exception(err)
-                contents?.mapNotNull { c ->
-                    c.asJsonObject.get("text")?.asString }?.joinToString("") ?: ""
-                } ?: ""
-            }
-            AiProvider.GOOGLE -> {
-                val json = JsonParser.parseString(body).asJsonObject
-                val candidates = json.getAsJsonArray("candidates")
-                candidates?.firstOrNull()?.asJsonObject?.getAsJsonObject("content")?.getAsJsonArray("parts")
-                    ?.map { it.asJsonObject.get("text")?.asString }?.joinToString("")
-                ?: ""
+    private fun unescapeJsonString(s: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < s.length) {
+            val c = s[i]
+            if (c == '\\' && i + 1 < s.length) {
+                when (val next = s[i + 1]) {
+                    '"' -> { sb.append('"'); i += 2 }
+                    '\\' -> { sb.append('\\'); i += 2 }
+                    '/' -> { sb.append('/'); i += 2 }
+                    'n' -> { sb.append('\n'); i += 2 }
+                    'r' -> { sb.append('\r'); i += 2 }
+                    't' -> { sb.append('\t'); i += 2 }
+                    'u' -> {
+                        val hex = s.substring(i + 2, i + 6).toIntOrNull(16)
+                        if (hex != null) {
+                            sb.append(hex.toChar())
+                            i += 6
+                        } else {
+                            sb.append(c); i++
+                        }
+                    }
+                    else -> { sb.append(c); i++ }
+                }
+            } else {
+                sb.append(c); i++
             }
         }
-    }
-
-    private fun parseStreamDelta(jsonStr: String, provider: AiProvider): String? {
-        return runCatching {
-            val json = JsonParser.parseString(jsonStr).asJsonObject
-            when (provider) {
-                AiProvider.OPENAI, AiProvider.DEEPSEEK, AiProvider.QWEN, AiProvider.KIMI,
-                AiProvider.OLLAMA, AiProvider.CUSTOM, AiProvider.WENXIN -> {
-                    json.getAsJsonArray("choices")?.firstOrNull()?.asJsonObject
-                        ?.getAsJsonObject("delta")?.get("content")?.asString
-                }
-                AiProvider.ANTHROPIC -> {
-                    val type = json.get("type")?.asString
-                    if (type == "content_block_delta") {
-                        json.getAsJsonObject("delta")?.get("text")?.asString
-                    } else null
-                }
-                AiProvider.GOOGLE -> {
-                    json.getAsJsonArray("candidates")?.firstOrNull()?.asJsonObject
-                        ?.getAsJsonObject("content")?.getAsJsonArray("parts")
-                        ?.firstOrNull()?.asJsonObject?.get("text")?.asString
-                }
-            }
-        }.getOrNull()
+        return sb.toString()
     }
 }

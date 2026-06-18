@@ -163,6 +163,19 @@ fun MyScreen(
             }
 
             SplicedColumnGroup(
+                title = "AI 智能"
+            ) {
+                ClickableSettingItem(
+                    title = "AI 控制台",
+                    description = "聊天 · 图像生成 · 书源生成 · 书架分析 · 更多",
+                    imageVector = Icons.AutoMirrored.Filled.LibraryBooks,
+                    onClick = {
+                        onNavigate(PrefClickEvent.OpenAiConsole)
+                    }
+                )
+            }
+
+            SplicedColumnGroup(
                 title = stringResource(R.string.other)
             ) {
                 ClickableSettingItem(
