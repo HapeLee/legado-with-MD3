@@ -104,7 +104,7 @@ private fun ButtonIconConfigSheet(
     onClearIcon: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    var draftItems by remember(items) {
+    var draftItems by remember(show, items) {
         mutableStateOf(buildButtonIconEntries(items, context))
     }
 
