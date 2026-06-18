@@ -166,8 +166,8 @@ class ReadStyleRepository(
                 }
             }
             config.bgStr = bgPath
-        } else if (config.bgTypeNight == 0) {
-            config.bgStrNight.toColorInt()
+        } else if (config.bgType == 0) {
+            config.bgStr.toColorInt()
         }
         if (config.bgTypeNight == 2) {
             val bgName = FileUtils.getName(config.bgStrNight)
@@ -180,6 +180,8 @@ class ReadStyleRepository(
                 }
             }
             config.bgStrNight = bgPath
+        } else if (config.bgTypeNight == 0) {
+            config.bgStrNight.toColorInt()
         }
         if (config.bgTypeEInk == 2) {
             val bgName = FileUtils.getName(config.bgStrEInk)
