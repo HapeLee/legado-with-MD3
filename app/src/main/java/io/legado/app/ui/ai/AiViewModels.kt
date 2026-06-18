@@ -138,8 +138,8 @@ class AiChatViewModel(app: Application) : AndroidViewModel(app) {
                         ),
                         model = state.activeModel.ifBlank { cfg.chatModel },
                         temperature = state.temperature,
-                        systemPrompt = state.currentPreset?.systemPrompt
-                    )
+                        systemPrompt = state.currentPreset?.systemPrompt ?: ""
+                )
                     var accumulated = ""
                     flow.collect { chunk ->
                         if (chunk.done) {
@@ -180,7 +180,7 @@ class AiChatViewModel(app: Application) : AndroidViewModel(app) {
                         ),
                         model = state.activeModel.ifBlank { cfg.chatModel },
                         temperature = state.temperature,
-                        systemPrompt = state.currentPreset?.systemPrompt
+                        systemPrompt = state.currentPreset?.systemPrompt ?: ""
                     )
                     val reply = result.getOrThrow()
                     val msgs = _uiState.value.messages.toMutableList()
@@ -272,7 +272,7 @@ class AiImageViewModel(app: Application) : AndroidViewModel(app) {
                     config = cfg,
                     model = state.model.ifBlank { cfg.imageModel },
                     size = state.size,
-                    n = state.count,
+                    count = state.count,
                     quality = state.quality
                 )
                 val imgs = result.getOrThrow()
@@ -501,8 +501,8 @@ class AiTextToolsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val result = AiClient.textTool(
-                    toolId = tool.id,
-                    input = state.input,
+                    inputText = state.input,
+                    toolType = tool.id,
                     config = cfg,
                     model = state.model.ifBlank { cfg.chatModel }
                 )
@@ -946,7 +946,8 @@ class AiArtViewModel(app: Application) : AndroidViewModel(app) {
                 config = cfg,
                 model = s.model.ifBlank { cfg.imageModel },
                 size = s.size,
-                quality = "standard"
+                quality = "standard",
+                count = 1
             )
             result.fold(
                 onSuccess = { imgs -> _uiState.value = _uiState.value.copy(isLoading = false, images = imgs) },

@@ -41,9 +41,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import io.legado.app.utils.ToastUtils
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,10 +55,11 @@ fun AiSourceScreen(
     effects: Flow<AiSourceEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiSourceEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiSourceEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }
@@ -232,10 +234,11 @@ fun AiBookshelfScreen(
     effects: Flow<AiBookshelfEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiBookshelfEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiBookshelfEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }
@@ -365,10 +368,11 @@ fun AiSettingsScreen(
     effects: Flow<AiSettingsEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiSettingsEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiSettingsEffect.ShowToast -> context.toastOnUi(eff.message ?: "")
                 else -> {}
             }
         }

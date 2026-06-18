@@ -2,7 +2,10 @@ package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookType
+import io.legado.app.model.analyzeRule.QueryTTF
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 
 object AiBookshelfHelper {
@@ -16,20 +19,22 @@ object AiBookshelfHelper {
 
     suspend fun getStats(): ShelfStats = withContext(Dispatchers.IO) {
         val allBooks: List<Book> = runCatching {
-            appDb.bookDao.all
+            appDb.bookDao.flowAll().firstOrNull() ?: emptyList()
         }.getOrElse { emptyList() }
 
-        val books = allBooks.take(500)
+        val books = allBooks.filter {
+            it.type and BookType.local == 0 || it.type and BookType.text > 0
+        }.take(500)
 
         val sources = books
-            .groupBy { it.originName ?: "未分类" }
+            .groupBy { it.originName?.ifBlank { null } ?: "未分类" }
             .mapValues { it.value.size }
             .entries.sortedByDescending { it.value }
             .take(15)
             .toMap()
 
         val kinds = books
-            .mapNotNull { it.kind?.trim()?.ifEmpty { null } }
+            .mapNotNull { it.kind?.trim()?.ifBlank { null } }
             .groupBy { it }
             .mapValues { it.value.size }
             .entries.sortedByDescending { it.value }
@@ -102,3 +107,4 @@ object AiBookshelfHelper {
         }
     }
 }
+

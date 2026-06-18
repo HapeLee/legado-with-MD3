@@ -42,10 +42,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.legado.app.help.ai.AiPreset
 import io.legado.app.help.ai.AiProvider
-import io.legado.app.utils.ToastUtils
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,10 +57,11 @@ fun AiChatScreen(
     effects: Flow<AiChatEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiChatEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiChatEffect.ShowToast -> context.toastOnUi(eff.message)
             }
         }
     }

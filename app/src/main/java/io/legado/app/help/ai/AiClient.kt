@@ -184,6 +184,38 @@ object AiClient {
         }
     }
 
+    suspend fun textTool(
+        inputText: String,
+        toolType: String,
+        config: AiProviderConfig,
+        model: String = "",
+        extra: String = ""
+    ): Result<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val effectiveModel = model.ifBlank { config.chatModel }
+            val systemPrompt = when (toolType) {
+                "polish" -> "你是一位文字润色助手。请润色用户提供的文本，保持原意但使表达更自然流畅、更具文采。只输出润色后的文本。"
+                "grammar" -> "你是一位语法检查助手。检查文本中的语法错误、错别字和标点问题，输出修正后的文本，并附上简短说明。"
+                "expand" -> "你是一位扩写助手。对提供的文本进行扩写，补充细节和背景，使内容更丰富。保持核心意思不变。"
+                "compress" -> "你是一位摘要助手。将提供的文本压缩为简洁的摘要，保留关键信息。"
+                else -> "你是一位文本处理助手。对用户文本进行规范化处理。"
+            }
+            val finalPrompt = buildString {
+                append(inputText)
+                if (extra.isNotBlank()) {
+                    append("\n\n附加说明：")
+                    append(extra)
+                }
+            }
+            chat(
+                messages = listOf(AiMessage("user", finalPrompt)),
+                config = config,
+                model = effectiveModel,
+                systemPrompt = systemPrompt
+            ).getOrThrow()
+        }
+    }
+
     // ---------- internal: OpenAI 兼容 ----------
     private suspend fun openAIChat(
         messages: List<AiMessage>,

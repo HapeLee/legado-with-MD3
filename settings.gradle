@@ -13,9 +13,8 @@ pluginManagement {
         maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
-}
+// foojay-resolver disabled: use host JDK installed by CI
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

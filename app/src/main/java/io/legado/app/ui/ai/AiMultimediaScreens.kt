@@ -59,7 +59,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.legado.app.help.ai.AiProvider
 import io.legado.app.help.ai.GeneratedImage
-import io.legado.app.utils.ToastUtils
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,10 +70,11 @@ fun AiImageScreen(
     effects: Flow<AiImageEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiImageEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiImageEffect.ShowToast -> context.toastOnUi(eff.message ?: "")
             }
         }
     }
@@ -260,10 +261,11 @@ fun AiVideoScreen(
     effects: Flow<AiVideoEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiVideoEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiVideoEffect.ShowToast -> context.toastOnUi(eff.message ?: "")
             }
         }
     }
@@ -415,7 +417,7 @@ fun AiVisionScreen(
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiVisionEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiVisionEffect.ShowToast -> context.toastOnUi(eff.message ?: "")
             }
         }
     }
@@ -541,10 +543,11 @@ fun AiTextToolsScreen(
     effects: Flow<AiTextToolsEffect>,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collect { eff ->
             when (eff) {
-                is AiTextToolsEffect.ShowToast -> ToastUtils.showToast(eff.message)
+                is AiTextToolsEffect.ShowToast -> context.toastOnUi(eff.message ?: "")
             }
         }
     }

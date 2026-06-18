@@ -13,7 +13,8 @@ enum class AiProvider(val displayName: String) {
     ANTHROPIC("Anthropic"),
     GEMINI("Google Gemini"),
     LOCAL("本地 LLM"),
-    OPENAI_COMPATIBLE("OpenAI 兼容 (代理/自建)")
+    OPENAI_COMPATIBLE("OpenAI 兼容 (代理/自建)"),
+    OLLAMA("Ollama 本地")
 }
 
 data class AiProviderConfig(
@@ -73,4 +74,61 @@ object AiToastHelper {
     fun toast(msg: String) {
         ctx?.toastOnUi(msg)
     }
+}
+
+fun defaultProviderConfig(provider: AiProvider): AiProviderConfig = when (provider) {
+    AiProvider.OPENAI -> AiProviderConfig(
+        provider = AiProvider.OPENAI,
+        endpoint = "https://api.openai.com/v1",
+        apiKey = "",
+        chatModel = "gpt-4o-mini",
+        imageModel = "dall-e-3",
+        videoModel = "sora",
+        visionModel = "gpt-4o"
+    )
+    AiProvider.ANTHROPIC -> AiProviderConfig(
+        provider = AiProvider.ANTHROPIC,
+        endpoint = "https://api.anthropic.com/v1",
+        apiKey = "",
+        chatModel = "claude-sonnet-4-5",
+        imageModel = "claude-sonnet-4-5",
+        videoModel = "claude-sonnet-4-5",
+        visionModel = "claude-sonnet-4-5"
+    )
+    AiProvider.GEMINI -> AiProviderConfig(
+        provider = AiProvider.GEMINI,
+        endpoint = "https://generativelanguage.googleapis.com/v1beta",
+        apiKey = "",
+        chatModel = "gemini-2.5-flash",
+        imageModel = "gemini-2.5-flash",
+        videoModel = "gemini-2.5-flash",
+        visionModel = "gemini-2.5-flash"
+    )
+    AiProvider.LOCAL -> AiProviderConfig(
+        provider = AiProvider.LOCAL,
+        endpoint = "http://localhost:11434/v1",
+        apiKey = "",
+        chatModel = "qwen2.5",
+        imageModel = "qwen2.5vl",
+        videoModel = "qwen2.5",
+        visionModel = "qwen2.5vl"
+    )
+    AiProvider.OPENAI_COMPATIBLE -> AiProviderConfig(
+        provider = AiProvider.OPENAI_COMPATIBLE,
+        endpoint = "https://api.deepseek.com/v1",
+        apiKey = "",
+        chatModel = "deepseek-chat",
+        imageModel = "deepseek-chat",
+        videoModel = "deepseek-chat",
+        visionModel = "deepseek-chat"
+    )
+    AiProvider.OLLAMA -> AiProviderConfig(
+        provider = AiProvider.OLLAMA,
+        endpoint = "http://localhost:11434/v1",
+        apiKey = "",
+        chatModel = "llama3.2",
+        imageModel = "llama3.2",
+        videoModel = "llama3.2",
+        visionModel = "llama3.2"
+    )
 }
