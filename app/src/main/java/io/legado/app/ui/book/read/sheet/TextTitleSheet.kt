@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.TextFormat
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,7 +38,6 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.ReadBookConfig
@@ -48,6 +45,7 @@ import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.SectionTitle
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
@@ -201,15 +199,7 @@ internal fun LayoutSpacingPage(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
-        Text(
-            text = stringResource(R.string.read_config_body_spacing),
-            style = MaterialTheme.typography.titleSmallEmphasized,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-        )
-
+        SectionTitle(stringResource(R.string.read_config_body_spacing))
         TinySliderSettingItem(
             title = stringResource(R.string.text_indent),
             value = indentCount.toFloat(),
@@ -274,14 +264,7 @@ internal fun TextEffectsPage(
             .padding(horizontal = 16.dp)
             .verticalScroll(rememberScrollState()),
     ) {
-        Text(
-            text = stringResource(R.string.text_typeface),
-            style = MaterialTheme.typography.titleSmallEmphasized,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-        )
+        SectionTitle(stringResource(R.string.text_typeface))
         TinySwitchSettingItem(
             title = stringResource(R.string.read_config_italic),
             checked = textItalic,
@@ -323,15 +306,7 @@ internal fun TextEffectsPage(
         Spacer(Modifier.height(8.dp))
 
         // Colors
-        Text(
-            text = stringResource(R.string.read_color),
-            style = MaterialTheme.typography.titleSmallEmphasized,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(4.dp))
+        SectionTitle(stringResource(R.string.read_color))
         TinyColorSettingItem(
             title = stringResource(R.string.text_color),
             colorValue = ReadBookConfig.durConfig.curTextColor(),
@@ -351,16 +326,7 @@ internal fun TextEffectsPage(
             },
         )
 
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            text = stringResource(R.string.read_config_effects),
-            style = MaterialTheme.typography.titleSmallEmphasized,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            textAlign = TextAlign.Center,
-        )
+        SectionTitle(stringResource(R.string.read_config_effects))
         TinyClickableSettingItem(
             title = stringResource(R.string.text_shadow_set),
             description = stringResource(R.string.read_config_shadow_desc),
