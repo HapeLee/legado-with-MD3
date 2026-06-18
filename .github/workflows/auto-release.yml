@@ -185,14 +185,15 @@ jobs:
           COMMIT_NUMBER: ${{ env.COMMIT_NUMBER_VAL }}
           APP_VERSION_NAME: ${{ env.VERSIONL }}
 
-      - name: Move Missing Rules Files
+      - name: Move Mapping Files
         if: matrix.type == 'release'
         run: |
-          echo "移动missing_rules.txt文件"
+          echo "移动 mapping 相关文件"
           MAPPING_DIR="${{ github.workspace }}/mapping"
           mkdir -p "$MAPPING_DIR"
           # 使用 find 代替 ls，避免参数列表过长
           find ${{ github.workspace }}/app/build/outputs/mapping/ -name "missing_rules.txt" -exec mv {} "$MAPPING_DIR/missing_rules.txt" \;
+          find ${{ github.workspace }}/app/build/outputs/mapping/ -name "mapping.txt" -exec mv {} "$MAPPING_DIR/mapping.txt" \;
 
       - name: Upload Missing Rules File To Artifact
         if: matrix.type == 'release'
