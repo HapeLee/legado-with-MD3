@@ -42,29 +42,32 @@ private data class AiConsoleEntry(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiConsoleScreen(
-    onChat: () -> Unit,
-    onImage: () -> Unit,
-    onContentTools: () -> Unit,
-    onArt: () -> Unit,
-    onSourceGen: () -> Unit,
-    onSourceAdvanced: () -> Unit,
-    onShelfAnalyze: () -> Unit,
-    onRecommend: () -> Unit,
-    onArchive: () -> Unit,
-    onSettings: () -> Unit,
+    onOpenChat: () -> Unit,
+    onOpenImage: () -> Unit,
+    onOpenVideo: () -> Unit,
+    onOpenVision: () -> Unit,
+    onOpenTextTools: () -> Unit,
+    onOpenSource: () -> Unit,
+    onOpenSourceAdvanced: () -> Unit,
+    onOpenShelfAnalyze: () -> Unit,
+    onOpenRecommend: () -> Unit,
+    onOpenArchive: () -> Unit,
+    onOpenContentTools: () -> Unit,
+    onOpenArt: () -> Unit,
+    onOpenSettings: () -> Unit,
     onBack: () -> Unit
 ) {
     val entries = listOf(
-        AiConsoleEntry("AI 对话", "与大模型自由对话，支持流式", "聊天", 0xFF3B82F6, onChat),
-        AiConsoleEntry("AI 图像生成", "生成封面、场景、海报", "图像", 0xFF8B5CF6, onImage),
-        AiConsoleEntry("AI 内容工具", "翻译、摘要、改写、检索", "文本", 0xFF10B981, onContentTools),
-        AiConsoleEntry("AI 封面 & 角色卡", "书籍封面 + 角色设定", "艺术", 0xFFF59E0B, onArt),
-        AiConsoleEntry("书源生成", "根据网站生成书源 JSON", "书源", 0xFFEC4899, onSourceGen),
-        AiConsoleEntry("书源进阶", "搜索 / 评分 / 自动修源", "书源", 0xFF06B6D4, onSourceAdvanced),
-        AiConsoleEntry("书架分析", "分析你的书架数据 & 偏好", "书架", 0xFFEF4444, onShelfAnalyze),
-        AiConsoleEntry("书单 & 阅读教练", "AI 推荐 + 阅读节奏建议", "推荐", 0xFF84CC16, onRecommend),
-        AiConsoleEntry("归档 & 替换规则", "本地书归档、自动重命名", "工具", 0xFF6366F1, onArchive),
-        AiConsoleEntry("AI 设置", "配置 API Key / 模型 / 供应商", "设置", 0xFF334155, onSettings)
+        AiConsoleEntry("AI 对话", "与大模型自由对话", "聊天", 0xFF3B82F6, onOpenChat),
+        AiConsoleEntry("AI 图像生成", "封面 / 场景 / 海报", "图像", 0xFF8B5CF6, onOpenImage),
+        AiConsoleEntry("AI 内容工具", "翻译、摘要、改写、检索", "文本", 0xFF10B981, onOpenContentTools),
+        AiConsoleEntry("AI 封面 & 角色卡", "书籍封面 + 角色设定", "艺术", 0xFFF59E0B, onOpenArt),
+        AiConsoleEntry("书源生成", "根据网站生成书源 JSON", "书源", 0xFFEC4899, onOpenSource),
+        AiConsoleEntry("书源进阶", "搜索 / 评分 / 自动修源", "书源", 0xFF06B6D4, onOpenSourceAdvanced),
+        AiConsoleEntry("书架分析", "分析你的书架数据 & 偏好", "书架", 0xFFEF4444, onOpenShelfAnalyze),
+        AiConsoleEntry("书单 & 阅读教练", "个性化书单与节奏建议", "推荐", 0xFF84CC16, onOpenRecommend),
+        AiConsoleEntry("归档 & 替换规则", "本地书归档、自动重命名", "工具", 0xFF6366F1, onOpenArchive),
+        AiConsoleEntry("AI 设置", "API Key / 模型 / 供应商", "设置", 0xFF334155, onOpenSettings)
     )
 
     Scaffold(

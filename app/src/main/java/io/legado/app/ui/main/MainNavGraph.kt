@@ -652,7 +652,12 @@ fun MainActivity.mainEntryProvider(
             onOpenVision = { onNavigateToRoute(MainRouteAiVision) },
             onOpenTextTools = { onNavigateToRoute(MainRouteAiTextTools) },
             onOpenSource = { onNavigateToRoute(MainRouteAiSource) },
-            onOpenBookshelf = { onNavigateToRoute(MainRouteAiBookshelf) },
+            onOpenSourceAdvanced = { onNavigateToRoute(MainRouteAiSourceAdvanced) },
+            onOpenShelfAnalyze = { onNavigateToRoute(MainRouteAiBookshelf) },
+            onOpenRecommend = { onNavigateToRoute(MainRouteAiRecommend) },
+            onOpenArchive = { onNavigateToRoute(MainRouteAiArchive) },
+            onOpenContentTools = { onNavigateToRoute(MainRouteAiContentTools) },
+            onOpenArt = { onNavigateToRoute(MainRouteAiArt) },
             onOpenSettings = { onNavigateToRoute(MainRouteAiSettings) }
         )
     }
@@ -707,6 +712,28 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    // AI 内容工具（翻译/摘要/检索/重写）
+    entry<MainRouteAiContentTools> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiContentToolsViewModel>()
+        io.legado.app.ui.ai.AiContentToolsScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    // AI 封面 & 角色卡
+    entry<MainRouteAiArt> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiArtViewModel>()
+        io.legado.app.ui.ai.AiArtScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
     entry<MainRouteAiSource> {
         val viewModel = koinViewModel<io.legado.app.ui.ai.AiSourceViewModel>()
         io.legado.app.ui.ai.AiSourceScreen(
@@ -717,9 +744,42 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
+    // AI 书源进阶（搜索 / 评分 / 自动修源）
+    entry<MainRouteAiSourceAdvanced> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSourceAdvancedViewModel>()
+        io.legado.app.ui.ai.AiSourceAdvancedScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
     entry<MainRouteAiBookshelf> {
         val viewModel = koinViewModel<io.legado.app.ui.ai.AiBookshelfViewModel>()
         io.legado.app.ui.ai.AiBookshelfScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    // AI 书单 / 推荐 / 阅读教练
+    entry<MainRouteAiRecommend> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiRecommendViewModel>()
+        io.legado.app.ui.ai.AiRecommendScreen(
+            state = viewModel.uiState.collectAsStateWithLifecycle().value,
+            onIntent = viewModel::onIntent,
+            effects = viewModel.effects,
+            onBack = { onNavigateBack() }
+        )
+    }
+
+    // AI 归档 & 替换规则 / 文件重命名
+    entry<MainRouteAiArchive> {
+        val viewModel = koinViewModel<io.legado.app.ui.ai.AiArchiveViewModel>()
+        io.legado.app.ui.ai.AiArchiveScreen(
             state = viewModel.uiState.collectAsStateWithLifecycle().value,
             onIntent = viewModel::onIntent,
             effects = viewModel.effects,

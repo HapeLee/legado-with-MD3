@@ -834,7 +834,7 @@ class AiSettingsViewModel(app: Application) : AndroidViewModel(app) {
 }
 
 // ========== AI 内容工具 ==========
-class AiContentToolsViewModel : ViewModel() {
+class AiContentToolsViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(AiContentToolsUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -903,7 +903,7 @@ class AiContentToolsViewModel : ViewModel() {
 }
 
 // ========== AI 艺术 / 封面 / 角色卡 ==========
-class AiArtViewModel : ViewModel() {
+class AiArtViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(AiArtUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -984,7 +984,7 @@ class AiArtViewModel : ViewModel() {
 }
 
 // ========== AI 书源高级 ==========
-class AiSourceAdvancedViewModel : ViewModel() {
+class AiSourceAdvancedViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(AiSourceAdvancedUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -1086,7 +1086,7 @@ class AiSourceAdvancedViewModel : ViewModel() {
 }
 
 // ========== AI 推荐 / 书单 / 教练 ==========
-class AiRecommendViewModel : ViewModel() {
+class AiRecommendViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(AiRecommendUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -1137,7 +1137,7 @@ class AiRecommendViewModel : ViewModel() {
 }
 
 // ========== AI 归档 / 工具 ==========
-class AiArchiveViewModel : ViewModel() {
+class AiArchiveViewModel(app: Application) : AndroidViewModel(app) {
     private val _uiState = MutableStateFlow(AiArchiveUiState())
     val uiState = _uiState.asStateFlow()
 

@@ -335,5 +335,10 @@ val appModule = module {
     viewModelOf(::AiSourceViewModel)
     viewModelOf(::AiBookshelfViewModel)
     viewModelOf(::AiSettingsViewModel)
+    viewModelOf(::AiContentToolsViewModel)
+    viewModelOf(::AiArtViewModel)
+    viewModelOf(::AiSourceAdvancedViewModel)
+    viewModelOf(::AiRecommendViewModel)
+    viewModelOf(::AiArchiveViewModel)
 }
 
