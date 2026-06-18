@@ -268,6 +268,9 @@ class ChangeChapterSourceViewModel(
     private fun startSearch() {
         val book = oldBook ?: return
         stopSearch()
+        if (searchResults.isNotEmpty()) {
+            io.legado.app.data.appDb.searchBookDao.delete(*searchResults.toTypedArray())
+        }
         searchResults.clear()
         bookMap.clear()
         val scope = SearchScope(ChangeSourceConfig.searchScope)
@@ -304,6 +307,7 @@ class ChangeChapterSourceViewModel(
                     is ChangeSourceSearchEvent.Result -> {
                         searchResults.add(event.searchBook)
                         bookMap[event.searchBook.primaryStr()] = event.searchBook
+                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
                         filterResults()
                     }
 
