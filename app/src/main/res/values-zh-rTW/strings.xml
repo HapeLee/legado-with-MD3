@@ -176,6 +176,7 @@
     <string name="clear_cache">清理快取</string>
     <string name="clear_cache_success">成功清理快取</string>
     <string name="action_save">儲存</string>
+    <string name="save_tts_timer">儲存定時</string>
     <string name="edit_source">編輯源</string>
     <string name="edit_book_source">編輯書源</string>
     <string name="disable_book_source">禁用書源</string>

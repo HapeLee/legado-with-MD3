@@ -244,6 +244,7 @@
     <string name="clear_cache">Clear Cache</string>
     <string name="clear_cache_success">Cache cleared</string>
     <string name="action_save">Save</string>
+    <string name="save_tts_timer">Save timer</string>
     <string name="edit_source">Edit source</string>
     <string name="edit_book_source">Edit Book source</string>
     <string name="disable_book_source">Disable Book source</string>
