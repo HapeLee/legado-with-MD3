@@ -351,10 +351,12 @@ fun MainActivity.mainEntryProvider(
             effectsReady.await()
             collectorReady[0] = true
             readBookViewModel.initReadBookConfig(readIntent)
-            readBookViewModel.initData(readIntent)
-            controller.onRouteInitialized()
-            if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                resumeReader()
+            readBookViewModel.initData(readIntent) {
+                readBookViewModel.markJustInitData()
+                controller.onRouteInitialized()
+                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                    resumeReader()
+                }
             }
         }
     }
