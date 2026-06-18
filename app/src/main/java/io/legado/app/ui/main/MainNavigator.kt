@@ -8,6 +8,8 @@ import io.legado.app.ui.rss.read.MainRouteRssRead
 
 object MainNavigator {
 
+    private var backNavigationInProgress = false
+
     fun navigateToRoute(backStack: MutableList<NavKey>, route: NavKey) {
         val currentRoute = backStack.lastOrNull()
         if (currentRoute == route) return
@@ -181,11 +183,19 @@ object MainNavigator {
     }
 
     fun navigateBack(activity: Activity, backStack: MutableList<NavKey>) {
+        if (backNavigationInProgress) {
+            return
+        }
+        backNavigationInProgress = true
         if (backStack.size > 1) {
             backStack.removeLastOrNull()
         } else {
             activity.finish()
         }
+    }
+
+    fun onBackStackChanged() {
+        backNavigationInProgress = false
     }
 
     fun resolveStartRoute(intent: Intent?): NavKey {

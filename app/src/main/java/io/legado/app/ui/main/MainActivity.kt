@@ -25,8 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import io.legado.app.BuildConfig
@@ -236,12 +238,19 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         LaunchedEffect(backStack) {
             snapshotFlow { backStack.toList() }
-                .collect { latestBackStack = it }
+                .collect {
+                    latestBackStack = it
+                    MainNavigator.onBackStackChanged()
+                }
         }
 
         SharedTransitionLayout {
             NavDisplay(
                 backStack = backStack,
+                entryDecorators = listOf(
+                    rememberSaveableStateHolderNavEntryDecorator(),
+                    rememberViewModelStoreNavEntryDecorator(),
+                ),
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 transitionSpec = {
                     (slideIntoContainer(
