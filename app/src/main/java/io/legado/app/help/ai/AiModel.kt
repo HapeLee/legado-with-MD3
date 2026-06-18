@@ -48,7 +48,9 @@ data class TextTool(
     val id: String,
     val name: String,
     val description: String,
-    val systemPrompt: String
+    val systemPrompt: String,
+    val inputHint: String = "输入要处理的文本...",
+    val actionName: String = "处理"
 )
 
 val BUILT_IN_PRESETS: List<AiPreset> = listOf(
@@ -62,10 +64,10 @@ val BUILT_IN_PRESETS: List<AiPreset> = listOf(
 )
 
 val TEXT_TOOLS: List<TextTool> = listOf(
-    TextTool("polish", "润色", "润色文本，使表达更自然。", "你是一个润色助手。"),
-    TextTool("grammar", "语法检查", "纠错和语法规范。", "你是一位文字校对员。"),
-    TextTool("expand", "扩写", "补充细节使内容更丰富。", "你是一位扩写作家。"),
-    TextTool("compress", "压缩", "保留核心意思的同时缩短。", "你是一位文本压缩编辑。")
+    TextTool("polish", "润色", "润色文本，使表达更自然。", "你是一个润色助手。", "输入要润色的文本...", "开始润色"),
+    TextTool("grammar", "语法检查", "纠错和语法规范。", "你是一位文字校对员。", "输入要检查语法的文本...", "检查语法"),
+    TextTool("expand", "扩写", "补充细节使内容更丰富。", "你是一位扩写作家。", "输入要扩写的文本...", "开始扩写"),
+    TextTool("compress", "压缩", "保留核心意思的同时缩短。", "你是一位文本压缩编辑。", "输入要压缩的文本...", "开始压缩")
 )
 
 object AiToastHelper {
