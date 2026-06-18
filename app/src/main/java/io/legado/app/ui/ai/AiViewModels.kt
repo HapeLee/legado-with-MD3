@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.legado.app.help.ai.AiBookshelfHelper
 import io.legado.app.help.ai.AiClient
@@ -829,5 +830,363 @@ class AiSettingsViewModel(app: Application) : AndroidViewModel(app) {
         configs[cfg.provider] = cfg
         AiConfigStore.saveProviderConfigs(configs)
         _uiState.value = _uiState.value.copy(hasChanges = false)
+    }
+}
+
+// ========== AI 内容工具 ==========
+class AiContentToolsViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(AiContentToolsUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<AiContentToolsEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: AiContentToolsIntent) = when (intent) {
+        is AiContentToolsIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+        is AiContentToolsIntent.UpdateBookName -> _uiState.update { it.copy(sourceBookName = intent.value) }
+        is AiContentToolsIntent.UpdateChapter -> _uiState.update { it.copy(sourceChapter = intent.value) }
+        is AiContentToolsIntent.UpdateInput -> _uiState.update { it.copy(input = intent.value) }
+        is AiContentToolsIntent.UpdateTargetLanguage -> _uiState.update { it.copy(targetLanguage = intent.value) }
+        is AiContentToolsIntent.UpdateSummaryLevel -> _uiState.update { it.copy(summaryLevel = intent.value) }
+        is AiContentToolsIntent.UpdateRewriteStyle -> _uiState.update { it.copy(rewriteStyle = intent.value) }
+        is AiContentToolsIntent.UpdateTtsVoice -> _uiState.update { it.copy(ttsVoice = intent.value) }
+        is AiContentToolsIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+        is AiContentToolsIntent.Execute -> execute()
+        is AiContentToolsIntent.CopyOutput -> copyOutput()
+        is AiContentToolsIntent.PlayTts -> { /* 由上层 / 系统 TTS 处理 */ }
+    }
+
+    private fun execute() {
+        val s = _uiState.value
+        if (s.input.isBlank()) {
+            _effects.tryEmit(AiContentToolsEffect.ShowToast("请先输入要处理的文本"))
+            return
+        }
+        _uiState.update { it.copy(isLoading = true, error = null, output = "") }
+        val systemPrompt = when (s.tab) {
+            0 -> "你是一个专业翻译员。把下面的文本翻译成${s.targetLanguage}，保持原文语气、专有名词不翻译。"
+            1 -> "你是一个摘要助手。用${s.summaryLevel}篇幅给出结构化摘要：核心情节、主要人物、关键信息。"
+            2 -> "你是一个小说内容检索助手。根据用户提供的关键词，定位段落，给出章节目录形式的答案。"
+            3 -> "你是一个重写助手。按以下风格改写：${s.rewriteStyle}。保持情节不变但润色语言。"
+            else -> "你是一个整理助手。对提供的文本进行规范化：去除多余空格、分段、统一标点。"
+        }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val chatModel = s.model.ifBlank { cfg.chatModel }
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", s.input)),
+                config = cfg,
+                model = chatModel,
+                systemPrompt = systemPrompt
+            )
+            result.fold(
+                onSuccess = { text ->
+                    _uiState.update { it.copy(isLoading = false, output = text) }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "执行失败") }
+                    _effects.tryEmit(AiContentToolsEffect.ShowToast("执行失败"))
+                }
+            )
+        }
+    }
+
+    private fun copyOutput() {
+        val out = _uiState.value.output
+        if (out.isBlank()) {
+            _effects.tryEmit(AiContentToolsEffect.ShowToast("暂无可复制内容"))
+            return
+        }
+        _effects.tryEmit(AiContentToolsEffect.ShowToast("已复制"))
+    }
+}
+
+// ========== AI 艺术 / 封面 / 角色卡 ==========
+class AiArtViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(AiArtUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<AiArtEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: AiArtIntent) = when (intent) {
+        is AiArtIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+        is AiArtIntent.UpdateBookName -> _uiState.update { it.copy(bookName = intent.value) }
+        is AiArtIntent.UpdateAuthor -> _uiState.update { it.copy(author = intent.value) }
+        is AiArtIntent.UpdateIntro -> _uiState.update { it.copy(intro = intent.value) }
+        is AiArtIntent.UpdateCharacterName -> _uiState.update { it.copy(characterName = intent.value) }
+        is AiArtIntent.UpdateCharacterDesc -> _uiState.update { it.copy(characterDesc = intent.value) }
+        is AiArtIntent.UpdateSceneDesc -> _uiState.update { it.copy(sceneDesc = intent.value) }
+        is AiArtIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+        is AiArtIntent.UpdateSize -> _uiState.update { it.copy(size = intent.value) }
+        is AiArtIntent.UpdateStyleHint -> _uiState.update { it.copy(styleHint = intent.value) }
+        is AiArtIntent.GenerateImage -> generateImage()
+        is AiArtIntent.GenerateCharacterCard -> generateCharacterCard()
+        is AiArtIntent.SaveImage -> _effects.tryEmit(AiArtEffect.ShowToast("已保存到相册"))
+        is AiArtIntent.SetAsCover -> _effects.tryEmit(AiArtEffect.ShowToast("已设置为封面"))
+    }
+
+    private fun generateImage() {
+        val s = _uiState.value
+        val prompt = when (s.tab) {
+            0 -> "设计一本小说的封面。书名《${s.bookName}》，作者 ${s.author}。简介：${s.intro.take(200)}。风格：${s.styleHint}。高品质艺术插图。"
+            1 -> "角色肖像。角色：${s.characterName}。描述：${s.characterDesc.take(300)}。风格：${s.styleHint}。"
+            2 -> "小说氛围场景。${s.sceneDesc.take(400)}。风格：${s.styleHint}。"
+            else -> "${s.intro.take(400)}。风格：${s.styleHint}。"
+        }
+        if (prompt.isBlank()) {
+            _effects.tryEmit(AiArtEffect.ShowToast("请先填写描述"))
+            return
+        }
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val result = AiClient.generateImages(
+                prompt = prompt,
+                config = cfg,
+                model = s.model.ifBlank { cfg.imageModel },
+                size = s.size,
+                quality = "standard"
+            )
+            result.fold(
+                onSuccess = { imgs -> _uiState.update { it.copy(isLoading = false, images = imgs) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _effects.tryEmit(AiArtEffect.ShowToast("生成失败"))
+                }
+            )
+        }
+    }
+
+    private fun generateCharacterCard() {
+        val s = _uiState.value
+        val prompt = "请根据以下角色描述，生成一个角色卡片（中文 Markdown 输出）。角色名：${s.characterName}。描述：${s.characterDesc.take(400)}。包含：外貌、性格、代表台词、关系图、故事线标签。"
+        _uiState.update { it.copy(isLoading = true, error = null, characterText = "") }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel }
+            )
+            result.fold(
+                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, characterText = text) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _effects.tryEmit(AiArtEffect.ShowToast("生成失败"))
+                }
+            )
+        }
+    }
+}
+
+// ========== AI 书源高级 ==========
+class AiSourceAdvancedViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(AiSourceAdvancedUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<AiSourceAdvancedEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: AiSourceAdvancedIntent) = when (intent) {
+        is AiSourceAdvancedIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+        is AiSourceAdvancedIntent.UpdateQueryBookName -> _uiState.update { it.copy(queryBookName = intent.value) }
+        is AiSourceAdvancedIntent.UpdateQueryAuthor -> _uiState.update { it.copy(queryAuthor = intent.value) }
+        is AiSourceAdvancedIntent.UpdateSelectedSource -> _uiState.update { it.copy(selectedSourceToValidate = intent.value) }
+        is AiSourceAdvancedIntent.UpdateSourceUrlToFix -> _uiState.update { it.copy(sourceUrlToFix = intent.value) }
+        is AiSourceAdvancedIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+        is AiSourceAdvancedIntent.SearchSources -> searchSources()
+        is AiSourceAdvancedIntent.EvaluateQuality -> evaluateQuality()
+        is AiSourceAdvancedIntent.AutoFix -> autoFix()
+    }
+
+    private fun searchSources() {
+        val s = _uiState.value
+        if (s.queryBookName.isBlank()) {
+            _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请填写书名"))
+            return
+        }
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val prompt = "帮我列出可以阅读《${s.queryBookName}》(作者：${s.queryAuthor}) 的在线小说网站/书源候选，每个一行，格式：网站名 - URL。至少列出 5-8 个，优先考虑权威站点。"
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel }
+            )
+            result.fold(
+                onSuccess = { text ->
+                    val lines = text.lines().map { it.trim() }.filter { it.isNotBlank() }
+                    _uiState.update { it.copy(isLoading = false, candidates = lines) }
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "查询失败") }
+                    _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("查询失败"))
+                }
+            )
+        }
+    }
+
+    private fun evaluateQuality() {
+        val s = _uiState.value
+        if (s.selectedSourceToValidate.isBlank()) {
+            _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请选择或粘贴要评估的书源"))
+            return
+        }
+        _uiState.update { it.copy(isLoading = true, error = null, qualityReport = "") }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val prompt = "请从以下维度评估这个书源：1) URL 结构稳定性 2) 章节抓取难度 3) 是否有严重广告/反爬 4) 对中文读者友好度 5) 总体评分(满分 10)。书源：\n${s.selectedSourceToValidate.take(1200)}"
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel }
+            )
+            result.fold(
+                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, qualityReport = text) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "评估失败") }
+                    _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("评估失败"))
+                }
+            )
+        }
+    }
+
+    private fun autoFix() {
+        val s = _uiState.value
+        if (s.sourceUrlToFix.isBlank()) {
+            _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("请粘贴要修复的书源 URL 或 JSON"))
+            return
+        }
+        _uiState.update { it.copy(isLoading = true, error = null, fixReport = "") }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val prompt = "下面的书源可能失效了（URL 或规则不对）。请根据你对常见小说网站结构的理解，给出：1) 可能的根地址/搜索规则；2) 推荐的 CSS 选择器（书名、作者、章节列表、章节内容）；3) 可能失效的原规则提示。输入：\n${s.sourceUrlToFix.take(1200)}"
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel }
+            )
+            result.fold(
+                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, fixReport = text) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "修复失败") }
+                    _effects.tryEmit(AiSourceAdvancedEffect.ShowToast("修复失败"))
+                }
+            )
+        }
+    }
+}
+
+// ========== AI 推荐 / 书单 / 教练 ==========
+class AiRecommendViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(AiRecommendUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<AiRecommendEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: AiRecommendIntent) = when (intent) {
+        is AiRecommendIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+        is AiRecommendIntent.UpdateQuery -> _uiState.update { it.copy(query = intent.value) }
+        is AiRecommendIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+        is AiRecommendIntent.Generate -> generate(typeText = "灵感书单")
+        is AiRecommendIntent.CoachReport -> generate(typeText = "阅读教练")
+        is AiRecommendIntent.VibeReport -> generate(typeText = "阅读氛围")
+    }
+
+    private fun generate(typeText: String) {
+        val s = _uiState.value
+        _uiState.update { it.copy(isLoading = true, error = null, report = "") }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val (sys, prompt) = when (s.tab) {
+                0 -> "你是一位资深阅读顾问，根据用户口味生成个性化书单，附每本书的推荐理由。" to
+                    "用户偏好/阅读需求：${s.query.ifBlank { "请随机推荐三本值得一读的中文/外文小说，并附理由。" }}"
+                1 -> "你是一位阅读教练。根据用户阅读数据（或自述），给出节奏建议、书单安排、以及鼓励。" to
+                    "阅读数据或自述：${s.query.ifBlank { "我最近阅读量下降，希望被鼓励并给出每周 3 本书的推荐节奏。" }}"
+                2 -> "你是一位灵感推荐员。根据用户描述的心情/场景，推荐匹配主题的书单。" to
+                    "场景描述：${s.query.ifBlank { "下雨天想读的治愈系小说 3-5 本" }}"
+                3 -> "你是一位阅读氛围策划师。推荐适合当前阅读内容的 BGM 歌单 + 壁纸风格。" to
+                    "当前阅读内容/关键词：${s.query.ifBlank { "深夜读科幻小说" }}"
+                else -> "你是一位推荐员" to s.query
+            }
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel },
+                systemPrompt = sys
+            )
+            result.fold(
+                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, report = text) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _effects.tryEmit(AiRecommendEffect.ShowToast("生成失败"))
+                }
+            )
+        }
+    }
+}
+
+// ========== AI 归档 / 工具 ==========
+class AiArchiveViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(AiArchiveUiState())
+    val uiState = _uiState.asStateFlow()
+
+    private val _effects = MutableSharedFlow<AiArchiveEffect>(extraBufferCapacity = 16)
+    val effects = _effects.asSharedFlow()
+
+    fun onIntent(intent: AiArchiveIntent) = when (intent) {
+        is AiArchiveIntent.ChangeTab -> _uiState.update { it.copy(tab = intent.tab) }
+        is AiArchiveIntent.UpdateInputDesc -> _uiState.update { it.copy(inputDesc = intent.value) }
+        is AiArchiveIntent.UpdateSampleText -> _uiState.update { it.copy(sampleText = intent.value) }
+        is AiArchiveIntent.UpdateFilePathPattern -> _uiState.update { it.copy(filePathPattern = intent.value) }
+        is AiArchiveIntent.UpdateModel -> _uiState.update { it.copy(model = intent.value) }
+        is AiArchiveIntent.GenerateReplaceRule -> generate("replace")
+        is AiArchiveIntent.GenerateArchivePlan -> generate("archive")
+        is AiArchiveIntent.GenerateRenamePlan -> generate("rename")
+        is AiArchiveIntent.CopyOutput -> {
+            if (_uiState.value.output.isNotBlank()) {
+                _effects.tryEmit(AiArchiveEffect.ShowToast("已复制"))
+            }
+        }
+    }
+
+    private fun generate(mode: String) {
+        val s = _uiState.value
+        _uiState.update { it.copy(isLoading = true, error = null, output = "") }
+        viewModelScope.launch {
+            val cfg = runCatching { AiConfigStore.currentConfig() }
+                .getOrElse { AiProviderConfig(AiProvider.OPENAI, "", "") }
+            val (sys, prompt) = when (mode) {
+                "replace" -> "你是一个规则生成助手。输出 Legado 可读的替换规则（JSON 数组）。" to
+                    "描述：${s.inputDesc}\n示例文本：${s.sampleText.take(400)}。请输出推荐的替换规则 JSON。"
+                "archive" -> "你是一个图书归档助理。给出本地书籍推荐的目录结构 + 元数据补全方案。" to
+                    "描述：${s.inputDesc}\n样例文件名：${s.filePathPattern.take(300)}"
+                else -> "你是一个文件重命名助理。输出批处理方案（中文说明 + 推荐的统一文件名模板）。" to
+                    "描述：${s.inputDesc}\n样例：${s.filePathPattern.take(300)}"
+            }
+            val result = AiClient.chat(
+                messages = listOf(AiMessage("user", prompt)),
+                config = cfg,
+                model = s.model.ifBlank { cfg.chatModel },
+                systemPrompt = sys
+            )
+            result.fold(
+                onSuccess = { text -> _uiState.update { it.copy(isLoading = false, output = text) } },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isLoading = false, error = e.message ?: "生成失败") }
+                    _effects.tryEmit(AiArchiveEffect.ShowToast("生成失败"))
+                }
+            )
+        }
     }
 }

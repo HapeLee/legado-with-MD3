@@ -229,3 +229,170 @@ sealed interface AiSettingsEffect {
     data class ShowToast(val message: String) : AiSettingsEffect
     data class ExportConfig(val json: String) : AiSettingsEffect
 }
+
+// ========== AI 内容工具 (翻译/摘要/检索/重写) ==========
+@Stable
+data class AiContentToolsUiState(
+    val tabs: List<String> = listOf("翻译", "摘要", "智能检索", "风格重写", "章节朗读"),
+    val tab: Int = 0,
+    val sourceBookName: String = "",
+    val sourceChapter: String = "",
+    val input: String = "",
+    val targetLanguage: String = "中文",
+    val summaryLevel: String = "标准", // 简洁 / 标准 / 详细
+    val rewriteStyle: String = "文学化",
+    val ttsVoice: String = "default",
+    val model: String = "gpt-4o-mini",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val output: String = "",
+    val audioFile: String? = null
+)
+
+sealed interface AiContentToolsIntent {
+    data class ChangeTab(val tab: Int) : AiContentToolsIntent
+    data class UpdateBookName(val value: String) : AiContentToolsIntent
+    data class UpdateChapter(val value: String) : AiContentToolsIntent
+    data class UpdateInput(val value: String) : AiContentToolsIntent
+    data class UpdateTargetLanguage(val value: String) : AiContentToolsIntent
+    data class UpdateSummaryLevel(val value: String) : AiContentToolsIntent
+    data class UpdateRewriteStyle(val value: String) : AiContentToolsIntent
+    data class UpdateTtsVoice(val value: String) : AiContentToolsIntent
+    data class UpdateModel(val value: String) : AiContentToolsIntent
+    data object Execute : AiContentToolsIntent
+    data object CopyOutput : AiContentToolsIntent
+    data object PlayTts : AiContentToolsIntent
+}
+
+sealed interface AiContentToolsEffect {
+    data class ShowToast(val message: String) : AiContentToolsEffect
+}
+
+// ========== AI 封面 / 角色卡 ==========
+@Stable
+data class AiArtUiState(
+    val tabs: List<String> = listOf("书籍封面", "角色卡", "场景氛围图", "章节插画"),
+    val tab: Int = 0,
+    val bookName: String = "",
+    val author: String = "",
+    val intro: String = "",
+    val characterName: String = "",
+    val characterDesc: String = "",
+    val sceneDesc: String = "",
+    val model: String = "flux-dev",
+    val size: String = "1024x1024",
+    val styleHint: String = "中式古风",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val images: List<io.legado.app.help.ai.GeneratedImage> = emptyList(),
+    val characterText: String = ""
+)
+
+sealed interface AiArtIntent {
+    data class ChangeTab(val tab: Int) : AiArtIntent
+    data class UpdateBookName(val value: String) : AiArtIntent
+    data class UpdateAuthor(val value: String) : AiArtIntent
+    data class UpdateIntro(val value: String) : AiArtIntent
+    data class UpdateCharacterName(val value: String) : AiArtIntent
+    data class UpdateCharacterDesc(val value: String) : AiArtIntent
+    data class UpdateSceneDesc(val value: String) : AiArtIntent
+    data class UpdateModel(val value: String) : AiArtIntent
+    data class UpdateSize(val value: String) : AiArtIntent
+    data class UpdateStyleHint(val value: String) : AiArtIntent
+    data object GenerateImage : AiArtIntent
+    data object GenerateCharacterCard : AiArtIntent
+    data object SaveImage : AiArtIntent
+    data object SetAsCover : AiArtIntent
+}
+
+sealed interface AiArtEffect {
+    data class ShowToast(val message: String) : AiArtEffect
+}
+
+// ========== AI 书源高级 (搜索/评分/自动修源) ==========
+@Stable
+data class AiSourceAdvancedUiState(
+    val tabs: List<String> = listOf("智能搜索书源", "书源质量评分", "自动修源"),
+    val tab: Int = 0,
+    val queryBookName: String = "",
+    val queryAuthor: String = "",
+    val model: String = "gpt-4o-mini",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val candidates: List<String> = emptyList(),
+    val selectedSourceToValidate: String = "",
+    val qualityReport: String = "",
+    val sourceUrlToFix: String = "",
+    val fixReport: String = ""
+)
+
+sealed interface AiSourceAdvancedIntent {
+    data class ChangeTab(val tab: Int) : AiSourceAdvancedIntent
+    data class UpdateQueryBookName(val value: String) : AiSourceAdvancedIntent
+    data class UpdateQueryAuthor(val value: String) : AiSourceAdvancedIntent
+    data class UpdateSelectedSource(val value: String) : AiSourceAdvancedIntent
+    data class UpdateSourceUrlToFix(val value: String) : AiSourceAdvancedIntent
+    data class UpdateModel(val value: String) : AiSourceAdvancedIntent
+    data object SearchSources : AiSourceAdvancedIntent
+    data object EvaluateQuality : AiSourceAdvancedIntent
+    data object AutoFix : AiSourceAdvancedIntent
+}
+
+sealed interface AiSourceAdvancedEffect {
+    data class ShowToast(val message: String) : AiSourceAdvancedEffect
+}
+
+// ========== AI 推荐 / 书单 / 阅读教练 ==========
+@Stable
+data class AiRecommendUiState(
+    val tabs: List<String> = listOf("个性化书单", "阅读教练", "灵感书单", "阅读氛围"),
+    val tab: Int = 0,
+    val query: String = "",
+    val model: String = "gpt-4o-mini",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val report: String = ""
+)
+
+sealed interface AiRecommendIntent {
+    data class ChangeTab(val tab: Int) : AiRecommendIntent
+    data class UpdateQuery(val value: String) : AiRecommendIntent
+    data class UpdateModel(val value: String) : AiRecommendIntent
+    data object Generate : AiRecommendIntent
+    data object CoachReport : AiRecommendIntent
+    data object VibeReport : AiRecommendIntent
+}
+
+sealed interface AiRecommendEffect {
+    data class ShowToast(val message: String) : AiRecommendEffect
+}
+
+// ========== AI 归档 / 工具 ==========
+@Stable
+data class AiArchiveUiState(
+    val tabs: List<String> = listOf("替换规则生成", "本地书归档", "文件重命名"),
+    val tab: Int = 0,
+    val inputDesc: String = "",
+    val sampleText: String = "",
+    val filePathPattern: String = "",
+    val model: String = "gpt-4o-mini",
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val output: String = ""
+)
+
+sealed interface AiArchiveIntent {
+    data class ChangeTab(val tab: Int) : AiArchiveIntent
+    data class UpdateInputDesc(val value: String) : AiArchiveIntent
+    data class UpdateSampleText(val value: String) : AiArchiveIntent
+    data class UpdateFilePathPattern(val value: String) : AiArchiveIntent
+    data class UpdateModel(val value: String) : AiArchiveIntent
+    data object GenerateReplaceRule : AiArchiveIntent
+    data object GenerateArchivePlan : AiArchiveIntent
+    data object GenerateRenamePlan : AiArchiveIntent
+    data object CopyOutput : AiArchiveIntent
+}
+
+sealed interface AiArchiveEffect {
+    data class ShowToast(val message: String) : AiArchiveEffect
+}
