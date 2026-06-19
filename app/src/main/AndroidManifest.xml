@@ -203,6 +203,25 @@
             android:name=".ui.book.search.SearchActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="standard" />
+        <!-- AI 提供商管理 -->
+        <activity
+            android:name=".ui.config.AiProviderManageActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiProviderEditActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
+        <activity
+            android:name=".ui.config.AiImageProviderManageActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard" />
+        <activity
+            android:name=".ui.config.AiImageProviderEditActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:launchMode="standard"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- AI 聊天界面 -->
         <activity
             android:name=".ui.main.ai.AiChatActivity"

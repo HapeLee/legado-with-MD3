@@ -39,4 +39,6 @@ val appDatabaseModule = module {
     factory<HomepageModuleDao> { get<AppDatabase>().homepageModuleDao }
     factory<HomepageCustomSetDao> { get<AppDatabase>().homepageCustomSetDao }
     factory<HighlightRuleDao> { get<AppDatabase>().highlightRuleDao }
+    factory<AiImageGroupDao> { get<AppDatabase>().aiImageGroupDao }
+    factory<AiGeneratedImageDao> { get<AppDatabase>().aiGeneratedImageDao }
 }
