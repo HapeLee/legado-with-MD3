@@ -14,6 +14,8 @@ data class ContentRule(
     var subContent: String? = null, //副文规则，拼接在正文后面或者获取歌词等
     var title: String? = null, //有些网站只能在正文中获取标题
     var nextContentUrl: String? = null,
+    var videoUrl: String? = null,      //视频地址规则
+    var videoPoster: String? = null,   //视频封面规则
     var webJs: String? = null,
     var sourceRegex: String? = null,
     var replaceRegex: String? = null, //替换规则

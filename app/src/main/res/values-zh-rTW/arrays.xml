@@ -5,6 +5,7 @@
         <item>音訊</item>
         <item>圖片</item>
         <item>資料</item>
+        <item>影片</item>
     </string-array>
 
     <string-array name="group_style">

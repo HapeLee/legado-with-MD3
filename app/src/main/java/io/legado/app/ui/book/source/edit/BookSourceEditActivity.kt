@@ -258,6 +258,7 @@ class BookSourceEditActivity :
                     BookSourceType.file -> 3
                     BookSourceType.image -> 2
                     BookSourceType.audio -> 1
+                    BookSourceType.video -> 4
                     else -> 0
                 }
             )
@@ -355,6 +356,8 @@ class BookSourceEditActivity :
             add(EditEntity("subContent", cr.subContent, R.string.rule_sub_content))
             add(EditEntity("title", cr.title, R.string.rule_chapter_name))
             add(EditEntity("nextContentUrl", cr.nextContentUrl, R.string.rule_next_content))
+            add(EditEntity("videoUrl", cr.videoUrl, "视频地址"))
+            add(EditEntity("videoPoster", cr.videoPoster, "视频封面"))
             add(EditEntity("webJs", cr.webJs, R.string.rule_web_js))
             add(EditEntity("sourceRegex", cr.sourceRegex, R.string.rule_source_regex))
             add(EditEntity("replaceRegex", cr.replaceRegex, R.string.rule_replace_regex))
@@ -390,6 +393,7 @@ class BookSourceEditActivity :
             3 -> BookSourceType.file
             2 -> BookSourceType.image
             1 -> BookSourceType.audio
+            4 -> BookSourceType.video
             else -> BookSourceType.default
         }
         val searchRule = SearchRule()
@@ -552,6 +556,9 @@ class BookSourceEditActivity :
                 "title" -> contentRule.title = viewModel.ruleComplete(it.value)
                 "nextContentUrl" -> contentRule.nextContentUrl =
                     viewModel.ruleComplete(it.value, type = 2)
+
+                "videoUrl" -> contentRule.videoUrl = viewModel.ruleComplete(it.value, type = 2)
+                "videoPoster" -> contentRule.videoPoster = viewModel.ruleComplete(it.value, type = 2)
 
                 "webJs" -> contentRule.webJs = it.value
                 "sourceRegex" -> contentRule.sourceRegex = it.value

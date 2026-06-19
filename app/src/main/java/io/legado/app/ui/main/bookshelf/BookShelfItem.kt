@@ -41,6 +41,8 @@ data class BookShelfItem(
 
     val isImage: Boolean get() = (type and BookType.image) > 0
 
+    val isVideo: Boolean get() = (type and BookType.video) > 0
+
     val isNotShelf: Boolean get() = (type and BookType.notShelf) > 0
 
     val isNew: Boolean get() = lastCheckCount > 0

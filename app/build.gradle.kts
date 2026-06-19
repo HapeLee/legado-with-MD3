@@ -196,6 +196,7 @@ dependencies {
     implementation(libs.media.media)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.datasource.okhttp)
+    implementation(libs.media3.ui)
     implementation(libs.splitties.appctx)
     implementation(libs.splitties.systemservices)
     implementation(libs.splitties.views)
