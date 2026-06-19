@@ -69,6 +69,19 @@ import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Animation
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CleanHands
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Rule
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Toc
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -157,6 +170,7 @@ import io.legado.app.ui.widget.components.AppVerticalSlider
 import io.legado.app.ui.widget.components.bookmark.BookmarkEditContent
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.divider.PillDivider
+import io.legado.app.ui.widget.components.icon.AppIcons
 import io.legado.app.ui.widget.components.menuItem.MenuItemIcon
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
@@ -1624,6 +1638,15 @@ private fun OverflowDropdownMenu(
     expanded: Boolean,
     onDismiss: () -> Unit,
 ) {
+    val showIcon = state.menuConfig.showMenuIcon
+    val menuIcon: (ImageVector) -> (@Composable () -> Unit)? = { imageVector ->
+        if (showIcon) {
+            { MenuItemIcon(imageVector = imageVector) }
+        } else {
+            null
+        }
+    }
+
     RoundDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
@@ -1634,6 +1657,7 @@ private fun OverflowDropdownMenu(
         if (!state.isLocalBook) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.menu_refresh_all),
+                leadingIcon = menuIcon(AppIcons.Replay),
                 onClick = { dismiss(); onIntent(ReadBookIntent.MenuRefreshAll) },
             )
         }
@@ -1642,6 +1666,7 @@ private fun OverflowDropdownMenu(
         if (state.isLocalTxt) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.txt_toc_rule),
+                leadingIcon = menuIcon(Icons.Default.Toc),
                 onClick = { dismiss(); onIntent(ReadBookIntent.MenuTocRegex) },
             )
         }
@@ -1650,6 +1675,7 @@ private fun OverflowDropdownMenu(
         if (state.isLocalBook) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.set_charset),
+                leadingIcon = menuIcon(Icons.Default.Translate),
                 onClick = {
                     dismiss()
                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Charset))
@@ -1662,10 +1688,12 @@ private fun OverflowDropdownMenu(
         // Content operations
         RoundDropdownMenuItem(
             text = stringResource(R.string.bookmark_add),
+            leadingIcon = menuIcon(Icons.Default.Bookmark),
             onClick = { dismiss(); onIntent(ReadBookIntent.AddBookmark) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.edit_content),
+            leadingIcon = menuIcon(AppIcons.Edit),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
@@ -1674,6 +1702,7 @@ private fun OverflowDropdownMenu(
         if (!state.isLocalBook) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.offline_cache),
+                leadingIcon = menuIcon(Icons.Default.CloudDownload),
                 onClick = {
                     dismiss()
                     onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download))
@@ -1682,10 +1711,12 @@ private fun OverflowDropdownMenu(
         }
         RoundDropdownMenuItem(
             text = stringResource(R.string.update_toc),
+            leadingIcon = menuIcon(AppIcons.Replay),
             onClick = { dismiss(); onIntent(ReadBookIntent.MenuUpdateToc) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.simulated_reading),
+            leadingIcon = menuIcon(Icons.Default.AutoStories),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SimulatedReading))
@@ -1693,6 +1724,7 @@ private fun OverflowDropdownMenu(
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.reverse_content),
+            leadingIcon = menuIcon(Icons.Default.SwapVert),
             onClick = { dismiss(); onIntent(ReadBookIntent.MenuReverseContent) },
         )
 
@@ -1701,15 +1733,18 @@ private fun OverflowDropdownMenu(
         // Checkable items
         RoundDropdownMenuItem(
             text = stringResource(R.string.replace_rule_title),
+            leadingIcon = menuIcon(Icons.Default.FindReplace),
             isSelected = state.useReplaceRule,
             onClick = { onIntent(ReadBookIntent.MenuEnableReplace) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.replace_rule_title_setting),
+            leadingIcon = menuIcon(AppIcons.Settings),
             onClick = { dismiss(); onIntent(ReadBookIntent.MenuSettingReplace) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.effective_replaces),
+            leadingIcon = menuIcon(Icons.Default.Rule),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.EffectiveReplaces))
@@ -1717,11 +1752,13 @@ private fun OverflowDropdownMenu(
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.same_title_removed),
+            leadingIcon = menuIcon(Icons.Default.CleanHands),
             isSelected = state.sameTitleRemoved,
             onClick = { onIntent(ReadBookIntent.MenuSameTitleRemoved) },
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.re_segment),
+            leadingIcon = menuIcon(Icons.Default.Toc),
             isSelected = state.reSegment,
             onClick = { onIntent(ReadBookIntent.MenuReSegment) },
         )
@@ -1730,11 +1767,13 @@ private fun OverflowDropdownMenu(
         if (state.isEpub) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.del_ruby_tag),
+                leadingIcon = menuIcon(Icons.Default.CleanHands),
                 isSelected = state.delRubyTag,
                 onClick = { onIntent(ReadBookIntent.MenuDelRubyTag) },
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.del_h_tag),
+                leadingIcon = menuIcon(Icons.Default.CleanHands),
                 isSelected = state.delHTag,
                 onClick = { onIntent(ReadBookIntent.MenuDelHTag) },
             )
@@ -1746,6 +1785,7 @@ private fun OverflowDropdownMenu(
         Box {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.image_style),
+                leadingIcon = menuIcon(Icons.Default.Image),
                 onClick = { imageStyleExpanded = true },
             )
             RoundDropdownMenu(
@@ -1784,6 +1824,7 @@ private fun OverflowDropdownMenu(
         }
         RoundDropdownMenuItem(
             text = stringResource(R.string.book_page_anim),
+            leadingIcon = menuIcon(Icons.Default.Animation),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageAnim))
@@ -1791,6 +1832,7 @@ private fun OverflowDropdownMenu(
         )
         RoundDropdownMenuItem(
             text = stringResource(R.string.config_btn),
+            leadingIcon = menuIcon(Icons.Default.Build),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
@@ -1801,10 +1843,12 @@ private fun OverflowDropdownMenu(
         if (state.isReadingProgressSyncConfigured) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.get_book_progress),
+                leadingIcon = menuIcon(Icons.Default.Sync),
                 onClick = { dismiss(); onIntent(ReadBookIntent.MenuGetProgress) },
             )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.cover_book_progress),
+                leadingIcon = menuIcon(Icons.Default.Sync),
                 onClick = { dismiss(); onIntent(ReadBookIntent.MenuCoverProgress) },
             )
         }
@@ -1813,6 +1857,7 @@ private fun OverflowDropdownMenu(
 
         RoundDropdownMenuItem(
             text = stringResource(R.string.log),
+            leadingIcon = menuIcon(AppIcons.BugReport),
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.AppLog))
