@@ -177,6 +177,29 @@ object MainNavigator {
                     backStack.add(route)
                 }
             }
+
+            MainRouteAiConsole,
+            MainRouteAiChat,
+            MainRouteAiImage,
+            MainRouteAiVideo,
+            MainRouteAiVision,
+            MainRouteAiTextTools,
+            MainRouteAiSource,
+            MainRouteAiBookshelf,
+            MainRouteAiContentTools,
+            MainRouteAiArt,
+            MainRouteAiSourceAdvanced,
+            MainRouteAiRecommend,
+            MainRouteAiArchive,
+            MainRouteAiSettings -> {
+                if (currentRoute is MainRoute) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(route)
+                }
+            }
         }
     }
 
