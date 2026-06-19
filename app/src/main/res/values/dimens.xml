@@ -33,4 +33,7 @@
     <dimen name="fastscroll_scrollbar_padding_end">8dp</dimen>
 
     <dimen name="fixed_height_bottom_padding">8dp</dimen>
+
+    <dimen name="ui_panel_radius">16dp</dimen>
+    <dimen name="ui_action_radius">8dp</dimen>
 </resources>

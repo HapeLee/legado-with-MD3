@@ -693,4 +693,8 @@
     <color name="ate_navigation_drawer_selected_dark">#202020</color>
 
     <color name="book_ant_10">#141414</color>
+
+    <color name="book_info_frost">#80FFFFFF</color>
+    <color name="background_card">#FFFFFFFF</color>
+    <color name="background_menu">#FFF5F5F5</color>
 </resources>
