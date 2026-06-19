@@ -101,11 +101,11 @@ android {
             versionNameSuffix = "-noR8"
         }
         getByName("debug") {
-            applicationIdSuffix = ".debug"
+            applicationId = "io.legato.kazusa.debug"
             if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig = signingConfigs.getByName("myConfig")
             }
-            manifestPlaceholders["app_name"] = "@string/app_name"
+            manifestPlaceholders["app_name"] = "Legado-Debug"
             versionNameSuffix = "_debug"
             isMinifyEnabled = false
             proguardFiles(
