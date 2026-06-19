@@ -171,9 +171,11 @@
             android:launchMode="singleTask" />
         <!-- 视频播放界面 -->
         <activity
-            android:name="io.legado.app.ui.book.read.video.VideoPlayActivity"
+            android:name="io.legado.app.ui.video.VideoPlayerActivity"
             android:enableOnBackInvokedCallback="true"
-            android:launchMode="singleTask" />
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:theme="@style/Activity.Transparent" />
         <!-- 授权界面 -->
         <activity
             android:name="io.legado.app.lib.permission.PermissionActivity"
@@ -486,6 +488,9 @@
             android:foregroundServiceType="mediaPlayback" />
         <service
             android:name=".service.AudioPlayService"
+            android:foregroundServiceType="mediaPlayback" />
+        <service
+            android:name=".service.VideoPlayService"
             android:foregroundServiceType="mediaPlayback" />
         <service
             android:name=".service.DownloadService"

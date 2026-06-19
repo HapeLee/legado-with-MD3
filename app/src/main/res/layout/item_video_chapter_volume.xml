@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="80dp"
+    android:layout_height="40dp"
+    android:layout_marginEnd="6dp"
+    tools:ignore="NamespaceTypo">
+
+    <TextView
+        android:id="@+id/tvChapterName"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_bookshelf_tag_item"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:padding="4dp"
+        android:textSize="11sp"
+        android:textStyle="normal" />
+
+</FrameLayout>
