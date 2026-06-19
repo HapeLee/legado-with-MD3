@@ -41,4 +41,5 @@ val appDatabaseModule = module {
     factory<HighlightRuleDao> { get<AppDatabase>().highlightRuleDao }
     factory<AiImageGroupDao> { get<AppDatabase>().aiImageGroupDao }
     factory<AiGeneratedImageDao> { get<AppDatabase>().aiGeneratedImageDao }
+    factory<BookCharacterDao> { get<AppDatabase>().bookCharacterDao }
 }

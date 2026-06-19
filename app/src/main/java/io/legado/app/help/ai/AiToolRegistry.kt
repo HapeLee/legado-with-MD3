@@ -155,6 +155,7 @@ object AiToolRegistry {
         tools += AiReadingNetworkTool.resolvedTools()
         tools += AiSettingsTool.resolvedTools()
         tools += AiImageTool.resolvedTools()
+        tools += AiBookCharacterTool.resolvedTools()
         return tools.distinctBy { it.name }
     }
 
