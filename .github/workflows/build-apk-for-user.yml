@@ -128,3 +128,21 @@ jobs:
             legado-debug-apks-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Auto Release on Push
+        if: ${{ github.event_name == 'push' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: debug-build-${{ github.run_number }}
+          name: Debug Build #${{ github.run_number }}
+          body: |
+            ## 自动构建的 Debug 版本
+            - 分支: ${{ steps.branch.outputs.branch }}
+            - 构建号: ${{ github.run_number }}
+            - Commit: ${{ github.sha }}
+          prerelease: true
+          files: |
+            app/build/outputs/apk/app/debug/*.apk
+            legado-debug-apks-*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
