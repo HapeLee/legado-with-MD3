@@ -662,6 +662,7 @@
     <string name="custom_button">CustomBtn</string>
     <string name="focus_lost_on_textbox">Please focus on the input box first</string>
     <string name="please_focus_cursor_on_textbox">Please move cursor to the input box first</string>
+    <string name="fullscreen_edit">Fullscreen edit</string>
     <string name="enable_js">Enable js</string>
     <string name="load_with_base_url">Load BaseUrl</string>
     <string name="all_source">All Sources</string>

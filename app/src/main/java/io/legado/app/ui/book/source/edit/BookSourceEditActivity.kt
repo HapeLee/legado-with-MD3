@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
@@ -33,7 +32,6 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
-import io.legado.app.ui.code.CodeEditActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.qrcode.QrCodeResult
@@ -79,38 +77,6 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
 
-    private val textEditLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            val view = window.decorView.findFocus()
-            if (view is EditText) {
-                result.data?.getStringExtra("text")?.let {
-                    view.setText(it)
-                }
-                result.data?.getIntExtra("cursorPosition", -1)?.takeIf { it in 0..< view.text.length }?.let {
-                    view.setSelection(it)
-                }
-            } else {
-                toastOnUi(R.string.focus_lost_on_textbox)
-            }
-        }
-    }
-
-    private fun onFullEditClicked() {
-        val view = window.decorView.findFocus()
-        if (view is EditText) {
-            val hint = findParentTextInputLayout(view)?.hint?.toString()
-            val currentText = view.text.toString()
-            val intent = Intent(this, CodeEditActivity::class.java).apply {
-                putExtra("text", currentText)
-                putExtra("title", hint)
-                putExtra("cursorPosition", view.selectionStart)
-            }
-            textEditLauncher.launch(intent)
-        }
-        else {
-            toastOnUi(R.string.please_focus_cursor_on_textbox)
-        }
-    }
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
@@ -160,8 +126,6 @@ class BookSourceEditActivity :
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_fullscreen_edit -> onFullEditClicked()
-
             R.id.menu_save -> viewModel.save(getSource()) {
                 setResult(RESULT_OK, Intent().putExtra("origin", it.bookSourceUrl))
                 finish()
@@ -196,7 +160,7 @@ class BookSourceEditActivity :
 
             R.id.menu_set_source_variable -> setSourceVariable()
             R.id.menu_search -> viewModel.save(getSource()) { source ->
-                SearchActivity.start(this, source)
+                SearchActivity.start(this, source.bookSourceUrl, SearchScope(source).toString())
             }
 
         }
@@ -404,6 +368,8 @@ class BookSourceEditActivity :
             add(EditEntity("subContent", cr.subContent, R.string.rule_sub_content))
             add(EditEntity("replaceRegex", cr.replaceRegex, R.string.rule_replace_regex))
             add(EditEntity("title", cr.title, R.string.rule_chapter_name))
+            add(EditEntity("videoUrl", cr.videoUrl, "视频地址"))
+            add(EditEntity("videoPoster", cr.videoPoster, "视频封面"))
             add(EditEntity("sourceRegex", cr.sourceRegex, R.string.rule_source_regex))
             add(EditEntity("imageStyle", cr.imageStyle, R.string.rule_image_style))
             add(EditEntity("imageDecode", cr.imageDecode, R.string.rule_image_decode))
@@ -605,6 +571,9 @@ class BookSourceEditActivity :
                 "subContent" -> contentRule.subContent = viewModel.ruleComplete(it.value)
                 "title" -> contentRule.title = viewModel.ruleComplete(it.value)
 
+                "videoUrl" -> contentRule.videoUrl = viewModel.ruleComplete(it.value, type = 2)
+                "videoPoster" -> contentRule.videoPoster = viewModel.ruleComplete(it.value, type = 2)
+
                 "webJs" -> contentRule.webJs = it.value
                 "sourceRegex" -> contentRule.sourceRegex = it.value
                 "replaceRegex" -> contentRule.replaceRegex = it.value
@@ -696,18 +665,44 @@ class BookSourceEditActivity :
     }
 
     override fun sendText(text: String) {
-        if (text.isBlank()) return
         val view = window.decorView.findFocus()
         if (view is EditText) {
-            val start = view.selectionStart
-            val end = view.selectionEnd
-            val edit = view.editableText//获取EditText的文字
-            if (start < 0 || start >= edit.length) {
-                edit.append(text)
-            } else if (start > end) {
-                edit.replace(end, start, text)
-            } else {
-                edit.replace(start, end, text)//光标所在位置插入文字
+            var start = view.selectionStart
+            var end = view.selectionEnd
+            if (start > end) {
+                val temp = start
+                start = end
+                end = temp
+            }
+            if (text.isNotEmpty()) {
+                val edit = view.editableText
+                if (start < 0 || start >= edit.length) {
+                    edit.append(text)
+                } else {
+                    edit.replace(start, end, text)
+                }
+            }
+            if (adapter.editEntityMaxLine >= 999) {
+                view.post {
+                    val editTextLocation = IntArray(2)
+                    view.getLocationOnScreen(editTextLocation)
+                    val recyclerViewLocation = IntArray(2)
+                    binding.recyclerView.getLocationOnScreen(recyclerViewLocation)
+                    val layout = view.layout
+                    if (layout != null) {
+                        val line = layout.getLineForOffset(end)
+                        val cursorYInEditText = layout.getLineTop(line)
+                        val cursorYOnScreen = editTextLocation[1] + cursorYInEditText
+                        val cursorYInRecyclerView = cursorYOnScreen - recyclerViewLocation[1]
+                        val recyclerViewBottom = binding.recyclerView.height - 120
+                        if (cursorYInRecyclerView !in 0..recyclerViewBottom) {
+                            val scrollDistance = cursorYInRecyclerView - recyclerViewBottom / 3
+                            if (scrollDistance > 0 && binding.recyclerView.canScrollVertically(1) || scrollDistance < 0 && binding.recyclerView.canScrollVertically(-1)) {
+                                binding.recyclerView.smoothScrollBy(0, scrollDistance)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -732,6 +727,22 @@ class BookSourceEditActivity :
 
     override fun setVariable(key: String, variable: String?) {
         viewModel.bookSource?.setVariable(variable)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onUndoClicked() {
+        val editText = window.decorView.findFocus()
+        if (editText is EditText) {
+            editText.onTextContextMenuItem(android.R.id.undo)
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.M)
+    override fun onRedoClicked() {
+        val editText = window.decorView.findFocus()
+        if (editText is EditText) {
+            editText.onTextContextMenuItem(android.R.id.redo)
+        }
     }
 
 }

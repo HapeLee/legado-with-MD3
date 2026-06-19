@@ -7,6 +7,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.ConcurrentRateLimiter.Companion.concurrentRecordMap
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.config.SourceConfig
 import io.legado.app.help.http.CookieStore
@@ -73,6 +74,7 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             }
             appDb.bookSourceDao.insert(source)
             bookSource = source
+            concurrentRecordMap.remove(source.bookSourceUrl) //删除并发限制缓存
             source
         }.onSuccess {
             success?.invoke(it)
