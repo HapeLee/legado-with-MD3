@@ -1,6 +1,8 @@
 package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
+import io.legado.app.help.http.newCallResponse
+import io.legado.app.help.http.okHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
@@ -237,7 +239,7 @@ object AiBookSourceTool {
                 put("bookUrl", book.bookUrl)
                 put("coverUrl", book.coverUrl)
                 put("kind", book.kind)
-                put("intro", book.intro.take(200))
+                put("intro", book.intro?.take(200))
                 put("latestChapterTitle", book.latestChapterTitle)
             }
         }
@@ -265,7 +267,7 @@ object AiBookSourceTool {
         }
 
         val html = runCatching {
-            io.legado.app.help.http.okHttpClient.newCallResponse {
+            okHttpClient.newCallResponse {
                 url(url)
             }.body?.string().orEmpty()
         }.getOrDefault("")

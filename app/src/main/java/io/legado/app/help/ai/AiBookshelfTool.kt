@@ -2,6 +2,8 @@ package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.help.http.newCallResponse
+import io.legado.app.help.http.okHttpClient
 import io.legado.app.model.ReadBook
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
@@ -174,12 +176,7 @@ object AiBookshelfTool {
             }
         }
         if (group.isNotBlank()) {
-            filtered = filtered.filter { it.group == group }
-        }
-        if (tag.isNotBlank()) {
-            filtered = filtered.filter {
-                it.bookTag?.split(",")?.any { t -> t.trim() == tag } == true
-            }
+            filtered = filtered.filter { it.group.toString() == group }
         }
         if (onlyReading) {
             filtered = filtered.filter { it.durChapterTitle != null }
@@ -196,7 +193,7 @@ object AiBookshelfTool {
                 put("origin", book.origin)
                 put("kind", book.kind)
                 put("group", book.group)
-                put("intro", book.intro.take(200))
+                put("intro", book.intro?.take(200))
                 put("lastChapter", book.latestChapterTitle)
                 put("currentChapter", book.durChapterTitle)
                 put("lastReadTime", book.lastCheckTime)
@@ -262,7 +259,8 @@ object AiBookshelfTool {
             }.toString(2)
         }
 
-        val chapters = appDb.bookChapterDao.getChapterByBook(bookUrl)
+        val chapterList = appDb.bookChapterDao.getChapterList(bookUrl)
+        val chapters = chapterList
             .drop(offset)
             .take(limit)
             .map { chapter ->
@@ -270,13 +268,12 @@ object AiBookshelfTool {
                     put("index", chapter.index)
                     put("title", chapter.title)
                     put("url", chapter.url)
-                    put("isRead", chapter.isRead)
                 }
             }
 
         JSONObject().apply {
             put("ok", true)
-            put("total", appDb.bookChapterDao.getChapterByBook(bookUrl).size)
+            put("total", chapterList.size)
             put("offset", offset)
             put("results", JSONArray().apply { chapters.forEach { put(it) } })
         }.toString(2)
