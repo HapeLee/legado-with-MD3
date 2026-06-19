@@ -67,7 +67,7 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleAppDebug --no-daemon --no-configuration-cache
+          ./gradlew assembleAppDebug --stacktrace --info --no-daemon --no-configuration-cache
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
