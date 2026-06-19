@@ -87,10 +87,15 @@ import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.ui.about.AboutViewModel
+import io.legado.app.ui.ai.AiArchiveViewModel
+import io.legado.app.ui.ai.AiArtViewModel
 import io.legado.app.ui.ai.AiBookshelfViewModel
 import io.legado.app.ui.ai.AiChatViewModel
+import io.legado.app.ui.ai.AiContentToolsViewModel
 import io.legado.app.ui.ai.AiImageViewModel
+import io.legado.app.ui.ai.AiRecommendViewModel
 import io.legado.app.ui.ai.AiSettingsViewModel
+import io.legado.app.ui.ai.AiSourceAdvancedViewModel
 import io.legado.app.ui.ai.AiSourceViewModel
 import io.legado.app.ui.ai.AiTextToolsViewModel
 import io.legado.app.ui.ai.AiVideoViewModel

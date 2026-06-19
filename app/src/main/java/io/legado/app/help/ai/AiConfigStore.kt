@@ -36,6 +36,12 @@ object AiConfigStore {
             endpoint = "https://api.deepseek.com/v1",
             apiKey = "",
             chatModel = "deepseek-chat"
+        ),
+        AiProvider.OLLAMA to AiProviderConfig(
+            provider = AiProvider.OLLAMA,
+            endpoint = "http://localhost:11434/v1",
+            apiKey = "",
+            chatModel = "llama3.2"
         )
     )
 

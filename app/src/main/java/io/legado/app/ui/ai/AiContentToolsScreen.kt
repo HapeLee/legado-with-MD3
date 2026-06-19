@@ -35,21 +35,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiContentToolsScreen(
-    viewModel: AiContentToolsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    state: AiContentToolsUiState,
+    onIntent: (AiContentToolsIntent) -> Unit,
+    effects: Flow<AiContentToolsEffect>,
     onBack: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.effects.collect { eff ->
+        effects.collect { eff ->
             when (eff) {
                 is AiContentToolsEffect.ShowToast -> context.toastOnUi(eff.message)
             }
@@ -82,7 +82,7 @@ fun AiContentToolsScreen(
                 state.tabs.forEachIndexed { idx, label ->
                     FilterChip(
                         selected = state.tab == idx,
-                        onClick = { viewModel.onIntent(AiContentToolsIntent.ChangeTab(idx)) },
+                        onClick = { onIntent(AiContentToolsIntent.ChangeTab(idx)) },
                         label = { Text(label) }
                     )
                 }
@@ -97,7 +97,7 @@ fun AiContentToolsScreen(
                         listOf("中文", "英文", "日文", "繁体").forEach { lang ->
                             FilterChip(
                                 selected = state.targetLanguage == lang,
-                                onClick = { viewModel.onIntent(AiContentToolsIntent.UpdateTargetLanguage(lang)) },
+                                onClick = { onIntent(AiContentToolsIntent.UpdateTargetLanguage(lang)) },
                                 label = { Text(lang) },
                                 modifier = Modifier.padding(end = 6.dp)
                             )
@@ -109,7 +109,7 @@ fun AiContentToolsScreen(
                         listOf("简洁", "标准", "详细").forEach { level ->
                             FilterChip(
                                 selected = state.summaryLevel == level,
-                                onClick = { viewModel.onIntent(AiContentToolsIntent.UpdateSummaryLevel(level)) },
+                                onClick = { onIntent(AiContentToolsIntent.UpdateSummaryLevel(level)) },
                                 label = { Text(level) },
                                 modifier = Modifier.padding(end = 6.dp)
                             )
@@ -121,7 +121,7 @@ fun AiContentToolsScreen(
                         listOf("文学化", "口语化", "正式化", "古风").forEach { style ->
                             FilterChip(
                                 selected = state.rewriteStyle == style,
-                                onClick = { viewModel.onIntent(AiContentToolsIntent.UpdateRewriteStyle(style)) },
+                                onClick = { onIntent(AiContentToolsIntent.UpdateRewriteStyle(style)) },
                                 label = { Text(style) },
                                 modifier = Modifier.padding(end = 6.dp)
                             )
@@ -133,7 +133,7 @@ fun AiContentToolsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.sourceBookName,
-                onValueChange = { viewModel.onIntent(AiContentToolsIntent.UpdateBookName(it)) },
+                onValueChange = { onIntent(AiContentToolsIntent.UpdateBookName(it)) },
                 placeholder = { Text("书名（可选）") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -141,7 +141,7 @@ fun AiContentToolsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.sourceChapter,
-                onValueChange = { viewModel.onIntent(AiContentToolsIntent.UpdateChapter(it)) },
+                onValueChange = { onIntent(AiContentToolsIntent.UpdateChapter(it)) },
                 placeholder = { Text("章节标题（可选）") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -149,7 +149,7 @@ fun AiContentToolsScreen(
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = state.input,
-                onValueChange = { viewModel.onIntent(AiContentToolsIntent.UpdateInput(it)) },
+                onValueChange = { onIntent(AiContentToolsIntent.UpdateInput(it)) },
                 placeholder = { Text("在此粘贴要处理的文本……") },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -159,12 +159,12 @@ fun AiContentToolsScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
             Row {
-                TextButton(onClick = { viewModel.onIntent(AiContentToolsIntent.Execute) }) {
+                TextButton(onClick = { onIntent(AiContentToolsIntent.Execute) }) {
                     Text("执行")
                 }
                 Spacer(modifier = Modifier.padding(4.dp))
                 if (state.output.isNotBlank()) {
-                    TextButton(onClick = { viewModel.onIntent(AiContentToolsIntent.CopyOutput) }) {
+                    TextButton(onClick = { onIntent(AiContentToolsIntent.CopyOutput) }) {
                         Text("复制结果")
                     }
                 }

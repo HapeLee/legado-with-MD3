@@ -39,20 +39,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiArtScreen(
-    viewModel: AiArtViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    state: AiArtUiState,
+    onIntent: (AiArtIntent) -> Unit,
+    effects: Flow<AiArtEffect>,
     onBack: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.effects.collect { eff ->
+        effects.collect { eff ->
             when (eff) {
                 is AiArtEffect.ShowToast -> context.toastOnUi(eff.message)
             }
@@ -85,7 +86,7 @@ fun AiArtScreen(
                 state.tabs.forEachIndexed { idx, label ->
                     FilterChip(
                         selected = state.tab == idx,
-                        onClick = { viewModel.onIntent(AiArtIntent.ChangeTab(idx)) },
+                        onClick = { onIntent(AiArtIntent.ChangeTab(idx)) },
                         label = { Text(label) }
                     )
                 }
@@ -97,7 +98,7 @@ fun AiArtScreen(
                 0 -> {
                     OutlinedTextField(
                         value = state.bookName,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateBookName(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateBookName(it)) },
                         placeholder = { Text("书名") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -105,7 +106,7 @@ fun AiArtScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = state.author,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateAuthor(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateAuthor(it)) },
                         placeholder = { Text("作者（可选）") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -113,7 +114,7 @@ fun AiArtScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = state.intro,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateIntro(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateIntro(it)) },
                         placeholder = { Text("简介 / 氛围描述") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -124,7 +125,7 @@ fun AiArtScreen(
                 1 -> {
                     OutlinedTextField(
                         value = state.characterName,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateCharacterName(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateCharacterName(it)) },
                         placeholder = { Text("角色名") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -132,7 +133,7 @@ fun AiArtScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = state.characterDesc,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateCharacterDesc(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateCharacterDesc(it)) },
                         placeholder = { Text("角色描述（外貌、性格、背景……）") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -143,7 +144,7 @@ fun AiArtScreen(
                 2, 3 -> {
                     OutlinedTextField(
                         value = state.sceneDesc,
-                        onValueChange = { viewModel.onIntent(AiArtIntent.UpdateSceneDesc(it)) },
+                        onValueChange = { onIntent(AiArtIntent.UpdateSceneDesc(it)) },
                         placeholder = { Text("场景描述 / 章节内容") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -161,7 +162,7 @@ fun AiArtScreen(
                 listOf("512x512", "1024x1024", "1024x1792").forEach { s ->
                     FilterChip(
                         selected = state.size == s,
-                        onClick = { viewModel.onIntent(AiArtIntent.UpdateSize(s)) },
+                        onClick = { onIntent(AiArtIntent.UpdateSize(s)) },
                         label = { Text(s) }
                     )
                 }
@@ -174,7 +175,7 @@ fun AiArtScreen(
                 listOf("中式古风", "赛博朋克", "奇幻", "写实", "水墨", "现代都市").forEach { s ->
                     FilterChip(
                         selected = state.styleHint == s,
-                        onClick = { viewModel.onIntent(AiArtIntent.UpdateStyleHint(s)) },
+                        onClick = { onIntent(AiArtIntent.UpdateStyleHint(s)) },
                         label = { Text(s) }
                     )
                 }
@@ -182,12 +183,12 @@ fun AiArtScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
             Row {
-                TextButton(onClick = { viewModel.onIntent(AiArtIntent.GenerateImage) }) {
+                TextButton(onClick = { onIntent(AiArtIntent.GenerateImage) }) {
                     Text("生成图像")
                 }
                 Spacer(modifier = Modifier.width(6.dp))
                 if (state.tab == 1) {
-                    TextButton(onClick = { viewModel.onIntent(AiArtIntent.GenerateCharacterCard) }) {
+                    TextButton(onClick = { onIntent(AiArtIntent.GenerateCharacterCard) }) {
                         Text("生成角色卡片文本")
                     }
                 }
@@ -255,14 +256,15 @@ fun AiArtScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiSourceAdvancedScreen(
-    viewModel: AiSourceAdvancedViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    state: AiSourceAdvancedUiState,
+    onIntent: (AiSourceAdvancedIntent) -> Unit,
+    effects: Flow<AiSourceAdvancedEffect>,
     onBack: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.effects.collect { eff ->
+        effects.collect { eff ->
             when (eff) {
                 is AiSourceAdvancedEffect.ShowToast -> context.toastOnUi(eff.message)
             }
@@ -295,7 +297,7 @@ fun AiSourceAdvancedScreen(
                 state.tabs.forEachIndexed { idx, label ->
                     FilterChip(
                         selected = state.tab == idx,
-                        onClick = { viewModel.onIntent(AiSourceAdvancedIntent.ChangeTab(idx)) },
+                        onClick = { onIntent(AiSourceAdvancedIntent.ChangeTab(idx)) },
                         label = { Text(label) }
                     )
                 }
@@ -307,7 +309,7 @@ fun AiSourceAdvancedScreen(
                 0 -> {
                     OutlinedTextField(
                         value = state.queryBookName,
-                        onValueChange = { viewModel.onIntent(AiSourceAdvancedIntent.UpdateQueryBookName(it)) },
+                        onValueChange = { onIntent(AiSourceAdvancedIntent.UpdateQueryBookName(it)) },
                         placeholder = { Text("书名") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
@@ -315,13 +317,13 @@ fun AiSourceAdvancedScreen(
                     Spacer(modifier = Modifier.height(6.dp))
                     OutlinedTextField(
                         value = state.queryAuthor,
-                        onValueChange = { viewModel.onIntent(AiSourceAdvancedIntent.UpdateQueryAuthor(it)) },
+                        onValueChange = { onIntent(AiSourceAdvancedIntent.UpdateQueryAuthor(it)) },
                         placeholder = { Text("作者（可选）") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.onIntent(AiSourceAdvancedIntent.SearchSources) }) {
+                    TextButton(onClick = { onIntent(AiSourceAdvancedIntent.SearchSources) }) {
                         Text("AI 搜索候选书源")
                     }
                     if (state.candidates.isNotEmpty()) {
@@ -343,7 +345,7 @@ fun AiSourceAdvancedScreen(
                 1 -> {
                     OutlinedTextField(
                         value = state.selectedSourceToValidate,
-                        onValueChange = { viewModel.onIntent(AiSourceAdvancedIntent.UpdateSelectedSource(it)) },
+                        onValueChange = { onIntent(AiSourceAdvancedIntent.UpdateSelectedSource(it)) },
                         placeholder = { Text("粘贴要校验的书源 JSON 或描述……") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -351,7 +353,7 @@ fun AiSourceAdvancedScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.onIntent(AiSourceAdvancedIntent.EvaluateQuality) }) {
+                    TextButton(onClick = { onIntent(AiSourceAdvancedIntent.EvaluateQuality) }) {
                         Text("AI 质量评估")
                     }
                     if (state.qualityReport.isNotEmpty()) {
@@ -370,7 +372,7 @@ fun AiSourceAdvancedScreen(
                 else -> {
                     OutlinedTextField(
                         value = state.sourceUrlToFix,
-                        onValueChange = { viewModel.onIntent(AiSourceAdvancedIntent.UpdateSourceUrlToFix(it)) },
+                        onValueChange = { onIntent(AiSourceAdvancedIntent.UpdateSourceUrlToFix(it)) },
                         placeholder = { Text("粘贴失效的书源 URL / JSON") },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -378,7 +380,7 @@ fun AiSourceAdvancedScreen(
                         shape = RoundedCornerShape(12.dp)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(onClick = { viewModel.onIntent(AiSourceAdvancedIntent.AutoFix) }) {
+                    TextButton(onClick = { onIntent(AiSourceAdvancedIntent.AutoFix) }) {
                         Text("AI 自动修源建议")
                     }
                     if (state.fixReport.isNotEmpty()) {

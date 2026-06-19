@@ -32,20 +32,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.Flow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiRecommendScreen(
-    viewModel: AiRecommendViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    state: AiRecommendUiState,
+    onIntent: (AiRecommendIntent) -> Unit,
+    effects: Flow<AiRecommendEffect>,
     onBack: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.effects.collect { eff ->
+        effects.collect { eff ->
             when (eff) {
                 is AiRecommendEffect.ShowToast -> context.toastOnUi(eff.message)
             }
@@ -78,7 +79,7 @@ fun AiRecommendScreen(
                 state.tabs.forEachIndexed { idx, label ->
                     FilterChip(
                         selected = state.tab == idx,
-                        onClick = { viewModel.onIntent(AiRecommendIntent.ChangeTab(idx)) },
+                        onClick = { onIntent(AiRecommendIntent.ChangeTab(idx)) },
                         label = { Text(label) }
                     )
                 }
@@ -96,7 +97,7 @@ fun AiRecommendScreen(
 
             OutlinedTextField(
                 value = state.query,
-                onValueChange = { viewModel.onIntent(AiRecommendIntent.UpdateQuery(it)) },
+                onValueChange = { onIntent(AiRecommendIntent.UpdateQuery(it)) },
                 placeholder = { Text(placeholder) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -107,9 +108,9 @@ fun AiRecommendScreen(
             Spacer(modifier = Modifier.height(10.dp))
             TextButton(onClick = {
                 when (state.tab) {
-                    1 -> viewModel.onIntent(AiRecommendIntent.CoachReport)
-                    3 -> viewModel.onIntent(AiRecommendIntent.VibeReport)
-                    else -> viewModel.onIntent(AiRecommendIntent.Generate)
+                    1 -> onIntent(AiRecommendIntent.CoachReport)
+                    3 -> onIntent(AiRecommendIntent.VibeReport)
+                    else -> onIntent(AiRecommendIntent.Generate)
                 }
             }) {
                 Text("生成")
@@ -147,14 +148,15 @@ fun AiRecommendScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiArchiveScreen(
-    viewModel: AiArchiveViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    state: AiArchiveUiState,
+    onIntent: (AiArchiveIntent) -> Unit,
+    effects: Flow<AiArchiveEffect>,
     onBack: () -> Unit
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.effects.collect { eff ->
+        effects.collect { eff ->
             when (eff) {
                 is AiArchiveEffect.ShowToast -> context.toastOnUi(eff.message)
             }
@@ -187,7 +189,7 @@ fun AiArchiveScreen(
                 state.tabs.forEachIndexed { idx, label ->
                     FilterChip(
                         selected = state.tab == idx,
-                        onClick = { viewModel.onIntent(AiArchiveIntent.ChangeTab(idx)) },
+                        onClick = { onIntent(AiArchiveIntent.ChangeTab(idx)) },
                         label = { Text(label) }
                     )
                 }
@@ -198,7 +200,7 @@ fun AiArchiveScreen(
             if (state.tab == 0) {
                 OutlinedTextField(
                     value = state.inputDesc,
-                    onValueChange = { viewModel.onIntent(AiArchiveIntent.UpdateInputDesc(it)) },
+                    onValueChange = { onIntent(AiArchiveIntent.UpdateInputDesc(it)) },
                     placeholder = { Text("目标：想要替换的文本模式（例如：去除章节中的广告）") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -208,7 +210,7 @@ fun AiArchiveScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.sampleText,
-                    onValueChange = { viewModel.onIntent(AiArchiveIntent.UpdateSampleText(it)) },
+                    onValueChange = { onIntent(AiArchiveIntent.UpdateSampleText(it)) },
                     placeholder = { Text("样本文本（可选）") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -216,13 +218,13 @@ fun AiArchiveScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { viewModel.onIntent(AiArchiveIntent.GenerateReplaceRule) }) {
+                TextButton(onClick = { onIntent(AiArchiveIntent.GenerateReplaceRule) }) {
                     Text("生成替换规则")
                 }
             } else {
                 OutlinedTextField(
                     value = state.inputDesc,
-                    onValueChange = { viewModel.onIntent(AiArchiveIntent.UpdateInputDesc(it)) },
+                    onValueChange = { onIntent(AiArchiveIntent.UpdateInputDesc(it)) },
                     placeholder = { Text("描述你的目标（例如：把我的 epub 按分类归档）") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -232,7 +234,7 @@ fun AiArchiveScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = state.filePathPattern,
-                    onValueChange = { viewModel.onIntent(AiArchiveIntent.UpdateFilePathPattern(it)) },
+                    onValueChange = { onIntent(AiArchiveIntent.UpdateFilePathPattern(it)) },
                     placeholder = { Text("样例路径 / 文件名列表") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -241,11 +243,11 @@ fun AiArchiveScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 if (state.tab == 1) {
-                    TextButton(onClick = { viewModel.onIntent(AiArchiveIntent.GenerateArchivePlan) }) {
+                    TextButton(onClick = { onIntent(AiArchiveIntent.GenerateArchivePlan) }) {
                         Text("生成归档方案")
                     }
                 } else {
-                    TextButton(onClick = { viewModel.onIntent(AiArchiveIntent.GenerateRenamePlan) }) {
+                    TextButton(onClick = { onIntent(AiArchiveIntent.GenerateRenamePlan) }) {
                         Text("生成重命名方案")
                     }
                 }
@@ -276,7 +278,7 @@ fun AiArchiveScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = { viewModel.onIntent(AiArchiveIntent.CopyOutput) }) {
+                TextButton(onClick = { onIntent(AiArchiveIntent.CopyOutput) }) {
                     Text("复制")
                 }
             }
