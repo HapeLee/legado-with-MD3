@@ -67,10 +67,19 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleAppDebug --stacktrace --info --no-daemon --no-configuration-cache
+          ./gradlew assembleAppDebug --stacktrace --info --no-daemon --no-configuration-cache 2>&1 | tee build_output.txt
+          echo "=== Gradle Exit Code ==="
+          echo $?
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
+
+      - name: Upload Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-build-logs-${{ github.run_number }}
+          path: build_output.txt
 
       - name: Check Build Output
         run: |
