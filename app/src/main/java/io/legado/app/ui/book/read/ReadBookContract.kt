@@ -340,6 +340,7 @@ sealed interface ReadBookIntent {
     data object ToggleReadUrlInBrowser : ReadBookIntent
 
     // Content edit
+    data object OpenContentEdit : ReadBookIntent
     data object LoadContentEdit : ReadBookIntent
     data class SaveContentEdit(val content: String, val saveToSource: Boolean) : ReadBookIntent
     data object ResetContentEdit : ReadBookIntent

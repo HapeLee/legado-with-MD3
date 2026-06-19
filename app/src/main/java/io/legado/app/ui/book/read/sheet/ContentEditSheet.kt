@@ -47,6 +47,7 @@ fun ContentEditSheet(
     val editorState = remember { TextFieldState() }
     val editorScrollState = rememberScrollState()
     var textLayoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var pendingLocateOffset by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
@@ -57,19 +58,31 @@ fun ContentEditSheet(
         if (editorState.text.toString() != state.contentEditText) {
             editorState.setTextAndSelectAll(state.contentEditText)
             editorState.edit {
-                selection = TextRange(state.contentEditCursorOffset.coerceIn(0, length))
+                val offset = state.contentEditCursorOffset.coerceIn(0, length)
+                selection = TextRange(offset)
+                pendingLocateOffset = offset
             }
         }
     }
 
-    LaunchedEffect(show, state.contentEditLoading, state.contentEditCursorOffset, textLayoutResult) {
+    LaunchedEffect(show, state.contentEditLoading, pendingLocateOffset, textLayoutResult) {
         val layoutResult = textLayoutResult
-        if (!show || state.contentEditLoading || layoutResult == null) {
+        val locateOffset = pendingLocateOffset
+        if (!show || state.contentEditLoading || layoutResult == null || locateOffset == null) {
             return@LaunchedEffect
         }
-        val offset = state.contentEditCursorOffset.coerceIn(0, editorState.text.length)
+        val layoutTextLength = layoutResult.layoutInput.text.length
+        if (layoutTextLength != editorState.text.length) {
+            return@LaunchedEffect
+        }
+        if (layoutTextLength == 0) {
+            pendingLocateOffset = null
+            return@LaunchedEffect
+        }
+        val offset = locateOffset.coerceIn(0, layoutTextLength)
         val cursorTop = layoutResult.getCursorRect(offset).top.toInt()
         editorScrollState.scrollTo((cursorTop - 120).coerceIn(0, editorScrollState.maxValue))
+        pendingLocateOffset = null
     }
 
     LaunchedEffect(editorState) {

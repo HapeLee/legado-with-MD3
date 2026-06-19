@@ -300,7 +300,7 @@ class ReadBookController(
     }
 
     override fun openContentEdit() {
-        viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
+        viewModel.onIntent(ReadBookIntent.OpenContentEdit)
     }
 
     override fun addBookmark() {
@@ -552,7 +552,7 @@ class ReadBookController(
             }
 
             R.id.menu_edit -> {
-                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
+                viewModel.onIntent(ReadBookIntent.OpenContentEdit)
                 return true
             }
 

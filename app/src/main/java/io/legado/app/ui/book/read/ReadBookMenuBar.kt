@@ -1668,7 +1668,7 @@ private fun OverflowDropdownMenu(
             text = stringResource(R.string.edit_content),
             onClick = {
                 dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ContentEdit))
+                onIntent(ReadBookIntent.OpenContentEdit)
             },
         )
         if (!state.isLocalBook) {

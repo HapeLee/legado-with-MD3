@@ -168,6 +168,8 @@ class ReadBookViewModel(
 
     private var changeSourceCoroutine: Coroutine<*>? = null
     private var pendingBooksDirReloadChapterList: Boolean = false
+    private var pendingContentEditCursorOffset: Int? = null
+    private var pendingContentEditAnchor: String? = null
 
     val isInitFinish: Boolean get() = _uiState.value.isInitFinish
 
@@ -445,6 +447,7 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
             is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
+            is ReadBookIntent.OpenContentEdit -> openContentEdit()
             is ReadBookIntent.LoadContentEdit -> loadContentEdit()
             is ReadBookIntent.SaveContentEdit -> saveContentEdit(intent.content, intent.saveToSource)
             is ReadBookIntent.ResetContentEdit -> resetContentEdit()
@@ -2439,6 +2442,62 @@ class ReadBookViewModel(
         }
     }
 
+    private fun openContentEdit() {
+        pendingContentEditCursorOffset = currentContentEditOffset()
+        pendingContentEditAnchor = currentContentEditAnchor()
+        _uiState.update { it.copy(activeSheet = ReadBookSheet.ContentEdit) }
+    }
+
+    private fun currentContentEditPage(): TextPage? {
+        return ReadBook.curTextChapter?.getPage(ReadBook.durPageIndex)
+    }
+
+    private fun currentContentEditOffset(): Int {
+        val page = currentContentEditPage()
+        return page?.lines
+            ?.firstOrNull { !it.isTitle && it.text.isNotBlank() }
+            ?.chapterPosition
+            ?: page?.lines
+                ?.firstOrNull { !it.isTitle }
+                ?.chapterPosition
+            ?: ReadBook.durChapterPos
+    }
+
+    private fun currentContentEditAnchor(): String? {
+        return currentContentEditPage()
+            ?.lines
+            ?.firstOrNull { !it.isTitle && it.text.isNotBlank() }
+            ?.text
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun resolveContentEditCursorOffset(text: String): Int {
+        if (text.isEmpty()) {
+            clearPendingContentEditLocation()
+            return 0
+        }
+        val preferred = (pendingContentEditCursorOffset ?: currentContentEditOffset())
+            .coerceIn(0, text.length)
+        val anchor = pendingContentEditAnchor ?: currentContentEditAnchor()
+        clearPendingContentEditLocation()
+        if (anchor.isNullOrBlank()) {
+            return preferred
+        }
+        val startIndex = (preferred - 200).coerceAtLeast(0)
+        val nearIndex = text.indexOf(anchor, startIndex = startIndex)
+        if (nearIndex >= 0) {
+            return nearIndex
+        }
+        val anyIndex = text.indexOf(anchor)
+        return if (anyIndex >= 0) anyIndex else preferred
+    }
+
+    private fun clearPendingContentEditLocation() {
+        pendingContentEditCursorOffset = null
+        pendingContentEditAnchor = null
+    }
+
     private fun loadContentEdit() {
         _uiState.update { it.copy(contentEditLoading = true, contentEditText = "") }
         execute {
@@ -2451,11 +2510,12 @@ class ReadBookViewModel(
             val rawContent = BookHelp.getContent(book, chapter) ?: return@execute
             val text = contentProcessor.getContent(book, chapter, rawContent, includeTitle = false)
                 .toString()
+            val cursorOffset = resolveContentEditCursorOffset(text)
             _uiState.update {
                 it.copy(
                     contentEditText = text,
                     contentEditTitle = title,
-                    contentEditCursorOffset = ReadBook.durChapterPos.coerceIn(0, text.length),
+                    contentEditCursorOffset = cursorOffset,
                     contentEditIsLocalTxt = book.isLocalTxt,
                 )
             }
@@ -2496,10 +2556,11 @@ class ReadBookViewModel(
             } else {
                 ""
             }
+            val cursorOffset = resolveContentEditCursorOffset(text)
             _uiState.update {
                 it.copy(
                     contentEditText = text,
-                    contentEditCursorOffset = ReadBook.durChapterPos.coerceIn(0, text.length),
+                    contentEditCursorOffset = cursorOffset,
                     contentEditLoading = false,
                 )
             }
