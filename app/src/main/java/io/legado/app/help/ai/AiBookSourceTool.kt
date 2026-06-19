@@ -2,6 +2,7 @@ package io.legado.app.help.ai
 
 import io.legado.app.data.appDb
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -187,25 +188,24 @@ object AiBookSourceTool {
             put("sourceUrl", source.bookSourceUrl)
             put("group", source.bookSourceGroup)
             put("type", source.bookSourceType)
-            put("searchUrl", source.ruleSearchUrl)
-            put("searchList", source.ruleSearchList)
-            put("searchName", source.ruleSearchName)
-            put("searchAuthor", source.ruleSearchAuthor)
-            put("searchIntro", source.ruleSearchIntroduce)
-            put("searchCover", source.ruleSearchCoverUrl)
-            put("searchBookUrl", source.ruleSearchBookUrl)
-            put("bookInfoUrlPattern", source.ruleBookInfoUrlPattern)
-            put("bookInfoName", source.ruleBookName)
-            put("bookInfoAuthor", source.ruleBookAuthor)
-            put("bookInfoIntro", source.ruleIntroduce)
-            put("bookInfoCover", source.ruleCoverUrl)
-            put("bookInfoKind", source.ruleBookKind)
-            put("bookInfoLatestChapter", source.ruleBookLastChapter)
-            put("chapterUrlPattern", source.ruleChapterUrlPattern)
-            put("chapterList", source.ruleChapterList)
-            put("chapterName", source.ruleChapterName)
-            put("contentUrl", source.ruleContentUrl)
-            put("content", source.ruleContent)
+            put("searchUrl", source.searchUrl)
+            put("searchList", source.ruleSearch?.bookList)
+            put("searchName", source.ruleSearch?.name)
+            put("searchAuthor", source.ruleSearch?.author)
+            put("searchIntro", source.ruleSearch?.intro)
+            put("searchCover", source.ruleSearch?.coverUrl)
+            put("searchBookUrl", source.ruleSearch?.bookUrl)
+            put("bookInfoUrlPattern", source.bookUrlPattern)
+            put("bookInfoName", source.ruleBookInfo?.name)
+            put("bookInfoAuthor", source.ruleBookInfo?.author)
+            put("bookInfoIntro", source.ruleBookInfo?.intro)
+            put("bookInfoCover", source.ruleBookInfo?.coverUrl)
+            put("bookInfoKind", source.ruleBookInfo?.kind)
+            put("bookInfoLatestChapter", source.ruleBookInfo?.lastChapter)
+            put("chapterUrl", source.ruleToc?.chapterUrl)
+            put("chapterList", source.ruleToc?.chapterList)
+            put("chapterName", source.ruleToc?.chapterName)
+            put("content", source.ruleContent?.content)
             put("header", source.header)
         }.toString(2)
     }
