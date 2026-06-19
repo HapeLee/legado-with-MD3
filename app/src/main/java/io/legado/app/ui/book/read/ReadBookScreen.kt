@@ -444,16 +444,16 @@ fun ReadBookScreen(
         }
 
         is ReadBookSheet.ChangeBookSource -> {
-            val changeSourceSheet = state.activeSheet as? ReadBookSheet.ChangeBookSource
+            val changeSourceSheet = state.activeSheet
             val changeSourceBook = state.book
-            if (changeSourceSheet != null && changeSourceBook == null) {
+            if (changeSourceBook == null) {
                 LaunchedEffect(changeSourceSheet) {
                     onIntent(ReadBookIntent.DismissSheet)
                 }
             }
             if (changeSourceBook != null) {
                 ChangeSourceSheet(
-                    show = changeSourceSheet != null,
+                    show = true,
                     oldBook = changeSourceBook,
                     fromReadBookActivity = true,
                     allowAddAsNew = false,

@@ -28,7 +28,10 @@ class ThemeConfigViewModel(
 ) : ViewModel() {
 
     val fontFolder = readSettingsRepository.preferences
-        .map { it.fontFolder as String? }
+        .map { preferences ->
+            val fontFolder: String? = preferences.fontFolder
+            fontFolder
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     fun setFontFolder(path: String) {
