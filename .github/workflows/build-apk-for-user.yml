@@ -67,15 +67,14 @@ jobs:
       - name: Build Debug APK
         run: |
           chmod +x gradlew
-          ./gradlew assembleAppDebug --stacktrace --info --no-daemon --no-configuration-cache 2>&1 | tee build_output.txt
-          echo "=== Gradle Exit Code ==="
-          echo $?
+          set -o pipefail
+          ./gradlew assembleAppDebug --stacktrace --no-daemon --no-configuration-cache 2>&1 | tee build_output.txt
         env:
           COMMIT_NUMBER: ${{ github.run_number }}
           APP_VERSION_NAME: debug-${{ github.run_number }}
 
       - name: Upload Build Logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gradle-build-logs-${{ github.run_number }}
@@ -83,18 +82,32 @@ jobs:
 
       - name: Check Build Output
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
-          echo "检查 APK 输出目录: $APK_PATH"
-          ls -la "$APK_PATH" || true
-          if [ -z "$(find "$APK_PATH" -name "*.apk" -print -quit)" ]; then
-            echo "未找到 APK 文件！"
+          echo "=== 检查 APK 输出目录 ==="
+          OUTPUTS_DIR="$GITHUB_WORKSPACE/app/build/outputs/apk"
+          echo "搜索范围: $OUTPUTS_DIR"
+          find "$OUTPUTS_DIR" -name "*.apk" 2>/dev/null || echo "APK 目录不存在"
+          
+          APK_FILE=$(find "$OUTPUTS_DIR" -name "*.apk" -print -quit 2>/dev/null)
+          
+          if [ -n "$APK_FILE" ]; then
+            echo "✅ 找到 APK: $APK_FILE"
+            ls -la $(dirname "$APK_FILE")
+          else
+            echo "❌ 未找到 APK 文件"
+            echo ""
+            echo "=== 所有输出目录 ==="
+            ls -la "$GITHUB_WORKSPACE/app/build/outputs/" 2>/dev/null || echo "outputs 目录不存在"
+            echo ""
+            echo "=== 构建日志最后 100 行 ==="
+            tail -100 build_output.txt
             exit 1
           fi
 
       - name: Rename APK Files
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
-          cd "$APK_PATH"
+          APK_DIR=$(find "$GITHUB_WORKSPACE/app/build/outputs/apk" -name "*.apk" -print0 2>/dev/null | xargs -0 -n1 dirname 2>/dev/null | head -1)
+          echo "APK 目录: $APK_DIR"
+          cd "$APK_DIR"
           for f in *.apk; do
             mv "$f" "legado-debug-${GITHUB_RUN_NUMBER}-${f}"
           done
@@ -102,9 +115,9 @@ jobs:
 
       - name: Create ZIP Archive
         run: |
-          APK_PATH="$GITHUB_WORKSPACE/app/build/outputs/apk/app/debug"
+          APK_DIR=$(find "$GITHUB_WORKSPACE/app/build/outputs/apk" -name "*.apk" -print0 2>/dev/null | xargs -0 -n1 dirname 2>/dev/null | head -1)
           ZIP_NAME="legado-debug-apks-${GITHUB_RUN_NUMBER}.zip"
-          cd "$APK_PATH"
+          cd "$APK_DIR"
           zip "$GITHUB_WORKSPACE/$ZIP_NAME" *.apk
           echo "ZIP 文件已创建: $ZIP_NAME"
           ls -la "$GITHUB_WORKSPACE/$ZIP_NAME"
@@ -113,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: legado-apks-${{ github.run_number }}
-          path: app/build/outputs/apk/app/debug/*.apk
+          path: app/build/outputs/apk/**/*.apk
 
       - name: Upload ZIP Artifact
         uses: actions/upload-artifact@v4
@@ -133,7 +146,7 @@ jobs:
             - 构建号: ${{ github.run_number }}
           prerelease: false
           files: |
-            app/build/outputs/apk/app/debug/*.apk
+            app/build/outputs/apk/**/*.apk
             legado-debug-apks-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -151,7 +164,7 @@ jobs:
             - Commit: ${{ github.sha }}
           prerelease: false
           files: |
-            app/build/outputs/apk/app/debug/*.apk
+            app/build/outputs/apk/**/*.apk
             legado-debug-apks-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
