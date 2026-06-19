@@ -464,7 +464,7 @@ class AiTextToolsViewModel(app: Application) : AndroidViewModel(app) {
         when (intent) {
             is AiTextToolsIntent.SelectTool -> _uiState.value = _uiState.value.copy(selectedTool = intent.tool, output = "")
             is AiTextToolsIntent.UpdateInput -> _uiState.value = _uiState.value.copy(input = intent.value)
-            is AiTextToolsIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.model)
+            is AiTextToolsIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiTextToolsIntent.Execute -> execute()
             is AiTextToolsIntent.CopyOutput -> {
                 val cm = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -544,7 +544,7 @@ class AiSourceViewModel(app: Application) : AndroidViewModel(app) {
             is AiSourceIntent.UpdateDescription -> _uiState.value = _uiState.value.copy(description = intent.value)
             is AiSourceIntent.UpdateSiteUrl -> _uiState.value = _uiState.value.copy(siteUrl = intent.value)
             is AiSourceIntent.UpdateValidationJson -> _uiState.value = _uiState.value.copy(sourceToValidateJson = intent.value)
-            is AiSourceIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.model)
+            is AiSourceIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiSourceIntent.GenerateSource -> generateSource()
             is AiSourceIntent.ValidateSource -> validateSource()
             is AiSourceIntent.SaveGeneratedSource -> saveGeneratedSource()
@@ -666,7 +666,7 @@ class AiBookshelfViewModel(app: Application) : AndroidViewModel(app) {
         when (intent) {
             is AiBookshelfIntent.ChangeMode -> _uiState.value = _uiState.value.copy(mode = intent.mode)
             is AiBookshelfIntent.UpdateCustomPrompt -> _uiState.value = _uiState.value.copy(customPrompt = intent.value)
-            is AiBookshelfIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.model)
+            is AiBookshelfIntent.UpdateModel -> _uiState.value = _uiState.value.copy(model = intent.value)
             is AiBookshelfIntent.LoadStats -> loadStats()
             is AiBookshelfIntent.Analyze -> analyze()
         }

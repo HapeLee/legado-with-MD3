@@ -31,7 +31,7 @@ object AiBookshelfHelper {
             .mapValues { it.value.size }
             .entries.sortedByDescending { it.value }
             .take(15)
-            .toMap()
+            .associate { it.key to it.value }
 
         val kinds = books
             .mapNotNull { it.kind?.trim()?.ifBlank { null } }
@@ -39,7 +39,7 @@ object AiBookshelfHelper {
             .mapValues { it.value.size }
             .entries.sortedByDescending { it.value }
             .take(10)
-            .toMap()
+            .associate { it.key to it.value }
 
         val sample = buildString {
             appendLine("书架中的书籍（取最多20本预览）：")
