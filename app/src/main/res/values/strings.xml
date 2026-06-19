@@ -528,6 +528,7 @@
     <string name="rule_sub_content">Sub content(subContent)</string>
     <string name="rule_image_style">Image style(imageStyle)</string>
     <string name="rule_pay_action">Pay action(payAction)</string>
+    <string name="rule_call_back">Call back(callBackJs)</string>
 
     <string name="source_icon">Source icon(sourceIcon)</string>
     <string name="r_articles">Rule articles(ruleArticles)</string>
@@ -657,6 +658,10 @@
     <string name="audio">Audio</string>
     <string name="web_file">Web file</string>
     <string name="is_enable">Enable</string>
+    <string name="is_event_listener">EventListener</string>
+    <string name="custom_button">CustomBtn</string>
+    <string name="focus_lost_on_textbox">Please focus on the input box first</string>
+    <string name="please_focus_cursor_on_textbox">Please move cursor to the input box first</string>
     <string name="enable_js">Enable js</string>
     <string name="load_with_base_url">Load BaseUrl</string>
     <string name="all_source">All Sources</string>

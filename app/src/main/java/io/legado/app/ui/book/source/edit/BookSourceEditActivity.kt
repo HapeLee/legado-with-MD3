@@ -1,11 +1,14 @@
 package io.legado.app.ui.book.source.edit
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -24,12 +27,13 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.dialogs.selector
-//import io.legado.app.lib.theme.accentColor
-//import io.legado.app.lib.theme.backgroundColor
-//import io.legado.app.lib.theme.primaryColor
+import io.legado.app.lib.theme.accentColor
+import io.legado.app.lib.theme.backgroundColor
+import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.book.search.SearchActivity
-import io.legado.app.ui.book.search.SearchScope
 import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
+import io.legado.app.ui.code.CodeEditActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.qrcode.QrCodeResult
@@ -44,12 +48,14 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
 import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.sendToClip
+import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.share
 import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.showHelp
 import io.legado.app.utils.startActivity
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
@@ -73,7 +79,38 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
 
-    //    private val reviewEntities: ArrayList<EditEntity> = ArrayList()
+    private val textEditLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val view = window.decorView.findFocus()
+            if (view is EditText) {
+                result.data?.getStringExtra("text")?.let {
+                    view.setText(it)
+                }
+                result.data?.getIntExtra("cursorPosition", -1)?.takeIf { it in 0..< view.text.length }?.let {
+                    view.setSelection(it)
+                }
+            } else {
+                toastOnUi(R.string.focus_lost_on_textbox)
+            }
+        }
+    }
+
+    private fun onFullEditClicked() {
+        val view = window.decorView.findFocus()
+        if (view is EditText) {
+            val hint = findParentTextInputLayout(view)?.hint?.toString()
+            val currentText = view.text.toString()
+            val intent = Intent(this, CodeEditActivity::class.java).apply {
+                putExtra("text", currentText)
+                putExtra("title", hint)
+                putExtra("cursorPosition", view.selectionStart)
+            }
+            textEditLauncher.launch(intent)
+        }
+        else {
+            toastOnUi(R.string.please_focus_cursor_on_textbox)
+        }
+    }
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
@@ -123,6 +160,8 @@ class BookSourceEditActivity :
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_fullscreen_edit -> onFullEditClicked()
+
             R.id.menu_save -> viewModel.save(getSource()) {
                 setResult(RESULT_OK, Intent().putExtra("origin", it.bookSourceUrl))
                 finish()
@@ -146,6 +185,7 @@ class BookSourceEditActivity :
                 ErrorCorrectionLevel.L
             )
 
+            R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_help -> showHelp("ruleHelp")
             R.id.menu_login -> viewModel.save(getSource()) { source ->
                 startActivity<SourceLoginActivity> {
@@ -156,9 +196,7 @@ class BookSourceEditActivity :
 
             R.id.menu_set_source_variable -> setSourceVariable()
             R.id.menu_search -> viewModel.save(getSource()) { source ->
-                startActivity<SearchActivity> {
-                    putExtra("searchScope", SearchScope(source).toString())
-                }
+                SearchActivity.start(this, source)
             }
 
         }
@@ -187,11 +225,18 @@ class BookSourceEditActivity :
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_content)
         })
-//        binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
+        binding.recyclerView.setEdgeEffectColor(primaryColor)
+        if (adapter.editEntityMaxLine < 999) {
+            binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
+        }
         binding.recyclerView.adapter = adapter
-//        binding.tabLayout.setBackgroundColor(backgroundColor)
-//        binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
+        binding.recyclerView.viewTreeObserver.addOnGlobalFocusChangeListener { _, newFocus ->
+            if (newFocus is EditText) {
+                newFocus.postDelayed({ sendText("") }, 120)
+            }
+        }
+        binding.tabLayout.setBackgroundColor(backgroundColor)
+        binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
 
@@ -255,13 +300,15 @@ class BookSourceEditActivity :
             binding.cbIsEnableCookie.isChecked = it.enabledCookieJar ?: false
             binding.spType.setSelection(
                 when (it.bookSourceType) {
+                    BookSourceType.video -> 4
                     BookSourceType.file -> 3
                     BookSourceType.image -> 2
                     BookSourceType.audio -> 1
-                    BookSourceType.video -> 4
                     else -> 0
                 }
             )
+            binding.cbIsEventListener.isChecked = it.eventListener
+            binding.cbIsCustomButton.isChecked = it.customButton
         }
         // 基本信息
         sourceEntities.clear()
@@ -353,17 +400,16 @@ class BookSourceEditActivity :
         contentEntities.clear()
         contentEntities.apply {
             add(EditEntity("content", cr.content, R.string.rule_book_content))
-            add(EditEntity("subContent", cr.subContent, R.string.rule_sub_content))
-            add(EditEntity("title", cr.title, R.string.rule_chapter_name))
             add(EditEntity("nextContentUrl", cr.nextContentUrl, R.string.rule_next_content))
-            add(EditEntity("videoUrl", cr.videoUrl, "视频地址"))
-            add(EditEntity("videoPoster", cr.videoPoster, "视频封面"))
-            add(EditEntity("webJs", cr.webJs, R.string.rule_web_js))
-            add(EditEntity("sourceRegex", cr.sourceRegex, R.string.rule_source_regex))
+            add(EditEntity("subContent", cr.subContent, R.string.rule_sub_content))
             add(EditEntity("replaceRegex", cr.replaceRegex, R.string.rule_replace_regex))
+            add(EditEntity("title", cr.title, R.string.rule_chapter_name))
+            add(EditEntity("sourceRegex", cr.sourceRegex, R.string.rule_source_regex))
             add(EditEntity("imageStyle", cr.imageStyle, R.string.rule_image_style))
             add(EditEntity("imageDecode", cr.imageDecode, R.string.rule_image_decode))
+            add(EditEntity("webJs", cr.webJs, R.string.rule_web_js))
             add(EditEntity("payAction", cr.payAction, R.string.rule_pay_action))
+            add(EditEntity("callBackJs", cr.callBackJs, R.string.rule_call_back))
         }
 
 //        val rr = bs.getReviewRule()
@@ -390,12 +436,14 @@ class BookSourceEditActivity :
         source.enabledExplore = binding.cbIsEnableExplore.isChecked
         source.enabledCookieJar = binding.cbIsEnableCookie.isChecked
         source.bookSourceType = when (binding.spType.selectedItemPosition) {
+            4 -> BookSourceType.video
             3 -> BookSourceType.file
             2 -> BookSourceType.image
             1 -> BookSourceType.audio
-            4 -> BookSourceType.video
             else -> BookSourceType.default
         }
+        source.eventListener = binding.cbIsEventListener.isChecked
+        source.customButton = binding.cbIsCustomButton.isChecked
         val searchRule = SearchRule()
         val exploreRule = ExploreRule()
         val bookInfoRule = BookInfoRule()
@@ -552,13 +600,10 @@ class BookSourceEditActivity :
             it.value = it.value?.takeIf { s -> s.isNotBlank() }
             when (it.key) {
                 "content" -> contentRule.content = viewModel.ruleComplete(it.value)
-                "subContent" -> contentRule.subContent = viewModel.ruleComplete(it.value)
-                "title" -> contentRule.title = viewModel.ruleComplete(it.value)
                 "nextContentUrl" -> contentRule.nextContentUrl =
                     viewModel.ruleComplete(it.value, type = 2)
-
-                "videoUrl" -> contentRule.videoUrl = viewModel.ruleComplete(it.value, type = 2)
-                "videoPoster" -> contentRule.videoPoster = viewModel.ruleComplete(it.value, type = 2)
+                "subContent" -> contentRule.subContent = viewModel.ruleComplete(it.value)
+                "title" -> contentRule.title = viewModel.ruleComplete(it.value)
 
                 "webJs" -> contentRule.webJs = it.value
                 "sourceRegex" -> contentRule.sourceRegex = it.value
@@ -566,6 +611,7 @@ class BookSourceEditActivity :
                 "imageStyle" -> contentRule.imageStyle = it.value
                 "imageDecode" -> contentRule.imageDecode = it.value
                 "payAction" -> contentRule.payAction = it.value
+                "callBackJs" -> contentRule.callBackJs = it.value
             }
         }
 //        reviewEntities.forEach {
