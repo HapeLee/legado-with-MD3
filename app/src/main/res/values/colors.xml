@@ -697,4 +697,5 @@
     <color name="book_info_frost">#80FFFFFF</color>
     <color name="background_card">#FFFFFFFF</color>
     <color name="background_menu">#FFF5F5F5</color>
+    <color name="glass_stroke">#40FFFFFF</color>
 </resources>

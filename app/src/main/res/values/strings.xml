@@ -2150,5 +2150,7 @@
     <string name="ai_tool_status_failed">调用失败</string>
     <string name="ai_tool_web_search">网络搜索</string>
     <string name="ai_web_tools">网络工具</string>
-
+    <string name="ask_ai">询问 AI</string>
+    <string name="more">更多</string>
+    <string name="history">历史</string>
 </resources>
