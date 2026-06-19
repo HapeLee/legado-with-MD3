@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <io.legado.app.ui.widget.TitleBar
+        android:id="@+id/title_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:title="@string/ai_image_gallery" />
+
+    <EditText
+        android:id="@+id/et_search"
+        android:layout_width="match_parent"
+        android:layout_height="42dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="12dp"
+        android:background="@color/background_card"
+        android:hint="@string/search"
+        android:imeOptions="actionSearch"
+        android:inputType="text"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:singleLine="true"
+        android:textColor="@color/primaryText"
+        android:textColorHint="@color/secondaryText"
+        android:textSize="14sp" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:overScrollMode="never"
+        android:paddingStart="12dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="12dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/filter_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+
+    </HorizontalScrollView>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
+        android:paddingBottom="16dp" />
+
+    <LinearLayout
+        android:id="@+id/batch_bar"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical|end"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_batch_count"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:singleLine="true"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/btn_batch_select_all"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_vertical"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="72dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:text="@string/select_all"
+            android:textAlignment="center"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_batch_group"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="72dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:text="@string/ai_image_group"
+            android:textAlignment="center"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_batch_delete"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="72dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:text="@string/delete"
+            android:textAlignment="center"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_batch_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:minWidth="72dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:singleLine="true"
+            android:text="@string/cancel"
+            android:textAlignment="center"
+            android:textSize="13sp" />
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="@string/ai_image_gallery_empty"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+</LinearLayout>
