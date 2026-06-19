@@ -101,7 +101,7 @@ android {
             versionNameSuffix = "-noR8"
         }
         getByName("debug") {
-            applicationId = "io.legato.kazusa.debug"
+            applicationIdSuffix = ".debug"
             if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig = signingConfigs.getByName("myConfig")
             }
