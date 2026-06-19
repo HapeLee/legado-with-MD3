@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.info
 
 import android.net.Uri
+import androidx.compose.runtime.Stable
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
@@ -13,8 +14,8 @@ import kotlinx.collections.immutable.persistentListOf
 const val READER_RESULT_DELETED = 100
 
 data class BookInfoUiState(
-    val book: Book? = null,
-    val chapterList: List<BookChapter> = emptyList(),
+    val book: BookInfoBookUi? = null,
+    val hasChapters: Boolean = false,
     val webFiles: List<BookInfoWebFile> = emptyList(),
     val kindLabels: List<String> = emptyList(),
     val groupNames: String? = null,
@@ -22,7 +23,7 @@ data class BookInfoUiState(
     val readRecordTotalTime: Long = 0L,
     val readRecordTimelineDays: List<ReadRecordTimelineDay> = emptyList(),
     val inBookshelf: Boolean = false,
-    val bookSource: BookSource? = null,
+    val bookSource: BookInfoSourceUi? = null,
     val relatedBooks: ImmutableList<RelatedBooksUi> = persistentListOf(),
     val isTocLoading: Boolean = true,
     val isBusy: Boolean = false,
@@ -33,11 +34,39 @@ data class BookInfoUiState(
     val dialog: BookInfoDialog? = null,
 )
 
+@Stable
+data class BookInfoBookUi(
+    val bookUrl: String,
+    val name: String,
+    val author: String,
+    val realAuthor: String,
+    val origin: String,
+    val originName: String,
+    val coverPath: String?,
+    val group: Long,
+    val isLocal: Boolean,
+    val type: Int,
+    val canUpdate: Boolean,
+    val splitLongChapter: Boolean,
+    val durChapterTitle: String?,
+    val latestChapterTitle: String?,
+    val totalChapterNum: Int,
+    val durChapterIndex: Int,
+    val remark: String?,
+    val displayIntro: String?,
+)
+
+@Stable
+data class BookInfoSourceUi(
+    val sourceUrl: String,
+    val hasLogin: Boolean,
+)
+
 sealed interface BookInfoSheet {
     data object None : BookInfoSheet
     data object CoverPicker : BookInfoSheet
     data object GroupPicker : BookInfoSheet
-    data object SourcePicker : BookInfoSheet
+    data class SourcePicker(val oldBook: Book) : BookInfoSheet
     data object ReadRecord : BookInfoSheet
     data class WebFiles(val openAfterImport: Boolean) : BookInfoSheet
     data class ArchiveEntries(

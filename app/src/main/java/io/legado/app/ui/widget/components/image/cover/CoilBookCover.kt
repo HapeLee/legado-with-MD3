@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
 import org.koin.compose.koinInject
@@ -58,6 +59,7 @@ fun BookCoverImage(
     path: String?,
     modifier: Modifier = Modifier,
     sourceOrigin: String? = null,
+    memoryCacheKey: String? = null,
     ignoreUseDefaultCover: Boolean = false,
     showLoadingPlaceholder: Boolean = true,
     contentScale: ContentScale = ContentScale.Crop,
@@ -65,6 +67,7 @@ fun BookCoverImage(
     onSuccess: (() -> Unit)? = null,
     onError: (() -> Unit)? = null,
     sharedCoverKey: String? = null,
+    requestBuilder: ImageRequest.Builder.() -> Unit = {},
 ) {
     val context = LocalContext.current
     val isNight = LegadoTheme.isDark
@@ -116,7 +119,8 @@ fun BookCoverImage(
                     sourceOrigin = sourceOrigin,
                     loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
                     crossfade = showLoadingPlaceholder,
-                    memoryCacheKey = finalPath,
+                    memoryCacheKey = memoryCacheKey ?: finalPath,
+                    configure = requestBuilder,
                 ),
                 contentDescription = null,
                 imageLoader = koinInject(),

@@ -62,12 +62,14 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -76,6 +78,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 class BookInfoViewModel(
@@ -119,6 +122,7 @@ class BookInfoViewModel(
 
     private var changeSourceCoroutine: Coroutine<*>? = null
     private var readRecordObserveJob: Job? = null
+    private var relatedBooksLoadJob: Job? = null
 
     fun initData(intent: Intent) {
         initData(
@@ -162,6 +166,7 @@ class BookInfoViewModel(
         bookSource = null
         chapterChanged = false
         clearReadRecordObserve()
+        relatedBooksLoadJob?.cancel()
         syncUiState()
         execute {
             val dbBook = appDb.bookDao.getBook(bookUrl)
@@ -214,7 +219,8 @@ class BookInfoViewModel(
                 ?.let { showDialog(BookInfoDialog.PhotoPreview(it)) }
 
             BookInfoIntent.GroupClick -> setSheet(BookInfoSheet.GroupPicker)
-            BookInfoIntent.ChangeSourceClick -> setSheet(BookInfoSheet.SourcePicker)
+            BookInfoIntent.ChangeSourceClick -> currentBook?.uiCopy()
+                ?.let { setSheet(BookInfoSheet.SourcePicker(it)) }
             BookInfoIntent.ReadRecordClick -> setSheet(BookInfoSheet.ReadRecord)
             BookInfoIntent.RemarkClick -> showDialog(BookInfoDialog.EditRemark(currentBook?.remark))
             is BookInfoIntent.SaveCover -> {
@@ -733,7 +739,7 @@ class BookInfoViewModel(
                     } else {
                         loadChapter(loadedBook, runPreUpdateJs)
                     }
-                    loadRelatedBooks(loadedBook, source)
+                    scheduleRelatedBooksLoad(loadedBook, source)
                 }.onError {
                     AppLog.put("获取书籍信息失败\n${it.localizedMessage}", it)
                     context.toastOnUi(R.string.error_get_book_info)
@@ -792,7 +798,7 @@ class BookInfoViewModel(
                 if (chapters.isNotEmpty()) {
                     currentChapterList = chapters
                     syncUiState(isTocLoading = false)
-                    source?.let { loadRelatedBooks(book, it) }
+                    source?.let { scheduleRelatedBooksLoad(book, it) }
                 } else {
                     loadChapter(book)
                 }
@@ -1291,8 +1297,8 @@ class BookInfoViewModel(
     private fun syncUiState(isTocLoading: Boolean = _uiState.value.isTocLoading) {
         _uiState.update {
             it.copy(
-                book = currentBook?.uiCopy(),
-                chapterList = currentChapterList,
+                book = currentBook?.toBookInfoBookUi(),
+                hasChapters = currentChapterList.isNotEmpty(),
                 webFiles = currentWebFiles,
                 relatedBooks = currentRelatedBooks.toImmutableList(),
                 kindLabels = currentKindLabels,
@@ -1301,7 +1307,7 @@ class BookInfoViewModel(
                 readRecordTotalTime = currentReadRecordTotalTime,
                 readRecordTimelineDays = currentReadRecordTimelineDays,
                 inBookshelf = inBookshelf,
-                bookSource = bookSource,
+                bookSource = bookSource?.toBookInfoSourceUi(),
                 isTocLoading = isTocLoading,
                 deleteAlertEnabled = LocalConfig.bookInfoDeleteAlert,
                 deleteOriginal = LocalConfig.deleteBookOriginal,
@@ -1332,14 +1338,50 @@ class BookInfoViewModel(
         )
     }
 
-    private fun loadRelatedBooks(book: Book, source: BookSource) {
+    private fun scheduleRelatedBooksLoad(
+        book: Book,
+        source: BookSource,
+        delayMillis: Long = 350L,
+    ) {
+        relatedBooksLoadJob?.cancel()
+        relatedBooksLoadJob = viewModelScope.launch {
+            delay(delayMillis)
+            if (!isCurrentBookSource(book, source)) return@launch
+
+            val modules = parseRelatedBookModules(source)
+            if (modules.isEmpty()) {
+                currentRelatedBooks = emptyList()
+                syncUiState()
+                return@launch
+            }
+
+            try {
+                val result = withContext(IO) {
+                    loadRelatedBooks(book, source, modules)
+                }
+                if (!isCurrentBookSource(book, source)) return@launch
+                currentRelatedBooks = result
+                syncUiState()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                if (!isCurrentBookSource(book, source)) return@launch
+                currentRelatedBooks = emptyList()
+                syncUiState()
+            }
+        }
+    }
+
+    private fun isCurrentBookSource(book: Book, source: BookSource): Boolean {
+        return currentBook?.bookUrl == book.bookUrl && bookSource?.bookSourceUrl == source.bookSourceUrl
+    }
+
+    private fun parseRelatedBookModules(source: BookSource): List<RelatedBooksDef> {
         val modulesJson = source.ruleBookInfo?.relatedBooks
         if (modulesJson.isNullOrBlank()) {
-            currentRelatedBooks = emptyList()
-            syncUiState()
-            return
+            return emptyList()
         }
-        val modules = try {
+        return try {
             GSON.fromJsonArray<RelatedBooksDef>(modulesJson)
                 .getOrNull()
                 ?.filter { !it.url.isNullOrBlank() }
@@ -1348,36 +1390,33 @@ class BookInfoViewModel(
         } catch (e: Exception) {
             emptyList()
         }
-        if (modules.isEmpty()) {
-            currentRelatedBooks = emptyList()
-            syncUiState()
-            return
-        }
-        execute {
-            coroutineScope {
-                modules.map { def ->
-                    async {
-                        val (resolvedUrl, books) = try {
-                            resolveAndExplore(source, def.url!!, book)
-                        } catch (e: Exception) {
-                            def.url!! to emptyList()
-                        }
-                        RelatedBooksUi(
-                            key = def.key ?: def.title.orEmpty(),
-                            title = def.title.orEmpty(),
-                            url = def.url!!,
-                            resolvedUrl = resolvedUrl,
-                            books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
-                        )
+    }
+
+    private suspend fun loadRelatedBooks(
+        book: Book,
+        source: BookSource,
+        modules: List<RelatedBooksDef>,
+    ): List<RelatedBooksUi> {
+        return coroutineScope {
+            modules.map { def ->
+                async {
+                    val url = def.url.orEmpty()
+                    val (resolvedUrl, books) = try {
+                        resolveAndExplore(source, url, book)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        url to emptyList()
                     }
-                }.awaitAll().filter { it.books.isNotEmpty() }
-            }
-        }.onSuccess { result ->
-            currentRelatedBooks = result
-            syncUiState()
-        }.onError {
-            currentRelatedBooks = emptyList()
-            syncUiState()
+                    RelatedBooksUi(
+                        key = def.key ?: def.title.orEmpty(),
+                        title = def.title.orEmpty(),
+                        url = url,
+                        resolvedUrl = resolvedUrl,
+                        books = books.filter { it.bookUrl != book.bookUrl }.toImmutableList(),
+                    )
+                }
+            }.awaitAll().filter { it.books.isNotEmpty() }
         }
     }
 
@@ -1391,6 +1430,36 @@ class BookInfoViewModel(
 
     private fun emitEffect(effect: BookInfoEffect) {
         _effects.tryEmit(effect)
+    }
+
+    private fun Book.toBookInfoBookUi(): BookInfoBookUi {
+        return BookInfoBookUi(
+            bookUrl = bookUrl,
+            name = name,
+            author = author,
+            realAuthor = getRealAuthor(),
+            origin = origin,
+            originName = originName,
+            coverPath = getDisplayCover(),
+            group = group,
+            isLocal = isLocal,
+            type = type,
+            canUpdate = canUpdate,
+            splitLongChapter = getSplitLongChapter(),
+            durChapterTitle = durChapterTitle,
+            latestChapterTitle = latestChapterTitle,
+            totalChapterNum = totalChapterNum,
+            durChapterIndex = durChapterIndex,
+            remark = remark,
+            displayIntro = getDisplayIntro(),
+        )
+    }
+
+    private fun BookSource.toBookInfoSourceUi(): BookInfoSourceUi {
+        return BookInfoSourceUi(
+            sourceUrl = bookSourceUrl,
+            hasLogin = !loginUrl.isNullOrBlank(),
+        )
     }
 
     private fun Book.uiCopy(): Book {
