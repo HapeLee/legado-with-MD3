@@ -475,6 +475,7 @@ class ReadSettingsRepository(
             readMenuBorderColorNight = this[Keys.ReadMenuBorderColorNight] ?: 0,
             readMenuCustomIcons = this[Keys.ReadMenuCustomIcons] ?: "",
             titleBarCustomIcons = this[Keys.TitleBarCustomIcons] ?: "",
+            titleBarIconPosition = this[Keys.TitleBarIconPosition] ?: 0,
             showTitleBarIcons = this[Keys.ShowTitleBarIcons] ?: false,
             chineseConverterType = this[Keys.ChineseConverterType] ?: 0,
             showMenuIcon = this[Keys.ShowMenuIcon] ?: true,
