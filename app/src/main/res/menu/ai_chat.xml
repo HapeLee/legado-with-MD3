@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_ai_model"
+        android:title="@string/ai_current_model"
+        app:actionLayout="@layout/view_ai_model_action"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_ai_more"
+        android:icon="@drawable/ic_more_vert"
+        android:title="@string/more_menu"
+        app:showAsAction="always" />
+
+</menu>

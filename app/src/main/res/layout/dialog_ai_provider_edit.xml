@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <io.legado.app.ui.widget.text.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/ai_provider_name">
+
+            <io.legado.app.lib.theme.view.ThemeEditText
+                android:id="@+id/edit_provider_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textCapWords" />
+
+        </io.legado.app.ui.widget.text.TextInputLayout>
+
+        <io.legado.app.ui.widget.text.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/ai_base_url">
+
+            <io.legado.app.lib.theme.view.ThemeEditText
+                android:id="@+id/edit_provider_base_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionNext"
+                android:inputType="textUri" />
+
+        </io.legado.app.ui.widget.text.TextInputLayout>
+
+        <io.legado.app.ui.widget.text.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/ai_api_key">
+
+            <io.legado.app.lib.theme.view.ThemeEditText
+                android:id="@+id/edit_provider_api_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword" />
+
+        </io.legado.app.ui.widget.text.TextInputLayout>
+
+        <io.legado.app.ui.widget.text.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:hint="@string/ai_custom_headers">
+
+            <io.legado.app.lib.theme.view.ThemeEditText
+                android:id="@+id/edit_provider_headers"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textMultiLine"
+                android:minHeight="96dp"
+                android:minLines="3" />
+
+        </io.legado.app.ui.widget.text.TextInputLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:gravity="center_vertical"
+    android:minWidth="56dp"
+    android:orientation="horizontal"
+    android:paddingStart="8dp"
+    android:paddingEnd="4dp">
+
+    <TextView
+        android:id="@+id/tv_ai_model_action"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center_vertical"
+        android:includeFontPadding="false"
+        android:maxEms="12"
+        android:maxLines="1"
+        android:textColor="@color/primaryText"
+        android:textSize="13sp" />
+
+    <ImageView
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginStart="2dp"
+        android:contentDescription="@string/ai_current_model"
+        android:src="@drawable/ic_arrow_drop_down"
+        android:tint="@color/secondaryText" />
+
+</LinearLayout>
