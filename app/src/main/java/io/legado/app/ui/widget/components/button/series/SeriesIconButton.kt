@@ -19,9 +19,13 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ripple
+import androidx.compose.animation.core.snap
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,13 +73,24 @@ internal fun SeriesButton(
     selectedContentColor: Color = LegadoTheme.colorScheme.onPrimaryContainer,
     content: @Composable (Color) -> Unit
 ) {
+    var lastEnabled by remember { mutableStateOf(enabled) }
+    var lastSelected by remember { mutableStateOf(selected) }
+    val isStateChanged = enabled != lastEnabled || selected != lastSelected
+
+    SideEffect {
+        lastEnabled = enabled
+        lastSelected = selected
+    }
+
+    val animSpec = if (isStateChanged) tween<Color>(150) else snap()
+
     val containerColor by animateColorAsState(
         targetValue = when {
             !enabled -> disabledContainerColor(style)
             selected -> selectedContainerColor
             else -> containerColor ?: containerColor(style)
         },
-        animationSpec = tween(150),
+        animationSpec = animSpec,
         label = "SeriesIconContainerColor"
     )
     val resolvedContentColor by animateColorAsState(
@@ -84,7 +99,7 @@ internal fun SeriesButton(
             selected -> selectedContentColor
             else -> contentColor
         },
-        animationSpec = tween(150),
+        animationSpec = animSpec,
         label = "SeriesIconContentColor"
     )
     val shape = IconButtonDefaults.extraSmallRoundShape
