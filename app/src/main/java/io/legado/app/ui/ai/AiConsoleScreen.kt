@@ -3,7 +3,6 @@ package io.legado.app.ui.ai
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,23 +25,26 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.R
 
-private data class AiConsoleEntry(
+data class AiConsoleItem(
     val title: String,
-    val description: String,
-    val tag: String,
-    val color: Long,
+    val subtitle: String,
+    val icon: String,
     val onClick: () -> Unit
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiConsoleScreen(
+    onBack: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenImage: () -> Unit,
     onOpenVideo: () -> Unit,
@@ -54,26 +57,28 @@ fun AiConsoleScreen(
     onOpenArchive: () -> Unit,
     onOpenContentTools: () -> Unit,
     onOpenArt: () -> Unit,
-    onOpenSettings: () -> Unit,
-    onBack: () -> Unit
+    onOpenSettings: () -> Unit
 ) {
-    val entries = listOf(
-        AiConsoleEntry("AI 对话", "与大模型自由对话", "聊天", 0xFF3B82F6, onOpenChat),
-        AiConsoleEntry("AI 图像生成", "封面 / 场景 / 海报", "图像", 0xFF8B5CF6, onOpenImage),
-        AiConsoleEntry("AI 内容工具", "翻译、摘要、改写、检索", "文本", 0xFF10B981, onOpenContentTools),
-        AiConsoleEntry("AI 封面 & 角色卡", "书籍封面 + 角色设定", "艺术", 0xFFF59E0B, onOpenArt),
-        AiConsoleEntry("书源生成", "根据网站生成书源 JSON", "书源", 0xFFEC4899, onOpenSource),
-        AiConsoleEntry("书源进阶", "搜索 / 评分 / 自动修源", "书源", 0xFF06B6D4, onOpenSourceAdvanced),
-        AiConsoleEntry("书架分析", "分析你的书架数据 & 偏好", "书架", 0xFFEF4444, onOpenShelfAnalyze),
-        AiConsoleEntry("书单 & 阅读教练", "个性化书单与节奏建议", "推荐", 0xFF84CC16, onOpenRecommend),
-        AiConsoleEntry("归档 & 替换规则", "本地书归档、自动重命名", "工具", 0xFF6366F1, onOpenArchive),
-        AiConsoleEntry("AI 设置", "API Key / 模型 / 供应商", "设置", 0xFF334155, onOpenSettings)
+    val items = listOf(
+        AiConsoleItem("AI 聊天", "智能对话、工具调用", "💬") { onOpenChat() },
+        AiConsoleItem("图片生成", "AI 生成图片/封面/头像", "🎨") { onOpenImage() },
+        AiConsoleItem("视频生成", "AI 生成视频内容", "🎬") { onOpenVideo() },
+        AiConsoleItem("图像理解", "图片内容识别和分析", "👁️") { onOpenVision() },
+        AiConsoleItem("文本工具", "润色、翻译、总结、校对", "📝") { onOpenTextTools() },
+        AiConsoleItem("书源生成", "AI 辅助生成书源规则", "📚") { onOpenSource() },
+        AiConsoleItem("高级书源", "书源调试、规则优化", "🔧") { onOpenSourceAdvanced() },
+        AiConsoleItem("书架分析", "阅读记录、分类统计", "📊") { onOpenShelfAnalyze() },
+        AiConsoleItem("书籍推荐", "根据阅读偏好推荐", "💡") { onOpenRecommend() },
+        AiConsoleItem("内容工具箱", "内容处理工具集", "🧰") { onOpenContentTools() },
+        AiConsoleItem("AI 画廊", "生成的图片作品集", "🖼️") { onOpenArt() },
+        AiConsoleItem("对话归档", "历史对话记录", "📋") { onOpenArchive() },
+        AiConsoleItem("AI 设置", "供应商、模型、Key 配置", "⚙️") { onOpenSettings() }
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI 能力中心") },
+                title = { Text("AI 控制台") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -88,69 +93,68 @@ fun AiConsoleScreen(
                 .padding(padding)
         ) {
             Card(
-                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "欢迎使用 AI 能力中心",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        text = "智能阅读助手",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "集成聊天、图像生成、书源生成、书架分析等多种能力",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "集聊天、书源、图片、书架分析于一体的 AI 助手。配置 API Key 后即可使用全部功能。",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(entries) { entry ->
-                    AiConsoleCard(entry = entry)
+                items(items) { item ->
+                    FeatureCard(item = item)
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AiConsoleCard(entry: AiConsoleEntry) {
+private fun FeatureCard(item: AiConsoleItem) {
     Card(
-        onClick = entry.onClick,
+        onClick = item.onClick,
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
+        modifier = Modifier.fillMaxWidth().height(120.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        Column(modifier = Modifier.fillMaxSize().padding(14.dp)) {
-            Text(
-                text = entry.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = entry.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "#${entry.tag}",
-                color = Color(entry.color.toInt()),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
-            )
+        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            Column(verticalArrangement = Arrangement.SpaceBetween) {
+                Text(text = item.icon, fontSize = 28.sp)
+                Column {
+                    Text(
+                        text = item.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = item.subtitle,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

@@ -663,137 +663,92 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteAiChat> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiChatViewModel>()
         io.legado.app.ui.ai.AiChatScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
             onBack = { onNavigateBack() }
         )
     }
 
     entry<MainRouteAiImage> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiImageViewModel>()
-        io.legado.app.ui.ai.AiImageScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "请帮我生成一张图片。描述你想要的图片内容、风格，我会使用 AI 为你生成。"
         )
     }
 
     entry<MainRouteAiVideo> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiVideoViewModel>()
-        io.legado.app.ui.ai.AiVideoScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "请描述你想要的视频内容、风格和时长。我会用 AI 帮你生成视频概念和脚本。"
         )
     }
 
     entry<MainRouteAiVision> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiVisionViewModel>()
-        io.legado.app.ui.ai.AiVisionScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "请描述你想要分析的图片内容。可以上传图片链接或描述文字内容，我会帮你分析。"
         )
     }
 
     entry<MainRouteAiTextTools> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiTextToolsViewModel>()
-        io.legado.app.ui.ai.AiTextToolsScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "请粘贴你要处理的文本，告诉我需要做什么（润色、翻译、摘要、重写、校对等），我来帮你处理。"
         )
     }
 
-    // AI 内容工具（翻译/摘要/检索/重写）
     entry<MainRouteAiContentTools> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiContentToolsViewModel>()
-        io.legado.app.ui.ai.AiContentToolsScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "告诉我你需要对书籍内容做什么处理（翻译章节、生成摘要、查找引用、重写段落等），我会调用工具帮你处理。"
         )
     }
 
-    // AI 封面 & 角色卡
     entry<MainRouteAiArt> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiArtViewModel>()
-        io.legado.app.ui.ai.AiArtScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "请描述你想要生成的艺术作品（书籍封面、角色头像、场景插画等）的风格和内容，我会用 AI 为你生成。"
         )
     }
 
     entry<MainRouteAiSource> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSourceViewModel>()
-        io.legado.app.ui.ai.AiSourceScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "告诉我你想要爬取的书籍网站，我会帮你分析网站结构并生成 Legado 书源规则。请提供网站 URL 和简单描述。"
         )
     }
 
-    // AI 书源进阶（搜索 / 评分 / 自动修源）
     entry<MainRouteAiSourceAdvanced> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSourceAdvancedViewModel>()
-        io.legado.app.ui.ai.AiSourceAdvancedScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "提供你现有的书源 URL 或规则描述，我会帮你分析、调试、优化规则，或查找更好的替代书源。"
         )
     }
 
     entry<MainRouteAiBookshelf> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiBookshelfViewModel>()
-        io.legado.app.ui.ai.AiBookshelfScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "我可以分析你的本地书架数据。请问你想了解什么？例如：最近在读什么、各分类统计、阅读偏好、推荐新书等。"
         )
     }
 
-    // AI 书单 / 推荐 / 阅读教练
     entry<MainRouteAiRecommend> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiRecommendViewModel>()
-        io.legado.app.ui.ai.AiRecommendScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "告诉我你喜欢的作家、作品类型或阅读偏好，我会基于你的书架数据为你推荐合适的书籍。"
         )
     }
 
-    // AI 归档 & 替换规则 / 文件重命名
     entry<MainRouteAiArchive> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiArchiveViewModel>()
-        io.legado.app.ui.ai.AiArchiveScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "这里可以处理对话历史归档相关的查询。告诉我你想回顾之前的哪些对话或主题。"
         )
     }
 
     entry<MainRouteAiSettings> {
-        val viewModel = koinViewModel<io.legado.app.ui.ai.AiSettingsViewModel>()
-        io.legado.app.ui.ai.AiSettingsScreen(
-            state = viewModel.uiState.collectAsStateWithLifecycle().value,
-            onIntent = viewModel::onIntent,
-            effects = viewModel.effects,
-            onBack = { onNavigateBack() }
+        io.legado.app.ui.ai.AiChatScreen(
+            onBack = { onNavigateBack() },
+            initialPrompt = "点击右上角「设置」按钮，配置你的 API Base URL、API Key 和模型名称即可开始使用 AI 功能。支持 OpenAI 兼容协议、本地 Ollama、各种代理转发。"
         )
     }
 }
