@@ -906,6 +906,7 @@
     <string name="restore_ignore">Bypass List</string>
     <string name="restore_ignore_summary">Ignore some contents while restoring</string>
     <string name="read_config">Reading Interface Settings</string>
+    <string name="show_menu_icon">Show Menu Item Icons</string>
     <string name="read_config_global_theme">Global &amp; Theme</string>
     <string name="read_config_layout_spacing">Layout &amp; Spacing</string>
     <string name="read_config_text_effects">Text &amp; Effects</string>

@@ -202,6 +202,7 @@ object ReadBookConfig {
     var hideNavigationBar by prefDelegate(PreferKey.hideNavigationBar, false)
     var useZhLayout by prefDelegate(PreferKey.useZhLayout, false)
     var readMenuIconShowText by prefDelegate(PreferKey.readMenuIconShowText, true)
+    var showMenuIcon by prefDelegate(PreferKey.showMenuIcon, true)
     var readMenuFloatingBottomBar by prefDelegate(PreferKey.readMenuFloatingBottomBar, false)
     var readMenuTopBarLiquidGlassButtons by prefDelegate(PreferKey.readMenuTopBarLiquidGlassButtons, false)
     var readMenuTopBarTitleCapsule by prefDelegate(PreferKey.readMenuTopBarTitleCapsule, false)

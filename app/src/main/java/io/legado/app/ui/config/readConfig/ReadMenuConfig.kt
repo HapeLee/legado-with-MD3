@@ -45,6 +45,11 @@ object ReadMenuConfig {
         true
     )
 
+    var showMenuIcon by prefDelegate(
+        PreferKey.showMenuIcon,
+        true
+    )
+
     // --- 点击区域配置 ---
 
     var clickActionTL by prefDelegate(

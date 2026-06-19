@@ -203,6 +203,12 @@ class ReadConfigViewModel(
                     postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
                 }
 
+                is ReadConfigIntent.ShowMenuIconChanged -> {
+                    ReadConfig.showMenuIcon = intent.value
+                    readSettingsRepository.setShowMenuIcon(intent.value)
+                    postEvent(EventBus.UPDATE_READ_ACTION_BAR, true)
+                }
+
                 is ReadConfigIntent.PageKeysChanged -> {
                     readSettingsRepository.setPageKeys(intent.prevKeys, intent.nextKeys)
                 }
@@ -260,7 +266,8 @@ class ReadConfigViewModel(
             showReadTitleAddition = showReadTitleAddition,
             autoReadSpeed = autoReadSpeed,
             prevKeys = prevKeys,
-            nextKeys = nextKeys
+            nextKeys = nextKeys,
+            showMenuIcon = showMenuIcon
         )
     }
 }

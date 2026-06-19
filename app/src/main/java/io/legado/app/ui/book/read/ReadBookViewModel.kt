@@ -1680,6 +1680,7 @@ class ReadBookViewModel(
                 ReadConfig.syncReadPreferences(preferences)
                 ReadBookConfig.readMenuPaletteStyle = preferences.readMenuPaletteStyle
                 _readPreferences.value = preferences
+                _uiState.update { syncFromReadBook(it) }
                 if (!preferences.hasMenuClickArea()) {
                     ReadConfig.detectClickArea()
                     readSettingsRepository.setClickAction(PreferKey.clickActionMC, 0)
@@ -1850,6 +1851,7 @@ class ReadBookViewModel(
                 brightnessVwPos = ReadBookConfig.brightnessVwPos,
                 readBrightness = ReadBookConfig.readBrightness,
                 brightnessAuto = ReadBookConfig.brightnessAuto,
+                showMenuIcon = ReadBookConfig.showMenuIcon,
             ),
         )
     }
@@ -3098,6 +3100,13 @@ class ReadBookViewModel(
                         )
                     )
                 }
+            }
+            is ConfigUpdate.ShowMenuIcon -> {
+                ReadBookConfig.showMenuIcon = update.value
+                viewModelScope.launch {
+                    readSettingsRepository.setShowMenuIcon(update.value)
+                }
+                _uiState.update { it.copy(menuConfig = it.menuConfig.copy(showMenuIcon = update.value)) }
             }
             is ConfigUpdate.MenuTopBarBlurMode -> {
                 val mode = update.value.coerceIn(0, 2).let {

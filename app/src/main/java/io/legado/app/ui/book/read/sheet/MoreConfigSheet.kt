@@ -147,6 +147,9 @@ fun MoreConfigSheet(
                 onShowReadTitleAdditionChange = {
                     onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowReadTitleAddition(it)))
                 },
+                onShowMenuIconChange = {
+                    onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowMenuIcon(it)))
+                },
             )
         }
     }
@@ -299,6 +302,7 @@ private fun OtherSettings(
     onOpenPageKeyConfig: () -> Unit,
     onExpandTextMenuChange: (Boolean) -> Unit,
     onShowReadTitleAdditionChange: (Boolean) -> Unit,
+    onShowMenuIconChange: (Boolean) -> Unit,
 ) {
     val clickImageWayEntries = stringArrayResource(R.array.click_image_way_title)
     val clickImageWayValues = stringArrayResource(R.array.click_image_way_value)
@@ -362,5 +366,10 @@ private fun OtherSettings(
         title = stringResource(R.string.show_read_title_addition),
         checked = preferences.showReadTitleAddition,
         onCheckedChange = onShowReadTitleAdditionChange,
+    )
+    TinySwitchSettingItem(
+        title = stringResource(R.string.show_menu_icon),
+        checked = preferences.showMenuIcon,
+        onCheckedChange = onShowMenuIconChange,
     )
 }
