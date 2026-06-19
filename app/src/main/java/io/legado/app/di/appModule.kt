@@ -87,19 +87,6 @@ import io.legado.app.help.coil.CoverInterceptor
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.okHttpClientManga
 import io.legado.app.ui.about.AboutViewModel
-import io.legado.app.ui.ai.AiArchiveViewModel
-import io.legado.app.ui.ai.AiArtViewModel
-import io.legado.app.ui.ai.AiBookshelfViewModel
-import io.legado.app.ui.ai.AiChatViewModel
-import io.legado.app.ui.ai.AiContentToolsViewModel
-import io.legado.app.ui.ai.AiImageViewModel
-import io.legado.app.ui.ai.AiRecommendViewModel
-import io.legado.app.ui.ai.AiSettingsViewModel
-import io.legado.app.ui.ai.AiSourceAdvancedViewModel
-import io.legado.app.ui.ai.AiSourceViewModel
-import io.legado.app.ui.ai.AiTextToolsViewModel
-import io.legado.app.ui.ai.AiVideoViewModel
-import io.legado.app.ui.ai.AiVisionViewModel
 import io.legado.app.ui.book.bookmark.AllBookmarkViewModel
 import io.legado.app.ui.book.cache.manage.BookCacheManageViewModel
 import io.legado.app.ui.book.changecover.ChangeCoverViewModel
@@ -332,18 +319,6 @@ val appModule = module {
     }
 
     // ========== AI ViewModels ==========
-    viewModelOf(::AiChatViewModel)
-    viewModelOf(::AiImageViewModel)
-    viewModelOf(::AiVideoViewModel)
-    viewModelOf(::AiVisionViewModel)
-    viewModelOf(::AiTextToolsViewModel)
-    viewModelOf(::AiSourceViewModel)
-    viewModelOf(::AiBookshelfViewModel)
-    viewModelOf(::AiSettingsViewModel)
-    viewModelOf(::AiContentToolsViewModel)
-    viewModelOf(::AiArtViewModel)
-    viewModelOf(::AiSourceAdvancedViewModel)
-    viewModelOf(::AiRecommendViewModel)
-    viewModelOf(::AiArchiveViewModel)
+    // AI 聊天使用 AiChatScreen 内部的简易状态管理，无需 Koin 注册
 }
 
