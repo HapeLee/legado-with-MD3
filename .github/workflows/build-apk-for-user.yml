@@ -122,7 +122,7 @@ jobs:
             自动构建的 Debug 版本
             - 分支: ${{ steps.branch.outputs.branch }}
             - 构建号: ${{ github.run_number }}
-          prerelease: true
+          prerelease: false
           files: |
             app/build/outputs/apk/app/debug/*.apk
             legado-debug-apks-*.zip
@@ -140,7 +140,7 @@ jobs:
             - 分支: ${{ steps.branch.outputs.branch }}
             - 构建号: ${{ github.run_number }}
             - Commit: ${{ github.sha }}
-          prerelease: true
+          prerelease: false
           files: |
             app/build/outputs/apk/app/debug/*.apk
             legado-debug-apks-*.zip
